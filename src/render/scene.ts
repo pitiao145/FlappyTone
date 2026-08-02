@@ -1,4 +1,4 @@
-import type { PitchState } from "../pitch/types";
+import type { PitchState } from "../pitch/types.ts";
 
 export interface TrailSample {
   chao: number;

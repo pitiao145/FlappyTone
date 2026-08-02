@@ -16,6 +16,8 @@ export interface PitchTrackerConfig {
   sampleRate: number;
   frameSize: number;
   f0Center: number;
+  /** Semitones from centre to top/bottom of the Chao scale (PRD: 3–8) */
+  rangeSemitones: number;
   alpha: number;
   clarityThreshold: number;
   /** Calibrated silence RMS; voiced requires rms >= noiseFloor * 3 */

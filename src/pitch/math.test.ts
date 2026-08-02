@@ -4,8 +4,8 @@ import {
   correctOctave,
   hzToSemitones,
   semitonesToChao,
-} from "./math";
-import { PitchTracker } from "./PitchTracker";
+} from "./math.ts";
+import { PitchTracker } from "./PitchTracker.ts";
 
 describe("hzToSemitones / semitonesToChao", () => {
   it("maps f0Center to chao 3", () => {

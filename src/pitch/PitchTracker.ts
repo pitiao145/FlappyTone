@@ -5,13 +5,14 @@ import {
   hzToSemitones,
   rmsOf,
   semitonesToChao,
-} from "./math";
-import type { PitchState, PitchTrackerConfig } from "./types";
+} from "./math.ts";
+import type { PitchState, PitchTrackerConfig } from "./types.ts";
 
 export const DEFAULT_CONFIG: Omit<PitchTrackerConfig, "sampleRate"> = {
   frameSize: 2048,
   f0Center: 120,
-  alpha: 0.35,
+  rangeSemitones: 5,
+  alpha: 0.6,
   clarityThreshold: 0.85,
   noiseFloor: 0.0033, // effective RMS floor ≈ 0.01 until calibration exists
   fMin: 70,
@@ -34,6 +35,10 @@ export class PitchTracker {
     this.config.f0Center = hz;
   }
 
+  setRangeSemitones(range: number): void {
+    this.config.rangeSemitones = range;
+  }
+
   setAlpha(alpha: number): void {
     this.config.alpha = alpha;
   }
@@ -43,8 +48,16 @@ export class PitchTracker {
   }
 
   push(frame: Float32Array): PitchState {
-    const { sampleRate, f0Center, alpha, clarityThreshold, noiseFloor, fMin, fMax } =
-      this.config;
+    const {
+      sampleRate,
+      f0Center,
+      rangeSemitones,
+      alpha,
+      clarityThreshold,
+      noiseFloor,
+      fMin,
+      fMax,
+    } = this.config;
 
     const [rawF0, clarity] = this.detector.findPitch(frame, sampleRate);
     const rms = rmsOf(frame);
@@ -70,7 +83,7 @@ export class PitchTracker {
     const medianF0 = this.median.push(f0);
 
     const semitones = hzToSemitones(medianF0, f0Center);
-    const chao = semitonesToChao(semitones);
+    const chao = semitonesToChao(semitones, rangeSemitones);
     this.smoothedChao += alpha * (chao - this.smoothedChao);
 
     return {

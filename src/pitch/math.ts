@@ -4,8 +4,11 @@ export function hzToSemitones(f0: number, f0Center: number): number {
   return 12 * Math.log2(f0 / f0Center);
 }
 
-export function semitonesToChao(semitones: number): number {
-  const chao = 3 + (semitones / RANGE_SEMITONES) * 2;
+export function semitonesToChao(
+  semitones: number,
+  rangeSemitones = RANGE_SEMITONES,
+): number {
+  const chao = 3 + (semitones / rangeSemitones) * 2;
   return Math.min(5, Math.max(1, chao));
 }
 

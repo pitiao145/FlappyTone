@@ -19,5 +19,11 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts"]
+  "include": [
+    "vite.config.ts",
+    "src/dev/analyze.ts",
+    "src/dev/make-tones.ts",
+    "src/dev/wav.ts",
+    "src/pitch"
+  ]
 }

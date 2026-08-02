@@ -52,7 +52,7 @@
 }
 
 .dev-panel {
-  width: 220px;
+  width: 260px;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   display: flex;
@@ -86,6 +86,16 @@
 
 .dev-panel input[type="range"] {
   width: 100%;
+}
+
+.dev-panel .param-name {
+  color: #dfe5ec;
+}
+
+.dev-panel .param-help {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #6b7684;
 }
 
 @media (max-width: 700px) {
