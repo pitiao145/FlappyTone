@@ -93,26 +93,28 @@ export function newDifficulty(): Difficulty {
 /**
  * Applies the PRD difficulty ramp: every 5 gates cleared, scrollSpeed *= 1.08
  * (cap 2.2x base), toleranceH *= 0.95 (floor 0.07), restMs *= 0.95 (floor 600ms).
+ * Always ramps from the fixed base constants keyed by total gatesCleared, so
+ * repeated calls with growing gatesCleared do not compound earlier steps.
  */
-export function rampDifficulty(d: Difficulty, gatesCleared: number): Difficulty {
+export function rampDifficulty(gatesCleared: number): Difficulty {
   const steps = Math.floor(gatesCleared / 5);
   return {
     scrollSpeed: Math.min(
-      d.scrollSpeed * Math.pow(1.08, steps),
+      BASE_SCROLL_SPEED * Math.pow(1.08, steps),
       SCROLL_SPEED_CAP,
     ),
     toleranceH: Math.max(
-      d.toleranceH * Math.pow(0.95, steps),
+      BASE_TOLERANCE_H * Math.pow(0.95, steps),
       TOLERANCE_FLOOR,
     ),
-    restMs: Math.max(d.restMs * Math.pow(0.95, steps), REST_MS_FLOOR),
+    restMs: Math.max(BASE_REST_MS * Math.pow(0.95, steps), REST_MS_FLOOR),
   };
 }
 
 /**
  * Picks a uniformly random tone, rerolling if it would make three identical
  * tones in a row (i.e. the last two entries of `prev` are already equal to
- * the candidate).
+ * the candidate). `rand` must return a value in [0, 1), e.g. `Math.random`.
  */
 export function nextTone(prev: Tone[], rand: () => number): Tone {
   const lastTwoEqual =

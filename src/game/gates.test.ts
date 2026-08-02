@@ -69,22 +69,29 @@ describe("rampDifficulty", () => {
   const base: Difficulty = { scrollSpeed: 220, toleranceH: 0.12, restMs: 900 };
 
   it("leaves difficulty unchanged below 5 cleared", () => {
-    expect(rampDifficulty(base, 0)).toEqual(base);
-    expect(rampDifficulty(base, 4)).toEqual(base);
+    expect(rampDifficulty(0)).toEqual(base);
+    expect(rampDifficulty(4)).toEqual(base);
   });
 
   it("applies one ramp step at 5 cleared", () => {
-    const d = rampDifficulty(base, 5);
+    const d = rampDifficulty(5);
     expect(d.scrollSpeed).toBeCloseTo(220 * 1.08);
     expect(d.toleranceH).toBeCloseTo(0.12 * 0.95);
     expect(d.restMs).toBeCloseTo(900 * 0.95);
   });
 
   it("caps scrollSpeed at 2.2x base and floors tolerance/rest at 100 cleared", () => {
-    const d = rampDifficulty(base, 100);
+    const d = rampDifficulty(100);
     expect(d.scrollSpeed).toBeCloseTo(484);
     expect(d.toleranceH).toBeCloseTo(0.07);
     expect(d.restMs).toBeCloseTo(600);
+  });
+
+  it("does not compound across repeated incremental calls", () => {
+    const d1 = rampDifficulty(5);
+    const d2 = rampDifficulty(10);
+    expect(d1.scrollSpeed).toBeCloseTo(220 * Math.pow(1.08, 1));
+    expect(d2.scrollSpeed).toBeCloseTo(220 * Math.pow(1.08, 2));
   });
 });
 
