@@ -13,7 +13,6 @@ export function decodeWav(bytes: Uint8Array): WavData {
   let offset = 12;
   let sampleRate = 0;
   let channels = 1;
-  let bitsPerSample = 16;
   let samples: Float32Array | null = null;
 
   while (offset + 8 <= view.byteLength) {
@@ -25,7 +24,7 @@ export function decodeWav(bytes: Uint8Array): WavData {
       if (format !== 1) throw new Error(`Unsupported WAV format ${format} (need PCM)`);
       channels = view.getUint16(body + 2, true);
       sampleRate = view.getUint32(body + 4, true);
-      bitsPerSample = view.getUint16(body + 14, true);
+      const bitsPerSample = view.getUint16(body + 14, true);
       if (bitsPerSample !== 16) throw new Error(`Unsupported bit depth ${bitsPerSample}`);
     } else if (id === 0x64617461 /* data */) {
       const frameCount = Math.floor(size / 2 / channels);
