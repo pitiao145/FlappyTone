@@ -1,15 +1,36 @@
 import { useEffect, useState } from "react";
+import { playReferenceTone } from "../audio/reference.ts";
 import { getLatestState, getTracker } from "../game/loop.ts";
+import { DEFAULT_CONFIG } from "../pitch/PitchTracker.ts";
 import type { PitchState } from "../pitch/types.ts";
 
 const READOUT_HZ = 10;
 
+const TONE_LABELS = [
+  { tone: "tone1" as const, label: "1 ˉ", hint: "flat & high" },
+  { tone: "tone2" as const, label: "2 ˊ", hint: "rising" },
+  { tone: "tone3" as const, label: "3 ˇ", hint: "dip, then up" },
+  { tone: "tone4" as const, label: "4 ˋ", hint: "falling" },
+];
+
 export function DevPanel() {
   const [pitch, setPitch] = useState<PitchState>(getLatestState());
-  const [f0Center, setF0Center] = useState(120);
-  const [range, setRange] = useState(5);
-  const [alpha, setAlpha] = useState(0.85);
-  const [clarityThreshold, setClarityThreshold] = useState(0.8);
+  const [f0Center, setF0Center] = useState(DEFAULT_CONFIG.f0Center);
+  const [range, setRange] = useState(DEFAULT_CONFIG.rangeSemitones);
+  const [alpha, setAlpha] = useState(DEFAULT_CONFIG.alpha);
+  const [clarityThreshold, setClarityThreshold] = useState(DEFAULT_CONFIG.clarityThreshold);
+
+  const resetSettings = () => {
+    setF0Center(DEFAULT_CONFIG.f0Center);
+    setRange(DEFAULT_CONFIG.rangeSemitones);
+    setAlpha(DEFAULT_CONFIG.alpha);
+    setClarityThreshold(DEFAULT_CONFIG.clarityThreshold);
+    const tracker = getTracker();
+    tracker?.setF0Center(DEFAULT_CONFIG.f0Center);
+    tracker?.setRangeSemitones(DEFAULT_CONFIG.rangeSemitones);
+    tracker?.setAlpha(DEFAULT_CONFIG.alpha);
+    tracker?.setClarityThreshold(DEFAULT_CONFIG.clarityThreshold);
+  };
 
   useEffect(() => {
     const id = setInterval(() => setPitch({ ...getLatestState() }), 1000 / READOUT_HZ);
@@ -31,6 +52,21 @@ export function DevPanel() {
           <tr><td title="Same, after smoothing — this is what the dot follows">dot position</td><td>{fmt(pitch.smoothedChao)}</td></tr>
         </tbody>
       </table>
+
+      <div className="ref-tones">
+        <span className="param-name">reference sounds — listen, then imitate</span>
+        <div className="ref-tone-buttons">
+          {TONE_LABELS.map(({ tone, label, hint }) => (
+            <button key={tone} title={hint} onClick={() => void playReferenceTone(tone, f0Center)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <span className="param-help">
+          Played at your current voice centre. Match the shape, not the exact
+          pitch.
+        </span>
+      </div>
 
       <label>
         <span className="param-name">voice centre — {f0Center} Hz</span>
@@ -95,6 +131,10 @@ export function DevPanel() {
           ignores your voice, lower this; if it twitches to noise, raise it.
         </span>
       </label>
+
+      <button className="reset-button" onClick={resetSettings}>
+        reset settings to defaults
+      </button>
     </div>
   );
 }

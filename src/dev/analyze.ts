@@ -1,4 +1,4 @@
-// CLI: npm run analyze <file.wav> [f0Center]
+// CLI: npm run analyze <file.wav> [f0Center] [startSec] [endSec]
 // Runs the WAV through the same PitchTracker the game uses and prints an
 // ASCII Chao contour — the offline way to "see" what the pitch pipeline saw.
 import { readFileSync } from "node:fs";
@@ -17,7 +17,14 @@ if (!path) {
 }
 const f0Center = process.argv[3] ? Number(process.argv[3]) : 120;
 
-const { sampleRate, samples } = decodeWav(readFileSync(path));
+const decoded = decodeWav(readFileSync(path));
+const sampleRate = decoded.sampleRate;
+const startSec = process.argv[4] ? Number(process.argv[4]) : 0;
+const endSec = process.argv[5] ? Number(process.argv[5]) : decoded.samples.length / sampleRate;
+const samples = decoded.samples.subarray(
+  Math.floor(startSec * sampleRate),
+  Math.floor(endSec * sampleRate),
+);
 const tracker = new PitchTracker({ sampleRate, f0Center });
 
 interface Point {

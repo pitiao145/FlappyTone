@@ -24,6 +24,12 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sessionRef = useRef<MicSession | null>(null);
 
+  const stop = useCallback(() => {
+    sessionRef.current?.stop();
+    sessionRef.current = null;
+    setPhase("idle");
+  }, []);
+
   const start = useCallback(async () => {
     setPhase("starting");
     try {
@@ -41,6 +47,11 @@ export default function App() {
     <div className="app">
       <div className="stage">
         <canvas ref={canvasRef} width={CANVAS_W} height={CANVAS_H} />
+        {phase === "running" && (
+          <button className="mic-stop" onClick={stop} title="Turn the microphone off">
+            ■ stop mic
+          </button>
+        )}
         {phase !== "running" && (
           <div className="overlay">
             {phase === "error" ? (
