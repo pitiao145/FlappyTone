@@ -115,16 +115,26 @@ export function rampDifficulty(gatesCleared: number): Difficulty {
  * Picks a uniformly random tone, rerolling if it would make three identical
  * tones in a row (i.e. the last two entries of `prev` are already equal to
  * the candidate). `rand` must return a value in [0, 1), e.g. `Math.random`.
+ *
+ * The reroll is bounded: a `rand` that keeps returning the forbidden tone
+ * (a constant, as an injected test stub often is) would otherwise spin
+ * forever. After MAX_REROLLS we deterministically step off the forbidden
+ * tone instead — a repeat is a cosmetic flaw, a hang is not.
  */
+const MAX_REROLLS = 8;
+
 export function nextTone(prev: Tone[], rand: () => number): Tone {
   const lastTwoEqual =
     prev.length >= 2 && prev[prev.length - 1] === prev[prev.length - 2];
   const forbidden = lastTwoEqual ? prev[prev.length - 1] : null;
 
-  let candidate: Tone;
-  do {
+  let candidate: Tone = (Math.floor(rand() * 4) + 1) as Tone;
+  for (let i = 0; i < MAX_REROLLS && candidate === forbidden; i++) {
     candidate = (Math.floor(rand() * 4) + 1) as Tone;
-  } while (candidate === forbidden);
+  }
+  if (candidate === forbidden) {
+    candidate = ((candidate % 4) + 1) as Tone;
+  }
   return candidate;
 }
 

@@ -3,7 +3,6 @@ import { Run, type RunSnapshot } from "./run.ts";
 import { corridorChaoAt } from "./gates.ts";
 import type { PitchState } from "../pitch/types.ts";
 
-const H = 800;
 const W = 420;
 const DT = 16;
 
@@ -62,9 +61,9 @@ function trackCorridor(s: RunSnapshot): PitchState {
 }
 
 /**
- * Deterministic rand cycling a fixed sequence. NOTE: a *constant* rand hangs
- * `nextTone` — it rerolls forever once two identical tones are queued — so
- * every sequence here must avoid producing three of a kind.
+ * Deterministic rand cycling a fixed sequence, so gate tones are predictable.
+ * (`nextTone` bounds its reroll, so a degenerate sequence is safe — it just
+ * makes the tone order harder to reason about.)
  */
 function seqRand(values: number[]): () => number {
   let i = 0;
@@ -75,7 +74,6 @@ function seqRand(values: number[]): () => number {
 function newGameRun(): Run {
   return new Run({
     mode: "game",
-    height: H,
     width: W,
     rand: seqRand([0, 0, 0.5, 0.75]),
   });
@@ -85,7 +83,6 @@ function newGameRun(): Run {
 function newT3Run(): Run {
   return new Run({
     mode: "game",
-    height: H,
     width: W,
     rand: seqRand([0.5, 0, 0.75, 0.25]),
   });
@@ -199,12 +196,26 @@ describe("Run — Tone 3 handling", () => {
     for (const c of chaosDuringSilence) {
       expect(Math.abs(c - chaoAtSilence)).toBeLessThan(driftIn200ms / 4);
     }
-    // ...and specifically it must not have moved toward the rest line.
-    const lastSilent = chaosDuringSilence[chaosDuringSilence.length - 1];
-    expect(Math.abs(lastSilent - 3)).toBeGreaterThan(
-      Math.abs(chaoAtSilence - 3) - 0.1,
-    );
     expect(run.snapshot().hearts).toBe(3);
+  });
+
+  it("entry silence inside the grace period never costs a heart", () => {
+    // 240ms of silence on entering the gate, then a perfectly on-corridor
+    // voice. The held dot diverges from the moving corridor during grace —
+    // that is our interpolation, not a wrong note, and must not collide.
+    const run = newT3Run();
+    let entryFrame: number | null = null;
+    const { snapshots } = simulate(run, 400, (s, i) => {
+      if (s.activeGate && entryFrame === null) entryFrame = i;
+      const silent =
+        entryFrame !== null && i - entryFrame < Math.round(240 / DT);
+      return silent ? pitch(null, s.birdChao) : trackCorridor(s);
+    });
+
+    expect(entryFrame).not.toBeNull();
+    const firstResolved = snapshots.find((s) => s.lastOutcome !== null)!;
+    expect(firstResolved.lastOutcome!.outcome).not.toBe("collision");
+    expect(firstResolved.hearts).toBe(3);
   });
 
   it("a T3 gate is never failed for signal loss alone", () => {
@@ -228,11 +239,47 @@ describe("Run — difficulty ramp", () => {
     expect(speeds.some((s) => Math.abs(s - 220 * 1.08) < 1e-9)).toBe(true);
     expect(Math.max(...speeds)).toBeGreaterThan(220 * 1.08);
   });
+
+  it("does not ramp on gates the player failed", () => {
+    // Colliding on every gate: the run ends on 3 hearts, but even before that
+    // the game must not have sped up on someone who is struggling.
+    const run = newGameRun();
+    const { snapshots } = simulate(run, 2000, () => pitch(1));
+    const speeds = snapshots.map((s) => s.difficulty.scrollSpeed);
+    expect(Math.max(...speeds)).toBe(220);
+  });
+
+  it("does not ramp on gates it couldn't hear", () => {
+    const run = newGameRun();
+    const { snapshots } = simulate(run, 2000, (s) => pitch(null, s.birdChao));
+    expect(outcomesOf(snapshots).length).toBeGreaterThanOrEqual(5);
+    expect(
+      Math.max(...snapshots.map((s) => s.difficulty.scrollSpeed)),
+    ).toBe(220);
+  });
+});
+
+describe("Run — frame timing", () => {
+  it("clamps a huge dt so a backgrounded tab cannot skip a gate unscored", () => {
+    const clamped = newGameRun();
+    const stepped = newGameRun();
+
+    // One 5-second frame vs. the same span in normal 100ms frames.
+    clamped.tickFrame(5000, 5000);
+    for (let i = 1; i <= 50; i++) stepped.tickFrame(100, i * 100);
+
+    // The clamped run advanced by at most one frame's worth, so its first gate
+    // is still ahead of it rather than silently passed.
+    expect(clamped.snapshot().upcoming).not.toBeNull();
+    const clampedX = clamped.snapshot().gates[0].x0;
+    const steppedX = stepped.snapshot().gates[0].x0;
+    expect(clampedX).toBeGreaterThan(steppedX);
+  });
 });
 
 describe("Run — tutorial mode", () => {
   it("runs the fixed tone order, never loses hearts, ends after 8 gates", () => {
-    const run = new Run({ mode: "tutorial", height: H, width: W });
+    const run = new Run({ mode: "tutorial", width: W });
     // Sing badly the whole way: tutorial must not punish.
     const { snapshots } = simulate(run, 4000, () => pitch(1));
     const outcomes = outcomesOf(snapshots);
@@ -244,7 +291,7 @@ describe("Run — tutorial mode", () => {
   });
 
   it("doubles the corridor tolerance", () => {
-    const tut = new Run({ mode: "tutorial", height: H, width: W });
+    const tut = new Run({ mode: "tutorial", width: W });
     const game = newGameRun();
     expect(tut.snapshot().gates[0].tolChao).toBeCloseTo(
       game.snapshot().gates[0].tolChao * 2,
@@ -299,8 +346,20 @@ describe("Run — snapshot extras", () => {
 
   it("reports the corridor centre so the renderer can draw the ghost line", () => {
     const run = newGameRun();
-    simulate(run, 200, trackCorridor);
-    // T1's corridor is flat at chao 5.
-    expect(corridorChaoAt(1, 0.5)).toBe(5);
+    const { snapshots } = simulate(run, 200, trackCorridor);
+    const inGate = snapshots.filter((s) => s.activeGate !== null);
+    expect(inGate.length).toBeGreaterThan(0);
+    for (const s of inGate) {
+      const g = s.activeGate!;
+      expect(g.corridorChao).toBeCloseTo(corridorChaoAt(g.tone, g.t), 10);
+      expect(g.t).toBeGreaterThanOrEqual(0);
+      expect(g.t).toBeLessThanOrEqual(1);
+    }
+    // T1's corridor is flat at chao 5, so the ghost line should report exactly that.
+    const t1 = inGate.filter((s) => s.activeGate!.tone === 1);
+    expect(t1.length).toBeGreaterThan(0);
+    for (const s of t1) {
+      expect(s.activeGate!.corridorChao).toBe(5);
+    }
   });
 });

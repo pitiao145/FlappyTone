@@ -131,6 +131,14 @@ describe("nextTone", () => {
       ).toBe(false);
     }
   });
+
+  it("terminates on a constant rand instead of rerolling forever", () => {
+    // A constant stub always proposes tone 1, which is exactly the forbidden
+    // tone here. The reroll is bounded, so this must return rather than hang.
+    const t = nextTone([1, 1], () => 0);
+    expect([1, 2, 3, 4]).toContain(t);
+    expect(t).not.toBe(1);
+  });
 });
 
 describe("makeGate", () => {

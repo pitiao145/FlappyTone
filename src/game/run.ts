@@ -43,7 +43,10 @@ export type RunMode = "game" | "tutorial";
 
 export interface RunConfig {
   mode: RunMode;
-  height: number;
+  /**
+   * Canvas width in px. Positions are otherwise in chao units, which are
+   * height-independent, so the run needs no height.
+   */
   width: number;
   /** Injected for deterministic tests. Defaults to Math.random. */
   rand?: () => number;
@@ -115,6 +118,12 @@ const NOISE_MIN_FRAMES = 30;
 
 const PIN_EPSILON = 1e-3;
 
+/** Upper bound on a single frame's dt, so a backgrounded tab can't skip a gate. */
+const MAX_FRAME_DT_MS = 100;
+
+/** Outcomes that count as "cleared" for the difficulty ramp (PRD §6). */
+const CLEARED_OUTCOMES = new Set<GateOutcome>(["perfect", "good", "ok"]);
+
 interface ActiveGateState {
   gate: Gate;
   samples: GateSample[];
@@ -140,7 +149,10 @@ export class Run {
   private spawnedTones: Tone[] = [];
   private active: ActiveGateState | null = null;
 
+  /** Gates resolved, whatever the outcome. Ends the tutorial. */
   private gatesFinished = 0;
+  /** Gates flown through without collision and with enough signal to score. Drives the ramp. */
+  private gatesCleared = 0;
   private stats: RunStats;
   private lastOutcome: LastOutcome | null = null;
 
@@ -172,7 +184,8 @@ export class Run {
    * Feeds one analysis frame. Updates the bird's position from voiced pitch,
    * records the gate sample, and checks collision.
    *
-   * Unvoiced frames never collide: signal loss is not a wall (PRD §6).
+   * Unvoiced frames never collide, in grace or out: signal loss is not a wall
+   * (PRD §6).
    */
   tickAudio(p: PitchState, nowMs: number): void {
     this.nowMs = nowMs;
@@ -209,8 +222,12 @@ export class Run {
       voiced: p.voiced,
     });
 
-    const live = p.voiced || this.inGrace(nowMs);
-    if (live && errChao > active.gate.tolChao) {
+    // Only a *voiced* off-corridor frame can start a collision. During grace
+    // the dot is held at the player's last real pitch while the corridor keeps
+    // moving underneath it — that divergence is the app's interpolation, not a
+    // wrong note, and must never cost a heart. An already-voiced collision
+    // stays set (the flag is sticky), so grace can sustain but never create.
+    if (p.voiced && errChao > active.gate.tolChao) {
       active.collided = true;
     }
   }
@@ -220,11 +237,16 @@ export class Run {
     this.nowMs = nowMs;
     if (this.isOver()) return;
 
-    this.applyUnvoicedDynamics(dtMs, nowMs);
-    this.displayChao +=
-      (this.targetChao - this.displayChao) * (1 - Math.exp(-dtMs / EASE_TAU_MS));
+    // A backgrounded tab hands back a multi-second dt on resume. Unclamped,
+    // the world would jump far enough to skip a whole gate — the player would
+    // be scored (or not scored) on a gate they never saw. Same clamp as loop.ts.
+    const dt = Math.min(MAX_FRAME_DT_MS, dtMs);
 
-    this.worldX += (this.difficulty.scrollSpeed * dtMs) / 1000;
+    this.applyUnvoicedDynamics(dt, nowMs);
+    this.displayChao +=
+      (this.targetChao - this.displayChao) * (1 - Math.exp(-dt / EASE_TAU_MS));
+
+    this.worldX += (this.difficulty.scrollSpeed * dt) / 1000;
     this.syncActive();
     this.retireOffscreen();
     this.pruneTrail(nowMs);
@@ -354,17 +376,23 @@ export class Run {
       tone: state.gate.tone,
       atMs: this.nowMs,
     };
+    if (CLEARED_OUTCOMES.has(outcome)) {
+      this.gatesCleared += 1;
+    }
     // The tutorial teaches: no score, no hearts, no stats to fail against.
     if (this.mode === "game") {
       this.stats = applyGate(this.stats, state.gate.tone, outcome, accuracy);
     }
-    this.difficulty = this.difficultyFor(this.gatesFinished);
+    // PRD §6 ramps every 5 gates *cleared*. Counting collisions and unheard
+    // gates here would speed the game up for exactly the player who is
+    // struggling with it.
+    this.difficulty = this.difficultyFor(this.gatesCleared);
     this.fillQueue();
   }
 
-  private difficultyFor(gatesFinished: number): Difficulty {
+  private difficultyFor(gatesCleared: number): Difficulty {
     const base =
-      this.mode === "tutorial" ? newDifficulty() : rampDifficulty(gatesFinished);
+      this.mode === "tutorial" ? newDifficulty() : rampDifficulty(gatesCleared);
     return this.mode === "tutorial"
       ? { ...base, toleranceH: base.toleranceH * TUTORIAL_TOLERANCE_FACTOR }
       : base;
@@ -377,7 +405,11 @@ export class Run {
     );
   }
 
-  /** Keeps QUEUE_AHEAD unentered gates spawned. */
+  /**
+   * Keeps QUEUE_AHEAD gates alive that the bird has not yet passed — the one
+   * it is in or approaching, plus its successor — so `upcoming` (which drives
+   * the HUD's next-syllable cue and reference audio) is always populated.
+   */
   private fillQueue(): void {
     while (
       this.gates.filter((g) => this.gateEnd(g) >= this.worldX).length <
