@@ -11,7 +11,8 @@
     "test": "vitest run",
     "typecheck": "tsc -b",
     "analyze": "node --experimental-strip-types src/dev/analyze.ts",
-    "make-tones": "node --experimental-strip-types src/dev/make-tones.ts"
+    "make-tones": "node --experimental-strip-types src/dev/make-tones.ts",
+    "tune": "node --experimental-strip-types src/dev/tune.ts"
   },
   "dependencies": {
     "pitchy": "^4.1.0",

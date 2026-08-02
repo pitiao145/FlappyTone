@@ -18,7 +18,7 @@ if (!path) {
 const f0Center = process.argv[3] ? Number(process.argv[3]) : 120;
 
 const { sampleRate, samples } = decodeWav(readFileSync(path));
-const tracker = new PitchTracker({ sampleRate, f0Center, alpha: 0.6 });
+const tracker = new PitchTracker({ sampleRate, f0Center });
 
 interface Point {
   t: number;

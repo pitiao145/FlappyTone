@@ -12,8 +12,10 @@ export const DEFAULT_CONFIG: Omit<PitchTrackerConfig, "sampleRate"> = {
   frameSize: 2048,
   f0Center: 120,
   rangeSemitones: 5,
-  alpha: 0.6,
-  clarityThreshold: 0.85,
+  // Tuned via `npm run tune` — median-5 does the de-jitter work, so the
+  // exponential smoother can be fast; 0.85 clarity missed too many frames.
+  alpha: 0.85,
+  clarityThreshold: 0.8,
   noiseFloor: 0.0033, // effective RMS floor ≈ 0.01 until calibration exists
   fMin: 70,
   fMax: 400,

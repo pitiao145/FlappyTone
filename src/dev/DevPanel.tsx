@@ -8,8 +8,8 @@ export function DevPanel() {
   const [pitch, setPitch] = useState<PitchState>(getLatestState());
   const [f0Center, setF0Center] = useState(120);
   const [range, setRange] = useState(5);
-  const [alpha, setAlpha] = useState(0.6);
-  const [clarityThreshold, setClarityThreshold] = useState(0.85);
+  const [alpha, setAlpha] = useState(0.85);
+  const [clarityThreshold, setClarityThreshold] = useState(0.8);
 
   useEffect(() => {
     const id = setInterval(() => setPitch({ ...getLatestState() }), 1000 / READOUT_HZ);
