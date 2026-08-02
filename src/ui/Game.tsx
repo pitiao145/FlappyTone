@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { playToneCue } from "../audio/reference.ts";
+import {
+  cueDurationMsFor,
+  loadReferenceClips,
+  playToneCue,
+} from "../audio/reference.ts";
 import { getMicSession, setFrameSink, stopMic } from "../audio/session.ts";
 import { TONE_INFO } from "../game/gates.ts";
 import { Run, type RunMode, type RunSnapshot } from "../game/run.ts";
@@ -59,7 +63,13 @@ export function Game({
       pace: loadPace(),
       corridor: loadCorridorWidth(),
       cueStyle: loadCueStyle(),
+      // Queried at cue time — clips finish loading after the Run exists.
+      cueDurationMsFor,
     });
+    {
+      const audio = getMicSession()?.ctx;
+      if (audio) void loadReferenceClips(audio);
+    }
     let tracker: PitchTracker | null = null;
     let rafId = 0;
     let running = true;

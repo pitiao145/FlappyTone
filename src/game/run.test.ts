@@ -545,3 +545,17 @@ describe("Run — cuePaused flag", () => {
     expect(snapshots.some((s) => s.cuePaused)).toBe(false);
   });
 });
+
+describe("Run — per-tone cue duration", () => {
+  it("uses the injected duration for the cued tone", () => {
+    const run = new Run({
+      mode: "game",
+      width: W,
+      rand: seqRand([0, 0, 0.5, 0.75]),
+      cueDurationMsFor: (tone) => 400 + tone * 100,
+    });
+    const { snapshots } = simulate(run, 400, trackCorridor);
+    const cued = snapshots.find((s) => s.cue !== null)!;
+    expect(cued.cue!.durationMs).toBe(400 + cued.cue!.tone * 100);
+  });
+});

@@ -72,6 +72,14 @@ export interface RunConfig {
    * default is "pause"; playtesting found "flow" blurs example into attempt.
    */
   cueStyle?: CueStyle;
+  /**
+   * Audible cue length per tone, in ms. The host wires this to the loaded
+   * reference clips (audio/reference.ts cueDurationMsFor) so the demo sweep
+   * and pause window match what the player actually hears; queried at cue
+   * time because clips finish loading after the Run is constructed. Defaults
+   * to CUE_DURATION_MS.
+   */
+  cueDurationMsFor?: (tone: Tone) => number;
 }
 
 export type CueStyle = "flow" | "pause";
@@ -209,6 +217,7 @@ export class Run {
   private readonly pace: Pace;
   private readonly corridor: CorridorWidth;
   private readonly cueStyle: CueStyle;
+  private readonly cueDurationMsFor: (tone: Tone) => number;
 
   /** Distance the world has scrolled, in px. The bird's world position. */
   private worldX = 0;
@@ -251,6 +260,7 @@ export class Run {
     this.pace = cfg.pace ?? "fast";
     this.corridor = cfg.corridor ?? "normal";
     this.cueStyle = cfg.cueStyle ?? "flow";
+    this.cueDurationMsFor = cfg.cueDurationMsFor ?? (() => CUE_DURATION_MS);
     this.difficulty = this.difficultyFor(0);
     this.stats = newRunStats(3);
     this.fillQueue();
@@ -367,7 +377,7 @@ export class Run {
         tone: next.tone,
         xStart: next.xStart,
         atMs: nowMs,
-        durationMs: CUE_DURATION_MS,
+        durationMs: this.cueDurationMsFor(next.tone),
       };
     }
   }
