@@ -479,3 +479,46 @@ describe("Run — corridor width option", () => {
     expect(gW.tolChao).toBeCloseTo(gN.tolChao * 1.4);
   });
 });
+
+describe("Run — pause cue style", () => {
+  function newPauseRun(): Run {
+    return new Run({
+      mode: "game",
+      width: W,
+      rand: seqRand([0, 0, 0.5, 0.75]),
+      cueStyle: "pause",
+    });
+  }
+
+  it("fires the cue only once the gate is fully on screen", () => {
+    const { snapshots } = simulate(newPauseRun(), 400, trackCorridor);
+    const firstCued = snapshots.find((s) => s.cue !== null)!;
+    const gate = firstCued.gates.find(
+      (g) => g.xStart === firstCued.cue!.xStart,
+    )!;
+    expect(gate.x1).toBeLessThanOrEqual(W + 1);
+  });
+
+  it("freezes the world for the demo plus a beat, then resumes", () => {
+    const { snapshots } = simulate(newPauseRun(), 600, trackCorridor);
+    const cueAt = snapshots.findIndex((s) => s.cue !== null);
+    expect(cueAt).toBeGreaterThanOrEqual(0);
+    const xOf = (s: RunSnapshot) =>
+      s.gates.find((g) => g.xStart === snapshots[cueAt].cue!.xStart)?.x0;
+
+    // 500ms demo + 500ms hold = 1000ms pause ≈ 62 frames at 16ms.
+    const duringPause = Math.floor(900 / DT);
+    for (let i = cueAt + 1; i <= cueAt + duringPause; i++) {
+      expect(xOf(snapshots[i])).toBe(xOf(snapshots[cueAt]));
+    }
+    const afterPause = cueAt + Math.ceil(1100 / DT);
+    expect(xOf(snapshots[afterPause])).toBeLessThan(xOf(snapshots[cueAt])!);
+  });
+
+  it("still reaches the gate and scores it after the pause", () => {
+    const { snapshots } = simulate(newPauseRun(), 2500, trackCorridor);
+    const outcomes = outcomesOf(snapshots);
+    expect(outcomes.length).toBeGreaterThan(0);
+    expect(outcomes[0].outcome).toBe("perfect");
+  });
+});

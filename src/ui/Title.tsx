@@ -7,10 +7,13 @@ import {
   type CorridorWidth,
   type Pace,
 } from "../game/gates.ts";
+import { CUE_STYLES, type CueStyle } from "../game/run.ts";
 import {
   loadCorridorWidth,
+  loadCueStyle,
   loadPace,
   saveCorridorWidth,
+  saveCueStyle,
   savePace,
 } from "../game/settings.ts";
 import { micErrorCopy } from "./micErrors.ts";
@@ -43,6 +46,7 @@ export function Title({
   const [busy, setBusy] = useState(false);
   const [pace, setPace] = useState<Pace>(loadPace);
   const [width, setWidth] = useState<CorridorWidth>(loadCorridorWidth);
+  const [cueStyle, setCueStyle] = useState<CueStyle>(loadCueStyle);
   const error = ownError ?? externalError;
 
   // The mic is opened here, inside the click handler, because iOS Safari only
@@ -116,6 +120,22 @@ export function Title({
             }}
           >
             {w}
+          </button>
+        ))}
+      </div>
+
+      <div className="pace-row">
+        <span className="pace-label">Demo</span>
+        {CUE_STYLES.map((s) => (
+          <button
+            key={s}
+            className={s === cueStyle ? "pace active" : "pace"}
+            onClick={() => {
+              setCueStyle(s);
+              saveCueStyle(s);
+            }}
+          >
+            {s === "flow" ? "in flow" : "pause & listen"}
           </button>
         ))}
       </div>

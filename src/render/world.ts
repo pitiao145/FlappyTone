@@ -112,15 +112,19 @@ function drawCueDemo(
 ): void {
   const cue = snap.cue;
   if (!cue) return;
-  const p = (performance.now() - cue.atMs) / cue.durationMs;
-  if (p < 0 || p > 1) return;
+  const raw = (performance.now() - cue.atMs) / cue.durationMs;
+  if (raw < 0) return;
+  // After the sweep the dot rests at the contour's endpoint, dimmed — in
+  // "pause" style this is the still beat before the world resumes.
+  const p = Math.min(1, raw);
+  const alpha = raw <= 1 ? 0.9 : 0.45;
   const gate = snap.gates.find((g) => g.xStart === cue.xStart);
   if (!gate) return;
 
   const x = gate.x0 + p * (gate.x1 - gate.x0);
   const y = chaoToY(corridorChaoAt(cue.tone, p), height);
   ctx.save();
-  ctx.fillStyle = "rgba(255, 210, 130, 0.9)";
+  ctx.fillStyle = `rgba(255, 210, 130, ${alpha})`;
   ctx.shadowColor = "rgba(255, 210, 130, 0.8)";
   ctx.shadowBlur = 10;
   ctx.beginPath();

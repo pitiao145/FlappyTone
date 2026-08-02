@@ -5,6 +5,7 @@ import { TONE_INFO } from "../game/gates.ts";
 import { Run, type RunMode, type RunSnapshot } from "../game/run.ts";
 import {
   loadCorridorWidth,
+  loadCueStyle,
   loadPace,
   type CalibrationSettings,
 } from "../game/settings.ts";
@@ -57,6 +58,7 @@ export function Game({
       width: canvas.width,
       pace: loadPace(),
       corridor: loadCorridorWidth(),
+      cueStyle: loadCueStyle(),
     });
     let tracker: PitchTracker | null = null;
     let rafId = 0;

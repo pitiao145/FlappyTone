@@ -36,6 +36,19 @@ it is testable and drives phases:
     becomes full-brightness once active ("your turn").
 - No pausing, no scroll-speed change. Pacing untouched.
 
+#### Addendum (same day): "pause & listen" demo style
+
+Playtesting the above showed the demo and the attempt still blur together at
+speed. New `CueStyle = "flow" | "pause"` on `RunConfig` (UI default:
+`"pause"`, persisted as `toneflap.demo.v1`, "Demo" chip row on Title):
+
+- `"flow"` — the behaviour above, unchanged.
+- `"pause"` — the cue fires only once the gate is *fully on screen*; the
+  world then freezes for the demo sweep (500ms) plus a 500ms still beat
+  (`CUE_PAUSE_HOLD_MS`), the demo dot resting dimmed at the contour's end.
+  Scrolling then resumes and the gate travels to the bird — a clear
+  call-and-response rhythm.
+
 ### 2. Corridor width selector
 
 - `gates.ts`: `type CorridorWidth = "narrow" | "normal" | "wide"` with

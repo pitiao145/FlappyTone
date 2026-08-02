@@ -65,7 +65,18 @@ export interface RunConfig {
    * (the PRD tolerance); the UI passes the persisted choice.
    */
   corridor?: CorridorWidth;
+  /**
+   * How the reference demo relates to play. "flow": the cue plays while the
+   * world keeps scrolling (PRD §9 baseline). "pause": the world freezes while
+   * the demo is traced, then resumes — a clear call-and-response beat. The UI
+   * default is "pause"; playtesting found "flow" blurs example into attempt.
+   */
+  cueStyle?: CueStyle;
 }
+
+export type CueStyle = "flow" | "pause";
+
+export const CUE_STYLES: CueStyle[] = ["flow", "pause"];
 
 export interface TrailSample {
   chao: number;
@@ -172,6 +183,8 @@ const MAX_FRAME_DT_MS = 100;
 export const CUE_LEAD_MS = 300;
 /** Length of the audible cue and its demo-dot trace. Mirrors CUE_MS in audio/reference.ts. */
 export const CUE_DURATION_MS = 500;
+/** "pause" style: still beat after the demo trace before the world resumes. */
+export const CUE_PAUSE_HOLD_MS = 500;
 
 /** Outcomes that count as "cleared" for the difficulty ramp (PRD §6). */
 const CLEARED_OUTCOMES = new Set<GateOutcome>(["perfect", "good", "ok"]);
@@ -193,6 +206,7 @@ export class Run {
   private readonly rand: () => number;
   private readonly pace: Pace;
   private readonly corridor: CorridorWidth;
+  private readonly cueStyle: CueStyle;
 
   /** Distance the world has scrolled, in px. The bird's world position. */
   private worldX = 0;
@@ -234,6 +248,7 @@ export class Run {
     this.rand = cfg.rand ?? Math.random;
     this.pace = cfg.pace ?? "fast";
     this.corridor = cfg.corridor ?? "normal";
+    this.cueStyle = cfg.cueStyle ?? "flow";
     this.difficulty = this.difficultyFor(0);
     this.stats = newRunStats(3);
     this.fillQueue();
@@ -307,18 +322,32 @@ export class Run {
     this.displayChao +=
       (this.targetChao - this.displayChao) * (1 - Math.exp(-dt / EASE_TAU_MS));
 
-    this.worldX += (this.difficulty.scrollSpeed * dt) / 1000;
+    // "pause" cue style: the world stands still while the demo is traced
+    // (plus a beat), so the example and the attempt cannot blur together.
+    if (!this.inCuePause(nowMs)) {
+      this.worldX += (this.difficulty.scrollSpeed * dt) / 1000;
+    }
     this.syncActive();
     this.updateCue(nowMs);
     this.retireOffscreen();
     this.pruneTrail(nowMs);
   }
 
+  private inCuePause(nowMs: number): boolean {
+    return (
+      this.cueStyle === "pause" &&
+      this.cue !== null &&
+      nowMs - this.cue.atMs < this.cue.durationMs + CUE_PAUSE_HOLD_MS
+    );
+  }
+
   /**
-   * PRD §9: the cue fires CUE_LEAD_MS before the gate's *leading (right) edge*
-   * enters the screen — not before it reaches the bird. Gates are cued once
-   * each, in spawn order. The cue is kept (the "listen" phase) until the bird
-   * enters the cued gate, then dropped — it is the player's turn.
+   * "flow" (PRD §9): the cue fires CUE_LEAD_MS before the gate's *leading
+   * (right) edge* enters the screen — not before it reaches the bird.
+   * "pause": it fires once the gate is fully on screen instead, so the frozen
+   * demo trace is visible end to end. Gates are cued once each, in spawn
+   * order. The cue is kept (the "listen" phase) until the bird enters the
+   * cued gate, then dropped — it is the player's turn.
    */
   private updateCue(nowMs: number): void {
     if (this.cue && this.worldX >= this.cue.xStart) {
@@ -329,7 +358,8 @@ export class Run {
     const screenRight = this.worldX + this.width * (1 - BIRD_X_FRAC);
     const msUntilOnScreen =
       ((this.gateEnd(next) - screenRight) / this.difficulty.scrollSpeed) * 1000;
-    if (msUntilOnScreen <= CUE_LEAD_MS) {
+    const lead = this.cueStyle === "pause" ? 0 : CUE_LEAD_MS;
+    if (msUntilOnScreen <= lead) {
       this.lastCuedXStart = next.xStart;
       this.cue = {
         tone: next.tone,

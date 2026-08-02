@@ -10,6 +10,7 @@ import {
   type CorridorWidth,
   type Pace,
 } from "./gates.ts";
+import { CUE_STYLES, type CueStyle } from "./run.ts";
 
 export interface CalibrationSettings {
   /** Baseline f0 in Hz, typically ~100–150 for most speakers. Used to map voice pitch to Chao 1–5. */
@@ -103,4 +104,25 @@ export function loadCorridorWidth(): CorridorWidth {
 
 export function saveCorridorWidth(width: CorridorWidth): void {
   localStorage.setItem(WIDTH_KEY, width);
+}
+
+// ------------------------------------------------------------------ demo cue
+
+const CUE_STYLE_KEY = "toneflap.demo.v1";
+const DEFAULT_CUE_STYLE: CueStyle = "pause";
+
+/**
+ * Load the chosen demo style. Defaults to "pause" (world freezes while the
+ * demo is traced) — playtesting found "flow" blurs the example into the
+ * player's attempt.
+ */
+export function loadCueStyle(): CueStyle {
+  const raw = localStorage.getItem(CUE_STYLE_KEY);
+  return raw !== null && (CUE_STYLES as string[]).includes(raw)
+    ? (raw as CueStyle)
+    : DEFAULT_CUE_STYLE;
+}
+
+export function saveCueStyle(style: CueStyle): void {
+  localStorage.setItem(CUE_STYLE_KEY, style);
 }
