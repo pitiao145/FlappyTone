@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { playToneCue } from "../audio/reference.ts";
 import { getMicSession, setFrameSink, stopMic } from "../audio/session.ts";
 import { TONE_INFO } from "../game/gates.ts";
-import { BIRD_X_FRAC, Run, type RunMode, type RunSnapshot } from "../game/run.ts";
+import { Run, type RunMode, type RunSnapshot } from "../game/run.ts";
 import type { CalibrationSettings } from "../game/settings.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { drawWorld } from "../render/world.ts";
@@ -11,8 +11,6 @@ import { drawWorld } from "../render/world.ts";
 const HUD_HZ = 4;
 /** PRD §9: the reference cue plays 300ms before the gate *enters the screen*. */
 const CUE_LEAD_MS = 300;
-/** msUntil jumping up by more than this means `upcoming` moved to the next gate. */
-const NEW_GATE_JUMP_MS = 50;
 /** How long the "couldn't hear that" toast stays up. */
 const TOAST_MS = 1200;
 
@@ -55,9 +53,10 @@ export function Game({
     let running = true;
     let finished = false;
     let lastT = performance.now();
-    // Cue bookkeeping: fire once per gate as msUntil falls through the lead.
-    let cued = false;
-    let prevMsUntil = Infinity;
+    // Cue bookkeeping: gates are keyed by their stable world-space xStart
+    // (monotonically increasing spawn order), so we only need to remember
+    // the xStart of the most recently cued gate to know which gate is next.
+    let lastCuedXStart = -Infinity;
 
     // The mic is already open — Title opened it inside the click gesture.
     setFrameSink((frame, sampleRate) => {
@@ -77,29 +76,29 @@ export function Game({
       const snap = run.snapshot();
       drawWorld(ctx2d, canvas.width, canvas.height, snap);
 
-      // `upcoming.msUntil` counts down to the gate reaching the *bird*. The cue
-      // is anchored to the gate reaching the *right edge of the screen*
-      // (PRD §9: hear it, then produce it), which is one screen-travel earlier
-      // — with the defaults that is ~1.4s of extra lead, so the 500ms cue has
-      // finished well before the gate is scored and cannot bleed into the mic.
-      const msUntil = snap.upcoming?.msUntil ?? Infinity;
-      const travelMs =
-        ((canvas.width * (1 - BIRD_X_FRAC)) / snap.difficulty.scrollSpeed) *
-        1000;
-      const msUntilOnScreen = msUntil - travelMs;
-      if (msUntil > prevMsUntil + NEW_GATE_JUMP_MS) cued = false;
-      prevMsUntil = msUntil;
-      if (!cued && snap.upcoming && msUntilOnScreen <= CUE_LEAD_MS) {
-        cued = true;
-        const audio = getMicSession()?.ctx;
-        // Same context the mic runs on, so it is already gesture-resumed.
-        if (audio && audio.state === "running") {
-          playToneCue(
-            audio,
-            snap.upcoming.tone,
-            settings.f0Center,
-            settings.rangeSemitones,
-          );
+      // PRD §9: the cue plays 300ms before the gate's *leading (right) edge*
+      // enters the screen — not 300ms before it reaches the bird. `gates` is
+      // ascending by xStart (world-space, stable across frames), so the next
+      // gate due a cue is the first one past `lastCuedXStart`. Firing off the
+      // gate's own x1 (rather than the "upcoming" gate, which only becomes
+      // active-gate's successor once the bird enters the current gate) means
+      // every gate gets cued on its own screen-entry, not the previous gate's.
+      const next = snap.gates.find((g) => g.xStart > lastCuedXStart);
+      if (next) {
+        const msUntilOnScreen =
+          ((next.x1 - canvas.width) / snap.difficulty.scrollSpeed) * 1000;
+        if (msUntilOnScreen <= CUE_LEAD_MS) {
+          lastCuedXStart = next.xStart;
+          const audio = getMicSession()?.ctx;
+          // Same context the mic runs on, so it is already gesture-resumed.
+          if (audio && audio.state === "running") {
+            playToneCue(
+              audio,
+              next.tone,
+              settings.f0Center,
+              settings.rangeSemitones,
+            );
+          }
         }
       }
 
@@ -162,8 +161,11 @@ export function Game({
     };
   }, [mode, settings]);
 
-  const upcomingTone = hud?.upcoming?.tone ?? hud?.activeGate?.tone ?? null;
-  const info = upcomingTone === null ? null : TONE_INFO[upcomingTone];
+  // Show the *active* gate's tone while flying it — showing the next gate's
+  // tone mid-gate would teach the wrong contour (this matters most in the
+  // tutorial, where the cue text is the lesson).
+  const displayTone = hud?.activeGate?.tone ?? hud?.upcoming?.tone ?? null;
+  const info = displayTone === null ? null : TONE_INFO[displayTone];
 
   return (
     <div className="screen game-screen">
@@ -183,11 +185,11 @@ export function Game({
             )}
           </div>
 
-          {info && upcomingTone !== null && (
+          {info && displayTone !== null && (
             <div className="hud-syllable">
               <span className="syllable">{info.pinyin}</span>
               <span className="hanzi">{info.hanzi}</span>
-              <span className="tone-num">({upcomingTone})</span>
+              <span className="tone-num">({displayTone})</span>
               {mode === "tutorial" && <span className="cue">{info.cue}</span>}
             </div>
           )}
@@ -203,6 +205,16 @@ export function Game({
         {paused && (
           <div className="overlay" onClick={() => resumeRef.current()}>
             <p>paused — tap to continue</p>
+            <button
+              className="mic-stop"
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuit();
+              }}
+              title="End the run"
+            >
+              ■ quit
+            </button>
           </div>
         )}
       </div>

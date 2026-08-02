@@ -311,6 +311,22 @@ describe("Run — snapshot extras", () => {
     expect(run.snapshot().pinned).toBeNull();
   });
 
+  it("gives each queued gate a stable world-space xStart, ascending and unchanged by scrolling", () => {
+    const run = newGameRun();
+    const before = run.snapshot().gates;
+    expect(before.length).toBeGreaterThanOrEqual(2);
+    // xStart is ascending — the host relies on this to find "the next gate
+    // past the last one cued" without re-scanning from the start.
+    for (let i = 1; i < before.length; i++) {
+      expect(before[i].xStart).toBeGreaterThan(before[i - 1].xStart);
+    }
+    // Scrolling changes screen-space x0/x1 but not the world-space xStart.
+    run.tickFrame(DT, DT);
+    const after = run.snapshot().gates;
+    expect(after[0].xStart).toBe(before[0].xStart);
+    expect(after[0].x0).toBeLessThan(before[0].x0);
+  });
+
   it("raises the noisy flag when most voiced frames jump erratically", () => {
     const run = newGameRun();
     let now = 0;

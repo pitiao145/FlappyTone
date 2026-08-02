@@ -65,6 +65,13 @@ export interface GateView {
   /** Right edge in screen px. */
   x1: number;
   tolChao: number;
+  /**
+   * Stable world-space identity for this gate (its left edge in world px).
+   * Unlike x0/x1 (screen space, changes every frame as the world scrolls),
+   * this is constant for the gate's lifetime — used by the host to key
+   * per-gate bookkeeping such as "has the reference cue fired yet".
+   */
+  xStart: number;
 }
 
 export interface ActiveGateView {
@@ -267,6 +274,7 @@ export class Run {
         x0: this.screenX(g.xStart),
         x1: this.screenX(g.xStart + g.widthPx),
         tolChao: g.tolChao,
+        xStart: g.xStart,
       })),
       activeGate: active
         ? {
