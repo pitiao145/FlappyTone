@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   MedianFilter,
+  clampSlew,
   correctOctave,
   hzToSemitones,
   semitonesToChao,
@@ -43,6 +44,18 @@ describe("correctOctave", () => {
   it("leaves normal movement alone", () => {
     expect(correctOctave(140, 120)).toBe(140);
     expect(correctOctave(120, null)).toBe(120);
+  });
+});
+
+describe("clampSlew", () => {
+  it("passes plausible glides through unchanged", () => {
+    expect(clampSlew(1.0, 0.2, 1.5)).toBe(1.0);
+    expect(clampSlew(-2, null, 1.5)).toBe(-2);
+  });
+
+  it("limits teleport-sized jumps to maxSlew per frame", () => {
+    expect(clampSlew(8, 0, 1.5)).toBe(1.5);
+    expect(clampSlew(-8, 0, 1.5)).toBe(-1.5);
   });
 });
 

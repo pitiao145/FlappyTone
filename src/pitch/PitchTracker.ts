@@ -1,6 +1,7 @@
 import { PitchDetector } from "pitchy";
 import {
   MedianFilter,
+  clampSlew,
   correctOctave,
   hzToSemitones,
   rmsOf,
@@ -15,6 +16,9 @@ export const DEFAULT_CONFIG: Omit<PitchTrackerConfig, "sampleRate"> = {
   // Tuned via `npm run tune` — median-5 does the de-jitter work, so the
   // exponential smoother can be fast; 0.85 clarity missed too many frames.
   alpha: 0.85,
+  // ~1.5 st per ~23ms hop ≈ 65 st/s — well above any real vocal glide
+  // (Tone 4 is ~25 st/s) but stops detector jumps from teleporting the dot
+  maxSlewSemitones: 1.5,
   clarityThreshold: 0.8,
   noiseFloor: 0.0033, // effective RMS floor ≈ 0.01 until calibration exists
   fMin: 70,
@@ -26,6 +30,7 @@ export class PitchTracker {
   private detector: PitchDetector<Float32Array>;
   private median = new MedianFilter(5);
   private prevVoicedF0: number | null = null;
+  private prevSemitones: number | null = null;
   private smoothedChao = 3;
 
   constructor(config: Partial<PitchTrackerConfig> & { sampleRate: number }) {
@@ -69,6 +74,7 @@ export class PitchTracker {
       inBand && clarity >= clarityThreshold && rms >= noiseFloor * 3;
 
     if (!voiced) {
+      this.prevSemitones = null;
       return {
         f0: null,
         clarity,
@@ -84,7 +90,12 @@ export class PitchTracker {
     this.prevVoicedF0 = f0;
     const medianF0 = this.median.push(f0);
 
-    const semitones = hzToSemitones(medianF0, f0Center);
+    const semitones = clampSlew(
+      hzToSemitones(medianF0, f0Center),
+      this.prevSemitones,
+      this.config.maxSlewSemitones,
+    );
+    this.prevSemitones = semitones;
     const chao = semitonesToChao(semitones, rangeSemitones);
     this.smoothedChao += alpha * (chao - this.smoothedChao);
 

@@ -27,6 +27,21 @@ export function correctOctave(
   return f0;
 }
 
+/**
+ * Limit the per-frame semitone change to maxSlew. A voice glides; a detector
+ * glitch teleports — anything faster than a plausible glide is an error.
+ */
+export function clampSlew(
+  semitones: number,
+  prevSemitones: number | null,
+  maxSlew: number,
+): number {
+  if (prevSemitones === null) return semitones;
+  const delta = semitones - prevSemitones;
+  if (Math.abs(delta) <= maxSlew) return semitones;
+  return prevSemitones + Math.sign(delta) * maxSlew;
+}
+
 export function rmsOf(frame: Float32Array): number {
   let sum = 0;
   for (let i = 0; i < frame.length; i++) sum += frame[i] * frame[i];

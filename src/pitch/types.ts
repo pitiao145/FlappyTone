@@ -19,6 +19,8 @@ export interface PitchTrackerConfig {
   /** Semitones from centre to top/bottom of the Chao scale (PRD: 3–8) */
   rangeSemitones: number;
   alpha: number;
+  /** Max semitone change per analysis frame; faster jumps are detector errors */
+  maxSlewSemitones: number;
   clarityThreshold: number;
   /** Calibrated silence RMS; voiced requires rms >= noiseFloor * 3 */
   noiseFloor: number;

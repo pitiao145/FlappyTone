@@ -1,9 +1,16 @@
-import type { PitchState } from "../pitch/types.ts";
-
 export interface TrailSample {
   chao: number;
   voiced: boolean;
   t: number;
+}
+
+export interface SceneSnapshot {
+  /** Eased display position of the dot, in chao units */
+  chao: number;
+  /** Voiced, or within the unvoiced grace period — controls dot fill */
+  voiced: boolean;
+  trail: readonly TrailSample[];
+  trailSeconds: number;
 }
 
 // PRD §5.1: y(chao) = 0.80H - ((chao - 1) / 4) * 0.60H
@@ -15,10 +22,9 @@ export function drawScene(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
-  pitch: PitchState,
-  trail: readonly TrailSample[],
-  trailSeconds: number,
+  snapshot: SceneSnapshot,
 ): void {
+  const { trail, trailSeconds } = snapshot;
   ctx.fillStyle = "#111318";
   ctx.fillRect(0, 0, width, height);
 
@@ -56,11 +62,11 @@ export function drawScene(
   }
 
   // The dot
-  const dotY = chaoToY(pitch.smoothedChao, height);
+  const dotY = chaoToY(snapshot.chao, height);
   const r = width * 0.03;
   ctx.beginPath();
   ctx.arc(dotX, dotY, r, 0, Math.PI * 2);
-  if (pitch.voiced) {
+  if (snapshot.voiced) {
     ctx.fillStyle = "#60cdff";
     ctx.fill();
   } else {
