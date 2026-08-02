@@ -1,5 +1,5 @@
 import { PitchTracker } from "../pitch/PitchTracker.ts";
-import type { PitchState } from "../pitch/types.ts";
+import type { PitchState, PitchTrackerConfig } from "../pitch/types.ts";
 import { drawScene, type TrailSample } from "../render/scene.ts";
 
 // Dot dynamics live in dynamics.ts (a pure module) so run.ts can share them
@@ -54,9 +54,25 @@ export function getTracker(): PitchTracker | null {
   return state.tracker;
 }
 
+/**
+ * Config applied to the preview tracker when it is (re)built — the player's
+ * saved calibration, so the preview dot behaves exactly like the game's.
+ * Calling this discards the current tracker so the next frame rebuilds it.
+ */
+let trackerOverrides: Partial<PitchTrackerConfig> = {};
+
+export function configureTracker(cfg: Partial<PitchTrackerConfig>): void {
+  trackerOverrides = cfg;
+  state.tracker = null;
+  state.trail = [];
+  state.targetChao = REST_CHAO;
+  state.displayChao = REST_CHAO;
+  state.lastVoicedAt = -Infinity;
+}
+
 export function handleFrame(frame: Float32Array, sampleRate: number): void {
   if (!state.tracker) {
-    state.tracker = new PitchTracker({ sampleRate });
+    state.tracker = new PitchTracker({ ...trackerOverrides, sampleRate });
   }
   state.latest = state.tracker.push(frame);
   // Only voiced frames join the trail — held/unvoiced samples painted a flat

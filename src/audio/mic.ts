@@ -16,6 +16,12 @@ export class MicError extends Error {
 
 export interface MicSession {
   sampleRate: number;
+  /**
+   * The capture AudioContext. Exposed so the host can suspend it when the tab
+   * is backgrounded (PRD §10) and so reference cues can be played through the
+   * same, already-gesture-resumed context.
+   */
+  ctx: AudioContext;
   stop: () => void;
 }
 
@@ -112,6 +118,7 @@ export async function startMic(
 
   return {
     sampleRate: ctx.sampleRate,
+    ctx,
     stop: () => {
       node.port.onmessage = null;
       source.disconnect();

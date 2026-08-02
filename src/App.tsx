@@ -1,73 +1,146 @@
 import { useCallback, useRef, useState } from "react";
-import { MicError, startMic, type MicSession } from "./audio/mic";
+import { MicError } from "./audio/mic";
+import { ensureMic, stopMic } from "./audio/session";
 import { DevPanel } from "./dev/DevPanel";
-import { handleFrame, startLoop } from "./game/loop";
+import type { RunSnapshot } from "./game/run";
+import { loadSettings, type CalibrationSettings } from "./game/settings";
+import type { RunStats } from "./game/scoring";
+import { Calibration } from "./ui/Calibration";
+import { Game } from "./ui/Game";
+import { GameOver } from "./ui/GameOver";
+import { HowTo } from "./ui/HowTo";
+import { micErrorCopy } from "./ui/micErrors";
+import { Title, type StartIntent } from "./ui/Title";
 import "./App.css";
 
-type Phase = "idle" | "starting" | "running" | "error";
-
-const ERROR_COPY: Record<string, string> = {
-  "permission-denied":
-    "Microphone access was denied. Allow the mic in your browser's site settings and reload.",
-  "no-microphone": "No microphone found. Plug one in and reload.",
-  "no-audioworklet":
-    "This browser doesn't support AudioWorklet. Try a recent Chrome, Firefox or Safari.",
-  unknown: "Couldn't start the microphone.",
-};
+type Screen = "title" | "howto" | "calibrate" | "tutorial" | "game" | "gameover";
 
 const CANVAS_W = 420;
 const CANVAS_H = Math.round((420 * 16) / 9);
 
 export default function App() {
-  const [phase, setPhase] = useState<Phase>("idle");
-  const [errorKind, setErrorKind] = useState<string>("unknown");
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const sessionRef = useRef<MicSession | null>(null);
+  const [screen, setScreen] = useState<Screen>("title");
+  const [settings, setSettings] = useState<CalibrationSettings | null>(() =>
+    loadSettings(),
+  );
+  const [stats, setStats] = useState<RunStats | null>(null);
+  const [tutorialDone, setTutorialDone] = useState(false);
+  const [devOpen, setDevOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  /** Where to go once calibration finishes, when Play/Tutorial routed through it. */
+  const pendingRef = useRef<"game" | "tutorial" | null>(null);
+  /** The mode of the run that just ended — drives Retry. */
+  const lastModeRef = useRef<"game" | "tutorial">("game");
 
-  const stop = useCallback(() => {
-    sessionRef.current?.stop();
-    sessionRef.current = null;
-    setPhase("idle");
+  const goHome = useCallback(() => {
+    stopMic();
+    setScreen("title");
   }, []);
 
-  const start = useCallback(async () => {
-    setPhase("starting");
+  /** Title has already opened the mic inside its click handler. */
+  const startFromTitle = useCallback(
+    (intent: StartIntent) => {
+      setTutorialDone(false);
+      setError(null);
+      if (intent === "calibrate") {
+        pendingRef.current = null;
+        setScreen("calibrate");
+        return;
+      }
+      lastModeRef.current = intent;
+      // Playing without calibration would map the player's voice through a
+      // stranger's f0 centre. Calibrate first, then continue to the run.
+      if (!settings) {
+        pendingRef.current = intent;
+        setScreen("calibrate");
+        return;
+      }
+      setScreen(intent);
+    },
+    [settings],
+  );
+
+  const onCalibrated = useCallback((s: CalibrationSettings) => {
+    setSettings(s);
+    const pending = pendingRef.current;
+    pendingRef.current = null;
+    if (pending) {
+      lastModeRef.current = pending;
+      setScreen(pending);
+    } else {
+      goHome();
+    }
+  }, [goHome]);
+
+  const onRunOver = useCallback((snap: RunSnapshot) => {
+    // Game.tsx has already stopped the mic.
+    if (lastModeRef.current === "tutorial") {
+      setTutorialDone(true);
+      setScreen("title");
+      return;
+    }
+    setStats(snap.stats);
+    setScreen("gameover");
+  }, []);
+
+  const retry = useCallback(async () => {
+    setError(null);
     try {
-      // startMic must be called inside this gesture handler (iOS Safari)
-      sessionRef.current = await startMic(handleFrame);
-      if (canvasRef.current) startLoop(canvasRef.current);
-      setPhase("running");
+      // Retry is a click, so this reopens the mic inside a user gesture.
+      await ensureMic();
+      setScreen(lastModeRef.current);
     } catch (err) {
-      setErrorKind(err instanceof MicError ? err.kind : "unknown");
-      setPhase("error");
+      setError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
+      setScreen("title");
     }
   }, []);
 
   return (
     <div className="app">
-      <div className="stage">
-        <canvas ref={canvasRef} width={CANVAS_W} height={CANVAS_H} />
-        {phase === "running" && (
-          <button className="mic-stop" onClick={stop} title="Turn the microphone off">
-            ■ stop mic
-          </button>
+      <div className="frame">
+        {screen === "title" && (
+          <>
+            <Title
+              calibrated={settings !== null}
+              tutorialDone={tutorialDone}
+              devOpen={devOpen}
+              onToggleDev={() => setDevOpen((v) => !v)}
+              onStart={startFromTitle}
+              onHowTo={() => setScreen("howto")}
+            />
+            {error && <p className="error">{error}</p>}
+          </>
         )}
-        {phase !== "running" && (
-          <div className="overlay">
-            {phase === "error" ? (
-              <p className="error">{ERROR_COPY[errorKind]}</p>
-            ) : (
-              <>
-                <p>Needs a microphone and a quiet room.</p>
-                <button onClick={start} disabled={phase === "starting"}>
-                  {phase === "starting" ? "Starting…" : "Tap to start"}
-                </button>
-              </>
-            )}
-          </div>
+
+        {screen === "howto" && <HowTo onBack={() => setScreen("title")} />}
+
+        {screen === "calibrate" && (
+          <Calibration
+            canvasWidth={CANVAS_W}
+            canvasHeight={CANVAS_H}
+            onDone={onCalibrated}
+            onCancel={goHome}
+          />
+        )}
+
+        {(screen === "game" || screen === "tutorial") && settings && (
+          <Game
+            key={screen}
+            mode={screen === "tutorial" ? "tutorial" : "game"}
+            settings={settings}
+            canvasWidth={CANVAS_W}
+            canvasHeight={CANVAS_H}
+            onOver={onRunOver}
+            onQuit={goHome}
+          />
+        )}
+
+        {screen === "gameover" && stats && (
+          <GameOver stats={stats} onRetry={() => void retry()} onHome={goHome} />
         )}
       </div>
-      <DevPanel />
+
+      {devOpen && <DevPanel />}
     </div>
   );
 }

@@ -10,10 +10,262 @@
   font-family: system-ui, sans-serif;
 }
 
+.frame {
+  width: 100%;
+  max-width: 420px;
+}
+
 .stage {
   position: relative;
   width: 100%;
   max-width: 420px;
+}
+
+/* ---------------------------------------------------------------- screens */
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: stretch;
+  text-align: center;
+}
+
+.screen h1 {
+  font-size: 2.2rem;
+  letter-spacing: 0.04em;
+}
+
+.screen h2 {
+  font-size: 1.4rem;
+}
+
+.screen h3 {
+  font-size: 1rem;
+  color: #9aa4b0;
+}
+
+.screen p {
+  line-height: 1.5;
+}
+
+.tagline,
+.note {
+  color: #9aa4b0;
+  font-size: 0.9rem;
+}
+
+.prompt {
+  color: #60cdff;
+}
+
+.error {
+  color: #ff9d9d;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.screen button {
+  font-size: 1rem;
+  padding: 12px 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: #dfe5ec;
+  cursor: pointer;
+}
+
+.screen button.primary {
+  border: none;
+  background: #60cdff;
+  color: #05070a;
+}
+
+.screen button.link {
+  border: none;
+  color: #9aa4b0;
+  font-size: 0.85rem;
+  padding: 6px;
+}
+
+.dev-toggle {
+  align-self: center;
+  font-size: 11px !important;
+  padding: 4px 10px !important;
+  color: #6b7684 !important;
+}
+
+/* ------------------------------------------------------------ how to play */
+
+.tone-list,
+.facts {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  color: #9aa4b0;
+  font-size: 0.9rem;
+}
+
+.tone-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.syllable {
+  font-size: 1.2rem;
+  color: #dfe5ec;
+}
+
+.hanzi {
+  font-size: 1.1rem;
+  color: #dfe5ec;
+}
+
+/* ----------------------------------------------------------- calibration */
+
+.meter {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.meter-fill {
+  display: block;
+  height: 100%;
+  background: #60cdff;
+  transition: width 60ms linear;
+}
+
+.big {
+  font-size: 1.3rem;
+}
+
+.slider {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  color: #9aa4b0;
+  font-size: 12px;
+}
+
+.slider input[type="range"] {
+  width: 100%;
+}
+
+/* ------------------------------------------------------------------- HUD */
+
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  gap: 8px;
+}
+
+.hud-top {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-top .score {
+  font-size: 1.2rem;
+}
+
+.hud-top .hearts {
+  color: #ff9d9d;
+  margin-left: auto;
+}
+
+.hud-top .combo {
+  color: #60cdff;
+}
+
+.hud-syllable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.hud-syllable .syllable {
+  font-size: 2rem;
+}
+
+.hud-syllable .tone-num,
+.hud-syllable .cue {
+  font-size: 0.85rem;
+  color: #9aa4b0;
+}
+
+.toast,
+.hint {
+  margin-top: auto;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  background: rgba(5, 7, 10, 0.7);
+  color: #9aa4b0;
+}
+
+/* ------------------------------------------------------------- game over */
+
+.score-big {
+  font-size: 2.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.breakdown-row .bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.breakdown-row .bar-fill {
+  display: block;
+  height: 100%;
+  background: #60cdff;
+}
+
+.breakdown-row .pct {
+  width: 44px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdown-row .unheard {
+  font-size: 0.75rem;
+  color: #6b7684;
 }
 
 .stage canvas {

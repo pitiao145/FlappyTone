@@ -46,6 +46,10 @@ export class PitchTracker {
     this.config.rangeSemitones = range;
   }
 
+  setNoiseFloor(rms: number): void {
+    this.config.noiseFloor = rms;
+  }
+
   setAlpha(alpha: number): void {
     this.config.alpha = alpha;
   }
