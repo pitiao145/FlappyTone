@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type CalibrationSettings,
   clearSettings,
+  loadPace,
   loadSettings,
+  savePace,
   saveSettings,
 } from "./settings.ts";
 
@@ -180,5 +182,34 @@ describe("Settings persistence", () => {
       rangeSemitones: "5",
     });
     expect(loadSettings()).toBeNull();
+  });
+});
+
+describe("Pace persistence", () => {
+  beforeEach(() => {
+    const map: Record<string, string> = {};
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => map[key] ?? null,
+      setItem: (key: string, value: string) => {
+        map[key] = value;
+      },
+      removeItem: (key: string) => {
+        delete map[key];
+      },
+    } as Storage);
+  });
+
+  it("defaults to normal when unset", () => {
+    expect(loadPace()).toBe("normal");
+  });
+
+  it("round-trips a saved pace", () => {
+    savePace("relaxed");
+    expect(loadPace()).toBe("relaxed");
+  });
+
+  it("falls back to normal on a corrupt value", () => {
+    localStorage.setItem("toneflap.pace.v1", "warp");
+    expect(loadPace()).toBe("normal");
   });
 });

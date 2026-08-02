@@ -379,3 +379,27 @@ describe("Run — snapshot extras", () => {
     }
   });
 });
+
+describe("Run — pace", () => {
+  it("defaults to the PRD baseline difficulty", () => {
+    const run = new Run({ mode: "game", width: 420, rand: () => 0.1 });
+    expect(run.snapshot().difficulty.scrollSpeed).toBeCloseTo(220);
+    expect(run.snapshot().difficulty.restMs).toBeCloseTo(900);
+  });
+
+  it("a relaxed pace slows scroll and stretches rest for the whole run", () => {
+    const run = new Run({
+      mode: "game",
+      width: 420,
+      rand: () => 0.1,
+      pace: "relaxed",
+    });
+    expect(run.snapshot().difficulty.scrollSpeed).toBeCloseTo(220 * 0.75);
+    expect(run.snapshot().difficulty.restMs).toBeCloseTo(900 * 2);
+  });
+
+  it("pace also applies in tutorial mode", () => {
+    const run = new Run({ mode: "tutorial", width: 420, pace: "normal" });
+    expect(run.snapshot().difficulty.scrollSpeed).toBeCloseTo(220 * 0.9);
+  });
+});

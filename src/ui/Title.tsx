@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { MicError } from "../audio/mic.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
+import { PACES, type Pace } from "../game/gates.ts";
+import { loadPace, savePace } from "../game/settings.ts";
 import { micErrorCopy } from "./micErrors.ts";
 
 export type StartIntent = "game" | "tutorial" | "calibrate";
@@ -29,6 +31,7 @@ export function Title({
 }: Props) {
   const [ownError, setOwnError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pace, setPace] = useState<Pace>(loadPace);
   const error = ownError ?? externalError;
 
   // The mic is opened here, inside the click handler, because iOS Safari only
@@ -72,6 +75,22 @@ export function Title({
         <button disabled={busy} onClick={onHowTo}>
           How to play
         </button>
+      </div>
+
+      <div className="pace-row">
+        <span className="pace-label">Speed</span>
+        {PACES.map((p) => (
+          <button
+            key={p}
+            className={p === pace ? "pace active" : "pace"}
+            onClick={() => {
+              setPace(p);
+              savePace(p);
+            }}
+          >
+            {p}
+          </button>
+        ))}
       </div>
 
       <p className="note">Needs a microphone and a quiet room.</p>

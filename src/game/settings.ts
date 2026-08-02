@@ -1,8 +1,10 @@
 /**
  * Settings persistence via localStorage.
  * CalibrationSettings holds the user's mic calibration (f0 centre, noise floor)
- * and their preferred tone range.
+ * and their preferred tone range. Also persists the chosen game pace.
  */
+
+import { PACES, type Pace } from "./gates.ts";
 
 export interface CalibrationSettings {
   /** Baseline f0 in Hz, typically ~100–150 for most speakers. Used to map voice pitch to Chao 1–5. */
@@ -58,4 +60,25 @@ export function saveSettings(s: CalibrationSettings): void {
  */
 export function clearSettings(): void {
   localStorage.removeItem(KEY);
+}
+
+// ---------------------------------------------------------------- game pace
+
+const PACE_KEY = "toneflap.pace.v1";
+const DEFAULT_PACE: Pace = "normal";
+
+/**
+ * Load the player's chosen pace. Defaults to "normal" (a notch calmer than
+ * the PRD baseline) when unset or corrupt — playtesting found the baseline
+ * too fast for learning.
+ */
+export function loadPace(): Pace {
+  const raw = localStorage.getItem(PACE_KEY);
+  return raw !== null && (PACES as string[]).includes(raw)
+    ? (raw as Pace)
+    : DEFAULT_PACE;
+}
+
+export function savePace(pace: Pace): void {
+  localStorage.setItem(PACE_KEY, pace);
 }

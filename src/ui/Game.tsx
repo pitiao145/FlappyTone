@@ -3,7 +3,7 @@ import { playToneCue } from "../audio/reference.ts";
 import { getMicSession, setFrameSink, stopMic } from "../audio/session.ts";
 import { TONE_INFO } from "../game/gates.ts";
 import { Run, type RunMode, type RunSnapshot } from "../game/run.ts";
-import type { CalibrationSettings } from "../game/settings.ts";
+import { loadPace, type CalibrationSettings } from "../game/settings.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { drawWorld } from "../render/world.ts";
 
@@ -47,7 +47,8 @@ export function Game({
     const ctx2d = canvas?.getContext("2d");
     if (!canvas || !ctx2d) return;
 
-    const run = new Run({ mode, width: canvas.width });
+    // Game remounts per run, so this picks up the latest saved pace.
+    const run = new Run({ mode, width: canvas.width, pace: loadPace() });
     let tracker: PitchTracker | null = null;
     let rafId = 0;
     let running = true;

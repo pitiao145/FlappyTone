@@ -93,6 +93,29 @@
   padding: 6px;
 }
 
+.pace-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pace-label {
+  color: #9aa4b0;
+  font-size: 0.85rem;
+  margin-right: 4px;
+}
+
+.screen button.pace {
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  color: #9aa4b0;
+}
+
+.screen button.pace.active {
+  border-color: #60cdff;
+  color: #60cdff;
+}
+
 .dev-toggle {
   align-self: center;
   font-size: 11px !important;

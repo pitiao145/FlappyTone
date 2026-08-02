@@ -91,6 +91,33 @@ export function newDifficulty(): Difficulty {
 }
 
 /**
+ * Player-selectable pacing. "fast" is the PRD §6 baseline; the slower paces
+ * scale scroll speed down and stretch the rest interval between gates.
+ * Gate duration is unaffected (width is derived from scroll speed), so a
+ * syllable is always ~600ms — pace only changes how much breathing room
+ * sits between gates and how quickly the world moves.
+ */
+export type Pace = "relaxed" | "normal" | "fast";
+
+export const PACES: Pace[] = ["relaxed", "normal", "fast"];
+
+const PACE_FACTORS: Record<Pace, { speed: number; rest: number }> = {
+  relaxed: { speed: 0.75, rest: 2.0 },
+  normal: { speed: 0.9, rest: 1.5 },
+  fast: { speed: 1.0, rest: 1.0 },
+};
+
+/** Scales a (possibly ramped) difficulty by the chosen pace. */
+export function applyPace(d: Difficulty, pace: Pace): Difficulty {
+  const f = PACE_FACTORS[pace];
+  return {
+    scrollSpeed: d.scrollSpeed * f.speed,
+    toleranceH: d.toleranceH,
+    restMs: d.restMs * f.rest,
+  };
+}
+
+/**
  * Applies the PRD difficulty ramp: every 5 gates cleared, scrollSpeed *= 1.08
  * (cap 2.2x base), toleranceH *= 0.95 (floor 0.07), restMs *= 0.95 (floor 600ms).
  * Always ramps from the fixed base constants keyed by total gatesCleared, so

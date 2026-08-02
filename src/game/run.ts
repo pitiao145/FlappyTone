@@ -10,6 +10,7 @@
  */
 
 import {
+  applyPace,
   corridorChaoAt,
   makeGate,
   newDifficulty,
@@ -17,6 +18,7 @@ import {
   rampDifficulty,
   type Difficulty,
   type Gate,
+  type Pace,
   type Tone,
 } from "./gates.ts";
 import {
@@ -50,6 +52,12 @@ export interface RunConfig {
   width: number;
   /** Injected for deterministic tests. Defaults to Math.random. */
   rand?: () => number;
+  /**
+   * Pacing selected by the player (see gates.ts). Defaults to "fast", the
+   * PRD baseline, so existing callers and tests are unaffected; the UI passes
+   * the persisted choice (default "normal").
+   */
+  pace?: Pace;
 }
 
 export interface TrailSample {
@@ -146,6 +154,7 @@ export class Run {
   private readonly mode: RunMode;
   private readonly width: number;
   private readonly rand: () => number;
+  private readonly pace: Pace;
 
   /** Distance the world has scrolled, in px. The bird's world position. */
   private worldX = 0;
@@ -180,6 +189,7 @@ export class Run {
     this.mode = cfg.mode;
     this.width = cfg.width;
     this.rand = cfg.rand ?? Math.random;
+    this.pace = cfg.pace ?? "fast";
     this.difficulty = this.difficultyFor(0);
     this.stats = newRunStats(3);
     this.fillQueue();
@@ -401,9 +411,11 @@ export class Run {
   private difficultyFor(gatesCleared: number): Difficulty {
     const base =
       this.mode === "tutorial" ? newDifficulty() : rampDifficulty(gatesCleared);
-    return this.mode === "tutorial"
-      ? { ...base, toleranceH: base.toleranceH * TUTORIAL_TOLERANCE_FACTOR }
-      : base;
+    const withTutorial =
+      this.mode === "tutorial"
+        ? { ...base, toleranceH: base.toleranceH * TUTORIAL_TOLERANCE_FACTOR }
+        : base;
+    return applyPace(withTutorial, this.pace);
   }
 
   /** Drops gates that have scrolled off the left edge. */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyPace,
   corridorChaoAt,
   makeGate,
   newDifficulty,
@@ -155,5 +156,31 @@ describe("makeGate", () => {
     const d = newDifficulty();
     const g = makeGate(3, 0, d);
     expect(g.tolChao).toBeCloseTo(0.8 * 1.3);
+  });
+});
+
+describe("applyPace", () => {
+  it("fast is the identity (PRD baseline)", () => {
+    const d = newDifficulty();
+    expect(applyPace(d, "fast")).toEqual(d);
+  });
+
+  it("normal slows scroll and stretches rest, leaving tolerance alone", () => {
+    const d = applyPace(newDifficulty(), "normal");
+    expect(d.scrollSpeed).toBeCloseTo(220 * 0.9);
+    expect(d.restMs).toBeCloseTo(900 * 1.5);
+    expect(d.toleranceH).toBeCloseTo(0.12);
+  });
+
+  it("relaxed slows further and doubles the rest interval", () => {
+    const d = applyPace(newDifficulty(), "relaxed");
+    expect(d.scrollSpeed).toBeCloseTo(220 * 0.75);
+    expect(d.restMs).toBeCloseTo(900 * 2);
+  });
+
+  it("keeps gate duration at 600ms — width scales with paced speed", () => {
+    const d = applyPace(newDifficulty(), "relaxed");
+    const g = makeGate(1, 0, d);
+    expect(g.widthPx / d.scrollSpeed).toBeCloseTo(0.6);
   });
 });
