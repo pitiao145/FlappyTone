@@ -18,7 +18,7 @@ import {
 } from "../game/settings.ts";
 import { micErrorCopy } from "./micErrors.ts";
 
-export type StartIntent = "game" | "tutorial" | "calibrate";
+export type StartIntent = "game" | "tutorial" | "calibrate" | "capture";
 
 interface Props {
   calibrated: boolean;
@@ -149,6 +149,11 @@ export function Title({
       <button className="dev-toggle" onClick={onToggleDev}>
         {devOpen ? "hide dev" : "dev"}
       </button>
+      {devOpen && (
+        <button className="dev-toggle" disabled={busy} onClick={go("capture")}>
+          capture
+        </button>
+      )}
     </div>
   );
 }

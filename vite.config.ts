@@ -8,4 +8,6 @@ import basicSsl from '@vitejs/plugin-basic-ssl'
 // only allow mic access in a secure context.
 export default defineConfig({
   plugins: [react(), basicSsl()],
+  // Reachable from the phone on the LAN (soundboard + on-device testing).
+  server: { host: true },
 })

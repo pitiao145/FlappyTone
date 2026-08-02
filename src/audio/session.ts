@@ -75,6 +75,14 @@ export function getMicSession(): MicSession | null {
   return session;
 }
 
+/**
+ * Dev escape hatch: lets a replay driver (src/dev/replay.ts) stand in for the
+ * mic by pushing WAV-derived frames into whatever sink is installed.
+ */
+export function feedFrame(frame: Float32Array, sampleRate: number): void {
+  sink?.(frame, sampleRate);
+}
+
 /** Installs (or clears) the consumer of analysis frames. */
 export function setFrameSink(fn: FrameSink | null): void {
   sink = fn;

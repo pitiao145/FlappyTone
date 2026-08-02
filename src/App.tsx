@@ -1,7 +1,9 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MicError } from "./audio/mic";
 import { ensureMic, stopMic } from "./audio/session";
+import { Capture } from "./dev/Capture";
 import { DevPanel } from "./dev/DevPanel";
+import { startReplay, stopReplay } from "./dev/replay";
 import type { RunSnapshot } from "./game/run";
 import { loadSettings, type CalibrationSettings } from "./game/settings";
 import type { RunStats } from "./game/scoring";
@@ -13,7 +15,14 @@ import { micErrorCopy } from "./ui/micErrors";
 import { Title, type StartIntent } from "./ui/Title";
 import "./App.css";
 
-type Screen = "title" | "howto" | "calibrate" | "tutorial" | "game" | "gameover";
+type Screen =
+  | "title"
+  | "howto"
+  | "calibrate"
+  | "tutorial"
+  | "game"
+  | "gameover"
+  | "capture";
 
 const CANVAS_W = 420;
 const CANVAS_H = Math.round((420 * 16) / 9);
@@ -40,8 +49,13 @@ export default function App() {
    */
   const navRef = useRef(0);
 
+  /** Set by Capture's "replay into game"; consumed when the game screen mounts. */
+  const replayRef = useRef<{ samples: Float32Array; sampleRate: number } | null>(null);
+
   const goHome = useCallback(() => {
     navRef.current += 1;
+    stopReplay();
+    replayRef.current = null;
     stopMic();
     setRetryBusy(false);
     setScreen("title");
@@ -52,6 +66,11 @@ export default function App() {
     (intent: StartIntent) => {
       setTutorialDone(false);
       setError(null);
+      if (intent === "capture") {
+        // Dev tooling — no calibration needed, tracker runs on defaults.
+        setScreen("capture");
+        return;
+      }
       if (intent === "calibrate") {
         pendingRef.current = null;
         setScreen("calibrate");
@@ -69,6 +88,26 @@ export default function App() {
     },
     [settings],
   );
+
+  /** Dev replay: run the game from a recording instead of the mic. */
+  const startReplayRun = useCallback((samples: Float32Array, sampleRate: number) => {
+    replayRef.current = { samples, sampleRate };
+    lastModeRef.current = "game";
+    setScreen("game");
+  }, []);
+
+  // Start the driver after the game screen mounts (its effect installs the
+  // frame sink first — child effects run before the parent's).
+  useEffect(() => {
+    if (screen === "game" && replayRef.current) {
+      const { samples, sampleRate } = replayRef.current;
+      startReplay(samples, sampleRate);
+      return () => {
+        stopReplay();
+        replayRef.current = null;
+      };
+    }
+  }, [screen]);
 
   const onCalibrated = useCallback((s: CalibrationSettings) => {
     setSettings(s);
@@ -127,6 +166,14 @@ export default function App() {
         )}
 
         {screen === "howto" && <HowTo onBack={() => setScreen("title")} />}
+
+        {screen === "capture" && (
+          <Capture
+            onBack={goHome}
+            onReplay={startReplayRun}
+            replayEnabled={settings !== null}
+          />
+        )}
 
         {screen === "calibrate" && (
           <Calibration

@@ -108,7 +108,39 @@ Rule for the agent: never update a snapshot without showing the before/after con
 
 ---
 
-## 4. What still needs a human
+## 4. The capture → report tuning loop
+
+The dot's behaviour on *real* voices (through the real acoustic path: speaker →
+room → laptop mic) is tuned with three dev tools built for the purpose:
+
+1. **Phone soundboard** — `https://<laptop-ip>:5173/?soundboard` on a phone.
+   Tiles for every native clip in `public/clips/` (fetched by
+   `npm run fetch-clips` from audio-cmn, CC-BY-SA; speakers `chen` male,
+   `tan` female). Point the phone at the laptop mic and tap.
+2. **Capture screen** — laptop, Title → `dev` → `capture`. Record while a clip
+   plays; Stop downloads `<name>.wav` + `<name>.telemetry.json`. Naming:
+   `<speaker>_<syllable><tone>[_note]` (e.g. `chen_ma3`, `pierre_ma2_fast`) —
+   the trailing digit tells the report CLI which contour to score against.
+   Move WAVs into `fixtures/captures/` and commit them.
+3. **Report CLI** — `npm run report [files...] [--set alpha=0.6,clarity=0.8]...
+   [--json out.json] [--f0 hz]`. Defaults to all of `fixtures/captures/*.wav`.
+   Replays each file through `PitchTracker` per parameter set and prints, per
+   auto-segmented utterance: **fit** (rmse vs the tone's ideal contour, chao),
+   **lag** (smoothing delay in ms), **wiggle** (excess shake), **voiced%**,
+   **maxDrop**, plus an ASCII overlay of raw (·), smoothed/dot (o) and ideal
+   (-). `--json` dumps full frame series for machine reading. Per-speaker
+   `f0Center` goes in `fixtures/captures/speakers.json` (`{"pierre": 118}`);
+   measure it with `npm run analyze` (median voiced f0 of a tone-1 capture).
+
+Tuning workflow: capture once → `npm run report --set ... --set ...` → pick the
+winner on the numbers → update `DEFAULT_CONFIG` → re-run fixture tests and
+report which goldens moved. To *feel* a candidate, use the Capture screen's
+"replay a WAV into the game" input: the game runs with the recording standing
+in for the mic, identical input every time.
+
+---
+
+## 5. What still needs a human
 
 The fixture tests cover the pipeline. They do not cover *feel*. These require Pierre with a microphone:
 
