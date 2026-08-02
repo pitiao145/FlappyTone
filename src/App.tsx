@@ -27,13 +27,23 @@ export default function App() {
   const [tutorialDone, setTutorialDone] = useState(false);
   const [devOpen, setDevOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryBusy, setRetryBusy] = useState(false);
   /** Where to go once calibration finishes, when Play/Tutorial routed through it. */
   const pendingRef = useRef<"game" | "tutorial" | null>(null);
   /** The mode of the run that just ended — drives Retry. */
   const lastModeRef = useRef<"game" | "tutorial">("game");
 
+  /**
+   * Bumped on every deliberate navigation. An in-flight `ensureMic` compares
+   * it after awaiting, so a Retry that resolves *after* the player pressed
+   * Home can never drop them into a run they left.
+   */
+  const navRef = useRef(0);
+
   const goHome = useCallback(() => {
+    navRef.current += 1;
     stopMic();
+    setRetryBusy(false);
     setScreen("title");
   }, []);
 
@@ -85,13 +95,19 @@ export default function App() {
 
   const retry = useCallback(async () => {
     setError(null);
+    setRetryBusy(true);
+    const gen = ++navRef.current;
     try {
       // Retry is a click, so this reopens the mic inside a user gesture.
       await ensureMic();
+      if (gen !== navRef.current) return; // player left while we were waiting
       setScreen(lastModeRef.current);
     } catch (err) {
+      if (gen !== navRef.current) return;
       setError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
       setScreen("title");
+    } finally {
+      setRetryBusy(false);
     }
   }, []);
 
@@ -99,17 +115,15 @@ export default function App() {
     <div className="app">
       <div className="frame">
         {screen === "title" && (
-          <>
-            <Title
-              calibrated={settings !== null}
-              tutorialDone={tutorialDone}
-              devOpen={devOpen}
-              onToggleDev={() => setDevOpen((v) => !v)}
-              onStart={startFromTitle}
-              onHowTo={() => setScreen("howto")}
-            />
-            {error && <p className="error">{error}</p>}
-          </>
+          <Title
+            calibrated={settings !== null}
+            tutorialDone={tutorialDone}
+            devOpen={devOpen}
+            error={error}
+            onToggleDev={() => setDevOpen((v) => !v)}
+            onStart={startFromTitle}
+            onHowTo={() => setScreen("howto")}
+          />
         )}
 
         {screen === "howto" && <HowTo onBack={() => setScreen("title")} />}
@@ -136,7 +150,12 @@ export default function App() {
         )}
 
         {screen === "gameover" && stats && (
-          <GameOver stats={stats} onRetry={() => void retry()} onHome={goHome} />
+          <GameOver
+            stats={stats}
+            busy={retryBusy}
+            onRetry={() => void retry()}
+            onHome={goHome}
+          />
         )}
       </div>
 

@@ -3,11 +3,13 @@ import { takeaway, toneBreakdown, type RunStats } from "../game/scoring.ts";
 
 interface Props {
   stats: RunStats;
+  /** True while the mic is reopening — stops a second Retry racing the first. */
+  busy: boolean;
   onRetry: () => void;
   onHome: () => void;
 }
 
-export function GameOver({ stats, onRetry, onHome }: Props) {
+export function GameOver({ stats, busy, onRetry, onHome }: Props) {
   const breakdown = toneBreakdown(stats);
 
   return (
@@ -41,8 +43,8 @@ export function GameOver({ stats, onRetry, onHome }: Props) {
       <p className="prompt">{takeaway(breakdown)}</p>
 
       <div className="menu">
-        <button className="primary" onClick={onRetry}>
-          Retry
+        <button className="primary" disabled={busy} onClick={onRetry}>
+          {busy ? "Starting…" : "Retry"}
         </button>
         <button onClick={onHome}>Home</button>
       </div>

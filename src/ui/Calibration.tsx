@@ -27,13 +27,41 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
   const [attempt, setAttempt] = useState(0);
   const [hint, setHint] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [paused, setPaused] = useState(false);
   const [noiseFloor, setNoiseFloor] = useState<number | null>(null);
   const [f0Center, setF0Center] = useState<number | null>(null);
   const [range, setRange] = useState(RANGE_SEMITONES);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Backgrounding mid-capture would let the quiet/speak timers run against a
+  // mic nobody is talking into, poisoning the measurement. Suspend the audio
+  // and abandon the step; resuming restarts it from the beginning.
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState !== "hidden") return;
+      setFrameSink(null);
+      void getMicSession()?.ctx.suspend();
+      setPaused(true);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
+  const resume = () => {
+    const audio = getMicSession()?.ctx;
+    // resume() must happen in this click handler — iOS Safari requires it.
+    if (audio && audio.state === "suspended") void audio.resume();
+    setPaused(false);
+    setProgress(0);
+    setHint(null);
+    // Bumping the attempt re-runs the current step's effect from scratch.
+    setAttempt((a) => a + 1);
+  };
+
   // Step machine. Each step installs its own frame sink and tears it down.
   useEffect(() => {
+    if (paused) return;
+
     if (step === "quiet") {
       const rms: number[] = [];
       setFrameSink((frame) => rms.push(rmsOf(frame)));
@@ -76,6 +104,7 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
         const centre = computeF0Center(f0s);
         if (centre === null) {
           // Never blame the player — the app failed to hear, not the speaker.
+          setFrameSink(null);
           setHint("Couldn't hear that — let's try again.");
           return;
         }
@@ -104,7 +133,7 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
     // `range` is deliberately excluded: the slider retunes the live tracker in
     // place (setRangeSemitones) rather than restarting the preview loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, attempt, noiseFloor, f0Center]);
+  }, [step, attempt, paused, noiseFloor, f0Center]);
 
   const save = () => {
     if (f0Center === null || noiseFloor === null) return;
@@ -199,8 +228,11 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
       <button className="link" onClick={onCancel}>
         Back
       </button>
-      {getMicSession() === null && (
-        <p className="error">The microphone isn't running — go back and retry.</p>
+
+      {paused && (
+        <div className="overlay" onClick={resume}>
+          <p>paused — tap to continue</p>
+        </div>
       )}
     </div>
   );

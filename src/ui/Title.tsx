@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MicError } from "../audio/mic.ts";
-import { ensureMic } from "../audio/session.ts";
+import { ensureMic, MicCancelled } from "../audio/session.ts";
 import { micErrorCopy } from "./micErrors.ts";
 
 export type StartIntent = "game" | "tutorial" | "calibrate";
@@ -10,6 +10,8 @@ interface Props {
   /** Shown once after the tutorial finishes. */
   tutorialDone: boolean;
   devOpen: boolean;
+  /** An error raised elsewhere (e.g. a failed Retry) — shown in Title's one error slot. */
+  error: string | null;
   onToggleDev: () => void;
   /** Called once the mic is open. The router decides whether to calibrate first. */
   onStart: (intent: StartIntent) => void;
@@ -20,24 +22,29 @@ export function Title({
   calibrated,
   tutorialDone,
   devOpen,
+  error: externalError,
   onToggleDev,
   onStart,
   onHowTo,
 }: Props) {
-  const [error, setError] = useState<string | null>(null);
+  const [ownError, setOwnError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const error = ownError ?? externalError;
 
   // The mic is opened here, inside the click handler, because iOS Safari only
   // grants getUserMedia/resume during a user gesture — a mount effect on the
   // next screen would be too late.
   const go = (intent: StartIntent) => async () => {
     setBusy(true);
-    setError(null);
+    setOwnError(null);
     try {
       await ensureMic();
       onStart(intent);
     } catch (err) {
-      setError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
+      // A cancelled start means the player navigated away — not a failure.
+      if (!(err instanceof MicCancelled)) {
+        setOwnError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
+      }
     } finally {
       setBusy(false);
     }

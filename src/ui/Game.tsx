@@ -2,14 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { playToneCue } from "../audio/reference.ts";
 import { getMicSession, setFrameSink, stopMic } from "../audio/session.ts";
 import { TONE_INFO } from "../game/gates.ts";
-import { Run, type RunMode, type RunSnapshot } from "../game/run.ts";
+import { BIRD_X_FRAC, Run, type RunMode, type RunSnapshot } from "../game/run.ts";
 import type { CalibrationSettings } from "../game/settings.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { drawWorld } from "../render/world.ts";
 
 /** HUD refresh rate. React never renders per frame — the rAF loop owns the canvas. */
 const HUD_HZ = 4;
-/** PRD §9: the reference cue plays this long before the gate arrives. */
+/** PRD §9: the reference cue plays 300ms before the gate *enters the screen*. */
 const CUE_LEAD_MS = 300;
 /** msUntil jumping up by more than this means `upcoming` moved to the next gate. */
 const NEW_GATE_JUMP_MS = 50;
@@ -77,10 +77,19 @@ export function Game({
       const snap = run.snapshot();
       drawWorld(ctx2d, canvas.width, canvas.height, snap);
 
+      // `upcoming.msUntil` counts down to the gate reaching the *bird*. The cue
+      // is anchored to the gate reaching the *right edge of the screen*
+      // (PRD §9: hear it, then produce it), which is one screen-travel earlier
+      // — with the defaults that is ~1.4s of extra lead, so the 500ms cue has
+      // finished well before the gate is scored and cannot bleed into the mic.
       const msUntil = snap.upcoming?.msUntil ?? Infinity;
+      const travelMs =
+        ((canvas.width * (1 - BIRD_X_FRAC)) / snap.difficulty.scrollSpeed) *
+        1000;
+      const msUntilOnScreen = msUntil - travelMs;
       if (msUntil > prevMsUntil + NEW_GATE_JUMP_MS) cued = false;
       prevMsUntil = msUntil;
-      if (!cued && snap.upcoming && msUntil <= CUE_LEAD_MS) {
+      if (!cued && snap.upcoming && msUntilOnScreen <= CUE_LEAD_MS) {
         cued = true;
         const audio = getMicSession()?.ctx;
         // Same context the mic runs on, so it is already gesture-resumed.
@@ -97,6 +106,7 @@ export function Game({
       if (snap.over && !finished) {
         finished = true;
         running = false;
+        clearInterval(hudTimer);
         setFrameSink(null);
         stopMic();
         onOverRef.current(snap);
@@ -105,10 +115,23 @@ export function Game({
       if (running) rafId = requestAnimationFrame(tick);
     };
 
+    let hudTimer = 0;
+    const startHud = () => {
+      hudTimer = setInterval(() => {
+        const snap = run.snapshot();
+        setHud(snap);
+        setUnheard(
+          snap.lastOutcome?.outcome === "unheard" &&
+            performance.now() - snap.lastOutcome.atMs < TOAST_MS,
+        );
+      }, 1000 / HUD_HZ);
+    };
+
     const start = () => {
       running = true;
       lastT = performance.now();
       rafId = requestAnimationFrame(tick);
+      startHud();
     };
     resumeRef.current = () => {
       const audio = getMicSession()?.ctx;
@@ -122,19 +145,12 @@ export function Game({
       if (document.visibilityState !== "hidden") return;
       running = false;
       cancelAnimationFrame(rafId);
+      clearInterval(hudTimer);
       void getMicSession()?.ctx.suspend();
       setPaused(true);
     };
     document.addEventListener("visibilitychange", onVisibility);
 
-    const hudTimer = setInterval(() => {
-      const snap = run.snapshot();
-      setHud(snap);
-      setUnheard(
-        snap.lastOutcome?.outcome === "unheard" &&
-          performance.now() - snap.lastOutcome.atMs < TOAST_MS,
-      );
-    }, 1000 / HUD_HZ);
     start();
 
     return () => {
