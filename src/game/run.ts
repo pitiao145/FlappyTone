@@ -105,7 +105,7 @@ const TUTORIAL_TOLERANCE_FACTOR = 2;
 const TUTORIAL_GATE_COUNT = TUTORIAL_TONES.length;
 
 /** Bird's fixed horizontal position, as a fraction of canvas width. */
-const BIRD_X_FRAC = 0.28;
+export const BIRD_X_FRAC = 0.28;
 /** Keep this many gates queued ahead so `upcoming` is always populated. */
 const QUEUE_AHEAD = 2;
 
