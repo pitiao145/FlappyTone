@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import { playReferenceTone } from "../audio/reference.ts";
 import { getLatestState, getTracker } from "../game/loop.ts";
+import type { Tone } from "../game/gates.ts";
 import { DEFAULT_CONFIG } from "../pitch/PitchTracker.ts";
 import type { PitchState } from "../pitch/types.ts";
 
 const READOUT_HZ = 10;
 
-const TONE_LABELS = [
-  { tone: "tone1" as const, label: "1 ˉ", hint: "flat & high" },
-  { tone: "tone2" as const, label: "2 ˊ", hint: "rising" },
-  { tone: "tone3" as const, label: "3 ˇ", hint: "dip, then up" },
-  { tone: "tone4" as const, label: "4 ˋ", hint: "falling" },
+const TONE_LABELS: Array<{ tone: Tone; label: string; hint: string }> = [
+  { tone: 1, label: "1 ˉ", hint: "flat & high" },
+  { tone: 2, label: "2 ˊ", hint: "rising" },
+  { tone: 3, label: "3 ˇ", hint: "dip, then up" },
+  { tone: 4, label: "4 ˋ", hint: "falling" },
 ];
 
 export function DevPanel() {
