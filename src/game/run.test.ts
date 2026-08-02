@@ -522,3 +522,26 @@ describe("Run — pause cue style", () => {
     expect(outcomes[0].outcome).toBe("perfect");
   });
 });
+
+describe("Run — cuePaused flag", () => {
+  it("is set exactly while a pause-style demo freezes the world", () => {
+    const run = new Run({
+      mode: "game",
+      width: W,
+      rand: seqRand([0, 0, 0.5, 0.75]),
+      cueStyle: "pause",
+    });
+    const { snapshots } = simulate(run, 600, trackCorridor);
+    const cueAt = snapshots.findIndex((s) => s.cue !== null);
+    expect(snapshots[cueAt].cuePaused).toBe(true);
+    // Still paused most of the way through the 1000ms window…
+    expect(snapshots[cueAt + Math.floor(900 / DT)].cuePaused).toBe(true);
+    // …and released after it.
+    expect(snapshots[cueAt + Math.ceil(1100 / DT)].cuePaused).toBe(false);
+  });
+
+  it("never sets in flow style", () => {
+    const { snapshots } = simulate(newGameRun(), 600, trackCorridor);
+    expect(snapshots.some((s) => s.cuePaused)).toBe(false);
+  });
+});

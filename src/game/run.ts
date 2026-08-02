@@ -148,6 +148,8 @@ export interface RunSnapshot {
   upcoming: { tone: Tone; msUntil: number } | null;
   cue: CueView | null;
   phase: RunPhase;
+  /** True while the world is frozen for a "pause"-style demo — the renderer dims the scene. */
+  cuePaused: boolean;
   score: number;
   hearts: number;
   comboMult: number;
@@ -400,6 +402,7 @@ export class Run {
         : null,
       cue: this.cue,
       phase: active ? "active" : this.cue ? "listen" : null,
+      cuePaused: this.inCuePause(this.nowMs),
       upcoming: upcoming
         ? {
             tone: upcoming.tone,

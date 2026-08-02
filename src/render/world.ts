@@ -44,13 +44,35 @@ export function drawWorld(
     drawGate(ctx, width, height, gate, gate.x0 <= dotX);
   }
 
-  drawCueDemo(ctx, height, snap);
+  if (!snap.cuePaused) drawCueDemo(ctx, height, snap);
 
   drawTrail(ctx, width, height, snap.trail, 1.5, dotX, performance.now());
   drawDot(ctx, width, height, snap.birdChao, dotX, snap.voiced);
 
   drawPinFlash(ctx, width, height, snap.pinned);
   drawOutcomeFlash(ctx, width, height, snap);
+  drawCueVeil(ctx, width, height, snap);
+}
+
+/**
+ * "pause"-style listen phase: dim everything (including the player's own dot
+ * and trail), then redraw the cued gate and demo dot above the veil — a
+ * spotlight on the example. The veil dropping is the "your turn" handoff.
+ */
+function drawCueVeil(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  snap: RunSnapshot,
+): void {
+  if (!snap.cuePaused || !snap.cue) return;
+  const fadeIn = Math.min(1, (performance.now() - snap.cue.atMs) / 150);
+  ctx.fillStyle = `rgba(6, 8, 12, ${0.6 * fadeIn})`;
+  ctx.fillRect(0, 0, width, height);
+
+  const gate = snap.gates.find((g) => g.xStart === snap.cue!.xStart);
+  if (gate) drawGate(ctx, width, height, gate, true);
+  drawCueDemo(ctx, height, snap);
 }
 
 function drawGate(
