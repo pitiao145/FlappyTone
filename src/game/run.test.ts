@@ -403,3 +403,79 @@ describe("Run — pace", () => {
     expect(run.snapshot().difficulty.scrollSpeed).toBeCloseTo(220 * 0.9);
   });
 });
+
+describe("Run — cue and listen/your-turn phases", () => {
+  it("starts with no cue and a null phase", () => {
+    const run = newGameRun();
+    const s = run.snapshot();
+    expect(s.cue).toBeNull();
+    expect(s.phase).toBeNull();
+  });
+
+  it("fires the cue ~300ms before the gate's leading edge enters the screen", () => {
+    const run = newGameRun();
+    const { snapshots } = simulate(run, 400, trackCorridor);
+    const firstCued = snapshots.find((s) => s.cue !== null);
+    expect(firstCued).toBeDefined();
+    const cue = firstCued!.cue!;
+    // The cued gate's right edge should still be at most ~300ms of travel
+    // past the screen's right edge (it fires as soon as the lead is reached).
+    const gate = firstCued!.gates.find((g) => g.xStart === cue.xStart)!;
+    const msUntilOnScreen =
+      ((gate.x1 - W) / firstCued!.difficulty.scrollSpeed) * 1000;
+    expect(msUntilOnScreen).toBeLessThanOrEqual(300);
+    expect(msUntilOnScreen).toBeGreaterThan(300 - 3 * DT);
+    expect(cue.durationMs).toBe(500);
+  });
+
+  it("holds the listen phase until the bird enters the gate, then flips to active", () => {
+    const run = newGameRun();
+    const { snapshots } = simulate(run, 400, trackCorridor);
+    const firstListen = snapshots.findIndex((s) => s.phase === "listen");
+    const firstActive = snapshots.findIndex((s) => s.phase === "active");
+    expect(firstListen).toBeGreaterThanOrEqual(0);
+    expect(firstActive).toBeGreaterThan(firstListen);
+    // Every frame between cue fire and gate entry stays "listen".
+    for (let i = firstListen; i < firstActive; i++) {
+      expect(snapshots[i].phase).toBe("listen");
+      expect(snapshots[i].cue).not.toBeNull();
+    }
+    // Once active, the cue is cleared — it is the player's turn.
+    expect(snapshots[firstActive].cue).toBeNull();
+  });
+
+  it("cues every gate exactly once, in order", () => {
+    const run = newGameRun();
+    const { snapshots } = simulate(run, 2000, trackCorridor);
+    const cuedStarts: number[] = [];
+    for (const s of snapshots) {
+      if (s.cue && cuedStarts[cuedStarts.length - 1] !== s.cue.xStart) {
+        cuedStarts.push(s.cue.xStart);
+      }
+    }
+    expect(cuedStarts.length).toBeGreaterThan(1);
+    const sorted = [...cuedStarts].sort((a, b) => a - b);
+    expect(cuedStarts).toEqual(sorted);
+    expect(new Set(cuedStarts).size).toBe(cuedStarts.length);
+  });
+});
+
+describe("Run — corridor width option", () => {
+  it("wide widens every gate's tolerance by 1.4x over the default", () => {
+    const normal = new Run({
+      mode: "game",
+      width: W,
+      rand: seqRand([0, 0, 0.5, 0.75]),
+    });
+    const wide = new Run({
+      mode: "game",
+      width: W,
+      rand: seqRand([0, 0, 0.5, 0.75]),
+      corridor: "wide",
+    });
+    const gN = normal.snapshot().gates[0];
+    const gW = wide.snapshot().gates[0];
+    expect(gN.tone).toBe(gW.tone);
+    expect(gW.tolChao).toBeCloseTo(gN.tolChao * 1.4);
+  });
+});

@@ -118,6 +118,28 @@ export function applyPace(d: Difficulty, pace: Pace): Difficulty {
 }
 
 /**
+ * Player-selectable corridor width. Scales the tolerance (tunnel half-height)
+ * only — speed and rest are the pace's job. Applied after the ramp, so the
+ * ramp's tolerance floor scales proportionally too.
+ */
+export type CorridorWidth = "narrow" | "normal" | "wide";
+
+export const CORRIDOR_WIDTHS: CorridorWidth[] = ["narrow", "normal", "wide"];
+
+const CORRIDOR_WIDTH_FACTORS: Record<CorridorWidth, number> = {
+  narrow: 0.75,
+  normal: 1,
+  wide: 1.4,
+};
+
+export function applyCorridorWidth(
+  d: Difficulty,
+  width: CorridorWidth,
+): Difficulty {
+  return { ...d, toleranceH: d.toleranceH * CORRIDOR_WIDTH_FACTORS[width] };
+}
+
+/**
  * Applies the PRD difficulty ramp: every 5 gates cleared, scrollSpeed *= 1.08
  * (cap 2.2x base), toleranceH *= 0.95 (floor 0.07), restMs *= 0.95 (floor 600ms).
  * Always ramps from the fixed base constants keyed by total gatesCleared, so

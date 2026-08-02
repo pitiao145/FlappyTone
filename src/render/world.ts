@@ -36,11 +36,16 @@ export function drawWorld(
 
   drawChaoGrid(ctx, width, height);
 
+  const dotX = width * BIRD_X_FRAC;
+
   for (const gate of snap.gates) {
-    drawGate(ctx, width, height, gate);
+    // A gate the bird has reached is the player's turn: full brightness.
+    // Approaching gates (still in or before their "listen" phase) stay dim.
+    drawGate(ctx, width, height, gate, gate.x0 <= dotX);
   }
 
-  const dotX = width * BIRD_X_FRAC;
+  drawCueDemo(ctx, height, snap);
+
   drawTrail(ctx, width, height, snap.trail, 1.5, dotX, performance.now());
   drawDot(ctx, width, height, snap.birdChao, dotX, snap.voiced);
 
@@ -53,12 +58,15 @@ function drawGate(
   width: number,
   height: number,
   gate: RunSnapshot["gates"][number],
+  active: boolean,
 ): void {
   const { x0, x1, tone, tolChao } = gate;
   if (x1 < 0 || x0 > width) return;
 
   // Corridor walls: everything outside centre ± tol, as filled bands.
-  ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
+  ctx.fillStyle = active
+    ? "rgba(255, 255, 255, 0.10)"
+    : "rgba(255, 255, 255, 0.04)";
   for (let i = 0; i < CENTRELINE_STEPS; i++) {
     const t0 = i / CENTRELINE_STEPS;
     const t1 = (i + 1) / CENTRELINE_STEPS;
@@ -76,7 +84,9 @@ function drawGate(
   // Dashed ghost centreline — the ideal contour (PRD §8).
   ctx.save();
   ctx.setLineDash([6, 6]);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+  ctx.strokeStyle = active
+    ? "rgba(255, 255, 255, 0.55)"
+    : "rgba(255, 255, 255, 0.22)";
   ctx.lineWidth = 2;
   ctx.beginPath();
   for (let i = 0; i <= CENTRELINE_STEPS; i++) {
@@ -87,6 +97,35 @@ function drawGate(
     else ctx.lineTo(sx, sy);
   }
   ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * The "listen" demo: a dot sweeping the cued gate's centreline in sync with
+ * the reference tone, so the player sees the contour being sung before it is
+ * their turn (design 2026-08-02).
+ */
+function drawCueDemo(
+  ctx: CanvasRenderingContext2D,
+  height: number,
+  snap: RunSnapshot,
+): void {
+  const cue = snap.cue;
+  if (!cue) return;
+  const p = (performance.now() - cue.atMs) / cue.durationMs;
+  if (p < 0 || p > 1) return;
+  const gate = snap.gates.find((g) => g.xStart === cue.xStart);
+  if (!gate) return;
+
+  const x = gate.x0 + p * (gate.x1 - gate.x0);
+  const y = chaoToY(corridorChaoAt(cue.tone, p), height);
+  ctx.save();
+  ctx.fillStyle = "rgba(255, 210, 130, 0.9)";
+  ctx.shadowColor = "rgba(255, 210, 130, 0.8)";
+  ctx.shadowBlur = 10;
+  ctx.beginPath();
+  ctx.arc(x, y, 5, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 

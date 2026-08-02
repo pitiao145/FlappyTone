@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyCorridorWidth,
   applyPace,
   corridorChaoAt,
   makeGate,
@@ -182,5 +183,30 @@ describe("applyPace", () => {
     const d = applyPace(newDifficulty(), "relaxed");
     const g = makeGate(1, 0, d);
     expect(g.widthPx / d.scrollSpeed).toBeCloseTo(0.6);
+  });
+});
+
+describe("applyCorridorWidth", () => {
+  it("normal is the identity", () => {
+    const d = newDifficulty();
+    expect(applyCorridorWidth(d, "normal")).toEqual(d);
+  });
+
+  it("narrow tightens tolerance to 0.75x, leaving speed and rest alone", () => {
+    const d = applyCorridorWidth(newDifficulty(), "narrow");
+    expect(d.toleranceH).toBeCloseTo(0.12 * 0.75);
+    expect(d.scrollSpeed).toBeCloseTo(220);
+    expect(d.restMs).toBeCloseTo(900);
+  });
+
+  it("wide loosens tolerance to 1.4x", () => {
+    const d = applyCorridorWidth(newDifficulty(), "wide");
+    expect(d.toleranceH).toBeCloseTo(0.12 * 1.4);
+  });
+
+  it("applied after the ramp, it scales the ramp floor proportionally", () => {
+    const ramped = rampDifficulty(1000); // tolerance at the 0.07 floor
+    const d = applyCorridorWidth(ramped, "wide");
+    expect(d.toleranceH).toBeCloseTo(0.07 * 1.4);
   });
 });

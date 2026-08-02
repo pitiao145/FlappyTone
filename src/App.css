@@ -237,6 +237,34 @@
   color: #9aa4b0;
 }
 
+.phase-banner {
+  margin-top: 6px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  background: rgba(5, 7, 10, 0.7);
+}
+
+.phase-banner.listen {
+  color: #ffd282;
+}
+
+.phase-banner.your-turn {
+  color: #78e6aa;
+  animation: your-turn-pop 0.25s ease-out;
+}
+
+@keyframes your-turn-pop {
+  from {
+    transform: scale(1.25);
+    opacity: 0.4;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 .toast,
 .hint {
   margin-top: auto;

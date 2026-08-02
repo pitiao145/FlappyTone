@@ -4,7 +4,12 @@
  * and their preferred tone range. Also persists the chosen game pace.
  */
 
-import { PACES, type Pace } from "./gates.ts";
+import {
+  CORRIDOR_WIDTHS,
+  PACES,
+  type CorridorWidth,
+  type Pace,
+} from "./gates.ts";
 
 export interface CalibrationSettings {
   /** Baseline f0 in Hz, typically ~100–150 for most speakers. Used to map voice pitch to Chao 1–5. */
@@ -81,4 +86,21 @@ export function loadPace(): Pace {
 
 export function savePace(pace: Pace): void {
   localStorage.setItem(PACE_KEY, pace);
+}
+
+// ------------------------------------------------------------ corridor width
+
+const WIDTH_KEY = "toneflap.width.v1";
+const DEFAULT_WIDTH: CorridorWidth = "normal";
+
+/** Load the player's chosen corridor width. Defaults to "normal" when unset or corrupt. */
+export function loadCorridorWidth(): CorridorWidth {
+  const raw = localStorage.getItem(WIDTH_KEY);
+  return raw !== null && (CORRIDOR_WIDTHS as string[]).includes(raw)
+    ? (raw as CorridorWidth)
+    : DEFAULT_WIDTH;
+}
+
+export function saveCorridorWidth(width: CorridorWidth): void {
+  localStorage.setItem(WIDTH_KEY, width);
 }

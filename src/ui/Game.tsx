@@ -3,14 +3,18 @@ import { playToneCue } from "../audio/reference.ts";
 import { getMicSession, setFrameSink, stopMic } from "../audio/session.ts";
 import { TONE_INFO } from "../game/gates.ts";
 import { Run, type RunMode, type RunSnapshot } from "../game/run.ts";
-import { loadPace, type CalibrationSettings } from "../game/settings.ts";
+import {
+  loadCorridorWidth,
+  loadPace,
+  type CalibrationSettings,
+} from "../game/settings.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { drawWorld } from "../render/world.ts";
 
 /** HUD refresh rate. React never renders per frame — the rAF loop owns the canvas. */
 const HUD_HZ = 4;
-/** PRD §9: the reference cue plays 300ms before the gate *enters the screen*. */
-const CUE_LEAD_MS = 300;
+/** "Your turn" flashes while the active gate is in its first stretch. */
+const YOUR_TURN_MAX_T = 0.5;
 /** How long the "couldn't hear that" toast stays up. */
 const TOAST_MS = 1200;
 
@@ -48,16 +52,20 @@ export function Game({
     if (!canvas || !ctx2d) return;
 
     // Game remounts per run, so this picks up the latest saved pace.
-    const run = new Run({ mode, width: canvas.width, pace: loadPace() });
+    const run = new Run({
+      mode,
+      width: canvas.width,
+      pace: loadPace(),
+      corridor: loadCorridorWidth(),
+    });
     let tracker: PitchTracker | null = null;
     let rafId = 0;
     let running = true;
     let finished = false;
     let lastT = performance.now();
-    // Cue bookkeeping: gates are keyed by their stable world-space xStart
-    // (monotonically increasing spawn order), so we only need to remember
-    // the xStart of the most recently cued gate to know which gate is next.
-    let lastCuedXStart = -Infinity;
+    // The run decides when a cue fires (snapshot.cue); the host only plays
+    // the audio, edge-triggered on the cued gate's stable xStart.
+    let lastPlayedXStart = -Infinity;
 
     // The mic is already open — Title opened it inside the click gesture.
     setFrameSink((frame, sampleRate) => {
@@ -77,29 +85,17 @@ export function Game({
       const snap = run.snapshot();
       drawWorld(ctx2d, canvas.width, canvas.height, snap);
 
-      // PRD §9: the cue plays 300ms before the gate's *leading (right) edge*
-      // enters the screen — not 300ms before it reaches the bird. `gates` is
-      // ascending by xStart (world-space, stable across frames), so the next
-      // gate due a cue is the first one past `lastCuedXStart`. Firing off the
-      // gate's own x1 (rather than the "upcoming" gate, which only becomes
-      // active-gate's successor once the bird enters the current gate) means
-      // every gate gets cued on its own screen-entry, not the previous gate's.
-      const next = snap.gates.find((g) => g.xStart > lastCuedXStart);
-      if (next) {
-        const msUntilOnScreen =
-          ((next.x1 - canvas.width) / snap.difficulty.scrollSpeed) * 1000;
-        if (msUntilOnScreen <= CUE_LEAD_MS) {
-          lastCuedXStart = next.xStart;
-          const audio = getMicSession()?.ctx;
-          // Same context the mic runs on, so it is already gesture-resumed.
-          if (audio && audio.state === "running") {
-            playToneCue(
-              audio,
-              next.tone,
-              settings.f0Center,
-              settings.rangeSemitones,
-            );
-          }
+      if (snap.cue && snap.cue.xStart > lastPlayedXStart) {
+        lastPlayedXStart = snap.cue.xStart;
+        const audio = getMicSession()?.ctx;
+        // Same context the mic runs on, so it is already gesture-resumed.
+        if (audio && audio.state === "running") {
+          playToneCue(
+            audio,
+            snap.cue.tone,
+            settings.f0Center,
+            settings.rangeSemitones,
+          );
         }
       }
 
@@ -168,6 +164,16 @@ export function Game({
   const displayTone = hud?.activeGate?.tone ?? hud?.upcoming?.tone ?? null;
   const info = displayTone === null ? null : TONE_INFO[displayTone];
 
+  // Listen → Your turn: "listen" spans the whole cue phase; "your turn" only
+  // flashes over the active gate's first stretch, then clears the screen.
+  const banner =
+    hud?.phase === "listen"
+      ? ("listen" as const)
+      : hud?.phase === "active" &&
+          (hud.activeGate?.t ?? 1) < YOUR_TURN_MAX_T
+        ? ("your-turn" as const)
+        : null;
+
   return (
     <div className="screen game-screen">
       <div className="stage">
@@ -193,6 +199,13 @@ export function Game({
               <span className="tone-num">({displayTone})</span>
               {mode === "tutorial" && <span className="cue">{info.cue}</span>}
             </div>
+          )}
+
+          {banner === "listen" && (
+            <div className="phase-banner listen">🔊 listen…</div>
+          )}
+          {banner === "your-turn" && (
+            <div className="phase-banner your-turn">your turn!</div>
           )}
 
           {unheard && <div className="toast">couldn't hear that</div>}

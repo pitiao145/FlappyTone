@@ -1,8 +1,18 @@
 import { useState } from "react";
 import { MicError } from "../audio/mic.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
-import { PACES, type Pace } from "../game/gates.ts";
-import { loadPace, savePace } from "../game/settings.ts";
+import {
+  CORRIDOR_WIDTHS,
+  PACES,
+  type CorridorWidth,
+  type Pace,
+} from "../game/gates.ts";
+import {
+  loadCorridorWidth,
+  loadPace,
+  saveCorridorWidth,
+  savePace,
+} from "../game/settings.ts";
 import { micErrorCopy } from "./micErrors.ts";
 
 export type StartIntent = "game" | "tutorial" | "calibrate";
@@ -32,6 +42,7 @@ export function Title({
   const [ownError, setOwnError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pace, setPace] = useState<Pace>(loadPace);
+  const [width, setWidth] = useState<CorridorWidth>(loadCorridorWidth);
   const error = ownError ?? externalError;
 
   // The mic is opened here, inside the click handler, because iOS Safari only
@@ -89,6 +100,22 @@ export function Title({
             }}
           >
             {p}
+          </button>
+        ))}
+      </div>
+
+      <div className="pace-row">
+        <span className="pace-label">Tunnel</span>
+        {CORRIDOR_WIDTHS.map((w) => (
+          <button
+            key={w}
+            className={w === width ? "pace active" : "pace"}
+            onClick={() => {
+              setWidth(w);
+              saveCorridorWidth(w);
+            }}
+          >
+            {w}
           </button>
         ))}
       </div>

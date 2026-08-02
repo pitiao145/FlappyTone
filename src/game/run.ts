@@ -10,12 +10,14 @@
  */
 
 import {
+  applyCorridorWidth,
   applyPace,
   corridorChaoAt,
   makeGate,
   newDifficulty,
   nextTone,
   rampDifficulty,
+  type CorridorWidth,
   type Difficulty,
   type Gate,
   type Pace,
@@ -58,6 +60,11 @@ export interface RunConfig {
    * the persisted choice (default "normal").
    */
   pace?: Pace;
+  /**
+   * Corridor width chosen by the player (see gates.ts). Defaults to "normal"
+   * (the PRD tolerance); the UI passes the persisted choice.
+   */
+  corridor?: CorridorWidth;
 }
 
 export interface TrailSample {
@@ -91,6 +98,29 @@ export interface ActiveGateView {
   corridorChao: number;
 }
 
+/**
+ * The reference-cue announcement for the next gate. Present from the moment
+ * the cue fires until the bird enters that gate — the "listen" phase. The
+ * host plays audio when `xStart` changes; the renderer animates the demo dot
+ * from `atMs` over `durationMs`.
+ */
+export interface CueView {
+  tone: Tone;
+  /** World-space identity of the cued gate — matches GateView.xStart. */
+  xStart: number;
+  /** When the cue fired (host clock, same nowMs fed to tick*). */
+  atMs: number;
+  /** How long the audible cue (and demo-dot trace) lasts. */
+  durationMs: number;
+}
+
+/**
+ * "listen": the example is being announced for an approaching gate.
+ * "active": the bird is inside a gate — the player's turn.
+ * null: between gates, nothing demanded.
+ */
+export type RunPhase = "listen" | "active" | null;
+
 export interface LastOutcome {
   outcome: GateOutcome;
   tone: Tone;
@@ -105,6 +135,8 @@ export interface RunSnapshot {
   gates: GateView[];
   activeGate: ActiveGateView | null;
   upcoming: { tone: Tone; msUntil: number } | null;
+  cue: CueView | null;
+  phase: RunPhase;
   score: number;
   hearts: number;
   comboMult: number;
@@ -136,6 +168,11 @@ const PIN_EPSILON = 1e-3;
 /** Upper bound on a single frame's dt, so a backgrounded tab can't skip a gate. */
 const MAX_FRAME_DT_MS = 100;
 
+/** PRD §9: the reference cue fires this long before the gate enters the screen. */
+export const CUE_LEAD_MS = 300;
+/** Length of the audible cue and its demo-dot trace. Mirrors CUE_MS in audio/reference.ts. */
+export const CUE_DURATION_MS = 500;
+
 /** Outcomes that count as "cleared" for the difficulty ramp (PRD §6). */
 const CLEARED_OUTCOMES = new Set<GateOutcome>(["perfect", "good", "ok"]);
 
@@ -155,6 +192,7 @@ export class Run {
   private readonly width: number;
   private readonly rand: () => number;
   private readonly pace: Pace;
+  private readonly corridor: CorridorWidth;
 
   /** Distance the world has scrolled, in px. The bird's world position. */
   private worldX = 0;
@@ -181,6 +219,11 @@ export class Run {
   private pinned: "high" | "low" | null = null;
   private lastChao: number | null = null;
 
+  /** The current "listen" announcement, cleared when the bird enters its gate. */
+  private cue: CueView | null = null;
+  /** xStart of the most recently cued gate — gates are cued once, in order. */
+  private lastCuedXStart = -Infinity;
+
   private trail: TrailSample[] = [];
   private noiseFrames: NoiseFrame[] = [];
   private nowMs = 0;
@@ -190,6 +233,7 @@ export class Run {
     this.width = cfg.width;
     this.rand = cfg.rand ?? Math.random;
     this.pace = cfg.pace ?? "fast";
+    this.corridor = cfg.corridor ?? "normal";
     this.difficulty = this.difficultyFor(0);
     this.stats = newRunStats(3);
     this.fillQueue();
@@ -265,8 +309,35 @@ export class Run {
 
     this.worldX += (this.difficulty.scrollSpeed * dt) / 1000;
     this.syncActive();
+    this.updateCue(nowMs);
     this.retireOffscreen();
     this.pruneTrail(nowMs);
+  }
+
+  /**
+   * PRD §9: the cue fires CUE_LEAD_MS before the gate's *leading (right) edge*
+   * enters the screen — not before it reaches the bird. Gates are cued once
+   * each, in spawn order. The cue is kept (the "listen" phase) until the bird
+   * enters the cued gate, then dropped — it is the player's turn.
+   */
+  private updateCue(nowMs: number): void {
+    if (this.cue && this.worldX >= this.cue.xStart) {
+      this.cue = null;
+    }
+    const next = this.gates.find((g) => g.xStart > this.lastCuedXStart);
+    if (!next) return;
+    const screenRight = this.worldX + this.width * (1 - BIRD_X_FRAC);
+    const msUntilOnScreen =
+      ((this.gateEnd(next) - screenRight) / this.difficulty.scrollSpeed) * 1000;
+    if (msUntilOnScreen <= CUE_LEAD_MS) {
+      this.lastCuedXStart = next.xStart;
+      this.cue = {
+        tone: next.tone,
+        xStart: next.xStart,
+        atMs: nowMs,
+        durationMs: CUE_DURATION_MS,
+      };
+    }
   }
 
   // -------------------------------------------------------------- snapshot
@@ -297,6 +368,8 @@ export class Run {
             ),
           }
         : null,
+      cue: this.cue,
+      phase: active ? "active" : this.cue ? "listen" : null,
       upcoming: upcoming
         ? {
             tone: upcoming.tone,
@@ -415,7 +488,7 @@ export class Run {
       this.mode === "tutorial"
         ? { ...base, toleranceH: base.toleranceH * TUTORIAL_TOLERANCE_FACTOR }
         : base;
-    return applyPace(withTutorial, this.pace);
+    return applyCorridorWidth(applyPace(withTutorial, this.pace), this.corridor);
   }
 
   /** Drops gates that have scrolled off the left edge. */

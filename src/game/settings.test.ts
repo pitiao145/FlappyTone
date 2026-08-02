@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type CalibrationSettings,
   clearSettings,
+  loadCorridorWidth,
   loadPace,
+  saveCorridorWidth,
   loadSettings,
   savePace,
   saveSettings,
@@ -211,5 +213,34 @@ describe("Pace persistence", () => {
   it("falls back to normal on a corrupt value", () => {
     localStorage.setItem("toneflap.pace.v1", "warp");
     expect(loadPace()).toBe("normal");
+  });
+});
+
+describe("Corridor width persistence", () => {
+  beforeEach(() => {
+    const map: Record<string, string> = {};
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => map[key] ?? null,
+      setItem: (key: string, value: string) => {
+        map[key] = value;
+      },
+      removeItem: (key: string) => {
+        delete map[key];
+      },
+    } as Storage);
+  });
+
+  it("defaults to normal when unset", () => {
+    expect(loadCorridorWidth()).toBe("normal");
+  });
+
+  it("round-trips a saved width", () => {
+    saveCorridorWidth("wide");
+    expect(loadCorridorWidth()).toBe("wide");
+  });
+
+  it("falls back to normal on a corrupt value", () => {
+    localStorage.setItem("toneflap.width.v1", "gigantic");
+    expect(loadCorridorWidth()).toBe("normal");
   });
 });
