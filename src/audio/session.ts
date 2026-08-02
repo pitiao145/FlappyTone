@@ -14,6 +14,8 @@ export type FrameSink = (frame: Float32Array, sampleRate: number) => void;
 let session: MicSession | null = null;
 let sink: FrameSink | null = null;
 let starting: Promise<MicSession> | null = null;
+/** The generation `starting` belongs to; -1 when nothing is in flight. */
+let startingGen = -1;
 /**
  * Bumped by `stopMic`. A `startMic` that resolves after a stop belongs to a
  * superseded generation and must close its own stream rather than becoming the
@@ -29,22 +31,36 @@ let generation = 0;
  */
 export function ensureMic(): Promise<MicSession> {
   if (session) return Promise.resolve(session);
+  // Only share an in-flight start from the *current* generation. A start that
+  // `stopMic` already doomed is going to reject with MicCancelled, and handing
+  // it to a fresh caller would make their click silently do nothing.
+  if (starting && startingGen === generation) return starting;
+
   const gen = generation;
-  starting ??= startMic((frame, sampleRate) => sink?.(frame, sampleRate))
-    .then((s) => {
+  const clearIfCurrent = () => {
+    if (startingGen === gen) {
       starting = null;
+      startingGen = -1;
+    }
+  };
+  const pending = startMic((frame, sampleRate) => sink?.(frame, sampleRate)).then(
+    (s) => {
+      clearIfCurrent();
       if (gen !== generation) {
         s.stop();
         throw new MicCancelled();
       }
       session = s;
       return s;
-    })
-    .catch((err) => {
-      starting = null;
+    },
+    (err: unknown) => {
+      clearIfCurrent();
       throw err;
-    });
-  return starting;
+    },
+  );
+  starting = pending;
+  startingGen = gen;
+  return pending;
 }
 
 /** Thrown by `ensureMic` when the caller navigated away before it resolved. */

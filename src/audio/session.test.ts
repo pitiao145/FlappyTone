@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const stops: Array<() => void> = [];
-let resolveStart: ((s: unknown) => void) | null = null;
+/** Resolvers for each pending startMic call, in order. */
+const pendingStarts: Array<(s: unknown) => void> = [];
 
 vi.mock("./mic.ts", () => ({
   MicError: class extends Error {},
   startMic: vi.fn(
     () =>
       new Promise((resolve) => {
-        resolveStart = resolve;
+        pendingStarts.push(resolve);
       }),
   ),
 }));
@@ -16,17 +16,17 @@ vi.mock("./mic.ts", () => ({
 const { ensureMic, getMicSession, MicCancelled, stopMic } = await import(
   "./session.ts"
 );
+const { startMic } = await import("./mic.ts");
 
 function makeSession() {
-  const stop = vi.fn();
-  stops.push(stop);
-  return { sampleRate: 48000, ctx: {} as AudioContext, stop };
+  return { sampleRate: 48000, ctx: {} as AudioContext, stop: vi.fn() };
 }
 
 describe("mic session cancellation", () => {
   beforeEach(() => {
-    stops.length = 0;
-    resolveStart = null;
+    pendingStarts.length = 0;
+    vi.mocked(startMic).mockClear();
+    stopMic();
   });
 
   it("closes a session that resolves after stopMic, rather than storing it", async () => {
@@ -34,7 +34,7 @@ describe("mic session cancellation", () => {
     // Player navigates home while getUserMedia is still resolving.
     stopMic();
     const session = makeSession();
-    resolveStart?.(session);
+    pendingStarts[0](session);
 
     await expect(pending).rejects.toBeInstanceOf(MicCancelled);
     expect(session.stop).toHaveBeenCalledTimes(1);
@@ -44,12 +44,34 @@ describe("mic session cancellation", () => {
   it("stores a session that resolves normally", async () => {
     const pending = ensureMic();
     const session = makeSession();
-    resolveStart?.(session);
+    pendingStarts[0](session);
 
     await expect(pending).resolves.toBe(session);
     expect(getMicSession()).toBe(session);
     stopMic();
     expect(session.stop).toHaveBeenCalledTimes(1);
     expect(getMicSession()).toBeNull();
+  });
+
+  it("starts a fresh session when called after a stop, while the old start is in flight", async () => {
+    const doomed = ensureMic();
+    stopMic();
+
+    // Home then Play: this click must open its own mic rather than attaching
+    // to the start stopMic already doomed, which would silently do nothing.
+    const revived = ensureMic();
+    expect(startMic).toHaveBeenCalledTimes(2);
+    expect(revived).not.toBe(doomed);
+
+    const abandoned = makeSession();
+    const fresh = makeSession();
+    pendingStarts[0](abandoned);
+    pendingStarts[1](fresh);
+
+    await expect(doomed).rejects.toBeInstanceOf(MicCancelled);
+    await expect(revived).resolves.toBe(fresh);
+    expect(abandoned.stop).toHaveBeenCalledTimes(1);
+    expect(fresh.stop).not.toHaveBeenCalled();
+    expect(getMicSession()).toBe(fresh);
   });
 });
