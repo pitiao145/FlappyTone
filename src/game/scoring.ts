@@ -14,7 +14,8 @@ export interface GateSample {
 
 export type GateOutcome = "perfect" | "good" | "ok" | "collision" | "unheard";
 
-const UNHEARD_VOICED_FLOOR = 0.6;
+/** Below this voiced fraction a gate is "couldn't hear that", not a failure (PRD §6). */
+export const UNHEARD_VOICED_FLOOR = 0.6;
 const PERFECT_ACCURACY = 0.85;
 const GOOD_ACCURACY = 0.6;
 
@@ -80,6 +81,8 @@ export function multiplierFor(combo: number): number {
 export interface RunStats {
   score: number;
   hearts: number;
+  /** Consecutive perfect/good gates. Carried in stats so applyGate can thread it explicitly. */
+  combo: number;
   bestMultiplier: number;
   perTone: Record<Tone, { gates: number; accSum: number; unheard: number }>;
 }
@@ -90,7 +93,7 @@ export function newRunStats(hearts = 3): RunStats {
   for (const tone of [1, 2, 3, 4] as Tone[]) {
     perTone[tone] = { gates: 0, accSum: 0, unheard: 0 };
   }
-  return { score: 0, hearts, bestMultiplier: 1, perTone };
+  return { score: 0, hearts, combo: 0, bestMultiplier: 1, perTone };
 }
 
 /**
@@ -104,8 +107,8 @@ export function applyGate(
   tone: Tone,
   outcome: GateOutcome,
   accuracy: number,
-): RunStats & { combo: number } {
-  const priorCombo = "combo" in stats ? (stats as RunStats & { combo: number }).combo : 0;
+): RunStats {
+  const priorCombo = stats.combo;
   const multiplier = multiplierFor(priorCombo);
   const points = Math.round(BASE_POINTS[outcome] * multiplier);
   const combo = comboAfter(outcome, priorCombo);

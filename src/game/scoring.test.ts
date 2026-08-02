@@ -191,10 +191,7 @@ describe("applyGate", () => {
   });
 
   it("unheard does not decrement hearts, does not reset combo, and is tallied separately", () => {
-    let stats: RunStats & { combo: number } = {
-      ...newRunStats(),
-      combo: 2,
-    };
+    const stats: RunStats = { ...newRunStats(), combo: 2 };
     const next = applyGate(stats, 3, "unheard", 0);
     expect(next.hearts).toBe(3);
     expect(next.combo).toBe(2);
@@ -203,7 +200,7 @@ describe("applyGate", () => {
   });
 
   it("tracks bestMultiplier across the run", () => {
-    let stats: RunStats & { combo: number } = { ...newRunStats(), combo: 0 };
+    let stats: RunStats = newRunStats();
     stats = applyGate(stats, 1, "perfect", 1); // combo -> 1, mult applied was x1
     stats = applyGate(stats, 1, "perfect", 1); // combo -> 2, mult applied was x1.5
     stats = applyGate(stats, 1, "perfect", 1); // combo -> 3, mult applied was x2
@@ -211,7 +208,7 @@ describe("applyGate", () => {
   });
 
   it("accumulates score using the multiplier in effect before this gate", () => {
-    let stats: RunStats & { combo: number } = { ...newRunStats(), combo: 1 };
+    const stats: RunStats = { ...newRunStats(), combo: 1 };
     // combo is 1 going in -> multiplier x1.5 applies to this gate's points
     const next = applyGate(stats, 1, "perfect", 1);
     expect(next.score).toBe(450);
@@ -228,7 +225,7 @@ describe("toneBreakdown", () => {
   });
 
   it("computes average accuracy pct per tone, excluding unheard", () => {
-    let stats: RunStats & { combo: number } = { ...newRunStats(), combo: 0 };
+    let stats: RunStats = newRunStats();
     stats = applyGate(stats, 1, "perfect", 1);
     stats = applyGate(stats, 1, "good", 0.7);
     stats = applyGate(stats, 1, "unheard", 0);
@@ -247,7 +244,7 @@ describe("takeaway", () => {
   });
 
   it("names the worst tone with its cue among tones with >= 2 scored gates", () => {
-    let stats: RunStats & { combo: number } = { ...newRunStats(), combo: 0 };
+    let stats: RunStats = newRunStats();
     // T1: two good scores, mean 0.9
     stats = applyGate(stats, 1, "perfect", 0.9);
     stats = applyGate(stats, 1, "perfect", 0.9);
@@ -261,7 +258,7 @@ describe("takeaway", () => {
   });
 
   it("ignores tones with fewer than 2 scored gates when picking the worst", () => {
-    let stats: RunStats & { combo: number } = { ...newRunStats(), combo: 0 };
+    let stats: RunStats = newRunStats();
     // T4: one very low score, but only 1 gate -> ignored
     stats = applyGate(stats, 4, "ok", 0.1);
     // T2: two mid scores -> only eligible tone

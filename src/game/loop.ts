@@ -2,16 +2,17 @@ import { PitchTracker } from "../pitch/PitchTracker.ts";
 import type { PitchState } from "../pitch/types.ts";
 import { drawScene, type TrailSample } from "../render/scene.ts";
 
-const TRAIL_SECONDS = 1.5;
-// PRD §5.3: hold the last position for 120ms of unvoiced (stop consonants,
-// dropouts), then drift toward the centre line at 0.8 screen-heights/sec.
-// Chao 1–5 spans 0.6H, so 0.8H/s = 0.8/0.6 * 4 ≈ 5.33 chao/s.
-const GRACE_MS = 120;
-const DRIFT_CHAO_PER_SEC = 5.33;
-const REST_CHAO = 3;
-// Render easing time constant: the drawn dot closes ~63% of the gap to the
-// measured value in this many ms. Visual only — never touches scoring data.
-const EASE_TAU_MS = 45;
+// Dot dynamics live in dynamics.ts (a pure module) so run.ts can share them
+// without pulling canvas code in. Re-exported here for existing importers.
+import {
+  DRIFT_CHAO_PER_SEC,
+  EASE_TAU_MS,
+  GRACE_MS,
+  REST_CHAO,
+  TRAIL_SECONDS,
+} from "./dynamics.ts";
+
+export { DRIFT_CHAO_PER_SEC, EASE_TAU_MS, GRACE_MS, REST_CHAO, TRAIL_SECONDS };
 
 // Mutable game state lives here, outside React. React reads it for the dev
 // panel readout and mutates tracker config via the exported handles.
