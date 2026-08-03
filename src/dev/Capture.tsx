@@ -11,6 +11,18 @@ import { decodeWav, encodeWav } from "./wav.ts";
 const HOP_SIZE = 1024;
 const READOUT_HZ = 10;
 
+/**
+ * f0Center per capture speaker, keyed by the filename prefix
+ * (`chen_ma3.wav` → chen). Mirror of fixtures/captures/speakers.json — a
+ * trace viewed through the wrong centre clamps flat against chao 1/5 and
+ * every shape reads as wrong.
+ */
+const SPEAKER_CENTERS: Record<string, number> = {
+  pierre: 115,
+  chen: 230,
+  tan: 207,
+};
+
 interface Props {
   onBack: () => void;
 }
@@ -45,6 +57,9 @@ export function Capture({ onBack }: Props) {
     name: string;
     points: TracePoint[];
     hopS: number;
+    f0Center: number;
+    /** Fraction of voiced frames clamped against chao 1 or 5. */
+    pinnedPct: number;
   } | null>(null);
   const traceCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -254,13 +269,28 @@ export function Capture({ onBack }: Props) {
             if (!file) return;
             void file.arrayBuffer().then((buf) => {
               const { samples, sampleRate } = decodeWav(new Uint8Array(buf));
-              const tracker = new PitchTracker({ sampleRate, f0Center: traceF0 });
+              const speaker = file.name.split("_")[0];
+              const f0Center = SPEAKER_CENTERS[speaker] ?? traceF0;
+              if (SPEAKER_CENTERS[speaker]) setTraceF0(f0Center);
+              const tracker = new PitchTracker({ sampleRate, f0Center });
               const points: TracePoint[] = [];
+              let voiced = 0;
+              let pinned = 0;
               for (let s = 0; s + 2048 <= samples.length; s += HOP_SIZE) {
                 const st = tracker.push(samples.subarray(s, s + 2048));
                 points.push({ chao: st.chao, smoothed: st.smoothedChao, voiced: st.voiced });
+                if (st.voiced) {
+                  voiced++;
+                  if (st.chao! <= 1.05 || st.chao! >= 4.95) pinned++;
+                }
               }
-              setTrace({ name: file.name, points, hopS: HOP_SIZE / sampleRate });
+              setTrace({
+                name: file.name,
+                points,
+                hopS: HOP_SIZE / sampleRate,
+                f0Center,
+                pinnedPct: voiced ? pinned / voiced : 0,
+              });
             });
           }}
         />
@@ -269,8 +299,16 @@ export function Capture({ onBack }: Props) {
       {trace && (
         <div className="note">
           <p style={{ margin: "8px 0 4px" }}>
-            {trace.name} — blue: the dot · grey: raw pitch · blank: unheard
+            {trace.name} @ {trace.f0Center} Hz — blue: the dot · grey: raw
+            pitch · blank: unheard
           </p>
+          {trace.pinnedPct > 0.4 && (
+            <p style={{ margin: "0 0 4px", color: "#f80" }}>
+              ⚠ {Math.round(trace.pinnedPct * 100)}% of the pitch is pinned at
+              the top/bottom edge — f0Center is probably wrong for this
+              speaker, so the shape is squashed flat.
+            </p>
+          )}
           <canvas
             ref={traceCanvasRef}
             style={{ width: "100%", background: "#111", borderRadius: 8 }}
