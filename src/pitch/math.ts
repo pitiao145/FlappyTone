@@ -51,6 +51,78 @@ export function clampSlew(
   return prevSemitones + Math.sign(delta) * maxSlew;
 }
 
+export interface VoicingFrame {
+  f0: number;
+  clarity: number;
+  rms: number;
+  /** Last accepted f0 in Hz, or null if nothing has been voiced yet */
+  prevVoicedF0: number | null;
+  /** Consecutive unvoiced frames immediately before this one (0 = last frame was voiced) */
+  framesSinceVoiced: number;
+}
+
+export interface VoicingConfig {
+  clarityThreshold: number;
+  noiseFloor: number;
+  /** Clarity floor for the glide rescue; below this a frame is never voiced */
+  rescueClarity: number;
+  /** Rescue requires rms >= noiseFloor * this (vs * 3 for the primary gate) */
+  rescueRmsMult: number;
+  /** Semitones of pitch travel allowed per elapsed hop when rescuing */
+  rescueMaxSemitones: number;
+  /** Give up rescuing after this many consecutive unvoiced frames */
+  rescueMaxFrames: number;
+}
+
+/**
+ * Tuned on fixtures/captures/Jane-*.wav (native Taiwanese speaker, iPhone mic).
+ * The rescue window is deliberately narrow: loud AND pitch-continuous AND
+ * recent. Any one of those alone admits wind or octave errors.
+ */
+export const DEFAULT_VOICING: VoicingConfig = {
+  clarityThreshold: 0.7,
+  noiseFloor: 0.0033,
+  rescueClarity: 0.4,
+  rescueRmsMult: 10,
+  rescueMaxSemitones: 3,
+  rescueMaxFrames: 3,
+};
+
+/**
+ * Voicing decision for one frame.
+ *
+ * The primary gate is PRD §5.2 (clarity + RMS). The *glide rescue* is the
+ * second path, and it exists because NSDF clarity collapses precisely when a
+ * tone moves fastest: across a steep Tone 4 fall the waveform is no longer
+ * periodic within the analysis window, so correlation degrades even though the
+ * signal is loud and the detected pitch is correct. Jane-4 loses its entire
+ * lower fall that way — frames at clarity 0.44–0.59 carrying full vowel
+ * loudness and a perfectly smooth 330→193Hz descent.
+ *
+ * So a frame that misses on clarity alone is still voiced if it is
+ * unmistakably loud and continues the previous pitch. Continuity is what makes
+ * this safe: an octave error jumps ~12 semitones and is rejected, while a real
+ * glide moves a few. The allowance scales with the gap so a single dropped
+ * frame doesn't break the chain.
+ */
+export function isFrameVoiced(frame: VoicingFrame, config: VoicingConfig): boolean {
+  const { f0, clarity, rms, prevVoicedF0, framesSinceVoiced } = frame;
+  if (f0 <= 0) return false;
+  if (rms < config.noiseFloor * 3) return false;
+
+  if (clarity >= config.clarityThreshold) return true;
+
+  // --- glide rescue ---
+  if (clarity < config.rescueClarity) return false;
+  if (prevVoicedF0 === null) return false;
+  if (framesSinceVoiced > config.rescueMaxFrames) return false;
+  if (rms < config.noiseFloor * config.rescueRmsMult) return false;
+
+  const travel = Math.abs(hzToSemitones(f0, prevVoicedF0));
+  const allowed = config.rescueMaxSemitones * (framesSinceVoiced + 1);
+  return travel <= allowed;
+}
+
 export function rmsOf(frame: Float32Array): number {
   let sum = 0;
   for (let i = 0; i < frame.length; i++) sum += frame[i] * frame[i];

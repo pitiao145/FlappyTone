@@ -1,8 +1,10 @@
 import {
+  DEFAULT_VOICING,
   MedianFilter,
   clampSlew,
   correctOctave,
   hzToSemitones,
+  isFrameVoiced,
   rmsOf,
   semitonesToChao,
 } from "./math.ts";
@@ -16,12 +18,21 @@ export const DEFAULT_CONFIG: Omit<PitchTrackerConfig, "sampleRate"> = {
   // Tuned via `npm run tune` — median-5 does the de-jitter work, so the
   // exponential smoother can be fast; 0.85 clarity missed too many frames.
   alpha: 0.85,
-  // ~1.5 st per ~23ms hop ≈ 65 st/s — well above any real vocal glide
-  // (Tone 4 is ~25 st/s) but stops detector jumps from teleporting the dot
-  maxSlewSemitones: 1.5,
+  // 3.0 st per ~23ms hop ≈ 130 st/s. The old 1.5 was set against an assumed
+  // "Tone 4 is ~25 st/s", which real speech falsifies: Jane-4 (native, citation
+  // T4) falls 377→127Hz in ~200ms ≈ 95 st/s, touching 140 st/s frame to frame.
+  // At 1.5 the clamp itself flattened the fall it was meant to protect. An
+  // octave error still jumps ~12 st and is still caught.
+  maxSlewSemitones: 3.0,
   // 0.8 went deaf mid-syllable on real Tone 2 (native captures hover ~0.7);
   // 0.65 admits noisy onsets. Chosen on fixtures/captures via `npm run report`.
+  // Frames that miss here can still be recovered by the glide rescue — see
+  // isFrameVoiced() in math.ts, which is what keeps fast Tone 4 falls alive.
   clarityThreshold: 0.7,
+  rescueClarity: DEFAULT_VOICING.rescueClarity,
+  rescueRmsMult: DEFAULT_VOICING.rescueRmsMult,
+  rescueMaxSemitones: DEFAULT_VOICING.rescueMaxSemitones,
+  rescueMaxFrames: DEFAULT_VOICING.rescueMaxFrames,
   noiseFloor: 0.0033, // effective RMS floor ≈ 0.01 until calibration exists
   fMin: 70,
   fMax: 400,
@@ -36,6 +47,8 @@ export class PitchTracker {
   private median = new MedianFilter(5);
   private prevVoicedF0: number | null = null;
   private prevSemitones: number | null = null;
+  /** Consecutive unvoiced frames; bounds how long the glide rescue trusts prevVoicedF0. */
+  private framesSinceVoiced = Number.MAX_SAFE_INTEGER;
   private smoothedChao = 3;
 
   constructor(config: Partial<PitchTrackerConfig> & { sampleRate: number }) {
@@ -84,10 +97,26 @@ export class PitchTracker {
     );
     const rms = rmsOf(frame);
 
-    const voiced =
-      rawF0 > 0 && clarity >= clarityThreshold && rms >= noiseFloor * 3;
+    const voiced = isFrameVoiced(
+      {
+        f0: rawF0,
+        clarity,
+        rms,
+        prevVoicedF0: this.prevVoicedF0,
+        framesSinceVoiced: this.framesSinceVoiced,
+      },
+      {
+        clarityThreshold,
+        noiseFloor,
+        rescueClarity: this.config.rescueClarity,
+        rescueRmsMult: this.config.rescueRmsMult,
+        rescueMaxSemitones: this.config.rescueMaxSemitones,
+        rescueMaxFrames: this.config.rescueMaxFrames,
+      },
+    );
 
     if (!voiced) {
+      this.framesSinceVoiced++;
       this.prevSemitones = null;
       return {
         f0: null,
@@ -102,6 +131,7 @@ export class PitchTracker {
 
     const f0 = correctOctave(rawF0, this.prevVoicedF0, f0Center);
     this.prevVoicedF0 = f0;
+    this.framesSinceVoiced = 0;
     const medianF0 = this.median.push(f0);
 
     const semitones = clampSlew(

@@ -21,6 +21,7 @@ const SPEAKER_CENTERS: Record<string, number> = {
   pierre: 115,
   chen: 230,
   tan: 207,
+  jane: 168,
 };
 
 interface Props {

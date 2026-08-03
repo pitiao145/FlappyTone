@@ -22,6 +22,14 @@ export interface PitchTrackerConfig {
   /** Max semitone change per analysis frame; faster jumps are detector errors */
   maxSlewSemitones: number;
   clarityThreshold: number;
+  /** Clarity floor for the glide rescue; below this a frame is never voiced */
+  rescueClarity: number;
+  /** Rescue requires rms >= noiseFloor * this (vs * 3 for the primary gate) */
+  rescueRmsMult: number;
+  /** Semitones of pitch travel allowed per elapsed hop when rescuing */
+  rescueMaxSemitones: number;
+  /** Give up rescuing after this many consecutive unvoiced frames */
+  rescueMaxFrames: number;
   /**
    * Samples of the frame's centre actually searched for pitch. Shorter than
    * frameSize: a fast Tone-4 fall sweeps ~7% in pitch across a full 2048
