@@ -19,7 +19,9 @@ export const DEFAULT_CONFIG: Omit<PitchTrackerConfig, "sampleRate"> = {
   // ~1.5 st per ~23ms hop ≈ 65 st/s — well above any real vocal glide
   // (Tone 4 is ~25 st/s) but stops detector jumps from teleporting the dot
   maxSlewSemitones: 1.5,
-  clarityThreshold: 0.8,
+  // 0.8 went deaf mid-syllable on real Tone 2 (native captures hover ~0.7);
+  // 0.65 admits noisy onsets. Chosen on fixtures/captures via `npm run report`.
+  clarityThreshold: 0.7,
   noiseFloor: 0.0033, // effective RMS floor ≈ 0.01 until calibration exists
   fMin: 70,
   fMax: 400,
@@ -90,7 +92,7 @@ export class PitchTracker {
       };
     }
 
-    const f0 = correctOctave(rawF0, this.prevVoicedF0);
+    const f0 = correctOctave(rawF0, this.prevVoicedF0, f0Center);
     this.prevVoicedF0 = f0;
     const medianF0 = this.median.push(f0);
 

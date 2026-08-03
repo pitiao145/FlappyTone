@@ -33,17 +33,23 @@ describe("hzToSemitones / semitonesToChao", () => {
 });
 
 describe("correctOctave", () => {
-  it("snaps a 2x jump down", () => {
-    expect(correctOctave(240, 121)).toBeCloseTo(120);
+  it("snaps a 2x jump down when the lower octave is nearer f0Center", () => {
+    expect(correctOctave(240, 121, 120)).toBeCloseTo(120);
   });
 
-  it("snaps a 0.5x jump up", () => {
-    expect(correctOctave(61, 121)).toBeCloseTo(122);
+  it("snaps a 0.5x jump up when the upper octave is nearer f0Center", () => {
+    expect(correctOctave(61, 121, 120)).toBeCloseTo(122);
+  });
+
+  it("keeps the raw f0 when the previous frame was the wrong octave", () => {
+    // pierre_ma1 regression: first frame read 77 Hz (half of the true 154);
+    // the correct 154 Hz frames that follow must not be dragged down to it.
+    expect(correctOctave(154, 77, 115)).toBe(154);
   });
 
   it("leaves normal movement alone", () => {
-    expect(correctOctave(140, 120)).toBe(140);
-    expect(correctOctave(120, null)).toBe(120);
+    expect(correctOctave(140, 120, 120)).toBe(140);
+    expect(correctOctave(120, null, 120)).toBe(120);
   });
 });
 

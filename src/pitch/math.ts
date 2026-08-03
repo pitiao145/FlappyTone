@@ -14,16 +14,25 @@ export function semitonesToChao(
 
 /**
  * If f0 is within `tolerance` (relative) of 2x or 0.5x the previous voiced f0,
- * snap it to the nearest octave of the previous value.
+ * the detector may have flipped octave layers — but *either* frame could be
+ * the wrong one. Snapping blindly toward the previous frame lets one bad
+ * onset frame drag every correct frame after it into the wrong octave
+ * (observed on fixtures/captures/pierre_ma1.wav: a 77 Hz first frame pinned a
+ * 154 Hz syllable to the floor). So on ambiguity, keep whichever octave lies
+ * closer to the speaker's calibrated f0Center — tones live within ±8
+ * semitones of it, well under the 12 an octave flip introduces.
  */
 export function correctOctave(
   f0: number,
   prevF0: number | null,
+  f0Center: number,
   tolerance = 0.05,
 ): number {
   if (prevF0 === null) return f0;
-  if (Math.abs(f0 / (2 * prevF0) - 1) <= tolerance) return f0 / 2;
-  if (Math.abs(f0 / (0.5 * prevF0) - 1) <= tolerance) return f0 * 2;
+  const nearerCenter = (a: number, b: number) =>
+    Math.abs(Math.log2(a / f0Center)) <= Math.abs(Math.log2(b / f0Center)) ? a : b;
+  if (Math.abs(f0 / (2 * prevF0) - 1) <= tolerance) return nearerCenter(f0 / 2, f0);
+  if (Math.abs(f0 / (0.5 * prevF0) - 1) <= tolerance) return nearerCenter(f0 * 2, f0);
   return f0;
 }
 
