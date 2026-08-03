@@ -22,6 +22,12 @@ export interface PitchTrackerConfig {
   /** Max semitone change per analysis frame; faster jumps are detector errors */
   maxSlewSemitones: number;
   clarityThreshold: number;
+  /**
+   * Samples of the frame's centre actually searched for pitch. Shorter than
+   * frameSize: a fast Tone-4 fall sweeps ~7% in pitch across a full 2048
+   * window, smearing the correlation peak below the clarity threshold.
+   */
+  detectWindow: number;
   /** Calibrated silence RMS; voiced requires rms >= noiseFloor * 3 */
   noiseFloor: number;
   fMin: number;

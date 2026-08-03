@@ -35,7 +35,7 @@ const MAX_LAG_FRAMES = 12;
 
 interface ParamSet {
   label: string;
-  overrides: Partial<{ alpha: number; clarityThreshold: number; maxSlewSemitones: number; noiseFloor: number; rangeSemitones: number }>;
+  overrides: Partial<{ alpha: number; clarityThreshold: number; maxSlewSemitones: number; noiseFloor: number; rangeSemitones: number; detectWindow: number }>;
 }
 
 const SET_KEYS: Record<string, keyof ParamSet["overrides"]> = {
@@ -47,6 +47,8 @@ const SET_KEYS: Record<string, keyof ParamSet["overrides"]> = {
   noiseFloor: "noiseFloor",
   range: "rangeSemitones",
   rangeSemitones: "rangeSemitones",
+  window: "detectWindow",
+  detectWindow: "detectWindow",
 };
 
 const files: string[] = [];

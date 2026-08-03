@@ -1,4 +1,3 @@
-import { PitchDetector } from "pitchy";
 import {
   MedianFilter,
   clampSlew,
@@ -7,6 +6,7 @@ import {
   rmsOf,
   semitonesToChao,
 } from "./math.ts";
+import { findPitchInBand } from "./mpm.ts";
 import type { PitchState, PitchTrackerConfig } from "./types.ts";
 
 export const DEFAULT_CONFIG: Omit<PitchTrackerConfig, "sampleRate"> = {
@@ -25,11 +25,14 @@ export const DEFAULT_CONFIG: Omit<PitchTrackerConfig, "sampleRate"> = {
   noiseFloor: 0.0033, // effective RMS floor ≈ 0.01 until calibration exists
   fMin: 70,
   fMax: 400,
+  // 1024 of the frame's centre: tone bodies (fast T2 rises / T4 falls) keep
+  // clarity that a full-2048 search smears away. Chosen on fixtures/captures
+  // via `npm run report --set window=...`.
+  detectWindow: 1024,
 };
 
 export class PitchTracker {
   private config: PitchTrackerConfig;
-  private detector: PitchDetector<Float32Array>;
   private median = new MedianFilter(5);
   private prevVoicedF0: number | null = null;
   private prevSemitones: number | null = null;
@@ -37,7 +40,6 @@ export class PitchTracker {
 
   constructor(config: Partial<PitchTrackerConfig> & { sampleRate: number }) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.detector = PitchDetector.forFloat32Array(this.config.frameSize);
   }
 
   setF0Center(hz: number): void {
@@ -72,12 +74,18 @@ export class PitchTracker {
       fMax,
     } = this.config;
 
-    const [rawF0, clarity] = this.detector.findPitch(frame, sampleRate);
+    const w = Math.min(this.config.detectWindow, frame.length);
+    const off = (frame.length - w) >> 1;
+    const [rawF0, clarity] = findPitchInBand(
+      frame.subarray(off, off + w),
+      sampleRate,
+      fMin,
+      fMax,
+    );
     const rms = rmsOf(frame);
 
-    const inBand = rawF0 >= fMin && rawF0 <= fMax;
     const voiced =
-      inBand && clarity >= clarityThreshold && rms >= noiseFloor * 3;
+      rawF0 > 0 && clarity >= clarityThreshold && rms >= noiseFloor * 3;
 
     if (!voiced) {
       this.prevSemitones = null;

@@ -49,7 +49,7 @@ export function Soundboard() {
       {speakers.map((speaker) => (
         <section key={speaker}>
           <h2 style={{ fontSize: 15, margin: "16px 0 8px", opacity: 0.8 }}>
-            {speaker === "chen" ? "chen (male)" : speaker === "tan" ? "tan (female)" : speaker}
+            {speaker === "chen" ? "chen (~230 Hz)" : speaker === "tan" ? "tan (~207 Hz)" : speaker}
           </h2>
           <div
             style={{
