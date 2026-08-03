@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   cueDurationMsFor,
+  isCueAudible,
   loadReferenceClips,
   playToneCue,
 } from "../audio/reference.ts";
@@ -81,6 +82,8 @@ export function Game({
 
     // The mic is already open — Title opened it inside the click gesture.
     setFrameSink((frame, sampleRate) => {
+      // Deaf while the game itself is talking — the cue would drive the dot.
+      if (isCueAudible()) return;
       tracker ??= new PitchTracker({
         sampleRate,
         f0Center: settings.f0Center,

@@ -93,6 +93,20 @@ function chaoToHz(chao: number, f0Center: number, rangeSemitones: number): numbe
  * `rangeSemitones`). Caller owns `ctx` and must have resumed it behind a user
  * gesture already.
  */
+/**
+ * The cue plays through the speakers while the mic is live, and it sits in
+ * the player's own pitch range — the mic picks it up and the dot flies the
+ * cue instead of the player (seen on a real session recording: spurious
+ * voiced frames at the calibrated f0 during every "listen" phase). While a
+ * cue is audible (plus a short room tail), the game must not listen.
+ */
+let cueAudibleUntilMs = 0;
+const CUE_TAIL_MS = 150;
+
+export function isCueAudible(): boolean {
+  return performance.now() < cueAudibleUntilMs;
+}
+
 export function playToneCue(
   ctx: AudioContext,
   tone: Tone,
@@ -105,6 +119,7 @@ export function playToneCue(
     src.buffer = clip.buffer;
     src.connect(ctx.destination);
     src.start(ctx.currentTime, clip.offsetS, clip.durationS);
+    cueAudibleUntilMs = performance.now() + clip.durationS * 1000 + CUE_TAIL_MS;
     return;
   }
   const osc = ctx.createOscillator();
@@ -132,6 +147,7 @@ export function playToneCue(
 
   osc.start(now);
   osc.stop(now + durationS);
+  cueAudibleUntilMs = performance.now() + CUE_MS + CUE_TAIL_MS;
 }
 
 /**
