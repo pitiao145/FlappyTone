@@ -134,9 +134,10 @@ room → laptop mic) is tuned with three dev tools built for the purpose:
 
 Tuning workflow: capture once → `npm run report --set ... --set ...` → pick the
 winner on the numbers → update `DEFAULT_CONFIG` → re-run fixture tests and
-report which goldens moved. To *feel* a candidate, use the Capture screen's
-"replay a WAV into the game" input: the game runs with the recording standing
-in for the mic, identical input every time.
+report which goldens moved. To *look at* what the game saw, use the Capture
+screen's trace viewer: upload any WAV and it draws the full dot path (blue),
+raw pitch (grey) and unheard gaps on the Chao grid — the trail with no time
+pressure.
 
 ---
 
