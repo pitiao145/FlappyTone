@@ -135,9 +135,40 @@ A **gate** is a corridor whose centreline traces the target tone's Chao contour.
 | **3** `mǎ` | 214 | (0, 2) → (0.4, 1) → (1, 4) | dip to the floor, then climb |
 | **4** `mà` | 51 | (0, 5) → (1, 1) | steep slide from top to bottom |
 
+> **⚠️ Superseded — the polyline table above is drawn from the tone *marks*, not from speech.**
+> Measured against `fixtures/captures/jane_ma*.wav` (native, citation), every
+> contour tone is wrong in the same way: **real tones hold, then move fast; these
+> ramp at a constant rate.** Her T4 sits at the top for ~60% of the syllable and
+> falls in ~170ms — about 95 st/s, the same figure the slew clamp in
+> `PitchTracker.ts` is set from. The linear 5→1 corridor asks for ~17 st/s, so no
+> T4 she can produce fits it. A 22-gate run on 4 Aug 2026 bore this out: she
+> cleared 90% of T1 gates — the only corridor with no rate demand — and 8% of
+> T2/T3/T4, and sustained and stretched her tones to compensate.
+>
+> | Tone | was | now (measured) |
+> |---|---|---|
+> | 1 | (0,5) → (1,5) | unchanged |
+> | 2 | (0,3) → (1,5) | (0,3) → (0.25, 2.2) → (1,5) — it dips before it climbs |
+> | 3 | (0,2) → (0.4,1) → (1,4) | (0,3) → (0.45,1.2) → (0.72,1.2) → (1,5) — holds on the floor |
+> | 4 | (0,5) → (1,1) | (0,5) → (0.6,5) → (0.9,1) → (1,1) — a plateau and a cliff |
+>
+> Evidence caveat: one speaker, one syllable, citation register. Thin, but a
+> large improvement on a hand-drawn diagram. Widen it before treating as settled.
+> Note also `jane_ma3_natural`: her *natural* T3 falls 3.3→1.8 in ~256ms and
+> never rises. v1 teaches the citation contour deliberately — the ˇ mark is the
+> game's premise — but the game is not teaching conversational T3.
+
 **Corridor tolerance (half-height of the gap):** starts at `0.12 * H`, tightens to a floor of `0.07 * H` as difficulty ramps.
 
-**Gate duration:** 600ms of travel. Gate width in px = `scrollSpeed * 0.6`.
+**Collision** requires `COLLISION_SUSTAIN_MS` (80ms) *continuously* outside the corridor. A single ~21ms frame is measurement, not a wall; an unvoiced frame clears the timer rather than bridging two excursions.
+
+> **⚠️ Superseded — gate duration is per-tone, answering §14's open question.**
+> Measured durations: T4 540ms, T1 850ms, T2 1020ms, T3 1230ms — a spread of
+> over 2×. `GATE_DURATION_S` in `gates.ts` uses 0.6 / 0.85 / 1.0 / 1.2s.
+> Gate width in px = `scrollSpeed * GATE_DURATION_S[tone]`, so the ramp moves
+> the world faster but never demands a faster tone.
+
+**Gate duration:** ~~600ms of travel. Gate width in px = `scrollSpeed * 0.6`.~~
 **Rest interval between gates:** 900ms at start, shrinking to a floor of 600ms.
 
 **Difficulty ramp:** every 5 gates cleared — `scrollSpeed *= 1.08` (cap 2.2× base), `tolerance *= 0.95` (floor 0.07H), `restInterval *= 0.95` (floor 600ms). Base `scrollSpeed = 220 px/s`.

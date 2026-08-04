@@ -3,6 +3,7 @@ import {
   applyCorridorWidth,
   applyPace,
   corridorChaoAt,
+  GATE_DURATION_S,
   makeGate,
   newDifficulty,
   nextTone,
@@ -19,24 +20,35 @@ describe("corridorChaoAt", () => {
     expect(corridorChaoAt(1, 1)).toBeCloseTo(5);
   });
 
-  it("T2 ramps from chao 3 to chao 5", () => {
+  it("T2 dips below its start before climbing", () => {
     expect(corridorChaoAt(2, 0)).toBeCloseTo(3);
+    expect(corridorChaoAt(2, 0.25)).toBeCloseTo(2.2);
     expect(corridorChaoAt(2, 1)).toBeCloseTo(5);
-    expect(corridorChaoAt(2, 0.5)).toBeCloseTo(4);
+    // The dip is the point: a correct T2 must be *below* chao 3 early on.
+    expect(corridorChaoAt(2, 0.15)).toBeLessThan(3);
+    expect(corridorChaoAt(2, 0.5)).toBeCloseTo(3.1333);
   });
 
-  it("T3 dips then rises across two segments", () => {
-    expect(corridorChaoAt(3, 0)).toBeCloseTo(2);
-    expect(corridorChaoAt(3, 0.4)).toBeCloseTo(1);
-    expect(corridorChaoAt(3, 1)).toBeCloseTo(4);
-    expect(corridorChaoAt(3, 0.2)).toBeCloseTo(1.5);
-    expect(corridorChaoAt(3, 0.7)).toBeCloseTo(2.5);
+  it("T3 falls, holds on the floor, then rises", () => {
+    expect(corridorChaoAt(3, 0)).toBeCloseTo(3);
+    expect(corridorChaoAt(3, 0.45)).toBeCloseTo(1.2);
+    expect(corridorChaoAt(3, 1)).toBeCloseTo(5);
+    expect(corridorChaoAt(3, 0.2)).toBeCloseTo(2.2);
+    // The low plateau — ~28% of the syllable spent on the floor.
+    expect(corridorChaoAt(3, 0.6)).toBeCloseTo(1.2);
+    expect(corridorChaoAt(3, 0.72)).toBeCloseTo(1.2);
+    expect(corridorChaoAt(3, 0.86)).toBeCloseTo(3.1);
   });
 
-  it("T4 slides from chao 5 to chao 1", () => {
+  it("T4 holds high, then falls off a cliff", () => {
     expect(corridorChaoAt(4, 0)).toBeCloseTo(5);
     expect(corridorChaoAt(4, 1)).toBeCloseTo(1);
-    expect(corridorChaoAt(4, 0.5)).toBeCloseTo(3);
+    // Still at the top halfway through — this is what the linear ramp got
+    // wrong, and why a native T4 could not fit the old corridor.
+    expect(corridorChaoAt(4, 0.5)).toBeCloseTo(5);
+    expect(corridorChaoAt(4, 0.6)).toBeCloseTo(5);
+    expect(corridorChaoAt(4, 0.75)).toBeCloseTo(3);
+    expect(corridorChaoAt(4, 0.9)).toBeCloseTo(1);
   });
 
   it("clamps t outside [0,1]", () => {
@@ -149,8 +161,20 @@ describe("makeGate", () => {
     const g = makeGate(1, 500, d);
     expect(g.tone).toBe(1);
     expect(g.xStart).toBe(500);
-    expect(g.widthPx).toBeCloseTo(220 * 0.6);
+    expect(g.widthPx).toBeCloseTo(220 * GATE_DURATION_S[1]);
     expect(g.tolChao).toBeCloseTo(0.8);
+  });
+
+  it("gate width follows the tone's own measured duration", () => {
+    const d = newDifficulty();
+    // T3 citation form runs over 2x as long as T4 — PRD §14's open question,
+    // answered from fixtures/captures/jane_ma*.wav.
+    expect(makeGate(3, 0, d).widthPx / makeGate(4, 0, d).widthPx).toBeCloseTo(2);
+    for (const tone of [1, 2, 3, 4] as const) {
+      expect(makeGate(tone, 0, d).widthPx / d.scrollSpeed).toBeCloseTo(
+        GATE_DURATION_S[tone],
+      );
+    }
   });
 
   it("uses widened tolerance for T3", () => {
@@ -179,10 +203,10 @@ describe("applyPace", () => {
     expect(d.restMs).toBeCloseTo(900 * 2);
   });
 
-  it("keeps gate duration at 600ms — width scales with paced speed", () => {
+  it("keeps each tone's gate duration intact — width scales with paced speed", () => {
     const d = applyPace(newDifficulty(), "relaxed");
     const g = makeGate(1, 0, d);
-    expect(g.widthPx / d.scrollSpeed).toBeCloseTo(0.6);
+    expect(g.widthPx / d.scrollSpeed).toBeCloseTo(GATE_DURATION_S[1]);
   });
 });
 

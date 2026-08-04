@@ -15,25 +15,67 @@ export const TONE_INFO: Record<
   4: { pinyin: "mà", hanzi: "骂", cue: "drop sharply top to bottom" },
 };
 
-/** Polylines from the PRD §6, as (t, chao) control points. */
+/**
+ * Corridor centrelines as (t, chao) control points, measured from a native
+ * speaker's citation takes in `fixtures/captures/jane_ma*.wav`.
+ *
+ * These replaced the PRD §6 table, which was drawn from the shapes of the tone
+ * *marks* rather than from speech. Real tones are not constant-rate ramps: they
+ * hold, then move fast. Her T4 sits at the top for ~60% of the syllable and
+ * then drops in ~170ms; the PRD's linear 5→1 glide across the whole gate asked
+ * her to fall at roughly 17 st/s when she actually falls at ~95 st/s (the same
+ * figure the slew clamp in PitchTracker.ts is set from). No tone she produced
+ * could fit that corridor, and a run of 22 gates bore it out — she cleared 90%
+ * of T1, the only corridor that demands no particular rate, and 8% of the rest.
+ *
+ * Caveat on the evidence: one speaker, one syllable (`ma`), citation register.
+ * That is thin, and it is still a large improvement on a hand-drawn diagram.
+ * Widen it with more speakers and syllables before treating these as settled.
+ */
 const POLYLINES: Record<Tone, Array<[number, number]>> = {
+  // Flat and high throughout — the one shape the PRD already had right.
   1: [
     [0, 5],
     [1, 5],
   ],
+  // Dips before it climbs. The PRD's straight 3→5 ramp missed the dip
+  // entirely, so a correct T2 started by leaving the corridor.
   2: [
     [0, 3],
+    [0.25, 2.2],
     [1, 5],
   ],
+  // Falls to the floor, *sits there* ~28% of the syllable, then rises. The
+  // low plateau is the part the PRD had no room for.
   3: [
-    [0, 2],
-    [0.4, 1],
-    [1, 4],
+    [0, 3],
+    [0.45, 1.2],
+    [0.72, 1.2],
+    [1, 5],
   ],
+  // A plateau and a cliff, not a slide.
   4: [
     [0, 5],
+    [0.6, 5],
+    [0.9, 1],
     [1, 1],
   ],
+};
+
+/**
+ * How long each tone's gate takes to cross, in seconds — its measured natural
+ * duration. PRD §14 asked "is 600ms the right gate width, or does it need to
+ * flex per tone?"; the captures answer it, and the spread is over 2×.
+ *
+ * Note this is invariant to the difficulty ramp: gate width is
+ * `scrollSpeed * duration`, so a faster world scrolls past more quickly but
+ * never demands a faster tone.
+ */
+export const GATE_DURATION_S: Record<Tone, number> = {
+  1: 0.85,
+  2: 1.0,
+  3: 1.2,
+  4: 0.6,
 };
 
 /** Piecewise-linear interpolation of a tone's corridor centreline. t is clamped to [0,1]. */
@@ -192,7 +234,7 @@ export function makeGate(tone: Tone, xStart: number, d: Difficulty): Gate {
   return {
     tone,
     xStart,
-    widthPx: d.scrollSpeed * 0.6,
+    widthPx: d.scrollSpeed * GATE_DURATION_S[tone],
     tolChao: toleranceChao(tone, d.toleranceH),
   };
 }

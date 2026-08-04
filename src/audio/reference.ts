@@ -6,12 +6,20 @@
 // are loaded (or if fetch/decode fails), playToneCue falls back to the v1
 // synthetic sweep: the tone's corridor polyline swept through the player's
 // own calibrated pitch range.
-import { corridorChaoAt, type Tone } from "../game/gates.ts";
+import { corridorChaoAt, GATE_DURATION_S, type Tone } from "../game/gates.ts";
 import { RANGE_SEMITONES } from "../pitch/math.ts";
 
 let ctx: AudioContext | null = null;
 
-const CUE_MS = 500;
+/**
+ * Fallback cue length when no native clip is loaded. The synthetic sweep must
+ * take exactly as long as the gate it is demonstrating, or it teaches a rate
+ * the corridor then refuses — T3's gate is 1.2s, so a flat 500ms demo showed
+ * the contour at more than twice the speed the player is scored against.
+ */
+function synthCueMsFor(tone: Tone): number {
+  return GATE_DURATION_S[tone] * 1000;
+}
 const FADE_MS = 20;
 /** Points sampled along the corridor for the frequency curve; 10ms apart. */
 const CURVE_POINTS = 50;
@@ -77,7 +85,7 @@ export function loadReferenceClips(audio: AudioContext): Promise<void> {
  */
 export function cueDurationMsFor(tone: Tone): number {
   const clip = clips.get(tone);
-  return clip ? clip.durationS * 1000 : CUE_MS;
+  return clip ? clip.durationS * 1000 : synthCueMsFor(tone);
 }
 
 /** Inverse of pitch/math's semitonesToChao: chao -> semitones -> Hz. */
@@ -129,7 +137,7 @@ export function playToneCue(
   gain.connect(ctx.destination);
 
   const now = ctx.currentTime;
-  const durationS = CUE_MS / 1000;
+  const durationS = synthCueMsFor(tone) / 1000;
   const fadeS = FADE_MS / 1000;
 
   const curve = new Float32Array(CURVE_POINTS);
@@ -147,7 +155,7 @@ export function playToneCue(
 
   osc.start(now);
   osc.stop(now + durationS);
-  cueAudibleUntilMs = performance.now() + CUE_MS + CUE_TAIL_MS;
+  cueAudibleUntilMs = performance.now() + durationS * 1000 + CUE_TAIL_MS;
 }
 
 /**
