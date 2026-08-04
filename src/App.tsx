@@ -3,6 +3,7 @@ import { MicError } from "./audio/mic";
 import { ensureMic, stopMic } from "./audio/session";
 import { Capture } from "./dev/Capture";
 import { DevPanel } from "./dev/DevPanel";
+import { GateLogPanel } from "./dev/GateLogPanel";
 import type { RunSnapshot } from "./game/run";
 import { loadSettings, type CalibrationSettings } from "./game/settings";
 import type { RunStats } from "./game/scoring";
@@ -127,6 +128,9 @@ export default function App() {
   return (
     <div className="app">
       <div className="frame">
+        {/* Quitting a run lands here, so the log has to be readable here too. */}
+        {screen === "title" && <GateLogPanel key="gatelog" />}
+
         {screen === "title" && (
           <Title
             calibrated={settings !== null}

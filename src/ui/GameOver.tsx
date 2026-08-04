@@ -1,5 +1,6 @@
 import { TONE_INFO } from "../game/gates.ts";
 import { takeaway, toneBreakdown, type RunStats } from "../game/scoring.ts";
+import { GateLogPanel } from "../dev/GateLogPanel.tsx";
 
 interface Props {
   stats: RunStats;
@@ -41,6 +42,8 @@ export function GameOver({ stats, busy, onRetry, onHome }: Props) {
       </div>
 
       <p className="prompt">{takeaway(breakdown)}</p>
+
+      <GateLogPanel />
 
       <div className="menu">
         <button className="primary" disabled={busy} onClick={onRetry}>

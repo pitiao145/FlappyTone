@@ -6,6 +6,7 @@ import {
   playToneCue,
 } from "../audio/reference.ts";
 import { getMicSession, setFrameSink, stopMic } from "../audio/session.ts";
+import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
 import { TONE_INFO } from "../game/gates.ts";
 import { Run, type RunMode, type RunSnapshot } from "../game/run.ts";
 import {
@@ -25,13 +26,8 @@ const YOUR_TURN_MAX_T = 0.5;
 /** How long the "couldn't hear that" toast stays up. */
 const TOAST_MS = 1200;
 
-/**
- * Per-gate diagnostics overlay, opt-in via `?gatelog`. This is how the unheard
- * rate gets *measured* rather than guessed — play 20 gates and read the column.
- */
-const SHOW_GATE_LOG =
-  typeof location !== "undefined" &&
-  new URLSearchParams(location.search).has("gatelog");
+/** Only the last few gates fit on screen; the full log lives on the end screen. */
+const GATE_LOG_ON_SCREEN = 4;
 
 interface Props {
   mode: RunMode;
@@ -128,6 +124,7 @@ export function Game({
       if (snap.over && !finished) {
         finished = true;
         running = false;
+        saveGateLog(snap.gateLog, snap.missedUtterances);
         clearInterval(hudTimer);
         setFrameSink(null);
         stopMic();
@@ -142,6 +139,9 @@ export function Game({
       hudTimer = setInterval(() => {
         const snap = run.snapshot();
         setHud(snap);
+        // Mirrored every tick, not just at game over, so quitting mid-run or
+        // closing the tab still leaves the numbers behind.
+        saveGateLog(snap.gateLog, snap.missedUtterances);
         setUnheard(
           snap.lastOutcome?.outcome === "unheard" &&
             performance.now() - snap.lastOutcome.atMs < TOAST_MS,
@@ -237,14 +237,15 @@ export function Game({
           {unheard && <div className="toast">couldn't hear that</div>}
           {hud?.noisy && <div className="hint">it's noisy in here</div>}
 
-          {SHOW_GATE_LOG && hud && (
+          {GATE_LOG_ENABLED && hud && (
             <div className="gate-log">
               <div>
-                unheard {hud.gateLog.filter((g) => g.outcome === "unheard").length}/
+                unheard{" "}
+                {hud.gateLog.filter((g) => g.outcome === "unheard").length}/
                 {hud.gateLog.length} · missed early {hud.missedUtterances}
               </div>
               {hud.gateLog
-                .slice()
+                .slice(-GATE_LOG_ON_SCREEN)
                 .reverse()
                 .map((g) => (
                   <div key={g.atMs}>

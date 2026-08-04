@@ -168,7 +168,11 @@ export interface RunSnapshot {
   lastOutcome: LastOutcome | null;
   noisy: boolean;
   difficulty: Difficulty;
-  /** Dev instrumentation (spec A2) — last GATE_LOG_SIZE gates, oldest first. */
+  /**
+   * Dev instrumentation (spec A2) — every gate this run resolved, oldest
+   * first. Uncapped: a run is bounded by 3 hearts, and truncating it meant the
+   * first half of a 20-gate measurement was gone by the time anyone read it.
+   */
   gateLog: GateLogEntry[];
   /** Voiced runs of >=150ms that occurred while no gate was active. */
   missedUtterances: number;
@@ -239,8 +243,6 @@ export interface GateLogEntry {
   atMs: number;
 }
 
-/** How many gates the rolling dev log keeps. */
-const GATE_LOG_SIZE = 10;
 
 /** A voiced run at least this long while no gate is active is a missed attempt. */
 const MISSED_UTTERANCE_MS = 150;
@@ -657,7 +659,6 @@ export class Run {
       seeded: state.seeded,
       atMs: this.nowMs,
     });
-    if (this.gateLog.length > GATE_LOG_SIZE) this.gateLog.shift();
 
     this.lastOutcome = {
       outcome,
