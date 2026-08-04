@@ -153,7 +153,9 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
         observedRef.current.push(latest.semitones);
       }
     });
-    const stopLoop = canvasRef.current ? startLoop(canvasRef.current) : null;
+    const stopLoop = canvasRef.current
+      ? startLoop(canvasRef.current, canvasWidth, canvasHeight)
+      : null;
     // 4Hz, not per frame — the suggestion is UI, and the loop stays outside React.
     const suggesting = setInterval(
       () => setFit(computeRangeSemitones(observedRef.current)),

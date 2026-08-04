@@ -1,4 +1,5 @@
 import { PitchTracker } from "../pitch/PitchTracker.ts";
+import { scaleForDpr } from "../render/canvas.ts";
 import type { PitchState, PitchTrackerConfig } from "../pitch/types.ts";
 import { drawScene, type TrailSample } from "../render/scene.ts";
 
@@ -92,8 +93,12 @@ export function handleFrame(frame: Float32Array, sampleRate: number): void {
   }
 }
 
-export function startLoop(canvas: HTMLCanvasElement): () => void {
-  const ctx = canvas.getContext("2d");
+export function startLoop(
+  canvas: HTMLCanvasElement,
+  cssWidth: number,
+  cssHeight: number,
+): () => void {
+  const ctx = scaleForDpr(canvas, cssWidth, cssHeight);
   if (!ctx) throw new Error("Canvas 2D context unavailable");
 
   let lastT = performance.now();
@@ -110,7 +115,7 @@ export function startLoop(canvas: HTMLCanvasElement): () => void {
     state.displayChao +=
       (state.targetChao - state.displayChao) * (1 - Math.exp(-dt / EASE_TAU_MS));
 
-    drawScene(ctx, canvas.width, canvas.height, {
+    drawScene(ctx, cssWidth, cssHeight, {
       chao: state.displayChao,
       voiced: state.latest.voiced || inGrace,
       trail: state.trail,

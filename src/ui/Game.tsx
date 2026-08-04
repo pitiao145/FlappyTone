@@ -15,6 +15,7 @@ import {
   type CalibrationSettings,
 } from "../game/settings.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
+import { scaleForDpr } from "../render/canvas.ts";
 import { drawWorld } from "../render/world.ts";
 
 /** HUD refresh rate. React never renders per frame — the rAF loop owns the canvas. */
@@ -54,13 +55,15 @@ export function Game({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const ctx2d = canvas?.getContext("2d");
+    // Logical drawing space stays canvasWidth x canvasHeight; only the backing
+    // store is density-scaled, so gameplay geometry is unchanged.
+    const ctx2d = canvas ? scaleForDpr(canvas, canvasWidth, canvasHeight) : null;
     if (!canvas || !ctx2d) return;
 
     // Game remounts per run, so this picks up the latest saved pace.
     const run = new Run({
       mode,
-      width: canvas.width,
+      width: canvasWidth,
       pace: loadPace(),
       corridor: loadCorridorWidth(),
       cueStyle: loadCueStyle(),
@@ -98,7 +101,7 @@ export function Game({
       lastT = now;
       run.tickFrame(dt, now);
       const snap = run.snapshot();
-      drawWorld(ctx2d, canvas.width, canvas.height, snap);
+      drawWorld(ctx2d, canvasWidth, canvasHeight, snap);
 
       if (snap.cue && snap.cue.xStart > lastPlayedXStart) {
         lastPlayedXStart = snap.cue.xStart;
@@ -171,7 +174,7 @@ export function Game({
       document.removeEventListener("visibilitychange", onVisibility);
       setFrameSink(null);
     };
-  }, [mode, settings]);
+  }, [mode, settings, canvasWidth, canvasHeight]);
 
   // Show the *active* gate's tone while flying it — showing the next gate's
   // tone mid-gate would teach the wrong contour (this matters most in the
