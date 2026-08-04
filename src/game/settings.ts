@@ -5,6 +5,10 @@
  */
 
 import {
+  RANGE_SEMITONES_MAX,
+  RANGE_SEMITONES_MIN,
+} from "../pitch/calibration.ts";
+import {
   CORRIDOR_WIDTHS,
   PACES,
   type CorridorWidth,
@@ -17,7 +21,8 @@ export interface CalibrationSettings {
   f0Center: number;
   /** Noise floor from the calibration silence capture (RMS). Voicing gate uses noiseFloor*3 as threshold. */
   noiseFloor: number;
-  /** Tone range in semitones: PRD default 5, range 3–8. Maps to playable vertical space. */
+  /** Tone range in semitones from centre to Chao 1/5. Seeded from the speaker's
+   * measured excursion during calibration; bounds in RANGE_SEMITONES_MIN/MAX. */
   rangeSemitones: number;
 }
 
@@ -29,7 +34,7 @@ const KEY = "toneflap.settings.v1";
  * Validation:
  * - f0Center: 70–400 Hz (human voice range)
  * - noiseFloor: > 0
- * - rangeSemitones: 3–8
+ * - rangeSemitones: RANGE_SEMITONES_MIN–MAX
  */
 export function loadSettings(): CalibrationSettings | null {
   try {
@@ -43,8 +48,8 @@ export function loadSettings(): CalibrationSettings | null {
       typeof s.noiseFloor !== "number" ||
       s.noiseFloor <= 0 ||
       typeof s.rangeSemitones !== "number" ||
-      s.rangeSemitones < 3 ||
-      s.rangeSemitones > 8
+      s.rangeSemitones < RANGE_SEMITONES_MIN ||
+      s.rangeSemitones > RANGE_SEMITONES_MAX
     ) {
       return null;
     }

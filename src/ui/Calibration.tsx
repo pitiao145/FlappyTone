@@ -1,8 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { getMicSession, setFrameSink } from "../audio/session.ts";
-import { configureTracker, getTracker, handleFrame, startLoop } from "../game/loop.ts";
+import {
+  configureTracker,
+  getLatestState,
+  getTracker,
+  handleFrame,
+  startLoop,
+} from "../game/loop.ts";
 import { saveSettings, type CalibrationSettings } from "../game/settings.ts";
-import { computeF0Center, computeNoiseFloor } from "../pitch/calibration.ts";
+import {
+  RANGE_SEMITONES_MAX,
+  RANGE_SEMITONES_MIN,
+  computeF0Center,
+  computeNoiseFloor,
+  computeRangeSemitones,
+} from "../pitch/calibration.ts";
 import { rmsOf } from "../pitch/math.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import type { PitchTrackerConfig } from "../pitch/types.ts";
@@ -31,6 +43,10 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
   const [noiseFloor, setNoiseFloor] = useState<number | null>(null);
   const [f0Center, setF0Center] = useState<number | null>(null);
   const [range, setRange] = useState(RANGE_SEMITONES);
+  /** Range the preview thinks fits this voice, or null until enough is heard. */
+  const [fit, setFit] = useState<number | null>(null);
+  /** Every voiced semitone seen during preview. A ref: this fills at frame rate. */
+  const observedRef = useRef<number[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Backgrounding mid-capture would let the quiet/speak timers run against a
@@ -124,9 +140,27 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
     if (f0Center !== null) cfg.f0Center = f0Center;
     if (noiseFloor !== null) cfg.noiseFloor = noiseFloor;
     configureTracker(cfg);
-    setFrameSink(handleFrame);
+    // Cleared here, not via setState: the interval below re-derives `fit` from
+    // this within 250ms, and an empty capture yields null anyway.
+    observedRef.current = [];
+    // Watch what the speaker actually does so the board can be sized to them.
+    // Semitones are relative to f0Center, so moving the slider doesn't
+    // invalidate anything collected before it moved.
+    setFrameSink((frame, sampleRate) => {
+      handleFrame(frame, sampleRate);
+      const latest = getLatestState();
+      if (latest.voiced && latest.semitones !== null) {
+        observedRef.current.push(latest.semitones);
+      }
+    });
     const stopLoop = canvasRef.current ? startLoop(canvasRef.current) : null;
+    // 4Hz, not per frame — the suggestion is UI, and the loop stays outside React.
+    const suggesting = setInterval(
+      () => setFit(computeRangeSemitones(observedRef.current)),
+      250,
+    );
     return () => {
+      clearInterval(suggesting);
       stopLoop?.();
       setFrameSink(null);
     };
@@ -196,8 +230,8 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
             <span className="param-name">sensitivity — ±{range} semitones</span>
             <input
               type="range"
-              min={3}
-              max={8}
+              min={RANGE_SEMITONES_MIN}
+              max={RANGE_SEMITONES_MAX}
               step={0.5}
               value={range}
               onChange={(e) => {
@@ -211,6 +245,16 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
               the edges, raise it.
             </span>
           </label>
+          {fit !== null && fit !== range && (
+            <button
+              onClick={() => {
+                setRange(fit);
+                getTracker()?.setRangeSemitones(fit);
+              }}
+            >
+              Fit to my voice (±{fit})
+            </button>
+          )}
           <button className="primary" onClick={save}>
             Feels right
           </button>

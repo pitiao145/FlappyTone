@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  RANGE_SEMITONES_MAX,
+  RANGE_SEMITONES_MIN,
   computeF0Center,
   computeNoiseFloor,
+  computeRangeSemitones,
   NOISE_FLOOR_MIN,
   median,
 } from "./calibration.ts";
@@ -71,5 +74,40 @@ describe("computeF0Center", () => {
   it("returns a value for exactly 10 samples", () => {
     const voicedF0s = Array.from({ length: 10 }, () => 100);
     expect(computeF0Center(voicedF0s)).toBe(100);
+  });
+});
+
+describe("computeRangeSemitones", () => {
+  /** A ramp of `n` values spread evenly across [lo, hi]. */
+  const ramp = (lo: number, hi: number, n = 100) =>
+    Array.from({ length: n }, (_, i) => lo + ((hi - lo) * i) / (n - 1));
+
+  it("returns half the p10–p90 span of the speaker's excursion", () => {
+    // -5..+4.9 ramp: p10 ≈ -4, p90 ≈ +4, so the board should span ±4.
+    expect(computeRangeSemitones(ramp(-5, 4.9))).toBeCloseTo(4, 1);
+  });
+
+  it("ignores a wild outlier frame", () => {
+    // One octave-error frame must not stretch the whole board. This is why the
+    // span is taken between percentiles rather than min and max.
+    const withGlitch = [...ramp(-5, 4.9), 50];
+    expect(computeRangeSemitones(withGlitch)).toBeCloseTo(4, 0);
+  });
+
+  it("rounds to the half-semitone the slider uses", () => {
+    const r = computeRangeSemitones(ramp(-5, 4.9));
+    expect((r! * 2) % 1).toBe(0);
+  });
+
+  it("returns null for a capture too sparse to trust", () => {
+    expect(computeRangeSemitones([0, 1, 2])).toBeNull();
+  });
+
+  it("never collapses the board for a monotone speaker", () => {
+    expect(computeRangeSemitones(ramp(0, 0.05))).toBe(RANGE_SEMITONES_MIN);
+  });
+
+  it("never widens the board past what the tone marks stay legible in", () => {
+    expect(computeRangeSemitones(ramp(-30, 30))).toBe(RANGE_SEMITONES_MAX);
   });
 });

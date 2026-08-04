@@ -115,17 +115,17 @@ describe("Settings persistence", () => {
     expect(loadSettings()).toBeNull();
   });
 
-  it("loadSettings returns null when rangeSemitones is out of range (> 8)", () => {
+  it("loadSettings returns null when rangeSemitones is out of range (> 10)", () => {
     const settings: CalibrationSettings = {
       f0Center: 120,
       noiseFloor: 0.001,
-      rangeSemitones: 9,
+      rangeSemitones: 11,
     };
     storageMap["toneflap.settings.v1"] = JSON.stringify(settings);
     expect(loadSettings()).toBeNull();
   });
 
-  it("loadSettings accepts rangeSemitones at the boundaries (3 and 8)", () => {
+  it("loadSettings accepts rangeSemitones at the boundaries (3 and 10)", () => {
     const settings3: CalibrationSettings = {
       f0Center: 120,
       noiseFloor: 0.001,
@@ -134,13 +134,13 @@ describe("Settings persistence", () => {
     storageMap["toneflap.settings.v1"] = JSON.stringify(settings3);
     expect(loadSettings()).toEqual(settings3);
 
-    const settings8: CalibrationSettings = {
+    const settings10: CalibrationSettings = {
       f0Center: 120,
       noiseFloor: 0.001,
-      rangeSemitones: 8,
+      rangeSemitones: 10,
     };
-    storageMap["toneflap.settings.v1"] = JSON.stringify(settings8);
-    expect(loadSettings()).toEqual(settings8);
+    storageMap["toneflap.settings.v1"] = JSON.stringify(settings10);
+    expect(loadSettings()).toEqual(settings10);
   });
 
   it("clearSettings removes the settings from localStorage", () => {

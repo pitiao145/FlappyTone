@@ -38,3 +38,37 @@ export function computeF0Center(voicedF0s: number[]): number | null {
   if (voicedF0s.length < 10) return null;
   return median(voicedF0s);
 }
+
+/**
+ * Bounds on the tone space. The PRD's 3–8 was a guess; the floor still holds
+ * (below ±3 st the four contours stop being distinguishable) but the ceiling
+ * was raised because it excluded real voices — a native speaker measured 6.0
+ * and would have been rejected outright by a cap she legitimately approached.
+ */
+export const RANGE_SEMITONES_MIN = 3;
+export const RANGE_SEMITONES_MAX = 10;
+
+/** Nearest-rank percentile of an already-sorted array. */
+function percentile(sorted: number[], p: number): number {
+  const i = Math.floor((p / 100) * sorted.length);
+  return sorted[Math.min(sorted.length - 1, Math.max(0, i))];
+}
+
+/**
+ * Choose the tone space from what the speaker actually does with their voice.
+ *
+ * Half the p10–p90 span, not half the full span: a single octave-error or
+ * creak frame at the edge would otherwise stretch the board so far that every
+ * real contour flattens into the middle. Measured on fixtures/captures, this
+ * reproduces the value a player had already arrived at by hand (3.5) and keeps
+ * a wide native speaker at a usable 6.0 where min–max gave 9.5.
+ *
+ * Returns null when the capture is too sparse to say anything.
+ */
+export function computeRangeSemitones(voicedSemitones: number[]): number | null {
+  if (voicedSemitones.length < 10) return null;
+  const sorted = [...voicedSemitones].sort((a, b) => a - b);
+  const half = (percentile(sorted, 90) - percentile(sorted, 10)) / 2;
+  const rounded = Math.round(half * 2) / 2;
+  return Math.min(RANGE_SEMITONES_MAX, Math.max(RANGE_SEMITONES_MIN, rounded));
+}
