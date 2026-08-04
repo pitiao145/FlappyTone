@@ -223,12 +223,30 @@ interface PreGateSample {
   atMs: number;
 }
 
+/**
+ * How long the player must stay outside the corridor for it to count as flying
+ * into a wall.
+ *
+ * A single frame is ~21ms of measurement, not a mistake. Judging collision
+ * frame-by-frame made every *contour* tone near-impossible: tolerance is 0.8
+ * chao (1.04 on T3), so dividing by how fast each corridor moves gives the
+ * phase budget a perfectly-pitched attempt has before it clips a wall — T2
+ * 240ms, T3 125ms on the rise, T4 120ms, T1 unlimited because it is flat. A
+ * native speaker cleared 90% of T1 gates and 8% of T2/T3/T4 gates, which is
+ * the shape of a timing rule, not a pitch rule.
+ */
+export const COLLISION_SUSTAIN_MS = 80;
+
 interface ActiveGateState {
   gate: Gate;
   samples: GateSample[];
   collided: boolean;
+  /** When the current unbroken out-of-corridor excursion began, or null. */
+  outsideSinceMs: number | null;
   /** How many samples were seeded from before the gate opened. Instrumentation. */
   seeded: number;
+  /** Longest sustained excursion this gate, in ms. Instrumentation. */
+  worstExcursionMs: number;
 }
 
 /** Per-gate diagnostics — dev instrumentation, not gameplay (spec A2). */
@@ -240,6 +258,8 @@ export interface GateLogEntry {
   voicedFraction: number;
   utteranceMs: number;
   seeded: number;
+  /** Longest unbroken time outside the corridor. >= COLLISION_SUSTAIN_MS means a wall. */
+  worstExcursionMs: number;
   atMs: number;
 }
 
@@ -378,8 +398,21 @@ export class Run {
     // moving underneath it — that divergence is the app's interpolation, not a
     // wrong note, and must never cost a heart. An already-voiced collision
     // stays set (the flag is sticky), so grace can sustain but never create.
-    if (p.voiced && errChao > active.gate.tolChao) {
-      active.collided = true;
+    //
+    // The excursion must also *last*: an unvoiced frame clears the timer
+    // rather than bridging two excursions, so signal loss can never be the
+    // thing that accumulates into a lost heart.
+    if (!p.voiced) {
+      active.outsideSinceMs = null;
+    } else if (errChao > active.gate.tolChao) {
+      active.outsideSinceMs ??= nowMs;
+      const heldMs = nowMs - active.outsideSinceMs;
+      active.worstExcursionMs = Math.max(active.worstExcursionMs, heldMs);
+      if (heldMs >= COLLISION_SUSTAIN_MS) {
+        active.collided = true;
+      }
+    } else {
+      active.outsideSinceMs = null;
     }
   }
 
@@ -622,7 +655,9 @@ export class Run {
           gate: entered,
           samples,
           collided: false,
+          outsideSinceMs: null,
           seeded: samples.length,
+          worstExcursionMs: 0,
         };
         this.preGate = [];
         this.idleRunStartMs = null;
@@ -657,6 +692,7 @@ export class Run {
         state.samples.length === 0 ? 0 : voicedCount / state.samples.length,
       utteranceMs: longestUtteranceMs(state.samples),
       seeded: state.seeded,
+      worstExcursionMs: state.worstExcursionMs,
       atMs: this.nowMs,
     });
 

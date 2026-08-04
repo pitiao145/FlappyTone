@@ -203,6 +203,68 @@ describe("Run — scoring a gate", () => {
     expect(log[0].outcome).toBe("perfect");
   });
 
+  it("a brief excursion outside the corridor does not collide", () => {
+    // Two frames (~32ms) off-corridor, well under COLLISION_SUSTAIN_MS. At one
+    // frame per collision this ended the gate; a 21ms sample is measurement,
+    // not flying into a wall.
+    const run = newGameRun();
+    let offFrames = 0;
+    const { snapshots } = simulate(run, 400, (s) => {
+      if (!s.activeGate) return pitch(3);
+      const off = s.activeGate.t > 0.4 && offFrames < 2;
+      if (off) {
+        offFrames++;
+        // Far outside tolerance (0.8 chao), so only duration is under test.
+        return pitch(s.activeGate.corridorChao - 3);
+      }
+      return pitch(s.activeGate.corridorChao);
+    });
+    expect(offFrames).toBe(2);
+    const outcomes = outcomesOf(snapshots);
+    expect(outcomes[0].outcome).not.toBe("collision");
+    expect(snapshots[snapshots.length - 1].hearts).toBe(3);
+  });
+
+  it("a sustained excursion still collides and costs a heart", () => {
+    // 150ms off-corridor — comfortably past COLLISION_SUSTAIN_MS.
+    const run = newGameRun();
+    let offFrames = 0;
+    const offLimit = Math.ceil(150 / DT);
+    const { snapshots } = simulate(run, 400, (s) => {
+      if (!s.activeGate) return pitch(3);
+      const off = s.activeGate.t > 0.4 && offFrames < offLimit;
+      if (off) {
+        offFrames++;
+        return pitch(s.activeGate.corridorChao - 3);
+      }
+      return pitch(s.activeGate.corridorChao);
+    });
+    const outcomes = outcomesOf(snapshots);
+    expect(outcomes[0].outcome).toBe("collision");
+    const firstResolved = snapshots.find((s) => s.lastOutcome !== null)!;
+    expect(firstResolved.hearts).toBe(2);
+  });
+
+  it("an unvoiced gap clears the excursion timer rather than bridging it", () => {
+    // Off-corridor, dropout, off-corridor again — neither stretch is long
+    // enough alone. Signal loss must never be what accumulates into a heart.
+    const run = newGameRun();
+    let phase = 0;
+    const { snapshots } = simulate(run, 400, (s) => {
+      if (!s.activeGate) return pitch(3);
+      if (s.activeGate.t <= 0.4) return pitch(s.activeGate.corridorChao);
+      phase++;
+      // ~48ms off, ~32ms unvoiced, ~48ms off: 96ms of excursion total, but
+      // never more than 48ms unbroken.
+      if (phase <= 3) return pitch(s.activeGate.corridorChao - 3);
+      if (phase <= 5) return pitch(null, s.birdChao);
+      if (phase <= 8) return pitch(s.activeGate.corridorChao - 3);
+      return pitch(s.activeGate.corridorChao);
+    });
+    const outcomes = outcomesOf(snapshots);
+    expect(outcomes[0].outcome).not.toBe("collision");
+  });
+
   it("hearts reaching 0 ends the run", () => {
     const run = newGameRun();
     const { snapshots } = simulate(run, 2000, () => pitch(1));
