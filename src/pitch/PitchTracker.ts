@@ -33,6 +33,9 @@ export const DEFAULT_CONFIG: Omit<PitchTrackerConfig, "sampleRate"> = {
   rescueRmsMult: DEFAULT_VOICING.rescueRmsMult,
   rescueMaxSemitones: DEFAULT_VOICING.rescueMaxSemitones,
   rescueMaxFrames: DEFAULT_VOICING.rescueMaxFrames,
+  // ~115ms at a 1024 hop — just past the PRD §5.3 grace period, so the reset
+  // lands only once the dot has already stopped being held for the old sound.
+  staleUnvoicedFrames: 5,
   noiseFloor: 0.0033, // effective RMS floor ≈ 0.01 until calibration exists
   fMin: 70,
   fMax: 400,
@@ -95,7 +98,10 @@ export class PitchTracker {
       fMin,
       fMax,
     );
-    const rms = rmsOf(frame);
+    // Voicing is judged on the same audio the pitch came from. Measuring the
+    // whole 2048 lets silence in the outer samples veto a centre that is
+    // cleanly voiced — a spurious "couldn't hear that" at syllable onset.
+    const rms = rmsOf(frame.subarray(off, off + w));
 
     const voiced = isFrameVoiced(
       {
@@ -117,6 +123,14 @@ export class PitchTracker {
 
     if (!voiced) {
       this.framesSinceVoiced++;
+      // Past this gap the previous syllable stops being evidence about the
+      // next one — the player has breathed and may restart anywhere. Holding
+      // the median buffer would drag the first frames of the new syllable
+      // toward the old pitch, blunting exactly the onsets that matter.
+      if (this.framesSinceVoiced === this.config.staleUnvoicedFrames) {
+        this.median.reset();
+        this.prevVoicedF0 = null;
+      }
       this.prevSemitones = null;
       return {
         f0: null,

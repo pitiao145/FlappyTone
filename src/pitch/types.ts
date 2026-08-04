@@ -30,6 +30,8 @@ export interface PitchTrackerConfig {
   rescueMaxSemitones: number;
   /** Give up rescuing after this many consecutive unvoiced frames */
   rescueMaxFrames: number;
+  /** Consecutive unvoiced frames after which median/octave history is discarded */
+  staleUnvoicedFrames: number;
   /**
    * Samples of the frame's centre actually searched for pitch. Shorter than
    * frameSize: a fast Tone-4 fall sweeps ~7% in pitch across a full 2048
