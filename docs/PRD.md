@@ -150,7 +150,22 @@ v1 mitigations:
 
 - Inside a T3 gate, extend the unvoiced grace period from 120ms to **250ms**, and *hold* rather than drift.
 - Widen T3 tolerance by 1.3× relative to other tones.
-- Never render a T3 gate as failed due to signal loss alone — if >40% of frames in the gate were unvoiced, mark the gate **"couldn't hear that"** (neutral, no score, no heart lost) rather than scoring it 0.
+- Never render a T3 gate as failed due to signal loss alone — if the gate holds no utterance long enough to judge, mark it **"couldn't hear that"** (neutral, no score, no heart lost) rather than scoring it 0.
+
+> **⚠️ Superseded — the ">40% unvoiced" rule is gone.** A 35-second real-device
+> session (iPhone, 4 Aug 2026) fired "couldn't hear that" on roughly half of all
+> gates while the player was speaking. A gate is 600ms of travel and a citation
+> syllable carries pitch for ~300–400ms of it, so demanding 60% voiced frames
+> demanded more voicing than the language produces. The test is now absolute
+> duration: the longest voiced run in the gate, merging gaps under
+> `MERGE_GAP_MS` (120ms, for T3 creak dropouts), must reach `MIN_UTTERANCE_MS`
+> (180ms). See `longestUtteranceMs()` in `src/game/scoring.ts`.
+>
+> Gates also seed from up to `PRE_GATE_BUFFER_MS` (400ms) of pitch history when
+> they open mid-syllable — the player answering the demo immediately, which the
+> call-and-response design trains them to do, previously had that whole
+> utterance discarded. Only a run seen to *begin* inside that buffer is claimed;
+> a hum the player never stopped is not an answer.
 
 That last rule generalises: **when the app isn't sure, it says so rather than scoring you wrong.** Every competitor in this space loses trust the first time it tells a correct speaker they're wrong.
 
@@ -171,7 +186,7 @@ accuracy   = clamp(1 - mean(err_t), 0, 1)
 | ≥ 0.60 | Good | 150 |
 | cleared without collision | OK | 50 |
 | wall collision | — | lose 1 heart, gate scores 0 |
-| >40% unvoiced | "Couldn't hear that" | 0, no heart lost |
+| no voiced run ≥180ms | "Couldn't hear that" | 0, no heart lost (see §6 — this replaced ">40% unvoiced") |
 
 **Combo:** consecutive Perfect/Good gates multiply score — ×1, ×1.5, ×2, ×3 (caps at ×3). Any OK or worse resets it.
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyGate,
   comboAfter,
+  longestUtteranceMs,
   multiplierFor,
   newRunStats,
   pointsFor,
@@ -12,6 +13,9 @@ import {
   type RunStats,
 } from "./scoring.ts";
 import type { Tone } from "./gates.ts";
+
+/** Analysis hop: 1024 samples at 44.1kHz. Frames really do arrive this far apart. */
+const HOP_MS = 23;
 
 function samples(
   n: number,
@@ -25,7 +29,28 @@ function samples(
       errChao: i < voicedCount ? errOverTol : 0,
       tolChao: 1,
       voiced: i < voicedCount,
+      atMs: i * HOP_MS,
     });
+  }
+  return out;
+}
+
+/** A voiced run of `ms` starting at `startMs`, then silence up to `padToMs`. */
+function voicedRun(startMs: number, ms: number, errOverTol = 0): GateSample[] {
+  const out: GateSample[] = [];
+  for (let t = 0; t <= ms; t += HOP_MS) {
+    out.push({ errChao: errOverTol, tolChao: 1, voiced: true, atMs: startMs + t });
+  }
+  // Land the last frame exactly on the run's end so durations are exact.
+  out[out.length - 1].atMs = startMs + ms;
+  return out;
+}
+
+/** Unvoiced frames from `startMs` up to and including `endMs`. */
+function unvoicedRun(startMs: number, endMs: number): GateSample[] {
+  const out: GateSample[] = [];
+  for (let t = startMs; t <= endMs; t += HOP_MS) {
+    out.push({ errChao: 0, tolChao: 1, voiced: false, atMs: t });
   }
   return out;
 }
@@ -42,15 +67,41 @@ describe("scoreGate", () => {
     expect(result.outcome).toBe("collision");
   });
 
-  it("unheard when voiced fraction < 0.6", () => {
-    const result = scoreGate(samples(10, 0.5, 0), false);
-    expect(result.outcome).toBe("unheard");
-    expect(result.accuracy).toBe(0);
+  it("a 200ms voiced run in a 600ms window scores rather than reporting unheard", () => {
+    const gate = [...voicedRun(0, 200), ...unvoicedRun(230, 600)];
+    const result = scoreGate(gate, false);
+    expect(result.outcome).toBe("perfect");
   });
 
-  it("voiced fraction exactly 0.6 is not unheard", () => {
-    const result = scoreGate(samples(10, 0.6, 0), false);
-    expect(result.outcome).not.toBe("unheard");
+  it("a 100ms blip is still unheard", () => {
+    const gate = [...voicedRun(0, 100), ...unvoicedRun(130, 600)];
+    expect(scoreGate(gate, false).outcome).toBe("unheard");
+  });
+
+  it("two 120ms runs split by an 80ms gap merge into one 320ms utterance", () => {
+    // The T3 creak case: neither half clears MIN_UTTERANCE_MS alone.
+    const gate = [
+      ...voicedRun(0, 120),
+      ...unvoicedRun(140, 180),
+      ...voicedRun(200, 120),
+    ];
+    expect(longestUtteranceMs(gate)).toBe(320);
+    expect(scoreGate(gate, false).outcome).toBe("perfect");
+  });
+
+  it("the same two runs split by a 200ms gap stay separate and go unheard", () => {
+    const gate = [
+      ...voicedRun(0, 120),
+      ...unvoicedRun(140, 300),
+      ...voicedRun(320, 120),
+    ];
+    expect(longestUtteranceMs(gate)).toBe(120);
+    expect(scoreGate(gate, false).outcome).toBe("unheard");
+  });
+
+  it("a fully voiced gate scores regardless of how long the window is", () => {
+    // The old fractional floor made this depend on window length; duration doesn't.
+    expect(scoreGate(voicedRun(0, 600), false).outcome).toBe("perfect");
   });
 
   it("perfect when accuracy >= 0.85", () => {
@@ -83,16 +134,8 @@ describe("scoreGate", () => {
   it("ignores unvoiced samples' error in the mean", () => {
     // 6 voiced with err/tol 0 (perfect signal), 4 unvoiced with huge err values
     const mixed: GateSample[] = [
-      ...Array.from({ length: 6 }, () => ({
-        errChao: 0,
-        tolChao: 1,
-        voiced: true,
-      })),
-      ...Array.from({ length: 4 }, () => ({
-        errChao: 999,
-        tolChao: 1,
-        voiced: false,
-      })),
+      ...voicedRun(0, 200),
+      ...unvoicedRun(230, 400).map((s) => ({ ...s, errChao: 999 })),
     ];
     const result = scoreGate(mixed, false);
     expect(result.accuracy).toBeCloseTo(1);

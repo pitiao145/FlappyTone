@@ -146,18 +146,61 @@ describe("Run — scoring a gate", () => {
     expect(firstResolved.hearts).toBe(2);
   });
 
-  it("50% unvoiced frames in a gate yield 'unheard' with hearts unchanged", () => {
+  it("a blip too short to be an utterance yields 'unheard' with hearts unchanged", () => {
+    // A ~95ms on-corridor burst at the top of the gate, silence otherwise:
+    // under MIN_UTTERANCE_MS, so the game says it couldn't hear rather than
+    // scoring. Frame-level dropouts do *not* count against the player — gaps
+    // under MERGE_GAP_MS merge — so the test has to be a genuinely short sound.
     const run = newGameRun();
-    const { snapshots } = simulate(run, 400, (s, i) =>
-      i % 2 === 0
-        ? pitch(s.activeGate ? s.activeGate.corridorChao : 3)
-        : pitch(null, s.birdChao),
-    );
+    const { snapshots } = simulate(run, 400, (s) => {
+      const speaking = s.activeGate !== null && s.activeGate.t < 0.16;
+      return speaking
+        ? pitch(s.activeGate!.corridorChao)
+        : pitch(null, s.birdChao);
+    });
     const outcomes = outcomesOf(snapshots);
     expect(outcomes[0].outcome).toBe("unheard");
     const last = snapshots[snapshots.length - 1];
     expect(last.hearts).toBe(3);
     expect(last.score).toBe(0);
+  });
+
+  it("a voiced run beginning before the gate opens is included in that gate's samples", () => {
+    // The call-and-response case: the player answers the demo the moment it
+    // ends, so their syllable is already underway when the gate arrives. The
+    // in-gate part alone (~95ms) is under MIN_UTTERANCE_MS — only the seeded
+    // head makes this an utterance the game can judge.
+    const run = newGameRun();
+    const { snapshots } = simulate(run, 400, (s) => {
+      const startingEarly =
+        s.activeGate === null &&
+        s.upcoming !== null &&
+        s.upcoming.msUntil < 200;
+      const inGateStretch = s.activeGate !== null && s.activeGate.t < 0.16;
+      if (!startingEarly && !inGateStretch) return pitch(null, s.birdChao);
+      // Both phases aim at the corridor's starting chao — where seeded samples
+      // are scored, and where a T1 corridor stays.
+      return pitch(corridorChaoAt(s.upcoming?.tone ?? s.activeGate!.tone, 0));
+    });
+
+    const log = snapshots[snapshots.length - 1].gateLog;
+    expect(log.length).toBeGreaterThan(0);
+    expect(log[0].seeded).toBeGreaterThan(0);
+    expect(log[0].utteranceMs).toBeGreaterThanOrEqual(180);
+    expect(log[0].outcome).not.toBe("unheard");
+  });
+
+  it("does not seed a gate from a hum the player never stopped", () => {
+    // Continuous voicing at chao 3 into a T1 gate: we cannot tell an answer
+    // from an idle hum, so nothing is seeded and the gate is judged on what
+    // happened inside it.
+    const run = newGameRun();
+    const { snapshots } = simulate(run, 400, (s) =>
+      s.activeGate ? pitch(s.activeGate.corridorChao) : pitch(3),
+    );
+    const log = snapshots[snapshots.length - 1].gateLog;
+    expect(log[0].seeded).toBe(0);
+    expect(log[0].outcome).toBe("perfect");
   });
 
   it("hearts reaching 0 ends the run", () => {

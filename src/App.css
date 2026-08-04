@@ -275,6 +275,20 @@
   color: #9aa4b0;
 }
 
+/* Dev-only gate diagnostics (?gatelog) — measures the unheard rate in play. */
+.gate-log {
+  margin-top: auto;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.65rem;
+  line-height: 1.35;
+  text-align: left;
+  background: rgba(5, 7, 10, 0.78);
+  color: #9aa4b0;
+  pointer-events: none;
+}
+
 /* ------------------------------------------------------------- game over */
 
 .score-big {

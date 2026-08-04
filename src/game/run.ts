@@ -25,10 +25,12 @@ import {
 } from "./gates.ts";
 import {
   applyGate,
+  heardUtterance,
+  longestUtteranceMs,
+  MERGE_GAP_MS,
   newRunStats,
   multiplierFor,
   scoreGate,
-  UNHEARD_VOICED_FLOOR,
   type GateOutcome,
   type GateSample,
   type RunStats,
@@ -166,6 +168,10 @@ export interface RunSnapshot {
   lastOutcome: LastOutcome | null;
   noisy: boolean;
   difficulty: Difficulty;
+  /** Dev instrumentation (spec A2) — last GATE_LOG_SIZE gates, oldest first. */
+  gateLog: GateLogEntry[];
+  /** Voiced runs of >=150ms that occurred while no gate was active. */
+  missedUtterances: number;
 }
 
 const TUTORIAL_TONES: Tone[] = [1, 1, 4, 4, 2, 2, 3, 3];
@@ -199,11 +205,45 @@ export const CUE_PAUSE_HOLD_MS = 500;
 /** Outcomes that count as "cleared" for the difficulty ramp (PRD §6). */
 const CLEARED_OUTCOMES = new Set<GateOutcome>(["perfect", "good", "ok"]);
 
+/**
+ * How far back a gate will reach for an utterance the player began before it
+ * opened. Long enough to cover a whole citation syllable, short enough that
+ * unrelated earlier voicing has already fallen out of the buffer.
+ */
+export const PRE_GATE_BUFFER_MS = 400;
+
+/** One frame of pitch history kept while no gate is active, for pre-gate seeding. */
+interface PreGateSample {
+  chao: number;
+  voiced: boolean;
+  atMs: number;
+}
+
 interface ActiveGateState {
   gate: Gate;
   samples: GateSample[];
   collided: boolean;
+  /** How many samples were seeded from before the gate opened. Instrumentation. */
+  seeded: number;
 }
+
+/** Per-gate diagnostics — dev instrumentation, not gameplay (spec A2). */
+export interface GateLogEntry {
+  tone: Tone;
+  outcome: GateOutcome;
+  samples: number;
+  voiced: number;
+  voicedFraction: number;
+  utteranceMs: number;
+  seeded: number;
+  atMs: number;
+}
+
+/** How many gates the rolling dev log keeps. */
+const GATE_LOG_SIZE = 10;
+
+/** A voiced run at least this long while no gate is active is a missed attempt. */
+const MISSED_UTTERANCE_MS = 150;
 
 interface NoiseFrame {
   t: number;
@@ -253,6 +293,21 @@ export class Run {
   private noiseFrames: NoiseFrame[] = [];
   private nowMs = 0;
 
+  /**
+   * Recent pitch frames kept while no gate is active, so a gate that opens
+   * mid-syllable can claim the part of the syllable that came first.
+   */
+  private preGate: PreGateSample[] = [];
+  /** End of the last resolved gate — never seed a gate from a previous gate's audio. */
+  private lastGateEndedAtMs = -Infinity;
+
+  private gateLog: GateLogEntry[] = [];
+  /** Voiced runs of >= MISSED_UTTERANCE_MS that happened with no gate active. */
+  private missedUtterances = 0;
+  private idleRunStartMs: number | null = null;
+  private idleRunLastMs = -Infinity;
+  private idleRunCounted = false;
+
   constructor(cfg: RunConfig) {
     this.mode = cfg.mode;
     this.width = cfg.width;
@@ -299,7 +354,12 @@ export class Run {
     this.recordNoise(p, nowMs);
 
     const active = this.active;
-    if (!active) return;
+    if (!active) {
+      this.recordPreGate(p.voiced, nowMs);
+      return;
+    }
+    // A gate is running: nothing here can be pre-gate audio for the next one.
+    this.preGate = [];
 
     const t = this.progressIn(active.gate);
     const corridor = corridorChaoAt(active.gate.tone, t);
@@ -308,6 +368,7 @@ export class Run {
       errChao,
       tolChao: active.gate.tolChao,
       voiced: p.voiced,
+      atMs: nowMs,
     });
 
     // Only a *voiced* off-corridor frame can start a collision. During grace
@@ -436,6 +497,8 @@ export class Run {
       lastOutcome: this.lastOutcome,
       noisy: this.isNoisy(),
       difficulty: this.difficulty,
+      gateLog: this.gateLog,
+      missedUtterances: this.missedUtterances,
     };
   }
 
@@ -477,6 +540,69 @@ export class Run {
     return Math.min(1, Math.max(0, t));
   }
 
+  /**
+   * Keeps the last PRE_GATE_BUFFER_MS of pitch history while no gate is
+   * active, and tallies voiced runs that landed with nowhere to go.
+   */
+  private recordPreGate(voiced: boolean, nowMs: number): void {
+    this.preGate.push({ chao: this.targetChao, voiced, atMs: nowMs });
+    const cutoff = nowMs - PRE_GATE_BUFFER_MS;
+    while (this.preGate.length > 0 && this.preGate[0].atMs < cutoff) {
+      this.preGate.shift();
+    }
+
+    if (!voiced) return;
+    if (
+      this.idleRunStartMs === null ||
+      nowMs - this.idleRunLastMs > MERGE_GAP_MS
+    ) {
+      this.idleRunStartMs = nowMs;
+      this.idleRunCounted = false;
+    }
+    this.idleRunLastMs = nowMs;
+    if (!this.idleRunCounted && nowMs - this.idleRunStartMs >= MISSED_UTTERANCE_MS) {
+      this.idleRunCounted = true;
+      this.missedUtterances += 1;
+    }
+  }
+
+  /**
+   * Samples of the voiced run that is *still ongoing* as the gate opens, scored
+   * against the corridor's starting chao.
+   *
+   * A player who answers the demo straight away — the call-and-response beat the
+   * game itself trains — is mid-syllable when the gate arrives. Without this the
+   * whole utterance was discarded and the gate reported "couldn't hear that".
+   * Only the ongoing run is taken: stray older voicing must not pre-fill a gate.
+   */
+  private seedSamples(gate: Gate): GateSample[] {
+    const buf = this.preGate;
+    if (buf.length === 0 || !buf[buf.length - 1].voiced) return [];
+
+    let i = buf.length - 1;
+    while (i > 0) {
+      const prev = buf[i - 1];
+      if (!prev.voiced) break;
+      if (buf[i].atMs - prev.atMs > MERGE_GAP_MS) break;
+      if (prev.atMs <= this.lastGateEndedAtMs) break;
+      i -= 1;
+    }
+    // The run must be seen to *begin* inside the buffer. If it is still going
+    // at the buffer's oldest frame we cannot tell an answer-to-the-cue from a
+    // sustained hum the player never stopped — and crediting the hum would both
+    // average in pitch aimed at no corridor and let continuous noise satisfy
+    // MIN_UTTERANCE_MS for a gate the player never actually addressed.
+    if (i === 0) return [];
+
+    const corridor = corridorChaoAt(gate.tone, 0);
+    return buf.slice(i).map((s) => ({
+      errChao: Math.abs(s.chao - corridor),
+      tolChao: gate.tolChao,
+      voiced: s.voiced,
+      atMs: s.atMs,
+    }));
+  }
+
   /** Opens the gate the bird has entered and closes the one it has left. */
   private syncActive(): void {
     if (this.active && this.worldX > this.gateEnd(this.active.gate)) {
@@ -489,7 +615,15 @@ export class Run {
         (g) => this.worldX >= g.xStart && this.worldX <= this.gateEnd(g),
       );
       if (entered) {
-        this.active = { gate: entered, samples: [], collided: false };
+        const samples = this.seedSamples(entered);
+        this.active = {
+          gate: entered,
+          samples,
+          collided: false,
+          seeded: samples.length,
+        };
+        this.preGate = [];
+        this.idleRunStartMs = null;
       }
     }
   }
@@ -503,15 +637,28 @@ export class Run {
     // (PRD §6). A mostly-unvoiced gate reports "couldn't hear that" even if a
     // held-through-grace frame clipped a wall — signal loss must never cost a
     // heart. This is why the collision flag is dropped here, not in scoreGate.
-    const voicedFraction =
-      state.samples.length === 0
-        ? 0
-        : state.samples.filter((s) => s.voiced).length / state.samples.length;
-    const collided =
-      voicedFraction < UNHEARD_VOICED_FLOOR ? false : state.collided;
+    const heard = heardUtterance(state.samples);
+    const collided = heard ? state.collided : false;
 
     const { outcome, accuracy } = scoreGate(state.samples, collided);
     this.gatesFinished += 1;
+    this.lastGateEndedAtMs = this.nowMs;
+    this.preGate = [];
+
+    const voicedCount = state.samples.filter((s) => s.voiced).length;
+    this.gateLog.push({
+      tone: state.gate.tone,
+      outcome,
+      samples: state.samples.length,
+      voiced: voicedCount,
+      voicedFraction:
+        state.samples.length === 0 ? 0 : voicedCount / state.samples.length,
+      utteranceMs: longestUtteranceMs(state.samples),
+      seeded: state.seeded,
+      atMs: this.nowMs,
+    });
+    if (this.gateLog.length > GATE_LOG_SIZE) this.gateLog.shift();
+
     this.lastOutcome = {
       outcome,
       tone: state.gate.tone,

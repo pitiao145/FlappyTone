@@ -10,14 +10,55 @@ export interface GateSample {
   errChao: number;
   tolChao: number;
   voiced: boolean;
+  /** Host clock (ms) the frame was analysed at. Duration reasoning needs it. */
+  atMs: number;
 }
 
 export type GateOutcome = "perfect" | "good" | "ok" | "collision" | "unheard";
 
-/** Below this voiced fraction a gate is "couldn't hear that", not a failure (PRD §6). */
-export const UNHEARD_VOICED_FLOOR = 0.6;
+/**
+ * A voiced run shorter than this is not an attempt — it is a cough or a click.
+ *
+ * This replaced a *fractional* floor (60% of the gate's frames voiced). A gate
+ * is 600ms of travel; a citation-form syllable carries pitch for ~300–400ms of
+ * it, so the old rule demanded more voicing than the language produces and
+ * "couldn't hear that" fired on roughly half of all real attempts. The right
+ * question is not "what proportion of the window was voiced" but "did the
+ * player produce an utterance long enough to judge".
+ */
+export const MIN_UTTERANCE_MS = 180;
+/** Voiced runs separated by less than this are one utterance (covers T3 creak). */
+export const MERGE_GAP_MS = 120;
 const PERFECT_ACCURACY = 0.85;
 const GOOD_ACCURACY = 0.6;
+
+/**
+ * Length of the longest voiced run in `samples`, merging unvoiced gaps shorter
+ * than MERGE_GAP_MS. Mirrors the segmentation in src/dev/report.ts.
+ *
+ * A run's length is the span between its first and last voiced frame, so a
+ * lone frame measures 0 — one frame is not a duration.
+ */
+export function longestUtteranceMs(samples: GateSample[]): number {
+  let best = 0;
+  let start: number | null = null;
+  let lastVoicedAt = 0;
+
+  for (const s of samples) {
+    if (!s.voiced) continue;
+    if (start === null || s.atMs - lastVoicedAt > MERGE_GAP_MS) {
+      start = s.atMs;
+    }
+    lastVoicedAt = s.atMs;
+    best = Math.max(best, lastVoicedAt - start);
+  }
+  return best;
+}
+
+/** Did the player produce anything long enough to score? */
+export function heardUtterance(samples: GateSample[]): boolean {
+  return longestUtteranceMs(samples) >= MIN_UTTERANCE_MS;
+}
 
 /** Scores a single gate from its per-frame samples. PRD §7. */
 export function scoreGate(
@@ -29,9 +70,8 @@ export function scoreGate(
   }
 
   const voicedSamples = samples.filter((s) => s.voiced);
-  const voicedFraction = samples.length === 0 ? 0 : voicedSamples.length / samples.length;
 
-  if (voicedFraction < UNHEARD_VOICED_FLOOR) {
+  if (!heardUtterance(samples)) {
     return { outcome: "unheard", accuracy: 0 };
   }
 

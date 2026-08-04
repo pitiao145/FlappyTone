@@ -15,7 +15,7 @@ React 18 + TypeScript + Vite + Tailwind. Canvas 2D. Web Audio API. No backend, n
 3. **All pitch math in semitones, never raw Hz.** Pitch perception is logarithmic. `semitones = 12 * Math.log2(f0 / f0Center)`.
 4. **Every audio API call sits behind an explicit user gesture.** iOS Safari requires a gesture for both `getUserMedia()` and `AudioContext.resume()`. This is the most common silent failure — test it on a real iPhone, not the simulator.
 5. **`src/pitch/` must have zero Web Audio dependencies.** It takes `Float32Array` frames in and returns pitch state out — a pure module. This is what makes it testable offline against WAV fixtures. Web Audio lives only in `src/audio/`, which feeds `src/pitch/`. Never import `AudioContext` inside `src/pitch/`.
-6. **When the signal is unclear, the game says "couldn't hear that" — it never scores the player wrong.** A gate with >40% unvoiced frames is neutral: no points, no heart lost. Confidently failing a correct speaker is the single fastest way to lose a user.
+6. **When the signal is unclear, the game says "couldn't hear that" — it never scores the player wrong.** A gate whose longest voiced run is under `MIN_UTTERANCE_MS` (180ms, merging gaps under 120ms) is neutral: no points, no heart lost. The test is utterance *duration*, not voiced fraction — a 600ms gate can never be 60% voiced by a 400ms syllable, and the old fractional floor was firing on half of all real attempts. Confidently failing a correct speaker is the single fastest way to lose a user.
 
 ## Layout
 

@@ -25,6 +25,14 @@ const YOUR_TURN_MAX_T = 0.5;
 /** How long the "couldn't hear that" toast stays up. */
 const TOAST_MS = 1200;
 
+/**
+ * Per-gate diagnostics overlay, opt-in via `?gatelog`. This is how the unheard
+ * rate gets *measured* rather than guessed — play 20 gates and read the column.
+ */
+const SHOW_GATE_LOG =
+  typeof location !== "undefined" &&
+  new URLSearchParams(location.search).has("gatelog");
+
 interface Props {
   mode: RunMode;
   settings: CalibrationSettings;
@@ -228,6 +236,26 @@ export function Game({
 
           {unheard && <div className="toast">couldn't hear that</div>}
           {hud?.noisy && <div className="hint">it's noisy in here</div>}
+
+          {SHOW_GATE_LOG && hud && (
+            <div className="gate-log">
+              <div>
+                unheard {hud.gateLog.filter((g) => g.outcome === "unheard").length}/
+                {hud.gateLog.length} · missed early {hud.missedUtterances}
+              </div>
+              {hud.gateLog
+                .slice()
+                .reverse()
+                .map((g) => (
+                  <div key={g.atMs}>
+                    T{g.tone} {g.outcome} · {g.voiced}/{g.samples} (
+                    {Math.round(g.voicedFraction * 100)}%) ·{" "}
+                    {Math.round(g.utteranceMs)}ms
+                    {g.seeded > 0 ? ` · +${g.seeded} early` : ""}
+                  </div>
+                ))}
+            </div>
+          )}
         </div>
 
         <button className="mic-stop" onClick={onQuit} title="End the run">
