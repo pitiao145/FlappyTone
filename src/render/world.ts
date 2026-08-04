@@ -11,7 +11,7 @@ import { BIRD_X_FRAC } from "../game/run.ts";
 import type { RunSnapshot } from "../game/run.ts";
 import { corridorChaoAt } from "../game/gates.ts";
 import { TRAIL_SECONDS } from "../game/dynamics.ts";
-import { chaoToY, drawChaoGrid, drawDot, drawTrail } from "./scene.ts";
+import { BACKDROP, chaoToY, drawChaoGrid, drawDot, drawTrail } from "./scene.ts";
 
 /** How long a "couldn't hear that" / rating flash lingers after a gate retires (PRD-adjacent, brief §5). */
 const OUTCOME_FLASH_MS = 800;
@@ -32,7 +32,8 @@ export function drawWorld(
   height: number,
   snap: RunSnapshot,
 ): void {
-  ctx.fillStyle = "#111318";
+  const now = performance.now();
+  ctx.fillStyle = BACKDROP;
   ctx.fillRect(0, 0, width, height);
 
   drawChaoGrid(ctx, width, height);
@@ -47,8 +48,8 @@ export function drawWorld(
 
   if (!snap.cuePaused) drawCueDemo(ctx, height, snap);
 
-  drawTrail(ctx, width, height, snap.trail, TRAIL_SECONDS, dotX, performance.now());
-  drawDot(ctx, width, height, snap.birdChao, dotX, snap.voiced);
+  drawTrail(ctx, width, height, snap.trail, TRAIL_SECONDS, dotX, now);
+  drawDot(ctx, width, height, snap.birdChao, dotX, snap.voiced, now);
 
   drawPinFlash(ctx, width, height, snap.pinned);
   drawOutcomeFlash(ctx, width, height, snap);
@@ -76,6 +77,28 @@ function drawCueVeil(
   drawCueDemo(ctx, height, snap);
 }
 
+/**
+ * Each tone's own light. Desaturated to a tint rather than a colour — enough
+ * that a clip reads as changing between gates and that the corridor carries
+ * *which* tone you are flying, not enough to turn the scene into a rainbow.
+ */
+const TONE_LIGHT: Record<number, [number, number, number]> = {
+  1: [150, 205, 255], // level — cool, steady
+  2: [130, 225, 190], // rising — green
+  3: [190, 170, 255], // dip then rise — violet
+  4: [255, 190, 140], // falling — amber
+};
+
+/**
+ * One gate: a solid wall with a lit channel cut through it.
+ *
+ * The emphasis here is inverted from the original, which drew the wall as a
+ * translucent white veil (0.10 active / 0.04 approaching) over a dark backdrop
+ * — so the *corridor* was the darker region and "passable" was signalled by
+ * absence. On a phone in daylight neither region resolved. Now the wall is the
+ * densest thing in the frame and the corridor is the only lit one, which is
+ * the reading the shape needs: fly through the light.
+ */
 function drawGate(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -86,31 +109,74 @@ function drawGate(
   const { x0, x1, tone, tolChao } = gate;
   if (x1 < 0 || x0 > width) return;
 
-  // Corridor walls: everything outside centre ± tol, as filled bands.
-  ctx.fillStyle = active
-    ? "rgba(255, 255, 255, 0.10)"
-    : "rgba(255, 255, 255, 0.04)";
-  for (let i = 0; i < CENTRELINE_STEPS; i++) {
-    const t0 = i / CENTRELINE_STEPS;
-    const t1 = (i + 1) / CENTRELINE_STEPS;
-    const sx0 = x0 + t0 * (x1 - x0);
-    const sx1 = x0 + t1 * (x1 - x0);
-    const centre = corridorChaoAt(tone, t0);
-    const topY = chaoToY(centre + tolChao, height);
-    const botY = chaoToY(centre - tolChao, height);
-    // Above the corridor (higher chao = smaller y)
-    ctx.fillRect(sx0, 0, sx1 - sx0 + 1, Math.max(0, topY));
-    // Below the corridor
-    ctx.fillRect(sx0, botY, sx1 - sx0 + 1, Math.max(0, height - botY));
+  // Sample both corridor edges once; walls, glow and rim all reuse them.
+  const top: Array<[number, number]> = [];
+  const bottom: Array<[number, number]> = [];
+  for (let i = 0; i <= CENTRELINE_STEPS; i++) {
+    const t = i / CENTRELINE_STEPS;
+    const sx = x0 + t * (x1 - x0);
+    const centre = corridorChaoAt(tone, t);
+    top.push([sx, chaoToY(centre + tolChao, height)]);
+    bottom.push([sx, chaoToY(centre - tolChao, height)]);
   }
 
-  // Dashed ghost centreline — the ideal contour (PRD §8).
+  const [r, g, b] = TONE_LIGHT[tone] ?? TONE_LIGHT[1];
+  const lit = active ? 1 : 0.42;
+
   ctx.save();
-  ctx.setLineDash([6, 6]);
-  ctx.strokeStyle = active
-    ? "rgba(255, 255, 255, 0.55)"
-    : "rgba(255, 255, 255, 0.22)";
-  ctx.lineWidth = 2;
+
+  // 1. The wall — near-black, opaque enough to swallow the grid behind it, so
+  //    the guide lines survive only inside the open channel.
+  ctx.fillStyle = active ? "rgba(6, 8, 12, 0.97)" : "rgba(8, 10, 15, 0.82)";
+  ctx.beginPath();
+  ctx.moveTo(x0, 0);
+  for (const [sx, sy] of top) ctx.lineTo(sx, sy);
+  ctx.lineTo(x1, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x0, height);
+  for (const [sx, sy] of bottom) ctx.lineTo(sx, sy);
+  ctx.lineTo(x1, height);
+  ctx.closePath();
+  ctx.fill();
+
+  // 2. The channel, lit from within. Clipped to the corridor so the glow can
+  //    be generous without bleeding into the wall.
+  ctx.save();
+  ctx.beginPath();
+  for (let i = 0; i < top.length; i++) {
+    const [sx, sy] = top[i];
+    if (i === 0) ctx.moveTo(sx, sy);
+    else ctx.lineTo(sx, sy);
+  }
+  for (let i = bottom.length - 1; i >= 0; i--) ctx.lineTo(bottom[i][0], bottom[i][1]);
+  ctx.closePath();
+  ctx.clip();
+  ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.13 * lit})`;
+  ctx.fillRect(x0, 0, x1 - x0, height);
+  ctx.restore();
+
+  // 3. Rims. A hard edge is what actually tells you where the wall starts —
+  //    the gradient alone reads as fog.
+  ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.55 * lit})`;
+  ctx.lineWidth = active ? 2 : 1.25;
+  for (const edge of [top, bottom]) {
+    ctx.beginPath();
+    for (let i = 0; i < edge.length; i++) {
+      const [sx, sy] = edge[i];
+      if (i === 0) ctx.moveTo(sx, sy);
+      else ctx.lineTo(sx, sy);
+    }
+    ctx.stroke();
+  }
+
+  // 4. The ghost centreline — guidance, so it must read as *inside* the
+  //    corridor rather than as a third obstacle. Thin, dashed, tinted to the
+  //    channel's own light instead of competing white.
+  ctx.setLineDash([5, 7]);
+  ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.42 * lit})`;
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
   for (let i = 0; i <= CENTRELINE_STEPS; i++) {
     const t = i / CENTRELINE_STEPS;
@@ -120,6 +186,7 @@ function drawGate(
     else ctx.lineTo(sx, sy);
   }
   ctx.stroke();
+
   ctx.restore();
 }
 
@@ -146,13 +213,34 @@ function drawCueDemo(
 
   const x = gate.x0 + p * (gate.x1 - gate.x0);
   const y = chaoToY(corridorChaoAt(cue.tone, p), height);
+
+  // A ghost, deliberately: small, hollow, no halo. It was previously drawn
+  // solid and glowing while the player's own dot was a 45%-opacity ring, which
+  // made the example the most prominent moving object on screen. The demo
+  // shows you the path; it is not the thing you are watching yourself do.
   ctx.save();
-  ctx.fillStyle = `rgba(255, 210, 130, ${alpha})`;
-  ctx.shadowColor = "rgba(255, 210, 130, 0.8)";
-  ctx.shadowBlur = 10;
+  // A short tail so the sweep still reads as tracing a contour rather than
+  // hopping — this is the only reason it is on screen at all.
+  const tailSteps = 8;
   ctx.beginPath();
-  ctx.arc(x, y, 5, 0, Math.PI * 2);
+  for (let i = 0; i <= tailSteps; i++) {
+    const tp = Math.max(0, p - (i / tailSteps) * 0.18);
+    const tx = gate.x0 + tp * (gate.x1 - gate.x0);
+    const ty = chaoToY(corridorChaoAt(cue.tone, tp), height);
+    if (i === 0) ctx.moveTo(tx, ty);
+    else ctx.lineTo(tx, ty);
+  }
+  ctx.strokeStyle = `rgba(235, 208, 170, ${alpha * 0.4})`;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(x, y, 4, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(235, 208, 170, ${alpha * 0.35})`;
   ctx.fill();
+  ctx.strokeStyle = `rgba(245, 222, 190, ${alpha * 0.75})`;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
   ctx.restore();
 }
 
