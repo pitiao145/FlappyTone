@@ -330,16 +330,23 @@ export class Run {
     // be scored (or not scored) on a gate they never saw. Same clamp as loop.ts.
     const dt = Math.min(MAX_FRAME_DT_MS, dtMs);
 
-    this.applyUnvoicedDynamics(dt, nowMs);
-    this.displayChao +=
-      (this.targetChao - this.displayChao) * (1 - Math.exp(-dt / EASE_TAU_MS));
-
     // "pause" cue style: the world stands still while the demo is traced
     // (plus a beat), so the example and the attempt cannot blur together.
     if (!this.inCuePause(nowMs)) {
       this.worldX += (this.difficulty.scrollSpeed * dt) / 1000;
     }
+    // Resolve which gate the bird is in *before* the dynamics read it. Drifting
+    // first meant the T3 hold used last frame's gate, so entering a T3 gate
+    // while unvoiced still took one drift step toward centre — at the 100ms dt
+    // clamp that is half a chao of unearned movement, on the tone whose whole
+    // mitigation is "don't move when we can't hear you".
     this.syncActive();
+    if (this.isOver()) return;
+
+    this.applyUnvoicedDynamics(dt, nowMs);
+    this.displayChao +=
+      (this.targetChao - this.displayChao) * (1 - Math.exp(-dt / EASE_TAU_MS));
+
     this.updateCue(nowMs);
     this.retireOffscreen();
     this.pruneTrail(nowMs);

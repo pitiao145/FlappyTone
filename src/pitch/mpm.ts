@@ -66,6 +66,10 @@ export function findPitchInBand(
   for (let lag = minLag + 1; lag < maxLag; lag++) {
     if (nsdf[lag] >= threshold && nsdf[lag] >= nsdf[lag - 1] && nsdf[lag] >= nsdf[lag + 1]) {
       // Parabolic interpolation around the peak for sub-sample lag precision.
+      // No clamp on `shift` is needed: this branch only runs where nsdf[lag] is
+      // a local maximum, so a=b-δ and c=b-ε with δ,ε>=0, giving
+      // shift = 0.5(δ-ε)/(δ+ε), which is structurally within [-0.5, 0.5].
+      // The one degenerate case (δ=ε=0) is the denom guard below.
       const a = nsdf[lag - 1];
       const b = nsdf[lag];
       const c = nsdf[lag + 1];

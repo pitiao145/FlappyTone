@@ -10,6 +10,7 @@
 import { BIRD_X_FRAC } from "../game/run.ts";
 import type { RunSnapshot } from "../game/run.ts";
 import { corridorChaoAt } from "../game/gates.ts";
+import { TRAIL_SECONDS } from "../game/dynamics.ts";
 import { chaoToY, drawChaoGrid, drawDot, drawTrail } from "./scene.ts";
 
 /** How long a "couldn't hear that" / rating flash lingers after a gate retires (PRD-adjacent, brief §5). */
@@ -46,7 +47,7 @@ export function drawWorld(
 
   if (!snap.cuePaused) drawCueDemo(ctx, height, snap);
 
-  drawTrail(ctx, width, height, snap.trail, 1.5, dotX, performance.now());
+  drawTrail(ctx, width, height, snap.trail, TRAIL_SECONDS, dotX, performance.now());
   drawDot(ctx, width, height, snap.birdChao, dotX, snap.voiced);
 
   drawPinFlash(ctx, width, height, snap.pinned);

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { setFrameSink, stopMic } from "../audio/session.ts";
 import { DEFAULT_CONFIG, PitchTracker } from "../pitch/PitchTracker.ts";
 import type { PitchState } from "../pitch/types.ts";
+import speakers from "../../fixtures/captures/speakers.json";
 import { decodeWav, encodeWav } from "./wav.ts";
 
 const HOP_SIZE = 1024;
@@ -13,16 +14,11 @@ const READOUT_HZ = 10;
 
 /**
  * f0Center per capture speaker, keyed by the filename prefix
- * (`chen_ma3.wav` → chen). Mirror of fixtures/captures/speakers.json — a
- * trace viewed through the wrong centre clamps flat against chao 1/5 and
- * every shape reads as wrong.
+ * (`chen_ma3.wav` → chen). Read from the same file `npm run report` uses, not
+ * copied: a trace viewed through the wrong centre clamps flat against chao 1/5
+ * and every shape reads as wrong, so the two must never disagree.
  */
-const SPEAKER_CENTERS: Record<string, number> = {
-  pierre: 115,
-  chen: 230,
-  tan: 207,
-  jane: 168,
-};
+const SPEAKER_CENTERS: Record<string, number> = speakers;
 
 interface Props {
   onBack: () => void;

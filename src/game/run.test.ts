@@ -42,15 +42,16 @@ function simulate(
   run: Run,
   frames: number,
   voice: (s: RunSnapshot, frame: number) => PitchState,
+  dt = DT,
 ): SimResult {
   const snapshots: RunSnapshot[] = [];
   let now = 0;
   for (let i = 0; i < frames; i++) {
     const s = run.snapshot();
     run.tickAudio(voice(s, i), now);
-    run.tickFrame(DT, now);
+    run.tickFrame(dt, now);
     snapshots.push(run.snapshot());
-    now += DT;
+    now += dt;
   }
   return { snapshots };
 }
@@ -557,5 +558,38 @@ describe("Run — per-tone cue duration", () => {
     const { snapshots } = simulate(run, 400, trackCorridor);
     const cued = snapshots.find((s) => s.cue !== null)!;
     expect(cued.cue!.durationMs).toBe(400 + cued.cue!.tone * 100);
+  });
+});
+
+describe("T3 gate boundaries", () => {
+  it("stops centre-drift on the frame the bird enters a T3 gate, not a frame after", () => {
+    // Drift is correct *between* gates and forbidden inside a T3 one (PRD §6),
+    // so the handover must happen on the entry frame itself. Run at the 100ms
+    // dt clamp -- a stuttering phone -- where one drift step is 0.53 chao, so a
+    // single stray frame of drift cannot hide inside easing noise.
+    const SLOW = 100;
+    const run = newT3Run();
+
+    const { snapshots } = simulate(
+      run,
+      25,
+      (s) => {
+        // Quiet from just before the gate arrives, so the grace period has
+        // already expired and the dot is mid-drift as it crosses the threshold.
+        const silent =
+          s.activeGate?.tone === 3 ||
+          (s.upcoming?.tone === 3 && s.upcoming.msUntil <= 250);
+        return silent ? pitch(null, s.birdChao) : pitch(5);
+      },
+      SLOW,
+    );
+
+    const entry = snapshots.findIndex((s) => s.activeGate?.tone === 3);
+    expect(entry).toBeGreaterThan(0);
+    const driftStep = (5.33 * SLOW) / 1000;
+    const movedOnEntry = Math.abs(
+      snapshots[entry].birdChao - snapshots[entry - 1].birdChao,
+    );
+    expect(movedOnEntry).toBeLessThan(driftStep / 4);
   });
 });
