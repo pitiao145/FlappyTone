@@ -60,6 +60,13 @@ chao      = clamp(3 + (semitones / RANGE_SEMITONES) * 2, 1, 5)
 
 Where `RANGE_SEMITONES = 5` by default (a 10-semitone total tone space, adjustable in settings, 3–8).
 
+> **⚠️ Superseded.** The range is no longer a fixed default: calibration
+> measures the speaker's own excursion and seeds it (`computeRangeSemitones`,
+> half the p10–p90 span of their voiced semitones). Bounds are **3–10**, not
+> 3–8 — measured speakers land between 3.5 and 6.0, and the old ceiling was
+> low enough that a wide voice could not persist a value that fitted her.
+> The slider still wins; the measurement is a starting point, not a verdict.
+
 Chao 1–5 is the standard Chinese tone-level scale. Map it to the playable vertical band:
 
 ```
@@ -83,6 +90,22 @@ Run at ~60 Hz (every ~16ms), analysis window 2048 samples @ 44.1kHz.
 3. **Octave-jump correction.** If the new f0 is within 5% of 2× or 0.5× the previous voiced f0, snap it to the nearest octave of the previous value.
 4. **Median filter**, window of 5 frames, on raw f0.
 5. **Exponential smoothing** on the resulting Y: `y = y + 0.35 * (yTarget - y)`. This is the key tuning knob — too low and the bird jitters, too high and the contour flattens out and Tone 2/4 stop registering. Expose it in a dev panel.
+
+> **⚠️ Measured deviations — the code is right and this section is stale.**
+> Do not "restore spec compliance"; these values were changed *because* the
+> spec's numbers failed on real voices. Evidence in `fixtures/captures/`,
+> reproduce with `npm run report`.
+>
+> | Spec says | Code does | Why |
+> |---|---|---|
+> | `clarity >= 0.85` | `0.7`, plus a **glide rescue** | NSDF clarity collapses exactly when pitch slews fastest, so a native Tone 4 fall was discarded at full loudness with correct pitch. A loud, pitch-continuous, recent frame is voiced even below threshold. See `isFrameVoiced()`. |
+> | `alpha = 0.35` | `0.85` | The smoothness/responsiveness trade-off does not exist here: median-5 and the slew clamp de-jitter upstream, so alpha is monotonic across 0.15–1.0 on lag, contour survival *and* jitter. 0.35 is strictly worse on all three. |
+> | analysis at ~60 Hz | ~43 Hz (2048 window, 1024 hop) | 50% overlap at 44.1–48kHz |
+> | (slew unspecified) | `3.0 st/hop` | A native citation Tone 4 falls ~95 st/s, touching 140. An earlier 1.5 (≈65 st/s) clamped the real signal. |
+>
+> Visual smoothing is a *separate* stage the spec doesn't mention:
+> `EASE_TAU_MS` in `src/game/dynamics.ts` eases the drawn dot and never touches
+> scoring data. It now contributes more lag than alpha does.
 
 ### 5.3 Unvoiced behaviour
 

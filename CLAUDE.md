@@ -44,7 +44,9 @@ npm run typecheck
 
 You cannot hear. Do not claim the pitch pipeline works based on reading the code.
 
-Verify it by running `npm run analyze fixtures/<file>.wav` and reading the ASCII contour, and by running the fixture tests. Full protocol in @docs/TESTING.md. Any change to `src/pitch/` requires the fixture tests to pass and the golden snapshots to be reviewed.
+Verify it by running `npm run analyze fixtures/captures/<file>.wav <f0Center>` and reading the ASCII contour, and by running the fixture tests. Full protocol in @docs/TESTING.md. Any change to `src/pitch/` requires the fixture tests to pass **and** a before/after `npm run report` comparison — state which of fit/lag/wiggle/voiced% moved, including the ones that got worse.
+
+Ground truth is `fixtures/captures/jane_*.wav` (native Taiwanese speaker, direct mic). `chen_*`/`tan_*` were recorded speaker-into-mic and that round trip is a confound — don't rest a conclusion on them. The synthetic `fixtures/tone*.wav` prove nothing about real voices.
 
 ## Working style
 
