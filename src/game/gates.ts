@@ -42,40 +42,54 @@ const POLYLINES: Record<Tone, Array<[number, number]>> = {
   // entirely, so a correct T2 started by leaving the corridor.
   2: [
     [0, 3],
-    [0.25, 2.2],
+    [0.2, 2.2],
+    [0.75, 5],
     [1, 5],
   ],
-  // Falls to the floor, *sits there* ~28% of the syllable, then rises. The
-  // low plateau is the part the PRD had no room for.
+  // Falls to the floor, *sits there*, then rises. The low plateau is the part
+  // the PRD had no room for.
   3: [
     [0, 3],
-    [0.45, 1.2],
-    [0.72, 1.2],
+    [0.38, 1.2],
+    [0.6, 1.2],
+    [0.85, 5],
     [1, 5],
   ],
   // A plateau and a cliff, not a slide.
   4: [
     [0, 5],
-    [0.6, 5],
-    [0.9, 1],
+    [0.55, 5],
+    [0.85, 1],
     [1, 1],
   ],
 };
 
 /**
- * How long each tone's gate takes to cross, in seconds — its measured natural
- * duration. PRD §14 asked "is 600ms the right gate width, or does it need to
- * flex per tone?"; the captures answer it, and the spread is over 2×.
+ * How long each tone's gate takes to cross, in seconds. PRD §14 asked "is 600ms
+ * the right gate width, or does it need to flex per tone?" — it does.
  *
- * Note this is invariant to the difficulty ramp: gate width is
- * `scrollSpeed * duration`, so a faster world scrolls past more quickly but
- * never demands a faster tone.
+ * These come from a native speaker's utterance lengths *in play* (18-gate run,
+ * 4 Aug 2026), not from the citation fixtures. The fixtures are isolated `ma`
+ * said deliberately for a recording and run far longer than the same speaker's
+ * natural production: measured 850/1020/1230/540ms in `jane_ma*.wav` versus
+ * medians of 501/342/235/341ms actually produced while playing. Sized to those
+ * medians with ~30% slack for timing, which also leaves room for the contour
+ * to finish early (see below).
+ *
+ * Each contour now completes before the gate ends and then holds its final
+ * chao. That tail is not cosmetic: a speaker who finishes a natural rise in
+ * ~350ms and sustains the top note was previously *above* a corridor still
+ * climbing underneath her, which produced 469ms and 512ms excursions and two
+ * collisions on otherwise-correct T2 attempts.
+ *
+ * Invariant to the difficulty ramp: gate width is `scrollSpeed * duration`, so
+ * a faster world scrolls past more quickly but never demands a faster tone.
  */
 export const GATE_DURATION_S: Record<Tone, number> = {
-  1: 0.85,
-  2: 1.0,
-  3: 1.2,
-  4: 0.6,
+  1: 0.65,
+  2: 0.65,
+  3: 0.85,
+  4: 0.55,
 };
 
 /** Piecewise-linear interpolation of a tone's corridor centreline. t is clamped to [0,1]. */

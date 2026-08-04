@@ -163,10 +163,26 @@ A **gate** is a corridor whose centreline traces the target tone's Chao contour.
 **Collision** requires `COLLISION_SUSTAIN_MS` (80ms) *continuously* outside the corridor. A single ~21ms frame is measurement, not a wall; an unvoiced frame clears the timer rather than bridging two excursions.
 
 > **⚠️ Superseded — gate duration is per-tone, answering §14's open question.**
-> Measured durations: T4 540ms, T1 850ms, T2 1020ms, T3 1230ms — a spread of
-> over 2×. `GATE_DURATION_S` in `gates.ts` uses 0.6 / 0.85 / 1.0 / 1.2s.
-> Gate width in px = `scrollSpeed * GATE_DURATION_S[tone]`, so the ramp moves
-> the world faster but never demands a faster tone.
+> `GATE_DURATION_S` in `gates.ts` is **0.65 / 0.65 / 0.85 / 0.55s**. Gate width
+> in px = `scrollSpeed * GATE_DURATION_S[tone]`, so the ramp moves the world
+> faster but never demands a faster tone.
+>
+> These come from utterance lengths **in play**, not from the citation fixtures.
+> An isolated `ma` said for a recording runs far longer than the same speaker's
+> natural production — 850/1020/1230/540ms in `jane_ma*.wav` against medians of
+> 501/342/235/341ms actually produced during an 18-gate run (4 Aug 2026). The
+> first pass sized gates from the fixtures and every gate came out too long; the
+> native speaker's own words were "the corridor feels too long, we really need
+> to sustain it for an unnatural amount of time."
+>
+> Each contour also **completes before the gate ends and then holds** its final
+> chao. That tail is load-bearing: a speaker who finishes a natural rise in
+> ~350ms and sustains the top note was otherwise sitting above a corridor still
+> climbing underneath her, which produced 469ms and 512ms excursions and two
+> collisions on correct T2 attempts.
+>
+> Caveat: T3 rests on n=1 in-play sample (235ms) and is sized conservatively at
+> 0.85s. It needs more evidence than the other three.
 
 **Gate duration:** ~~600ms of travel. Gate width in px = `scrollSpeed * 0.6`.~~
 **Rest interval between gates:** 900ms at start, shrinking to a floor of 600ms.

@@ -234,8 +234,12 @@ interface PreGateSample {
  * 240ms, T3 125ms on the rise, T4 120ms, T1 unlimited because it is flat. A
  * native speaker cleared 90% of T1 gates and 8% of T2/T3/T4 gates, which is
  * the shape of a timing rule, not a pitch rule.
+ *
+ * Raised 80 → 120ms after the 18-gate run of 4 Aug 2026: a T1 gate collided on
+ * an 85ms excursion, close enough to the threshold to be noise, while the two
+ * genuine failures ran 469ms and 512ms. Nothing real sits between.
  */
-export const COLLISION_SUSTAIN_MS = 80;
+export const COLLISION_SUSTAIN_MS = 120;
 
 interface ActiveGateState {
   gate: Gate;

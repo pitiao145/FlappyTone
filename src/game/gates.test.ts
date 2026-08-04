@@ -22,22 +22,22 @@ describe("corridorChaoAt", () => {
 
   it("T2 dips below its start before climbing", () => {
     expect(corridorChaoAt(2, 0)).toBeCloseTo(3);
-    expect(corridorChaoAt(2, 0.25)).toBeCloseTo(2.2);
+    expect(corridorChaoAt(2, 0.2)).toBeCloseTo(2.2);
     expect(corridorChaoAt(2, 1)).toBeCloseTo(5);
     // The dip is the point: a correct T2 must be *below* chao 3 early on.
     expect(corridorChaoAt(2, 0.15)).toBeLessThan(3);
-    expect(corridorChaoAt(2, 0.5)).toBeCloseTo(3.1333);
+    expect(corridorChaoAt(2, 0.5)).toBeCloseTo(3.7273);
   });
 
   it("T3 falls, holds on the floor, then rises", () => {
     expect(corridorChaoAt(3, 0)).toBeCloseTo(3);
-    expect(corridorChaoAt(3, 0.45)).toBeCloseTo(1.2);
+    expect(corridorChaoAt(3, 0.38)).toBeCloseTo(1.2);
     expect(corridorChaoAt(3, 1)).toBeCloseTo(5);
-    expect(corridorChaoAt(3, 0.2)).toBeCloseTo(2.2);
-    // The low plateau — ~28% of the syllable spent on the floor.
+    expect(corridorChaoAt(3, 0.2)).toBeCloseTo(2.0526);
+    // The low plateau — time spent sitting on the floor, which the PRD's
+    // two-segment polyline had no room for.
+    expect(corridorChaoAt(3, 0.5)).toBeCloseTo(1.2);
     expect(corridorChaoAt(3, 0.6)).toBeCloseTo(1.2);
-    expect(corridorChaoAt(3, 0.72)).toBeCloseTo(1.2);
-    expect(corridorChaoAt(3, 0.86)).toBeCloseTo(3.1);
   });
 
   it("T4 holds high, then falls off a cliff", () => {
@@ -46,9 +46,21 @@ describe("corridorChaoAt", () => {
     // Still at the top halfway through — this is what the linear ramp got
     // wrong, and why a native T4 could not fit the old corridor.
     expect(corridorChaoAt(4, 0.5)).toBeCloseTo(5);
-    expect(corridorChaoAt(4, 0.6)).toBeCloseTo(5);
-    expect(corridorChaoAt(4, 0.75)).toBeCloseTo(3);
-    expect(corridorChaoAt(4, 0.9)).toBeCloseTo(1);
+    expect(corridorChaoAt(4, 0.55)).toBeCloseTo(5);
+    expect(corridorChaoAt(4, 0.7)).toBeCloseTo(3);
+    expect(corridorChaoAt(4, 0.85)).toBeCloseTo(1);
+  });
+
+  it("every contour completes before the gate ends, then holds", () => {
+    // A speaker who finishes a natural rise early and sustains the final note
+    // must still be inside the corridor. Without this tail she sat above a
+    // corridor still climbing underneath her — 469ms and 512ms excursions on
+    // otherwise-correct T2 attempts, 4 Aug 2026.
+    for (const tone of [1, 2, 3, 4] as const) {
+      const end = corridorChaoAt(tone, 1);
+      expect(corridorChaoAt(tone, 0.9)).toBeCloseTo(end);
+      expect(corridorChaoAt(tone, 0.95)).toBeCloseTo(end);
+    }
   });
 
   it("clamps t outside [0,1]", () => {
@@ -167,9 +179,9 @@ describe("makeGate", () => {
 
   it("gate width follows the tone's own measured duration", () => {
     const d = newDifficulty();
-    // T3 citation form runs over 2x as long as T4 — PRD §14's open question,
-    // answered from fixtures/captures/jane_ma*.wav.
-    expect(makeGate(3, 0, d).widthPx / makeGate(4, 0, d).widthPx).toBeCloseTo(2);
+    // T3 runs longest and T4 shortest — PRD §14's open question, answered from
+    // a native speaker's utterance lengths in play.
+    expect(makeGate(3, 0, d).widthPx).toBeGreaterThan(makeGate(4, 0, d).widthPx);
     for (const tone of [1, 2, 3, 4] as const) {
       expect(makeGate(tone, 0, d).widthPx / d.scrollSpeed).toBeCloseTo(
         GATE_DURATION_S[tone],
