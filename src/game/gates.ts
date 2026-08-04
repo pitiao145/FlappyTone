@@ -40,10 +40,15 @@ const POLYLINES: Record<Tone, Array<[number, number]>> = {
   ],
   // Dips before it climbs. The PRD's straight 3→5 ramp missed the dip
   // entirely, so a correct T2 started by leaving the corridor.
+  //
+  // The dip target is deliberately shallower than the 2.2 measured in
+  // `jane_ma2.wav`: at 2.2, with tolerance 0.8, a speaker who simply does not
+  // dip sits at *exactly* the boundary with no headroom. 2.5 leaves 0.3 chao
+  // for a T2 produced without a low onset, which quick speech often is.
   2: [
     [0, 3],
-    [0.2, 2.2],
-    [0.75, 5],
+    [0.15, 2.5],
+    [0.55, 5],
     [1, 5],
   ],
   // Falls to the floor, *sits there*, then rises. The low plateau is the part
@@ -87,7 +92,7 @@ const POLYLINES: Record<Tone, Array<[number, number]>> = {
  */
 export const GATE_DURATION_S: Record<Tone, number> = {
   1: 0.65,
-  2: 0.65,
+  2: 0.45,
   3: 0.85,
   4: 0.55,
 };
@@ -108,12 +113,23 @@ export function corridorChaoAt(tone: Tone, t: number): number {
 }
 
 /**
+ * Per-tone tolerance widening, applied where the *signal* is least reliable —
+ * not where the tone is hardest to say.
+ *
+ * T3 ×1.3 is the PRD §6 creak mitigation. T2 ×1.15 is the same argument from
+ * the same cause: NSDF clarity collapses when pitch slews fastest (PRD §5.2),
+ * and T2's rise is the longest sustained slew of any tone. It shows up in play
+ * as the lowest voiced fraction of the four — 22–50% across six T2 gates
+ * against 51–80% on T1 in the same run.
+ */
+const TOLERANCE_FACTOR: Record<Tone, number> = { 1: 1, 2: 1.15, 3: 1.3, 4: 1 };
+
+/**
  * Converts a corridor tolerance in screen-height fraction to chao units.
- * 0.60H spans 4 chao, so tolChao = baseTolH / 0.60 * 4. Tone 3 gets ×1.3 (PRD §6).
+ * 0.60H spans 4 chao, so tolChao = baseTolH / 0.60 * 4.
  */
 export function toleranceChao(tone: Tone, baseTolH: number): number {
-  const tolChao = (baseTolH / 0.6) * 4;
-  return tone === 3 ? tolChao * 1.3 : tolChao;
+  return (baseTolH / 0.6) * 4 * TOLERANCE_FACTOR[tone];
 }
 
 export interface Gate {

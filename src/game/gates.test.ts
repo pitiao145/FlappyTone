@@ -22,11 +22,14 @@ describe("corridorChaoAt", () => {
 
   it("T2 dips below its start before climbing", () => {
     expect(corridorChaoAt(2, 0)).toBeCloseTo(3);
-    expect(corridorChaoAt(2, 0.2)).toBeCloseTo(2.2);
+    expect(corridorChaoAt(2, 0.15)).toBeCloseTo(2.5);
     expect(corridorChaoAt(2, 1)).toBeCloseTo(5);
     // The dip is the point: a correct T2 must be *below* chao 3 early on.
-    expect(corridorChaoAt(2, 0.15)).toBeLessThan(3);
-    expect(corridorChaoAt(2, 0.5)).toBeCloseTo(3.7273);
+    expect(corridorChaoAt(2, 0.1)).toBeLessThan(3);
+    // ...but not so far below that a T2 produced without a low onset is
+    // already outside tolerance. At chao 3 throughout the dip, the error must
+    // stay under the corridor's half-height.
+    expect(3 - corridorChaoAt(2, 0.15)).toBeLessThan(toleranceChao(2, 0.12));
   });
 
   it("T3 falls, holds on the floor, then rises", () => {
@@ -71,10 +74,16 @@ describe("corridorChaoAt", () => {
 });
 
 describe("toleranceChao", () => {
-  it("converts base 0.12H to 0.8 chao for non-T3 tones", () => {
+  it("converts base 0.12H to 0.8 chao for the level and falling tones", () => {
     expect(toleranceChao(1, 0.12)).toBeCloseTo(0.8);
-    expect(toleranceChao(2, 0.12)).toBeCloseTo(0.8);
     expect(toleranceChao(4, 0.12)).toBeCloseTo(0.8);
+  });
+
+  it("widens where the signal is least reliable, not where the tone is hardest", () => {
+    // Both are clarity-collapse mitigations: T3 for creak (PRD §6), T2 for the
+    // longest sustained slew, which shows up as the lowest voiced fraction.
+    expect(toleranceChao(2, 0.12)).toBeCloseTo(0.8 * 1.15);
+    expect(toleranceChao(3, 0.12)).toBeCloseTo(0.8 * 1.3);
   });
 
   it("widens T3 tolerance by 1.3x", () => {
