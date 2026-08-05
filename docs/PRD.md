@@ -163,26 +163,31 @@ A **gate** is a corridor whose centreline traces the target tone's Chao contour.
 **Collision** requires `COLLISION_SUSTAIN_MS` (80ms) *continuously* outside the corridor. A single ~21ms frame is measurement, not a wall; an unvoiced frame clears the timer rather than bridging two excursions.
 
 > **⚠️ Superseded — gate duration is per-tone, answering §14's open question.**
-> `GATE_DURATION_S` in `gates.ts` is **0.65 / 0.65 / 0.85 / 0.55s**. Gate width
-> in px = `scrollSpeed * GATE_DURATION_S[tone]`, so the ramp moves the world
-> faster but never demands a faster tone.
+> `GATE_DURATION_S` in `gates.ts` is **0.88 / 1.07 / 1.33 / 0.60s** — the exact
+> lengths of the shipped reference clips. Gate width in px =
+> `scrollSpeed * GATE_DURATION_S[tone]`, so the ramp moves the world faster but
+> never demands a faster tone.
 >
-> These come from utterance lengths **in play**, not from the citation fixtures.
-> An isolated `ma` said for a recording runs far longer than the same speaker's
-> natural production — 850/1020/1230/540ms in `jane_ma*.wav` against medians of
-> 501/342/235/341ms actually produced during an 18-gate run (4 Aug 2026). The
-> first pass sized gates from the fixtures and every gate came out too long; the
-> native speaker's own words were "the corridor feels too long, we really need
-> to sustain it for an unnatural amount of time."
+> **The clips are the anchor.** `public/ref/ma{1-4}.wav` are cut by
+> `npm run make-ref-clips` from `fixtures/captures/jane_ma*.wav`, the same takes
+> the polylines are measured from. The player hears a contour, watches the demo
+> dot trace that contour, and is scored against it — one clock for all three.
+> Two separate failures came from those three disagreeing, so treat "demo length
+> == gate length == polyline timeline" as an invariant, not a coincidence.
 >
-> Each contour also **completes before the gate ends and then holds** its final
-> chao. That tail is load-bearing: a speaker who finishes a natural rise in
-> ~350ms and sustains the top note was otherwise sitting above a corridor still
-> climbing underneath her, which produced 469ms and 512ms excursions and two
-> collisions on correct T2 attempts.
+> Each contour **completes before the gate ends and then holds** its final chao.
+> Load-bearing: a speaker who finishes a rise and sustains the note was
+> otherwise above a corridor still climbing underneath her — 469ms and 512ms
+> excursions and two collisions on correct T2 attempts (4 Aug 2026). The clips'
+> own trailing *release* (T2 falls back to ~3.0 after its peak) is deliberately
+> not modelled; releasing is not part of the tone.
 >
-> Caveat: T3 rests on n=1 in-play sample (235ms) and is sized conservatively at
-> 0.85s. It needs more evidence than the other three.
+> **Known tension.** These are citation-form takes, and the same speaker in play
+> produced much shorter syllables (medians 501/342/235/341ms) and said "the
+> corridor feels too long, we really need to sustain it for an unnatural amount
+> of time." Matching the demo was chosen over matching natural tempo, on the
+> grounds that call-and-response only works if both halves agree. The way to get
+> both is shorter recordings, not a shorter corridor — see §14.
 
 **Gate duration:** ~~600ms of travel. Gate width in px = `scrollSpeed * 0.6`.~~
 **Rest interval between gates:** 900ms at start, shrinking to a floor of 600ms.
@@ -266,6 +271,12 @@ accuracy   = clamp(1 - mean(err_t), 0, 1)
 Play a native recording of the target syllable **300ms before the gate enters the screen**. Call-and-response: hear it, then produce it.
 
 **Source:** [MSU Tone Perfect](https://tone.lib.msu.edu/) — 9,860 free open-access clips, 410 syllables × 4 tones × 6 native speakers.
+> **⚠️ Superseded — the shipped clips are Jane's own recordings**, cut from
+> `fixtures/captures/jane_ma*.wav` by `npm run make-ref-clips`, used with her
+> permission. That removes the audio-cmn CC-BY-SA attribution obligation *and*
+> the speaker mismatch: the corridors are measured from these same takes. The
+> note below applies only if a third-party corpus is ever reintroduced.
+
 **⚠️ Check the licence before shipping publicly.** It's open access for research/education; commercial or redistribution terms need verifying. If it doesn't clear, fall back to [audio-cmn](https://github.com/hugolpz/audio-cmn) (open-licensed) or record a handful of syllables with a local native speaker.
 
 **v1 syllable set:** 8 syllables × 4 tones = 32 clips. Suggested: `ma, ba, yi, wu, shu, li, hao, tang`. Preload all on game start; they're tiny.

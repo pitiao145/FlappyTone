@@ -1,11 +1,17 @@
 // Plays the reference cue through the speakers so the player can hear a
 // contour before imitating it.
 //
-// Preferred source: native recordings (public/ref/ma{1-4}.mp3 — speaker Chen
-// Wang, audio-cmn, CC-BY-SA), preloaded via loadReferenceClips. Until they
-// are loaded (or if fetch/decode fails), playToneCue falls back to the v1
-// synthetic sweep: the tone's corridor polyline swept through the player's
-// own calibrated pitch range.
+// Preferred source: native recordings (public/ref/ma{1-4}.wav — Jane, a native
+// Taiwanese speaker, recorded direct to mic and used with permission), built by
+// `npm run make-ref-clips` from the same `fixtures/captures/jane_ma*.wav` the
+// corridor polylines were measured from. That shared origin is the point: the
+// example the player hears and the shape they are scored against come from one
+// voice and one take. They previously disagreed — the clips were a different
+// speaker whose contours did not match the corridors.
+//
+// Until they are loaded (or if fetch/decode fails), playToneCue falls back to
+// the v1 synthetic sweep: the tone's corridor polyline swept through the
+// player's own calibrated pitch range.
 import { corridorChaoAt, GATE_DURATION_S, type Tone } from "../game/gates.ts";
 import { RANGE_SEMITONES } from "../pitch/math.ts";
 
@@ -67,7 +73,7 @@ function trimBounds(buffer: AudioBuffer): { offsetS: number; durationS: number }
 export function loadReferenceClips(audio: AudioContext): Promise<void> {
   loading ??= Promise.allSettled(
     ([1, 2, 3, 4] as Tone[]).map(async (tone) => {
-      const url = `${import.meta.env.BASE_URL}ref/ma${tone}.mp3`;
+      const url = `${import.meta.env.BASE_URL}ref/ma${tone}.wav`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`${url}: ${res.status}`);
       const buffer = await audio.decodeAudioData(await res.arrayBuffer());

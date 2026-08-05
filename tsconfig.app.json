@@ -28,6 +28,7 @@
     "src/dev/analyze.ts",
     "src/dev/make-tones.ts",
     "src/dev/report.ts",
+    "src/dev/make-ref-clips.ts",
     "src/dev/fetch-clips.ts",
     "src/pitch/fixtures.test.ts"
   ]

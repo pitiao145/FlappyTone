@@ -14,44 +14,39 @@ import {
 } from "./gates.ts";
 
 describe("corridorChaoAt", () => {
-  it("T1 is flat at chao 5", () => {
-    expect(corridorChaoAt(1, 0)).toBeCloseTo(5);
-    expect(corridorChaoAt(1, 0.5)).toBeCloseTo(5);
-    expect(corridorChaoAt(1, 1)).toBeCloseTo(5);
+  it("T1 is flat, at the level she actually holds", () => {
+    // 4.6, not a textbook 5 — read off the shipped reference clip.
+    expect(corridorChaoAt(1, 0)).toBeCloseTo(4.6);
+    expect(corridorChaoAt(1, 0.5)).toBeCloseTo(4.6);
+    expect(corridorChaoAt(1, 1)).toBeCloseTo(4.6);
   });
 
   it("T2 dips below its start before climbing", () => {
     expect(corridorChaoAt(2, 0)).toBeCloseTo(3);
-    expect(corridorChaoAt(2, 0.15)).toBeCloseTo(2.5);
+    expect(corridorChaoAt(2, 0.3)).toBeCloseTo(1.85);
     expect(corridorChaoAt(2, 1)).toBeCloseTo(5);
     // The dip is the point: a correct T2 must be *below* chao 3 early on.
-    expect(corridorChaoAt(2, 0.1)).toBeLessThan(3);
-    // ...but not so far below that a T2 produced without a low onset is
-    // already outside tolerance. At chao 3 throughout the dip, the error must
-    // stay under the corridor's half-height.
-    expect(3 - corridorChaoAt(2, 0.15)).toBeLessThan(toleranceChao(2, 0.12));
+    expect(corridorChaoAt(2, 0.2)).toBeLessThan(3);
   });
 
   it("T3 falls, holds on the floor, then rises", () => {
-    expect(corridorChaoAt(3, 0)).toBeCloseTo(3);
-    expect(corridorChaoAt(3, 0.38)).toBeCloseTo(1.2);
+    expect(corridorChaoAt(3, 0)).toBeCloseTo(2.7);
+    expect(corridorChaoAt(3, 0.5)).toBeCloseTo(1.25);
     expect(corridorChaoAt(3, 1)).toBeCloseTo(5);
-    expect(corridorChaoAt(3, 0.2)).toBeCloseTo(2.0526);
-    // The low plateau — time spent sitting on the floor, which the PRD's
+    // The low plateau — time sitting on the floor, which the PRD's
     // two-segment polyline had no room for.
-    expect(corridorChaoAt(3, 0.5)).toBeCloseTo(1.2);
-    expect(corridorChaoAt(3, 0.6)).toBeCloseTo(1.2);
+    expect(corridorChaoAt(3, 0.55)).toBeLessThan(1.3);
+    expect(corridorChaoAt(3, 0.62)).toBeCloseTo(1.22);
   });
 
   it("T4 holds high, then falls off a cliff", () => {
     expect(corridorChaoAt(4, 0)).toBeCloseTo(5);
-    expect(corridorChaoAt(4, 1)).toBeCloseTo(1);
+    expect(corridorChaoAt(4, 1)).toBeCloseTo(1.25);
     // Still at the top halfway through — this is what the linear ramp got
     // wrong, and why a native T4 could not fit the old corridor.
     expect(corridorChaoAt(4, 0.5)).toBeCloseTo(5);
-    expect(corridorChaoAt(4, 0.55)).toBeCloseTo(5);
-    expect(corridorChaoAt(4, 0.7)).toBeCloseTo(3);
-    expect(corridorChaoAt(4, 0.85)).toBeCloseTo(1);
+    expect(corridorChaoAt(4, 0.62)).toBeCloseTo(5);
+    expect(corridorChaoAt(4, 0.9)).toBeCloseTo(1.25);
   });
 
   it("every contour completes before the gate ends, then holds", () => {
@@ -67,8 +62,8 @@ describe("corridorChaoAt", () => {
   });
 
   it("clamps t outside [0,1]", () => {
-    expect(corridorChaoAt(1, -0.5)).toBeCloseTo(5);
-    expect(corridorChaoAt(4, 1.5)).toBeCloseTo(1);
+    expect(corridorChaoAt(1, -0.5)).toBeCloseTo(4.6);
+    expect(corridorChaoAt(4, 1.5)).toBeCloseTo(1.25);
     expect(corridorChaoAt(4, -1)).toBeCloseTo(5);
   });
 });

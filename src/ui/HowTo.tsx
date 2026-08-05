@@ -43,8 +43,8 @@ export function HowTo({ onBack }: { onBack: () => void }) {
       </ul>
 
       <p className="note">
-        Reference audio: Chen Wang via{" "}
-        <a href="https://github.com/hugolpz/audio-cmn">audio-cmn</a> (CC-BY-SA).
+        Reference audio: Jane, a native Taiwanese speaker, recorded direct to
+        mic and used with permission.
       </p>
 
       <button className="primary" onClick={onBack}>

@@ -151,15 +151,23 @@ describe("Run — scoring a gate", () => {
     // under MIN_UTTERANCE_MS, so the game says it couldn't hear rather than
     // scoring. Frame-level dropouts do *not* count against the player — gaps
     // under MERGE_GAP_MS merge — so the test has to be a genuinely short sound.
+    // Fixed wall-clock, not a fraction of the gate: gate durations differ per
+    // tone, so a fraction would be a different number of milliseconds each time.
     const run = newGameRun();
+    const burstFrames = Math.floor(95 / DT);
+    let spoken = 0;
+    let wasInGate = false;
     const { snapshots } = simulate(run, 400, (s) => {
-      const speaking = s.activeGate !== null && s.activeGate.t < 0.16;
-      return speaking
-        ? pitch(s.activeGate!.corridorChao)
-        : pitch(null, s.birdChao);
+      const inGate = s.activeGate !== null;
+      if (inGate && !wasInGate) spoken = 0; // a new gate opened
+      wasInGate = inGate;
+      if (!inGate || spoken >= burstFrames) return pitch(null, s.birdChao);
+      spoken++;
+      return pitch(s.activeGate!.corridorChao);
     });
     const outcomes = outcomesOf(snapshots);
-    expect(outcomes[0].outcome).toBe("unheard");
+    expect(outcomes.length).toBeGreaterThan(0);
+    for (const o of outcomes) expect(o.outcome).toBe("unheard");
     const last = snapshots[snapshots.length - 1];
     expect(last.hearts).toBe(3);
     expect(last.score).toBe(0);
@@ -477,11 +485,11 @@ describe("Run — snapshot extras", () => {
       expect(g.t).toBeGreaterThanOrEqual(0);
       expect(g.t).toBeLessThanOrEqual(1);
     }
-    // T1's corridor is flat at chao 5, so the ghost line should report exactly that.
+    // T1's corridor is flat, so the ghost line should report one constant.
     const t1 = inGate.filter((s) => s.activeGate!.tone === 1);
     expect(t1.length).toBeGreaterThan(0);
     for (const s of t1) {
-      expect(s.activeGate!.corridorChao).toBe(5);
+      expect(s.activeGate!.corridorChao).toBe(corridorChaoAt(1, 0));
     }
   });
 });

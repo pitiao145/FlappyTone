@@ -19,6 +19,23 @@ export const TONE_INFO: Record<
  * Corridor centrelines as (t, chao) control points, measured from a native
  * speaker's citation takes in `fixtures/captures/jane_ma*.wav`.
  *
+ * These are now read off the *shipped reference clips* — `npm run
+ * make-ref-clips` cuts `public/ref/ma{1-4}.wav` from those same captures and
+ * prints the contour over each clip's own timeline, which is the timeline the
+ * demo dot sweeps. Example and target therefore agree by construction: the
+ * player hears a contour, watches the dot trace that contour, and is scored
+ * against it. Before this they were three different things.
+ *
+ * `t` is normalised over `GATE_DURATION_S[tone]`, which equals the clip length,
+ * so a control point at t=0.3 is 30% of the way through what the player heard.
+ *
+ * Every contour completes before t=1 and then holds its final chao. That tail
+ * is load-bearing: a speaker who finishes a rise and sustains the note was
+ * otherwise left above a corridor still climbing underneath her. The clips'
+ * own trailing release (T2 falls back to ~3.0 after its peak) is deliberately
+ * *not* modelled — releasing is not part of the tone, and scoring it would
+ * punish holding.
+ *
  * These replaced the PRD §6 table, which was drawn from the shapes of the tone
  * *marks* rather than from speech. Real tones are not constant-rate ramps: they
  * hold, then move fast. Her T4 sits at the top for ~60% of the syllable and
@@ -33,39 +50,35 @@ export const TONE_INFO: Record<
  * Widen it with more speakers and syllables before treating these as settled.
  */
 const POLYLINES: Record<Tone, Array<[number, number]>> = {
-  // Flat and high throughout — the one shape the PRD already had right.
+  // Flat, and at 4.6 rather than a textbook 5 — that is where she actually
+  // holds a high level tone.
   1: [
-    [0, 5],
-    [1, 5],
+    [0, 4.6],
+    [1, 4.6],
   ],
-  // Dips before it climbs. The PRD's straight 3→5 ramp missed the dip
-  // entirely, so a correct T2 started by leaving the corridor.
-  //
-  // The dip target is deliberately shallower than the 2.2 measured in
-  // `jane_ma2.wav`: at 2.2, with tolerance 0.8, a speaker who simply does not
-  // dip sits at *exactly* the boundary with no headroom. 2.5 leaves 0.3 chao
-  // for a T2 produced without a low onset, which quick speech often is.
+  // Dips well below its start before climbing. The PRD's straight 3→5 ramp
+  // missed the dip entirely, so a correct T2 began by leaving the corridor.
   2: [
-    [0, 3],
-    [0.15, 2.5],
-    [0.55, 5],
-    [1, 5],
+    [0, 3.0],
+    [0.3, 1.85],
+    [0.8, 5.0],
+    [1, 5.0],
   ],
-  // Falls to the floor, *sits there*, then rises. The low plateau is the part
-  // the PRD had no room for.
+  // Falls to the floor, sits there, then rises — the low plateau is the part
+  // the PRD's two-segment polyline had no room for.
   3: [
-    [0, 3],
-    [0.38, 1.2],
-    [0.6, 1.2],
-    [0.85, 5],
-    [1, 5],
+    [0, 2.7],
+    [0.5, 1.25],
+    [0.62, 1.22],
+    [0.9, 5.0],
+    [1, 5.0],
   ],
   // A plateau and a cliff, not a slide.
   4: [
-    [0, 5],
-    [0.55, 5],
-    [0.85, 1],
-    [1, 1],
+    [0, 5.0],
+    [0.62, 5.0],
+    [0.9, 1.25],
+    [1, 1.25],
   ],
 };
 
@@ -73,28 +86,20 @@ const POLYLINES: Record<Tone, Array<[number, number]>> = {
  * How long each tone's gate takes to cross, in seconds. PRD §14 asked "is 600ms
  * the right gate width, or does it need to flex per tone?" — it does.
  *
- * These come from a native speaker's utterance lengths *in play* (18-gate run,
- * 4 Aug 2026), not from the citation fixtures. The fixtures are isolated `ma`
- * said deliberately for a recording and run far longer than the same speaker's
- * natural production: measured 850/1020/1230/540ms in `jane_ma*.wav` versus
- * medians of 501/342/235/341ms actually produced while playing. Sized to those
- * medians with ~30% slack for timing, which also leaves room for the contour
- * to finish early (see below).
- *
- * Each contour now completes before the gate ends and then holds its final
- * chao. That tail is not cosmetic: a speaker who finishes a natural rise in
- * ~350ms and sustains the top note was previously *above* a corridor still
- * climbing underneath her, which produced 469ms and 512ms excursions and two
- * collisions on otherwise-correct T2 attempts.
+ * **These are the shipped reference clips' own lengths**, printed by
+ * `npm run make-ref-clips`. The player hears a syllable, then flies a corridor
+ * that lasts exactly as long: call and response with the same clock on both
+ * halves. Any other number makes the demo teach a tempo the gate refuses,
+ * which is the failure this project has now hit twice.
  *
  * Invariant to the difficulty ramp: gate width is `scrollSpeed * duration`, so
  * a faster world scrolls past more quickly but never demands a faster tone.
  */
 export const GATE_DURATION_S: Record<Tone, number> = {
-  1: 0.65,
-  2: 0.45,
-  3: 0.85,
-  4: 0.55,
+  1: 0.88,
+  2: 1.07,
+  3: 1.33,
+  4: 0.6,
 };
 
 /** Piecewise-linear interpolation of a tone's corridor centreline. t is clamped to [0,1]. */

@@ -14,7 +14,8 @@
     "make-tones": "node --experimental-strip-types src/dev/make-tones.ts",
     "tune": "node --experimental-strip-types src/dev/tune.ts",
     "report": "node --experimental-strip-types src/dev/report.ts",
-    "fetch-clips": "node --experimental-strip-types src/dev/fetch-clips.ts"
+    "fetch-clips": "node --experimental-strip-types src/dev/fetch-clips.ts",
+    "make-ref-clips": "node --experimental-strip-types src/dev/make-ref-clips.ts"
   },
   "dependencies": {
     "pitchy": "^4.1.0",
