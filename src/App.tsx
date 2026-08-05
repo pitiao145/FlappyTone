@@ -1,8 +1,6 @@
-import { useCallback, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useRef, useState } from "react";
 import { MicError } from "./audio/mic";
 import { ensureMic, stopMic } from "./audio/session";
-import { Capture } from "./dev/Capture";
-import { DevPanel } from "./dev/DevPanel";
 import { GateLogPanel } from "./dev/GateLogPanel";
 import type { RunSnapshot } from "./game/run";
 import { loadSettings, type CalibrationSettings } from "./game/settings";
@@ -22,7 +20,17 @@ type Screen =
   | "tutorial"
   | "game"
   | "gameover"
-  | "capture";
+  | "lab";
+
+/**
+ * The dev Lab is a separate instance of the game for tuning, and it must not
+ * reach a player. Loading it lazily behind `import.meta.env.DEV` means Rollup
+ * drops the whole subtree — Lab, tuning UI, Capture, Soundboard — from a
+ * production build rather than merely hiding the button.
+ */
+const Lab = import.meta.env.DEV
+  ? lazy(() => import("./dev/Lab.tsx").then((m) => ({ default: m.Lab })))
+  : null;
 
 const CANVAS_W = 420;
 const CANVAS_H = Math.round((420 * 16) / 9);
@@ -34,7 +42,6 @@ export default function App() {
   );
   const [stats, setStats] = useState<RunStats | null>(null);
   const [tutorialDone, setTutorialDone] = useState(false);
-  const [devOpen, setDevOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryBusy, setRetryBusy] = useState(false);
   /** Where to go once calibration finishes, when Play/Tutorial routed through it. */
@@ -61,9 +68,9 @@ export default function App() {
     (intent: StartIntent) => {
       setTutorialDone(false);
       setError(null);
-      if (intent === "capture") {
-        // Dev tooling — no calibration needed, tracker runs on defaults.
-        setScreen("capture");
+      if (intent === "lab") {
+        // Dev tooling — the Lab supplies its own fallback calibration.
+        setScreen("lab");
         return;
       }
       if (intent === "calibrate") {
@@ -135,9 +142,7 @@ export default function App() {
           <Title
             calibrated={settings !== null}
             tutorialDone={tutorialDone}
-            devOpen={devOpen}
             error={error}
-            onToggleDev={() => setDevOpen((v) => !v)}
             onStart={startFromTitle}
             onHowTo={() => setScreen("howto")}
           />
@@ -145,7 +150,11 @@ export default function App() {
 
         {screen === "howto" && <HowTo onBack={() => setScreen("title")} />}
 
-        {screen === "capture" && <Capture onBack={goHome} />}
+        {screen === "lab" && Lab && (
+          <Suspense fallback={<p className="note">loading lab…</p>}>
+            <Lab onBack={goHome} />
+          </Suspense>
+        )}
 
         {screen === "calibrate" && (
           <Calibration
@@ -178,7 +187,6 @@ export default function App() {
         )}
       </div>
 
-      {devOpen && <DevPanel />}
     </div>
   );
 }

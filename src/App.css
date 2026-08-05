@@ -602,3 +602,165 @@
     max-width: 420px;
   }
 }
+
+/* ---------------------------------------------------------------- dev lab */
+/* Dev builds only — the Lab is lazy-loaded behind import.meta.env.DEV, so
+   these rules style something a player never sees. Kept deliberately plain:
+   this is instrumentation, and it should not compete with the game's own look. */
+
+.lab-screen {
+  width: 100%;
+  max-width: 1100px;
+  gap: 12px;
+  align-items: stretch;
+  text-align: left;
+}
+
+.lab-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.lab-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.lab-tabs .tab {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: #9aa4b0;
+  cursor: pointer;
+}
+
+.lab-tabs .tab.active {
+  border-color: #60cdff;
+  color: #dfe5ec;
+}
+
+.lab-split {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.lab-stage {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.lab-idle {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 360px;
+}
+
+.lab-controls {
+  flex: 1 1 320px;
+  max-height: 78vh;
+  overflow-y: auto;
+}
+
+.tuning-panel {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px;
+  background: #111318;
+  border-radius: 8px;
+  color: #9aa4b0;
+}
+
+.tuning-panel h4 {
+  margin: 0 0 2px;
+  color: #dfe5ec;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+}
+
+.tuning-panel section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tuning-panel .knob {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 8px;
+  border-left: 2px solid transparent;
+}
+
+/* A moved value must be obvious: the whole point of a tuning session is
+   knowing which numbers are no longer the shipped ones. */
+.tuning-panel .knob.moved {
+  border-left-color: #f0b866;
+}
+
+.tuning-panel .param-name {
+  color: #dfe5ec;
+}
+
+.tuning-panel .param-help {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #6b7684;
+}
+
+.tuning-panel input[type="range"] {
+  width: 100%;
+}
+
+.tuning-panel .revert {
+  margin-left: 6px;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  color: #f0b866;
+  cursor: pointer;
+}
+
+.tuning-panel .row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.diff {
+  margin: 0;
+  padding: 8px;
+  background: #0b0d12;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #9fd8b8;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.dev-panel .param-help.warn {
+  color: #f0b866;
+}
+
+@media (max-width: 900px) {
+  .lab-split {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .lab-controls {
+    max-height: none;
+  }
+}

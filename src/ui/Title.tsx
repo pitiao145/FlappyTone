@@ -18,16 +18,14 @@ import {
 } from "../game/settings.ts";
 import { micErrorCopy } from "./micErrors.ts";
 
-export type StartIntent = "game" | "tutorial" | "calibrate" | "capture";
+export type StartIntent = "game" | "tutorial" | "calibrate" | "lab";
 
 interface Props {
   calibrated: boolean;
   /** Shown once after the tutorial finishes. */
   tutorialDone: boolean;
-  devOpen: boolean;
   /** An error raised elsewhere (e.g. a failed Retry) — shown in Title's one error slot. */
   error: string | null;
-  onToggleDev: () => void;
   /** Called once the mic is open. The router decides whether to calibrate first. */
   onStart: (intent: StartIntent) => void;
   onHowTo: () => void;
@@ -36,9 +34,7 @@ interface Props {
 export function Title({
   calibrated,
   tutorialDone,
-  devOpen,
   error: externalError,
-  onToggleDev,
   onStart,
   onHowTo,
 }: Props) {
@@ -146,12 +142,9 @@ export function Title({
       )}
       {error && <p className="error">{error}</p>}
 
-      <button className="dev-toggle" onClick={onToggleDev}>
-        {devOpen ? "hide dev" : "dev"}
-      </button>
-      {devOpen && (
-        <button className="dev-toggle" disabled={busy} onClick={go("capture")}>
-          capture
+      {import.meta.env.DEV && (
+        <button className="dev-toggle" disabled={busy} onClick={go("lab")}>
+          lab
         </button>
       )}
     </div>
