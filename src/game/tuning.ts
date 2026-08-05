@@ -72,7 +72,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   restMsFloor: 600,
   cueLeadMs: 300,
   cuePauseHoldMs: 450,
-  cueApproachMs: 1200,
+  cueApproachMs: 600,
   collisionSustainMs: 120,
   timingSlackS: 0.09,
   maxTimingWidenFactor: 1.5,

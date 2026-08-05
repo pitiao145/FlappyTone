@@ -124,17 +124,6 @@ export function drawWorld(
 }
 
 /**
- * Where the example sits on screen while the world is frozen, as a fraction of
- * canvas width. The demo used to be drawn at the gate's *real* position, which
- * tied cue timing to how much room the gate needed to be visible — so the
- * pause landed at a different distance from the corridor for every tone (a T3
- * corridor is more than twice as wide as a T4 one). The world is frozen and
- * everything else is veiled, so the example can simply be shown where it can
- * be read.
- */
-const EXAMPLE_LEFT_FRAC = 0.08;
-
-/**
  * "pause"-style listen phase: dim everything (including the player's own dot
  * and trail), then redraw the cued gate and demo dot above the veil — a
  * spotlight on the example. The veil dropping is the "your turn" handoff.
@@ -151,21 +140,8 @@ function drawCueVeil(
   ctx.fillRect(0, 0, width, height);
 
   const gate = snap.gates.find((g) => g.xStart === snap.cue!.xStart);
-  // Never shift right: a gate already left of the mark is close enough to fly,
-  // and moving it away from where it really is would misread as scrolling.
-  const shift = gate
-    ? Math.min(0, EXAMPLE_LEFT_FRAC * width - gate.x0)
-    : 0;
-  if (gate) {
-    drawGate(
-      ctx,
-      width,
-      height,
-      { ...gate, x0: gate.x0 + shift, x1: gate.x1 + shift },
-      true,
-    );
-  }
-  drawCueDemo(ctx, height, snap, shift);
+  if (gate) drawGate(ctx, width, height, gate, true);
+  drawCueDemo(ctx, height, snap);
 }
 
 /**
@@ -294,8 +270,6 @@ function drawCueDemo(
   ctx: CanvasRenderingContext2D,
   height: number,
   snap: RunSnapshot,
-  /** Horizontal offset applied to the gate, so a frozen example stays legible. */
-  shift = 0,
 ): void {
   const cue = snap.cue;
   if (!cue) return;
@@ -308,7 +282,7 @@ function drawCueDemo(
   const gate = snap.gates.find((g) => g.xStart === cue.xStart);
   if (!gate) return;
 
-  const x = gate.x0 + shift + p * (gate.x1 - gate.x0);
+  const x = gate.x0 + p * (gate.x1 - gate.x0);
   const y = chaoToY(corridorChaoAt(cue.tone, p), height);
 
   // A ghost, deliberately: small, hollow, no halo. It was previously drawn
@@ -322,7 +296,7 @@ function drawCueDemo(
   ctx.beginPath();
   for (let i = 0; i <= tailSteps; i++) {
     const tp = Math.max(0, p - (i / tailSteps) * 0.18);
-    const tx = gate.x0 + shift + tp * (gate.x1 - gate.x0);
+    const tx = gate.x0 + tp * (gate.x1 - gate.x0);
     const ty = chaoToY(corridorChaoAt(cue.tone, tp), height);
     if (i === 0) ctx.moveTo(tx, ty);
     else ctx.lineTo(tx, ty);

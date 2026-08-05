@@ -555,14 +555,18 @@ export class Run {
       // remaining travel rather than on "the gate is fully on screen", so the
       // freeze ends roughly as the corridor arrives.
       //
-      // The wait is now the same for every tone. It was briefly bounded by
-      // "the gate must be fully on screen", because the demo was drawn at the
-      // gate's real position — and since a T3 corridor is more than twice as
-      // wide as a T4 one, that bound decided the timing for the wide tones and
-      // cueApproachMs decided it for the narrow ones. Reported in play as the
-      // pause landing right on top of a T3 gate. The renderer now draws the
-      // frozen example at a fixed spot instead (EXAMPLE_LEFT_FRAC), which
-      // leaves this free to be one number.
+      // One number for every tone, measured to the gate's *start* — the edge
+      // the bird enters. It was briefly bounded by "the gate must be fully on
+      // screen", because the demo is drawn along the gate's real position; but
+      // a wide corridor is by definition close to you by the time it fits, so
+      // that bound gave T3 ~197ms of approach against T1's 647ms at normal
+      // pace. Reported in play as the pause landing right on top of a T3 gate.
+      //
+      // The cost of dropping it: at 600ms the gate's start sits 119px ahead of
+      // the dot, so T3's right-hand third hangs off the screen and its demo
+      // sweep finishes out of view. Chosen deliberately — a uniform beat
+      // matters more than seeing the end of the widest trace, and the whole
+      // clip is still audible.
       const travelToBirdMs =
         ((next.xStart - this.worldX) / this.difficulty.scrollSpeed) * 1000;
       if (travelToBirdMs <= tuning().cueApproachMs) {
