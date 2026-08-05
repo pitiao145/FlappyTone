@@ -2,7 +2,81 @@
 
 **Date:** 4 Aug 2026
 **Repo:** `~/repos/Pierrebuilds/FlappyTone`
-**Status:** ready to hand to Claude Code via `/goal`
+**Status:** Part A done · B1–B2, B4–B6 done · **B3 outstanding** (see below)
+
+---
+
+## Status — 5 Aug 2026
+
+| Item | State |
+|---|---|
+| **Part A** — unheard bug | Done. 0% unheard across three separate runs (10, 9, 8 gates). |
+| **B1** — player's dot is the hero | Done, `3d2c080`. |
+| **B2** — contrast / corridor legibility | Done, `3d2c080`. |
+| **B3** — pacing | **Outstanding.** The only item left. |
+| **B4** — felt reaction per outcome | Done, `d048871`. Visual only — sound was ruled out. |
+| **B5** — beautiful trail | Done, `fb1652f`. |
+| **B6** — mobile chrome | Done, `8cd883e`. |
+
+### Deviations from this spec, and why
+
+**B4 ships no sound.** Pierre ruled it out. That also retired the constraint
+that would have shaped it: `isCueAudible()` deafens the mic while a clip
+plays, and any sfx pitched under 400Hz would be tracked as pitch by the
+detector, so sfx would have had to live above the detector's band.
+
+**Three things this spec did not anticipate had to be fixed first.** All three
+were found while building, not by playtest impression:
+
+1. *The trail was not in the world's coordinate frame.* It moved at a fixed
+   fraction of canvas width per second — 126 px/s against a world scrolling at
+   220, diverging further as the difficulty ramp sped the world up. B5's
+   ribbon and B4's ignition both need the path and the corridor to share a
+   frame, and independently PRD §8's "see your trace against the ideal" was
+   horizontally distorted the whole time. Fixed in `d048871`.
+2. *Corridor tolerance was uniform across a gate*, so what a timing error cost
+   depended entirely on how fast the corridor was moving. 100ms of error is
+   worth 0.00 chao on T1 but 2.23 on T4 against a 0.80 tolerance — a correct
+   T4 slightly off the beat could not clear, whatever its shape, and the
+   wide-tunnel setting did not help because it scales the whole corridor while
+   the problem lives in the steep fifth of it. Tolerance is now local. Fixed in
+   `c1eab37`. Reported as "I would do the shape pretty much perfectly, but
+   because my timing was not perfect it would result in small collisions".
+3. *The canvas grew taller than short viewports*, pushing the HUD off the
+   bottom, because it is width-driven with `aspect-ratio: 9/16`. Fixed as part
+   of B6.
+
+### Verification tooling added
+
+`npm run analyze-recording <video>` (`1447bc0`) demuxes a screen recording and
+puts the soundtrack and the frames on one clock: per-utterance contours,
+whether each clears `MIN_UTTERANCE_MS`, cue-vs-player separation by matching
+the shipped ref clips, call→response gaps, and frames sampled around each
+attempt. This is how "Part A ends with a measured number, not an impression"
+generalised to the rest of the work. See docs/TESTING.md §5.
+
+**Render tests assert differentially** — each frame drawn with and without the
+effect, and the delta in draw calls is the assertion. The first version of
+those tests passed with the ignition entirely deleted, because gate rims and
+the dot's halo already emit strokes, arcs and gradients. Every effect and both
+of the trail's honesty properties are mutation-checked.
+
+### Open, carried forward
+
+- **T1 gate length.** Pierre's T1 declines 1.3–1.8st over the 860–1020ms the
+  0.88s gate asks him to sustain, while his 250ms calibration "ma" is flat and
+  Jane's 811ms reference holds level. The dot is honest; the gate is too long.
+  Now the dominant failure — a 604ms excursion against 139ms for every other
+  collision in the same run. Fix is a shorter T1 gate plus a re-cut `ma1.wav`;
+  deferred because it changes a shipped recording.
+- **`COLLISION_SUSTAIN_MS`.** Both non-T1 collisions in the latest run sat at
+  139ms against the 120ms threshold. Raising it to ~160 would clear both, but
+  wants a human read on whether those collisions felt fair.
+- **Unseen at top end.** No run has yet produced a `perfect` gate or a combo
+  above ×1.5, so B4's full flare and its combo escalation are unverified by
+  anyone.
+- **Timing-slack constants** (90ms, cap 1.5×) have one run behind them.
+  Non-T1 collision excursions fell from 581/325/418 and 277/234 to 139/139.
 
 Two parts. **Part A is a bug fix and must land first** — it is small, and until it lands every judgement about how the game feels is measuring the bug rather than the game. Part B is a larger design session that assumes A is done.
 
@@ -26,6 +100,17 @@ Not verified, and the subject of Part A:
 ---
 
 # PART A — the unheard-gate bug
+
+> **Done — `9de85ca`.** Both candidates in A1 were real. The rule is now
+> absolute utterance duration rather than voiced fraction, `GateSample` carries
+> `atMs`, and a gate seeds from up to 400ms of pre-gate history when a voiced
+> run is still ongoing as it opens. Unheard went from ~50% to **0%**, held
+> across three later runs (10, 9 and 8 gates).
+>
+> One thing A1 did not predict: with the unheard rule fixed, a *collision*
+> could still be caused by signal loss, so `703951c` made a wall require
+> `COLLISION_SUSTAIN_MS` of continuous excursion, with an unvoiced frame
+> clearing the timer rather than bridging two.
 
 ## A1. Root cause: two candidates, both plausible, likely both real
 
@@ -132,6 +217,10 @@ If a proposed change does not show up in the clip, it is out of scope.
 
 ## B1. Make the player's dot the hero
 
+> **Done — `3d2c080`.** The dot keeps its size and a solid core when unvoiced,
+> loses only its halo, and breathes — it reads as waiting, not absent. The demo
+> dot is demoted to a small hollow ghost with a short tail.
+
 Currently in `src/render/scene.ts`:
 
 ```ts
@@ -151,6 +240,11 @@ Required:
 
 ## B2. Raise contrast so the tunnel reads instantly
 
+> **Done — `3d2c080`.** Emphasis inverted as this section suggested: the wall
+> is now the densest thing in the frame and the corridor the only lit one, so
+> the shape reads as "fly through the light". Each tone carries its own tint,
+> and the grid recedes behind both.
+
 The scene is `#111318` background with corridor walls in near-black hatching. In extracted frames it is genuinely hard to tell which region is passable. On a phone outdoors it would be unreadable.
 
 - Make the wall unmistakably a wall and the corridor unmistakably open. Consider inverting the current emphasis: light corridor, dark wall.
@@ -159,6 +253,18 @@ The scene is `#111318` background with corridor walls in near-black hatching. In
 - Check the result at phone brightness in daylight, not just on a laptop.
 
 ## B3. Fix the pacing
+
+> **Outstanding — the only item left, and the diagnosis is now measured
+> rather than argued.** Across three runs: `seeded` 6/5/5, `missedEarly`
+> 5/2/1, median call→response gap 1161–1440ms. In one recording the HUD still
+> read `listen…` at 43.5s while the player had begun speaking at 43.35s. The
+> pre-gate buffer from Part A is currently rescuing those answers, which is why
+> the unheard rate stays at 0% despite the mistiming.
+>
+> **Play before starting this.** The timing-slack constants shipped in
+> `c1eab37` (90ms, cap 1.5×) have one run behind them, and B3 is the other
+> timing knob — landing both before a playtest makes them unattributable. B5
+> and B6 were safe to build first precisely because neither touches timing.
 
 Two separate problems that share a fix.
 
@@ -169,6 +275,18 @@ Two separate problems that share a fix.
 Close that gap. Either fire the cue later so the gate arrives soon after the demo ends, or shorten the post-demo hold, or let the world resume faster. **The "your turn" moment must be unmistakable and must be immediately followed by the gate** — a call-and-response beat, like a rhythm game. Right now the response window opens a beat and a half after the call.
 
 ## B4. Give every gate outcome a felt reaction
+
+> **Done — `d048871`, visual only.** Cleared gates ignite the path actually
+> flown, along the corridor it was flown through, with combo extending the
+> burn. Collision shakes, reddens the edges, knocks the dot back and breaks a
+> heart. "Couldn't hear that" gets a neutral grey ring plus a hint saying which
+> of *louder* or *longer* would help — `unheardHint()` reasons from voicing
+> alone, since `GateSample` carries no RMS.
+>
+> **No sound**, and no hitstop: freezing the world mid-gate would desynchronise
+> the corridor from the voice or discard samples the player is still producing,
+> which is the class of bug Part A fixed. Design doc:
+> `docs/superpowers/specs/2026-08-05-b4-outcome-feedback-design.md`.
 
 `drawOutcomeFlash` exists but caps at 0.5 alpha on a radial gradient over 800ms — in the recording it is invisible. Feedback should be impossible to miss:
 
@@ -181,6 +299,17 @@ Add sound. A voice game with no audio feedback is missing an obvious channel, an
 
 ## B5. Make the trail beautiful
 
+> **Done — `fb1652f`.** Tapered ribbon, quadratic through segment midpoints
+> with each sample as its own control point; at ~43Hz and 220px/s consecutive
+> samples are ~5px apart, so the drawn curve never departs visibly from the
+> data. Coloured by distance from the corridor centre, blue on the centreline
+> warming to amber at the wall.
+>
+> **It breaks across silence.** Only voiced frames enter the trail, so a pause
+> is a hole in the data rather than quiet samples, and stroking through one
+> would draw a pitch path the player never produced. The B4 ignition traces the
+> same curve, so the celebration is the same shape as the thing celebrated.
+
 The trail is the product — it is the player's own pitch contour drawn live, and it is the single most interesting thing in any clip.
 
 - Draw it as a continuous, smoothly fitted ribbon rather than discrete dots. Fit a curve through recent points; still their data, drawn kindly.
@@ -189,6 +318,18 @@ The trail is the product — it is the player's own pitch contour drawn live, an
 - Keep it honest. Never idealise or snap it. It must remain what the player actually did.
 
 ## B6. Reclaim vertical space on mobile
+
+> **Done — `8cd883e`.** Manifest with `display: standalone`, portrait lock, iOS
+> meta tags, and home-screen icons built by `npm run make-icons` (the mark on
+> the game's backdrop, since iOS composites transparency onto black and
+> maskable icons get cropped).
+>
+> The layout fix mattered more than the chrome: the canvas is width-driven with
+> `aspect-ratio: 9/16` and simply grew taller than short viewports, pushing the
+> HUD off the bottom. It is now capped by available height in **svh** — the
+> viewport with browser chrome *showing* — so the game fits at the URL bar's
+> largest. `dvh` would fit only while the bar was hidden and clip as it slid
+> back in.
 
 In the recording, Chrome's URL bar, its bottom nav, and the persistent "Microphone access allowed" chip consume roughly a fifth of the screen. Investigate a web-app manifest and `display: standalone` so an added-to-home-screen install runs without browser chrome, and make the canvas layout resilient to the URL bar collapsing on scroll.
 
@@ -213,10 +354,14 @@ Do not touch `src/pitch/`.
 
 ## Suggested order
 
-1. A2 instrumentation → report the numbers
-2. A3 fix → A4 acceptance
-3. B1 + B2 (visual hierarchy and contrast — biggest visible gain per hour)
-4. B4 (feedback and sound)
-5. B3 (pacing)
-6. B5 (trail)
-7. B6 (mobile chrome) if time remains
+1. ~~A2 instrumentation → report the numbers~~ done
+2. ~~A3 fix → A4 acceptance~~ done
+3. ~~B1 + B2 (visual hierarchy and contrast)~~ done
+4. ~~B4 (feedback and sound)~~ done, without sound
+5. **B3 (pacing)** — remaining
+6. ~~B5 (trail)~~ done
+7. ~~B6 (mobile chrome)~~ done
+
+B5 and B6 were taken before B3, out of the order above, because B3 is a timing
+change and the timing slack shipped that day was unplayed; doing both at once
+would have made a playtest unattributable. Neither B5 nor B6 touches timing.
