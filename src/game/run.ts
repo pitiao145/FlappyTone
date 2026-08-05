@@ -547,8 +547,42 @@ export class Run {
     const screenRight = this.worldX + this.width * (1 - BIRD_X_FRAC);
     const msUntilOnScreen =
       ((this.gateEnd(next) - screenRight) / this.difficulty.scrollSpeed) * 1000;
-    const lead = this.cueStyle === "pause" ? 0 : tuning().cueLeadMs;
-    if (msUntilOnScreen <= lead) {
+    if (this.cueStyle === "pause") {
+      // Spec B3. The world freezes for the demo plus a beat, so what the player
+      // waits through after the call is whatever travel the gate has *left*
+      // when the cue fires — measured at 1161–1440ms in play, with the HUD
+      // still reading "listen…" while they had already begun answering. Fire on
+      // remaining travel rather than on "the gate is fully on screen", so the
+      // freeze ends roughly as the corridor arrives.
+      //
+      // Bounded by the fully-on-screen moment because the demo dot is drawn
+      // along the gate's own screen position: cue a wide gate any earlier and
+      // its sweep runs off the right edge. For a T3 corridor (1.33s of travel)
+      // that bound, not cueApproachMs, is what decides.
+      const travelToBirdMs =
+        ((next.xStart - this.worldX) / this.difficulty.scrollSpeed) * 1000;
+      // What travelToBirdMs reads at the instant the gate is fully on screen —
+      // a constant per gate, unlike msUntilOnScreen, which keeps falling.
+      const travelWhenVisibleMs = Math.max(
+        0,
+        ((this.width * (1 - BIRD_X_FRAC) - next.widthPx) /
+          this.difficulty.scrollSpeed) *
+          1000,
+      );
+      const fireAt = Math.min(tuning().cueApproachMs, travelWhenVisibleMs);
+      if (travelToBirdMs <= fireAt) {
+        this.lastCuedXStart = next.xStart;
+        this.cue = {
+          tone: next.tone,
+          xStart: next.xStart,
+          atMs: nowMs,
+          durationMs: this.cueDurationMsFor(next.tone),
+        };
+      }
+      return;
+    }
+
+    if (msUntilOnScreen <= tuning().cueLeadMs) {
       this.lastCuedXStart = next.xStart;
       this.cue = {
         tone: next.tone,

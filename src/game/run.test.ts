@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { Run, type RunSnapshot } from "./run.ts";
+import { DEFAULT_TUNING, resetTuning, setTuning, tuning } from "./tuning.ts";
 import { corridorChaoAt, GATE_DURATION_S } from "./gates.ts";
 import type { PitchState } from "../pitch/types.ts";
 
@@ -346,7 +347,8 @@ describe("Run — Tone 3 handling", () => {
 describe("Run — difficulty ramp", () => {
   it("scroll speed increases after 5 gates cleared", () => {
     const run = newGameRun();
-    const { snapshots } = simulate(run, 1200, trackCorridor);
+    // Long enough to clear five gates at the shipped rest interval.
+    const { snapshots } = simulate(run, 2400, trackCorridor);
     const speeds = snapshots.map((s) => s.difficulty.scrollSpeed);
     expect(speeds[0]).toBe(220);
     // The first ramp step lands exactly on base * 1.08 after 5 gates.
@@ -498,7 +500,9 @@ describe("Run — pace", () => {
   it("defaults to the PRD baseline difficulty", () => {
     const run = new Run({ mode: "game", width: 420, rand: () => 0.1 });
     expect(run.snapshot().difficulty.scrollSpeed).toBeCloseTo(220);
-    expect(run.snapshot().difficulty.restMs).toBeCloseTo(900);
+    expect(run.snapshot().difficulty.restMs).toBeCloseTo(
+      DEFAULT_TUNING.baseRestMs,
+    );
   });
 
   it("a relaxed pace slows scroll and stretches rest for the whole run", () => {
@@ -509,7 +513,9 @@ describe("Run — pace", () => {
       pace: "relaxed",
     });
     expect(run.snapshot().difficulty.scrollSpeed).toBeCloseTo(220 * 0.75);
-    expect(run.snapshot().difficulty.restMs).toBeCloseTo(900 * 2);
+    expect(run.snapshot().difficulty.restMs).toBeCloseTo(
+      DEFAULT_TUNING.baseRestMs * 2,
+    );
   });
 
   it("pace also applies in tutorial mode", () => {
@@ -634,6 +640,49 @@ describe("Run — pause cue style", () => {
     const outcomes = outcomesOf(snapshots);
     expect(outcomes.length).toBeGreaterThan(0);
     expect(outcomes[0].outcome).toBe("perfect");
+  });
+});
+
+describe("Run — call-and-response gap (spec B3)", () => {
+  afterEach(() => resetTuning());
+
+  /**
+   * How long after the demo finishes the player waits before the corridor is
+   * actually there to fly. Measured in play at 1161–1440ms, with the HUD still
+   * reading "listen…" while the player had already answered.
+   */
+  function responseGapMs(): number {
+    const run = new Run({
+      mode: "game",
+      width: W,
+      rand: seqRand([0, 0, 0.5, 0.75]),
+      cueStyle: "pause",
+      cueDurationMsFor: () => 500,
+    });
+    const { snapshots } = simulate(run, 4000, trackCorridor);
+    const cueAt = snapshots.findIndex((s) => s.cue !== null);
+    const activeAt = snapshots.findIndex((s) => s.activeGate !== null);
+    expect(cueAt).toBeGreaterThanOrEqual(0);
+    expect(activeAt).toBeGreaterThan(cueAt);
+    return (activeAt - cueAt) * DT - 500 - tuning().cuePauseHoldMs;
+  }
+
+  it("opens the response window on the beat the demo ends", () => {
+    expect(responseGapMs()).toBeLessThan(400);
+  });
+
+  it("cueApproachMs sets the gap, until the demo would run off-screen", () => {
+    setTuning({ cueApproachMs: 100 });
+    expect(responseGapMs()).toBeLessThan(150);
+
+    // Raising it does not keep buying time: the cue cannot fire before the
+    // gate is fully on screen, because the demo dot is drawn along the gate.
+    setTuning({ cueApproachMs: 100 });
+    const tight = responseGapMs();
+    setTuning({ cueApproachMs: 5000 });
+    const capped = responseGapMs();
+    expect(capped).toBeGreaterThan(tight);
+    expect(capped).toBeLessThan(700);
   });
 });
 

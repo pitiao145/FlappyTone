@@ -1,3 +1,4 @@
+import { DEFAULT_TUNING } from "./tuning.ts";
 import { describe, expect, it } from "vitest";
 import {
   applyCorridorWidth,
@@ -93,12 +94,12 @@ describe("newDifficulty", () => {
     const d = newDifficulty();
     expect(d.scrollSpeed).toBeCloseTo(220);
     expect(d.toleranceH).toBeCloseTo(0.12);
-    expect(d.restMs).toBeCloseTo(900);
+    expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.baseRestMs);
   });
 });
 
 describe("rampDifficulty", () => {
-  const base: Difficulty = { scrollSpeed: 220, toleranceH: 0.12, restMs: 900 };
+  const base: Difficulty = { scrollSpeed: 220, toleranceH: 0.12, restMs: DEFAULT_TUNING.baseRestMs };
 
   it("leaves difficulty unchanged below 5 cleared", () => {
     expect(rampDifficulty(0)).toEqual(base);
@@ -109,7 +110,7 @@ describe("rampDifficulty", () => {
     const d = rampDifficulty(5);
     expect(d.scrollSpeed).toBeCloseTo(220 * 1.08);
     expect(d.toleranceH).toBeCloseTo(0.12 * 0.95);
-    expect(d.restMs).toBeCloseTo(900 * 0.95);
+    expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.baseRestMs * 0.95);
   });
 
   it("caps scrollSpeed at 2.2x base and floors tolerance/rest at 100 cleared", () => {
@@ -211,14 +212,14 @@ describe("applyPace", () => {
   it("normal slows scroll and stretches rest, leaving tolerance alone", () => {
     const d = applyPace(newDifficulty(), "normal");
     expect(d.scrollSpeed).toBeCloseTo(220 * 0.9);
-    expect(d.restMs).toBeCloseTo(900 * 1.5);
+    expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.baseRestMs * 1.5);
     expect(d.toleranceH).toBeCloseTo(0.12);
   });
 
   it("relaxed slows further and doubles the rest interval", () => {
     const d = applyPace(newDifficulty(), "relaxed");
     expect(d.scrollSpeed).toBeCloseTo(220 * 0.75);
-    expect(d.restMs).toBeCloseTo(900 * 2);
+    expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.baseRestMs * 2);
   });
 
   it("keeps each tone's gate duration intact — width scales with paced speed", () => {
@@ -238,7 +239,7 @@ describe("applyCorridorWidth", () => {
     const d = applyCorridorWidth(newDifficulty(), "narrow");
     expect(d.toleranceH).toBeCloseTo(0.12 * 0.75);
     expect(d.scrollSpeed).toBeCloseTo(220);
-    expect(d.restMs).toBeCloseTo(900);
+    expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.baseRestMs);
   });
 
   it("wide loosens tolerance to 1.4x", () => {
