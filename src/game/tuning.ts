@@ -14,6 +14,82 @@
 
 import type { Tone } from "./gates.ts";
 
+/** A corridor centreline: (t, chao) control points, ascending in t over [0,1]. */
+export type Polyline = Array<[number, number]>;
+
+/**
+ * Corridor centrelines as (t, chao) control points, measured from a native
+ * speaker's citation takes in `fixtures/captures/jane_ma*.wav`.
+ *
+ * These are now read off the *shipped reference clips* — `npm run
+ * make-ref-clips` cuts `public/ref/ma{1-4}.wav` from those same captures and
+ * prints the contour over each clip's own timeline, which is the timeline the
+ * demo dot sweeps. Example and target therefore agree by construction: the
+ * player hears a contour, watches the dot trace that contour, and is scored
+ * against it. Before this they were three different things.
+ *
+ * `t` is normalised over `GATE_DURATION_S[tone]`, which equals the clip length,
+ * so a control point at t=0.3 is 30% of the way through what the player heard.
+ *
+ * Every contour completes before t=1 and then holds its final chao. That tail
+ * is load-bearing: a speaker who finishes a rise and sustains the note was
+ * otherwise left above a corridor still climbing underneath her. The clips'
+ * own trailing release (T2 falls back to ~3.0 after its peak) is deliberately
+ * *not* modelled — releasing is not part of the tone, and scoring it would
+ * punish holding.
+ *
+ * Editable from the dev Lab's shapes tab, which is how "some of them look a
+ * bit funky" gets answered with a change rather than an argument. Whatever the
+ * corridor is, the demo dot sweeps the same function, so example and target
+ * cannot drift apart.
+ *
+ * These replaced the PRD §6 table, which was drawn from the shapes of the tone
+ * *marks* rather than from speech. Real tones are not constant-rate ramps: they
+ * hold, then move fast. Her T4 sits at the top for ~60% of the syllable and
+ * then drops in ~170ms; the PRD's linear 5→1 glide across the whole gate asked
+ * her to fall at roughly 17 st/s when she actually falls at ~95 st/s (the same
+ * figure the slew clamp in PitchTracker.ts is set from). No tone she produced
+ * could fit that corridor, and a run of 22 gates bore it out — she cleared 90%
+ * of T1, the only corridor that demands no particular rate, and 8% of the rest.
+ *
+ * Caveat on the evidence: one speaker, one syllable (`ma`), citation register.
+ * That is thin, and it is still a large improvement on a hand-drawn diagram.
+ * Widen it with more speakers and syllables before treating these as settled.
+ */
+export const DEFAULT_POLYLINES: Record<Tone, Polyline> = {
+  // Flat, and at 4.6 rather than a textbook 5 — that is where she actually
+  // holds a high level tone.
+  1: [
+    [0, 4.6],
+    [1, 4.6],
+  ],
+  // Dips well below its start before climbing. The PRD's straight 3→5 ramp
+  // missed the dip entirely, so a correct T2 began by leaving the corridor.
+  2: [
+    [0, 3.0],
+    [0.3, 1.85],
+    [0.8, 5.0],
+    [1, 5.0],
+  ],
+  // Falls to the floor, sits there, then rises — the low plateau is the part
+  // the PRD's two-segment polyline had no room for.
+  3: [
+    [0, 2.7],
+    [0.5, 1.25],
+    [0.62, 1.22],
+    [0.9, 5.0],
+    [1, 5.0],
+  ],
+  // A plateau and a cliff, not a slide.
+  4: [
+    [0, 5.0],
+    [0.62, 5.0],
+    [0.9, 1.25],
+    [1, 1.25],
+  ],
+};
+
+
 export interface Tuning {
   // ---- pacing
   /** Base world scroll speed in px/s before pace and ramp (PRD §6). */
@@ -63,6 +139,8 @@ export interface Tuning {
 
   /** Per-tone gate length in seconds — the shipped reference clips' lengths. */
   gateDurationS: Record<Tone, number>;
+  /** Per-tone corridor centreline. See DEFAULT_POLYLINES. */
+  polylines: Record<Tone, Polyline>;
 }
 
 export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
@@ -72,7 +150,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   restMsFloor: 600,
   cueLeadMs: 300,
   cuePauseHoldMs: 450,
-  cueApproachMs: 600,
+  cueApproachMs: 700,
   collisionSustainMs: 120,
   timingSlackS: 0.09,
   maxTimingWidenFactor: 1.5,
@@ -85,10 +163,24 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   driftChaoPerSec: 5.33,
   trailSeconds: 1.0,
   gateDurationS: Object.freeze({ 1: 0.88, 2: 1.07, 3: 1.33, 4: 0.6 }),
+  polylines: DEFAULT_POLYLINES,
 }) as Readonly<Tuning>;
 
+function clonePolylines(p: Record<Tone, Polyline>): Record<Tone, Polyline> {
+  return {
+    1: p[1].map((pt) => [...pt] as [number, number]),
+    2: p[2].map((pt) => [...pt] as [number, number]),
+    3: p[3].map((pt) => [...pt] as [number, number]),
+    4: p[4].map((pt) => [...pt] as [number, number]),
+  };
+}
+
 function clone(t: Readonly<Tuning>): Tuning {
-  return { ...t, gateDurationS: { ...t.gateDurationS } };
+  return {
+    ...t,
+    gateDurationS: { ...t.gateDurationS },
+    polylines: clonePolylines(t.polylines),
+  };
 }
 
 let current: Tuning = clone(DEFAULT_TUNING);
@@ -104,6 +196,7 @@ export function setTuning(patch: Partial<Tuning>): void {
     ...current,
     ...patch,
     gateDurationS: { ...current.gateDurationS, ...(patch.gateDurationS ?? {}) },
+    polylines: { ...current.polylines, ...(patch.polylines ?? {}) },
   };
 }
 

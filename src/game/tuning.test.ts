@@ -1,6 +1,17 @@
 import { beforeEach, expect, test } from "vitest";
-import { DEFAULT_TUNING, resetTuning, setTuning, tuning } from "./tuning.ts";
-import { corridorToleranceAt, rampDifficulty, type Tone } from "./gates.ts";
+import {
+  DEFAULT_TUNING,
+  resetTuning,
+  setTuning,
+  tuning,
+  type Polyline,
+} from "./tuning.ts";
+import {
+  corridorChaoAt,
+  corridorToleranceAt,
+  rampDifficulty,
+  type Tone,
+} from "./gates.ts";
 
 beforeEach(() => resetTuning());
 
@@ -37,4 +48,20 @@ test("gates read tuning live — widening tracks timingSlackS", () => {
 test("the difficulty ramp reads tuning live", () => {
   setTuning({ baseScrollSpeed: 100 });
   expect(rampDifficulty(0).scrollSpeed).toBe(100);
+});
+
+test("polylines patch per tone and clone on reset", () => {
+  setTuning({ polylines: { 1: [[0, 3], [1, 3]] } as Record<Tone, Polyline> });
+  expect(tuning().polylines[1]).toEqual([[0, 3], [1, 3]]);
+  expect(tuning().polylines[3]).toEqual(DEFAULT_TUNING.polylines[3]);
+  resetTuning();
+  expect(tuning().polylines[1]).toEqual(DEFAULT_TUNING.polylines[1]);
+  // Deep-cloned, so mutating the live value cannot corrupt the defaults.
+  expect(tuning().polylines[1]).not.toBe(DEFAULT_TUNING.polylines[1]);
+});
+
+test("the corridor follows an edited polyline", () => {
+  expect(corridorChaoAt(1, 0.5)).toBeCloseTo(4.6);
+  setTuning({ polylines: { 1: [[0, 2], [1, 2]] } as Record<Tone, Polyline> });
+  expect(corridorChaoAt(1, 0.5)).toBeCloseTo(2);
 });

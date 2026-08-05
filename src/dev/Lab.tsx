@@ -19,13 +19,15 @@ import { Game } from "../ui/Game.tsx";
 import { Capture } from "./Capture.tsx";
 import { DevPanel } from "./DevPanel.tsx";
 import { GateLogPanel } from "./GateLogPanel.tsx";
+import { ShapeEditor } from "./ShapeEditor.tsx";
 import { Soundboard } from "./Soundboard.tsx";
 import { TuningPanel } from "./TuningPanel.tsx";
 
-type Tab = "play" | "pitch" | "gates" | "capture" | "sounds";
+type Tab = "play" | "shapes" | "pitch" | "gates" | "capture" | "sounds";
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "play", label: "play" },
+  { id: "shapes", label: "shapes" },
   { id: "pitch", label: "pitch" },
   { id: "gates", label: "gates" },
   { id: "capture", label: "capture" },
@@ -145,6 +147,20 @@ worst excursion ${Math.round(Math.max(0, ...last.gateLog.map((g) => g.worstExcur
           </div>
           <div className="lab-controls">
             <TuningPanel />
+          </div>
+        </div>
+      )}
+
+      {tab === "shapes" && (
+        <div className="lab-split">
+          <div className="lab-stage">
+            <ShapeEditor />
+          </div>
+          <div className="lab-controls">
+            <p className="param-help">
+              Edits are live in the play tab — switch across and start a run
+              without losing them. Only a reload restores the shipped shapes.
+            </p>
           </div>
         </div>
       )}

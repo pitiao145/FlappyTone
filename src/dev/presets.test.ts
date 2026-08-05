@@ -4,6 +4,7 @@ import {
   resetTuning,
   setTuning,
   tuning,
+  type Polyline,
 } from "../game/tuning.ts";
 import type { Tone } from "../game/gates.ts";
 import {
@@ -74,4 +75,25 @@ test("presets round-trip, replace by name, and delete", () => {
 test("corrupt storage yields no presets rather than throwing", () => {
   localStorage.setItem("toneflap.dev.presets.v1", "{not json");
   expect(loadPresets()).toEqual([]);
+});
+
+test("an edited corridor shape shows up in the diff, per tone", () => {
+  setTuning({
+    polylines: { 1: [[0, 3], [1, 3]] } as Record<Tone, Polyline>,
+  });
+  expect(tuningDiff(tuning()).polylines).toEqual({ 1: [[0, 3], [1, 3]] });
+});
+
+test("an untouched shape is not reported just because it was cloned", () => {
+  resetTuning();
+  expect(tuningDiff(tuning()).polylines).toBeUndefined();
+});
+
+test("a shape formats as a pasteable DEFAULT_POLYLINES entry", () => {
+  setTuning({
+    polylines: { 4: [[0, 5], [0.618, 5], [1, 1.25]] } as Record<Tone, Polyline>,
+  });
+  expect(formatTuningDiff(tuningDiff(tuning()))).toBe(
+    "  4: [\n    [0, 5],\n    [0.62, 5],\n    [1, 1.25],\n  ],",
+  );
 });
