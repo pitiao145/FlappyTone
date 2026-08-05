@@ -9,7 +9,7 @@
 
 import { BIRD_X_FRAC } from "../game/run.ts";
 import type { RunSnapshot } from "../game/run.ts";
-import { corridorChaoAt } from "../game/gates.ts";
+import { corridorChaoAt, corridorToleranceAt } from "../game/gates.ts";
 import { TRAIL_SECONDS } from "../game/dynamics.ts";
 import { BACKDROP, chaoToY, drawChaoGrid, drawDot, drawTrail } from "./scene.ts";
 
@@ -165,8 +165,12 @@ function drawGate(
     const t = i / CENTRELINE_STEPS;
     const sx = x0 + t * (x1 - x0);
     const centre = corridorChaoAt(tone, t);
-    top.push([sx, chaoToY(centre + tolChao, height)]);
-    bottom.push([sx, chaoToY(centre - tolChao, height)]);
+    // Local tolerance, so the corridor visibly flares where it forgives
+    // timing. Collision uses the same function — the wall the player sees is
+    // exactly the wall they hit.
+    const tol = corridorToleranceAt(tone, t, tolChao);
+    top.push([sx, chaoToY(centre + tol, height)]);
+    bottom.push([sx, chaoToY(centre - tol, height)]);
   }
 
   const [r, g, b] = TONE_LIGHT[tone] ?? TONE_LIGHT[1];

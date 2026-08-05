@@ -137,6 +137,72 @@ export function toleranceChao(tone: Tone, baseTolH: number): number {
   return (baseTolH / 0.6) * 4 * TOLERANCE_FACTOR[tone];
 }
 
+/**
+ * How far out of step with the corridor a correct attempt is allowed to be.
+ *
+ * A single tolerance for the whole gate charges wildly different amounts for
+ * the same timing error, because what being late *costs* depends on how fast
+ * the corridor is moving underneath you. Measured against the shipped
+ * contours, 100ms of timing error is worth:
+ *
+ * | tone | max slope   | vertical cost | tolerance |
+ * |------|-------------|---------------|-----------|
+ * | 1    |  0 chao/s   | 0.00          | 0.80      |
+ * | 2    |  5.9 chao/s | 0.59          | 0.92      |
+ * | 3    | 10.2 chao/s | 1.02          | 1.04      |
+ * | 4    | 22.3 chao/s | 2.23          | 0.80      |
+ *
+ * So a T4 that is 100ms off collides whatever its shape — the error is 2.8×
+ * the whole corridor — and a T3 that is 100ms off sits exactly on the wall.
+ * Reported in play as "I did the shape right but started slightly early", and
+ * unfixable with the wide-tunnel setting, which scales the whole corridor
+ * while the problem lives in the steep fifth of it.
+ */
+export const TIMING_SLACK_S = 0.09;
+/**
+ * Ceiling on the widening, as a multiple of the gate's base tolerance. The T4
+ * cliff falls further inside the slack window than the entire corridor is
+ * wide, so without a cap its wall would effectively disappear.
+ */
+export const MAX_TIMING_WIDEN_FACTOR = 1.5;
+/** Offsets sampled either side of t when measuring the corridor's travel. */
+const SLACK_STEPS = 6;
+
+/**
+ * Corridor half-height at `t`, widened by however far the centreline travels
+ * within TIMING_SLACK_S either side.
+ *
+ * Expressed as the corridor's own movement rather than as slope × slack
+ * because that is the quantity being forgiven, and it stays exact at the
+ * polyline's vertices and plateaus, where a slope is discontinuous or zero.
+ *
+ * Flat stretches — all of T1, the T4 plateau, the T3 floor — widen by nothing,
+ * so the game stays exactly as strict about *pitch*. Only the moving parts,
+ * where no speaker can be sample-accurate, open up. And because the renderer
+ * draws the same function, the corridor visibly flares where it forgives:
+ * this is something the player can see, not a hidden fudge factor.
+ */
+export function corridorToleranceAt(
+  tone: Tone,
+  t: number,
+  baseTolChao: number,
+): number {
+  const dtNorm = TIMING_SLACK_S / GATE_DURATION_S[tone];
+  const here = corridorChaoAt(tone, t);
+  let travel = 0;
+  for (let i = 1; i <= SLACK_STEPS; i++) {
+    const offset = (i / SLACK_STEPS) * dtNorm;
+    travel = Math.max(
+      travel,
+      Math.abs(corridorChaoAt(tone, t + offset) - here),
+      Math.abs(corridorChaoAt(tone, t - offset) - here),
+    );
+  }
+  return (
+    baseTolChao + Math.min(travel, baseTolChao * MAX_TIMING_WIDEN_FACTOR)
+  );
+}
+
 export interface Gate {
   tone: Tone;
   xStart: number;

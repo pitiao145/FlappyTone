@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Run, type RunSnapshot } from "./run.ts";
-import { corridorChaoAt } from "./gates.ts";
+import { corridorChaoAt, GATE_DURATION_S } from "./gates.ts";
 import type { PitchState } from "../pitch/types.ts";
 
 const W = 420;
@@ -797,5 +797,52 @@ describe("Run — trail is drawn in the world's frame (spec B4)", () => {
     // The sample was taken at the bird's x, before this frame's scroll.
     expect(newest.x).toBeLessThanOrEqual(W * 0.28 + 0.001);
     expect(newest.x).toBeGreaterThan(W * 0.28 - 20);
+  });
+});
+
+describe("Run — timing slack (a right shape, slightly off the beat)", () => {
+  /**
+   * Flies the corridor's exact contour, but shifted in time — the reported
+   * failure mode: "I did the shape pretty much perfectly, but I started a bit
+   * early", which used to collide because tolerance was uniform while the cost
+   * of being late is not.
+   */
+  function shifted(offsetMs: number) {
+    return (s: RunSnapshot) => {
+      if (!s.activeGate) return pitch(3);
+      const { tone, t } = s.activeGate;
+      const offsetT = offsetMs / (GATE_DURATION_S[tone] * 1000);
+      return pitch(corridorChaoAt(tone, t + offsetT));
+    };
+  }
+
+  function collisionsFor(offsetMs: number): number {
+    const run = newGameRun();
+    const { snapshots } = simulate(run, 1600, shifted(offsetMs));
+    return outcomesOf(snapshots).filter((o) => o.outcome === "collision").length;
+  }
+
+  it("clears a contour that is a beat early", () => {
+    expect(collisionsFor(-80)).toBe(0);
+  });
+
+  it("clears a contour that is a beat late", () => {
+    expect(collisionsFor(80)).toBe(0);
+  });
+
+  it("still walls off a contour that is wildly out of step", () => {
+    // The slack forgives being slightly off, not being in a different place.
+    // If this ever reaches 0 the wall has been deleted, not widened.
+    expect(collisionsFor(400)).toBeGreaterThan(0);
+  });
+
+  it("still walls off a flat hum through a moving corridor", () => {
+    // The clearest "wrong contour": correct range, no shape at all.
+    const run = newGameRun();
+    const { snapshots } = simulate(run, 1600, () => pitch(3));
+    const collisions = outcomesOf(snapshots).filter(
+      (o) => o.outcome === "collision",
+    );
+    expect(collisions.length).toBeGreaterThan(0);
   });
 });

@@ -3,7 +3,9 @@ import {
   applyCorridorWidth,
   applyPace,
   corridorChaoAt,
+  corridorToleranceAt,
   GATE_DURATION_S,
+  MAX_TIMING_WIDEN_FACTOR,
   makeGate,
   newDifficulty,
   nextTone,
@@ -248,5 +250,59 @@ describe("applyCorridorWidth", () => {
     const ramped = rampDifficulty(1000); // tolerance at the 0.07 floor
     const d = applyCorridorWidth(ramped, "wide");
     expect(d.toleranceH).toBeCloseTo(0.07 * 1.4);
+  });
+});
+
+describe("corridorToleranceAt", () => {
+  // Base tolerance for a default gate, in chao.
+  const BASE = 0.8;
+
+  it("leaves a flat corridor exactly as strict", () => {
+    // T1 never moves, so no timing error can cost vertical room and there is
+    // nothing to forgive. The game stays as honest about pitch as it was.
+    for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+      expect(corridorToleranceAt(1, t, BASE)).toBeCloseTo(BASE, 10);
+    }
+  });
+
+  it("never returns less than the base tolerance", () => {
+    for (const tone of [1, 2, 3, 4] as const) {
+      for (let i = 0; i <= 20; i++) {
+        expect(corridorToleranceAt(tone, i / 20, BASE)).toBeGreaterThanOrEqual(
+          BASE - 1e-9,
+        );
+      }
+    }
+  });
+
+  it("widens most where the corridor moves fastest", () => {
+    // T4's cliff is at t≈0.63; its plateau at t≈0.3 is flat.
+    const plateau = corridorToleranceAt(4, 0.3, BASE);
+    const cliff = corridorToleranceAt(4, 0.63, BASE);
+    expect(plateau).toBeCloseTo(BASE, 10);
+    expect(cliff).toBeGreaterThan(plateau * 1.5);
+  });
+
+  it("caps the widening so a fast fall still has walls", () => {
+    // The T4 cliff travels further within the slack window than the corridor
+    // is wide; without the cap its wall would effectively vanish.
+    for (let i = 0; i <= 40; i++) {
+      expect(corridorToleranceAt(4, i / 40, BASE)).toBeLessThanOrEqual(
+        BASE * (1 + MAX_TIMING_WIDEN_FACTOR) + 1e-9,
+      );
+    }
+  });
+
+  it("keeps the tail open only while the move is still within reach", () => {
+    // Both contours finish before t=1 and hold, but the slack window looks
+    // *backwards* too — so whether the tail forgives depends on whether the
+    // movement is still inside it.
+    //
+    // T2's rise ends at t=0.8 of a 1.07s gate, which is 214ms back from the
+    // end — outside the 90ms window, so the tail is strict.
+    expect(corridorToleranceAt(2, 1, BASE)).toBeCloseTo(BASE, 10);
+    // T4's cliff ends at t=0.9 of a 0.6s gate — only 60ms back, so a player
+    // still falling as the gate closes is legitimately late, not wrong.
+    expect(corridorToleranceAt(4, 1, BASE)).toBeGreaterThan(BASE);
   });
 });

@@ -13,6 +13,7 @@ import {
   applyCorridorWidth,
   applyPace,
   corridorChaoAt,
+  corridorToleranceAt,
   makeGate,
   newDifficulty,
   nextTone,
@@ -441,9 +442,12 @@ export class Run {
     const t = this.progressIn(active.gate);
     const corridor = corridorChaoAt(active.gate.tone, t);
     const errChao = Math.abs(this.targetChao - corridor);
+    // Local, not the gate's base: on a moving stretch of corridor a small
+    // timing error is worth more chao than the whole corridor is wide.
+    const tolChao = corridorToleranceAt(active.gate.tone, t, active.gate.tolChao);
     active.samples.push({
       errChao,
-      tolChao: active.gate.tolChao,
+      tolChao,
       voiced: p.voiced,
       atMs: nowMs,
     });
@@ -459,7 +463,7 @@ export class Run {
     // thing that accumulates into a lost heart.
     if (!p.voiced) {
       active.outsideSinceMs = null;
-    } else if (errChao > active.gate.tolChao) {
+    } else if (errChao > tolChao) {
       active.outsideSinceMs ??= nowMs;
       const heldMs = nowMs - active.outsideSinceMs;
       active.worstExcursionMs = Math.max(active.worstExcursionMs, heldMs);
@@ -561,7 +565,11 @@ export class Run {
         ? {
             tone: active.gate.tone,
             t: this.progressIn(active.gate),
-            tolChao: active.gate.tolChao,
+            tolChao: corridorToleranceAt(
+              active.gate.tone,
+              this.progressIn(active.gate),
+              active.gate.tolChao,
+            ),
             corridorChao: corridorChaoAt(
               active.gate.tone,
               this.progressIn(active.gate),
@@ -700,9 +708,10 @@ export class Run {
     if (i === 0) return [];
 
     const corridor = corridorChaoAt(gate.tone, 0);
+    const tolChao = corridorToleranceAt(gate.tone, 0, gate.tolChao);
     return buf.slice(i).map((s) => ({
       errChao: Math.abs(s.chao - corridor),
-      tolChao: gate.tolChao,
+      tolChao,
       voiced: s.voiced,
       atMs: s.atMs,
     }));
