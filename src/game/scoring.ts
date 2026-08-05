@@ -4,6 +4,7 @@
  */
 
 import type { Tone } from "./gates.ts";
+import { tuning } from "./tuning.ts";
 
 export interface GateSample {
   /** |bird - corridor centre| in chao. */
@@ -46,7 +47,7 @@ export function longestUtteranceMs(samples: GateSample[]): number {
 
   for (const s of samples) {
     if (!s.voiced) continue;
-    if (start === null || s.atMs - lastVoicedAt > MERGE_GAP_MS) {
+    if (start === null || s.atMs - lastVoicedAt > tuning().mergeGapMs) {
       start = s.atMs;
     }
     lastVoicedAt = s.atMs;
@@ -57,7 +58,7 @@ export function longestUtteranceMs(samples: GateSample[]): number {
 
 /** Did the player produce anything long enough to score? */
 export function heardUtterance(samples: GateSample[]): boolean {
-  return longestUtteranceMs(samples) >= MIN_UTTERANCE_MS;
+  return longestUtteranceMs(samples) >= tuning().minUtteranceMs;
 }
 
 /**

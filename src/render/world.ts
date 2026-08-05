@@ -10,7 +10,7 @@
 import { BIRD_X_FRAC } from "../game/run.ts";
 import type { RunSnapshot } from "../game/run.ts";
 import { corridorChaoAt, corridorToleranceAt } from "../game/gates.ts";
-import { TRAIL_SECONDS } from "../game/dynamics.ts";
+import { tuning } from "../game/tuning.ts";
 import {
   BACKDROP,
   chaoToY,
@@ -92,7 +92,7 @@ export function drawWorld(
 
   if (!snap.cuePaused) drawCueDemo(ctx, height, snap);
 
-  drawTrail(ctx, width, height, snap.trail, TRAIL_SECONDS, dotX, now);
+  drawTrail(ctx, width, height, snap.trail, tuning().trailSeconds, dotX, now);
   drawIgnition(ctx, width, height, snap, now);
   drawDot(
     ctx,

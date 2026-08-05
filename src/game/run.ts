@@ -28,7 +28,6 @@ import {
   applyGate,
   heardUtterance,
   longestUtteranceMs,
-  MERGE_GAP_MS,
   newRunStats,
   multiplierFor,
   scoreGate,
@@ -38,14 +37,8 @@ import {
   type RunStats,
   type UnheardHint,
 } from "./scoring.ts";
-import {
-  DRIFT_CHAO_PER_SEC,
-  EASE_TAU_MS,
-  GRACE_MS,
-  REST_CHAO,
-  T3_GRACE_MS,
-  TRAIL_SECONDS,
-} from "./dynamics.ts";
+import { REST_CHAO } from "./dynamics.ts";
+import { tuning } from "./tuning.ts";
 import type { PitchState } from "../pitch/types.ts";
 
 export type RunMode = "game" | "tutorial";
@@ -488,7 +481,7 @@ export class Run {
       active.outsideSinceMs ??= nowMs;
       const heldMs = nowMs - active.outsideSinceMs;
       active.worstExcursionMs = Math.max(active.worstExcursionMs, heldMs);
-      if (heldMs >= COLLISION_SUSTAIN_MS) {
+      if (heldMs >= tuning().collisionSustainMs) {
         active.collided = true;
       }
     } else {
@@ -521,7 +514,8 @@ export class Run {
 
     this.applyUnvoicedDynamics(dt, nowMs);
     this.displayChao +=
-      (this.targetChao - this.displayChao) * (1 - Math.exp(-dt / EASE_TAU_MS));
+      (this.targetChao - this.displayChao) *
+      (1 - Math.exp(-dt / tuning().easeTauMs));
 
     this.updateCue(nowMs);
     this.retireOffscreen();
@@ -532,7 +526,7 @@ export class Run {
     return (
       this.cueStyle === "pause" &&
       this.cue !== null &&
-      nowMs - this.cue.atMs < this.cue.durationMs + CUE_PAUSE_HOLD_MS
+      nowMs - this.cue.atMs < this.cue.durationMs + tuning().cuePauseHoldMs
     );
   }
 
@@ -553,7 +547,7 @@ export class Run {
     const screenRight = this.worldX + this.width * (1 - BIRD_X_FRAC);
     const msUntilOnScreen =
       ((this.gateEnd(next) - screenRight) / this.difficulty.scrollSpeed) * 1000;
-    const lead = this.cueStyle === "pause" ? 0 : CUE_LEAD_MS;
+    const lead = this.cueStyle === "pause" ? 0 : tuning().cueLeadMs;
     if (msUntilOnScreen <= lead) {
       this.lastCuedXStart = next.xStart;
       this.cue = {
@@ -636,7 +630,7 @@ export class Run {
 
   private inGrace(nowMs: number): boolean {
     const graceMs =
-      this.active?.gate.tone === 3 ? T3_GRACE_MS : GRACE_MS;
+      this.active?.gate.tone === 3 ? tuning().t3GraceMs : tuning().graceMs;
     return nowMs - this.lastVoicedAt <= graceMs;
   }
 
@@ -649,7 +643,7 @@ export class Run {
     if (this.active?.gate.tone === 3) return;
     if (this.inGrace(nowMs)) return;
 
-    const step = (DRIFT_CHAO_PER_SEC * dtMs) / 1000;
+    const step = (tuning().driftChaoPerSec * dtMs) / 1000;
     const delta = REST_CHAO - this.targetChao;
     this.targetChao +=
       Math.abs(delta) <= step ? delta : Math.sign(delta) * step;
@@ -681,7 +675,7 @@ export class Run {
    */
   private recordPreGate(voiced: boolean, nowMs: number): void {
     this.preGate.push({ chao: this.targetChao, voiced, atMs: nowMs });
-    const cutoff = nowMs - PRE_GATE_BUFFER_MS;
+    const cutoff = nowMs - tuning().preGateBufferMs;
     while (this.preGate.length > 0 && this.preGate[0].atMs < cutoff) {
       this.preGate.shift();
     }
@@ -689,7 +683,7 @@ export class Run {
     if (!voiced) return;
     if (
       this.idleRunStartMs === null ||
-      nowMs - this.idleRunLastMs > MERGE_GAP_MS
+      nowMs - this.idleRunLastMs > tuning().mergeGapMs
     ) {
       this.idleRunStartMs = nowMs;
       this.idleRunCounted = false;
@@ -718,7 +712,7 @@ export class Run {
     while (i > 0) {
       const prev = buf[i - 1];
       if (!prev.voiced) break;
-      if (buf[i].atMs - prev.atMs > MERGE_GAP_MS) break;
+      if (buf[i].atMs - prev.atMs > tuning().mergeGapMs) break;
       if (prev.atMs <= this.lastGateEndedAtMs) break;
       i -= 1;
     }
@@ -881,7 +875,7 @@ export class Run {
   }
 
   private pruneTrail(nowMs: number): void {
-    const cutoff = nowMs - TRAIL_SECONDS * 1000;
+    const cutoff = nowMs - tuning().trailSeconds * 1000;
     while (this.trail.length > 0 && this.trail[0].t < cutoff) {
       this.trail.shift();
     }

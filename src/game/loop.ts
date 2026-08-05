@@ -1,4 +1,5 @@
 import { PitchTracker } from "../pitch/PitchTracker.ts";
+import { tuning } from "./tuning.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import type { PitchState, PitchTrackerConfig } from "../pitch/types.ts";
 import { drawScene, type TrailSample } from "../render/scene.ts";
@@ -87,7 +88,7 @@ export function handleFrame(frame: Float32Array, sampleRate: number): void {
       t: performance.now(),
     });
   }
-  const cutoff = performance.now() - TRAIL_SECONDS * 1000;
+  const cutoff = performance.now() - tuning().trailSeconds * 1000;
   while (state.trail.length > 0 && state.trail[0].t < cutoff) {
     state.trail.shift();
   }
@@ -106,20 +107,21 @@ export function startLoop(
     const dt = Math.min(100, now - lastT);
     lastT = now;
 
-    const inGrace = now - state.lastVoicedAt <= GRACE_MS;
+    const inGrace = now - state.lastVoicedAt <= tuning().graceMs;
     if (!state.latest.voiced && !inGrace) {
-      const step = (DRIFT_CHAO_PER_SEC * dt) / 1000;
+      const step = (tuning().driftChaoPerSec * dt) / 1000;
       const delta = REST_CHAO - state.targetChao;
       state.targetChao += Math.abs(delta) <= step ? delta : Math.sign(delta) * step;
     }
     state.displayChao +=
-      (state.targetChao - state.displayChao) * (1 - Math.exp(-dt / EASE_TAU_MS));
+      (state.targetChao - state.displayChao) *
+      (1 - Math.exp(-dt / tuning().easeTauMs));
 
     drawScene(ctx, cssWidth, cssHeight, {
       chao: state.displayChao,
       voiced: state.latest.voiced || inGrace,
       trail: state.trail,
-      trailSeconds: TRAIL_SECONDS,
+      trailSeconds: tuning().trailSeconds,
     });
     state.rafId = requestAnimationFrame(tick);
   };

@@ -3,6 +3,8 @@
  * No Web Audio, no React, no canvas. See docs/PRD.md §6.
  */
 
+import { tuning } from "./tuning.ts";
+
 export type Tone = 1 | 2 | 3 | 4;
 
 export const TONE_INFO: Record<
@@ -102,6 +104,11 @@ export const GATE_DURATION_S: Record<Tone, number> = {
   4: 0.6,
 };
 
+/** Live gate length — the Lab can move these; the constant above is the default. */
+export function gateDurationS(tone: Tone): number {
+  return tuning().gateDurationS[tone];
+}
+
 /** Piecewise-linear interpolation of a tone's corridor centreline. t is clamped to [0,1]. */
 export function corridorChaoAt(tone: Tone, t: number): number {
   const clamped = Math.min(1, Math.max(0, t));
@@ -187,7 +194,7 @@ export function corridorToleranceAt(
   t: number,
   baseTolChao: number,
 ): number {
-  const dtNorm = TIMING_SLACK_S / GATE_DURATION_S[tone];
+  const dtNorm = tuning().timingSlackS / gateDurationS(tone);
   const here = corridorChaoAt(tone, t);
   let travel = 0;
   for (let i = 1; i <= SLACK_STEPS; i++) {
@@ -199,7 +206,8 @@ export function corridorToleranceAt(
     );
   }
   return (
-    baseTolChao + Math.min(travel, baseTolChao * MAX_TIMING_WIDEN_FACTOR)
+    baseTolChao +
+    Math.min(travel, baseTolChao * tuning().maxTimingWidenFactor)
   );
 }
 
@@ -216,20 +224,16 @@ export interface Difficulty {
   restMs: number;
 }
 
-const BASE_SCROLL_SPEED = 220;
-const BASE_TOLERANCE_H = 0.12;
-const BASE_REST_MS = 900;
-
-const SCROLL_SPEED_CAP = BASE_SCROLL_SPEED * 2.2;
+const SPEED_CAP_FACTOR = 2.2;
 const TOLERANCE_FLOOR = 0.07;
-const REST_MS_FLOOR = 600;
 
-/** The PRD's base difficulty values (§6). */
+/** The PRD's base difficulty values (§6), as currently tuned. */
 export function newDifficulty(): Difficulty {
+  const t = tuning();
   return {
-    scrollSpeed: BASE_SCROLL_SPEED,
-    toleranceH: BASE_TOLERANCE_H,
-    restMs: BASE_REST_MS,
+    scrollSpeed: t.baseScrollSpeed,
+    toleranceH: t.baseToleranceH,
+    restMs: t.baseRestMs,
   };
 }
 
@@ -290,16 +294,17 @@ export function applyCorridorWidth(
  */
 export function rampDifficulty(gatesCleared: number): Difficulty {
   const steps = Math.floor(gatesCleared / 5);
+  const t = tuning();
   return {
     scrollSpeed: Math.min(
-      BASE_SCROLL_SPEED * Math.pow(1.08, steps),
-      SCROLL_SPEED_CAP,
+      t.baseScrollSpeed * Math.pow(1.08, steps),
+      t.baseScrollSpeed * SPEED_CAP_FACTOR,
     ),
     toleranceH: Math.max(
-      BASE_TOLERANCE_H * Math.pow(0.95, steps),
+      t.baseToleranceH * Math.pow(0.95, steps),
       TOLERANCE_FLOOR,
     ),
-    restMs: Math.max(BASE_REST_MS * Math.pow(0.95, steps), REST_MS_FLOOR),
+    restMs: Math.max(t.baseRestMs * Math.pow(0.95, steps), t.restMsFloor),
   };
 }
 
@@ -335,7 +340,7 @@ export function makeGate(tone: Tone, xStart: number, d: Difficulty): Gate {
   return {
     tone,
     xStart,
-    widthPx: d.scrollSpeed * GATE_DURATION_S[tone],
+    widthPx: d.scrollSpeed * gateDurationS(tone),
     tolChao: toleranceChao(tone, d.toleranceH),
   };
 }
