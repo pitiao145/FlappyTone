@@ -72,3 +72,30 @@ export function computeRangeSemitones(voicedSemitones: number[]): number | null 
   const rounded = Math.round(half * 2) / 2;
   return Math.min(RANGE_SEMITONES_MAX, Math.max(RANGE_SEMITONES_MIN, rounded));
 }
+
+/**
+ * Tone space from a deliberate high sweep and a deliberate low sweep, in
+ * semitones relative to f0Center.
+ *
+ * Measuring beats inferring. `computeRangeSemitones` reads the excursion out of
+ * whatever the speaker happened to do during a preview, which for a beginner is
+ * three flat syllables — so it under-reports a range they have but did not use.
+ * Asking them to reach, once in each direction, measures the thing directly.
+ *
+ * p90 of the high sweep against p10 of the low sweep, for the same reason the
+ * preview version trims: one octave-error or creak frame at either extreme
+ * would otherwise size the whole board around a measurement artefact.
+ *
+ * Returns null when either sweep is too sparse to say anything.
+ */
+export function computeRangeFromExtremes(
+  high: number[],
+  low: number[],
+): number | null {
+  if (high.length < 10 || low.length < 10) return null;
+  const h = [...high].sort((a, b) => a - b);
+  const l = [...low].sort((a, b) => a - b);
+  const half = (percentile(h, 90) - percentile(l, 10)) / 2;
+  const rounded = Math.round(half * 2) / 2;
+  return Math.min(RANGE_SEMITONES_MAX, Math.max(RANGE_SEMITONES_MIN, rounded));
+}

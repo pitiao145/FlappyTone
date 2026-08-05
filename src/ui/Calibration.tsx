@@ -13,6 +13,7 @@ import {
   RANGE_SEMITONES_MIN,
   computeF0Center,
   computeNoiseFloor,
+  computeRangeFromExtremes,
   computeRangeSemitones,
 } from "../pitch/calibration.ts";
 import { rmsOf } from "../pitch/math.ts";
@@ -21,9 +22,12 @@ import type { PitchTrackerConfig } from "../pitch/types.ts";
 import { RANGE_SEMITONES } from "../pitch/math.ts";
 
 const QUIET_MS = 1000;
-const SPEAK_MS = 5000;
+/** Long enough for a couple of sentences — more voiced frames than three syllables. */
+const TALK_MS = 6000;
+/** One deliberate reach in each direction. Short: reaching is tiring. */
+const SWEEP_MS = 3000;
 
-type Step = "quiet" | "speak" | "preview";
+type Step = "quiet" | "talk" | "high" | "low" | "preview";
 
 interface Props {
   canvasWidth: number;
@@ -32,10 +36,19 @@ interface Props {
   onCancel: () => void;
 }
 
-/** PRD §5.4: quiet second → "say ma three times" → live preview + range slider. */
+/**
+ * Calibration: quiet → talk normally → reach high → reach low → live preview.
+ *
+ * This replaced PRD §5.4's "say **ma** three times", which asked a beginner to
+ * perform a syllable from the language they are here to learn, and inferred
+ * their range from whatever excursion three flat syllables happened to
+ * contain. Normal speech gives a better f0 centre — more voiced frames, and
+ * the register they actually talk in — and asking them to reach, once in each
+ * direction, *measures* the range instead of guessing it.
+ */
 export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Props) {
   const [step, setStep] = useState<Step>("quiet");
-  /** Bumped to retry the speak step without leaving it. */
+  /** Bumped to retry a capture step without leaving it. */
   const [attempt, setAttempt] = useState(0);
   const [hint, setHint] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
@@ -43,15 +56,18 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
   const [noiseFloor, setNoiseFloor] = useState<number | null>(null);
   const [f0Center, setF0Center] = useState<number | null>(null);
   const [range, setRange] = useState(RANGE_SEMITONES);
+  /** Semitones captured during each sweep, relative to the measured centre. */
+  const highRef = useRef<number[]>([]);
+  const lowRef = useRef<number[]>([]);
   /** Range the preview thinks fits this voice, or null until enough is heard. */
   const [fit, setFit] = useState<number | null>(null);
   /** Every voiced semitone seen during preview. A ref: this fills at frame rate. */
   const observedRef = useRef<number[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Backgrounding mid-capture would let the quiet/speak timers run against a
-  // mic nobody is talking into, poisoning the measurement. Suspend the audio
-  // and abandon the step; resuming restarts it from the beginning.
+  // Backgrounding mid-capture would let the timers run against a mic nobody is
+  // talking into, poisoning the measurement. Suspend the audio and abandon the
+  // step; resuming restarts it from the beginning.
   useEffect(() => {
     const onVisibility = () => {
       if (document.visibilityState !== "hidden") return;
@@ -89,7 +105,7 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
       const timer = setTimeout(() => {
         setNoiseFloor(computeNoiseFloor(rms));
         setProgress(0);
-        setStep("speak");
+        setStep("talk");
       }, QUIET_MS);
       return () => {
         clearTimeout(timer);
@@ -98,21 +114,19 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
       };
     }
 
-    if (step === "speak") {
+    if (step === "talk") {
       const f0s: number[] = [];
       let tracker: PitchTracker | null = null;
       setFrameSink((frame, sampleRate) => {
         tracker ??= new PitchTracker(
-          noiseFloor === null
-            ? { sampleRate }
-            : { sampleRate, noiseFloor },
+          noiseFloor === null ? { sampleRate } : { sampleRate, noiseFloor },
         );
         const p = tracker.push(frame);
         if (p.voiced && p.f0 !== null) f0s.push(p.f0);
       });
       const started = performance.now();
       const ticker = setInterval(
-        () => setProgress(Math.min(1, (performance.now() - started) / SPEAK_MS)),
+        () => setProgress(Math.min(1, (performance.now() - started) / TALK_MS)),
         50,
       );
       const timer = setTimeout(() => {
@@ -126,11 +140,59 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
         }
         setHint(null);
         setF0Center(centre);
-        setStep("preview");
-      }, SPEAK_MS);
+        highRef.current = [];
+        lowRef.current = [];
+        setStep("high");
+      }, TALK_MS);
       return () => {
         clearTimeout(timer);
         clearInterval(ticker);
+        setFrameSink(null);
+      };
+    }
+
+    if (step === "high" || step === "low") {
+      // Semitones are relative to the centre measured a moment ago, so the two
+      // sweeps and the preview are all on one scale.
+      const cfg: Partial<PitchTrackerConfig> = {};
+      if (f0Center !== null) cfg.f0Center = f0Center;
+      if (noiseFloor !== null) cfg.noiseFloor = noiseFloor;
+      configureTracker(cfg);
+      const into = step === "high" ? highRef : lowRef;
+      into.current = [];
+      setFrameSink((frame, sampleRate) => {
+        handleFrame(frame, sampleRate);
+        const latest = getLatestState();
+        if (latest.voiced && latest.semitones !== null) {
+          into.current.push(latest.semitones);
+        }
+      });
+      // The live dot runs during the sweeps: seeing yourself reach is what
+      // makes "as high as is comfortable" legible without more words.
+      const stopLoop = canvasRef.current
+        ? startLoop(canvasRef.current, canvasWidth, canvasHeight)
+        : null;
+      const started = performance.now();
+      const ticker = setInterval(
+        () => setProgress(Math.min(1, (performance.now() - started) / SWEEP_MS)),
+        50,
+      );
+      const timer = setTimeout(() => {
+        setProgress(0);
+        if (step === "high") {
+          setStep("low");
+          return;
+        }
+        setRange(
+          computeRangeFromExtremes(highRef.current, lowRef.current) ??
+            RANGE_SEMITONES,
+        );
+        setStep("preview");
+      }, SWEEP_MS);
+      return () => {
+        clearTimeout(timer);
+        clearInterval(ticker);
+        stopLoop?.();
         setFrameSink(null);
       };
     }
@@ -143,9 +205,6 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
     // Cleared here, not via setState: the interval below re-derives `fit` from
     // this within 250ms, and an empty capture yields null anyway.
     observedRef.current = [];
-    // Watch what the speaker actually does so the board can be sized to them.
-    // Semitones are relative to f0Center, so moving the slider doesn't
-    // invalidate anything collected before it moved.
     setFrameSink((frame, sampleRate) => {
       handleFrame(frame, sampleRate);
       const latest = getLatestState();
@@ -169,7 +228,7 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
     // `range` is deliberately excluded: the slider retunes the live tracker in
     // place (setRangeSemitones) rather than restarting the preview loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, attempt, paused, noiseFloor, f0Center]);
+  }, [step, attempt, paused, noiseFloor, f0Center, canvasWidth, canvasHeight]);
 
   const save = () => {
     if (f0Center === null || noiseFloor === null) return;
@@ -182,24 +241,27 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
     onDone(settings);
   };
 
+  const sweeping = step === "high" || step === "low";
+
   return (
     <div className="screen calibrate-screen">
       <h2>Calibration</h2>
 
       {step === "quiet" && (
         <>
-          <p className="big">Stay quiet for a second…</p>
+          <p className="big">Give me a second of quiet…</p>
           <Meter value={progress} />
           <p className="note">Measuring how quiet your room is.</p>
         </>
       )}
 
-      {step === "speak" && (
+      {step === "talk" && (
         <>
-          <p className="big">
-            Say <strong>ma</strong> three times
+          <p className="big">Just talk, normally</p>
+          <p className="note">
+            Say what you had for breakfast, or count to ten — anything in your
+            everyday voice. No singing.
           </p>
-          <p className="note">Normal speaking voice, no singing.</p>
           {hint ? (
             <>
               <p className="prompt">{hint}</p>
@@ -219,11 +281,29 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
         </>
       )}
 
+      {sweeping && (
+        <>
+          <p className="big">
+            {step === "high"
+              ? "Now go high — say “ahh” as high as is comfortable"
+              : "And now low — as low as is comfortable"}
+          </p>
+          <p className="note">
+            Don't strain. Watch the dot: this is finding the top and bottom of
+            your board.
+          </p>
+          <Meter value={progress} />
+          <div className="stage">
+            <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} />
+          </div>
+        </>
+      )}
+
       {step === "preview" && (
         <>
           <p className="note">
-            Does this feel right? Say <strong>mā má mǎ mà</strong> and watch the
-            dot.
+            Does this feel right? Try a few sounds — high, low, and a slide
+            between them.
           </p>
           <div className="stage">
             <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} />
@@ -254,7 +334,7 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
                 getTracker()?.setRangeSemitones(fit);
               }}
             >
-              Fit to my voice (±{fit})
+              Fit to what I just did (±{fit})
             </button>
           )}
           <button className="primary" onClick={save}>
@@ -263,10 +343,10 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
           <button
             onClick={() => {
               setAttempt((a) => a + 1);
-              setStep("speak");
+              setStep("talk");
             }}
           >
-            Redo the voice step
+            Start over
           </button>
         </>
       )}

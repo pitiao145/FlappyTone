@@ -4,6 +4,7 @@ import {
   RANGE_SEMITONES_MIN,
   computeF0Center,
   computeNoiseFloor,
+  computeRangeFromExtremes,
   computeRangeSemitones,
   NOISE_FLOOR_MIN,
   median,
@@ -109,5 +110,39 @@ describe("computeRangeSemitones", () => {
 
   it("never widens the board past what the tone marks stay legible in", () => {
     expect(computeRangeSemitones(ramp(-30, 30))).toBe(RANGE_SEMITONES_MAX);
+  });
+});
+
+describe("computeRangeFromExtremes", () => {
+  const many = (v: number, n = 40) => Array.from({ length: n }, () => v);
+
+  it("is half the span the speaker demonstrated", () => {
+    expect(computeRangeFromExtremes(many(5), many(-5))).toBe(5);
+  });
+
+  it("a sparse sweep yields null rather than a confident wrong answer", () => {
+    expect(computeRangeFromExtremes([4, 4, 4], many(-4))).toBeNull();
+    expect(computeRangeFromExtremes(many(4), [-4])).toBeNull();
+  });
+
+  it("clamps into the usable band at both ends", () => {
+    expect(computeRangeFromExtremes(many(40), many(-40))).toBe(
+      RANGE_SEMITONES_MAX,
+    );
+    expect(computeRangeFromExtremes(many(0.2), many(-0.2))).toBe(
+      RANGE_SEMITONES_MIN,
+    );
+  });
+
+  it("sizes an asymmetric voice by the span, not by one side", () => {
+    // Someone who reaches 8 st up but never drops below their centre still
+    // gets a board that fits the range they actually have.
+    expect(computeRangeFromExtremes(many(8), many(0))).toBe(4);
+  });
+
+  it("ignores a single wild frame at either extreme", () => {
+    const high = [...many(5, 39), 30];
+    const low = [...many(-5, 39), -30];
+    expect(computeRangeFromExtremes(high, low)).toBe(5);
   });
 });
