@@ -3,8 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>toneflap</title>
+    <!-- viewport-fit=cover lets the layout reach under the notch; the safe-area
+         insets in App.css put the HUD back inside it. user-scalable=no because
+         a double-tap zoom mid-run leaves the canvas mis-scaled and there is
+         nothing here to read closely. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
+    />
+
+    <!-- Added to the home screen, the game runs without browser chrome. In the
+         recorded iPhone session Chrome's URL bar, its bottom nav and the
+         persistent mic chip took roughly a fifth of the screen (spec B6). -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#05070a" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="FlappyTone" />
+    <!-- black-translucent draws the app under the status bar, which is why the
+         safe-area padding is not optional. -->
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <title>FlappyTone</title>
   </head>
   <body>
     <div id="root"></div>

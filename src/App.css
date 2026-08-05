@@ -1,24 +1,44 @@
 .app {
   min-height: 100vh;
+  /* Tracks the URL bar collapsing instead of standing at its expanded height,
+     which left a scrollbar and a jumping layout mid-run. */
+  min-height: 100dvh;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   gap: 16px;
   padding: 16px;
+  /* viewport-fit=cover plus a translucent iOS status bar means the layout runs
+     under the notch and the home indicator; put it back inside them. */
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
   background: #05070a;
   color: #dfe5ec;
   font-family: system-ui, sans-serif;
 }
 
-.frame {
+/*
+ * The canvas is width-driven with a 9/16 aspect-ratio, so on a short viewport
+ * it grew taller than the screen and pushed the HUD — score, hearts, the
+ * syllable being asked for — off the bottom. Cap the width by the height that
+ * is actually available as well.
+ *
+ * svh, not dvh: svh is the viewport with browser chrome *showing*, so the game
+ * still fits at the URL bar's largest. Sizing to dvh would fit only while the
+ * bar was hidden and clip the moment it slid back in.
+ */
+.frame,
+.stage {
   width: 100%;
   max-width: 420px;
+  max-width: min(420px, calc((100svh - 40px) * 9 / 16));
+  margin-inline: auto;
 }
 
 .stage {
   position: relative;
-  width: 100%;
-  max-width: 420px;
 }
 
 /* ---------------------------------------------------------------- screens */
