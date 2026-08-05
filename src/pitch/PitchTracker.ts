@@ -58,6 +58,14 @@ export class PitchTracker {
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
+  /**
+   * The config in force. Read-only snapshot: dev tooling needs to show a
+   * slider at the value the running tracker actually has, not at the default.
+   */
+  getConfig(): Readonly<PitchTrackerConfig> {
+    return this.config;
+  }
+
   setF0Center(hz: number): void {
     this.config.f0Center = hz;
   }

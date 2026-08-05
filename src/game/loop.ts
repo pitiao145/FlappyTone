@@ -1,4 +1,5 @@
 import { PitchTracker } from "../pitch/PitchTracker.ts";
+import { publishState, setActiveTracker } from "./activeTracker.ts";
 import { tuning } from "./tuning.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import type { PitchState, PitchTrackerConfig } from "../pitch/types.ts";
@@ -66,6 +67,7 @@ let trackerOverrides: Partial<PitchTrackerConfig> = {};
 export function configureTracker(cfg: Partial<PitchTrackerConfig>): void {
   trackerOverrides = cfg;
   state.tracker = null;
+  setActiveTracker(null);
   state.trail = [];
   state.targetChao = REST_CHAO;
   state.displayChao = REST_CHAO;
@@ -75,8 +77,10 @@ export function configureTracker(cfg: Partial<PitchTrackerConfig>): void {
 export function handleFrame(frame: Float32Array, sampleRate: number): void {
   if (!state.tracker) {
     state.tracker = new PitchTracker({ ...trackerOverrides, sampleRate });
+    setActiveTracker(state.tracker);
   }
   state.latest = state.tracker.push(frame);
+  publishState(state.latest);
   // Only voiced frames join the trail — held/unvoiced samples painted a flat
   // grey smear that drowned the actual contour.
   if (state.latest.voiced) {

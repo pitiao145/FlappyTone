@@ -7,6 +7,7 @@ import {
 } from "../audio/reference.ts";
 import { getMicSession, setFrameSink, stopMic } from "../audio/session.ts";
 import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
+import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { TONE_INFO } from "../game/gates.ts";
 import { Run, type RunMode, type RunSnapshot } from "../game/run.ts";
 import type { GateOutcome, UnheardHint } from "../game/scoring.ts";
@@ -133,13 +134,20 @@ export function Game({
     setFrameSink((frame, sampleRate) => {
       // Deaf while the game itself is talking — the cue would drive the dot.
       if (isCueAudible()) return;
-      tracker ??= new PitchTracker({
-        sampleRate,
-        f0Center: settings.f0Center,
-        noiseFloor: settings.noiseFloor,
-        rangeSemitones: settings.rangeSemitones,
-      });
-      run.tickAudio(tracker.push(frame), performance.now());
+      if (!tracker) {
+        tracker = new PitchTracker({
+          sampleRate,
+          f0Center: settings.f0Center,
+          noiseFloor: settings.noiseFloor,
+          rangeSemitones: settings.rangeSemitones,
+        });
+        // Published so the dev Lab's sliders reach the tracker that is
+        // actually flying the dot, rather than a tracker nobody is listening to.
+        setActiveTracker(tracker);
+      }
+      const pitch = tracker.push(frame);
+      publishState(pitch);
+      run.tickAudio(pitch, performance.now());
     });
 
     const tick = (now: number) => {
@@ -236,6 +244,7 @@ export function Game({
       clearInterval(hudTimer);
       document.removeEventListener("visibilitychange", onVisibility);
       setFrameSink(null);
+      setActiveTracker(null);
     };
   }, [mode, settings, canvasWidth, canvasHeight]);
 
