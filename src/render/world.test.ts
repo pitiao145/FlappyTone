@@ -14,7 +14,8 @@
 import { describe, expect, it } from "vitest";
 import { Run, type RunSnapshot } from "../game/run.ts";
 import type { PitchState } from "../pitch/types.ts";
-import { drawWorld } from "./world.ts";
+import { toleranceChao, type Tone } from "../game/gates.ts";
+import { corridorEdges, drawWorld } from "./world.ts";
 
 const W = 420;
 const H = 747;
@@ -225,5 +226,63 @@ describe("drawWorld", () => {
       }
     }
     throw new Error("never reached a paused cue");
+  });
+});
+
+/**
+ * The drawn corridor. These are geometry assertions, not looks — but the two
+ * defects they pin were both visible on screen: walls that stopped being drawn
+ * where the corridor left the canvas, and faceting coarse enough to read as
+ * spikes on the widest gates.
+ */
+describe("corridorEdges", () => {
+  const TONES: Tone[] = [1, 2, 3, 4];
+  /** Base tolerance in chao for each tone at the shipped 0.12H. */
+  const tol = (tone: Tone) => toleranceChao(tone, 0.12);
+
+  it("keeps both edges on the canvas for every tone", () => {
+    // Unclamped, the timing-slack flare takes T4's top edge to chao 7.0 (y=-64
+    // on a 640px canvas) and its bottom to -0.75 (y=680). The wall polygon
+    // inverted there and drew nothing at all.
+    for (const tone of TONES) {
+      const { top, bottom } = corridorEdges(tone, tol(tone), 0, 260, H);
+      for (const p of [...top, ...bottom]) {
+        expect(p.y).toBeGreaterThanOrEqual(0);
+        expect(p.y).toBeLessThanOrEqual(H);
+      }
+    }
+  });
+
+  it("samples by width, so facet size stays constant as gates get wider", () => {
+    const narrow = corridorEdges(3, tol(3), 0, 120, H).top.length;
+    const wide = corridorEdges(3, tol(3), 0, 480, H).top.length;
+    expect(wide).toBeGreaterThan(narrow * 3);
+    // Every sample is a quadratic control point in the drawn path, so this is
+    // also a cap on per-frame work.
+    expect(corridorEdges(3, tol(3), 0, 5000, H).top.length).toBeLessThanOrEqual(
+      241,
+    );
+  });
+
+  it("never lets an edge cross the one opposite it", () => {
+    // top is centre+tol and bottom is centre-tol, both single-valued in x, so
+    // the channel cannot pinch shut or bowtie — which is what would produce a
+    // genuinely impossible corridor rather than merely an ugly one.
+    for (const tone of TONES) {
+      const { top, bottom } = corridorEdges(tone, tol(tone), 0, 260, H);
+      for (let i = 0; i < top.length; i++) {
+        expect(top[i].y).toBeLessThanOrEqual(bottom[i].y);
+      }
+    }
+  });
+
+  it("still flares where the corridor moves fastest", () => {
+    // The clamp must not have quietly flattened the timing slack: T4's cliff
+    // is the widest part of its corridor.
+    const { top, bottom } = corridorEdges(4, tol(4), 0, 260, H);
+    const heights = top.map((p, i) => bottom[i].y - p.y);
+    const atCliff = heights[Math.round(0.75 * (heights.length - 1))];
+    const atPlateau = heights[Math.round(0.2 * (heights.length - 1))];
+    expect(atCliff).toBeGreaterThan(atPlateau);
   });
 });

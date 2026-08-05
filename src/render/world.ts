@@ -9,7 +9,11 @@
 
 import { BIRD_X_FRAC } from "../game/run.ts";
 import type { RunSnapshot } from "../game/run.ts";
-import { corridorChaoAt, corridorToleranceAt } from "../game/gates.ts";
+import {
+  corridorChaoAt,
+  corridorToleranceAt,
+  type Tone,
+} from "../game/gates.ts";
 import { loadReduceMotion } from "../game/settings.ts";
 import { tuning } from "../game/tuning.ts";
 import {
@@ -21,8 +25,56 @@ import {
   traceSmoothPath,
 } from "./scene.ts";
 
-/** Samples per gate when tracing the dashed ghost centreline. */
-const CENTRELINE_STEPS = 24;
+/**
+ * Roughly one sample per this many horizontal pixels when tracing a corridor.
+ *
+ * Was a flat 24 samples per gate regardless of width, which on a T3 corridor
+ * (263px at normal pace) put 11px between samples — enough that the polyline's
+ * vertices fell between samples and the edges read as faceted. Sampling by
+ * width keeps the facet size constant instead of the facet *count*.
+ */
+const CORRIDOR_SAMPLE_PX = 2;
+const MIN_CORRIDOR_STEPS = 24;
+const MAX_CORRIDOR_STEPS = 240;
+
+function corridorSteps(widthPx: number): number {
+  return Math.min(
+    MAX_CORRIDOR_STEPS,
+    Math.max(MIN_CORRIDOR_STEPS, Math.round(widthPx / CORRIDOR_SAMPLE_PX)),
+  );
+}
+
+interface Pt {
+  x: number;
+  y: number;
+}
+
+/**
+ * Appends a smoothed run of points to the current path — quadratics through
+ * segment midpoints, each sample its own control point.
+ *
+ * The drawn wall must stay the wall the player hits, and it does: the curve
+ * departs from the sampled polyline by at most half a segment, which at
+ * CORRIDOR_SAMPLE_PX is about one pixel. What it removes is the faceting and
+ * the miter spikes at the polyline's corners, not the shape.
+ *
+ * Does not call beginPath or moveTo — the caller owns the path, because these
+ * runs are stitched into closed wall polygons.
+ */
+function appendSmooth(ctx: CanvasRenderingContext2D, pts: readonly Pt[]): void {
+  if (pts.length === 0) return;
+  ctx.lineTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length - 1; i++) {
+    ctx.quadraticCurveTo(
+      pts[i].x,
+      pts[i].y,
+      (pts[i].x + pts[i + 1].x) / 2,
+      (pts[i].y + pts[i + 1].y) / 2,
+    );
+  }
+  const last = pts[pts.length - 1];
+  ctx.quadraticCurveTo(last.x, last.y, last.x, last.y);
+}
 
 const OUTCOME_COLOR: Record<string, string> = {
   perfect: "rgba(120, 230, 170,",
@@ -166,6 +218,52 @@ const TONE_LIGHT: Record<number, [number, number, number]> = {
  * densest thing in the frame and the corridor is the only lit one, which is
  * the reading the shape needs: fly through the light.
  */
+/**
+ * Keeps a drawn corridor edge on the canvas.
+ *
+ * The timing-slack flare takes tolerance to 2.0 chao at the T4 cliff against a
+ * base of 0.80, so `centre ± tol` reaches chao 7.0 and −0.75 — well outside the
+ * 1–5 band, and off both ends of the canvas. Unclamped, the wall polygon
+ * (`moveTo(x, 0)` → edge → `lineTo(x, 0)`) inverted and simply stopped being
+ * drawn there, which is the "the corridor runs off the top and bottom" report.
+ *
+ * Rendering only: the player's own chao is clamped to 1–5 by the pitch math, so
+ * this hides no wall anyone could hit, and scoring never sees it. Clamped, the
+ * channel reads as opening out to the screen edge, which is what it does.
+ */
+function clampY(y: number, height: number): number {
+  return Math.min(height, Math.max(0, y));
+}
+
+/**
+ * Both corridor edges, sampled across the gate. Exported for testing: this is
+ * the geometry every part of the gate is built from, and it is the thing that
+ * has to stay on the canvas.
+ */
+export function corridorEdges(
+  tone: Tone,
+  tolChao: number,
+  x0: number,
+  x1: number,
+  height: number,
+): { top: Pt[]; bottom: Pt[] } {
+  const steps = corridorSteps(x1 - x0);
+  const top: Pt[] = [];
+  const bottom: Pt[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const sx = x0 + t * (x1 - x0);
+    const centre = corridorChaoAt(tone, t);
+    // Local tolerance, so the corridor visibly flares where it forgives
+    // timing. Collision uses the same function — the wall the player sees is
+    // exactly the wall they hit.
+    const tol = corridorToleranceAt(tone, t, tolChao);
+    top.push({ x: sx, y: clampY(chaoToY(centre + tol, height), height) });
+    bottom.push({ x: sx, y: clampY(chaoToY(centre - tol, height), height) });
+  }
+  return { top, bottom };
+}
+
 function drawGate(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -176,20 +274,8 @@ function drawGate(
   const { x0, x1, tone, tolChao } = gate;
   if (x1 < 0 || x0 > width) return;
 
-  // Sample both corridor edges once; walls, glow and rim all reuse them.
-  const top: Array<[number, number]> = [];
-  const bottom: Array<[number, number]> = [];
-  for (let i = 0; i <= CENTRELINE_STEPS; i++) {
-    const t = i / CENTRELINE_STEPS;
-    const sx = x0 + t * (x1 - x0);
-    const centre = corridorChaoAt(tone, t);
-    // Local tolerance, so the corridor visibly flares where it forgives
-    // timing. Collision uses the same function — the wall the player sees is
-    // exactly the wall they hit.
-    const tol = corridorToleranceAt(tone, t, tolChao);
-    top.push([sx, chaoToY(centre + tol, height)]);
-    bottom.push([sx, chaoToY(centre - tol, height)]);
-  }
+  const { top, bottom } = corridorEdges(tone, tolChao, x0, x1, height);
+  const steps = top.length - 1;
 
   const [r, g, b] = TONE_LIGHT[tone] ?? TONE_LIGHT[1];
   const lit = active ? 1 : 0.42;
@@ -199,15 +285,17 @@ function drawGate(
   // 1. The wall — near-black, opaque enough to swallow the grid behind it, so
   //    the guide lines survive only inside the open channel.
   ctx.fillStyle = active ? "rgba(6, 8, 12, 0.97)" : "rgba(8, 10, 15, 0.82)";
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
   ctx.beginPath();
   ctx.moveTo(x0, 0);
-  for (const [sx, sy] of top) ctx.lineTo(sx, sy);
+  appendSmooth(ctx, top);
   ctx.lineTo(x1, 0);
   ctx.closePath();
   ctx.fill();
   ctx.beginPath();
   ctx.moveTo(x0, height);
-  for (const [sx, sy] of bottom) ctx.lineTo(sx, sy);
+  appendSmooth(ctx, bottom);
   ctx.lineTo(x1, height);
   ctx.closePath();
   ctx.fill();
@@ -216,12 +304,9 @@ function drawGate(
   //    be generous without bleeding into the wall.
   ctx.save();
   ctx.beginPath();
-  for (let i = 0; i < top.length; i++) {
-    const [sx, sy] = top[i];
-    if (i === 0) ctx.moveTo(sx, sy);
-    else ctx.lineTo(sx, sy);
-  }
-  for (let i = bottom.length - 1; i >= 0; i--) ctx.lineTo(bottom[i][0], bottom[i][1]);
+  ctx.moveTo(top[0].x, top[0].y);
+  appendSmooth(ctx, top);
+  appendSmooth(ctx, [...bottom].reverse());
   ctx.closePath();
   ctx.clip();
   ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.13 * lit})`;
@@ -234,11 +319,8 @@ function drawGate(
   ctx.lineWidth = active ? 2 : 1.25;
   for (const edge of [top, bottom]) {
     ctx.beginPath();
-    for (let i = 0; i < edge.length; i++) {
-      const [sx, sy] = edge[i];
-      if (i === 0) ctx.moveTo(sx, sy);
-      else ctx.lineTo(sx, sy);
-    }
+    ctx.moveTo(edge[0].x, edge[0].y);
+    appendSmooth(ctx, edge);
     ctx.stroke();
   }
 
@@ -248,14 +330,17 @@ function drawGate(
   ctx.setLineDash([5, 7]);
   ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.42 * lit})`;
   ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  for (let i = 0; i <= CENTRELINE_STEPS; i++) {
-    const t = i / CENTRELINE_STEPS;
-    const sx = x0 + t * (x1 - x0);
-    const sy = chaoToY(corridorChaoAt(tone, t), height);
-    if (i === 0) ctx.moveTo(sx, sy);
-    else ctx.lineTo(sx, sy);
+  const centreline: Pt[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    centreline.push({
+      x: x0 + t * (x1 - x0),
+      y: chaoToY(corridorChaoAt(tone, t), height),
+    });
   }
+  ctx.beginPath();
+  ctx.moveTo(centreline[0].x, centreline[0].y);
+  appendSmooth(ctx, centreline);
   ctx.stroke();
 
   ctx.restore();
