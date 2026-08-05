@@ -37,6 +37,10 @@
   margin-inline: auto;
 }
 
+.frame:has(.lab-screen) {
+  max-width: 100%;
+}
+
 .stage {
   position: relative;
 }
@@ -614,6 +618,7 @@
   gap: 12px;
   align-items: stretch;
   text-align: left;
+  margin-inline: auto;
 }
 
 .lab-header {
@@ -647,10 +652,11 @@
   display: flex;
   gap: 16px;
   align-items: flex-start;
+  flex-wrap: wrap;
 }
 
 .lab-stage {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   gap: 10px;

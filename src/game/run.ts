@@ -555,22 +555,17 @@ export class Run {
       // remaining travel rather than on "the gate is fully on screen", so the
       // freeze ends roughly as the corridor arrives.
       //
-      // Bounded by the fully-on-screen moment because the demo dot is drawn
-      // along the gate's own screen position: cue a wide gate any earlier and
-      // its sweep runs off the right edge. For a T3 corridor (1.33s of travel)
-      // that bound, not cueApproachMs, is what decides.
+      // The wait is now the same for every tone. It was briefly bounded by
+      // "the gate must be fully on screen", because the demo was drawn at the
+      // gate's real position — and since a T3 corridor is more than twice as
+      // wide as a T4 one, that bound decided the timing for the wide tones and
+      // cueApproachMs decided it for the narrow ones. Reported in play as the
+      // pause landing right on top of a T3 gate. The renderer now draws the
+      // frozen example at a fixed spot instead (EXAMPLE_LEFT_FRAC), which
+      // leaves this free to be one number.
       const travelToBirdMs =
         ((next.xStart - this.worldX) / this.difficulty.scrollSpeed) * 1000;
-      // What travelToBirdMs reads at the instant the gate is fully on screen —
-      // a constant per gate, unlike msUntilOnScreen, which keeps falling.
-      const travelWhenVisibleMs = Math.max(
-        0,
-        ((this.width * (1 - BIRD_X_FRAC) - next.widthPx) /
-          this.difficulty.scrollSpeed) *
-          1000,
-      );
-      const fireAt = Math.min(tuning().cueApproachMs, travelWhenVisibleMs);
-      if (travelToBirdMs <= fireAt) {
+      if (travelToBirdMs <= tuning().cueApproachMs) {
         this.lastCuedXStart = next.xStart;
         this.cue = {
           tone: next.tone,

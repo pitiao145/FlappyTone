@@ -610,13 +610,19 @@ describe("Run — pause cue style", () => {
     });
   }
 
-  it("fires the cue only once the gate is fully on screen", () => {
+  it("fires at a fixed distance from the bird, not once the gate fits on screen", () => {
+    // The gate may still be off the right edge — the renderer draws a frozen
+    // example at a fixed spot rather than at the gate's real position, so how
+    // wide the corridor happens to be no longer decides the timing.
     const { snapshots } = simulate(newPauseRun(), 400, trackCorridor);
     const firstCued = snapshots.find((s) => s.cue !== null)!;
     const gate = firstCued.gates.find(
       (g) => g.xStart === firstCued.cue!.xStart,
     )!;
-    expect(gate.x1).toBeLessThanOrEqual(W + 1);
+    const travelMs =
+      ((gate.x0 - W * 0.28) / firstCued.difficulty.scrollSpeed) * 1000;
+    expect(travelMs).toBeLessThanOrEqual(tuning().cueApproachMs + DT);
+    expect(travelMs).toBeGreaterThan(tuning().cueApproachMs - 4 * DT);
   });
 
   it("freezes the world for the demo plus a beat, then resumes", () => {
@@ -650,12 +656,14 @@ describe("Run — call-and-response gap (spec B3)", () => {
    * How long after the demo finishes the player waits before the corridor is
    * actually there to fly. Measured in play at 1161–1440ms, with the HUD still
    * reading "listen…" while the player had already answered.
+   *
+   * `randValue` picks the tone: nextTone reads floor(rand * 4) + 1.
    */
-  function responseGapMs(): number {
+  function responseGapMs(randValue = 0): number {
     const run = new Run({
       mode: "game",
       width: W,
-      rand: seqRand([0, 0, 0.5, 0.75]),
+      rand: () => randValue,
       cueStyle: "pause",
       cueDurationMsFor: () => 500,
     });
@@ -667,22 +675,26 @@ describe("Run — call-and-response gap (spec B3)", () => {
     return (activeAt - cueAt) * DT - 500 - tuning().cuePauseHoldMs;
   }
 
-  it("opens the response window on the beat the demo ends", () => {
-    expect(responseGapMs()).toBeLessThan(400);
+  it("the gap is cueApproachMs, not whatever is left of the approach", () => {
+    setTuning({ cueApproachMs: 300 });
+    expect(responseGapMs()).toBeGreaterThan(250);
+    expect(responseGapMs()).toBeLessThan(360);
   });
 
-  it("cueApproachMs sets the gap, until the demo would run off-screen", () => {
-    setTuning({ cueApproachMs: 100 });
-    expect(responseGapMs()).toBeLessThan(150);
+  it("the gap is the same for every tone", () => {
+    // It was not: the cue could not fire until the gate was fully on screen,
+    // and a T3 corridor is more than twice as wide as a T4 one, so the pause
+    // landed nearly on top of a T3 gate and well clear of a T1 one. Reported
+    // in play as "for T3 the dot pauses very close to the gate start".
+    const gaps = [0, 0.3, 0.5, 0.9].map((r) => responseGapMs(r));
+    expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(2 * DT);
+  });
 
-    // Raising it does not keep buying time: the cue cannot fire before the
-    // gate is fully on screen, because the demo dot is drawn along the gate.
-    setTuning({ cueApproachMs: 100 });
+  it("cueApproachMs buys as much approach as it asks for", () => {
+    setTuning({ cueApproachMs: 300 });
     const tight = responseGapMs();
-    setTuning({ cueApproachMs: 5000 });
-    const capped = responseGapMs();
-    expect(capped).toBeGreaterThan(tight);
-    expect(capped).toBeLessThan(700);
+    setTuning({ cueApproachMs: 1200 });
+    expect(responseGapMs()).toBeGreaterThan(tight + 700);
   });
 });
 
