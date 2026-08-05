@@ -9,6 +9,7 @@ import { getMicSession, setFrameSink, stopMic } from "../audio/session.ts";
 import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
 import { TONE_INFO } from "../game/gates.ts";
 import { Run, type RunMode, type RunSnapshot } from "../game/run.ts";
+import type { GateOutcome, UnheardHint } from "../game/scoring.ts";
 import {
   loadCorridorWidth,
   loadCueStyle,
@@ -25,6 +26,28 @@ const HUD_HZ = 4;
 const YOUR_TURN_MAX_T = 0.5;
 /** How long the "couldn't hear that" toast stays up. */
 const TOAST_MS = 1200;
+
+/** What the HUD reacts to when a gate resolves. */
+interface OutcomeFlash {
+  outcome: GateOutcome;
+  points: number;
+  hint: UnheardHint | null;
+  /** Resolve time, used as a React key so repeats re-trigger the animation. */
+  atMs: number;
+}
+
+/**
+ * The hint shown when a gate goes unheard.
+ *
+ * PRD §6: this is the path where the app says it is unsure rather than scoring
+ * the player wrong, and it must never read as a punishment. Saying *what* was
+ * unclear turns the one moment of doubt into the one moment that teaches.
+ */
+const HINT_TEXT: Record<UnheardHint, string> = {
+  louder: "say it a bit louder",
+  longer: "hold it a little longer",
+  generic: "didn't catch that",
+};
 
 /** Only the last few gates fit on screen; the full log lives on the end screen. */
 const GATE_LOG_ON_SCREEN = 4;
@@ -51,11 +74,28 @@ export function Game({
   const [paused, setPaused] = useState(false);
   /** Set by the effect so the pause overlay's tap can restart the loop. */
   const resumeRef = useRef<() => void>(() => {});
-  const [unheard, setUnheard] = useState(false);
+  /**
+   * The last resolved gate, pushed once when it resolves rather than polled.
+   *
+   * The HUD samples at HUD_HZ (4), which is fine for score and hearts but
+   * would land a reaction up to 250ms after the thing it is reacting to. This
+   * fires from the rAF loop instead — once per gate, so it is still an event,
+   * not a per-frame render.
+   */
+  const [flash, setFlash] = useState<OutcomeFlash | null>(null);
   const onOverRef = useRef(onOver);
   useEffect(() => {
     onOverRef.current = onOver;
   });
+
+  // Retire the reaction on a timer rather than by comparing clocks during
+  // render — render must stay pure, and the CSS animations own the timing
+  // anyway. A new gate replaces `flash`, which restarts this.
+  useEffect(() => {
+    if (!flash) return;
+    const id = setTimeout(() => setFlash(null), TOAST_MS);
+    return () => clearTimeout(id);
+  }, [flash]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -86,6 +126,8 @@ export function Game({
     // The run decides when a cue fires (snapshot.cue); the host only plays
     // the audio, edge-triggered on the cued gate's stable xStart.
     let lastPlayedXStart = -Infinity;
+    /** Resolve time of the gate the HUD has already reacted to. */
+    let lastFlashedAtMs = -Infinity;
 
     // The mic is already open — Title opened it inside the click gesture.
     setFrameSink((frame, sampleRate) => {
@@ -106,6 +148,23 @@ export function Game({
       run.tickFrame(dt, now);
       const snap = run.snapshot();
       drawWorld(ctx2d, canvasWidth, canvasHeight, snap);
+
+      // One setState per resolved gate, not per frame — the rAF loop stays
+      // the owner of the canvas, React just hears about outcomes.
+      const resolved = snap.lastOutcome;
+      if (resolved && resolved.atMs !== lastFlashedAtMs) {
+        lastFlashedAtMs = resolved.atMs;
+        // Sync the numbers on the same beat. Otherwise the heart that just
+        // broke is still counted by the polled HUD for up to 250ms, and the
+        // score lands visibly after the gate that earned it.
+        setHud(snap);
+        setFlash({
+          outcome: resolved.outcome,
+          points: resolved.points,
+          hint: resolved.hint,
+          atMs: resolved.atMs,
+        });
+      }
 
       if (snap.cue && snap.cue.xStart > lastPlayedXStart) {
         lastPlayedXStart = snap.cue.xStart;
@@ -142,10 +201,6 @@ export function Game({
         // Mirrored every tick, not just at game over, so quitting mid-run or
         // closing the tab still leaves the numbers behind.
         saveGateLog(snap.gateLog, snap.missedUtterances);
-        setUnheard(
-          snap.lastOutcome?.outcome === "unheard" &&
-            performance.now() - snap.lastOutcome.atMs < TOAST_MS,
-        );
       }, 1000 / HUD_HZ);
     };
 
@@ -200,6 +255,11 @@ export function Game({
         ? ("your-turn" as const)
         : null;
 
+  const showPoints = flash !== null && flash.points > 0;
+  const showHint = flash?.outcome === "unheard";
+  const breaking = flash?.outcome === "collision";
+  const hearts = Math.max(0, hud?.hearts ?? 3);
+
   return (
     <div className="screen game-screen">
       <div className="stage">
@@ -207,10 +267,28 @@ export function Game({
 
         <div className="hud">
           <div className="hud-top">
-            <span className="score">{hud?.score ?? 0}</span>
+            <span className="score">
+              {hud?.score ?? 0}
+              {showPoints && (
+                <span key={flash!.atMs} className="points-pop">
+                  +{flash!.points}
+                </span>
+              )}
+            </span>
             {mode === "game" && (
               <span className="hearts">
-                {"♥".repeat(Math.max(0, hud?.hearts ?? 3))}
+                {Array.from({ length: hearts }, (_, i) => (
+                  <span key={i} className="heart">
+                    ♥
+                  </span>
+                ))}
+                {/* The heart just lost, shown mid-break then gone. Without it
+                    a collision simply removed a glyph, which read as nothing. */}
+                {breaking && (
+                  <span key={flash!.atMs} className="heart breaking">
+                    ♥
+                  </span>
+                )}
               </span>
             )}
             {mode === "game" && (hud?.comboMult ?? 1) > 1 && (
@@ -234,7 +312,11 @@ export function Game({
             <div className="phase-banner your-turn">your turn!</div>
           )}
 
-          {unheard && <div className="toast">couldn't hear that</div>}
+          {showHint && (
+            <div key={flash!.atMs} className="toast unheard-toast">
+              {HINT_TEXT[flash!.hint ?? "generic"]}
+            </div>
+          )}
           {hud?.noisy && <div className="hint">it's noisy in here</div>}
 
           {GATE_LOG_ENABLED && hud && (

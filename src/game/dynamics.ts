@@ -18,5 +18,13 @@ export const EASE_TAU_MS = 45;
 /** PRD §6: creak concentrates on Tone 3, so T3 gates get a longer grace and hold instead of drifting. */
 export const T3_GRACE_MS = 250;
 
-/** Seconds of movement kept in the bird's trail (PRD §8). */
-export const TRAIL_SECONDS = 1.5;
+/**
+ * Seconds of movement kept in the bird's trail (PRD §8).
+ *
+ * Was 1.5s when the trail was drawn at a fixed 45% of canvas width regardless
+ * of scroll speed — i.e. ~126 px/s against a world moving at 220. The trail is
+ * now drawn in world space so it lines up with the corridor it was flown
+ * through, which stretches it by the same ratio; 1.0s keeps its on-screen
+ * length close to what it was (220px vs 189px at base speed).
+ */
+export const TRAIL_SECONDS = 1.0;

@@ -31,9 +31,11 @@ import {
   newRunStats,
   multiplierFor,
   scoreGate,
+  unheardHint,
   type GateOutcome,
   type GateSample,
   type RunStats,
+  type UnheardHint,
 } from "./scoring.ts";
 import {
   DRIFT_CHAO_PER_SEC,
@@ -92,6 +94,27 @@ export interface TrailSample {
   chao: number;
   voiced: boolean;
   t: number;
+  /**
+   * Screen x at the moment this snapshot was taken.
+   *
+   * The trail used to be positioned from age alone, at a fixed fraction of
+   * canvas width per second — ~126 px/s against a world scrolling at 220, and
+   * diverging further as the difficulty ramp raised scroll speed but not the
+   * trail. Your trace was drawn horizontally compressed against the very
+   * corridor it is meant to be compared with, which is the one visual PRD §8
+   * calls the whole product. Positions now come from the world, so the trace
+   * and the corridor share a coordinate frame through speed ramps and cue
+   * pauses alike.
+   */
+  x: number;
+}
+
+/** Trail sample as stored: world-space, so screen x is derived per frame. */
+interface TrailPoint {
+  chao: number;
+  voiced: boolean;
+  t: number;
+  worldX: number;
 }
 
 export interface GateView {
@@ -146,6 +169,22 @@ export interface LastOutcome {
   outcome: GateOutcome;
   tone: Tone;
   atMs: number;
+  /** 0–1 corridor fit, as scored. Drives how hot the ignition burns. */
+  accuracy: number;
+  /** Points this gate added, combo multiplier already applied. 0 when none. */
+  points: number;
+  /** Combo multiplier in force after this gate — the escalation lever. */
+  comboMult: number;
+  /**
+   * The path actually flown through the gate, captured at resolve time.
+   *
+   * Snapshotted rather than sliced from the live trail on demand because the
+   * trail prunes at TRAIL_SECONDS (1.0s) and a T3 gate runs 1.33s — the start
+   * of the very contour being celebrated would already have been dropped.
+   */
+  path: TrailSample[];
+  /** Why the gate went unheard, when it did. Null for every other outcome. */
+  hint: UnheardHint | null;
 }
 
 export interface RunSnapshot {
@@ -244,6 +283,8 @@ export const COLLISION_SUSTAIN_MS = 120;
 interface ActiveGateState {
   gate: Gate;
   samples: GateSample[];
+  /** Host clock when the gate opened — bounds the flown path on resolve. */
+  enteredAtMs: number;
   collided: boolean;
   /** When the current unbroken out-of-corridor excursion began, or null. */
   outsideSinceMs: number | null;
@@ -251,6 +292,11 @@ interface ActiveGateState {
   seeded: number;
   /** Longest sustained excursion this gate, in ms. Instrumentation. */
   worstExcursionMs: number;
+}
+
+/** `LastOutcome` as stored — path in world space, projected on snapshot. */
+interface LastOutcomeState extends Omit<LastOutcome, "path"> {
+  path: TrailPoint[];
 }
 
 /** Per-gate diagnostics — dev instrumentation, not gameplay (spec A2). */
@@ -299,7 +345,7 @@ export class Run {
   /** Gates flown through without collision and with enough signal to score. Drives the ramp. */
   private gatesCleared = 0;
   private stats: RunStats;
-  private lastOutcome: LastOutcome | null = null;
+  private lastOutcome: LastOutcomeState | null = null;
 
   /** Where the bird actually is, in chao — the value scoring uses. */
   private targetChao = REST_CHAO;
@@ -315,7 +361,7 @@ export class Run {
   /** xStart of the most recently cued gate — gates are cued once, in order. */
   private lastCuedXStart = -Infinity;
 
-  private trail: TrailSample[] = [];
+  private trail: TrailPoint[] = [];
   private noiseFrames: NoiseFrame[] = [];
   private nowMs = 0;
 
@@ -371,7 +417,12 @@ export class Run {
           : p.chao !== null && p.chao <= 1 + PIN_EPSILON
             ? "low"
             : null;
-      this.trail.push({ chao: p.smoothedChao, voiced: true, t: nowMs });
+      this.trail.push({
+        chao: p.smoothedChao,
+        voiced: true,
+        t: nowMs,
+        worldX: this.worldX,
+      });
       this.pruneTrail(nowMs);
     } else {
       this.pinned = null;
@@ -498,7 +549,7 @@ export class Run {
       birdChao: this.displayChao,
       voiced: this.voiced || this.inGrace(this.nowMs),
       pinned: this.pinned,
-      trail: this.trail,
+      trail: this.trail.map((s) => this.projectTrail(s)),
       gates: this.gates.map((g) => ({
         tone: g.tone,
         x0: this.screenX(g.xStart),
@@ -533,7 +584,12 @@ export class Run {
       comboMult: multiplierFor(this.stats.combo),
       over: this.isOver(),
       stats: this.stats,
-      lastOutcome: this.lastOutcome,
+      lastOutcome: this.lastOutcome
+        ? {
+            ...this.lastOutcome,
+            path: this.lastOutcome.path.map((s) => this.projectTrail(s)),
+          }
+        : null,
       noisy: this.isNoisy(),
       difficulty: this.difficulty,
       gateLog: this.gateLog,
@@ -568,6 +624,16 @@ export class Run {
     const delta = REST_CHAO - this.targetChao;
     this.targetChao +=
       Math.abs(delta) <= step ? delta : Math.sign(delta) * step;
+  }
+
+  /** World-space trail point → the shape the renderer consumes. */
+  private projectTrail(s: TrailPoint): TrailSample {
+    return {
+      chao: s.chao,
+      voiced: s.voiced,
+      t: s.t,
+      x: this.screenX(s.worldX),
+    };
   }
 
   private screenX(worldPos: number): number {
@@ -658,6 +724,7 @@ export class Run {
         this.active = {
           gate: entered,
           samples,
+          enteredAtMs: this.nowMs,
           collided: false,
           outsideSinceMs: null,
           seeded: samples.length,
@@ -700,18 +767,28 @@ export class Run {
       atMs: this.nowMs,
     });
 
-    this.lastOutcome = {
-      outcome,
-      tone: state.gate.tone,
-      atMs: this.nowMs,
-    };
     if (CLEARED_OUTCOMES.has(outcome)) {
       this.gatesCleared += 1;
     }
     // The tutorial teaches: no score, no hearts, no stats to fail against.
+    const scoreBefore = this.stats.score;
     if (this.mode === "game") {
       this.stats = applyGate(this.stats, state.gate.tone, outcome, accuracy);
     }
+
+    this.lastOutcome = {
+      outcome,
+      tone: state.gate.tone,
+      atMs: this.nowMs,
+      accuracy,
+      points: this.stats.score - scoreBefore,
+      comboMult: multiplierFor(this.stats.combo),
+      // Only the stretch flown inside the gate — the trail also holds the
+      // approach and whatever the player did between gates, and igniting that
+      // would celebrate pitch aimed at no corridor.
+      path: this.trail.filter((s) => s.t >= state.enteredAtMs),
+      hint: outcome === "unheard" ? unheardHint(state.samples) : null,
+    };
     // PRD §6 ramps every 5 gates *cleared*. Counting collisions and unheard
     // gates here would speed the game up for exactly the player who is
     // struggling with it.

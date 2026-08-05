@@ -706,3 +706,96 @@ describe("T3 gate boundaries", () => {
     expect(movedOnEntry).toBeLessThan(driftStep / 4);
   });
 });
+
+describe("Run — outcome payload for feedback (spec B4)", () => {
+  it("reports accuracy, points and combo alongside the outcome", () => {
+    const run = newGameRun();
+    const { snapshots } = simulate(run, 900, trackCorridor);
+    const resolved = snapshots
+      .map((s) => s.lastOutcome)
+      .filter((o): o is NonNullable<typeof o> => o !== null);
+    expect(resolved.length).toBeGreaterThan(0);
+
+    const first = resolved[0];
+    // Flying the corridor exactly should score well and pay out.
+    expect(first.accuracy).toBeGreaterThan(0.8);
+    expect(first.points).toBeGreaterThan(0);
+    expect(first.comboMult).toBeGreaterThanOrEqual(1);
+  });
+
+  it("carries the flown path, bounded to the gate", () => {
+    const run = newGameRun();
+    const { snapshots } = simulate(run, 900, trackCorridor);
+    const outcome = snapshots.map((s) => s.lastOutcome).find((o) => o !== null);
+    expect(outcome).toBeTruthy();
+    expect(outcome!.path.length).toBeGreaterThan(2);
+
+    // Every point must lie inside the gate's own window: the trail also holds
+    // the approach, and igniting that would celebrate pitch aimed at nothing.
+    const spanMs =
+      outcome!.path[outcome!.path.length - 1].t - outcome!.path[0].t;
+    expect(spanMs).toBeLessThanOrEqual(1400);
+  });
+
+  it("keeps the path after the live trail has pruned past it", () => {
+    const run = newGameRun();
+    // TRAIL_SECONDS is 1.0s; run well past a resolved gate and confirm the
+    // captured path is still intact rather than emptied by pruning.
+    const { snapshots } = simulate(run, 1200, trackCorridor);
+    const last = snapshots[snapshots.length - 1];
+    const withPath = snapshots
+      .map((s) => s.lastOutcome)
+      .filter((o): o is NonNullable<typeof o> => o !== null);
+    expect(withPath[withPath.length - 1].path.length).toBeGreaterThan(2);
+    expect(last.lastOutcome!.path.length).toBeGreaterThan(2);
+  });
+
+  it("explains an unheard gate and stays silent about the others", () => {
+    const run = newGameRun();
+    // Never voice: every gate goes unheard, with nothing to blame but level.
+    const { snapshots } = simulate(run, 900, () => pitch(null));
+    const unheard = snapshots
+      .map((s) => s.lastOutcome)
+      .find((o) => o?.outcome === "unheard");
+    expect(unheard?.hint).toBe("louder");
+
+    const run2 = newGameRun();
+    const cleared = simulate(run2, 900, trackCorridor)
+      .snapshots.map((s) => s.lastOutcome)
+      .find((o) => o !== null && o.outcome !== "unheard");
+    expect(cleared?.hint).toBeNull();
+  });
+});
+
+describe("Run — trail is drawn in the world's frame (spec B4)", () => {
+  it("moves the trail at scroll speed, so it stays glued to the corridor", () => {
+    const run = newGameRun();
+    const { snapshots } = simulate(run, 200, trackCorridor);
+
+    // Take one trail point and follow it across two snapshots. It must recede
+    // at exactly the world's scroll speed — the whole point of the fix.
+    const withTrail = snapshots.filter((s) => s.trail.length > 2);
+    expect(withTrail.length).toBeGreaterThan(2);
+
+    const a = withTrail[withTrail.length - 2];
+    const b = withTrail[withTrail.length - 1];
+    // Mid-trail, so pruning can't drop it between the two snapshots.
+    const probe = a.trail[Math.floor(a.trail.length / 2)];
+    const sameT = b.trail.find((p) => p.t === probe.t);
+    expect(sameT).toBeTruthy();
+
+    const movedPx = probe.x - sameT!.x;
+    const expectedPx = (b.difficulty.scrollSpeed * DT) / 1000;
+    expect(movedPx).toBeCloseTo(expectedPx, 5);
+  });
+
+  it("puts the newest trail point at the bird, where the dot is drawn", () => {
+    const run = newGameRun();
+    const { snapshots } = simulate(run, 120, trackCorridor);
+    const s = snapshots[snapshots.length - 1];
+    const newest = s.trail[s.trail.length - 1];
+    // The sample was taken at the bird's x, before this frame's scroll.
+    expect(newest.x).toBeLessThanOrEqual(W * 0.28 + 0.001);
+    expect(newest.x).toBeGreaterThan(W * 0.28 - 20);
+  });
+});

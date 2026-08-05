@@ -13,8 +13,6 @@ import { corridorChaoAt } from "../game/gates.ts";
 import { TRAIL_SECONDS } from "../game/dynamics.ts";
 import { BACKDROP, chaoToY, drawChaoGrid, drawDot, drawTrail } from "./scene.ts";
 
-/** How long a "couldn't hear that" / rating flash lingers after a gate retires (PRD-adjacent, brief §5). */
-const OUTCOME_FLASH_MS = 800;
 /** Samples per gate when tracing the dashed ghost centreline. */
 const CENTRELINE_STEPS = 24;
 
@@ -26,6 +24,39 @@ const OUTCOME_COLOR: Record<string, string> = {
   unheard: "rgba(180, 180, 190,",
 };
 
+/**
+ * How long the flown path burns after a cleared gate, before combo extends it.
+ *
+ * The effect this replaces was a radial gradient capped at 0.5 alpha over
+ * 800ms, and on a real device it was not detectable at all — a heart could be
+ * lost with nothing visible happening. Feedback here is deliberately drawn on
+ * the player's own contour rather than as an overlay, so it cannot be mistaken
+ * for scenery.
+ */
+const IGNITE_MS = 520;
+/** Extra burn time at full combo — the escalation, felt as lingering. */
+const IGNITE_COMBO_BONUS_MS = 200;
+/** Collision shake duration. Short: this is a jolt, not a wobble. */
+const SHAKE_MS = 120;
+const SHAKE_PX = 7;
+/** Collision vignette lifetime — outlives the shake so the read is unhurried. */
+const IMPACT_MS = 420;
+/** How far the dot is knocked back on impact, as a fraction of canvas width. */
+const RECOIL_FRAC = 0.055;
+/** The unheard pulse — neutral, unhurried, never in the failure colour. */
+const UNHEARD_PULSE_MS = 900;
+
+const CLEARED = new Set(["perfect", "good", "ok"]);
+
+/**
+ * Respect the OS "reduce motion" setting for the two effects that actually
+ * move the frame. Read once: this does not change mid-run, and querying
+ * matchMedia every frame is needless work in a 60fps loop.
+ */
+const REDUCED_MOTION =
+  typeof matchMedia === "function" &&
+  matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 export function drawWorld(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -35,6 +66,12 @@ export function drawWorld(
   const now = performance.now();
   ctx.fillStyle = BACKDROP;
   ctx.fillRect(0, 0, width, height);
+
+  // The shake displaces the world, not the backdrop — a shaking background
+  // would show seams at the canvas edges.
+  const shake = shakeOffset(snap, now);
+  ctx.save();
+  if (shake) ctx.translate(shake.x, shake.y);
 
   drawChaoGrid(ctx, width, height);
 
@@ -49,10 +86,22 @@ export function drawWorld(
   if (!snap.cuePaused) drawCueDemo(ctx, height, snap);
 
   drawTrail(ctx, width, height, snap.trail, TRAIL_SECONDS, dotX, now);
-  drawDot(ctx, width, height, snap.birdChao, dotX, snap.voiced, now);
+  drawIgnition(ctx, width, height, snap, now);
+  drawDot(
+    ctx,
+    width,
+    height,
+    snap.birdChao,
+    dotX + recoilOffset(snap, now, width),
+    snap.voiced,
+    now,
+  );
+
+  ctx.restore();
 
   drawPinFlash(ctx, width, height, snap.pinned);
-  drawOutcomeFlash(ctx, width, height, snap);
+  drawImpact(ctx, width, height, snap, now);
+  drawUnheardPulse(ctx, width, height, snap, now);
   drawCueVeil(ctx, width, height, snap);
 }
 
@@ -266,26 +315,187 @@ function drawPinFlash(
   ctx.fillRect(0, y, width, bandH);
 }
 
-function drawOutcomeFlash(
+/** Age of the last outcome in ms, or null if there isn't one / it's in the future. */
+function outcomeAge(snap: RunSnapshot, now: number): number | null {
+  const last = snap.lastOutcome;
+  if (!last) return null;
+  const age = now - last.atMs;
+  return age < 0 ? null : age;
+}
+
+/** How long a cleared gate's ignition burns, given its combo. */
+function igniteDuration(comboMult: number): number {
+  // Combo runs ×1 → ×3; normalise so ×1 gets none of the bonus and ×3 all.
+  const t = Math.max(0, Math.min(1, (comboMult - 1) / 2));
+  return IGNITE_MS + IGNITE_COMBO_BONUS_MS * t;
+}
+
+/**
+ * The reward: the path the player actually flew, burning along the corridor
+ * they flew it through.
+ *
+ * PRD §8 is blunt that the trail "is the whole product" and everything else is
+ * packaging — so the payoff for a good gate is their own contour lit up,
+ * rather than a generic burst that would look the same in any game. Nothing
+ * here is idealised or snapped: these are the same samples the live trail
+ * drew, re-drawn hotter.
+ */
+function drawIgnition(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   snap: RunSnapshot,
+  now: number,
 ): void {
   const last = snap.lastOutcome;
-  if (!last) return;
-  const age = performance.now() - last.atMs;
-  if (age < 0 || age > OUTCOME_FLASH_MS) return;
+  const age = outcomeAge(snap, now);
+  if (!last || age === null || !CLEARED.has(last.outcome)) return;
+  if (last.path.length < 2) return;
 
-  const alpha = 0.5 * (1 - age / OUTCOME_FLASH_MS);
-  const color = OUTCOME_COLOR[last.outcome] ?? "rgba(255, 255, 255,";
-  // Anchor near the bird's fixed x — the retiring gate has just passed it.
-  const cx = width * BIRD_X_FRAC;
-  const cy = height * 0.5;
-  const r = width * 0.12;
-  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-  grad.addColorStop(0, `${color} ${alpha})`);
-  grad.addColorStop(1, `${color} 0)`);
+  const duration = igniteDuration(last.comboMult);
+  if (age > duration) return;
+
+  // Fast attack, slow decay — the flare should arrive on the beat the gate
+  // resolved and then bleed off, not fade symmetrically.
+  const p = age / duration;
+  const envelope = p < 0.12 ? p / 0.12 : 1 - (p - 0.12) / 0.88;
+  if (envelope <= 0) return;
+
+  // "ok" is a cleared gate the player did not fly well; it gets an ember, not
+  // a flare, so the three ratings stay distinguishable at a glance.
+  const heat =
+    last.outcome === "perfect" ? 1 : last.outcome === "good" ? 0.72 : 0.4;
+  const combo = 1 + 0.5 * Math.max(0, Math.min(1, (last.comboMult - 1) / 2));
+  const intensity = envelope * heat * combo;
+
+  const color = OUTCOME_COLOR[last.outcome] ?? OUTCOME_COLOR.ok;
+
+  ctx.save();
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+
+  // Three passes: a wide soft bloom, the ribbon, then a white-hot core. The
+  // bloom is what makes it read as light rather than as a drawn line.
+  const passes: [number, number][] = [
+    [width * 0.05, 0.1 * intensity],
+    [width * 0.018, 0.55 * intensity],
+  ];
+  for (const [lineWidth, alpha] of passes) {
+    ctx.strokeStyle = `${color} ${alpha})`;
+    ctx.lineWidth = lineWidth;
+    strokePath(ctx, height, last.path);
+  }
+  ctx.strokeStyle = `rgba(255, 255, 255, ${0.75 * intensity})`;
+  ctx.lineWidth = width * 0.006;
+  strokePath(ctx, height, last.path);
+
+  ctx.restore();
+}
+
+function strokePath(
+  ctx: CanvasRenderingContext2D,
+  height: number,
+  path: RunSnapshot["trail"],
+): void {
+  ctx.beginPath();
+  for (let i = 0; i < path.length; i++) {
+    const x = path[i].x ?? 0;
+    const y = chaoToY(path[i].chao, height);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+/**
+ * Collision shake. Decaying sinusoids on both axes at incommensurate rates,
+ * so it reads as a knock rather than a slide in one direction.
+ */
+function shakeOffset(
+  snap: RunSnapshot,
+  now: number,
+): { x: number; y: number } | null {
+  if (REDUCED_MOTION) return null;
+  const last = snap.lastOutcome;
+  const age = outcomeAge(snap, now);
+  if (!last || age === null || last.outcome !== "collision") return null;
+  if (age > SHAKE_MS) return null;
+
+  const decay = 1 - age / SHAKE_MS;
+  return {
+    x: Math.sin(age * 0.09) * SHAKE_PX * decay,
+    y: Math.sin(age * 0.13) * SHAKE_PX * 0.6 * decay,
+  };
+}
+
+/** The dot is knocked backwards on impact and swims back to station. */
+function recoilOffset(snap: RunSnapshot, now: number, width: number): number {
+  if (REDUCED_MOTION) return 0;
+  const last = snap.lastOutcome;
+  const age = outcomeAge(snap, now);
+  if (!last || age === null || last.outcome !== "collision") return 0;
+  if (age > IMPACT_MS) return 0;
+  // Knocked back instantly, eased home — the reverse of the shake's envelope.
+  return -width * RECOIL_FRAC * Math.pow(1 - age / IMPACT_MS, 2);
+}
+
+/** Red vignette from the screen edges. Unmissable, and gone in under half a second. */
+function drawImpact(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  snap: RunSnapshot,
+  now: number,
+): void {
+  const last = snap.lastOutcome;
+  const age = outcomeAge(snap, now);
+  if (!last || age === null || last.outcome !== "collision") return;
+  if (age > IMPACT_MS) return;
+
+  const alpha = 0.55 * Math.pow(1 - age / IMPACT_MS, 1.6);
+  const grad = ctx.createRadialGradient(
+    width / 2,
+    height / 2,
+    Math.min(width, height) * 0.28,
+    width / 2,
+    height / 2,
+    Math.max(width, height) * 0.72,
+  );
+  grad.addColorStop(0, "rgba(255, 60, 60, 0)");
+  grad.addColorStop(1, `rgba(255, 45, 45, ${alpha})`);
   ctx.fillStyle = grad;
-  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  ctx.fillRect(0, 0, width, height);
+}
+
+/**
+ * "Couldn't hear that": a single soft ring leaving the dot, in neutral grey.
+ *
+ * Deliberately outside both the success and failure colour languages. This is
+ * the path where the game admits it is unsure, and PRD §6 is explicit that it
+ * must never feel like a punishment — so it gets the quietest effect here, and
+ * the only one with no flash at all. The wording of the accompanying hint is
+ * the HUD's job; canvas draws geometry (see this module's header).
+ */
+function drawUnheardPulse(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  snap: RunSnapshot,
+  now: number,
+): void {
+  const last = snap.lastOutcome;
+  const age = outcomeAge(snap, now);
+  if (!last || age === null || last.outcome !== "unheard") return;
+  if (age > UNHEARD_PULSE_MS) return;
+
+  const p = age / UNHEARD_PULSE_MS;
+  const cx = width * BIRD_X_FRAC;
+  const cy = chaoToY(snap.birdChao, height);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, width * (0.04 + 0.09 * p), 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(190, 200, 215, ${0.5 * (1 - p)})`;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
 }

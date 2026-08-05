@@ -9,6 +9,7 @@ import {
   scoreGate,
   takeaway,
   toneBreakdown,
+  unheardHint,
   type GateSample,
   type RunStats,
 } from "./scoring.ts";
@@ -311,5 +312,47 @@ describe("takeaway", () => {
     expect(takeaway(breakdown)).toBe(
       "Tone 2 is your weak spot — it rises, don't start too high.",
     );
+  });
+});
+
+describe("unheardHint", () => {
+  const sample = (atMs: number, voiced: boolean) => ({
+    errChao: 0,
+    tolChao: 1,
+    voiced,
+    atMs,
+  });
+
+  it("blames level when nothing crossed the voicing gate", () => {
+    const samples = [0, 20, 40, 60].map((t) => sample(t, false));
+    expect(unheardHint(samples)).toBe("louder");
+  });
+
+  it("blames duration when a real but short run was heard", () => {
+    // 100ms of voicing — audible, but under MIN_UTTERANCE_MS.
+    const samples = [0, 25, 50, 75, 100].map((t) => sample(t, true));
+    expect(unheardHint(samples)).toBe("longer");
+  });
+
+  it("claims nothing from a single stray voiced frame", () => {
+    const samples = [sample(0, false), sample(20, true), sample(40, false)];
+    expect(unheardHint(samples)).toBe("generic");
+  });
+
+  it("claims nothing when the gate captured no samples at all", () => {
+    expect(unheardHint([])).toBe("generic");
+  });
+
+  // A T3 attempt that creaks in the middle is one utterance, not two blips —
+  // the hint must reason on the same merged run the scoring does.
+  it("treats a creak-split run as one utterance when blaming duration", () => {
+    const samples = [
+      sample(0, true),
+      sample(25, true),
+      sample(50, false),
+      sample(120, true),
+      sample(145, true),
+    ];
+    expect(unheardHint(samples)).toBe("longer");
   });
 });

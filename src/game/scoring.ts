@@ -60,6 +60,39 @@ export function heardUtterance(samples: GateSample[]): boolean {
   return longestUtteranceMs(samples) >= MIN_UTTERANCE_MS;
 }
 
+/**
+ * Why a gate went unheard — the difference between "I heard nothing" and "I
+ * heard something too brief to judge".
+ *
+ * "When the app isn't sure, it says so rather than scoring you wrong" (PRD §6)
+ * is stronger when it also says *what* it is unsure about. This is the only
+ * moment the game admits doubt, so it is the cheapest place to teach.
+ */
+export type UnheardHint = "louder" | "longer" | "generic";
+
+/**
+ * A voiced run this short is a click or a breath, not a clipped attempt —
+ * below it we claim nothing about why.
+ */
+const HINT_MIN_EVIDENCE_MS = 60;
+
+/**
+ * Pick the hint for an unheard gate. Conservative by construction: a wrong
+ * hint is worse than a generic one, so anything ambiguous returns "generic".
+ *
+ * Note this reasons from voicing alone — `GateSample` carries no RMS, so
+ * "louder" is inferred from the *absence* of any voiced frame rather than
+ * measured quietness. That is the honest reading: if nothing crossed the
+ * voicing gate at all, level is the likeliest cause.
+ */
+export function unheardHint(samples: GateSample[]): UnheardHint {
+  if (samples.length === 0) return "generic";
+  if (!samples.some((s) => s.voiced)) return "louder";
+  const utterance = longestUtteranceMs(samples);
+  if (utterance >= HINT_MIN_EVIDENCE_MS) return "longer";
+  return "generic";
+}
+
 /** Scores a single gate from its per-frame samples. PRD §7. */
 export function scoreGate(
   samples: GateSample[],

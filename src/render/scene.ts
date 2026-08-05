@@ -2,6 +2,13 @@ export interface TrailSample {
   chao: number;
   voiced: boolean;
   t: number;
+  /**
+   * Screen x, when the caller knows it. The game supplies this from world
+   * space so the trace lines up with the corridor it was flown through; the
+   * calibration preview has no world and lets it fall back to age-based
+   * spacing.
+   */
+  x?: number;
 }
 
 export interface SceneSnapshot {
@@ -71,7 +78,8 @@ export function drawTrail(
     const age = nowMs - sample.t;
     const alpha = Math.max(0, 1 - age / (trailSeconds * 1000));
     if (alpha <= 0) continue;
-    const x = dotX - age * pxPerMs;
+    const x = sample.x ?? dotX - age * pxPerMs;
+    if (x < -width * 0.1) continue;
     const y = chaoToY(sample.chao, height);
     ctx.fillStyle = sample.voiced
       ? `rgba(96, 205, 255, ${0.7 * alpha})`
