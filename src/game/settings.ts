@@ -131,3 +131,33 @@ export function loadCueStyle(): CueStyle {
 export function saveCueStyle(style: CueStyle): void {
   localStorage.setItem(CUE_STYLE_KEY, style);
 }
+
+// -------------------------------------------------------------- reduce motion
+
+const MOTION_KEY = "toneflap.motion.v1";
+
+/**
+ * The player's motion preference: `null` means follow the OS
+ * (`prefers-reduced-motion`), which is the default and the right one for
+ * almost everyone. The explicit values exist because the OS setting is a blunt
+ * instrument — someone may want the screen shake here without turning off
+ * every animation on their phone, or the reverse.
+ */
+export function loadReduceMotion(): boolean | null {
+  // Guarded because the renderer reads this at module scope, where the test
+  // environment has no localStorage — and "follow the OS" is the right answer
+  // when we cannot tell.
+  try {
+    const raw = localStorage.getItem(MOTION_KEY);
+    if (raw === "on") return true;
+    if (raw === "off") return false;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export function saveReduceMotion(v: boolean | null): void {
+  if (v === null) localStorage.removeItem(MOTION_KEY);
+  else localStorage.setItem(MOTION_KEY, v ? "on" : "off");
+}

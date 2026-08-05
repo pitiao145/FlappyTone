@@ -764,3 +764,73 @@
     max-height: none;
   }
 }
+
+/* --------------------------------------------------- settings & visualiser */
+
+.settings-screen {
+  align-items: stretch;
+  text-align: left;
+  max-width: 420px;
+  gap: 18px;
+}
+
+.setting {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setting h3 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8e99a6;
+}
+
+.setting-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.setting .param-help {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #6b7684;
+  margin: 0;
+}
+
+/* One row, one obvious current value — the old version was three rows of
+   lowercase words with nothing to say which was selected or what it did. */
+.choice {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.choice-option {
+  flex: 1 1 auto;
+  padding: 8px 10px;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+  color: #9aa4b0;
+  cursor: pointer;
+}
+
+.choice-option.active {
+  border-color: #60cdff;
+  background: rgba(96, 205, 255, 0.12);
+  color: #eaf4ff;
+}
+
+.settings-screen .danger {
+  border-color: rgba(255, 110, 110, 0.5);
+  color: #ff9c9c;
+}
+
+.visualiser-screen {
+  gap: 12px;
+}

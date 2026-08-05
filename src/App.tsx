@@ -9,6 +9,8 @@ import { Calibration } from "./ui/Calibration";
 import { Game } from "./ui/Game";
 import { GameOver } from "./ui/GameOver";
 import { HowTo } from "./ui/HowTo";
+import { Settings } from "./ui/Settings";
+import { Visualiser } from "./ui/Visualiser";
 import { micErrorCopy } from "./ui/micErrors";
 import { Title, type StartIntent } from "./ui/Title";
 import "./App.css";
@@ -20,6 +22,8 @@ type Screen =
   | "tutorial"
   | "game"
   | "gameover"
+  | "settings"
+  | "visualiser"
   | "lab";
 
 /**
@@ -45,7 +49,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [retryBusy, setRetryBusy] = useState(false);
   /** Where to go once calibration finishes, when Play/Tutorial routed through it. */
-  const pendingRef = useRef<"game" | "tutorial" | null>(null);
+  const pendingRef = useRef<"game" | "tutorial" | "visualiser" | null>(null);
   /** The mode of the run that just ended — drives Retry. */
   const lastModeRef = useRef<"game" | "tutorial">("game");
 
@@ -78,7 +82,7 @@ export default function App() {
         setScreen("calibrate");
         return;
       }
-      lastModeRef.current = intent;
+      if (intent !== "visualiser") lastModeRef.current = intent;
       // Playing without calibration would map the player's voice through a
       // stranger's f0 centre. Calibrate first, then continue to the run.
       if (!settings) {
@@ -96,7 +100,7 @@ export default function App() {
     const pending = pendingRef.current;
     pendingRef.current = null;
     if (pending) {
-      lastModeRef.current = pending;
+      if (pending !== "visualiser") lastModeRef.current = pending;
       setScreen(pending);
     } else {
       goHome();
@@ -145,10 +149,42 @@ export default function App() {
             error={error}
             onStart={startFromTitle}
             onHowTo={() => setScreen("howto")}
+            onSettings={() => setScreen("settings")}
           />
         )}
 
         {screen === "howto" && <HowTo onBack={() => setScreen("title")} />}
+
+        {screen === "settings" && (
+          <Settings
+            settings={settings}
+            onBack={() => setScreen("title")}
+            onRecalibrate={() => {
+              pendingRef.current = null;
+              setScreen("calibrate");
+            }}
+            onVisualiser={() => {
+              // Uncalibrated, the visualiser would draw the player's voice
+              // through a stranger's range — same reason Play routes here.
+              if (!settings) {
+                pendingRef.current = "visualiser";
+                setScreen("calibrate");
+                return;
+              }
+              setScreen("visualiser");
+            }}
+            onForget={() => setSettings(null)}
+          />
+        )}
+
+        {screen === "visualiser" && settings && (
+          <Visualiser
+            settings={settings}
+            canvasWidth={CANVAS_W}
+            canvasHeight={CANVAS_H}
+            onBack={goHome}
+          />
+        )}
 
         {screen === "lab" && Lab && (
           <Suspense fallback={<p className="note">loading lab…</p>}>

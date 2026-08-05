@@ -10,6 +10,7 @@
 import { BIRD_X_FRAC } from "../game/run.ts";
 import type { RunSnapshot } from "../game/run.ts";
 import { corridorChaoAt, corridorToleranceAt } from "../game/gates.ts";
+import { loadReduceMotion } from "../game/settings.ts";
 import { tuning } from "../game/tuning.ts";
 import {
   BACKDROP,
@@ -56,13 +57,23 @@ const UNHEARD_PULSE_MS = 900;
 const CLEARED = new Set(["perfect", "good", "ok"]);
 
 /**
- * Respect the OS "reduce motion" setting for the two effects that actually
- * move the frame. Read once: this does not change mid-run, and querying
- * matchMedia every frame is needless work in a 60fps loop.
+ * Respect "reduce motion" for the two effects that actually move the frame:
+ * the player's explicit choice if they have made one, otherwise the OS.
+ *
+ * Read once per run rather than per frame — this does not change mid-run, and
+ * querying matchMedia in a 60fps loop is needless work. Settings changes take
+ * effect on the next run, which is when the player will be looking.
  */
-const REDUCED_MOTION =
+const osReducedMotion = () =>
   typeof matchMedia === "function" &&
   matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+let REDUCED_MOTION = loadReduceMotion() ?? osReducedMotion();
+
+/** Re-reads the preference. Called when a run starts. */
+export function refreshMotionPreference(): void {
+  REDUCED_MOTION = loadReduceMotion() ?? osReducedMotion();
+}
 
 export function drawWorld(
   ctx: CanvasRenderingContext2D,

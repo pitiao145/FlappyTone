@@ -1,24 +1,14 @@
 import { useState } from "react";
 import { MicError } from "../audio/mic.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
-import {
-  CORRIDOR_WIDTHS,
-  PACES,
-  type CorridorWidth,
-  type Pace,
-} from "../game/gates.ts";
-import { CUE_STYLES, type CueStyle } from "../game/run.ts";
-import {
-  loadCorridorWidth,
-  loadCueStyle,
-  loadPace,
-  saveCorridorWidth,
-  saveCueStyle,
-  savePace,
-} from "../game/settings.ts";
 import { micErrorCopy } from "./micErrors.ts";
 
-export type StartIntent = "game" | "tutorial" | "calibrate" | "lab";
+export type StartIntent =
+  | "game"
+  | "tutorial"
+  | "calibrate"
+  | "visualiser"
+  | "lab";
 
 interface Props {
   calibrated: boolean;
@@ -29,6 +19,7 @@ interface Props {
   /** Called once the mic is open. The router decides whether to calibrate first. */
   onStart: (intent: StartIntent) => void;
   onHowTo: () => void;
+  onSettings: () => void;
 }
 
 export function Title({
@@ -37,12 +28,10 @@ export function Title({
   error: externalError,
   onStart,
   onHowTo,
+  onSettings,
 }: Props) {
   const [ownError, setOwnError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [pace, setPace] = useState<Pace>(loadPace);
-  const [width, setWidth] = useState<CorridorWidth>(loadCorridorWidth);
-  const [cueStyle, setCueStyle] = useState<CueStyle>(loadCueStyle);
   const error = ownError ?? externalError;
 
   // The mic is opened here, inside the click handler, because iOS Safari only
@@ -80,68 +69,28 @@ export function Title({
         <button disabled={busy} onClick={go("tutorial")}>
           Tutorial
         </button>
-        <button disabled={busy} onClick={go("calibrate")}>
-          {calibrated ? "Re-calibrate" : "Calibrate"}
+        <button disabled={busy} onClick={go("visualiser")}>
+          Tone visualiser
+        </button>
+        <button disabled={busy} onClick={onSettings}>
+          Settings
         </button>
         <button disabled={busy} onClick={onHowTo}>
           How to play
         </button>
       </div>
 
-      <div className="pace-row">
-        <span className="pace-label">Speed</span>
-        {PACES.map((p) => (
-          <button
-            key={p}
-            className={p === pace ? "pace active" : "pace"}
-            onClick={() => {
-              setPace(p);
-              savePace(p);
-            }}
-          >
-            {p}
-          </button>
-        ))}
-      </div>
-
-      <div className="pace-row">
-        <span className="pace-label">Tunnel</span>
-        {CORRIDOR_WIDTHS.map((w) => (
-          <button
-            key={w}
-            className={w === width ? "pace active" : "pace"}
-            onClick={() => {
-              setWidth(w);
-              saveCorridorWidth(w);
-            }}
-          >
-            {w}
-          </button>
-        ))}
-      </div>
-
-      <div className="pace-row">
-        <span className="pace-label">Demo</span>
-        {CUE_STYLES.map((s) => (
-          <button
-            key={s}
-            className={s === cueStyle ? "pace active" : "pace"}
-            onClick={() => {
-              setCueStyle(s);
-              saveCueStyle(s);
-            }}
-          >
-            {s === "flow" ? "in flow" : "pause & listen"}
-          </button>
-        ))}
-      </div>
-
       <p className="note">Needs a microphone and a quiet room.</p>
       {!calibrated && (
-        <p className="note">First run starts with a 30-second calibration.</p>
+        <p className="note">
+          First run starts with a short calibration — talk normally, then reach
+          high and low.
+        </p>
       )}
       {error && <p className="error">{error}</p>}
 
+      {/* Dev builds only. The Lab is a separate instance of the game for
+          tuning, and it is not part of the product. */}
       {import.meta.env.DEV && (
         <button className="dev-toggle" disabled={busy} onClick={go("lab")}>
           lab

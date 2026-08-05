@@ -4,9 +4,11 @@ import {
   clearSettings,
   loadCorridorWidth,
   loadPace,
+  loadReduceMotion,
   saveCorridorWidth,
   loadSettings,
   savePace,
+  saveReduceMotion,
   saveSettings,
 } from "./settings.ts";
 
@@ -242,5 +244,44 @@ describe("Corridor width persistence", () => {
   it("falls back to normal on a corrupt value", () => {
     localStorage.setItem("toneflap.width.v1", "gigantic");
     expect(loadCorridorWidth()).toBe("normal");
+  });
+});
+
+describe("Reduce-motion preference", () => {
+  let storageMap: Record<string, string>;
+
+  beforeEach(() => {
+    storageMap = {};
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => storageMap[key] ?? null,
+      setItem: (key: string, value: string) => {
+        storageMap[key] = value;
+      },
+      removeItem: (key: string) => {
+        delete storageMap[key];
+      },
+    } as Storage);
+  });
+
+  it("defaults to following the OS", () => {
+    expect(loadReduceMotion()).toBeNull();
+  });
+
+  it("round-trips both explicit values", () => {
+    saveReduceMotion(true);
+    expect(loadReduceMotion()).toBe(true);
+    saveReduceMotion(false);
+    expect(loadReduceMotion()).toBe(false);
+  });
+
+  it("saving null returns to following the OS", () => {
+    saveReduceMotion(true);
+    saveReduceMotion(null);
+    expect(loadReduceMotion()).toBeNull();
+  });
+
+  it("ignores a corrupt stored value rather than guessing", () => {
+    storageMap["toneflap.motion.v1"] = "maybe";
+    expect(loadReduceMotion()).toBeNull();
   });
 });

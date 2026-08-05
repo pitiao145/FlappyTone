@@ -19,7 +19,7 @@ import {
 } from "../game/settings.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
-import { drawWorld } from "../render/world.ts";
+import { drawWorld, refreshMotionPreference } from "../render/world.ts";
 
 /** HUD refresh rate. React never renders per frame — the rAF loop owns the canvas. */
 const HUD_HZ = 4;
@@ -105,7 +105,10 @@ export function Game({
     const ctx2d = canvas ? scaleForDpr(canvas, canvasWidth, canvasHeight) : null;
     if (!canvas || !ctx2d) return;
 
-    // Game remounts per run, so this picks up the latest saved pace.
+    // Game remounts per run, so this picks up the latest saved pace — and the
+    // latest motion preference, which the renderer caches.
+    refreshMotionPreference();
+
     const run = new Run({
       mode,
       width: canvasWidth,
