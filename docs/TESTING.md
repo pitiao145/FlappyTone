@@ -208,7 +208,31 @@ is nothing to analyse. Pass `--f0` if the player is not Pierre.
 
 ---
 
-## 6. What still needs a human
+## 6. Tuning a constant in the Lab
+
+`npm run dev`, open the title screen, press **lab** (dev builds only — the
+whole subtree is dropped from `dist/`).
+
+1. **play** tab → *start a run*. The tuning sliders sit beside the canvas and
+   write straight into `src/game/tuning.ts`, so a value moves mid-run.
+2. Fly ten gates or so with the constant at the candidate value. The idle panel
+   between runs reports score, gates, unheard, collisions, missed-early and the
+   worst sustained excursion — enough to tell "felt better" from "was better".
+3. Save a **preset** to flip between two candidate feels without losing either.
+4. **copy diff as TS** prints exactly the fields that differ from
+   `DEFAULT_TUNING`. Paste them into `DEFAULT_TUNING` to ship the value.
+5. Then run `npm run test`. If the constant is anything the fixture tests or
+   `npm run report` touch, run the before/after report comparison too and state
+   which of fit / lag / wiggle / voiced% moved, **including the ones that got
+   worse**.
+
+A slider that appears to do nothing is worth investigating rather than
+shrugging at: that was the state of the old dev panel for the whole of B1–B6,
+because it retuned the calibration preview's `PitchTracker` while the game ran
+on one of its own. `src/game/activeTracker.ts` is the fix, and the panel now
+says "no live tracker" rather than pretending.
+
+## 7. What still needs a human
 
 The fixture tests cover the pipeline. They do not cover *feel*. These require Pierre with a microphone:
 

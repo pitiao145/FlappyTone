@@ -2,7 +2,8 @@
 
 **Date:** 4 Aug 2026
 **Repo:** `~/repos/Pierrebuilds/FlappyTone`
-**Status:** Part A done · B1–B2, B4–B6 done · **B3 outstanding** (see below)
+**Status:** Part A done · B1–B6 done. Nothing in this spec is outstanding; see
+"Open, carried forward" for what a human still has to confirm.
 
 ---
 
@@ -13,7 +14,7 @@
 | **Part A** — unheard bug | Done. 0% unheard across three separate runs (10, 9, 8 gates). |
 | **B1** — player's dot is the hero | Done, `3d2c080`. |
 | **B2** — contrast / corridor legibility | Done, `3d2c080`. |
-| **B3** — pacing | **Outstanding.** The only item left. |
+| **B3** — pacing | Done, `9b819ff` (5 Aug). Simulated call→response gap 488ms → 85ms; unmeasured with a real voice. |
 | **B4** — felt reaction per outcome | Done, `d048871`. Visual only — sound was ruled out. |
 | **B5** — beautiful trail | Done, `fb1652f`. |
 | **B6** — mobile chrome | Done, `8cd883e`. |
@@ -77,6 +78,14 @@ of the trail's honesty properties are mutation-checked.
   anyone.
 - **Timing-slack constants** (90ms, cap 1.5×) have one run behind them.
   Non-T1 collision excursions fell from 581/325/418 and 277/234 to 139/139.
+- **B3 and the timing slack are now both unplayed.** This is exactly the
+  situation B3 warned about — two timing changes landing without a session
+  between them, which makes a bad result unattributable. The dev Lab exists to
+  make that cheap to untangle: both constants are sliders, so a session can
+  bisect them without a rebuild.
+- **Everything in the 5 Aug update is unplayed by a human**: the new
+  calibration flow (does normal speech give a better f0 centre in practice?),
+  the visualiser, the settings screen, the tutorial card.
 
 Two parts. **Part A is a bug fix and must land first** — it is small, and until it lands every judgement about how the game feels is measuring the bug rather than the game. Part B is a larger design session that assumes A is done.
 
@@ -254,8 +263,27 @@ The scene is `#111318` background with corridor walls in near-black hatching. In
 
 ## B3. Fix the pacing
 
-> **Outstanding — the only item left, and the diagnosis is now measured
-> rather than argued.** Across three runs: `seeded` 6/5/5, `missedEarly`
+> **Done.** Two changes, both now live-tunable from the dev Lab
+> (`src/game/tuning.ts`):
+>
+> 1. *The listen phase.* The pause-style cue fired the moment the gate was
+>    fully on screen, then froze the world for demo + hold, leaving the gate
+>    another 0.72 × width to travel. It now fires on the gate's **remaining
+>    travel** — `cueApproachMs`, 250 — so the freeze ends roughly as the
+>    corridor arrives. Bounded by the fully-on-screen moment, because the demo
+>    dot is drawn along the gate's own screen position and a wide T3 corridor
+>    cued any earlier would sweep off the right edge. In simulation the gap
+>    from the end of the demo to the gate becoming active fell from 488ms to
+>    85ms on a T1 gate.
+> 2. *Density.* `baseRestMs` 900 → 1200. At base speed that is ~264px of clear
+>    space against a 420px canvas, so one gate is the obvious current target.
+>
+> **Still unmeasured with a real voice.** The numbers above are from the run
+> simulation, not from a session. The measurement that would settle it is
+> `npm run analyze-recording` on a 20-gate screen recording: median
+> call→response gap, `seeded`, `missedEarly`, unheard rate.
+>
+> The original diagnosis, retained: Across three runs: `seeded` 6/5/5, `missedEarly`
 > 5/2/1, median call→response gap 1161–1440ms. In one recording the HUD still
 > read `listen…` at 43.5s while the player had begun speaking at 43.35s. The
 > pre-gate buffer from Part A is currently rescuing those answers, which is why
@@ -365,3 +393,28 @@ Do not touch `src/pitch/`.
 B5 and B6 were taken before B3, out of the order above, because B3 is a timing
 change and the timing slack shipped that day was unplayed; doing both at once
 would have made a playtest unattributable. Neither B5 nor B6 touches timing.
+
+
+---
+
+## Addendum — 5 Aug 2026: the tuning surface
+
+B3 was the last spec item, and the thing that made it slow was that every
+pacing constant was a module constant: changing one meant an edit, a reload,
+and a fresh run, with no way to compare two candidate feels in a session.
+
+Three changes came out of that, and they outlive this spec:
+
+1. **`src/game/tuning.ts`** — every pacing, judging and dot-dynamics constant
+   is now a field on a mutable singleton whose defaults are the shipped values.
+   Production never writes to it. A new constant of this kind belongs here, not
+   as a bare `export const`.
+2. **`src/dev/Lab.tsx`** — a second, disposable instance of the game that
+   exists to be measured: sliders over that singleton beside a live run, the
+   pitch prototype, the gate log, capture and the soundboard. Dev builds only,
+   lazily imported behind `import.meta.env.DEV`, and verified absent from
+   `dist/`. Its "copy diff as TS" output is how a tuned value gets shipped.
+3. **`src/game/activeTracker.ts`** — the dev sliders had been retuning the
+   *calibration preview's* `PitchTracker` while the game ran on one of its own,
+   so during play every one of them was inert. Whoever owns the mic now
+   registers, and the panel says so when nothing is live.

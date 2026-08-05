@@ -15,7 +15,9 @@ React 18 + TypeScript + Vite + Tailwind. Canvas 2D. Web Audio API. No backend, n
 3. **All pitch math in semitones, never raw Hz.** Pitch perception is logarithmic. `semitones = 12 * Math.log2(f0 / f0Center)`.
 4. **Every audio API call sits behind an explicit user gesture.** iOS Safari requires a gesture for both `getUserMedia()` and `AudioContext.resume()`. This is the most common silent failure — test it on a real iPhone, not the simulator.
 5. **`src/pitch/` must have zero Web Audio dependencies.** It takes `Float32Array` frames in and returns pitch state out — a pure module. This is what makes it testable offline against WAV fixtures. Web Audio lives only in `src/audio/`, which feeds `src/pitch/`. Never import `AudioContext` inside `src/pitch/`.
-6. **When the signal is unclear, the game says "couldn't hear that" — it never scores the player wrong.** A gate whose longest voiced run is under `MIN_UTTERANCE_MS` (180ms, merging gaps under 120ms) is neutral: no points, no heart lost. The test is utterance *duration*, not voiced fraction — a 600ms gate can never be 60% voiced by a 400ms syllable, and the old fractional floor was firing on half of all real attempts. Confidently failing a correct speaker is the single fastest way to lose a user.
+6. **Tunable constants live in `src/game/tuning.ts`, not as bare module constants.** Anything the Lab should be able to move during a session — pacing, cue timing, collision sustain, utterance thresholds, dot dynamics, gate lengths — is a field on that singleton, with its default equal to the shipped value. Production never calls `setTuning`. Re-introducing an `export const` for something of this kind takes the knob away from the person tuning it.
+7. **Dev tooling lives behind `import.meta.env.DEV` and stays out of `dist/`.** `src/dev/Lab.tsx` is lazily imported so Rollup drops the whole subtree. Check with `npm run build && grep -rl TuningPanel dist/assets` after touching that boundary.
+8. **When the signal is unclear, the game says "couldn't hear that" — it never scores the player wrong.** A gate whose longest voiced run is under `MIN_UTTERANCE_MS` (180ms, merging gaps under 120ms) is neutral: no points, no heart lost. The test is utterance *duration*, not voiced fraction — a 600ms gate can never be 60% voiced by a 400ms syllable, and the old fractional floor was firing on half of all real attempts. Confidently failing a correct speaker is the single fastest way to lose a user.
 
 ## Layout
 
@@ -26,7 +28,7 @@ src/
   game/       loop, entities, gate generation, collision, scoring. NO React.
   render/     canvas draw calls. Pure functions of game state.
   ui/         React components: menus, HUD overlay, calibration, game over.
-  dev/        dev panel + CLI analysis script.
+  dev/        the Lab (dev-only tuning instance) + CLI analysis scripts.
 fixtures/     WAV files for offline tests — see docs/TESTING.md
 docs/         PRD.md, TESTING.md
 ```
@@ -52,6 +54,7 @@ Ground truth is `fixtures/captures/jane_*.wav` (native Taiwanese speaker, direct
 
 - One vertical slice per session, in the order in PRD §12. A slice ends with something runnable and committed.
 - Build the dev panel (`src/dev/`) in the first slice, not last. It shows live f0, clarity, RMS, voiced flag, smoothed Y and Chao value.
+- **Tune in the Lab, ship from the diff.** `npm run dev` → title → `lab`. The play tab runs a throwaway game beside sliders over `src/game/tuning.ts`; "copy diff as TS" prints exactly the fields that moved, for pasting into `DEFAULT_TUNING`. A value that has not been flown is not tuned.
 - When a tuning constant changes (smoothing alpha, clarity threshold, tolerances), run the fixture tests and report which golden snapshots moved.
 - Ask before adding a dependency. The whole app should need: react, vite, tailwind, pitchy, and a WAV decoder for tests.
 

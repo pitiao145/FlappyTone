@@ -122,6 +122,27 @@ Run at ~60 Hz (every ~16ms), analysis window 2048 samples @ 44.1kHz.
 
 Persist to `localStorage` so it isn't re-run every session (this is the one exception to "no persistence" — it's a settings value, not game data).
 
+> **⚠️ Superseded — the flow is now quiet → talk → high → low → preview.**
+> "Say **ma** three times" asks a beginner to perform a syllable from the
+> language they are here to learn, and it infers the range from whatever
+> excursion three flat syllables happen to contain — which under-reports a
+> range the speaker has but did not use.
+>
+> | step | asks for | yields |
+> |---|---|---|
+> | quiet, 1s | silence | `noiseFloor` (unchanged) |
+> | talk, 6s | "say what you had for breakfast, or count to ten" | `f0Center` — more voiced frames, in the register they actually speak in |
+> | high, 3s | "say ahh as high as is comfortable" | high semitone sweep |
+> | low, 3s | "and as low as is comfortable" | low semitone sweep |
+> | preview | free play + slider | confirmation |
+>
+> `computeRangeFromExtremes(high, low)` seeds the range: half the span from
+> p90 of the high sweep to p10 of the low sweep, trimmed for the same reason
+> `computeRangeSemitones` trims — one octave-error or creak frame at either
+> extreme would otherwise size the whole board around an artefact. The live
+> dot runs during both sweeps, because seeing yourself reach is what makes
+> "as high as is comfortable" legible without more words.
+
 ---
 
 ## 6. Tone gate geometry
@@ -250,6 +271,16 @@ accuracy   = clamp(1 - mean(err_t), 0, 1)
 
 1. **Title** — Play, Calibrate, Settings, How to play. Must include a visible "needs a microphone and a quiet room" line before the mic prompt.
 2. **Calibration** — as in §5.4.
+2b. **Settings** — voice (read-back of the saved calibration, re-calibrate,
+   forget), speed, tunnel width, demo style, motion preference, and a way into
+   the visualiser. Each control says what it changes; they were previously
+   three unlabelled rows on the title screen.
+2c. **Tone visualiser** — the game's screen with the game taken out: no gates,
+   no scrolling, no score. x is time-since-the-utterance-began rather than
+   world position, so repeated attempts at one tone lie on top of each other
+   and on top of the target. This is the answer to "the game asks you to
+   produce a tone *and* hit a moving corridor, and a failure does not say
+   which half went wrong."
 3. **Tutorial run** — 8 gates, one tone type at a time in order 1→4→2→3, double tolerance, no hearts, no scoring. Text cue on each gate: *"say it flat and high"*, *"start low, slide up"* etc.
 4. **Game** — the run.
 5. **Game over** — total score, best combo, and **the actual learning payload: per-tone accuracy breakdown** (e.g. T1 92% · T2 71% · T3 34% · T4 88%) plus a one-line takeaway ("Tone 3 is your weak spot — it dips before it rises"). Retry / Home.
@@ -344,7 +375,7 @@ Only then:
 
 ## 14. Open questions for after the prototype
 
-- Does the trail read better as a solid line, dots-per-frame, or a fading ribbon?
+- Does the trail read better as a solid line, dots-per-frame, or a fading ribbon? (The visualiser is now the surface to answer this on — same data, stationary axis, no timing pressure.)
 - Should the gate show the target syllable in hanzi at all for beginners, or pinyin only? (Three separate learners in the HN thread asked for pinyin-only modes.)
 - Is 600ms the right gate width, or does it need to flex per tone? Tone 3 in citation form is genuinely longer than Tone 4.
 - Taiwan vs Beijing reference audio — you're in Taiwan and MSU's corpus is mainland standard. Worth flagging to testers.
