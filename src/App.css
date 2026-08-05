@@ -834,3 +834,45 @@
 .visualiser-screen {
   gap: 12px;
 }
+
+/* ------------------------------------------------ how to play & tutorial */
+
+.howto-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.howto-section h3 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8e99a6;
+}
+
+/* The tone's actual measured shape, next to the words describing it. */
+.contour-spark {
+  color: #60cdff;
+  flex: 0 0 auto;
+  opacity: 0.85;
+}
+
+.tone-list li {
+  align-items: center;
+}
+
+/* Holds the tutorial before its first gate: a first-time player needs to know
+   what they are looking at, and the button is the gesture that resumes audio. */
+.tutorial-card {
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+}
+
+.tutorial-card h3 {
+  margin: 0;
+  font-size: 18px;
+}

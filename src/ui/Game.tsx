@@ -73,8 +73,18 @@ export function Game({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hud, setHud] = useState<RunSnapshot | null>(null);
   const [paused, setPaused] = useState(false);
+  /**
+   * The tutorial waits behind a card rather than starting on mount.
+   *
+   * Two reasons: the first gate arrives before a first-time player has worked
+   * out what they are looking at, and the card's button is a user gesture —
+   * the iOS-safe place to resume the AudioContext.
+   */
+  const [waiting, setWaiting] = useState(mode === "tutorial");
   /** Set by the effect so the pause overlay's tap can restart the loop. */
   const resumeRef = useRef<() => void>(() => {});
+  /** Set by the effect so the tutorial card's button can begin the run. */
+  const startRef = useRef<() => void>(() => {});
   /**
    * The last resolved gate, pushed once when it resolves rather than polled.
    *
@@ -239,7 +249,13 @@ export function Game({
     };
     document.addEventListener("visibilitychange", onVisibility);
 
-    start();
+    // The tutorial holds until the player taps Start; a game run begins now.
+    startRef.current = () => {
+      const audio = getMicSession()?.ctx;
+      if (audio && audio.state === "suspended") void audio.resume();
+      start();
+    };
+    if (mode !== "tutorial") start();
 
     return () => {
       running = false;
@@ -356,6 +372,28 @@ export function Game({
         <button className="mic-stop" onClick={onQuit} title="End the run">
           ■ quit
         </button>
+
+        {waiting && (
+          <div className="overlay tutorial-card">
+            <h3>Tutorial</h3>
+            <p>
+              Eight gates, one tone at a time. No score, no hearts, and twice
+              the room.
+            </p>
+            <p className="note">
+              Listen to the example, then say it. The dot follows your pitch.
+            </p>
+            <button
+              className="primary"
+              onClick={() => {
+                setWaiting(false);
+                startRef.current();
+              }}
+            >
+              Start
+            </button>
+          </div>
+        )}
 
         {paused && (
           <div className="overlay" onClick={() => resumeRef.current()}>
