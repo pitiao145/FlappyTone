@@ -172,7 +172,43 @@ pressure.
 
 ---
 
-## 5. What still needs a human
+## 5. `npm run analyze-recording` — reading back a playtest
+
+The fixture loop shows what the pipeline saw. It cannot show what the *game*
+did about it. A screen recording carries both, and this demuxes them onto one
+clock:
+
+```bash
+npm run analyze-recording ~/Desktop/run.mov          # audio + frames
+npm run analyze-recording run.mov --no-frames        # soundtrack only
+npm run analyze-recording run.mov --from 12 --to 30  # one stretch
+```
+
+Needs `ffmpeg` on PATH (`brew install ffmpeg`). Output lands in
+`<video>-analysis/` — the extracted WAV, plus JPEG frames an agent can read.
+
+It reports:
+
+- **every utterance** — start, duration, median f0, ASCII Chao contour, and
+  whether it clears the game's own `MIN_UTTERANCE_MS` floor. An utterance
+  marked `NO` is one the game threw away, which is the "couldn't hear that"
+  bug measured directly rather than inferred.
+- **cue vs player.** The soundtrack contains the reference clip as well as the
+  player, and mistaking one for the other inverts every conclusion. Cues are
+  identified by matching `public/ref/ma{1-4}.wav` on absolute pitch, duration
+  *and* contour together — an energy envelope alone matches every syllable.
+  Pinned by `analyze-recording.test.ts`: each clip must match itself, and no
+  `pierre_*` capture may match any clip.
+- **call → response gaps**, per cue. This is B3's pacing claim as a number.
+- **frames**, as a coarse sweep plus a dense burst around each player
+  utterance — the frames showing what was on screen while they were speaking.
+
+The recording must capture microphone audio, not just system audio, or there
+is nothing to analyse. Pass `--f0` if the player is not Pierre.
+
+---
+
+## 6. What still needs a human
 
 The fixture tests cover the pipeline. They do not cover *feel*. These require Pierre with a microphone:
 
