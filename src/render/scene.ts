@@ -9,6 +9,8 @@ export interface TrailSample {
    * spacing.
    */
   x?: number;
+  /** Distance off the corridor centre in units of tolerance; null outside a gate. */
+  errRatio?: number | null;
 }
 
 export interface SceneSnapshot {
@@ -60,9 +62,68 @@ export function drawChaoGrid(
   }
 }
 
+/** Ribbon thickness at the dot, and at the far end of its life. */
+const TRAIL_WIDTH_FRAC = 0.019;
+const TRAIL_TAIL_WIDTH_FRAC = 0.004;
 /**
- * The player's trail: newest sample at `dotX`, older samples drift left and
- * fade over `trailSeconds`. Shared by the prototype scene and the game world.
+ * Samples further apart than this in time are separate utterances and must not
+ * be joined.
+ *
+ * Only voiced frames enter the trail, so a silence leaves a hole in the data
+ * rather than a run of quiet samples. Drawing straight through one would
+ * invent a pitch path the player never produced — the ribbon has to break.
+ * Roughly three analysis hops (~23ms each).
+ */
+const TRAIL_BREAK_MS = 70;
+
+interface Point {
+  x: number;
+  y: number;
+  /** 0 at the oldest end of the trail's life, 1 at the dot. */
+  freshness: number;
+  errRatio: number | null;
+}
+
+/**
+ * Lay down a smoothed path through `pts` without stroking it — quadratics
+ * through segment midpoints, with each sample as its own control point.
+ *
+ * Shared so the ignition of a cleared gate traces the same curve the live
+ * trail drew. Stroking the raw polyline there instead would make the
+ * celebration a visibly different shape from the thing being celebrated.
+ */
+export function traceSmoothPath(
+  ctx: CanvasRenderingContext2D,
+  pts: readonly { x: number; y: number }[],
+): void {
+  if (pts.length === 0) return;
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  if (pts.length === 1) return;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const mid = {
+      x: (pts[i].x + pts[i + 1].x) / 2,
+      y: (pts[i].y + pts[i + 1].y) / 2,
+    };
+    ctx.quadraticCurveTo(pts[i].x, pts[i].y, mid.x, mid.y);
+  }
+  const last = pts[pts.length - 1];
+  ctx.quadraticCurveTo(last.x, last.y, last.x, last.y);
+}
+
+/**
+ * The player's trail, drawn as a tapered ribbon: newest at `dotX`, older
+ * samples drifting left and thinning as they fade.
+ *
+ * PRD §8 calls this the one visual that matters — it is the player's own pitch
+ * contour drawn live, and the most interesting thing in any clip. It used to
+ * be one flat-sized dot per frame, which read as a nervous scribble rather
+ * than a line.
+ *
+ * Curve fitting is a quadratic through segment midpoints. At ~43Hz and 220px/s
+ * consecutive samples are about 5px apart, so the drawn line never departs
+ * from the data by a visible amount: it is still their contour, drawn kindly
+ * (spec B5). Nothing here idealises or snaps the shape.
  */
 export function drawTrail(
   ctx: CanvasRenderingContext2D,
@@ -73,20 +134,105 @@ export function drawTrail(
   dotX: number,
   nowMs: number,
 ): void {
-  const pxPerMs = (width * 0.45) / (trailSeconds * 1000);
+  if (trail.length === 0) return;
+  const lifetimeMs = trailSeconds * 1000;
+  const pxPerMs = (width * 0.45) / lifetimeMs;
+
+  // Split into strokes, breaking wherever the player stopped phonating.
+  const strokes: Point[][] = [];
+  let current: Point[] = [];
+  let prevT: number | null = null;
+
   for (const sample of trail) {
     const age = nowMs - sample.t;
-    const alpha = Math.max(0, 1 - age / (trailSeconds * 1000));
-    if (alpha <= 0) continue;
+    const freshness = 1 - age / lifetimeMs;
+    if (freshness <= 0) {
+      prevT = sample.t;
+      continue;
+    }
     const x = sample.x ?? dotX - age * pxPerMs;
-    if (x < -width * 0.1) continue;
-    const y = chaoToY(sample.chao, height);
-    ctx.fillStyle = sample.voiced
-      ? `rgba(96, 205, 255, ${0.7 * alpha})`
-      : `rgba(120, 130, 145, ${0.3 * alpha})`;
+    if (x < -width * 0.1) {
+      prevT = sample.t;
+      continue;
+    }
+    if (prevT !== null && sample.t - prevT > TRAIL_BREAK_MS && current.length > 0) {
+      strokes.push(current);
+      current = [];
+    }
+    prevT = sample.t;
+    current.push({
+      x,
+      y: chaoToY(sample.chao, height),
+      freshness,
+      errRatio: sample.errRatio ?? null,
+    });
+  }
+  if (current.length > 0) strokes.push(current);
+
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  for (const stroke of strokes) drawRibbon(ctx, width, stroke);
+  ctx.restore();
+}
+
+/**
+ * Colour for a point: the trail's own blue when on the corridor centre,
+ * warming toward amber as it approaches the wall.
+ *
+ * This is the drift made visible without any text — you can see which part of
+ * your contour wandered. Outside a gate there is no corridor to be off, so it
+ * stays blue.
+ */
+function trailColor(errRatio: number | null, alpha: number): string {
+  if (errRatio === null) return `rgba(96, 205, 255, ${alpha})`;
+  const t = Math.max(0, Math.min(1, errRatio));
+  const r = Math.round(96 + (255 - 96) * t);
+  const g = Math.round(205 + (180 - 205) * t);
+  const b = Math.round(255 + (120 - 255) * t);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/**
+ * One unbroken stroke, drawn segment by segment so width, opacity and colour
+ * can all vary along its length. Round caps make the pieces read as one
+ * continuous ribbon.
+ */
+function drawRibbon(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  pts: Point[],
+): void {
+  const maxW = width * TRAIL_WIDTH_FRAC;
+  const minW = width * TRAIL_TAIL_WIDTH_FRAC;
+
+  if (pts.length === 1) {
+    const p = pts[0];
+    ctx.fillStyle = trailColor(p.errRatio, 0.75 * p.freshness);
     ctx.beginPath();
-    ctx.arc(x, y, width * 0.008, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, minW, 0, Math.PI * 2);
     ctx.fill();
+    return;
+  }
+
+  for (let i = 1; i < pts.length; i++) {
+    const prev = pts[i - 1];
+    const p = pts[i];
+    // Quadratic through midpoints: the control point is the sample itself, so
+    // the curve leans toward every measurement without overshooting it.
+    const from =
+      i === 1 ? prev : { x: (prev.x + p.x) / 2, y: (prev.y + p.y) / 2 };
+    const to =
+      i === pts.length - 1 ? p : { x: (p.x + pts[i + 1].x) / 2, y: (p.y + pts[i + 1].y) / 2 };
+
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.quadraticCurveTo(p.x, p.y, to.x, to.y);
+    // Taper is eased rather than linear so the ribbon keeps presence for most
+    // of its life and then thins away quickly at the tail.
+    ctx.lineWidth = minW + (maxW - minW) * Math.pow(p.freshness, 0.7);
+    ctx.strokeStyle = trailColor(p.errRatio, 0.8 * Math.pow(p.freshness, 0.8));
+    ctx.stroke();
   }
 }
 

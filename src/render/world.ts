@@ -11,7 +11,14 @@ import { BIRD_X_FRAC } from "../game/run.ts";
 import type { RunSnapshot } from "../game/run.ts";
 import { corridorChaoAt, corridorToleranceAt } from "../game/gates.ts";
 import { TRAIL_SECONDS } from "../game/dynamics.ts";
-import { BACKDROP, chaoToY, drawChaoGrid, drawDot, drawTrail } from "./scene.ts";
+import {
+  BACKDROP,
+  chaoToY,
+  drawChaoGrid,
+  drawDot,
+  drawTrail,
+  traceSmoothPath,
+} from "./scene.ts";
 
 /** Samples per gate when tracing the dashed ghost centreline. */
 const CENTRELINE_STEPS = 24;
@@ -401,13 +408,12 @@ function strokePath(
   height: number,
   path: RunSnapshot["trail"],
 ): void {
-  ctx.beginPath();
-  for (let i = 0; i < path.length; i++) {
-    const x = path[i].x ?? 0;
-    const y = chaoToY(path[i].chao, height);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
+  // Same curve the live trail draws — the celebration must be the same shape
+  // as the thing being celebrated.
+  traceSmoothPath(
+    ctx,
+    path.map((p) => ({ x: p.x ?? 0, y: chaoToY(p.chao, height) })),
+  );
   ctx.stroke();
 }
 

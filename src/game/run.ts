@@ -108,6 +108,14 @@ export interface TrailSample {
    * pauses alike.
    */
   x: number;
+  /**
+   * How far off the corridor centre this sample was, in units of the local
+   * tolerance — 0 dead centre, 1 at the wall. Null outside a gate, where
+   * there is no corridor to be off.
+   *
+   * Lets the trail show where the player drifted without any text.
+   */
+  errRatio: number | null;
 }
 
 /** Trail sample as stored: world-space, so screen x is derived per frame. */
@@ -116,6 +124,7 @@ interface TrailPoint {
   voiced: boolean;
   t: number;
   worldX: number;
+  errRatio: number | null;
 }
 
 export interface GateView {
@@ -423,6 +432,9 @@ export class Run {
         voiced: true,
         t: nowMs,
         worldX: this.worldX,
+        // Filled in below if a gate is running — the corridor is not resolved
+        // at this point in the frame.
+        errRatio: null,
       });
       this.pruneTrail(nowMs);
     } else {
@@ -451,6 +463,15 @@ export class Run {
       voiced: p.voiced,
       atMs: nowMs,
     });
+
+    // Tag the trail point pushed earlier this frame, so the drawn ribbon can
+    // show where the player drifted. Guarded on the timestamp: an unvoiced
+    // frame pushes nothing, and tagging a stale point would attribute this
+    // frame's error to an older part of the contour.
+    const newest = this.trail[this.trail.length - 1];
+    if (newest && newest.t === nowMs) {
+      newest.errRatio = tolChao > 0 ? errChao / tolChao : null;
+    }
 
     // Only a *voiced* off-corridor frame can start a collision. During grace
     // the dot is held at the player's last real pitch while the corridor keeps
@@ -641,6 +662,7 @@ export class Run {
       voiced: s.voiced,
       t: s.t,
       x: this.screenX(s.worldX),
+      errRatio: s.errRatio,
     };
   }
 
