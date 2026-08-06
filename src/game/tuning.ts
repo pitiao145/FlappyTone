@@ -137,7 +137,17 @@ export interface Tuning {
   /** Seconds of movement kept in the trail. */
   trailSeconds: number;
 
-  /** Per-tone gate length in seconds — the shipped reference clips' lengths. */
+  /**
+   * Per-tone gate length in seconds.
+   *
+   * These started as the shipped reference clips' own lengths, so that the
+   * demo, the corridor and the scorer all ran on one clock. T1 and T3 no
+   * longer match their clip (0.55 against an 880ms `ma1.wav`, 1.25 against
+   * 1.33s) — tuned down from play, where T1 was the worst-scoring tone
+   * precisely because it asked for a note longer than the flat part of one.
+   * The demo still sweeps over the *clip's* length, so for T1 the example
+   * currently shows a longer hold than the gate scores. See make-ref-clips.
+   */
   gateDurationS: Record<Tone, number>;
   /** Per-tone corridor centreline. See DEFAULT_POLYLINES. */
   polylines: Record<Tone, Polyline>;
@@ -145,14 +155,14 @@ export interface Tuning {
 
 export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   baseScrollSpeed: 220,
-  baseToleranceH: 0.12,
+  baseToleranceH: 0.1,
   baseRestMs: 1200,
   restMsFloor: 600,
   cueLeadMs: 300,
   cuePauseHoldMs: 450,
   cueApproachMs: 700,
   collisionSustainMs: 120,
-  timingSlackS: 0.09,
+  timingSlackS: 0.07,
   maxTimingWidenFactor: 1.5,
   preGateBufferMs: 400,
   minUtteranceMs: 180,
@@ -162,7 +172,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   easeTauMs: 35,
   driftChaoPerSec: 5.33,
   trailSeconds: 1.0,
-  gateDurationS: Object.freeze({ 1: 0.88, 2: 1.07, 3: 1.33, 4: 0.6 }),
+  gateDurationS: Object.freeze({ 1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6 }),
   polylines: DEFAULT_POLYLINES,
 }) as Readonly<Tuning>;
 

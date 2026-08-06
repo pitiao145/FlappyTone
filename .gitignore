@@ -11,6 +11,13 @@ node_modules
 dist
 dist-ssr
 *.local
+.vercel
+
+# Raw takes pulled from Blob by `npm run pull-recordings`. Not committed: the
+# committed artefact is what `npm run make-clips` cuts out of them into
+# public/ref/, and these stay re-pullable from storage. Deleting them locally
+# costs a download, not a recording session.
+fixtures/recordings/
 
 # Editor directories and files
 .vscode/*

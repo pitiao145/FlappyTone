@@ -42,6 +42,32 @@ npm run analyze <wav>  # print ASCII contour for a fixture — use this to "see"
 npm run typecheck
 ```
 
+## The clip inventory
+
+Reference clips are recorded by Jane at `/record` (a separate Vite entry,
+`record.html` → `src/record/`), not cut by hand. The loop is:
+
+```bash
+npm run pull-recordings [session]  # Blob -> fixtures/recordings/<session>/ (gitignored)
+npm run make-clips                 # -> public/ref/<id>.wav + manifest.json, with a review report
+```
+
+Three rules hold this together:
+
+1. **`src/dev/clipCut.ts` is the only cutter.** `make-ref-clips` (the four
+   shipped `ma` clips) and `make-clips` (everything Jane records) both call it,
+   so the demo audio, the corridor shape and the timeline both run on are one
+   measurement. PRD §6 calls their agreement an invariant; two past failures
+   came from those three disagreeing. After touching it, regenerate and check
+   `git diff public/ref` is empty.
+2. **`takeDetector` and `clipCut` must find the same voiced run.**
+   `takeDetector.test.ts` pins this against Jane's four captures to the
+   millisecond. If one moves and the other doesn't, the shared segmentation is
+   broken, not the test.
+3. **`clipReview.ts` flags, it never blocks.** Its tests assert that Jane's four
+   shipped clips pass clean — anything that flags those is measuring the wrong
+   thing, which both of its original heuristics were.
+
 ## Testing
 
 You cannot hear. Do not claim the pitch pipeline works based on reading the code.

@@ -72,6 +72,9 @@ describe("corridorChaoAt", () => {
 });
 
 describe("toleranceChao", () => {
+  // Pure conversion: a base half-height in screen fractions to chao. Takes its
+  // input literally rather than from DEFAULT_TUNING, because the formula is
+  // what is under test, not the value currently shipped.
   it("converts base 0.12H to 0.8 chao for the level and falling tones", () => {
     expect(toleranceChao(1, 0.12)).toBeCloseTo(0.8);
     expect(toleranceChao(4, 0.12)).toBeCloseTo(0.8);
@@ -83,23 +86,19 @@ describe("toleranceChao", () => {
     expect(toleranceChao(2, 0.12)).toBeCloseTo(0.8 * 1.15);
     expect(toleranceChao(3, 0.12)).toBeCloseTo(0.8 * 1.3);
   });
-
-  it("widens T3 tolerance by 1.3x", () => {
-    expect(toleranceChao(3, 0.12)).toBeCloseTo(0.8 * 1.3);
-  });
 });
 
 describe("newDifficulty", () => {
   it("exposes the PRD base values", () => {
     const d = newDifficulty();
     expect(d.scrollSpeed).toBeCloseTo(220);
-    expect(d.toleranceH).toBeCloseTo(0.12);
+    expect(d.toleranceH).toBeCloseTo(DEFAULT_TUNING.baseToleranceH);
     expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.baseRestMs);
   });
 });
 
 describe("rampDifficulty", () => {
-  const base: Difficulty = { scrollSpeed: 220, toleranceH: 0.12, restMs: DEFAULT_TUNING.baseRestMs };
+  const base: Difficulty = { scrollSpeed: 220, toleranceH: DEFAULT_TUNING.baseToleranceH, restMs: DEFAULT_TUNING.baseRestMs };
 
   it("leaves difficulty unchanged below 5 cleared", () => {
     expect(rampDifficulty(0)).toEqual(base);
@@ -109,7 +108,7 @@ describe("rampDifficulty", () => {
   it("applies one ramp step at 5 cleared", () => {
     const d = rampDifficulty(5);
     expect(d.scrollSpeed).toBeCloseTo(220 * 1.08);
-    expect(d.toleranceH).toBeCloseTo(0.12 * 0.95);
+    expect(d.toleranceH).toBeCloseTo(DEFAULT_TUNING.baseToleranceH * 0.95);
     expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.baseRestMs * 0.95);
   });
 
@@ -181,13 +180,13 @@ describe("makeGate", () => {
     expect(g.tone).toBe(1);
     expect(g.xStart).toBe(500);
     expect(g.widthPx).toBeCloseTo(220 * GATE_DURATION_S[1]);
-    expect(g.tolChao).toBeCloseTo(0.8);
+    expect(g.tolChao).toBeCloseTo(toleranceChao(1, DEFAULT_TUNING.baseToleranceH));
   });
 
   it("gate width follows the tone's own measured duration", () => {
     const d = newDifficulty();
     // T3 runs longest and T4 shortest — PRD §14's open question, answered from
-    // a native speaker's utterance lengths in play.
+    // a native speaker's clips and then tuned in play.
     expect(makeGate(3, 0, d).widthPx).toBeGreaterThan(makeGate(4, 0, d).widthPx);
     for (const tone of [1, 2, 3, 4] as const) {
       expect(makeGate(tone, 0, d).widthPx / d.scrollSpeed).toBeCloseTo(
@@ -199,7 +198,9 @@ describe("makeGate", () => {
   it("uses widened tolerance for T3", () => {
     const d = newDifficulty();
     const g = makeGate(3, 0, d);
-    expect(g.tolChao).toBeCloseTo(0.8 * 1.3);
+    expect(g.tolChao).toBeCloseTo(
+      toleranceChao(1, DEFAULT_TUNING.baseToleranceH) * 1.3,
+    );
   });
 });
 
@@ -213,7 +214,7 @@ describe("applyPace", () => {
     const d = applyPace(newDifficulty(), "normal");
     expect(d.scrollSpeed).toBeCloseTo(220 * 0.9);
     expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.baseRestMs * 1.5);
-    expect(d.toleranceH).toBeCloseTo(0.12);
+    expect(d.toleranceH).toBeCloseTo(DEFAULT_TUNING.baseToleranceH);
   });
 
   it("relaxed slows further and doubles the rest interval", () => {
@@ -237,14 +238,14 @@ describe("applyCorridorWidth", () => {
 
   it("narrow tightens tolerance to 0.75x, leaving speed and rest alone", () => {
     const d = applyCorridorWidth(newDifficulty(), "narrow");
-    expect(d.toleranceH).toBeCloseTo(0.12 * 0.75);
+    expect(d.toleranceH).toBeCloseTo(DEFAULT_TUNING.baseToleranceH * 0.75);
     expect(d.scrollSpeed).toBeCloseTo(220);
     expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.baseRestMs);
   });
 
   it("wide loosens tolerance to 1.4x", () => {
     const d = applyCorridorWidth(newDifficulty(), "wide");
-    expect(d.toleranceH).toBeCloseTo(0.12 * 1.4);
+    expect(d.toleranceH).toBeCloseTo(DEFAULT_TUNING.baseToleranceH * 1.4);
   });
 
   it("applied after the ramp, it scales the ramp floor proportionally", () => {

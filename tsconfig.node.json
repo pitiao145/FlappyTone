@@ -5,6 +5,7 @@
     "lib": ["ES2023"],
     "types": ["node"],
     "skipLibCheck": true,
+    "resolveJsonModule": true,
 
     /* Bundler mode */
     "module": "nodenext",
@@ -32,6 +33,12 @@
     "src/dev/wav.ts",
     "src/pitch",
     "src/record/takeDetector.test.ts",
-    "api"
+    "api",
+    "src/dev/clipCut.ts",
+    "src/dev/clipReview.ts",
+    "src/dev/make-ref-clips.ts",
+    "src/dev/make-clips.ts",
+    "src/dev/pull-recordings.ts",
+    "src/record/wordlist.ts"
   ]
 }

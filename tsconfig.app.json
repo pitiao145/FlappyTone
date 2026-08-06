@@ -34,6 +34,8 @@
     "src/dev/make-ref-clips.ts",
     "src/dev/fetch-clips.ts",
     "src/pitch/fixtures.test.ts",
-    "src/record/takeDetector.test.ts"
+    "src/record/takeDetector.test.ts",
+    "src/dev/make-clips.ts",
+    "src/dev/pull-recordings.ts"
   ]
 }

@@ -882,34 +882,3 @@
   margin: 0;
   font-size: 18px;
 }
-
-/* The corridor shape editor (dev Lab → shapes). */
-.shape-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 420px;
-  max-width: 100%;
-}
-
-.shape-canvas {
-  width: 100%;
-  height: auto;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  touch-action: none; /* drags must not scroll the page */
-  cursor: crosshair;
-}
-
-.shape-editor .row {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.shape-editor .param-help {
-  font-size: 11px;
-  line-height: 1.5;
-  color: #6b7684;
-  margin: 0;
-}

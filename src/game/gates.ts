@@ -3,7 +3,7 @@
  * No Web Audio, no React, no canvas. See docs/PRD.md §6.
  */
 
-import { tuning } from "./tuning.ts";
+import { DEFAULT_TUNING, tuning } from "./tuning.ts";
 
 export type Tone = 1 | 2 | 3 | 4;
 
@@ -18,24 +18,24 @@ export const TONE_INFO: Record<
 };
 
 /**
- * How long each tone's gate takes to cross, in seconds. PRD §14 asked "is 600ms
- * the right gate width, or does it need to flex per tone?" — it does.
+ * The shipped gate lengths, as a convenience alias for the tuning defaults.
  *
- * **These are the shipped reference clips' own lengths**, printed by
- * `npm run make-ref-clips`. The player hears a syllable, then flies a corridor
- * that lasts exactly as long: call and response with the same clock on both
- * halves. Any other number makes the demo teach a tempo the gate refuses,
- * which is the failure this project has now hit twice.
+ * PRD §14 asked "is 600ms the right gate width, or does it need to flex per
+ * tone?" — it does. These began as the reference clips' own lengths, printed by
+ * `npm run make-ref-clips`, so that the player heard a syllable and then flew a
+ * corridor lasting exactly as long: call and response on one clock. T1 and T3
+ * have since been shortened from play (see tuning.ts), which means the demo and
+ * the gate no longer agree on those two — the sort of disagreement that has
+ * caused two separate failures in this project, so it is worth re-cutting the
+ * clips rather than leaving it.
  *
  * Invariant to the difficulty ramp: gate width is `scrollSpeed * duration`, so
  * a faster world scrolls past more quickly but never demands a faster tone.
+ *
+ * Live values come from `gateDurationS()`; this is only the default, and the
+ * single source of truth for it is DEFAULT_TUNING.
  */
-export const GATE_DURATION_S: Record<Tone, number> = {
-  1: 0.88,
-  2: 1.07,
-  3: 1.33,
-  4: 0.6,
-};
+export const GATE_DURATION_S: Record<Tone, number> = DEFAULT_TUNING.gateDurationS;
 
 /** Live gate length — the Lab can move these; the constant above is the default. */
 export function gateDurationS(tone: Tone): number {
