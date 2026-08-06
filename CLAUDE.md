@@ -103,6 +103,21 @@ because the durability paths (offline retry, `sendBeacon` on tab close) can
 otherwise only be exercised by deploying. Note a Vercel **preview** deploy is a
 production build, so playing on a preview URL does report.
 
+To exercise it locally you need `npm run dev:api` (`vercel dev`), **not**
+`npm run dev` — plain Vite does not serve `api/`, so the POST 404s, and the
+client treats any 4xx as a payload the server will never accept and drops the
+session. It looks like it worked and nothing arrives.
+
+```bash
+npm run dev:api        # http://localhost:3999/?analytics
+```
+
+The trade: `vercel dev` serves plain HTTP, which is a secure context on
+`localhost` (so the mic works) but **not** over the LAN — so it cannot be used
+for on-phone testing. `npm run dev` has HTTPS via basic-ssl for the phone but no
+`api/`. On-device analytics testing therefore means a preview deploy, where
+reporting is on by default.
+
 Five rules hold this together:
 
 1. **`src/analytics/session.ts` decides what is sent, and nothing else does.**
