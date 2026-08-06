@@ -108,6 +108,56 @@ describe("Uploader", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
+  it("confirms a word only once the server has stored it", async () => {
+    // What resume is allowed to trust. Confirming on capture meant a word that
+    // never reached storage was remembered as done and skipped on the way back.
+    const confirmed: string[] = [];
+    const uploader = new Uploader({
+      sessionId: "s1",
+      passcode: "open",
+      onChange: () => {},
+      onConfirmed: (id) => confirmed.push(id),
+      fetchImpl: vi.fn(ok) as unknown as typeof fetch,
+      sleep: () => Promise.resolve(),
+    });
+    uploader.enqueue("ma1", blob());
+    expect(confirmed).toEqual([]); // queued, not stored
+    await uploader.flush();
+    expect(confirmed).toEqual(["ma1"]);
+  });
+
+  it("never confirms a word whose upload gave up", async () => {
+    const confirmed: string[] = [];
+    const uploader = new Uploader({
+      sessionId: "s1",
+      passcode: "open",
+      onChange: () => {},
+      onConfirmed: (id) => confirmed.push(id),
+      fetchImpl: vi.fn(boom) as unknown as typeof fetch,
+      sleep: () => Promise.resolve(),
+    });
+    uploader.enqueue("ma1", blob());
+    await uploader.flush();
+    expect(confirmed).toEqual([]);
+    expect(uploader.getState().byId.ma1).toBe("failed");
+  });
+
+  it("confirms once, not once per attempt", async () => {
+    let calls = 0;
+    const confirmed: string[] = [];
+    const uploader = new Uploader({
+      sessionId: "s1",
+      passcode: "open",
+      onChange: () => {},
+      onConfirmed: (id) => confirmed.push(id),
+      fetchImpl: vi.fn(() => (++calls < 3 ? boom() : ok())) as unknown as typeof fetch,
+      sleep: () => Promise.resolve(),
+    });
+    uploader.enqueue("ma1", blob());
+    await uploader.flush();
+    expect(confirmed).toEqual(["ma1"]);
+  });
+
   it("reports pending work so the UI can say what is outstanding", () => {
     const fetchImpl = vi.fn(
       () => new Promise<Response>(() => {}), // never resolves

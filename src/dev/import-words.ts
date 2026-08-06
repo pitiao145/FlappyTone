@@ -25,7 +25,9 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { AmbiguousPinyinError, disambiguate, idFor, parseWord } from "../record/pinyin.ts";
+import { AmbiguousPinyinError, parseWord } from "../record/pinyin.ts";
+import { assignIds } from "../record/wordIds.ts";
+import { WORDS } from "../record/wordlist.ts";
 
 const root = new URL("../../", import.meta.url).pathname;
 const input = process.argv[2] ?? `${root}fixtures/wordlist.tsv`;
@@ -74,7 +76,6 @@ if (rows.length === 0 && errors.length === 0) {
 }
 
 interface Parsed extends Row {
-  id: string;
   tone: number;
   syllables: number;
 }
@@ -91,7 +92,6 @@ for (const row of rows) {
     }
     parsed.push({
       ...row,
-      id: idFor(row.pinyin),
       // A multi-syllable word has several; the first is what a single gate
       // could ever be built from. Phase 3 decides whether it is used at all.
       tone: toned[0].tone,
@@ -110,16 +110,18 @@ if (errors.length) {
   process.exit(1);
 }
 
-// Homophones are normal in a real list: 是 and 事 are both shì.
-const ids = disambiguate(parsed.map((p) => p.id));
-parsed.forEach((p, i) => (p.id = ids[i]));
+// Merge against the shipped list rather than regenerating from scratch: a word
+// Jane has already recorded must keep its id, because that id is the key its
+// audio is filed under. See wordIds.ts.
+const assigned = assignIds(WORDS, parsed);
+const toneOf = new Map(parsed.map((p) => [`${p.hanzi.trim()}\t${p.pinyin.trim()}`, p.tone]));
 
 const quote = (s: string) => JSON.stringify(s);
-const body = parsed
-  .map(
-    (p) =>
-      `  { id: ${quote(p.id)}, hanzi: ${quote(p.hanzi)}, pinyin: ${quote(p.pinyin)}, tone: ${p.tone} },`,
-  )
+const body = assigned.words
+  .map((p) => {
+    const tone = toneOf.get(`${p.hanzi.trim()}\t${p.pinyin.trim()}`);
+    return `  { id: ${quote(p.id)}, hanzi: ${quote(p.hanzi)}, pinyin: ${quote(p.pinyin)}, tone: ${tone} },`;
+  })
   .join("\n");
 
 const out = `${root}src/record/wordlist.ts`;
@@ -138,23 +140,39 @@ writeFileSync(out, replaced);
 const multi = parsed.filter((p) => p.syllables > 1);
 const byTone = [1, 2, 3, 4].map((t) => `T${t} ${parsed.filter((p) => p.tone === t).length}`);
 
-console.log(`${parsed.length} word(s) -> src/record/wordlist.ts`);
+console.log(`${assigned.words.length} word(s) -> src/record/wordlist.ts`);
 console.log(`  by first tone: ${byTone.join("  ")}`);
+if (assigned.kept.length) {
+  console.log(`  ${assigned.kept.length} already in the list, ids unchanged`);
+}
+if (assigned.added.length) {
+  console.log(
+    `  ${assigned.added.length} new: ` +
+      assigned.added
+        .slice(0, 10)
+        .map((p) => `${p.hanzi} ${p.id}`)
+        .join(", ") +
+      (assigned.added.length > 10 ? ", …" : ""),
+  );
+}
+if (assigned.dropped.length) {
+  // Loud, because these may already have audio in storage. `make-clips` will
+  // skip their recordings as "not in the word list" rather than lose them.
+  console.log(
+    `\n  ⚠ ${assigned.dropped.length} word(s) were in the list and are not in this file:\n    ` +
+      assigned.dropped.map((p) => `${p.hanzi} (${p.id})`).join(", ") +
+      `\n    Their ids stay reserved. If Jane recorded them, that audio is still` +
+      `\n    in storage but will no longer be cut into public/ref/.`,
+  );
+}
 if (multi.length) {
   console.log(
-    `  ${multi.length} multi-syllable (recorded, but not usable as gates until Phase 3): ` +
+    `\n  ${multi.length} multi-syllable (recorded, but not usable as gates until Phase 3): ` +
       multi
         .slice(0, 8)
         .map((p) => p.pinyin)
         .join(", ") +
       (multi.length > 8 ? ", …" : ""),
-  );
-}
-const suffixed = parsed.filter((p) => /[a-z]$/.test(p.id));
-if (suffixed.length) {
-  console.log(
-    `  ${suffixed.length} homophone(s) got a suffix: ` +
-      suffixed.map((p) => `${p.hanzi} ${p.id}`).join(", "),
   );
 }
 console.log(`\nRun \`npm test\` to confirm, then the booth will serve them in this order.`);

@@ -52,7 +52,17 @@ npm run pull-recordings [session]  # Blob -> fixtures/recordings/<session>/ (git
 npm run make-clips                 # -> public/ref/<id>.wav + manifest.json, with a review report
 ```
 
-Three rules hold this together:
+The word list comes from a two-column TSV (hanzi, pinyin) via
+`npm run import-words`; `id` and `tone` are derived, never hand-written.
+
+**`src/record/wordlist.ts` is a registry, not a generated file.** The importer
+merges into it: a word already there keeps its id, and only new words mint one.
+Ids of words dropped from the list stay reserved. This is load-bearing — `id` is
+the blob key, the clip filename and the manifest key, so an id that moves
+relabels audio that is already recorded. With 是/事/市 all `shì`, recomputing
+from list order turned `shi4b` from 事 into 试 the moment a word was inserted.
+
+Three more rules hold this together:
 
 1. **`src/dev/clipCut.ts` is the only cutter.** `make-ref-clips` (the four
    shipped `ma` clips) and `make-clips` (everything Jane records) both call it,

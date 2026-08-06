@@ -61,18 +61,15 @@ export function Recorder({ passcode }: Props) {
     indexRef.current = index;
   }, [index]);
 
-  // Lazy initialiser, not a ref assigned during render: the queue must outlive
-  // re-renders but must also not be rebuilt by one, which would drop pending
-  // uploads on the floor.
-  const [uploader] = useState(
-    () => new Uploader({ sessionId: progress.sessionId, passcode, onChange: setUploads }),
-  );
-
-  const done = new Set(progress.done);
-  const word: WordItem | undefined = WORDS[index];
-  const finished = index >= WORDS.length;
-
-  const markDone = useCallback((id: string) => {
+  /**
+   * Persisted progress follows the *server*, not the microphone.
+   *
+   * Resume reads this, so a word is only recorded here once the upload has been
+   * acknowledged. Marking it on capture meant a permanently failed upload was
+   * still remembered as done, and coming back to the page would skip a word
+   * that never reached storage — the one failure mode resume exists to prevent.
+   */
+  const markConfirmed = useCallback((id: string) => {
     setProgress((prev) => {
       if (prev.done.includes(id)) return prev;
       const next = { ...prev, done: [...prev.done, id] };
@@ -80,6 +77,31 @@ export function Recorder({ passcode }: Props) {
       return next;
     });
   }, []);
+
+  // Lazy initialiser, not a ref assigned during render: the queue must outlive
+  // re-renders but must also not be rebuilt by one, which would drop pending
+  // uploads on the floor.
+  const [uploader] = useState(
+    () =>
+      new Uploader({
+        sessionId: progress.sessionId,
+        passcode,
+        onChange: setUploads,
+        onConfirmed: markConfirmed,
+      }),
+  );
+
+  /** Captured this session but not yet acknowledged — drives the tick, not resume. */
+  const [captured, setCaptured] = useState<Set<string>>(new Set());
+  const markCaptured = useCallback((id: string) => {
+    setCaptured((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
+  }, []);
+
+  // Ticked = captured this session or confirmed on the server. She should not
+  // watch a word untick itself while the upload is in flight.
+  const done = new Set([...progress.done, ...captured]);
+  const word: WordItem | undefined = WORDS[index];
+  const finished = index >= WORDS.length;
 
   // Live meters, at 10Hz. Never per frame.
   useEffect(() => {
@@ -132,7 +154,7 @@ export function Recorder({ passcode }: Props) {
         current.id,
         new Blob([wav.slice() as Uint8Array<ArrayBuffer>], { type: "audio/wav" }),
       );
-      markDone(current.id);
+      markCaptured(current.id);
       setFeedback({ kind: "got-it" });
 
       // Advance after a beat, then listen again for the next word.
@@ -156,7 +178,7 @@ export function Recorder({ passcode }: Props) {
       setFrameSink(null);
       detector.disarm();
     };
-  }, [markDone, uploader]);
+  }, [markCaptured, uploader]);
 
   useEffect(() => () => stopMic(), []);
 

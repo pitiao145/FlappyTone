@@ -34,6 +34,11 @@ export interface UploaderOptions {
   sessionId: string;
   passcode: string;
   onChange: (state: UploadState) => void;
+  /**
+   * Called once per word, when the server has actually stored it. This is what
+   * resume is allowed to trust — see `Recorder.tsx`.
+   */
+  onConfirmed?: (id: string) => void;
   /** Injected in tests. */
   fetchImpl?: typeof fetch;
   sleep?: (ms: number) => Promise<void>;
@@ -126,6 +131,7 @@ export class Uploader {
       if (ok) {
         this.queue.shift();
         this.byId[job.id] = "done";
+        this.options.onConfirmed?.(job.id);
         this.emit();
         continue;
       }
