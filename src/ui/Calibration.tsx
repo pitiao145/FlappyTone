@@ -22,10 +22,29 @@ import type { PitchTrackerConfig } from "../pitch/types.ts";
 import { RANGE_SEMITONES } from "../pitch/math.ts";
 
 const QUIET_MS = 1000;
-/** Long enough for a couple of sentences — more voiced frames than three syllables. */
-const TALK_MS = 6000;
-/** One deliberate reach in each direction. Short: reaching is tiring. */
-const SWEEP_MS = 3000;
+
+/*
+ * The talk and sweep steps wait for the player instead of running a clock.
+ *
+ * They used to be a 6s and two 3s countdowns, which start the moment the screen
+ * appears — so the timer is already draining while the instruction is still
+ * being read, and someone who takes a breath first gets measured on whatever
+ * they managed in the remainder. These targets are amounts of *voiced* audio:
+ * the meter fills only while you are actually making a sound, and the step ends
+ * when there is enough of it. Silence costs nothing but time.
+ */
+
+/** Voiced speech needed to site the centre of someone's range. */
+const TALK_VOICED_MS = 2500;
+/** One deliberate reach. Short, because reaching is tiring. */
+const SWEEP_VOICED_MS = 900;
+/**
+ * Gap between two voiced frames that still counts as continuous phonation.
+ * Anything longer is a pause, and pauses are not part of the measurement.
+ */
+const VOICED_GAP_MS = 60;
+/** Silence this long, with nothing heard yet, earns a nudge — never a failure. */
+const NUDGE_AFTER_MS = 7000;
 
 /** How long a "Got it." sits on screen before the next instruction. */
 const CONFIRM_MS = 900;
@@ -50,6 +69,29 @@ interface Props {
 }
 
 /**
+ * Accumulates how much *voiced* audio has been heard, in wall-clock ms.
+ *
+ * Frame timestamps rather than a frame count, because the analysis hop is the
+ * audio layer's business and this module should not have to know it. A gap
+ * longer than VOICED_GAP_MS is a pause between utterances and is not counted,
+ * so "talk for a couple of seconds" cannot be satisfied by two seconds of
+ * saying nothing with a cough at each end.
+ */
+function makeVoicedClock() {
+  let total = 0;
+  let last: number | null = null;
+  return {
+    tick(now: number): void {
+      if (last !== null) total += Math.min(now - last, VOICED_GAP_MS);
+      last = now;
+    },
+    get ms(): number {
+      return total;
+    },
+  };
+}
+
+/**
  * Calibration: quiet → talk normally → reach low → reach high → you're all set.
  *
  * This replaced PRD §5.4's "say **ma** three times", which asked a beginner to
@@ -62,7 +104,9 @@ interface Props {
  * Two rules govern the copy, and they are why this reads shorter than it used
  * to. **Each step is one instruction plus one example to imitate** — "as low as
  * you comfortably can" is an instruction to interpret, "like a sleepy ohhhh" is
- * a thing to copy. And **nothing is explained**: no Hz, no semitones, no
+ * a thing to copy. **Nothing runs on a clock** except the one second of silence
+ * — every other step waits for the player and ends when it has heard enough,
+ * so reading the instruction costs nothing. And **nothing is explained**: no Hz, no semitones, no
  * account of what is being measured. A first-time player has no basis to judge
  * a sensitivity slider, so they are no longer shown one; the live preview and
  * its numbers moved to Settings → Fine-tune (`startAt="preview"`), for the
@@ -145,7 +189,8 @@ export function Calibration({
   };
 
   /** Acknowledge, then move on. The effect below owns the timing. */
-  const advance = (word: string, next: Step): void => setConfirm({ word, next });
+  const advance = (word: string, next: Step): void =>
+    setConfirm({ word, next });
 
   useEffect(() => {
     if (!confirm) return;
@@ -167,7 +212,8 @@ export function Calibration({
       setFrameSink((frame) => rms.push(rmsOf(frame)));
       const started = performance.now();
       const ticker = setInterval(
-        () => setProgress(Math.min(1, (performance.now() - started) / QUIET_MS)),
+        () =>
+          setProgress(Math.min(1, (performance.now() - started) / QUIET_MS)),
         50,
       );
       const timer = setTimeout(() => {
@@ -184,20 +230,28 @@ export function Calibration({
 
     if (step === "talk") {
       const f0s: number[] = [];
+      const heard = makeVoicedClock();
       let tracker: PitchTracker | null = null;
       setFrameSink((frame, sampleRate) => {
         tracker ??= new PitchTracker(
           noiseFloor === null ? { sampleRate } : { sampleRate, noiseFloor },
         );
         const p = tracker.push(frame);
-        if (p.voiced && p.f0 !== null) f0s.push(p.f0);
+        if (p.voiced && p.f0 !== null) {
+          f0s.push(p.f0);
+          heard.tick(performance.now());
+        }
       });
       const started = performance.now();
-      const ticker = setInterval(
-        () => setProgress(Math.min(1, (performance.now() - started) / TALK_MS)),
-        50,
-      );
-      const timer = setTimeout(() => {
+      // 20Hz: the meter reacts to the voice, and the step ends when the meter
+      // is full. No clock is running against the player.
+      const ticker = setInterval(() => {
+        setProgress(Math.min(1, heard.ms / TALK_VOICED_MS));
+        if (heard.ms === 0 && performance.now() - started > NUDGE_AFTER_MS) {
+          setHint("Take your time — I'm still listening.");
+        }
+        if (heard.ms < TALK_VOICED_MS) return;
+        clearInterval(ticker);
         setProgress(0);
         const centre = computeF0Center(f0s);
         if (centre === null) {
@@ -211,9 +265,8 @@ export function Calibration({
         highRef.current = [];
         lowRef.current = [];
         advance("Got it.", "low");
-      }, TALK_MS);
+      }, 50);
       return () => {
-        clearTimeout(timer);
         clearInterval(ticker);
         setFrameSink(null);
       };
@@ -228,11 +281,13 @@ export function Calibration({
       configureTracker(cfg);
       const into = step === "high" ? highRef : lowRef;
       into.current = [];
+      const heard = makeVoicedClock();
       setFrameSink((frame, sampleRate) => {
         handleFrame(frame, sampleRate);
         const latest = getLatestState();
         if (latest.voiced && latest.semitones !== null) {
           into.current.push(latest.semitones);
+          heard.tick(performance.now());
         }
       });
       // The live dot runs during the sweeps: seeing yourself reach is what
@@ -241,15 +296,19 @@ export function Calibration({
         ? startLoop(canvasRef.current, canvasWidth, canvasHeight)
         : null;
       const started = performance.now();
-      const ticker = setInterval(
-        () => setProgress(Math.min(1, (performance.now() - started) / SWEEP_MS)),
-        50,
-      );
-      const timer = setTimeout(() => {
+      const ticker = setInterval(() => {
+        setProgress(Math.min(1, heard.ms / SWEEP_VOICED_MS));
+        if (heard.ms === 0 && performance.now() - started > NUDGE_AFTER_MS) {
+          setHint("Whenever you're ready — I'm still listening.");
+        }
+        if (heard.ms < SWEEP_VOICED_MS) return;
+        clearInterval(ticker);
         setProgress(0);
         // A sweep we could not hear is asked for again rather than folded into
         // the measurement — a range sized around silence fits nobody, and the
-        // player would meet it as a board that does not respond.
+        // player would meet it as a board that does not respond. Reaching the
+        // voiced target makes this near-impossible now; it stays as the floor
+        // the range maths actually needs.
         if (into.current.length < MIN_SWEEP_SAMPLES) {
           setFrameSink(null);
           setHint("Didn't quite catch that — one more go?");
@@ -265,9 +324,8 @@ export function Calibration({
             RANGE_SEMITONES,
         );
         advance("Perfect.", "done");
-      }, SWEEP_MS);
+      }, 50);
       return () => {
-        clearTimeout(timer);
         clearInterval(ticker);
         stopLoop?.();
         setFrameSink(null);
@@ -309,7 +367,16 @@ export function Calibration({
     // `range` is deliberately excluded: the slider retunes the live tracker in
     // place (setRangeSemitones) rather than restarting the preview loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, attempt, paused, confirm, noiseFloor, f0Center, canvasWidth, canvasHeight]);
+  }, [
+    step,
+    attempt,
+    paused,
+    confirm,
+    noiseFloor,
+    f0Center,
+    canvasWidth,
+    canvasHeight,
+  ]);
 
   const settingsNow = (): CalibrationSettings | null =>
     f0Center === null || noiseFloor === null
@@ -358,6 +425,9 @@ export function Calibration({
             <li>What you had for breakfast</li>
             <li>How you got here today</li>
           </ul>
+          <p className="note">
+            Start whenever you like — the bar fills while I can hear you.
+          </p>
           {hint ? (
             <>
               <p className="prompt">{hint}</p>
@@ -389,6 +459,9 @@ export function Calibration({
             {step === "low"
               ? "Like a sleepy “ohhhh”. Hold it. Don't strain."
               : "Like a surprised “ooh?”. Hold it. Don't strain."}
+          </p>
+          <p className="note">
+            Take your time — the bar fills while you're making the sound.
           </p>
           {hint ? (
             <>
