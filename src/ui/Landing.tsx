@@ -7,6 +7,7 @@ import type { Tone } from "../game/gates.ts";
 import { ContourSpark } from "./ContourSpark.tsx";
 import { DemoLoop } from "./DemoLoop.tsx";
 import { micErrorCopy } from "./micErrors.ts";
+import { Nav } from "./Nav.tsx";
 
 const TONES: Tone[] = [1, 2, 3, 4];
 
@@ -52,25 +53,9 @@ export function Landing({ onPlay, onVisualiser, onMenu }: Props) {
     }
   };
 
-  const navItems = brand.sections.filter((s) => s.inNav);
-
   return (
     <div className="landing">
-      <nav className="landing-nav">
-        <a className="wordmark" href="#top">
-          {brand.name}
-        </a>
-        <div className="landing-nav-links">
-          {navItems.map((s) => (
-            <a key={s.id} href={`#${s.id}`}>
-              {s.navLabel ?? s.title}
-            </a>
-          ))}
-        </div>
-        <button className="primary nav-play" disabled={busy} onClick={go(onPlay)}>
-          Play
-        </button>
-      </nav>
+      <Nav variant="landing" onNavigate={() => {}} onPlay={go(onPlay)} disabled={busy} />
 
       <header id="top" className="landing-hero">
         <h1>{brand.name}</h1>

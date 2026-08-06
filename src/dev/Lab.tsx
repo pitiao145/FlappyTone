@@ -123,6 +123,9 @@ export function Lab({ onBack }: Props) {
                   setRunning(false);
                 }}
                 onQuit={stop}
+                // The Lab is not the product and has no landing page to
+                // return to; leaving the throwaway run is the same action.
+                onLanding={stop}
               />
             ) : (
               <div className="lab-idle">

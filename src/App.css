@@ -1230,3 +1230,61 @@
 .prompts {
   align-self: center;
 }
+
+/* ------------------------------------------------------- nav, app variant */
+
+/* Same bar as the landing page's, but the links are buttons: inside the app
+   there is no page under them to anchor to, so they change screen and scroll
+   on arrival. Narrower, because it sits over a 420px board. */
+.nav-app {
+  width: 100%;
+  max-width: 420px;
+  margin-inline: auto;
+  margin-bottom: var(--space-2);
+  padding: 6px 0;
+}
+
+.nav-app .wordmark,
+.nav-link {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+}
+
+.nav-app .wordmark {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  font-size: var(--text-sm);
+}
+
+.nav-link {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.nav-link:hover {
+  color: var(--ink);
+}
+
+/* Quit and "home page" sit together at the foot of the pause menu: both leave
+   the run, and neither should look like the way back into it. */
+.pause-exits {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.pause-menu .link {
+  border: none;
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 12px;
+  padding: 4px;
+  cursor: pointer;
+}

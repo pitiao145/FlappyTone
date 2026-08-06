@@ -61,6 +61,8 @@ interface Props {
   canvasHeight: number;
   onOver: (snapshot: RunSnapshot) => void;
   onQuit: () => void;
+  /** Leave the run for the landing page. Offered only from the pause menu. */
+  onLanding: () => void;
 }
 
 export function Game({
@@ -70,6 +72,7 @@ export function Game({
   canvasHeight,
   onOver,
   onQuit,
+  onLanding,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hud, setHud] = useState<RunSnapshot | null>(null);
@@ -435,9 +438,17 @@ export function Game({
               onCueStyle={(style) => runRef.current?.setCueStyle(style)}
             />
 
-            <button className="mic-stop" onClick={onQuit} title="End the run">
-              ■ quit
-            </button>
+            <div className="pause-exits">
+              <button className="mic-stop" onClick={onQuit} title="End the run">
+                ■ quit
+              </button>
+              {/* The nav bar is hidden during a run, so this is the way back
+                  to the site from inside one. It ends the run — there is
+                  nothing to come back to. */}
+              <button className="link" onClick={onLanding}>
+                home page
+              </button>
+            </div>
           </div>
         )}
       </div>

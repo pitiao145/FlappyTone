@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { MicError } from "./audio/mic";
 import { ensureMic, stopMic } from "./audio/session";
 import { GateLogPanel } from "./dev/GateLogPanel";
@@ -8,6 +8,7 @@ import type { RunStats } from "./game/scoring";
 import { Calibration } from "./ui/Calibration";
 import { Game } from "./ui/Game";
 import { Landing } from "./ui/Landing";
+import { Nav } from "./ui/Nav";
 import { GameOver } from "./ui/GameOver";
 import { HowTo } from "./ui/HowTo";
 import { Settings } from "./ui/Settings";
@@ -86,6 +87,24 @@ export default function App() {
    */
   const navRef = useRef(0);
 
+  /**
+   * Section to scroll to once the landing page is on screen. The nav exists on
+   * the app's screens too, but a link there has to change screen *and* land on
+   * the right section — there is no page under it to anchor to.
+   */
+  const pendingSectionRef = useRef<string | null>(null);
+
+  const goLanding = useCallback((sectionId: string) => {
+    navRef.current += 1;
+    // Leaving for the marketing page means leaving the game: nothing on the
+    // landing page listens, and a mic left open there is a recording light
+    // nobody can explain.
+    stopMic();
+    setRetryBusy(false);
+    pendingSectionRef.current = sectionId;
+    setScreen("landing");
+  }, []);
+
   const goHome = useCallback(() => {
     navRef.current += 1;
     stopMic();
@@ -162,9 +181,35 @@ export default function App() {
     }
   }, []);
 
+  // Runs after the landing page has painted, so the target exists. "top" is
+  // the hero, which is where a plain jump-to-top belongs anyway.
+  useEffect(() => {
+    if (screen !== "landing") return;
+    const id = pendingSectionRef.current;
+    pendingSectionRef.current = null;
+    if (!id) return;
+    document.getElementById(id)?.scrollIntoView({ block: "start" });
+  }, [screen]);
+
+  /**
+   * Screens that carry the nav. Deliberately not the ones you are *inside* —
+   * a run, a calibration, the visualiser — where a site nav would compete with
+   * the thing the screen exists for, and where a stray tap would abandon work
+   * in progress. The pause menu is the way out of a run.
+   */
+  const showNav =
+    screen === "title" ||
+    screen === "howto" ||
+    screen === "settings" ||
+    screen === "gameover";
+
   return (
     <div className="app">
       <div className="frame">
+        {/* No Play button here: offering it to someone already inside the game
+            is the one link on the bar that means nothing where they are. */}
+        {showNav && <Nav variant="app" onNavigate={goLanding} />}
+
         {/* Quitting a run lands here, so the log has to be readable here too. */}
         {screen === "title" && <GateLogPanel key="gatelog" />}
 
@@ -251,6 +296,7 @@ export default function App() {
             canvasHeight={CANVAS_H}
             onOver={onRunOver}
             onQuit={goHome}
+            onLanding={() => goLanding("top")}
           />
         )}
 
