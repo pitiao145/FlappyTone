@@ -92,12 +92,21 @@ export function Calibration({
     existing?.rangeSemitones ?? RANGE_SEMITONES,
   );
   /**
-   * A one-word acknowledgement between steps. The player is never told what is
-   * being measured — Hz and semitones mean nothing to someone here to learn a
-   * tone, and explaining them turns a 15-second setup into a lecture. They get
-   * confirmation that the last thing worked, and nothing else.
+   * A one-word acknowledgement, and the step it leads to.
+   *
+   * The player is never told what is being measured — Hz and semitones mean
+   * nothing to someone here to learn a tone, and explaining them turns a
+   * 15-second setup into a lecture. They get confirmation that the last thing
+   * worked, and nothing else.
+   *
+   * It is *state*, with its own effect below, rather than a timer owned by the
+   * step effect. The step effect depends on noiseFloor and f0Center, so the
+   * very act of recording a measurement re-ran it — and its cleanup cancelled
+   * the pending timer, leaving the flow stuck on "Thanks." for good.
    */
-  const [confirm, setConfirm] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<{ word: string; next: Step } | null>(
+    null,
+  );
   /** Semitones captured during each sweep, relative to the measured centre. */
   const highRef = useRef<number[]>([]);
   const lowRef = useRef<number[]>([]);
@@ -128,26 +137,30 @@ export function Calibration({
     setPaused(false);
     setProgress(0);
     setHint(null);
+    // Backgrounding mid-acknowledgement abandons the step it was going to
+    // advance to; resuming re-runs the step, so the word must not linger.
+    setConfirm(null);
     // Bumping the attempt re-runs the current step's effect from scratch.
     setAttempt((a) => a + 1);
   };
 
-  /**
-   * Acknowledge, then move on. The pending timer is returned so the step's
-   * cleanup can cancel it — leaving the flow mid-acknowledgement must not
-   * advance a screen the player is no longer on.
-   */
-  const advance = (word: string, next: Step): number => {
-    setConfirm(word);
-    return window.setTimeout(() => {
+  /** Acknowledge, then move on. The effect below owns the timing. */
+  const advance = (word: string, next: Step): void => setConfirm({ word, next });
+
+  useEffect(() => {
+    if (!confirm) return;
+    const id = setTimeout(() => {
+      setStep(confirm.next);
       setConfirm(null);
-      setStep(next);
     }, CONFIRM_MS);
-  };
+    return () => clearTimeout(id);
+  }, [confirm]);
 
   // Step machine. Each step installs its own frame sink and tears it down.
   useEffect(() => {
-    if (paused) return;
+    // Nothing is captured during the acknowledgement — without this the
+    // measurement that produced it would immediately restart underneath.
+    if (paused || confirm) return;
 
     if (step === "quiet") {
       const rms: number[] = [];
@@ -157,15 +170,13 @@ export function Calibration({
         () => setProgress(Math.min(1, (performance.now() - started) / QUIET_MS)),
         50,
       );
-      let confirmTimer = 0;
       const timer = setTimeout(() => {
         setNoiseFloor(computeNoiseFloor(rms));
         setProgress(0);
-        confirmTimer = advance("Thanks.", "talk");
+        advance("Thanks.", "talk");
       }, QUIET_MS);
       return () => {
         clearTimeout(timer);
-        clearTimeout(confirmTimer);
         clearInterval(ticker);
         setFrameSink(null);
       };
@@ -186,7 +197,6 @@ export function Calibration({
         () => setProgress(Math.min(1, (performance.now() - started) / TALK_MS)),
         50,
       );
-      let confirmTimer = 0;
       const timer = setTimeout(() => {
         setProgress(0);
         const centre = computeF0Center(f0s);
@@ -200,11 +210,10 @@ export function Calibration({
         setF0Center(centre);
         highRef.current = [];
         lowRef.current = [];
-        confirmTimer = advance("Got it.", "low");
+        advance("Got it.", "low");
       }, TALK_MS);
       return () => {
         clearTimeout(timer);
-        clearTimeout(confirmTimer);
         clearInterval(ticker);
         setFrameSink(null);
       };
@@ -236,7 +245,6 @@ export function Calibration({
         () => setProgress(Math.min(1, (performance.now() - started) / SWEEP_MS)),
         50,
       );
-      let confirmTimer = 0;
       const timer = setTimeout(() => {
         setProgress(0);
         // A sweep we could not hear is asked for again rather than folded into
@@ -249,18 +257,17 @@ export function Calibration({
         }
         setHint(null);
         if (step === "low") {
-          confirmTimer = advance("Nice.", "high");
+          advance("Nice.", "high");
           return;
         }
         setRange(
           computeRangeFromExtremes(highRef.current, lowRef.current) ??
             RANGE_SEMITONES,
         );
-        confirmTimer = advance("Perfect.", "done");
+        advance("Perfect.", "done");
       }, SWEEP_MS);
       return () => {
         clearTimeout(timer);
-        clearTimeout(confirmTimer);
         clearInterval(ticker);
         stopLoop?.();
         setFrameSink(null);
@@ -302,7 +309,7 @@ export function Calibration({
     // `range` is deliberately excluded: the slider retunes the live tracker in
     // place (setRangeSemitones) rather than restarting the preview loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, attempt, paused, noiseFloor, f0Center, canvasWidth, canvasHeight]);
+  }, [step, attempt, paused, confirm, noiseFloor, f0Center, canvasWidth, canvasHeight]);
 
   const settingsNow = (): CalibrationSettings | null =>
     f0Center === null || noiseFloor === null
@@ -333,7 +340,7 @@ export function Calibration({
     <div className="screen calibrate-screen">
       <h2>Calibration</h2>
 
-      {confirm && <p className="big confirm">{confirm}</p>}
+      {confirm && <p className="big confirm">{confirm.word}</p>}
 
       {step === "quiet" && !confirm && (
         <>
