@@ -339,6 +339,19 @@ export function Game({
             {mode === "game" && (hud?.comboMult ?? 1) > 1 && (
               <span className="combo">×{hud?.comboMult}</span>
             )}
+            {/* In the row rather than absolutely positioned over it: floated
+                top-right it sat on top of the hearts, which are also
+                right-aligned. */}
+            {!waiting && !paused && (
+              <button
+                className="pause-button"
+                onClick={() => pauseRef.current()}
+                title="Pause"
+                aria-label="Pause"
+              >
+                ‖
+              </button>
+            )}
           </div>
 
           {info && displayTone !== null && (
@@ -385,17 +398,6 @@ export function Game({
             </div>
           )}
         </div>
-
-        {!waiting && !paused && (
-          <button
-            className="pause-button"
-            onClick={() => pauseRef.current()}
-            title="Pause"
-            aria-label="Pause"
-          >
-            ‖
-          </button>
-        )}
 
         {waiting && (
           <div className="overlay tutorial-card">

@@ -1115,27 +1115,52 @@
 
 /* The one always-visible control during a run. Replaces the old ■ quit
    button, which made ending the run the only thing you could do. */
+/* Sits in .hud-top's flow, after the hearts. It was absolutely positioned at
+   the top right, which is exactly where the hearts are — three hearts and the
+   button occupied the same corner and neither read. */
 .pause-button {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 34px;
-  height: 34px;
-  font-size: 14px;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
   line-height: 1;
   border-radius: var(--radius-pill);
   border: 1px solid var(--line);
   background: rgba(var(--surface-rgb), 0.6);
   color: var(--ink);
   cursor: pointer;
+  /* .hud is pointer-events: none so the canvas stays clickable; the one
+     control inside it has to opt back in. */
+  pointer-events: auto;
 }
 
+/* Near-opaque, unlike the pause overlay it grew out of. That one showed a
+   single line of text over a frozen game and 0.75 was atmospheric; this one is
+   a menu with controls in it, and the corridor showing through made the
+   segmented buttons hard to read. */
 .pause-menu {
   cursor: default;
   justify-content: flex-start;
   overflow-y: auto;
   gap: var(--space-3);
   padding: var(--space-4);
+  background: rgba(var(--surface-rgb), 0.97);
+}
+
+/* The quit button is the one destructive action here — it must not be the
+   most prominent thing on the screen, which the blanket .overlay button rule
+   below would otherwise make it. */
+.pause-menu .mic-stop {
+  position: static;
+  align-self: center;
+  margin-top: var(--space-2);
+  background: transparent;
+  border: 1px solid rgba(var(--danger-rgb), 0.4);
+  color: var(--danger);
+  font-size: 12px;
+  padding: 6px 12px;
 }
 
 .pause-title {
@@ -1168,11 +1193,28 @@
   color: var(--ink-dim);
 }
 
-/* The pause menu's segmented controls are narrower than the settings screen's
-   and sit on a dark overlay, so they need their own weight. */
+/*
+ * The pause menu's segmented controls, restated in full.
+ *
+ * `.overlay button` fills every button in an overlay with the accent — which
+ * inverted these: the *unselected* options came out solid blue while the
+ * selected one, which sets its own faint tint, read as the disabled one. The
+ * selected option is the filled one; everything else is an outline.
+ */
 .pause-options .choice-option {
-  padding: 6px 8px;
+  padding: 7px 8px;
   font-size: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-muted);
+}
+
+.pause-options .choice-option.active {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
 }
 
 /* ------------------------------------------- calibration acknowledgement */
