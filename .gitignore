@@ -29,3 +29,4 @@ fixtures/recordings/
 *.njsproj
 *.sln
 *.sw?
+.env*.local
