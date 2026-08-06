@@ -27,17 +27,30 @@ const TALK_MS = 6000;
 /** One deliberate reach in each direction. Short: reaching is tiring. */
 const SWEEP_MS = 3000;
 
-type Step = "quiet" | "talk" | "high" | "low" | "preview";
+/** How long a "Got it." sits on screen before the next instruction. */
+const CONFIRM_MS = 900;
+/** Below this many voiced frames a sweep tells us nothing — ask for another go. */
+const MIN_SWEEP_SAMPLES = 10;
+
+type Step = "quiet" | "talk" | "low" | "high" | "done" | "preview";
 
 interface Props {
   canvasWidth: number;
   canvasHeight: number;
   onDone: (settings: CalibrationSettings) => void;
   onCancel: () => void;
+  /**
+   * Where to start. "preview" is Settings' Fine-tune: it skips the capture and
+   * goes straight to the live dot and the sensitivity slider, seeded from
+   * `existing`. Omit for the first-run flow.
+   */
+  startAt?: Step;
+  /** The saved calibration, required when `startAt` is "preview". */
+  existing?: CalibrationSettings | null;
 }
 
 /**
- * Calibration: quiet → talk normally → reach high → reach low → live preview.
+ * Calibration: quiet → talk normally → reach low → reach high → you're all set.
  *
  * This replaced PRD §5.4's "say **ma** three times", which asked a beginner to
  * perform a syllable from the language they are here to learn, and inferred
@@ -45,17 +58,46 @@ interface Props {
  * contain. Normal speech gives a better f0 centre — more voiced frames, and
  * the register they actually talk in — and asking them to reach, once in each
  * direction, *measures* the range instead of guessing it.
+ *
+ * Two rules govern the copy, and they are why this reads shorter than it used
+ * to. **Each step is one instruction plus one example to imitate** — "as low as
+ * you comfortably can" is an instruction to interpret, "like a sleepy ohhhh" is
+ * a thing to copy. And **nothing is explained**: no Hz, no semitones, no
+ * account of what is being measured. A first-time player has no basis to judge
+ * a sensitivity slider, so they are no longer shown one; the live preview and
+ * its numbers moved to Settings → Fine-tune (`startAt="preview"`), for the
+ * people who go looking.
  */
-export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Props) {
-  const [step, setStep] = useState<Step>("quiet");
+export function Calibration({
+  canvasWidth,
+  canvasHeight,
+  onDone,
+  onCancel,
+  startAt = "quiet",
+  existing = null,
+}: Props) {
+  const [step, setStep] = useState<Step>(startAt);
   /** Bumped to retry a capture step without leaving it. */
   const [attempt, setAttempt] = useState(0);
   const [hint, setHint] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [noiseFloor, setNoiseFloor] = useState<number | null>(null);
-  const [f0Center, setF0Center] = useState<number | null>(null);
-  const [range, setRange] = useState(RANGE_SEMITONES);
+  const [noiseFloor, setNoiseFloor] = useState<number | null>(
+    existing?.noiseFloor ?? null,
+  );
+  const [f0Center, setF0Center] = useState<number | null>(
+    existing?.f0Center ?? null,
+  );
+  const [range, setRange] = useState(
+    existing?.rangeSemitones ?? RANGE_SEMITONES,
+  );
+  /**
+   * A one-word acknowledgement between steps. The player is never told what is
+   * being measured — Hz and semitones mean nothing to someone here to learn a
+   * tone, and explaining them turns a 15-second setup into a lecture. They get
+   * confirmation that the last thing worked, and nothing else.
+   */
+  const [confirm, setConfirm] = useState<string | null>(null);
   /** Semitones captured during each sweep, relative to the measured centre. */
   const highRef = useRef<number[]>([]);
   const lowRef = useRef<number[]>([]);
@@ -90,6 +132,19 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
     setAttempt((a) => a + 1);
   };
 
+  /**
+   * Acknowledge, then move on. The pending timer is returned so the step's
+   * cleanup can cancel it — leaving the flow mid-acknowledgement must not
+   * advance a screen the player is no longer on.
+   */
+  const advance = (word: string, next: Step): number => {
+    setConfirm(word);
+    return window.setTimeout(() => {
+      setConfirm(null);
+      setStep(next);
+    }, CONFIRM_MS);
+  };
+
   // Step machine. Each step installs its own frame sink and tears it down.
   useEffect(() => {
     if (paused) return;
@@ -102,13 +157,15 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
         () => setProgress(Math.min(1, (performance.now() - started) / QUIET_MS)),
         50,
       );
+      let confirmTimer = 0;
       const timer = setTimeout(() => {
         setNoiseFloor(computeNoiseFloor(rms));
         setProgress(0);
-        setStep("talk");
+        confirmTimer = advance("Thanks.", "talk");
       }, QUIET_MS);
       return () => {
         clearTimeout(timer);
+        clearTimeout(confirmTimer);
         clearInterval(ticker);
         setFrameSink(null);
       };
@@ -129,6 +186,7 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
         () => setProgress(Math.min(1, (performance.now() - started) / TALK_MS)),
         50,
       );
+      let confirmTimer = 0;
       const timer = setTimeout(() => {
         setProgress(0);
         const centre = computeF0Center(f0s);
@@ -142,16 +200,17 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
         setF0Center(centre);
         highRef.current = [];
         lowRef.current = [];
-        setStep("high");
+        confirmTimer = advance("Got it.", "low");
       }, TALK_MS);
       return () => {
         clearTimeout(timer);
+        clearTimeout(confirmTimer);
         clearInterval(ticker);
         setFrameSink(null);
       };
     }
 
-    if (step === "high" || step === "low") {
+    if (step === "low" || step === "high") {
       // Semitones are relative to the centre measured a moment ago, so the two
       // sweeps and the preview are all on one scale.
       const cfg: Partial<PitchTrackerConfig> = {};
@@ -177,25 +236,40 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
         () => setProgress(Math.min(1, (performance.now() - started) / SWEEP_MS)),
         50,
       );
+      let confirmTimer = 0;
       const timer = setTimeout(() => {
         setProgress(0);
-        if (step === "high") {
-          setStep("low");
+        // A sweep we could not hear is asked for again rather than folded into
+        // the measurement — a range sized around silence fits nobody, and the
+        // player would meet it as a board that does not respond.
+        if (into.current.length < MIN_SWEEP_SAMPLES) {
+          setFrameSink(null);
+          setHint("Didn't quite catch that — one more go?");
+          return;
+        }
+        setHint(null);
+        if (step === "low") {
+          confirmTimer = advance("Nice.", "high");
           return;
         }
         setRange(
           computeRangeFromExtremes(highRef.current, lowRef.current) ??
             RANGE_SEMITONES,
         );
-        setStep("preview");
+        confirmTimer = advance("Perfect.", "done");
       }, SWEEP_MS);
       return () => {
         clearTimeout(timer);
+        clearTimeout(confirmTimer);
         clearInterval(ticker);
         stopLoop?.();
         setFrameSink(null);
       };
     }
+
+    // "done" captures nothing: the numbers are already in state and saved by
+    // the effect below. Nothing to install, nothing to tear down.
+    if (step === "done") return;
 
     // preview: the Step-0 free-play dot, driven by the tracker we just calibrated.
     const cfg: Partial<PitchTrackerConfig> = { rangeSemitones: range };
@@ -230,37 +304,84 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, attempt, paused, noiseFloor, f0Center, canvasWidth, canvasHeight]);
 
+  const settingsNow = (): CalibrationSettings | null =>
+    f0Center === null || noiseFloor === null
+      ? null
+      : { f0Center, noiseFloor, rangeSemitones: range };
+
   const save = () => {
-    if (f0Center === null || noiseFloor === null) return;
-    const settings: CalibrationSettings = {
-      f0Center,
-      noiseFloor,
-      rangeSemitones: range,
-    };
-    saveSettings(settings);
-    onDone(settings);
+    const s = settingsNow();
+    if (!s) return;
+    saveSettings(s);
+    onDone(s);
   };
 
-  const sweeping = step === "high" || step === "low";
+  // Persist on *arrival* at the last card rather than on its button: someone
+  // who closes the tab there has still done the work, and making them redo it
+  // because they never pressed a button would be the app's fault, not theirs.
+  useEffect(() => {
+    if (step !== "done") return;
+    const s = settingsNow();
+    if (s) saveSettings(s);
+    // settingsNow closes over the three values in the deps below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, f0Center, noiseFloor, range]);
+
+  const sweeping = step === "low" || step === "high";
 
   return (
     <div className="screen calibrate-screen">
       <h2>Calibration</h2>
 
-      {step === "quiet" && (
+      {confirm && <p className="big confirm">{confirm}</p>}
+
+      {step === "quiet" && !confirm && (
         <>
-          <p className="big">Give me a second of quiet…</p>
+          <p className="big">One second of quiet, please.</p>
           <Meter value={progress} />
-          <p className="note">Measuring how quiet your room is.</p>
         </>
       )}
 
-      {step === "talk" && (
+      {step === "talk" && !confirm && (
         <>
-          <p className="big">Just talk, normally</p>
+          <p className="big">Now just talk, in your normal voice.</p>
+          {/* Concrete options, because "say something" is where people freeze. */}
+          <ul className="facts prompts">
+            <li>Count to ten</li>
+            <li>What you had for breakfast</li>
+            <li>How you got here today</li>
+          </ul>
+          {hint ? (
+            <>
+              <p className="prompt">{hint}</p>
+              <button
+                className="primary"
+                onClick={() => {
+                  setHint(null);
+                  setAttempt((a) => a + 1);
+                }}
+              >
+                Try again
+              </button>
+            </>
+          ) : (
+            <Meter value={progress} />
+          )}
+        </>
+      )}
+
+      {sweeping && !confirm && (
+        <>
+          <p className="big">
+            {step === "low"
+              ? "Now go as low as you comfortably can."
+              : "And now as high as you comfortably can."}
+          </p>
+          {/* An example to imitate beats an instruction to interpret. */}
           <p className="note">
-            Say what you had for breakfast, or count to ten — anything in your
-            everyday voice. No singing.
+            {step === "low"
+              ? "Like a sleepy “ohhhh”. Hold it. Don't strain."
+              : "Like a surprised “ooh?”. Hold it. Don't strain."}
           </p>
           {hint ? (
             <>
@@ -281,21 +402,23 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
         </>
       )}
 
+      {/* Outside the block above so the acknowledgement between the two sweeps
+          does not unmount the canvas the live dot is drawing into. */}
       {sweeping && (
+        <div className="stage">
+          <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} />
+        </div>
+      )}
+
+      {step === "done" && (
         <>
-          <p className="big">
-            {step === "high"
-              ? "Now go high — say “ahh” as high as is comfortable"
-              : "And now low — as low as is comfortable"}
-          </p>
+          <p className="big">You're all set.</p>
           <p className="note">
-            Don't strain. Watch the dot: this is finding the top and bottom of
-            your board.
+            That's your voice mapped. You can change it any time in Settings.
           </p>
-          <Meter value={progress} />
-          <div className="stage">
-            <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} />
-          </div>
+          <button className="primary" onClick={save}>
+            Start playing
+          </button>
         </>
       )}
 
@@ -340,14 +463,16 @@ export function Calibration({ canvasWidth, canvasHeight, onDone, onCancel }: Pro
           <button className="primary" onClick={save}>
             Feels right
           </button>
-          <button
-            onClick={() => {
-              setAttempt((a) => a + 1);
-              setStep("talk");
-            }}
-          >
-            Start over
-          </button>
+          {startAt !== "preview" && (
+            <button
+              onClick={() => {
+                setAttempt((a) => a + 1);
+                setStep("talk");
+              }}
+            >
+              Start over
+            </button>
+          )}
         </>
       )}
 

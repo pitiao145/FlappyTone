@@ -11,6 +11,7 @@
 import { corridorChaoAt, type Tone } from "../game/gates.ts";
 import type { Contour } from "../game/contours.ts";
 import { BACKDROP, chaoToY, drawChaoGrid, drawDot } from "./scene.ts";
+import { rgba } from "./palette.ts";
 
 export interface VisualiserScene {
   /** Target contour ghosted across the panel, or null for free play. */
@@ -86,7 +87,7 @@ function drawTarget(
   if (tone === null) return;
   ctx.save();
   ctx.setLineDash([6, 8]);
-  ctx.strokeStyle = "rgba(235, 208, 170, 0.55)";
+  ctx.strokeStyle = rgba("demo", 0.55);
   ctx.lineWidth = 2;
   ctx.beginPath();
   for (let i = 0; i <= TARGET_STEPS; i++) {
@@ -113,7 +114,7 @@ function drawContour(
   const pts = contour.points;
   if (pts.length < 2) return;
   ctx.save();
-  ctx.strokeStyle = `rgba(96, 205, 255, ${alpha})`;
+  ctx.strokeStyle = rgba("accent", alpha);
   ctx.lineWidth = lineWidth;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";

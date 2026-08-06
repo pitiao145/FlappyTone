@@ -1,0 +1,101 @@
+import { useState } from "react";
+import {
+  CORRIDOR_WIDTHS,
+  PACES,
+  type CorridorWidth,
+  type Pace,
+} from "../game/gates.ts";
+import type { CueStyle } from "../game/run.ts";
+import {
+  loadCorridorWidth,
+  loadCueStyle,
+  loadPace,
+  saveCorridorWidth,
+  saveCueStyle,
+  savePace,
+} from "../game/settings.ts";
+import { Choice } from "./Choice.tsx";
+
+const PACE_HELP: Record<Pace, string> = {
+  relaxed: "Slowest scroll, longest breather between gates.",
+  normal: "A little calmer than the original tuning.",
+  fast: "The original pace. Gates come quickly.",
+};
+
+const WIDTH_HELP: Record<CorridorWidth, string> = {
+  narrow: "Demanding. Your pitch has to sit close to the line.",
+  normal: "The tuned default.",
+  wide: "Forgiving on pitch. Good while a tone is still new.",
+};
+
+interface Props {
+  /**
+   * Applies the demo choice to the run in flight. Speed and width have no
+   * live equivalent — both would move the world under a gate already being
+   * flown — so they are saved and picked up by the next run.
+   */
+  onCueStyle?: (style: CueStyle) => void;
+}
+
+/**
+ * The three game options, inside the pause menu.
+ *
+ * They used to live on the settings screen, two navigations away from the game.
+ * Nobody discovers they want a wider tunnel while reading a settings list; they
+ * discover it on the gate they just clipped. Every change is written to
+ * localStorage as it is made, so it also becomes the default for future runs.
+ */
+export function PauseOptions({ onCueStyle }: Props) {
+  const [pace, setPace] = useState<Pace>(loadPace);
+  const [width, setWidth] = useState<CorridorWidth>(loadCorridorWidth);
+  const [cueStyle, setCueStyle] = useState<CueStyle>(loadCueStyle);
+
+  return (
+    <div className="pause-options">
+      <section>
+        <h4>Speed</h4>
+        <Choice
+          options={PACES}
+          value={pace}
+          onChange={(p) => {
+            setPace(p);
+            savePace(p);
+          }}
+        />
+        <p className="param-help">{PACE_HELP[pace]} Takes effect next run.</p>
+      </section>
+
+      <section>
+        <h4>Tunnel width</h4>
+        <Choice
+          options={CORRIDOR_WIDTHS}
+          value={width}
+          onChange={(w) => {
+            setWidth(w);
+            saveCorridorWidth(w);
+          }}
+        />
+        <p className="param-help">{WIDTH_HELP[width]} Takes effect next run.</p>
+      </section>
+
+      <section>
+        <h4>Example</h4>
+        <Choice
+          options={["pause", "off"] as CueStyle[]}
+          value={cueStyle}
+          label={(s) => (s === "pause" ? "on" : "off")}
+          onChange={(s) => {
+            setCueStyle(s);
+            saveCueStyle(s);
+            onCueStyle?.(s);
+          }}
+        />
+        <p className="param-help">
+          {cueStyle === "pause"
+            ? "The world stops while a native speaker says the syllable, then it's your turn."
+            : "No example. The corridors just arrive."}
+        </p>
+      </section>
+    </div>
+  );
+}

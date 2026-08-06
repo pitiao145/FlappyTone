@@ -24,6 +24,14 @@ import {
   drawTrail,
   traceSmoothPath,
 } from "./scene.ts";
+import { rgb, rgba, rgbTuple } from "./palette.ts";
+
+/** The token mixed `amount` toward white — a highlight of the same hue. */
+function lighten(token: Parameters<typeof rgb>[0], amount: number): string {
+  return rgbTuple(token)
+    .map((c) => Math.round(c + (255 - c) * amount))
+    .join(", ");
+}
 
 /**
  * Roughly one sample per this many horizontal pixels when tracing a corridor.
@@ -76,11 +84,15 @@ function appendSmooth(ctx: CanvasRenderingContext2D, pts: readonly Pt[]): void {
   ctx.quadraticCurveTo(last.x, last.y, last.x, last.y);
 }
 
+// Colour prefixes — the caller appends `${alpha})`. Perfect, collision and the
+// good/blue tier come from the tokens so they stay in step with the rest of the
+// palette; "ok" amber and the neutral "unheard" grey are deliberately outside
+// the brand's colour language (see drawUnheardPulse below).
 const OUTCOME_COLOR: Record<string, string> = {
-  perfect: "rgba(120, 230, 170,",
-  good: "rgba(150, 210, 255,",
+  perfect: `rgba(${rgb("good")},`,
+  good: `rgba(${rgb("accent")},`,
   ok: "rgba(210, 200, 140,",
-  collision: "rgba(255, 110, 110,",
+  collision: `rgba(${rgb("danger")},`,
   unheard: "rgba(180, 180, 190,",
 };
 
@@ -386,15 +398,15 @@ function drawCueDemo(
     if (i === 0) ctx.moveTo(tx, ty);
     else ctx.lineTo(tx, ty);
   }
-  ctx.strokeStyle = `rgba(235, 208, 170, ${alpha * 0.4})`;
+  ctx.strokeStyle = rgba("demo", alpha * 0.4);
   ctx.lineWidth = 2;
   ctx.stroke();
 
   ctx.beginPath();
   ctx.arc(x, y, 4, 0, Math.PI * 2);
-  ctx.fillStyle = `rgba(235, 208, 170, ${alpha * 0.35})`;
+  ctx.fillStyle = rgba("demo", alpha * 0.35);
   ctx.fill();
-  ctx.strokeStyle = `rgba(245, 222, 190, ${alpha * 0.75})`;
+  ctx.strokeStyle = `rgba(${lighten("demo", 0.35)}, ${alpha * 0.75})`;
   ctx.lineWidth = 1.5;
   ctx.stroke();
   ctx.restore();
@@ -567,8 +579,8 @@ function drawImpact(
     height / 2,
     Math.max(width, height) * 0.72,
   );
-  grad.addColorStop(0, "rgba(255, 60, 60, 0)");
-  grad.addColorStop(1, `rgba(255, 45, 45, ${alpha})`);
+  grad.addColorStop(0, rgba("danger", 0));
+  grad.addColorStop(1, rgba("danger", alpha));
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, width, height);
 }

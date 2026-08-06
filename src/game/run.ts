@@ -64,10 +64,15 @@ export interface RunConfig {
    */
   corridor?: CorridorWidth;
   /**
-   * How the reference demo relates to play. "flow": the cue plays while the
-   * world keeps scrolling (PRD §9 baseline). "pause": the world freezes while
-   * the demo is traced, then resumes — a clear call-and-response beat. The UI
-   * default is "pause"; playtesting found "flow" blurs example into attempt.
+   * Whether the reference demo plays at all. "pause": the world freezes while
+   * the demo is traced, then resumes — a clear call-and-response beat. "off":
+   * no clip, no demo trace, no freeze; the corridors simply arrive.
+   *
+   * There used to be a third setting, "flow", where the clip played over a
+   * moving world. It was cut rather than kept as an option: playtesting found
+   * it blurred the example into the attempt, and asking a player to choose
+   * between two demo *styles* asked them to have an opinion they cannot form
+   * before playing. On or off is a choice anyone can make.
    */
   cueStyle?: CueStyle;
   /**
@@ -80,9 +85,9 @@ export interface RunConfig {
   cueDurationMsFor?: (tone: Tone) => number;
 }
 
-export type CueStyle = "flow" | "pause";
+export type CueStyle = "pause" | "off";
 
-export const CUE_STYLES: CueStyle[] = ["flow", "pause"];
+export const CUE_STYLES: CueStyle[] = ["pause", "off"];
 
 export interface TrailSample {
   chao: number;
@@ -331,7 +336,7 @@ export class Run {
   private readonly rand: () => number;
   private readonly pace: Pace;
   private readonly corridor: CorridorWidth;
-  private readonly cueStyle: CueStyle;
+  private cueStyle: CueStyle;
   private readonly cueDurationMsFor: (tone: Tone) => number;
 
   /** Distance the world has scrolled, in px. The bird's world position. */
@@ -389,7 +394,7 @@ export class Run {
     this.rand = cfg.rand ?? Math.random;
     this.pace = cfg.pace ?? "fast";
     this.corridor = cfg.corridor ?? "normal";
-    this.cueStyle = cfg.cueStyle ?? "flow";
+    this.cueStyle = cfg.cueStyle ?? "pause";
     this.cueDurationMsFor = cfg.cueDurationMsFor ?? (() => CUE_DURATION_MS);
     this.difficulty = this.difficultyFor(0);
     this.stats = newRunStats(3);
@@ -531,57 +536,43 @@ export class Run {
   }
 
   /**
-   * "flow" (PRD §9): the cue fires CUE_LEAD_MS before the gate's *leading
-   * (right) edge* enters the screen — not before it reaches the bird.
-   * "pause": it fires once the gate is fully on screen instead, so the frozen
-   * demo trace is visible end to end. Gates are cued once each, in spawn
-   * order. The cue is kept (the "listen" phase) until the bird enters the
-   * cued gate, then dropped — it is the player's turn.
+   * The cue fires when the gate is close enough to the bird (see below), and is
+   * kept — the "listen" phase — until the bird enters that gate, then dropped:
+   * it is the player's turn. Gates are cued once each, in spawn order.
+   *
+   * With the demo off nothing is ever cued, which is the whole implementation
+   * of that setting: no clip is requested, no demo trace is drawn, the "listen"
+   * banner never shows and `inCuePause` can never be true.
    */
   private updateCue(nowMs: number): void {
+    if (this.cueStyle === "off") return;
     if (this.cue && this.worldX >= this.cue.xStart) {
       this.cue = null;
     }
     const next = this.gates.find((g) => g.xStart > this.lastCuedXStart);
     if (!next) return;
-    const screenRight = this.worldX + this.width * (1 - BIRD_X_FRAC);
-    const msUntilOnScreen =
-      ((this.gateEnd(next) - screenRight) / this.difficulty.scrollSpeed) * 1000;
-    if (this.cueStyle === "pause") {
-      // Spec B3. The world freezes for the demo plus a beat, so what the player
-      // waits through after the call is whatever travel the gate has *left*
-      // when the cue fires — measured at 1161–1440ms in play, with the HUD
-      // still reading "listen…" while they had already begun answering. Fire on
-      // remaining travel rather than on "the gate is fully on screen", so the
-      // freeze ends roughly as the corridor arrives.
-      //
-      // One number for every tone, measured to the gate's *start* — the edge
-      // the bird enters. It was briefly bounded by "the gate must be fully on
-      // screen", because the demo is drawn along the gate's real position; but
-      // a wide corridor is by definition close to you by the time it fits, so
-      // that bound gave T3 ~197ms of approach against T1's 647ms at normal
-      // pace. Reported in play as the pause landing right on top of a T3 gate.
-      //
-      // The cost of dropping it: at 600ms the gate's start sits 119px ahead of
-      // the dot, so T3's right-hand third hangs off the screen and its demo
-      // sweep finishes out of view. Chosen deliberately — a uniform beat
-      // matters more than seeing the end of the widest trace, and the whole
-      // clip is still audible.
-      const travelToBirdMs =
-        ((next.xStart - this.worldX) / this.difficulty.scrollSpeed) * 1000;
-      if (travelToBirdMs <= tuning().cueApproachMs) {
-        this.lastCuedXStart = next.xStart;
-        this.cue = {
-          tone: next.tone,
-          xStart: next.xStart,
-          atMs: nowMs,
-          durationMs: this.cueDurationMsFor(next.tone),
-        };
-      }
-      return;
-    }
-
-    if (msUntilOnScreen <= tuning().cueLeadMs) {
+    // Spec B3. The world freezes for the demo plus a beat, so what the player
+    // waits through after the call is whatever travel the gate has *left*
+    // when the cue fires — measured at 1161–1440ms in play, with the HUD
+    // still reading "listen…" while they had already begun answering. Fire on
+    // remaining travel rather than on "the gate is fully on screen", so the
+    // freeze ends roughly as the corridor arrives.
+    //
+    // One number for every tone, measured to the gate's *start* — the edge
+    // the bird enters. It was briefly bounded by "the gate must be fully on
+    // screen", because the demo is drawn along the gate's real position; but
+    // a wide corridor is by definition close to you by the time it fits, so
+    // that bound gave T3 ~197ms of approach against T1's 647ms at normal
+    // pace. Reported in play as the pause landing right on top of a T3 gate.
+    //
+    // The cost of dropping it: at 600ms the gate's start sits 119px ahead of
+    // the dot, so T3's right-hand third hangs off the screen and its demo
+    // sweep finishes out of view. Chosen deliberately — a uniform beat
+    // matters more than seeing the end of the widest trace, and the whole
+    // clip is still audible.
+    const travelToBirdMs =
+      ((next.xStart - this.worldX) / this.difficulty.scrollSpeed) * 1000;
+    if (travelToBirdMs <= tuning().cueApproachMs) {
       this.lastCuedXStart = next.xStart;
       this.cue = {
         tone: next.tone,
@@ -590,6 +581,22 @@ export class Run {
         durationMs: this.cueDurationMsFor(next.tone),
       };
     }
+  }
+
+  /**
+   * Turn the demo on or off mid-run, from the pause menu.
+   *
+   * Live rather than next-run because this is the one option whose effect is
+   * obvious the moment you resume, and because turning it off is usually what
+   * someone does when the call-and-response beat is in their way *right now*.
+   * Pace and corridor width stay next-run: both would move the world under a
+   * gate already in flight.
+   */
+  setCueStyle(style: CueStyle): void {
+    this.cueStyle = style;
+    // A cue left standing with the demo off would keep the world frozen and
+    // the "listen" banner up with nothing playing.
+    if (style === "off") this.cue = null;
   }
 
   // -------------------------------------------------------------- snapshot

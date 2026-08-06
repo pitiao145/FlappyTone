@@ -1,3 +1,5 @@
+@import "./ui/tokens.css";
+
 * {
   margin: 0;
   padding: 0;
@@ -6,6 +8,16 @@
 
 html,
 body {
-  background: #05070a;
+  background: var(--surface);
   color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }

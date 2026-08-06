@@ -1,0 +1,78 @@
+/*
+ * Design tokens — the whole surface of a re-brand.
+ *
+ * Everything visual should reference a variable from this file: App.css does,
+ * and so does the canvas, via src/render/palette.ts which reads these same
+ * properties off :root at startup. Changing --accent here changes the buttons,
+ * the grid, the dot and its halo together. A literal colour anywhere else is a
+ * bug waiting for the next restyle.
+ *
+ * The --*-rgb pairs exist because the canvas composites almost everything with
+ * a per-frame alpha, so it needs the components rather than a finished colour.
+ * Keep each pair in sync with its hex twin.
+ */
+
+:root {
+  /* ---- surfaces */
+  --surface: #05070a;
+  --surface-rgb: 5, 7, 10;
+  --surface-panel: #111318;
+  --surface-deep: #0b0d12;
+  /* The canvas's darkest value. Walls are cut from this — see render/world.ts. */
+  --canvas-backdrop: #141821;
+  --canvas-backdrop-rgb: 20, 24, 33;
+
+  /* ---- ink */
+  --ink: #dfe5ec;
+  --ink-muted: #9aa4b0;
+  --ink-soft: #8e99a6;
+  --ink-dim: #6b7684;
+
+  /* ---- accent */
+  --accent: #60cdff;
+  --accent-rgb: 96, 205, 255;
+  /* Text drawn *on* the accent. */
+  --accent-ink: #05070a;
+  --accent-bright: #eaf4ff;
+
+  /* ---- semantic */
+  --good: #78e6aa;
+  --good-rgb: 120, 230, 170;
+  --good-dim: #9fd8b8;
+  --warn: #ffd282;
+  --warn-strong: #f0b866;
+  --danger: #ff9d9d;
+  --danger-rgb: 255, 110, 110;
+  --danger-strong: #ff5d5d;
+
+  /* Canvas-only accents: the demo trace and the guide grid. */
+  --demo-rgb: 235, 208, 170;
+  --grid-rgb: 150, 180, 215;
+
+  /* ---- lines */
+  --line: rgba(255, 255, 255, 0.15);
+  --line-soft: rgba(255, 255, 255, 0.1);
+  --line-strong: #262b33;
+
+  /* ---- shape */
+  --radius-pill: 999px;
+  --radius-md: 8px;
+  --radius-sm: 6px;
+
+  /* ---- type */
+  --font: system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.85rem;
+  --text-base: 1rem;
+  --text-lg: 1.2rem;
+  --text-xl: 1.4rem;
+  --text-2xl: 2.2rem;
+
+  /* ---- spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+}

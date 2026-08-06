@@ -44,8 +44,6 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
         help: "Travel left between the end of the demo freeze and the corridor reaching you. 0 = it arrives the instant the world resumes." },
       { key: "cuePauseHoldMs", label: "post-demo hold", min: 0, max: 1200, step: 25,
         help: "Still beat after the demo finishes tracing, before the world moves again." },
-      { key: "cueLeadMs", label: "cue lead (flow style)", min: 0, max: 1200, step: 25,
-        help: "Only used by the 'in flow' demo style: how early the cue fires." },
       { key: "baseScrollSpeed", label: "scroll speed", min: 100, max: 400, step: 5,
         help: "px/s before pace and difficulty ramp. Gate width scales with it, so tone tempo is unaffected." },
     ],

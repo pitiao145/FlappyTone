@@ -128,7 +128,7 @@ export function Lab({ onBack }: Props) {
               <div className="lab-idle">
                 <p className="param-help">
                   Runs on {loadPace()} pace · {loadCorridorWidth()} tunnel ·{" "}
-                  {loadCueStyle()} demo, and on your saved calibration
+                  demo {loadCueStyle() === "off" ? "off" : "on"}, and on your saved calibration
                   {loadSettings() === null ? " (none — using defaults)" : ""}.
                 </p>
                 <button className="primary" onClick={() => void restart()}>

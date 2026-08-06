@@ -1,3 +1,12 @@
+import { rgba, rgbTuple, solid } from "./palette.ts";
+
+/** The accent mixed `amount` of the way toward `toward` (255 = white, 0 = black). */
+function mixAccent(amount: number, toward: number): string {
+  return rgbTuple("accent")
+    .map((c) => Math.round(c + (toward - c) * amount))
+    .join(", ");
+}
+
 export interface TrailSample {
   chao: number;
   voiced: boolean;
@@ -28,7 +37,7 @@ export function chaoToY(chao: number, height: number): number {
 }
 
 /** The scene's darkest value. Walls are cut from this — see world.ts. */
-export const BACKDROP = "#141821";
+export const BACKDROP = solid("backdrop");
 
 /**
  * Faint Chao 1–5 guide lines, with axis labels.
@@ -50,14 +59,14 @@ export function drawChaoGrid(
     // Chao 3 is the rest line the dot returns to — the one guide worth reading.
     const isRest = chao === 3;
     ctx.strokeStyle = isRest
-      ? "rgba(150, 180, 215, 0.13)"
-      : "rgba(150, 180, 215, 0.06)";
+      ? rgba("grid", 0.13)
+      : rgba("grid", 0.06);
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
     ctx.stroke();
-    ctx.fillStyle = `rgba(150, 180, 215, ${isRest ? 0.3 : 0.18})`;
+    ctx.fillStyle = rgba("grid", isRest ? 0.3 : 0.18);
     ctx.fillText(String(chao), 8, y);
   }
 }
@@ -185,11 +194,14 @@ export function drawTrail(
  * stays blue.
  */
 function trailColor(errRatio: number | null, alpha: number): string {
-  if (errRatio === null) return `rgba(96, 205, 255, ${alpha})`;
+  if (errRatio === null) return rgba("accent", alpha);
   const t = Math.max(0, Math.min(1, errRatio));
-  const r = Math.round(96 + (255 - 96) * t);
-  const g = Math.round(205 + (180 - 205) * t);
-  const b = Math.round(255 + (120 - 255) * t);
+  const [ar, ag, ab] = rgbTuple("accent");
+  // Warm target: the wall's own amber. Not a token — it is the far end of a
+  // gradient whose near end is the accent, and it has to stay legible against it.
+  const r = Math.round(ar + (255 - ar) * t);
+  const g = Math.round(ag + (180 - ag) * t);
+  const b = Math.round(ab + (120 - ab) * t);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
@@ -275,18 +287,20 @@ export function drawDot(
   // sticker. Present even when silent, just quieter.
   const haloR = r * (voiced ? 3.4 : 2.4);
   const halo = ctx.createRadialGradient(dotX, dotY, r * 0.4, dotX, dotY, haloR);
-  halo.addColorStop(0, `rgba(96, 205, 255, ${0.42 * pulse})`);
-  halo.addColorStop(0.55, `rgba(96, 205, 255, ${0.14 * pulse})`);
-  halo.addColorStop(1, "rgba(96, 205, 255, 0)");
+  halo.addColorStop(0, rgba("accent", 0.42 * pulse));
+  halo.addColorStop(0.55, rgba("accent", 0.14 * pulse));
+  halo.addColorStop(1, rgba("accent", 0));
   ctx.fillStyle = halo;
   ctx.fillRect(dotX - haloR, dotY - haloR, haloR * 2, haloR * 2);
 
   // Body: a filled disc in both states. Never a hollow ring.
   ctx.beginPath();
   ctx.arc(dotX, dotY, r, 0, Math.PI * 2);
+  // Both states are the accent: lifted toward white while voiced, pulled down
+  // while silent. Derived rather than hard-coded so the dot follows a re-brand.
   ctx.fillStyle = voiced
-    ? "rgba(126, 216, 255, 0.95)"
-    : `rgba(96, 180, 225, ${0.5 + 0.18 * pulse})`;
+    ? `rgba(${mixAccent(0.25, 255)}, 0.95)`
+    : `rgba(${mixAccent(0.12, 0)}, ${0.5 + 0.18 * pulse})`;
   ctx.fill();
 
   // A white-hot core only while actually producing pitch — this is the single
@@ -294,14 +308,14 @@ export function drawDot(
   if (voiced) {
     ctx.beginPath();
     ctx.arc(dotX, dotY, r * 0.52, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(242, 252, 255, 0.98)";
+    ctx.fillStyle = `rgba(${mixAccent(0.92, 255)}, 0.98)`;
     ctx.fill();
   }
 
   // Crisp rim keeps the dot legible against a lit corridor as well as a dark wall.
   ctx.beginPath();
   ctx.arc(dotX, dotY, r, 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(200, 240, 255, ${voiced ? 0.9 : 0.4 * pulse})`;
+  ctx.strokeStyle = `rgba(${mixAccent(0.55, 255)}, ${voiced ? 0.9 : 0.4 * pulse})`;
   ctx.lineWidth = 1.5;
   ctx.stroke();
 

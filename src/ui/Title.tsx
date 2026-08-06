@@ -2,6 +2,7 @@ import { useState } from "react";
 import { MicError } from "../audio/mic.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
 import { micErrorCopy } from "./micErrors.ts";
+import { brand } from "../brand.ts";
 
 export type StartIntent =
   | "game"
@@ -55,10 +56,8 @@ export function Title({
 
   return (
     <div className="screen title-screen">
-      <h1>ToneFlap</h1>
-      <p className="tagline">
-        Your voice is the controller. Fly the shape of the tone.
-      </p>
+      <h1>{brand.name}</h1>
+      <p className="tagline">{brand.tagline}</p>
 
       {tutorialDone && <p className="prompt">Nice — ready to play?</p>}
 
@@ -80,7 +79,7 @@ export function Title({
         </button>
       </div>
 
-      <p className="note">Needs a microphone and a quiet room.</p>
+      <p className="note">{brand.requirement}</p>
       {!calibrated && (
         <p className="note">
           First run starts with a short calibration — talk normally, then reach

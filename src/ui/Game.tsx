@@ -20,6 +20,7 @@ import {
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawWorld, refreshMotionPreference } from "../render/world.ts";
+import { PauseOptions } from "./PauseOptions.tsx";
 
 /** HUD refresh rate. React never renders per frame — the rAF loop owns the canvas. */
 const HUD_HZ = 4;
@@ -81,8 +82,12 @@ export function Game({
    * the iOS-safe place to resume the AudioContext.
    */
   const [waiting, setWaiting] = useState(mode === "tutorial");
-  /** Set by the effect so the pause overlay's tap can restart the loop. */
+  /** Set by the effect so the pause overlay's Resume can restart the loop. */
   const resumeRef = useRef<() => void>(() => {});
+  /** Set by the effect so the HUD's pause button can stop it. */
+  const pauseRef = useRef<() => void>(() => {});
+  /** The run in flight, so the pause menu can toggle the demo live. */
+  const runRef = useRef<Run | null>(null);
   /** Set by the effect so the tutorial card's button can begin the run. */
   const startRef = useRef<() => void>(() => {});
   /**
@@ -128,6 +133,7 @@ export function Game({
       // Queried at cue time — clips finish loading after the Run exists.
       cueDurationMsFor,
     });
+    runRef.current = run;
     {
       const audio = getMicSession()?.ctx;
       if (audio) void loadReferenceClips(audio);
@@ -231,6 +237,20 @@ export function Game({
       rafId = requestAnimationFrame(tick);
       startHud();
     };
+    // One pause, two triggers: the player's button and the tab going away.
+    // They must do the same thing — a run that keeps scrolling behind a menu,
+    // or an AudioContext left running while the phone is in a pocket, are the
+    // two bugs this shape exists to prevent.
+    const pause = () => {
+      if (!running) return;
+      running = false;
+      cancelAnimationFrame(rafId);
+      clearInterval(hudTimer);
+      void getMicSession()?.ctx.suspend();
+      setPaused(true);
+    };
+    pauseRef.current = pause;
+
     resumeRef.current = () => {
       const audio = getMicSession()?.ctx;
       // resume() is called from the overlay's click handler — iOS needs that.
@@ -241,11 +261,7 @@ export function Game({
 
     const onVisibility = () => {
       if (document.visibilityState !== "hidden") return;
-      running = false;
-      cancelAnimationFrame(rafId);
-      clearInterval(hudTimer);
-      void getMicSession()?.ctx.suspend();
-      setPaused(true);
+      pause();
     };
     document.addEventListener("visibilitychange", onVisibility);
 
@@ -264,6 +280,7 @@ export function Game({
       document.removeEventListener("visibilitychange", onVisibility);
       setFrameSink(null);
       setActiveTracker(null);
+      runRef.current = null;
     };
   }, [mode, settings, canvasWidth, canvasHeight]);
 
@@ -369,9 +386,16 @@ export function Game({
           )}
         </div>
 
-        <button className="mic-stop" onClick={onQuit} title="End the run">
-          ■ quit
-        </button>
+        {!waiting && !paused && (
+          <button
+            className="pause-button"
+            onClick={() => pauseRef.current()}
+            title="Pause"
+            aria-label="Pause"
+          >
+            ‖
+          </button>
+        )}
 
         {waiting && (
           <div className="overlay tutorial-card">
@@ -395,17 +419,21 @@ export function Game({
           </div>
         )}
 
+        {/* The pause menu. Deliberately not dismissable by tapping the
+            backdrop: there are controls under here now, and a mis-tap that
+            drops you back into a moving corridor is worse than one more tap. */}
         {paused && (
-          <div className="overlay" onClick={() => resumeRef.current()}>
-            <p>paused — tap to continue</p>
-            <button
-              className="mic-stop"
-              onClick={(e) => {
-                e.stopPropagation();
-                onQuit();
-              }}
-              title="End the run"
-            >
+          <div className="overlay pause-menu">
+            <p className="pause-title">Paused</p>
+            <button className="primary" onClick={() => resumeRef.current()}>
+              Resume
+            </button>
+
+            <PauseOptions
+              onCueStyle={(style) => runRef.current?.setCueStyle(style)}
+            />
+
+            <button className="mic-stop" onClick={onQuit} title="End the run">
               ■ quit
             </button>
           </div>

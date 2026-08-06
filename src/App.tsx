@@ -7,6 +7,7 @@ import { loadSettings, type CalibrationSettings } from "./game/settings";
 import type { RunStats } from "./game/scoring";
 import { Calibration } from "./ui/Calibration";
 import { Game } from "./ui/Game";
+import { Landing } from "./ui/Landing";
 import { GameOver } from "./ui/GameOver";
 import { HowTo } from "./ui/HowTo";
 import { Settings } from "./ui/Settings";
@@ -16,9 +17,11 @@ import { Title, type StartIntent } from "./ui/Title";
 import "./App.css";
 
 type Screen =
+  | "landing"
   | "title"
   | "howto"
   | "calibrate"
+  | "finetune"
   | "tutorial"
   | "game"
   | "gameover"
@@ -36,11 +39,34 @@ const Lab = import.meta.env.DEV
   ? lazy(() => import("./dev/Lab.tsx").then((m) => ({ default: m.Lab })))
   : null;
 
+/**
+ * Where a fresh load starts.
+ *
+ * Installed to the home screen, this is the game and nothing else — landing on
+ * marketing copy every launch would be a bug. The manifest asks for `?app=1`;
+ * the display-mode check is the belt-and-braces half, because iOS has not
+ * always honoured `start_url`, and anyone who installed before the landing page
+ * existed still has the bare `/` saved.
+ */
+function initialScreen(): Screen {
+  try {
+    if (new URLSearchParams(window.location.search).has("app")) return "title";
+    if (window.matchMedia("(display-mode: standalone)").matches) return "title";
+    // iOS Safari's own flag, which predates display-mode and still differs.
+    if ((navigator as { standalone?: boolean }).standalone === true) {
+      return "title";
+    }
+  } catch {
+    /* no window (tests): fall through to the landing */
+  }
+  return "landing";
+}
+
 const CANVAS_W = 420;
 const CANVAS_H = Math.round((420 * 16) / 9);
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("title");
+  const [screen, setScreen] = useState<Screen>(initialScreen);
   const [settings, setSettings] = useState<CalibrationSettings | null>(() =>
     loadSettings(),
   );
@@ -142,6 +168,14 @@ export default function App() {
         {/* Quitting a run lands here, so the log has to be readable here too. */}
         {screen === "title" && <GateLogPanel key="gatelog" />}
 
+        {screen === "landing" && (
+          <Landing
+            onPlay={() => startFromTitle("game")}
+            onVisualiser={() => startFromTitle("visualiser")}
+            onMenu={() => setScreen("title")}
+          />
+        )}
+
         {screen === "title" && (
           <Title
             calibrated={settings !== null}
@@ -163,16 +197,7 @@ export default function App() {
               pendingRef.current = null;
               setScreen("calibrate");
             }}
-            onVisualiser={() => {
-              // Uncalibrated, the visualiser would draw the player's voice
-              // through a stranger's range — same reason Play routes here.
-              if (!settings) {
-                pendingRef.current = "visualiser";
-                setScreen("calibrate");
-                return;
-              }
-              setScreen("visualiser");
-            }}
+            onFineTune={() => setScreen("finetune")}
             onForget={() => setSettings(null)}
           />
         )}
@@ -198,6 +223,22 @@ export default function App() {
             canvasHeight={CANVAS_H}
             onDone={onCalibrated}
             onCancel={goHome}
+          />
+        )}
+
+        {/* Settings → Fine-tune: the live preview and the sensitivity slider,
+            seeded from what is already saved. Not part of the first run. */}
+        {screen === "finetune" && settings && (
+          <Calibration
+            canvasWidth={CANVAS_W}
+            canvasHeight={CANVAS_H}
+            startAt="preview"
+            existing={settings}
+            onDone={(s) => {
+              setSettings(s);
+              setScreen("settings");
+            }}
+            onCancel={() => setScreen("settings")}
           />
         )}
 

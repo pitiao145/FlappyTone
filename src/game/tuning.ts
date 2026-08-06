@@ -100,12 +100,10 @@ export interface Tuning {
   baseRestMs: number;
   /** Floor the difficulty ramp may shrink `baseRestMs` to. */
   restMsFloor: number;
-  /** "flow" cue style: how long before the gate enters the screen the cue fires. */
-  cueLeadMs: number;
-  /** "pause" cue style: still beat after the demo trace before the world resumes. */
+  /** Still beat after the demo trace, before the world resumes. */
   cuePauseHoldMs: number;
   /**
-   * "pause" cue style: how much travel is left between the end of the freeze
+   * How much travel is left between the end of the freeze
    * and the corridor reaching the bird. This is the call-and-response beat —
    * see spec B3. 0 means the gate arrives the instant the world resumes.
    */
@@ -158,7 +156,6 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   baseToleranceH: 0.1,
   baseRestMs: 1200,
   restMsFloor: 600,
-  cueLeadMs: 300,
   cuePauseHoldMs: 450,
   cueApproachMs: 700,
   collisionSustainMs: 120,

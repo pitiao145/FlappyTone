@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { Run, type RunSnapshot } from "./run.ts";
+import { BIRD_X_FRAC, Run, type RunSnapshot } from "./run.ts";
 import { DEFAULT_TUNING, resetTuning, setTuning, tuning } from "./tuning.ts";
 import { corridorChaoAt, GATE_DURATION_S } from "./gates.ts";
 import type { PitchState } from "../pitch/types.ts";
@@ -532,19 +532,20 @@ describe("Run — cue and listen/your-turn phases", () => {
     expect(s.phase).toBeNull();
   });
 
-  it("fires the cue ~300ms before the gate's leading edge enters the screen", () => {
+  it("fires the cue with cueApproachMs of travel left to the bird", () => {
     const run = newGameRun();
     const { snapshots } = simulate(run, 400, trackCorridor);
     const firstCued = snapshots.find((s) => s.cue !== null);
     expect(firstCued).toBeDefined();
     const cue = firstCued!.cue!;
-    // The cued gate's right edge should still be at most ~300ms of travel
-    // past the screen's right edge (it fires as soon as the lead is reached).
+    // The cue is measured to the gate's *start* — the edge the bird enters —
+    // so that the freeze ends roughly as the corridor arrives.
     const gate = firstCued!.gates.find((g) => g.xStart === cue.xStart)!;
-    const msUntilOnScreen =
-      ((gate.x1 - W) / firstCued!.difficulty.scrollSpeed) * 1000;
-    expect(msUntilOnScreen).toBeLessThanOrEqual(300);
-    expect(msUntilOnScreen).toBeGreaterThan(300 - 3 * DT);
+    const travelToBirdMs =
+      ((gate.x0 - W * BIRD_X_FRAC) / firstCued!.difficulty.scrollSpeed) * 1000;
+    const approach = DEFAULT_TUNING.cueApproachMs;
+    expect(travelToBirdMs).toBeLessThanOrEqual(approach);
+    expect(travelToBirdMs).toBeGreaterThan(approach - 3 * DT);
     expect(cue.durationMs).toBe(500);
   });
 
@@ -715,9 +716,19 @@ describe("Run — cuePaused flag", () => {
     expect(snapshots[cueAt + Math.ceil(1100 / DT)].cuePaused).toBe(false);
   });
 
-  it("never sets in flow style", () => {
-    const { snapshots } = simulate(newGameRun(), 600, trackCorridor);
+  // Demo off is implemented entirely by never cueing, so this one assertion
+  // covers the clip, the demo trace, the "listen" banner and the freeze.
+  it("never cues or freezes with the demo off", () => {
+    const run = new Run({
+      mode: "game",
+      width: W,
+      rand: seqRand([0, 0, 0.5, 0.75]),
+      cueStyle: "off",
+    });
+    const { snapshots } = simulate(run, 600, trackCorridor);
+    expect(snapshots.some((s) => s.cue !== null)).toBe(false);
     expect(snapshots.some((s) => s.cuePaused)).toBe(false);
+    expect(snapshots.some((s) => s.phase === "listen")).toBe(false);
   });
 });
 
