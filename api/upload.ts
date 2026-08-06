@@ -8,6 +8,12 @@
  *
  * Re-recording a word overwrites its blob — `addRandomSuffix: false` is what
  * makes the id the durable identity of the clip, all the way to the manifest.
+ *
+ * Private, not public. These are recordings of a named person's voice, and a
+ * public blob is readable by anyone who ever comes across its URL. The cut
+ * clips in `public/ref/` do ship publicly with the game — that is the point of
+ * making them — but the raw session takes are hers, and there is no reason for
+ * them to be fetchable without our token.
  */
 import { put } from "@vercel/blob";
 import { checkPasscode, json } from "./_passcode.ts";
@@ -34,11 +40,13 @@ export async function POST(request: Request): Promise<Response> {
   if (body.byteLength > MAX_BYTES) return json(413, { error: "Too large." });
 
   const blob = await put(`recordings/${session}/${id}.wav`, body, {
-    access: "public",
+    access: "private",
     contentType: "audio/wav",
     addRandomSuffix: false,
     allowOverwrite: true,
   });
 
-  return json(200, { ok: true, url: blob.url });
+  // The pathname, not the URL: a private blob's URL is not usable on its own,
+  // and the pathname is what `pull-recordings` reads back with.
+  return json(200, { ok: true, pathname: blob.pathname });
 }

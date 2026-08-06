@@ -13,7 +13,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { list } from "@vercel/blob";
+import { get, list } from "@vercel/blob";
 
 const root = new URL("../../", import.meta.url).pathname;
 
@@ -59,12 +59,14 @@ for (const blob of blobs) {
   const dir = `${root}fixtures/recordings/${session}`;
   mkdirSync(dir, { recursive: true });
 
-  const res = await fetch(blob.url);
-  if (!res.ok) {
-    console.warn(`failed to download ${blob.pathname}: ${res.status}`);
+  // Authenticated read by pathname. These blobs are private, so their URL is
+  // not enough on its own — the token is what opens them.
+  const result = await get(blob.pathname, { access: "private", token });
+  if (!result) {
+    console.warn(`failed to download ${blob.pathname}: not found`);
     continue;
   }
-  writeFileSync(`${dir}/${filename}`, new Uint8Array(await res.arrayBuffer()));
+  writeFileSync(`${dir}/${filename}`, new Uint8Array(await new Response(result.stream).arrayBuffer()));
   written++;
   console.log(`${blob.pathname}  ${(blob.size / 1024) | 0}KB`);
 }
