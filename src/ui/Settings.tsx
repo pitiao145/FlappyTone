@@ -2,7 +2,16 @@ import { useState } from "react";
 import { MicError } from "../audio/mic.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
 import { micErrorCopy } from "./micErrors.ts";
-import { clearSettings, type CalibrationSettings } from "../game/settings.ts";
+import { setSharingEnabled } from "../analytics/client.ts";
+import {
+  clearSettings,
+  loadShareData,
+  saveShareData,
+  type CalibrationSettings,
+} from "../game/settings.ts";
+import { Choice } from "./Choice.tsx";
+
+const SHARING = ["on", "off"] as const;
 
 interface Props {
   /** The saved calibration, or null if the player has never calibrated. */
@@ -37,6 +46,10 @@ export function Settings({
   const [confirmForget, setConfirmForget] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Seeded from the store, saved on change — the PauseOptions convention.
+  const [sharing, setSharing] = useState<(typeof SHARING)[number]>(() =>
+    loadShareData() ? "on" : "off",
+  );
 
   // Both of these lead to screens that listen. iOS Safari grants getUserMedia
   // only inside the gesture, so the mic opens here rather than in the
@@ -108,6 +121,26 @@ export function Settings({
           Re-calibrate if you've changed microphone or room. Fine-tune opens the
           live dot and a sensitivity slider, if the board feels too big or too
           small for your voice.
+        </p>
+      </section>
+
+      <section className="setting">
+        <h3>Anonymous game data</h3>
+        <Choice
+          options={SHARING}
+          value={sharing}
+          onChange={(v) => {
+            setSharing(v);
+            saveShareData(v === "on");
+            // Applied now, not next run: turning this off erases the queue and
+            // the anonymous id straight away rather than after one more game.
+            setSharingEnabled(v === "on");
+          }}
+        />
+        <p className="param-help">
+          {sharing === "on"
+            ? "Sends which gates you hit or miss and your calibration numbers, so the game can be tuned against real attempts. No audio, no recordings, no location, and nothing that identifies you."
+            : "Nothing is sent, and anything already stored on this device has been deleted."}
         </p>
       </section>
 

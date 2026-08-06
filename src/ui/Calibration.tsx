@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { track } from "../analytics/client.ts";
 import { getMicSession, setFrameSink } from "../audio/session.ts";
 import {
   configureTracker,
@@ -200,6 +201,18 @@ export function Calibration({
     }, CONFIRM_MS);
     return () => clearTimeout(id);
   }, [confirm]);
+
+  /**
+   * Which step the player is on, reported as they arrive.
+   *
+   * This is the drop-off funnel: calibration is four things asked of someone
+   * who has not played yet, and the step they stop at says which request was
+   * the one too many. Reported on arrival rather than completion so the last
+   * event is the step they were looking at when they left.
+   */
+  useEffect(() => {
+    track({ type: "calib_step", step });
+  }, [step]);
 
   // Step machine. Each step installs its own frame sink and tears it down.
   useEffect(() => {
@@ -556,7 +569,17 @@ export function Calibration({
         </>
       )}
 
-      <button className="link" onClick={onCancel}>
+      <button
+        className="link"
+        onClick={() => {
+          // Only a *departure* before the end is an abandonment. Backing out of
+          // the preview means calibration already succeeded and was saved.
+          if (step !== "done" && step !== "preview") {
+            track({ type: "calib_abandoned", step });
+          }
+          onCancel();
+        }}
+      >
         Back
       </button>
 

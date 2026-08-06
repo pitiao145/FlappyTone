@@ -42,7 +42,11 @@ describe("api/ deploy surface", () => {
   });
 
   it("only exposes the endpoints we meant to expose", () => {
-    expect(files.filter((f) => !f.startsWith("_")).sort()).toEqual(["auth.ts", "upload.ts"]);
+    expect(files.filter((f) => !f.startsWith("_")).sort()).toEqual([
+      "analytics.ts",
+      "auth.ts",
+      "upload.ts",
+    ]);
   });
 });
 

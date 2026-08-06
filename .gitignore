@@ -19,6 +19,12 @@ dist-ssr
 # costs a download, not a recording session.
 fixtures/recordings/
 
+# Play sessions pulled from Blob by `npm run pull-analytics`. Not committed for
+# the same reason as the recordings, plus one of its own: these are other
+# people's play data, and a public repo is not where it belongs. Blob is the
+# system of record; these are a local working copy.
+fixtures/analytics/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

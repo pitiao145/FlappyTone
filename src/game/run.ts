@@ -311,6 +311,16 @@ interface LastOutcomeState extends Omit<LastOutcome, "path"> {
 export interface GateLogEntry {
   tone: Tone;
   outcome: GateOutcome;
+  /**
+   * The gate's accuracy as `scoreGate` computed it, 0–1.
+   *
+   * Kept per-gate rather than only summed into `RunStats.perTone.accSum`
+   * because a mean cannot tell "everyone scrapes 0.6" from "half score 0.9 and
+   * half score 0.3" — and those two ask for opposite changes to the corridor.
+   * Always 0 for an unheard gate, which is a neutral outcome, not a bad score;
+   * anything aggregating this must exclude them the way `applyGate` does.
+   */
+  accuracy: number;
   samples: number;
   voiced: number;
   voicedFraction: number;
@@ -822,6 +832,7 @@ export class Run {
     this.gateLog.push({
       tone: state.gate.tone,
       outcome,
+      accuracy,
       samples: state.samples.length,
       voiced: voicedCount,
       voicedFraction:

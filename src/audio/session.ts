@@ -7,7 +7,8 @@
  * the gesture. The screen then claims the already-open session by installing
  * its own frame sink.
  */
-import { startMic, type MicSession } from "./mic.ts";
+import { track } from "../analytics/client.ts";
+import { MicError, startMic, type MicSession } from "./mic.ts";
 
 export type FrameSink = (frame: Float32Array, sampleRate: number) => void;
 
@@ -51,10 +52,23 @@ export function ensureMic(): Promise<MicSession> {
         throw new MicCancelled();
       }
       session = s;
+      // The single choke point for mic outcome — four UI call sites route
+      // through here, and a denied mic is the most common reason a tester
+      // never reaches a gate at all.
+      track({ type: "mic", ok: true });
       return s;
     },
     (err: unknown) => {
       clearIfCurrent();
+      // MicCancelled is the player navigating away, not a failure. Counting it
+      // as one would invent a permission problem out of an ordinary back tap.
+      if (!(err instanceof MicCancelled)) {
+        track({
+          type: "mic",
+          ok: false,
+          reason: err instanceof MicError ? err.kind : "unknown",
+        });
+      }
       throw err;
     },
   );

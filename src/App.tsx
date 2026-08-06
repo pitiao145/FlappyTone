@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { initAnalytics, track, trackCalibration } from "./analytics/client";
 import { MicError } from "./audio/mic";
 import { ensureMic, stopMic } from "./audio/session";
 import { GateLogPanel } from "./dev/GateLogPanel";
@@ -142,6 +143,8 @@ export default function App() {
 
   const onCalibrated = useCallback((s: CalibrationSettings) => {
     setSettings(s);
+    trackCalibration(s);
+    track({ type: "calib_done" });
     const pending = pendingRef.current;
     pendingRef.current = null;
     if (pending) {
@@ -179,6 +182,25 @@ export default function App() {
     } finally {
       setRetryBusy(false);
     }
+  }, []);
+
+  /**
+   * Starts the analytics client and drains anything an earlier visit failed to
+   * send. Runs once — `initAnalytics` ignores repeat calls, so React's
+   * strict-mode double-mount cannot register two visibility listeners.
+   *
+   * `landed` is recorded here rather than on a click because the interesting
+   * case is the tester who arrives and does nothing: without it, they are
+   * indistinguishable from someone who never opened the link.
+   */
+  useEffect(() => {
+    initAnalytics();
+    track({ type: "landed" });
+    // Re-report the saved calibration each visit, so a session that skips
+    // calibration (because it already ran) still carries the voice numbers its
+    // gate results have to be read against.
+    const saved = loadSettings();
+    if (saved) trackCalibration(saved);
   }, []);
 
   // Runs after the landing page has painted, so the target exists. "top" is

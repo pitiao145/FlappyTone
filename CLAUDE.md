@@ -28,10 +28,14 @@ src/
   game/       loop, entities, gate generation, collision, scoring. NO React.
   render/     canvas draw calls. Pure functions of game state.
   ui/         React components: menus, HUD overlay, calibration, game over.
+  analytics/  what a play session sends home. session.ts is pure; client.ts is the only impure part.
   dev/        the Lab (dev-only tuning instance) + CLI analysis scripts.
 fixtures/     WAV files for offline tests — see docs/TESTING.md
 docs/         PRD.md, TESTING.md
 ```
+
+Unlike `src/dev/`, **`src/analytics/` ships**. It is in the bundle, not behind
+`import.meta.env.DEV`.
 
 ## Commands
 
@@ -77,6 +81,50 @@ Three more rules hold this together:
 3. **`clipReview.ts` flags, it never blocks.** Its tests assert that Jane's four
    shipped clips pass clean — anything that flags those is measuring the wrong
    thing, which both of its original heuristics were.
+
+## Play analytics
+
+Every session writes one JSON file to Blob at
+`analytics/<day>/<sessionId>.json`. Read it back with:
+
+```bash
+npm run pull-analytics [YYYY-MM-DD]   # Blob -> fixtures/analytics/ (gitignored)
+npm run report-runs [YYYY-MM-DD]      # funnel, per-tone outcomes, quit histogram
+```
+
+Four rules hold this together:
+
+1. **`src/analytics/session.ts` decides what is sent, and nothing else does.**
+   `AnalyticsEvent` is a closed discriminated union, so a forbidden field is a
+   type error rather than a review someone has to catch. Never sent: audio,
+   per-frame pitch or contour data, raw user-agent, IP, geolocation, cookies.
+   `api/analytics.ts` re-enforces this from the other side by requiring every
+   event to be a **flat object of primitives** — the shape bulk data would
+   arrive in is refused, so no blocklist of field names has to be maintained.
+2. **localStorage is the source of truth; the network is a mirror.** A session
+   is deleted locally only once the server acknowledges it, and the next page
+   load re-sends whatever is still queued. `sendBeacon` alone does not survive
+   airplane mode or a force-quit; the retry-on-load is what makes it lossless.
+   Every flush PUTs the whole session to the same key with `allowOverwrite`, so
+   a retry is a plain repeat — **there is deliberately no dedupe logic on
+   either side, and adding any would be a sign the idempotence broke.**
+3. **Analytics never breaks a run.** Every entry point in `client.ts` swallows
+   its own failures, the same posture `saveGateLog` takes for quota errors. If
+   this code can throw into a caller, that is the bug.
+4. **Consent is checked before an id is minted**, not after. Opting out in
+   Settings erases the queue and the anonymous player id immediately.
+
+`api/analytics.ts` is public and unauthenticated — it has to be, since every
+player posts to it and a bundled secret is not a secret. Its defence is the size
+cap, the strict id regex, and the schema. `validate()` is the security boundary
+and is tested directly in `api/_analytics.test.ts`.
+
+**Node-only CLI scripts must be listed in `tsconfig.app.json`'s `exclude` and
+`tsconfig.node.json`'s `include`.** Skipping this leaks `@types/node` into the
+DOM project, where `setInterval` starts returning `Timeout` and unrelated files
+fail to compile. For the same reason `session.ts` restates `MicErrorKind`
+instead of importing it — importing would drag Web Audio into a graph the Node
+report has to typecheck. `session.test.ts` pins the two together.
 
 ## Testing
 

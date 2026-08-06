@@ -73,7 +73,7 @@ export function formatGateLog(log: StoredGateLog): string {
     `seeded=${seeded}  missedEarly=${missedUtterances}`,
     `savedAt=${log.savedAt}`,
     "",
-    "#   tone  outcome    voiced/total  voiced%  utteranceMs  seeded  worstExcursionMs",
+    "#   tone  outcome      acc  voiced/total  voiced%  utteranceMs  seeded  worstExcursionMs",
   ].join("\n");
 
   const rows = entries.map((g, i) => {
@@ -82,7 +82,13 @@ export function formatGateLog(log: StoredGateLog): string {
     const frac = `${Math.round(g.voicedFraction * 100)}%`.padStart(7);
     const utt = `${Math.round(g.utteranceMs)}`.padStart(11);
     const exc = `${Math.round(g.worstExcursionMs ?? 0)}`.padStart(16);
-    return `${n}   T${g.tone}    ${g.outcome.padEnd(9)}  ${voiced}  ${frac}  ${utt}  ${String(g.seeded).padStart(6)}  ${exc}`;
+    // Blank rather than 0.00 for an unheard gate: it was never scored, and a
+    // printed zero reads as "you were badly wrong" — the exact thing PRD §6
+    // says the game must never tell a player.
+    const acc = (g.outcome === "unheard" ? "—" : g.accuracy.toFixed(2)).padStart(
+      5,
+    );
+    return `${n}   T${g.tone}    ${g.outcome.padEnd(9)}  ${acc}  ${voiced}  ${frac}  ${utt}  ${String(g.seeded).padStart(6)}  ${exc}`;
   });
 
   return [header, ...rows].join("\n");

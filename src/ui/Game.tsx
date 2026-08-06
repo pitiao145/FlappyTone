@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { flush, track } from "../analytics/client.ts";
+import { gateEvent, type RunEndReason } from "../analytics/session.ts";
 import {
   cueDurationMsFor,
   isCueAudible,
@@ -14,7 +16,9 @@ import type { GateOutcome, UnheardHint } from "../game/scoring.ts";
 import {
   loadCorridorWidth,
   loadCueStyle,
+  loadNoticeSeen,
   loadPace,
+  saveNoticeSeen,
   type CalibrationSettings,
 } from "../game/settings.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
@@ -85,6 +89,21 @@ export function Game({
    * the iOS-safe place to resume the AudioContext.
    */
   const [waiting, setWaiting] = useState(mode === "tutorial");
+  /**
+   * The one-time "still in testing" notice, which holds a real run the same way
+   * the tutorial card does. Decided once at mount and kept in a ref as well as
+   * state, because the run effect reads it without wanting it as a dependency —
+   * dismissing the card must start the run, not rebuild it.
+   *
+   * Not shown before the tutorial: that is a first-timer's first screen, and a
+   * disclosure about data is easier to read once they know what the game is.
+   */
+  const [notice, setNotice] = useState(
+    () => mode !== "tutorial" && !loadNoticeSeen(),
+  );
+  const noticeRef = useRef(notice);
+  /** Gate log entries already reported, so each gate is sent exactly once. */
+  const reportedGatesRef = useRef(0);
   /** Set by the effect so the pause overlay's Resume can restart the loop. */
   const resumeRef = useRef<() => void>(() => {});
   /** Set by the effect so the HUD's pause button can stop it. */
@@ -116,6 +135,56 @@ export function Game({
     return () => clearTimeout(id);
   }, [flash]);
 
+  /**
+   * Reports gates that have resolved since the last call.
+   *
+   * Driven off the gate log's length rather than an event, because the log is
+   * the only place a finished gate is recorded and it only ever grows. Called
+   * from the HUD tick and again at every exit, so a run that ends between ticks
+   * still reports its last gate.
+   */
+  const reportGates = useCallback((snap: RunSnapshot): void => {
+    for (let i = reportedGatesRef.current; i < snap.gateLog.length; i++) {
+      track(gateEvent(snap.gateLog[i], i));
+    }
+    reportedGatesRef.current = snap.gateLog.length;
+  }, []);
+
+  /**
+   * Closes out a run. `flush` is deliberately not awaited — the player is on
+   * their way to the game-over screen or the title, and the send is already
+   * durable in localStorage whether or not it completes.
+   */
+  const reportRunEnd = useCallback(
+    (snap: RunSnapshot, reason: RunEndReason): void => {
+      reportGates(snap);
+      track({
+        type: "run_end",
+        reason,
+        gates: snap.gateLog.length,
+        score: snap.stats.score,
+        bestMult: snap.stats.bestMultiplier,
+        missedEarly: snap.missedUtterances,
+      });
+      void flush();
+    },
+    [reportGates],
+  );
+
+  /**
+   * The pause menu's two exits. Neither goes through `onOver`, so without this
+   * a quit left no trace at all — and quitting is precisely the signal that
+   * says the game got too hard or too boring.
+   */
+  const exitRun = useCallback(
+    (go: () => void) => () => {
+      const snap = runRef.current?.snapshot();
+      if (snap) reportRunEnd(snap, "quit");
+      go();
+    },
+    [reportRunEnd],
+  );
+
   useEffect(() => {
     const canvas = canvasRef.current;
     // Logical drawing space stays canvasWidth x canvasHeight; only the backing
@@ -127,16 +196,24 @@ export function Game({
     // latest motion preference, which the renderer caches.
     refreshMotionPreference();
 
+    const pace = loadPace();
+    const corridor = loadCorridorWidth();
+    const cueStyle = loadCueStyle();
     const run = new Run({
       mode,
       width: canvasWidth,
-      pace: loadPace(),
-      corridor: loadCorridorWidth(),
-      cueStyle: loadCueStyle(),
+      pace,
+      corridor,
+      cueStyle,
       // Queried at cue time — clips finish loading after the Run exists.
       cueDurationMsFor,
     });
     runRef.current = run;
+    reportedGatesRef.current = 0;
+    // The settings are stamped on the run rather than the session: a player who
+    // widens the corridor mid-session would otherwise have their easier run
+    // read against the harder one's settings.
+    track({ type: "run_start", mode, pace, corridor, cue: cueStyle });
     {
       const audio = getMicSession()?.ctx;
       if (audio) void loadReferenceClips(audio);
@@ -214,6 +291,8 @@ export function Game({
         finished = true;
         running = false;
         saveGateLog(snap.gateLog, snap.missedUtterances);
+        // The tutorial has no hearts — reaching the end of it is finishing.
+        reportRunEnd(snap, mode === "tutorial" ? "finished" : "out_of_hearts");
         clearInterval(hudTimer);
         setFrameSink(null);
         stopMic();
@@ -231,6 +310,7 @@ export function Game({
         // Mirrored every tick, not just at game over, so quitting mid-run or
         // closing the tab still leaves the numbers behind.
         saveGateLog(snap.gateLog, snap.missedUtterances);
+        reportGates(snap);
       }, 1000 / HUD_HZ);
     };
 
@@ -274,7 +354,9 @@ export function Game({
       if (audio && audio.state === "suspended") void audio.resume();
       start();
     };
-    if (mode !== "tutorial") start();
+    // The tutorial holds behind its card; a first real run holds behind the
+    // testing notice. Everything else starts now.
+    if (mode !== "tutorial" && !noticeRef.current) start();
 
     return () => {
       running = false;
@@ -285,7 +367,9 @@ export function Game({
       setActiveTracker(null);
       runRef.current = null;
     };
-  }, [mode, settings, canvasWidth, canvasHeight]);
+    // reportGates/reportRunEnd are stable (useCallback with no changing deps),
+    // so listing them cannot rebuild the run mid-play.
+  }, [mode, settings, canvasWidth, canvasHeight, reportGates, reportRunEnd]);
 
   // Show the *active* gate's tone while flying it — showing the next gate's
   // tone mid-gate would teach the wrong contour (this matters most in the
@@ -345,7 +429,7 @@ export function Game({
             {/* In the row rather than absolutely positioned over it: floated
                 top-right it sat on top of the hearts, which are also
                 right-aligned. */}
-            {!waiting && !paused && (
+            {!waiting && !notice && !paused && (
               <button
                 className="pause-button"
                 onClick={() => pauseRef.current()}
@@ -402,6 +486,36 @@ export function Game({
           )}
         </div>
 
+        {/* Shown once, ever. A notice rather than a consent gate: sharing is
+            already on, and the button only makes the card stop coming back.
+            Its click is also a user gesture, which is the iOS-safe place to
+            resume the AudioContext — the same reason the tutorial card works. */}
+        {notice && (
+          <div className="overlay tutorial-card">
+            <h3>Still in testing</h3>
+            <p>
+              I'm sending anonymous data about how the game goes — which gates
+              you hit or miss, and how your voice maps to the screen — so I can
+              tune it.
+            </p>
+            <p className="note">
+              No audio is ever recorded or sent. You can turn this off in
+              Settings at any time.
+            </p>
+            <button
+              className="primary"
+              onClick={() => {
+                saveNoticeSeen();
+                noticeRef.current = false;
+                setNotice(false);
+                startRef.current();
+              }}
+            >
+              Got it
+            </button>
+          </div>
+        )}
+
         {waiting && (
           <div className="overlay tutorial-card">
             <h3>Tutorial</h3>
@@ -439,13 +553,17 @@ export function Game({
             />
 
             <div className="pause-exits">
-              <button className="mic-stop" onClick={onQuit} title="End the run">
+              <button
+                className="mic-stop"
+                onClick={exitRun(onQuit)}
+                title="End the run"
+              >
                 ■ quit
               </button>
               {/* The nav bar is hidden during a run, so this is the way back
                   to the site from inside one. It ends the run — there is
                   nothing to come back to. */}
-              <button className="link" onClick={onLanding}>
+              <button className="link" onClick={exitRun(onLanding)}>
                 home page
               </button>
             </div>

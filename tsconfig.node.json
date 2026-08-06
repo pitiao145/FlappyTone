@@ -39,6 +39,8 @@
     "src/dev/make-ref-clips.ts",
     "src/dev/make-clips.ts",
     "src/dev/pull-recordings.ts",
+    "src/dev/pull-analytics.ts",
+    "src/dev/report-runs.ts",
     "src/record/wordlist.ts",
     "src/record/pinyin.ts",
     "src/dev/import-words.ts"

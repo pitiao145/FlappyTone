@@ -20,6 +20,8 @@
     "make-clips": "node --experimental-strip-types src/dev/make-clips.ts",
     "import-words": "node --experimental-strip-types src/dev/import-words.ts",
     "pull-recordings": "node --experimental-strip-types src/dev/pull-recordings.ts",
+    "pull-analytics": "node --experimental-strip-types src/dev/pull-analytics.ts",
+    "report-runs": "node --experimental-strip-types src/dev/report-runs.ts",
     "make-icons": "node --experimental-strip-types src/dev/make-icons.ts"
   },
   "dependencies": {

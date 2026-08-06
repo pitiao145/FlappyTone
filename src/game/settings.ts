@@ -161,3 +161,56 @@ export function saveReduceMotion(v: boolean | null): void {
   if (v === null) localStorage.removeItem(MOTION_KEY);
   else localStorage.setItem(MOTION_KEY, v ? "on" : "off");
 }
+
+// ------------------------------------------------------------ analytics
+
+const SHARE_DATA_KEY = "toneflap.sharedata.v1";
+const NOTICE_KEY = "toneflap.analytics.notice.v1";
+
+/**
+ * Whether anonymous gameplay data is sent home. On by default — the game is in
+ * testing and the whole point of this round is to find out where it fails.
+ *
+ * Defaults to true when storage is unreadable, matching every other read here:
+ * an unreadable store means "no preference recorded", not "opted out".
+ */
+export function loadShareData(): boolean {
+  try {
+    return localStorage.getItem(SHARE_DATA_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+export function saveShareData(v: boolean): void {
+  try {
+    localStorage.setItem(SHARE_DATA_KEY, v ? "on" : "off");
+  } catch {
+    // Blocked storage. The toggle still applies to this session.
+  }
+}
+
+/**
+ * Whether the first-run notice has been dismissed.
+ *
+ * Clearing site data brings it back, which is correct rather than a bug: that
+ * is also when the analytics player id is regenerated, so it genuinely is a
+ * first run again.
+ */
+export function loadNoticeSeen(): boolean {
+  try {
+    return localStorage.getItem(NOTICE_KEY) === "seen";
+  } catch {
+    // Unreadable storage means we cannot know it was shown. Showing a notice
+    // twice is a small annoyance; never showing it is a broken disclosure.
+    return false;
+  }
+}
+
+export function saveNoticeSeen(): void {
+  try {
+    localStorage.setItem(NOTICE_KEY, "seen");
+  } catch {
+    // ignore
+  }
+}
