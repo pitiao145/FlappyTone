@@ -1,0 +1,210 @@
+/* Standalone styles for the recording booth. Deliberately not sharing App.css:
+   this page has one job, ships as its own entry, and should not break when the
+   game's visual language changes. */
+
+:root {
+  color-scheme: dark;
+  --rec-bg: #05070a;
+  --rec-fg: #e8eef6;
+  --rec-dim: #8a97a8;
+  --rec-accent: #4ab3ff;
+  --rec-good: #4ade80;
+  --rec-warn-c: #ffb020;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--rec-bg);
+  color: var(--rec-fg);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+#root {
+  height: 100%;
+}
+
+.rec {
+  min-height: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+  padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.rec-gate {
+  justify-content: center;
+  text-align: center;
+}
+
+.rec-title {
+  font-size: 1.6rem;
+  margin: 0;
+}
+
+.rec-sub {
+  color: var(--rec-dim);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.rec-warn {
+  color: var(--rec-warn-c);
+  line-height: 1.5;
+}
+
+.rec-input {
+  display: block;
+  width: 100%;
+  margin: 16px 0;
+  padding: 14px;
+  font-size: 1.1rem;
+  text-align: center;
+  border-radius: 10px;
+  border: 1px solid #2a3442;
+  background: #0e141c;
+  color: var(--rec-fg);
+}
+
+.rec-btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 1rem;
+  border-radius: 10px;
+  border: 1px solid #2a3442;
+  background: #121a24;
+  color: var(--rec-fg);
+  cursor: pointer;
+}
+
+.rec-btn-primary {
+  background: var(--rec-accent);
+  border-color: var(--rec-accent);
+  color: #04121e;
+  font-weight: 600;
+}
+
+.rec-btn:disabled {
+  opacity: 0.5;
+}
+
+/* Always-on level bar: the cheapest possible answer to "is it hearing me?",
+   which is the first thing anyone recording alone wants to know. */
+.rec-level {
+  height: 6px;
+  border-radius: 3px;
+  background: #16202c;
+  overflow: hidden;
+  flex: none;
+}
+
+.rec-level-fill {
+  height: 100%;
+  background: var(--rec-accent);
+  transition: width 90ms linear;
+}
+
+.rec-word {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.rec-hanzi {
+  font-size: clamp(5rem, 34vw, 9rem);
+  line-height: 1;
+}
+
+.rec-pinyin {
+  font-size: 2rem;
+  color: var(--rec-dim);
+}
+
+.rec-tone {
+  font-size: 1.2rem;
+  opacity: 0.7;
+}
+
+.rec-feedback {
+  text-align: center;
+  min-height: 3em;
+  color: var(--rec-dim);
+  line-height: 1.4;
+}
+
+.rec-feedback-got-it {
+  color: var(--rec-good);
+}
+
+.rec-feedback-hearing {
+  color: var(--rec-accent);
+}
+
+.rec-feedback-rejected {
+  color: var(--rec-warn-c);
+}
+
+.rec-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  flex: none;
+}
+
+.rec-chip {
+  flex: none;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid #2a3442;
+  background: #0e141c;
+  color: var(--rec-dim);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.rec-chip-done {
+  color: var(--rec-good);
+  border-color: #1f4030;
+}
+
+.rec-chip-current {
+  border-color: var(--rec-accent);
+  color: var(--rec-fg);
+}
+
+.rec-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+}
+
+.rec-footer .rec-btn {
+  width: auto;
+  flex: none;
+  padding: 10px 14px;
+}
+
+.rec-count {
+  color: var(--rec-dim);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+}
+
+.rec-done {
+  font-size: 1.8rem;
+  text-align: center;
+}

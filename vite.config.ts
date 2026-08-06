@@ -1,3 +1,4 @@
+import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import basicSsl from '@vitejs/plugin-basic-ssl'
@@ -10,4 +11,15 @@ export default defineConfig({
   plugins: [react(), basicSsl()],
   // Reachable from the phone on the LAN (soundboard + on-device testing).
   server: { host: true },
+  build: {
+    rollupOptions: {
+      input: {
+        // The game.
+        main: resolve(import.meta.dirname, 'index.html'),
+        // Jane's recording booth — a separate entry so neither page carries
+        // the other's code. Reached at /record via the rewrite in vercel.json.
+        record: resolve(import.meta.dirname, 'record.html'),
+      },
+    },
+  },
 })

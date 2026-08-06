@@ -30,6 +30,8 @@
     "src/dev/fetch-clips.ts",
     "src/dev/tone-synth.ts",
     "src/dev/wav.ts",
-    "src/pitch"
+    "src/pitch",
+    "src/record/takeDetector.test.ts",
+    "api"
   ]
 }

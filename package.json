@@ -20,6 +20,7 @@
     "make-icons": "node --experimental-strip-types src/dev/make-icons.ts"
   },
   "dependencies": {
+    "@vercel/blob": "^2.6.1",
     "pitchy": "^4.1.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"

@@ -33,6 +33,7 @@
     "src/dev/report.ts",
     "src/dev/make-ref-clips.ts",
     "src/dev/fetch-clips.ts",
-    "src/pitch/fixtures.test.ts"
+    "src/pitch/fixtures.test.ts",
+    "src/record/takeDetector.test.ts"
   ]
 }
