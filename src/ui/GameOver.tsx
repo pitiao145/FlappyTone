@@ -43,7 +43,10 @@ export function GameOver({ stats, busy, onRetry, onHome }: Props) {
 
       <p className="prompt">{takeaway(breakdown)}</p>
 
-      <GateLogPanel />
+      {/* Guarded here as well as inside the panel: the internal guard hides it,
+          this one lets Rollup drop the component from the production bundle
+          entirely (CLAUDE.md rule 7). */}
+      {import.meta.env.DEV && <GateLogPanel />}
 
       <div className="menu">
         <button className="primary" disabled={busy} onClick={onRetry}>

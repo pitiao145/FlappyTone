@@ -233,7 +233,9 @@ export default function App() {
         {showNav && <Nav variant="app" onNavigate={goLanding} />}
 
         {/* Quitting a run lands here, so the log has to be readable here too. */}
-        {screen === "title" && <GateLogPanel key="gatelog" />}
+        {import.meta.env.DEV && screen === "title" && (
+          <GateLogPanel key="gatelog" />
+        )}
 
         {screen === "landing" && (
           <Landing

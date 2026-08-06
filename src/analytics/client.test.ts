@@ -46,6 +46,7 @@ function setup(
     status?: number;
     throws?: boolean;
     beacon?: boolean | "fails";
+    enabled?: boolean;
   } = {},
 ): Harness {
   const stores: Stores = { local: memoryStorage(), session: memoryStorage() };
@@ -55,6 +56,9 @@ function setup(
 
   initAnalytics({
     stores,
+    // Tests run as a dev build, where reporting is off by default. The
+    // production gate itself is covered by its own test below.
+    enabled: opts.enabled ?? true,
     consent: () => opts.consent ?? true,
     now: () => (clock += 1000),
     nowIso: () => "2026-08-06T00:00:00.000Z",
@@ -85,6 +89,43 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+describe("build gate", () => {
+  it("records nothing at all when reporting is disabled", () => {
+    // A dev session is the developer flying the same four gates twenty times.
+    // Mixing that into the data would move the very numbers the tuning
+    // decisions are read from, so a dev build must be silent — not merely
+    // quiet on the network, but storing nothing and minting no id either.
+    const h = setup({ enabled: false });
+    track({ type: "landed" });
+    trackCalibration({ f0Center: 200, rangeSemitones: 5, noiseFloor: 0.002 });
+    flushSync();
+
+    expect(h.calls).toEqual([]);
+    expect(h.beacons).toEqual([]);
+    expect(loadQueue(h.stores)).toEqual([]);
+    expect(h.stores.local.getItem("toneflap.analytics.player.v1")).toBeNull();
+    expect(h.stores.session.getItem("toneflap.analytics.session.v1")).toBeNull();
+  });
+
+  it("does not drain an existing queue when disabled", async () => {
+    // Sessions recorded by a production build on the same origin must survive
+    // a dev run, not be uploaded by it under dev conditions.
+    const prod = setup();
+    track({ type: "landed" });
+    resetAnalyticsForTest();
+
+    const h = setup({ enabled: false });
+    h.stores.local.setItem(
+      "toneflap.analytics.queue.v1",
+      prod.stores.local.getItem("toneflap.analytics.queue.v1") ?? "[]",
+    );
+    await retryUnsent();
+
+    expect(h.calls).toEqual([]);
+    expect(loadQueue(h.stores)).toHaveLength(1);
+  });
+});
+
 describe("consent", () => {
   it("mints no player id and stores nothing when opted out", () => {
     const h = setup({ consent: false });
@@ -105,6 +146,7 @@ describe("consent", () => {
     // Same device, sharing since turned off.
     initAnalytics({
       stores: first.stores,
+      enabled: true,
       consent: () => false,
       fetchImpl: (async () => ({ ok: true, status: 200 })) as unknown as typeof fetch,
       beacon: null,
@@ -177,6 +219,7 @@ describe("track", () => {
     resetAnalyticsForTest();
     initAnalytics({
       stores: { local: hostile, session: hostile },
+      enabled: true,
       consent: () => true,
       fetchImpl: (() => {
         throw new Error("nope");
@@ -284,6 +327,7 @@ describe("retryUnsent", () => {
     const calls: SessionRecord[] = [];
     initAnalytics({
       stores: offline.stores,
+      enabled: true,
       consent: () => true,
       now: () => 2_000_000,
       nowIso: () => "2026-08-07T00:00:00.000Z",

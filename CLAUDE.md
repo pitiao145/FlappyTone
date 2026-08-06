@@ -16,7 +16,11 @@ React 18 + TypeScript + Vite + Tailwind. Canvas 2D. Web Audio API. No backend, n
 4. **Every audio API call sits behind an explicit user gesture.** iOS Safari requires a gesture for both `getUserMedia()` and `AudioContext.resume()`. This is the most common silent failure — test it on a real iPhone, not the simulator.
 5. **`src/pitch/` must have zero Web Audio dependencies.** It takes `Float32Array` frames in and returns pitch state out — a pure module. This is what makes it testable offline against WAV fixtures. Web Audio lives only in `src/audio/`, which feeds `src/pitch/`. Never import `AudioContext` inside `src/pitch/`.
 6. **Tunable constants live in `src/game/tuning.ts`, not as bare module constants.** Anything the Lab should be able to move during a session — pacing, cue timing, collision sustain, utterance thresholds, dot dynamics, gate lengths — is a field on that singleton, with its default equal to the shipped value. Production never calls `setTuning`. Re-introducing an `export const` for something of this kind takes the knob away from the person tuning it.
-7. **Dev tooling lives behind `import.meta.env.DEV` and stays out of `dist/`.** `src/dev/Lab.tsx` is lazily imported so Rollup drops the whole subtree. Check with `npm run build && grep -rl TuningPanel dist/assets` after touching that boundary.
+7. **Dev tooling lives behind `import.meta.env.DEV` and stays out of `dist/`.** `src/dev/Lab.tsx`, `Soundboard` and `GateLogPanel` are all gated this way so Rollup drops the subtree. A query-param flag is *not* a gate on its own — `?gatelog` and `?soundboard` both shipped to production for exactly that reason, and a guard *inside* a component only hides it, it does not remove it. Gate the JSX at the usage site as well. Check the whole boundary after touching it:
+   ```bash
+   npm run build
+   for s in TuningPanel "copy gate log" soundboard flappytone.gatelog; do grep -l "$s" dist/assets/*.js; done   # must print nothing
+   ```
 8. **When the signal is unclear, the game says "couldn't hear that" — it never scores the player wrong.** A gate whose longest voiced run is under `MIN_UTTERANCE_MS` (180ms, merging gaps under 120ms) is neutral: no points, no heart lost. The test is utterance *duration*, not voiced fraction — a 600ms gate can never be 60% voiced by a 400ms syllable, and the old fractional floor was firing on half of all real attempts. Confidently failing a correct speaker is the single fastest way to lose a user.
 
 ## Layout
@@ -92,7 +96,14 @@ npm run pull-analytics [YYYY-MM-DD]   # Blob -> fixtures/analytics/ (gitignored)
 npm run report-runs [YYYY-MM-DD]      # funnel, per-tone outcomes, quit histogram
 ```
 
-Four rules hold this together:
+**Production reports; a dev build does not.** A dev session is you flying the
+same four gates twenty times, and mixing that in would move the numbers the
+tuning decisions are read from. `?analytics` forces it on in dev — needed
+because the durability paths (offline retry, `sendBeacon` on tab close) can
+otherwise only be exercised by deploying. Note a Vercel **preview** deploy is a
+production build, so playing on a preview URL does report.
+
+Five rules hold this together:
 
 1. **`src/analytics/session.ts` decides what is sent, and nothing else does.**
    `AnalyticsEvent` is a closed discriminated union, so a forbidden field is a
@@ -113,6 +124,10 @@ Four rules hold this together:
    this code can throw into a caller, that is the bug.
 4. **Consent is checked before an id is minted**, not after. Opting out in
    Settings erases the queue and the anonymous player id immediately.
+5. **A disabled build stores nothing**, rather than storing and withholding.
+   `initAnalytics` leaves `deps` null, so every entry point no-ops — no id, no
+   queue, no listener — and a dev run will not drain a queue a production build
+   left on the same origin.
 
 `api/analytics.ts` is public and unauthenticated — it has to be, since every
 player posts to it and a bundled secret is not a secret. Its defence is the size

@@ -64,6 +64,34 @@ interface Deps {
   nowIso: () => string;
   userAgent: string;
   consent: () => boolean;
+  /**
+   * Whether this build reports at all. Production only — a dev session is the
+   * developer flying the same four gates twenty times, and mixing that into
+   * the data would move the numbers the tuning decisions are read from.
+   */
+  enabled: boolean;
+}
+
+/**
+ * Production builds report. A dev build does not, unless `?analytics` is set.
+ *
+ * The escape hatch is not a convenience: without it the durability paths —
+ * offline retry, `sendBeacon` on tab close — could only ever be exercised by
+ * deploying, which is the worst place to first find out they are broken.
+ *
+ * Note that a Vercel *preview* deploy is a production build, so a session on a
+ * preview URL does report.
+ */
+function reportingEnabled(): boolean {
+  if (import.meta.env.PROD) return true;
+  try {
+    return (
+      typeof location !== "undefined" &&
+      new URLSearchParams(location.search).has("analytics")
+    );
+  } catch {
+    return false;
+  }
 }
 
 let deps: Deps | null = null;
@@ -90,6 +118,7 @@ function defaultDeps(): Omit<Deps, "stores"> & { stores: Stores | null } {
     nowIso: () => new Date().toISOString(),
     userAgent: typeof navigator === "undefined" ? "" : navigator.userAgent,
     consent: loadShareData,
+    enabled: reportingEnabled(),
   };
 }
 
@@ -105,11 +134,18 @@ export function initAnalytics(overrides: Partial<Deps> = {}): void {
     const base = defaultDeps();
     const stores = overrides.stores ?? base.stores;
     if (!stores) return;
-    deps = { ...base, ...overrides, stores };
+    const resolved: Deps = { ...base, ...overrides, stores };
+
+    // Left as null rather than stored: `track` and every other entry point
+    // no-ops on a null `deps`, so a dev build records nothing at all — no id
+    // minted, no queue written, no listener registered.
+    if (!resolved.enabled) return;
+    deps = resolved;
 
     if (!deps.consent()) {
       // Opted out before this visit: make sure nothing lingers from before.
       forgetEverything(deps.stores);
+      deps = null;
       return;
     }
 
