@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { PASSCODE_HEADER, checkPasscode } from "./_passcode.ts";
+import { PASSCODE_HEADER, checkPasscode } from "./_passcode.js";
 
 const req = (code?: string) =>
   new Request("https://example.test/api/upload", {

@@ -16,7 +16,7 @@
  * them to be fetchable without our token.
  */
 import { put } from "@vercel/blob";
-import { checkPasscode, json } from "./_passcode.ts";
+import { checkPasscode, json } from "./_passcode.js";
 
 /** Word ids are `[a-z0-9]+` by `wordlist.test.ts`; sessions add dashes. */
 const ID = /^[a-z0-9]{1,32}$/;

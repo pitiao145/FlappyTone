@@ -39,8 +39,17 @@ export function RecordApp() {
         method: "POST",
         headers: { "x-record-passcode": passcode },
       });
+      // Only 401 means the code is wrong. Reporting every failure as a bad
+      // code sent Jane — and the person who built this — hunting for a typo
+      // while the server was returning 500 on every request.
       if (res.ok) setPhase("ready");
-      else setError("That code isn't right. Check the message Pierre sent you.");
+      else if (res.status === 401) {
+        setError("That code isn't right. Check the message Pierre sent you.");
+      } else if (res.status === 503) {
+        setError("Recording isn't switched on yet. Tell Pierre — it's his end, not yours.");
+      } else {
+        setError(`Something broke on the server (${res.status}). Not your fault — tell Pierre.`);
+      }
     } catch {
       setError("Couldn't reach the server. Are you online?");
     } finally {
