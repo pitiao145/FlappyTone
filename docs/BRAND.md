@@ -61,20 +61,41 @@ Rendering at 2× and downscaling is what keeps the type clean.
 After changing it, re-scrape the preview — Slack, X and iMessage all cache
 aggressively. A `?v=2` on the `og:image` URL forces a refresh.
 
-## The icons — unfinished
+## The icons
 
-`public/favicon.svg`, `public/icons.svg` and `public/icons/*.png` are **Vite
-scaffold artwork**, not a FlappyTone mark. `src/dev/make-icons.ts` was built
-around them under the mistaken belief that the bolt was the Pierrebuilds brand;
-its comments say so and are wrong.
+`public/favicon.svg` is the mark: the same Tone 3 contour as the OG image, over
+the Chao grid, with the bird at its head. It is deliberately **not** a bird — at
+16px a bird is a blob, and the trail is what the product is (PRD §8).
 
-Replacing them is a set, not one file:
+`npm run make-icons` rasterises everything else from it. The PNGs are committed;
+re-run only when the mark changes.
 
-- `public/favicon.svg` — the source `make-icons.ts` reads. Its `rasteriseMark()`
-  hard-codes the current `48×46` viewBox in a regex and **throws** if it does
-  not match, so a new mark means updating that regex to the new dimensions.
-- Re-run `npm run make-icons` to regenerate the 180/192/512 PNGs.
-- `public/icons.svg` appears to be referenced by nothing — check, then delete.
+| Output | Purpose |
+|---|---|
+| `icons/icon-32.png` | tab fallback for anything that will not take an SVG favicon |
+| `icons/apple-touch-icon.png` (180) | iOS home screen |
+| `icons/icon-192.png`, `icon-512.png` | manifest, `purpose: any` |
+| `icons/icon-maskable-512.png` | manifest, `purpose: maskable` |
 
-A candidate mark (the T3 contour over the Chao grid, matching the OG image) is
-drafted but not adopted.
+Three constraints on the artwork, all of which the current file satisfies:
+
+- **Opaque, edge to edge.** iOS composites a transparent home-screen icon onto
+  black, which would turn the glow into a black notch.
+- **The mark runs close to the edges on purpose** — the bird's glow reaches ~97%
+  of the width. That is a choice in favour of 16px legibility, and it is why
+  `maskable` gets its own file rather than sharing `icon-512.png`: the launcher
+  crop would cut the bird off. `make-icons` insets the maskable variant to 72%,
+  inside the 80% safe circle the spec guarantees.
+- `rasteriseMark()` hard-codes the source's `width="32" height="32"` in a regex
+  and **throws** if it does not match, so a redrawn mark at another viewBox
+  means updating that line.
+
+Chrome renders it, not `sips`: `sips` ignores SVG filters, so the glow the mark
+is built from came out flat.
+
+### Known cosmetic wart
+
+The maskable variant is the rounded-square artwork padded onto the same
+backdrop, so its corner radius leaves a faint arc against the padding. Invisible
+at launcher size; if it ever bothers anyone, render that variant from a copy of
+the mark with the `clipPath` dropped.
