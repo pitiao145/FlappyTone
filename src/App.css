@@ -1083,6 +1083,12 @@
   border: 1px solid var(--line-soft);
 }
 
+/* The prerendered stand-in for the demo canvas (src/dev/demoStub.tsx): holds
+   the box so nothing below it moves when the live loop replaces it. */
+.demo-placeholder {
+  background: var(--canvas-backdrop);
+}
+
 .demo-static {
   display: flex;
   gap: var(--space-4);

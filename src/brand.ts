@@ -17,8 +17,8 @@
  *   - `public/icons/`            — regenerate with `npm run make-icons`
  *
  * The landing page's body copy is *not* on that list: `src/dev/prerender.ts`
- * emits it into `index.html` at build time from this file, so the crawlable
- * HTML and the React page cannot drift.
+ * renders `Landing` itself at build time and writes the markup into
+ * `index.html`, so the crawlable HTML *is* the page rather than a copy of it.
  */
 
 export interface LandingSection {

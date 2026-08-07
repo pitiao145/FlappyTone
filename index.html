@@ -76,7 +76,26 @@
     </script>
   </head>
   <body>
+    <!-- Filled at build time with the rendered landing page — see
+         src/dev/prerender.ts. React replaces it with the same markup on mount. -->
     <div id="root"></div>
+    <!-- Installed to the home screen this is the game, not the marketing page,
+         so drop the prerendered landing before it is ever painted. Mirrors
+         initialScreen() in App.tsx; blocking and inline on purpose, because
+         anything deferred is a frame of the wrong page. -->
+    <script>
+      try {
+        if (
+          new URLSearchParams(location.search).has("app") ||
+          matchMedia("(display-mode: standalone)").matches ||
+          navigator.standalone === true
+        ) {
+          document.getElementById("root").replaceChildren();
+        }
+      } catch (e) {
+        /* leave it: a painted landing page beats a blank screen */
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

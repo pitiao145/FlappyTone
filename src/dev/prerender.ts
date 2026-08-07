@@ -1,149 +1,113 @@
 /**
- * Build-time prerender of the landing copy into `index.html`.
+ * Build-time render of the landing page into `index.html`.
  *
  * The app ships an empty `<div id="root">`, so a crawler that fetches `/` sees
  * the head and nothing else. Google renders JavaScript, but on a discretionary
  * second pass a young subdomain with no inbound links does not reliably get,
- * and link-preview bots (X, Slack, LINE, iMessage) never run JS at all. This
- * plugin writes the page's text into the HTML at build time.
+ * and link-preview bots (X, Slack, LINE, iMessage) never run JS at all.
  *
- * Two rules hold it together:
+ * **This renders the real component, not a copy of its copy.** The first
+ * attempt emitted a hand-written block of `brand.ts` strings with its own
+ * inline styles; even styled to match, the swap to React's version was a
+ * visible flash of a different document. Now `renderToStaticMarkup(<Landing/>)`
+ * runs at build time and the result goes *inside* `#root`, so the first paint
+ * is the landing page — same markup, same class names, and `App.css` is a
+ * render-blocking `<link>`, so it is already styled. React then replaces it
+ * with an identical tree.
  *
- * 1. **It may import `src/brand.ts` and nothing else.** No game, render, audio
- *    or pitch imports — it is plain data to plain HTML. If it ever needs the
- *    engine, the design is wrong.
- * 2. **The block is genuinely visible**, never `display:none` or `hidden`.
- *    Content hidden from users is discounted or read as a spam signal, so
- *    hiding it would be both risky and pointless. `App`'s mount effect removes
- *    it after React has committed, so there is no blank frame.
+ * How it runs: Node cannot import `.tsx`, so `transformIndexHtml` kicks off a
+ * nested Vite SSR build of `prerenderEntry.tsx` to a scratch directory outside
+ * `dist/`, imports the result, and calls it. Two aliases keep that bundle
+ * honest — `DemoLoop` becomes a static placeholder (it is a rAF canvas loop
+ * with nothing to draw in Node), and `import.meta.env.DEV` is false there, so
+ * no dev subtree can be reached from it either.
  *
- * Despite living in `src/dev/`, this runs in Vite's Node process, not the
- * browser bundle — nothing here reaches `dist/assets/`.
+ * Production build only. In `vite dev` the page is served by the module graph
+ * anyway and there is no crawler to serve.
  */
 
+import { mkdir, rm } from "node:fs/promises";
+import { join, resolve as resolvePath } from "node:path";
+import { pathToFileURL } from "node:url";
 import type { Plugin } from "vite";
-import { brand } from "../brand.ts";
 
-/** HTML-escape every interpolated string. Copy is data, not markup. */
-function esc(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+const ROOT_DIV = '<div id="root"></div>';
 
-const p = (s: string) => `<p>${esc(s)}</p>`;
+/** Build `prerenderEntry.tsx` for Node and run it. Returns the markup. */
+async function renderLandingHtml(root: string): Promise<string> {
+  // Imported lazily and by name so this module stays cheap for `vite dev`.
+  const { build } = await import("vite");
+  const react = (await import("@vitejs/plugin-react")).default;
 
-/**
- * Styling for the block.
- *
- * This is the page's first paint — `App.css` and `tokens.css` both arrive with
- * the bundle, so nothing here can reference a custom property; the values are
- * the tokens' own, copied literally. What matters is that it *matches the real
- * hero*: same 760px column, same 16px page padding, same `h1` clamp, same
- * accent on the tagline. React then replaces it with a layout that starts in
- * the same place at the same size, so the swap reads as the rest of the page
- * arriving rather than as a flash of a different document.
- *
- * Keep it in step with `.landing` / `.landing-hero` in `src/App.css` if those
- * move. (Values from `src/ui/tokens.css`: --surface #05070a, --ink #dfe5ec,
- * --ink-muted #9aa4b0, --ink-dim #6b7684, --accent #60cdff.)
- */
-const STYLE = `
-#prerender {
-  background: #05070a;
-  color: #dfe5ec;
-  font: 16px/1.5 system-ui, sans-serif;
-  padding: 16px 16px 48px;
-}
-#prerender .pr-col { width: 100%; max-width: 760px; margin-inline: auto; }
-#prerender .pr-mark {
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin: 0 0 48px;
-}
-#prerender h1 {
-  font-size: clamp(1.9rem, 7vw, 2.7rem);
-  line-height: 1.12;
-  margin: 16px 0 12px;
-  font-weight: 700;
-  text-wrap: balance;
-}
-#prerender .pr-tagline { font-size: 1.4rem; color: #60cdff; margin: 0 0 12px; }
-#prerender h2 { font-size: 1.4rem; margin: 48px 0 12px; font-weight: 600; }
-#prerender h3 { font-size: 1.2rem; margin: 24px 0 8px; font-weight: 600; }
-#prerender p { margin: 0 0 12px; color: #9aa4b0; line-height: 1.6; max-width: 52ch; }
-#prerender ul { margin: 0 0 12px; padding-left: 18px; color: #9aa4b0; line-height: 1.6; }
-#prerender li { margin-bottom: 6px; }
-#prerender .pr-foot { color: #6b7684; font-size: 0.85rem; margin-top: 48px; }
-`.trim();
+  // Inside the project, not os.tmpdir(): the SSR bundle leaves react and
+  // react-dom external, so it has to sit somewhere Node's resolver can still
+  // find node_modules from. Not under dist/ — nothing here ships.
+  const outDir = resolvePath(root, "node_modules/.flappytone-prerender");
+  await mkdir(outDir, { recursive: true });
+  try {
+    await build({
+      root,
+      // configFile: false — otherwise this build reads vite.config.ts, finds
+      // this plugin in it, and recurses.
+      configFile: false,
+      logLevel: "warn",
+      plugins: [react()],
+      resolve: {
+        alias: [
+          {
+            // Matched against the import specifier (`./DemoLoop.tsx`), not the
+            // resolved path — a pattern anchored to `src/ui/` silently never
+            // fires and the real canvas loop renders instead. It must also
+            // consume the *whole* specifier: a regex matching only the tail
+            // leaves the leading `./` glued to the replacement.
+            find: /^.*DemoLoop\.tsx$/,
+            replacement: resolvePath(root, "src/dev/demoStub.tsx"),
+          },
+        ],
+      },
+      build: {
+        ssr: resolvePath(root, "src/dev/prerenderEntry.tsx"),
+        outDir,
+        emptyOutDir: true,
+        minify: false,
+      },
+    });
 
-/** The landing page's text, in document order, as static HTML. */
-function renderStatic(): string {
-  const tones = ([1, 2, 3, 4] as const)
-    .map((t) => {
-      const info = brand.tones[t];
-      return `<li>${esc(info.pinyin)} ${esc(info.hanzi)} — tone ${t}: ${esc(info.cue)}</li>`;
-    })
-    .join("");
-
-  return [
-    // Inside the block, not before it, so removing the block removes the CSS
-    // with it and leaves nothing behind in the DOM.
-    `<div id="prerender"><style>${STYLE}</style><div class="pr-col">`,
-    // The wordmark row is the nav's first line, so the top of the page does
-    // not jump when React swaps the real nav in over it.
-    `<p class="pr-mark">${esc(brand.name)}</p>`,
-    `<h1>${esc(brand.headline)}</h1>`,
-    `<p class="pr-tagline">${esc(brand.tagline)}</p>`,
-    p(brand.pitch),
-    p(brand.requirement),
-
-    `<h2>How it works</h2>`,
-    ...brand.howItWorks.map(
-      (s) => `<h3>${esc(s.title)}</h3>${p(s.body)}`,
-    ),
-    `<ul>${tones}</ul>`,
-
-    `<h2>${esc(brand.visualiser.title)}</h2>`,
-    p(brand.visualiser.body),
-
-    // Flattened rather than wrapped in <details>: collapsed copy counted
-    // against the sibling project's thin-content read. The React page keeps
-    // its disclosure; this does not.
-    `<h2>${esc(brand.mobile.title)}</h2>`,
-    p(brand.mobile.summary),
-    p(brand.mobile.body),
-    p(brand.mobile.meantime),
-    `<ul><li>${esc(brand.mobile.ios)}</li><li>${esc(brand.mobile.android)}</li></ul>`,
-    p(brand.mobile.note),
-
-    `<h2>What it doesn't do</h2>`,
-    `<ul>${brand.limits.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>`,
-
-    `<p class="pr-foot">${esc(brand.attribution)}</p>`,
-    `</div></div>`,
-  ].join("");
+    const entry = pathToFileURL(join(outDir, "prerenderEntry.js")).href;
+    const mod = (await import(entry)) as { renderLanding: () => string };
+    return mod.renderLanding();
+  } finally {
+    await rm(outDir, { recursive: true, force: true });
+  }
 }
 
 export function prerenderLanding(): Plugin {
+  let root = process.cwd();
+  let isBuild = false;
+
   return {
     name: "prerender-landing",
+    configResolved(config) {
+      root = config.root;
+      isBuild = config.command === "build";
+    },
     transformIndexHtml: {
-      order: "pre",
-      handler(html, ctx) {
+      order: "post",
+      async handler(html, ctx) {
+        if (!isBuild) return html;
         // The game entry only. `record.html` is Jane's booth: noindex twice
         // over, and it must stay that way.
         const file = ctx.filename.replace(/\\/g, "/");
         if (file.includes("record")) return html;
         if (!file.endsWith("index.html")) return html;
-        return html.replace(
-          '<div id="root"></div>',
-          `${renderStatic()}<div id="root"></div>`,
-        );
+        if (!html.includes(ROOT_DIV)) {
+          // Better a loud build than a silent regression to an empty page.
+          throw new Error(
+            "prerender-landing: could not find an empty #root in index.html",
+          );
+        }
+        const landing = await renderLandingHtml(root);
+        return html.replace(ROOT_DIV, `<div id="root">${landing}</div>`);
       },
     },
   };
