@@ -28,6 +28,23 @@
       content="black-translucent"
     />
     <title>FlappyTone</title>
+
+    <!-- Link previews. og:image must be absolute — a relative path silently
+         fails on every scraper. The image is generated from
+         src/dev/og-source.svg; see docs/BRAND.md to regenerate it.
+         The description says "tone contour", not "pronunciation": humming
+         beats the game and there is no syllable verification (PRD §11). -->
+    <meta name="description" content="Steer a bird with your voice through corridors shaped like Mandarin tone marks. A browser-based tone contour trainer." />
+    <meta property="og:title" content="FlappyTone — Mandarin tone trainer" />
+    <meta property="og:description" content="Your voice is the controller. Fly through corridors shaped like Mandarin tone marks — your pitch is the flight path." />
+    <meta property="og:image" content="https://flappytone.pierrebuilds.dev/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="A glowing pitch trail tracing a Tone 3 contour through a corridor shaped like the ˇ tone mark." />
+    <meta property="og:url" content="https://flappytone.pierrebuilds.dev/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="FlappyTone" />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
     <div id="root"></div>
