@@ -1,10 +1,11 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { initAnalytics, track, trackCalibration } from "./analytics/client";
+import { initPostHog } from "./analytics/posthog.ts";
 import { MicError } from "./audio/mic";
 import { ensureMic, stopMic } from "./audio/session";
 import { GateLogPanel } from "./dev/GateLogPanel";
 import type { RunSnapshot } from "./game/run";
-import { loadSettings, type CalibrationSettings } from "./game/settings";
+import { loadSettings, loadShareData, type CalibrationSettings } from "./game/settings";
 import type { RunStats } from "./game/scoring";
 import { Calibration } from "./ui/Calibration";
 import { Game } from "./ui/Game";
@@ -195,6 +196,9 @@ export default function App() {
    */
   useEffect(() => {
     initAnalytics();
+    // Traffic analytics, deliberately separate from the gameplay pipeline
+    // above — see src/analytics/posthog.ts. Pageviews only, same consent flag.
+    initPostHog(loadShareData());
     track({ type: "landed" });
     // Re-report the saved calibration each visit, so a session that skips
     // calibration (because it already ran) still carries the voice numbers its

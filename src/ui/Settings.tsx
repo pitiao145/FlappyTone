@@ -3,6 +3,7 @@ import { MicError } from "../audio/mic.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
 import { micErrorCopy } from "./micErrors.ts";
 import { setSharingEnabled } from "../analytics/client.ts";
+import { setPostHogConsent } from "../analytics/posthog.ts";
 import {
   clearSettings,
   loadShareData,
@@ -135,6 +136,7 @@ export function Settings({
             // Applied now, not next run: turning this off erases the queue and
             // the anonymous id straight away rather than after one more game.
             setSharingEnabled(v === "on");
+            setPostHogConsent(v === "on");
           }}
         />
         <p className="param-help">
