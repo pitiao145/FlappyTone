@@ -2,13 +2,16 @@ import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import basicSsl from '@vitejs/plugin-basic-ssl'
+import { prerenderLanding } from './src/dev/prerender.ts'
 
 // https://vite.dev/config/
 // basic-ssl serves the dev server over HTTPS (self-signed cert) so
 // getUserMedia works when testing on a phone over the LAN — browsers
 // only allow mic access in a secure context.
 export default defineConfig({
-  plugins: [react(), basicSsl()],
+  // prerenderLanding writes the landing copy into index.html so a crawler (and
+  // every link-preview bot, none of which run JS) sees more than an empty root.
+  plugins: [react(), basicSsl(), prerenderLanding()],
   // Reachable from the phone on the LAN (soundboard + on-device testing).
   server: { host: true },
   build: {

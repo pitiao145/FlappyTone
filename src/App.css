@@ -964,9 +964,14 @@
   padding-top: var(--space-4);
 }
 
+/* The h1 is a sentence now, not the one-word wordmark it used to be: smaller,
+   tighter tracking and a line-height that survives wrapping. It still reads as
+   the largest thing on the page. */
 .landing-hero h1 {
-  font-size: clamp(2.2rem, 9vw, 3.4rem);
-  letter-spacing: 0.02em;
+  font-size: clamp(1.9rem, 7vw, 2.7rem);
+  line-height: 1.12;
+  letter-spacing: 0;
+  text-wrap: balance;
 }
 
 .hero-tagline {

@@ -5,11 +5,20 @@
  * re-brand is this file plus `src/ui/tokens.css`. In-game microcopy stays where
  * it is used — this is the marketing surface, not an i18n layer.
  *
- * Three places cannot read TypeScript and must be edited by hand alongside a
- * rename here:
- *   - `index.html`               — <title> and apple-mobile-web-app-title
+ * These cannot read TypeScript and must be edited by hand alongside a rename
+ * here:
+ *   - `index.html`               — <title>, apple-mobile-web-app-title, the
+ *                                  description, the OG copy and the JSON-LD
  *   - `public/manifest.webmanifest` — name, short_name, description
+ *   - `public/robots.txt`        — the Sitemap: URL
+ *   - `public/sitemap.xml`       — the <loc>, and `lastmod` (a real date, never
+ *                                  regenerated per deploy — see
+ *                                  docs/SEO_PRERENDER_BRIEF.md)
  *   - `public/icons/`            — regenerate with `npm run make-icons`
+ *
+ * The landing page's body copy is *not* on that list: `src/dev/prerender.ts`
+ * emits it into `index.html` at build time from this file, so the crawlable
+ * HTML and the React page cannot drift.
  */
 
 export interface LandingSection {
@@ -25,6 +34,14 @@ export interface LandingSection {
 export const brand = {
   name: "FlappyTone",
   shortName: "FlappyTone",
+  /**
+   * The page's `h1`, and the thing someone would actually search for.
+   *
+   * Deliberately not the brand name: "FlappyTone" is a coined word with no
+   * search demand, and a brand-name `h1` is part of what got the sibling
+   * project deindexed. The wordmark in `Nav` carries the name instead.
+   */
+  headline: "Practice Mandarin tones with your voice",
   tagline: "Your voice is the controller.",
   /** One sentence, under the tagline. Say what it does, not what it feels like. */
   pitch:
@@ -48,6 +65,20 @@ export const brand = {
     },
   ],
 
+  /**
+   * The four tones, as the landing page names them.
+   *
+   * `TONE_INFO` in `src/game/gates.ts` reads this rather than owning it: the
+   * prerender may import only `src/brand.ts` (it is data → HTML, never the game
+   * engine), and one copy is better than two that can drift apart.
+   */
+  tones: {
+    1: { pinyin: "mā", hanzi: "妈", cue: "say it flat and high" },
+    2: { pinyin: "má", hanzi: "麻", cue: "start mid, slide up" },
+    3: { pinyin: "mǎ", hanzi: "马", cue: "dip low, then rise" },
+    4: { pinyin: "mà", hanzi: "骂", cue: "drop sharply top to bottom" },
+  },
+
   /** PRD §11, stated in the product rather than only in the spec. */
   limits: [
     "It checks your pitch contour, not your pronunciation — humming will beat it. It's a tone trainer, not a pronunciation checker.",
@@ -70,6 +101,10 @@ export const brand = {
     android: "Android: open the ⋮ menu in Chrome, then Install app.",
     note: "Add it from the game screen or from here — either one opens straight into the game.",
   },
+
+  /** Footer credit for the reference clips. Jane recorded them; say so. */
+  attribution:
+    "Reference audio: Jane, a native Taiwanese speaker, recorded direct to mic and used with permission.",
 
   sections: [
     { id: "top", title: "FlappyTone" },

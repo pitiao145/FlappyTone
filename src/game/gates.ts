@@ -3,19 +3,20 @@
  * No Web Audio, no React, no canvas. See docs/PRD.md §6.
  */
 
+import { brand } from "../brand.ts";
 import { DEFAULT_TUNING, tuning } from "./tuning.ts";
 
 export type Tone = 1 | 2 | 3 | 4;
 
+/**
+ * The strings live in `src/brand.ts` so the build-time prerender can reach them
+ * without importing the game engine. This alias is the game's name for them —
+ * every call site here stays as it was.
+ */
 export const TONE_INFO: Record<
   Tone,
   { pinyin: string; hanzi: string; cue: string }
-> = {
-  1: { pinyin: "mā", hanzi: "妈", cue: "say it flat and high" },
-  2: { pinyin: "má", hanzi: "麻", cue: "start mid, slide up" },
-  3: { pinyin: "mǎ", hanzi: "马", cue: "dip low, then rise" },
-  4: { pinyin: "mà", hanzi: "骂", cue: "drop sharply top to bottom" },
-};
+> = brand.tones;
 
 /**
  * The shipped gate lengths, as a convenience alias for the tuning defaults.

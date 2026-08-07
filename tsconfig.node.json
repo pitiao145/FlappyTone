@@ -22,6 +22,8 @@
   },
   "include": [
     "vite.config.ts",
+    "src/dev/prerender.ts",
+    "src/brand.ts",
     "src/dev/analyze.ts",
     "src/dev/analyze-recording.ts",
     "src/dev/analyze-recording.test.ts",

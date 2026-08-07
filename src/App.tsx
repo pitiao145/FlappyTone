@@ -194,6 +194,11 @@ export default function App() {
    * indistinguishable from someone who never opened the link.
    */
   useEffect(() => {
+    // The build-time prerender (src/dev/prerender.ts) put the landing copy in
+    // the HTML for crawlers. React has committed by the time this runs, so
+    // removing it now swaps one painted page for another with no blank frame.
+    // Idempotent, so StrictMode's double-invoke is harmless.
+    document.getElementById("prerender")?.remove();
     initAnalytics();
     track({ type: "landed" });
     // Re-report the saved calibration each visit, so a session that skips

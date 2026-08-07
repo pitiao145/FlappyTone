@@ -58,7 +58,8 @@ export function Landing({ onPlay, onVisualiser, onMenu }: Props) {
       <Nav variant="landing" onNavigate={() => {}} onPlay={go(onPlay)} disabled={busy} />
 
       <header id="top" className="landing-hero">
-        <h1>{brand.name}</h1>
+        {/* The h1 is the headline, not the brand name — see brand.headline. */}
+        <h1>{brand.headline}</h1>
         <p className="hero-tagline">{brand.tagline}</p>
         <p className="hero-pitch">{brand.pitch}</p>
         <div className="hero-actions">
@@ -155,10 +156,7 @@ export function Landing({ onPlay, onVisualiser, onMenu }: Props) {
       </section>
 
       <footer className="landing-footer">
-        <p className="note">
-          Reference audio: Jane, a native Taiwanese speaker, recorded direct to
-          mic and used with permission.
-        </p>
+        <p className="note">{brand.attribution}</p>
       </footer>
     </div>
   );

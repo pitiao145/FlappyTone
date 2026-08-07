@@ -29,7 +29,12 @@
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
-    <title>FlappyTone</title>
+    <!-- Says what the thing is, not just what it is called: "FlappyTone" is a
+         coined word nobody searches for. Matches brand.headline. -->
+    <title>Practice Mandarin Tones With Your Voice — FlappyTone</title>
+    <!-- The bare URL, deliberately not ?app=1 — that variant is the PWA
+         start_url and must never become the canonical. -->
+    <link rel="canonical" href="https://flappytone.pierrebuilds.dev/" />
 
     <!-- Link previews. og:image must be absolute — a relative path silently
          fails on every scraper. The image is generated from
@@ -46,7 +51,29 @@
     <meta property="og:url" content="https://flappytone.pierrebuilds.dev/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="FlappyTone" />
+    <!-- No twitter:title/description/image: the card spec falls back to the
+         og: tags when they are absent, so adding them is the same copy in two
+         places that can drift. -->
     <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Structured data. SoftwareApplication only — no FAQPage: Google
+         deprecated FAQ rich results and it earns nothing now. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "FlappyTone",
+        "description": "Steer a bird with your voice through corridors shaped like Mandarin tone marks. A browser-based tone contour trainer.",
+        "url": "https://flappytone.pierrebuilds.dev/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

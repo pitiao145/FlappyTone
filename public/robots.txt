@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+# Jane's recording booth. Also noindex via X-Robots-Tag in vercel.json and a
+# meta tag in record.html.
+Disallow: /record
+
+# /assets/ is deliberately NOT disallowed — Google needs the JS and CSS to
+# render the page.
+
+Sitemap: https://flappytone.pierrebuilds.dev/sitemap.xml

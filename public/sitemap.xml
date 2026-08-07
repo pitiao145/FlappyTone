@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  One page, one entry. lastmod is a hardcoded real date and must be edited by
+  hand when the landing content actually changes. Do not generate it from the
+  build date: a sitemap that claims a change on every deploy teaches Google to
+  distrust lastmod and then ignore it entirely.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://flappytone.pierrebuilds.dev/</loc>
+    <lastmod>2026-08-07</lastmod>
+  </url>
+</urlset>
