@@ -1132,40 +1132,47 @@
 .hud-controls {
   flex: 0 0 auto;
   display: flex;
-  gap: var(--space-1);
+  align-items: center;
+  /* No gap: the two buttons' own padding already separates the marks by 16px,
+     and adding to that pushed them apart far enough to read as unrelated. */
+  gap: 0;
   /* .hud is pointer-events: none so the canvas stays clickable; the controls
      inside it have to opt back in. */
   pointer-events: auto;
 }
 
-/* 40px, against the 30px this replaced. The old button was a 13px `‖` glyph
-   in a 30px circle — under the iOS 44px touch minimum and, over a scrolling
-   corridor, not obviously a control at all. The icon is 22px inside it, so
-   the mark alone is nearly the size of the whole old button. 22 rather than
-   20 because the Phosphor icons are stroked at Regular weight, which carries
-   less ink at a given size than a solid glyph does. */
+/* Bare marks, no chrome. The pill and border made these read as two buttons
+   bolted onto the HUD rather than part of it, and the icon never sat true in
+   the circle. Nothing else in this row is boxed — the score, the hearts and
+   the combo are all just marks on the canvas — so these are too, and they
+   line up with the hearts instead of floating above them.
+   The touch target is the padding, not a visible box: 26px of icon plus
+   var(--space-2) either side puts it at ~42px, near the iOS minimum, while
+   only the glyph is drawn. */
 .hud-button {
   flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
   display: grid;
   place-items: center;
-  padding: 0;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--line);
-  background: rgba(var(--surface-rgb), 0.82);
+  padding: var(--space-2);
+  margin: calc(var(--space-2) * -1) 0;
+  border: none;
+  background: none;
   color: var(--ink);
   cursor: pointer;
-  transition: background 120ms ease;
+  opacity: 0.75;
+  transition: opacity 120ms ease;
 }
 
 .hud-button:active {
-  background: rgba(var(--surface-rgb), 1);
+  opacity: 1;
 }
 
+/* 26px — bigger than the 22 it replaced, and bigger again than the 13px glyph
+   this all started as. With the pill gone the mark is the whole control, so
+   it has to carry the affordance on its own. */
 .hud-button svg {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
 }
 
 /* Resume is the one thing a paused player almost always wants, so it carries
