@@ -24,6 +24,7 @@ import {
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawWorld, refreshMotionPreference } from "../render/world.ts";
+import { GearIcon, PauseIcon, PlayIcon } from "./icons.tsx";
 import { PauseOptions } from "./PauseOptions.tsx";
 
 /** HUD refresh rate. React never renders per frame — the rAF loop owns the canvas. */
@@ -82,6 +83,15 @@ export function Game({
   const [hud, setHud] = useState<RunSnapshot | null>(null);
   const [paused, setPaused] = useState(false);
   /**
+   * Whether the paused menu shows the game options.
+   *
+   * The options were only ever reachable by pausing, and the 7 Aug sessions
+   * show nobody found them — every run reported the default speed, width and
+   * cue. "Pause" does not promise settings, so the gear says it instead, and
+   * a plain pause still offers a way in.
+   */
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  /**
    * The tutorial waits behind a card rather than starting on mount.
    *
    * Two reasons: the first gate arrives before a first-time player has worked
@@ -106,8 +116,12 @@ export function Game({
   const reportedGatesRef = useRef(0);
   /** Set by the effect so the pause overlay's Resume can restart the loop. */
   const resumeRef = useRef<() => void>(() => {});
-  /** Set by the effect so the HUD's pause button can stop it. */
-  const pauseRef = useRef<() => void>(() => {});
+  /**
+   * Set by the effect so the HUD's pause and settings buttons can stop it.
+   * The argument is what the resulting menu opens on — the gear pauses and
+   * shows the options, the pause button pauses and does not.
+   */
+  const pauseRef = useRef<(withOptions?: boolean) => void>(() => {});
   /** The run in flight, so the pause menu can toggle the demo live. */
   const runRef = useRef<Run | null>(null);
   /** Set by the effect so the tutorial card's button can begin the run. */
@@ -324,7 +338,11 @@ export function Game({
     // They must do the same thing — a run that keeps scrolling behind a menu,
     // or an AudioContext left running while the phone is in a pocket, are the
     // two bugs this shape exists to prevent.
-    const pause = () => {
+    const pause = (withOptions = false) => {
+      // Still set the menu's shape when already stopped: tapping the gear
+      // while the tab-hidden pause is showing should open the options, not
+      // silently do nothing.
+      setOptionsOpen(withOptions);
       if (!running) return;
       running = false;
       cancelAnimationFrame(rafId);
@@ -430,14 +448,24 @@ export function Game({
                 top-right it sat on top of the hearts, which are also
                 right-aligned. */}
             {!waiting && !notice && !paused && (
-              <button
-                className="pause-button"
-                onClick={() => pauseRef.current()}
-                title="Pause"
-                aria-label="Pause"
-              >
-                ‖
-              </button>
+              <div className="hud-controls">
+                <button
+                  className="hud-button"
+                  onClick={() => pauseRef.current(true)}
+                  title="Game options"
+                  aria-label="Game options"
+                >
+                  <GearIcon />
+                </button>
+                <button
+                  className="hud-button"
+                  onClick={() => pauseRef.current(false)}
+                  title="Pause"
+                  aria-label="Pause"
+                >
+                  <PauseIcon />
+                </button>
+              </div>
             )}
           </div>
 
@@ -544,13 +572,30 @@ export function Game({
         {paused && (
           <div className="overlay pause-menu">
             <p className="pause-title">Paused</p>
-            <button className="primary" onClick={() => resumeRef.current()}>
+            <button
+              className="primary resume-button"
+              onClick={() => resumeRef.current()}
+            >
+              <PlayIcon />
               Resume
             </button>
 
-            <PauseOptions
-              onCueStyle={(style) => runRef.current?.setCueStyle(style)}
-            />
+            {optionsOpen ? (
+              <PauseOptions
+                onCueStyle={(style) => runRef.current?.setCueStyle(style)}
+              />
+            ) : (
+              /* The way in from a plain pause, and from the tab-hidden one.
+                 Named for what it changes rather than "Settings", which in
+                 this app is the mic-calibration screen. */
+              <button
+                className="options-reveal"
+                onClick={() => setOptionsOpen(true)}
+              >
+                <GearIcon />
+                Speed, tunnel width &amp; example
+              </button>
+            )}
 
             <div className="pause-exits">
               <button

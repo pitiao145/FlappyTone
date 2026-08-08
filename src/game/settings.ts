@@ -76,12 +76,17 @@ export function clearSettings(): void {
 // ---------------------------------------------------------------- game pace
 
 const PACE_KEY = "toneflap.pace.v1";
-const DEFAULT_PACE: Pace = "normal";
+const DEFAULT_PACE: Pace = "relaxed";
 
 /**
- * Load the player's chosen pace. Defaults to "normal" (a notch calmer than
- * the PRD baseline) when unset or corrupt — playtesting found the baseline
- * too fast for learning.
+ * Load the player's chosen pace. Defaults to "relaxed" when unset or corrupt.
+ *
+ * It was "normal", one notch down from the PRD baseline, and that was still
+ * too fast: the 7 Aug analytics show walls as the dominant outcome on every
+ * tone including T1, the one corridor with no rate demand at all. A first-time
+ * player is learning the pitch mapping and the tone at once; the scroll speed
+ * is the part of that we can simply hand them. Anyone who wants the pressure
+ * moves the slider up, and the choice sticks.
  */
 export function loadPace(): Pace {
   const raw = localStorage.getItem(PACE_KEY);

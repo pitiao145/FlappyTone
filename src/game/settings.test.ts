@@ -203,18 +203,18 @@ describe("Pace persistence", () => {
     } as Storage);
   });
 
-  it("defaults to normal when unset", () => {
-    expect(loadPace()).toBe("normal");
-  });
-
-  it("round-trips a saved pace", () => {
-    savePace("relaxed");
+  it("defaults to relaxed when unset", () => {
     expect(loadPace()).toBe("relaxed");
   });
 
-  it("falls back to normal on a corrupt value", () => {
+  it("round-trips a saved pace", () => {
+    savePace("fast");
+    expect(loadPace()).toBe("fast");
+  });
+
+  it("falls back to relaxed on a corrupt value", () => {
     localStorage.setItem("toneflap.pace.v1", "warp");
-    expect(loadPace()).toBe("normal");
+    expect(loadPace()).toBe("relaxed");
   });
 });
 

@@ -1124,27 +1124,82 @@
 
 /* ---------------------------------------------------------- pause menu */
 
-/* The one always-visible control during a run. Replaces the old ■ quit
-   button, which made ending the run the only thing you could do. */
-/* Sits in .hud-top's flow, after the hearts. It was absolutely positioned at
-   the top right, which is exactly where the hearts are — three hearts and the
-   button occupied the same corner and neither read. */
-.pause-button {
+/* The always-visible run controls. Two buttons, not one: pausing and changing
+   the speed are different intentions, and folding the second into the first
+   meant nobody found it — every reported run on 7 Aug used the defaults.
+   Sits in .hud-top's flow, after the hearts. Absolutely positioned at the top
+   right it sat on the hearts, which are also right-aligned. */
+.hud-controls {
   flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
+  display: flex;
+  gap: var(--space-1);
+  /* .hud is pointer-events: none so the canvas stays clickable; the controls
+     inside it have to opt back in. */
+  pointer-events: auto;
+}
+
+/* 40px, against the 30px this replaced. The old button was a 13px `‖` glyph
+   in a 30px circle — under the iOS 44px touch minimum and, over a scrolling
+   corridor, not obviously a control at all. The icon is 20px inside it, so
+   the mark is bigger than the whole old button's type. */
+.hud-button {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
-  font-size: 13px;
-  line-height: 1;
+  padding: 0;
   border-radius: var(--radius-pill);
   border: 1px solid var(--line);
-  background: rgba(var(--surface-rgb), 0.6);
+  background: rgba(var(--surface-rgb), 0.82);
   color: var(--ink);
   cursor: pointer;
-  /* .hud is pointer-events: none so the canvas stays clickable; the one
-     control inside it has to opt back in. */
-  pointer-events: auto;
+  transition: background 120ms ease;
+}
+
+.hud-button:active {
+  background: rgba(var(--surface-rgb), 1);
+}
+
+.hud-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Resume is the one thing a paused player almost always wants, so it carries
+   the play mark as well as the word. */
+.resume-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.resume-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Quiet, because it is the second choice on this screen after Resume — but a
+   full-width row rather than a link, because it is the only signpost that the
+   game has options at all. */
+.options-reveal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.options-reveal svg {
+  width: 17px;
+  height: 17px;
 }
 
 /* Near-opaque, unlike the pause overlay it grew out of. That one showed a
