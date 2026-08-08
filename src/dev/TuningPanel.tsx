@@ -40,6 +40,8 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
         help: "Gap after one gate before the next. Higher = fewer gates on screen at once." },
       { key: "restMsFloor", label: "rest floor", min: 300, max: 2000, step: 50,
         help: "The ramp shrinks the rest toward this and no further." },
+      { key: "birdXFrac", label: "dot position", min: 0.08, max: 0.45, step: 0.01,
+        help: "How far from the left edge the dot sits. Left = more runway after the demo." },
       { key: "cueApproachMs", label: "cue approach", min: 0, max: 2000, step: 25,
         help: "Travel left between the end of the demo freeze and the corridor reaching you. 0 = it arrives the instant the world resumes." },
       { key: "cuePauseHoldMs", label: "post-demo hold", min: 0, max: 1200, step: 25,

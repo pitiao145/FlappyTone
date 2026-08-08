@@ -626,7 +626,7 @@ describe("Run — pause cue style", () => {
       (g) => g.xStart === firstCued.cue!.xStart,
     )!;
     const travelMs =
-      ((gate.x0 - W * 0.28) / firstCued.difficulty.scrollSpeed) * 1000;
+      ((gate.x0 - W * BIRD_X_FRAC) / firstCued.difficulty.scrollSpeed) * 1000;
     expect(travelMs).toBeLessThanOrEqual(tuning().cueApproachMs + DT);
     expect(travelMs).toBeGreaterThan(tuning().cueApproachMs - 4 * DT);
   });
@@ -879,8 +879,8 @@ describe("Run — trail is drawn in the world's frame (spec B4)", () => {
     const s = snapshots[snapshots.length - 1];
     const newest = s.trail[s.trail.length - 1];
     // The sample was taken at the bird's x, before this frame's scroll.
-    expect(newest.x).toBeLessThanOrEqual(W * 0.28 + 0.001);
-    expect(newest.x).toBeGreaterThan(W * 0.28 - 20);
+    expect(newest.x).toBeLessThanOrEqual(W * BIRD_X_FRAC + 0.001);
+    expect(newest.x).toBeGreaterThan(W * BIRD_X_FRAC - 20);
   });
 });
 

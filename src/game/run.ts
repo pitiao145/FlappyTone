@@ -40,7 +40,7 @@ import {
   type UnheardHint,
 } from "./scoring.ts";
 import { REST_CHAO } from "./dynamics.ts";
-import { tuning } from "./tuning.ts";
+import { DEFAULT_TUNING, tuning } from "./tuning.ts";
 import type { PitchState } from "../pitch/types.ts";
 
 export type RunMode = "game" | "tutorial";
@@ -250,8 +250,18 @@ const TUTORIAL_TONES: Tone[] = [1, 1, 4, 4, 2, 2, 3, 3];
 const TUTORIAL_TOLERANCE_FACTOR = 2;
 const TUTORIAL_GATE_COUNT = TUTORIAL_TONES.length;
 
-/** Bird's fixed horizontal position, as a fraction of canvas width. */
-export const BIRD_X_FRAC = 0.28;
+/**
+ * Bird's fixed horizontal position, as a fraction of canvas width.
+ *
+ * The shipped default, as a convenience alias — live reads go through
+ * `birdXFrac()` so the Lab can move it while a run is being flown.
+ */
+export const BIRD_X_FRAC = DEFAULT_TUNING.birdXFrac;
+
+/** Live bird position. See `Tuning.birdXFrac`. */
+export function birdXFrac(): number {
+  return tuning().birdXFrac;
+}
 /** Keep this many gates queued ahead so `upcoming` is always populated. */
 const QUEUE_AHEAD = 2;
 
@@ -765,7 +775,7 @@ export class Run {
   }
 
   private screenX(worldPos: number): number {
-    return this.width * BIRD_X_FRAC + (worldPos - this.worldX);
+    return this.width * birdXFrac() + (worldPos - this.worldX);
   }
 
   private progressIn(gate: Gate): number {
@@ -979,7 +989,7 @@ export class Run {
     const last = this.gates[this.gates.length - 1];
     if (!last) {
       // First gate enters at the right edge, so the player sees it coming.
-      return this.worldX + this.width * (1 - BIRD_X_FRAC);
+      return this.worldX + this.width * (1 - birdXFrac());
     }
     return Math.max(this.gateEnd(last) + restPx, this.worldX + restPx);
   }

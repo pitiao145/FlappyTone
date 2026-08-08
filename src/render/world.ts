@@ -7,7 +7,7 @@
  * the HUD React overlay's job, not this module's — see PRD §8.
  */
 
-import { BIRD_X_FRAC } from "../game/run.ts";
+import { birdXFrac } from "../game/run.ts";
 import type { RunSnapshot } from "../game/run.ts";
 import {
   corridorChaoAt,
@@ -157,7 +157,7 @@ export function drawWorld(
 
   drawChaoGrid(ctx, width, height);
 
-  const dotX = width * BIRD_X_FRAC;
+  const dotX = width * birdXFrac();
 
   for (const gate of snap.gates) {
     // A gate the bird has reached is the player's turn: full brightness.
@@ -607,7 +607,7 @@ function drawUnheardPulse(
   if (age > UNHEARD_PULSE_MS) return;
 
   const p = age / UNHEARD_PULSE_MS;
-  const cx = width * BIRD_X_FRAC;
+  const cx = width * birdXFrac();
   const cy = chaoToY(snap.birdChao, height);
   ctx.save();
   ctx.beginPath();

@@ -117,6 +117,24 @@ export interface Tuning {
    */
   cuePauseHoldMs: number;
   /**
+   * The bird's fixed horizontal position, as a fraction of canvas width.
+   *
+   * This is half of the call-and-response beat, and the cheap half. The gap
+   * between the demo ending and the corridor arriving is `cueApproachMs` of
+   * travel, and buying more of it by firing the cue earlier also pushes the
+   * gate rightward on screen until a long word's corridor runs off the edge.
+   * Moving the bird left buys the same runway without moving the gate: the
+   * corridor is drawn at its real position either way, so the space has to
+   * come from somewhere, and the left of the screen is holding a trail that is
+   * already clipped.
+   *
+   * Costs trail: at 165px/s the last 1.5s is 248px against the ~76px to the
+   * left of the bird here, so the trace was being cut off long before this
+   * moved. What is left is the recent part, which is the part being compared
+   * to the corridor.
+   */
+  birdXFrac: number;
+  /**
    * How much travel is left between the end of the freeze
    * and the corridor reaching the bird. This is the call-and-response beat —
    * see spec B3. 0 means the gate arrives the instant the world resumes.
@@ -171,7 +189,8 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   baseRestMs: 1200,
   restMsFloor: 600,
   cuePauseHoldMs: 750,
-  cueApproachMs: 700,
+  birdXFrac: 0.18,
+  cueApproachMs: 1000,
   collisionSustainMs: 120,
   timingSlackS: 0.07,
   maxTimingWidenFactor: 1.5,
