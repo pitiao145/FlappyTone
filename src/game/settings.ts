@@ -114,7 +114,7 @@ const WIDTH_KEY = "toneflap.width.v1";
  */
 const DEFAULT_WIDTH: CorridorWidth = "wide";
 
-/** Load the player's chosen corridor width. Defaults to "normal" when unset or corrupt. */
+/** Load the player's chosen corridor width. Falls back to DEFAULT_WIDTH when unset or corrupt. */
 export function loadCorridorWidth(): CorridorWidth {
   const raw = localStorage.getItem(WIDTH_KEY);
   return raw !== null && (CORRIDOR_WIDTHS as string[]).includes(raw)
@@ -124,6 +124,29 @@ export function loadCorridorWidth(): CorridorWidth {
 
 export function saveCorridorWidth(width: CorridorWidth): void {
   localStorage.setItem(WIDTH_KEY, width);
+}
+
+// -------------------------------------------------------- English translation
+
+const TRANSLATION_KEY = "toneflap.translation.v1";
+
+/**
+ * Show the English gloss above the pinyin. On by default.
+ *
+ * On, because the person this game is for does not yet know what 賣 means, and
+ * a syllable they cannot attach a meaning to is a sound they are imitating
+ * rather than a word they are learning. Off exists for the case where that is
+ * the point — reading the hanzi without a crutch.
+ */
+export function loadShowTranslation(): boolean {
+  const raw = localStorage.getItem(TRANSLATION_KEY);
+  // Anything other than an explicit "off" is on, so a corrupt value fails to
+  // the more useful state rather than silently hiding the translations.
+  return raw !== "off";
+}
+
+export function saveShowTranslation(show: boolean): void {
+  localStorage.setItem(TRANSLATION_KEY, show ? "on" : "off");
 }
 
 // ------------------------------------------------------------------ demo cue

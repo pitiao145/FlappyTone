@@ -42,6 +42,7 @@ import { DEFAULT_POLYLINES } from "../game/tuning.ts";
 import type { Tone } from "../record/wordlist.ts";
 import { decodeWav, encodeWav } from "./wav.ts";
 import { WORDS } from "../record/wordlist.ts";
+import { GLOSSARY } from "../record/glossary.ts";
 import speakers from "../../fixtures/captures/speakers.json" with { type: "json" };
 
 const SPEAKER = "jane";
@@ -193,6 +194,9 @@ for (const cut of [...cuts.values()].sort((a, b) => a.id.localeCompare(b.id))) {
     id: cut.id,
     hanzi: cut.hanzi,
     pinyin: cut.pinyin,
+    // Empty rather than absent when a word has no gloss yet, so the shape of a
+    // manifest entry does not depend on how complete the glossary is.
+    english: GLOSSARY[cut.id] ?? "",
     tone: cut.tone,
     file: `${cut.id}.wav`,
     durationS: Number((cut.durationMs / 1000).toFixed(4)),

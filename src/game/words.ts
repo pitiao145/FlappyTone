@@ -19,6 +19,12 @@ export interface Word {
   id: string;
   hanzi: string;
   pinyin: string;
+  /**
+   * English gloss, or "" when the glossary has no entry yet. Optional on the
+   * wire and never a reason to drop a word: a missing translation costs one
+   * line of HUD, a dropped word costs the whole gate.
+   */
+  english: string;
   tone: Tone;
   /** Filename under `public/ref/`. */
   file: string;
@@ -86,6 +92,7 @@ export function loadWords(manifest: unknown): Word[] {
       id: c.id,
       hanzi: c.hanzi,
       pinyin: c.pinyin,
+      english: typeof c.english === "string" ? c.english : "",
       tone: c.tone as Tone,
       file: c.file,
       durationS: c.durationS,

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { GLOSSARY } from "./glossary.ts";
 import { idFor, parseWord } from "./pinyin.ts";
 import { WORDS } from "./wordlist.ts";
 
@@ -44,6 +45,32 @@ describe("word list", () => {
         // The bare id, or the same plus a homophone suffix.
         new RegExp(`^${idFor(w.pinyin)}[a-z]*$`),
       );
+    }
+  });
+});
+
+describe("the glossary", () => {
+  it("gives every word an English gloss", () => {
+    const missing = WORDS.filter((w) => !GLOSSARY[w.id]).map((w) => `${w.hanzi} (${w.id})`);
+    expect(missing).toEqual([]);
+  });
+
+  it("glosses nothing that is not in the word list", () => {
+    // A stale key is a translation that will never be shown, and usually the
+    // trace of an id that moved.
+    const ids = new Set(WORDS.map((w) => w.id));
+    expect(Object.keys(GLOSSARY).filter((id) => !ids.has(id))).toEqual([]);
+  });
+
+  it("keeps a gloss short enough for one HUD line", () => {
+    // It sits above the pinyin on a 420px canvas. A definition wraps and
+    // pushes the syllable off its line.
+    for (const [id, gloss] of Object.entries(GLOSSARY)) {
+      expect(gloss.length, id).toBeLessThanOrEqual(18);
+      expect(gloss, id).toBe(gloss.trim());
+      // Lower case, so the line reads as a gloss rather than a heading. "I" is
+      // the one word English will not let us lower-case.
+      expect(gloss.replace("I", "i"), id).toBe(gloss.replace("I", "i").toLowerCase());
     }
   });
 });

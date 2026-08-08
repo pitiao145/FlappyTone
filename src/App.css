@@ -311,6 +311,14 @@
   font-size: 2rem;
 }
 
+/* Above the pinyin, and quieter than it: the meaning is context for the word,
+   not the thing being practised. */
+.hud-syllable .english {
+  font-size: 0.95rem;
+  color: var(--ink-muted);
+  letter-spacing: 0.01em;
+}
+
 .hud-syllable .tone-num,
 .hud-syllable .cue {
   font-size: 0.85rem;

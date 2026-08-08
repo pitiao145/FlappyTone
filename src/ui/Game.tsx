@@ -19,6 +19,7 @@ import {
   loadCueStyle,
   loadNoticeSeen,
   loadPace,
+  loadShowTranslation,
   saveNoticeSeen,
   type CalibrationSettings,
 } from "../game/settings.ts";
@@ -92,6 +93,10 @@ export function Game({
    * a plain pause still offers a way in.
    */
   const [optionsOpen, setOptionsOpen] = useState(false);
+  // Read once on mount and then owned by React, so the pause menu's toggle
+  // reaches the HUD without a re-run. Unlike speed and width, this changes no
+  // geometry, so applying it mid-gate is safe.
+  const [showTranslation, setShowTranslation] = useState(loadShowTranslation);
   /**
    * The tutorial waits behind a card rather than starting on mount.
    *
@@ -486,6 +491,9 @@ export function Game({
 
           {info && displayTone !== null && (
             <div className="hud-syllable">
+              {showTranslation && displayWord?.english && (
+                <span className="english">{displayWord.english}</span>
+              )}
               <span className="syllable">{displayWord?.pinyin ?? info.pinyin}</span>
               <span className="hanzi">{displayWord?.hanzi ?? info.hanzi}</span>
               <span className="tone-num">({displayTone})</span>
@@ -598,6 +606,7 @@ export function Game({
             {optionsOpen ? (
               <PauseOptions
                 onCueStyle={(style) => runRef.current?.setCueStyle(style)}
+                onShowTranslation={setShowTranslation}
               />
             ) : (
               /* The way in from a plain pause, and from the tab-hidden one.
@@ -608,7 +617,7 @@ export function Game({
                 onClick={() => setOptionsOpen(true)}
               >
                 <GearIcon />
-                Speed, tunnel width &amp; example
+                Speed, width, translation &amp; example
               </button>
             )}
 

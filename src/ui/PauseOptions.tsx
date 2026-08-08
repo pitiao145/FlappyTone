@@ -10,9 +10,11 @@ import {
   loadCorridorWidth,
   loadCueStyle,
   loadPace,
+  loadShowTranslation,
   saveCorridorWidth,
   saveCueStyle,
   savePace,
+  saveShowTranslation,
 } from "../game/settings.ts";
 import { Choice } from "./Choice.tsx";
 
@@ -35,6 +37,12 @@ interface Props {
    * flown — so they are saved and picked up by the next run.
    */
   onCueStyle?: (style: CueStyle) => void;
+  /**
+   * Applies the translation choice to the run in flight. This one *is* live:
+   * it is a line of HUD text, not geometry, so there is nothing to move under
+   * a gate — and the moment you want it is the word you are looking at.
+   */
+  onShowTranslation?: (show: boolean) => void;
 }
 
 /**
@@ -45,10 +53,11 @@ interface Props {
  * discover it on the gate they just clipped. Every change is written to
  * localStorage as it is made, so it also becomes the default for future runs.
  */
-export function PauseOptions({ onCueStyle }: Props) {
+export function PauseOptions({ onCueStyle, onShowTranslation }: Props) {
   const [pace, setPace] = useState<Pace>(loadPace);
   const [width, setWidth] = useState<CorridorWidth>(loadCorridorWidth);
   const [cueStyle, setCueStyle] = useState<CueStyle>(loadCueStyle);
+  const [translation, setTranslation] = useState<boolean>(loadShowTranslation);
 
   return (
     <div className="pause-options">
@@ -76,6 +85,25 @@ export function PauseOptions({ onCueStyle }: Props) {
           }}
         />
         <p className="param-help">{WIDTH_HELP[width]} Takes effect next run.</p>
+      </section>
+
+      <section>
+        <h4>Translation</h4>
+        <Choice
+          options={["on", "off"] as const}
+          value={translation ? "on" : "off"}
+          onChange={(v) => {
+            const show = v === "on";
+            setTranslation(show);
+            saveShowTranslation(show);
+            onShowTranslation?.(show);
+          }}
+        />
+        <p className="param-help">
+          {translation
+            ? "The English meaning sits above the pinyin."
+            : "Hanzi and pinyin only."}
+        </p>
       </section>
 
       <section>

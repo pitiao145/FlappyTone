@@ -8,6 +8,7 @@ function clip(over: Partial<Word> = {}): Record<string, unknown> {
     id: "ba1",
     hanzi: "八",
     pinyin: "bā",
+    english: "eight",
     tone: 1,
     file: "ba1.wav",
     durationS: 1.178,
@@ -54,6 +55,15 @@ describe("loadWords", () => {
     expect(loadWords({ clips: [bad] })).toEqual([]);
     // The good entry beside it still loads.
     expect(loadWords({ clips: [bad, clip({ id: "ok" })] }).map((w) => w.id)).toEqual(["ok"]);
+  });
+
+  it("keeps a word whose gloss is missing rather than dropping it", () => {
+    // A missing translation costs one line of HUD; a dropped word costs the
+    // gate. Anything non-string reads as "no gloss yet".
+    const noGloss = { ...clip(), english: undefined };
+    expect(loadWords({ clips: [noGloss] })[0].english).toBe("");
+    const wrongType = { ...clip(), english: 42 };
+    expect(loadWords({ clips: [wrongType] })[0].english).toBe("");
   });
 
   it("keeps the first of a duplicated id", () => {

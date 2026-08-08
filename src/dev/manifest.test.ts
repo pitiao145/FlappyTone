@@ -25,6 +25,12 @@ describe("the shipped manifest", () => {
     expect(words.length).toBeGreaterThan(0);
   });
 
+  it("carries an English gloss for every word", () => {
+    // The HUD reads `word.english`; a gloss that stops at the glossary and
+    // never reaches the manifest is invisible rather than broken.
+    for (const w of words) expect(w.english, w.id).not.toBe("");
+  });
+
   it("covers all four tones", () => {
     expect([...new Set(words.map((w) => w.tone))].sort()).toEqual([1, 2, 3, 4]);
   });
