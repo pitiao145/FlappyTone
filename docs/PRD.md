@@ -302,6 +302,16 @@ accuracy   = clamp(1 - mean(err_t), 0, 1)
 Play a native recording of the target syllable **300ms before the gate enters the screen**. Call-and-response: hear it, then produce it.
 
 **Source:** [MSU Tone Perfect](https://tone.lib.msu.edu/) — 9,860 free open-access clips, 410 syllables × 4 tones × 6 native speakers.
+> **⚠️ Superseded again (8 Aug 2026) — the inventory is 120 of Jane's words**,
+> 30 per tone, recorded at `/record` and cut by `npm run make-clips`. Each clip
+> carries its own corridor polyline and its own length in `manifest.json`, and
+> the gate is built from the clip the player is about to hear — so §6's
+> "demo length == gate length == polyline timeline" now holds per word rather
+> than per tone. Two exceptions, both deliberate and both documented in
+> CLAUDE.md: T3 corridors are still the citation polyline (her natural T3 does
+> not rise), and a clip's absolute Chao level comes from the tone mark rather
+> than from her voice (her T1 measures at chao 3.3).
+>
 > **⚠️ Superseded — the shipped clips are Jane's own recordings**, cut from
 > `fixtures/captures/jane_ma*.wav` by `npm run make-ref-clips`, used with her
 > permission. That removes the audio-cmn CC-BY-SA attribution obligation *and*

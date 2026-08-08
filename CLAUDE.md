@@ -70,21 +70,51 @@ the blob key, the clip filename and the manifest key, so an id that moves
 relabels audio that is already recorded. With 是/事/市 all `shì`, recomputing
 from list order turned `shi4b` from 事 into 试 the moment a word was inserted.
 
-Three more rules hold this together:
+**A gate is built from a word, not a tone.** `manifest.json` carries each
+clip's `durationS` and its corridor `polyline`; `src/game/words.ts` parses it,
+`shapeForWord` turns it into the corridor, and `reference.ts` fetches the audio
+by word id. `public/ref/` is the shipped inventory and nothing else — the four
+`ma` anchors moved to `fixtures/anchors/`, because 麻 `má` has id `ma2` and both
+cutters were writing `public/ref/ma2.wav`.
+
+**Level comes from the tone mark, shape from the recording.** Her T4 onsets
+reach ~330Hz against a T1 at ~215 — reproducibly, across both sessions — so a
+contour normalised against her own voice puts "high level" T1 at chao 3.3.
+`src/dev/clipNormalize.ts` maps each tone's cohort as a body onto the canonical
+Chao span: the differences between that tone's 30 words survive, only their
+shared height is taken from the mark. Contours are measured against a
+deliberately wide range (`MEASURE_RANGE_SEMITONES`) and clamped once, after
+placement — clamping first destroys the anchors.
+
+**Tone 3 corridors are still synthetic.** 22 of her 30 T3 takes are the natural
+falling third, so a T3 gate flies the citation polyline while cueing her word.
+One branch, in `shapeForWord`, to delete once T3 is re-recorded in citation
+form. It is the only place demo and corridor disagree.
+
+Five more rules hold this together:
 
 1. **`src/dev/clipCut.ts` is the only cutter.** `make-ref-clips` (the four
-   shipped `ma` clips) and `make-clips` (everything Jane records) both call it,
-   so the demo audio, the corridor shape and the timeline both run on are one
-   measurement. PRD §6 calls their agreement an invariant; two past failures
-   came from those three disagreeing. After touching it, regenerate and check
-   `git diff public/ref` is empty.
+   anchor `ma` clips, now `fixtures/anchors/`) and `make-clips` (everything Jane
+   records) both call it, so the demo audio, the corridor shape and the timeline
+   both run on are one measurement. PRD §6 calls their agreement an invariant;
+   two past failures came from those three disagreeing. After touching it,
+   regenerate and check `git diff fixtures/anchors` is empty.
 2. **`takeDetector` and `clipCut` must find the same voiced run.**
    `takeDetector.test.ts` pins this against Jane's four captures to the
    millisecond. If one moves and the other doesn't, the shared segmentation is
    broken, not the test.
 3. **`clipReview.ts` flags, it never blocks.** Its tests assert that Jane's four
-   shipped clips pass clean — anything that flags those is measuring the wrong
+   anchor clips pass clean — anything that flags those is measuring the wrong
    thing, which both of its original heuristics were.
+4. **`f0Center` is measured per session, not read from `speakers.json`.** That
+   file is a measurement of one sitting and pitch drifts between them: against a
+   stale 168 for a session she recorded at 201, six T1 clips came out as a flat
+   line pinned at chao 5. `measurePitchReference` pools the session's own voiced
+   frames.
+5. **`manifest.test.ts` is the seam between the cutter and the game.** Nothing
+   else connects them, and a renamed field surfaces as an empty inventory —
+   which degrades to the tuning defaults and looks exactly like the game
+   working.
 
 ## Play analytics
 
