@@ -638,12 +638,14 @@ describe("Run — pause cue style", () => {
     const xOf = (s: RunSnapshot) =>
       s.gates.find((g) => g.xStart === snapshots[cueAt].cue!.xStart)?.x0;
 
-    // 500ms demo + 500ms hold = 1000ms pause ≈ 62 frames at 16ms.
-    const duringPause = Math.floor(900 / DT);
+    // The default 500ms demo plus the tuned hold. Read from tuning rather than
+    // written down, so moving the preparation window is not a test edit.
+    const pauseMs = 500 + tuning().cuePauseHoldMs;
+    const duringPause = Math.floor((pauseMs - 100) / DT);
     for (let i = cueAt + 1; i <= cueAt + duringPause; i++) {
       expect(xOf(snapshots[i])).toBe(xOf(snapshots[cueAt]));
     }
-    const afterPause = cueAt + Math.ceil(1100 / DT);
+    const afterPause = cueAt + Math.ceil((pauseMs + 100) / DT);
     expect(xOf(snapshots[afterPause])).toBeLessThan(xOf(snapshots[cueAt])!);
   });
 
@@ -714,11 +716,12 @@ describe("Run — cuePaused flag", () => {
     });
     const { snapshots } = simulate(run, 600, trackCorridor);
     const cueAt = snapshots.findIndex((s) => s.cue !== null);
+    const pauseMs = 500 + tuning().cuePauseHoldMs;
     expect(snapshots[cueAt].cuePaused).toBe(true);
-    // Still paused most of the way through the 1000ms window…
-    expect(snapshots[cueAt + Math.floor(900 / DT)].cuePaused).toBe(true);
+    // Still paused most of the way through the window…
+    expect(snapshots[cueAt + Math.floor((pauseMs - 100) / DT)].cuePaused).toBe(true);
     // …and released after it.
-    expect(snapshots[cueAt + Math.ceil(1100 / DT)].cuePaused).toBe(false);
+    expect(snapshots[cueAt + Math.ceil((pauseMs + 100) / DT)].cuePaused).toBe(false);
   });
 
   // Demo off is implemented entirely by never cueing, so this one assertion
@@ -764,7 +767,9 @@ describe("T3 gate boundaries", () => {
 
     const { snapshots } = simulate(
       run,
-      25,
+      // Long enough to reach the gate through the demo freeze — which grew
+      // when cuePauseHoldMs did.
+      32,
       (s) => {
         // Quiet from just before the gate arrives, so the grace period has
         // already expired and the dot is mid-drift as it crosses the threshold.

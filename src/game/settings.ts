@@ -102,7 +102,17 @@ export function savePace(pace: Pace): void {
 // ------------------------------------------------------------ corridor width
 
 const WIDTH_KEY = "toneflap.width.v1";
-const DEFAULT_WIDTH: CorridorWidth = "normal";
+/**
+ * Wide, not the PRD's tolerance.
+ *
+ * The corridors are measured from one speaker's takes now, and a first-time
+ * player is being asked to match a stranger's syllable inside a wall drawn from
+ * it. Being told you missed, when what you produced was a perfectly good tone
+ * in your own voice, is the single fastest way to lose someone — the same
+ * argument "couldn't hear that" is built on. Narrow is one tap away in
+ * Settings for anyone who wants it.
+ */
+const DEFAULT_WIDTH: CorridorWidth = "wide";
 
 /** Load the player's chosen corridor width. Defaults to "normal" when unset or corrupt. */
 export function loadCorridorWidth(): CorridorWidth {

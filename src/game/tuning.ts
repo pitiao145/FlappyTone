@@ -100,7 +100,21 @@ export interface Tuning {
   baseRestMs: number;
   /** Floor the difficulty ramp may shrink `baseRestMs` to. */
   restMsFloor: number;
-  /** Still beat after the demo trace, before the world resumes. */
+  /**
+   * Still beat after the demo trace, before the world resumes.
+   *
+   * This is the player's preparation window: the dot has stopped, the corridor
+   * has not moved, and nothing is being scored yet. Raised from 450ms once the
+   * inventory became 120 words — a one-syllable game only ever asked for `ma`,
+   * and some of these words need a moment to get the mouth ready for before
+   * the tone starts.
+   *
+   * Deliberately this knob rather than `cueApproachMs`: that one buys the same
+   * time by firing the cue further out, which also pushes the corridor further
+   * right while the demo is drawn over it. At 700ms the gate's start already
+   * sits ~154px ahead of the dot on a 420px canvas, so a long word's trace runs
+   * off the edge. The freeze costs nothing on screen.
+   */
   cuePauseHoldMs: number;
   /**
    * How much travel is left between the end of the freeze
@@ -156,7 +170,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   baseToleranceH: 0.1,
   baseRestMs: 1200,
   restMsFloor: 600,
-  cuePauseHoldMs: 450,
+  cuePauseHoldMs: 750,
   cueApproachMs: 700,
   collisionSustainMs: 120,
   timingSlackS: 0.07,

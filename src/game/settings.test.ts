@@ -232,8 +232,10 @@ describe("Corridor width persistence", () => {
     } as Storage);
   });
 
-  it("defaults to normal when unset", () => {
-    expect(loadCorridorWidth()).toBe("normal");
+  it("defaults to wide when unset", () => {
+    // See DEFAULT_WIDTH: a first-timer matching a stranger's syllable inside a
+    // wall measured from it gets the benefit of the doubt.
+    expect(loadCorridorWidth()).toBe("wide");
   });
 
   it("round-trips a saved width", () => {
@@ -241,9 +243,9 @@ describe("Corridor width persistence", () => {
     expect(loadCorridorWidth()).toBe("wide");
   });
 
-  it("falls back to normal on a corrupt value", () => {
+  it("falls back to the default on a corrupt value", () => {
     localStorage.setItem("toneflap.width.v1", "gigantic");
-    expect(loadCorridorWidth()).toBe("normal");
+    expect(loadCorridorWidth()).toBe("wide");
   });
 });
 
