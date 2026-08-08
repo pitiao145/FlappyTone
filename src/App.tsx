@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { initAnalytics, track, trackCalibration } from "./analytics/client";
 import { initPostHog } from "./analytics/posthog.ts";
+import { loadInventory } from "./audio/inventory";
 import { MicError } from "./audio/mic";
 import { ensureMic, stopMic } from "./audio/session";
 import { GateLogPanel } from "./dev/GateLogPanel";
@@ -205,6 +206,11 @@ export default function App() {
     // gate results have to be read against.
     const saved = loadSettings();
     if (saved) trackCalibration(saved);
+    // The clip inventory, started here so it has landed by the time a run is
+    // constructed — the Run needs its words synchronously, at the moment the
+    // first gates spawn. A failure resolves to an empty inventory and the game
+    // falls back to the tuning defaults; nothing here can block a run.
+    void loadInventory();
   }, []);
 
   // Runs after the landing page has painted, so the target exists. "top" is

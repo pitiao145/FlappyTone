@@ -4,7 +4,8 @@
  */
 
 import { brand } from "../brand.ts";
-import { DEFAULT_TUNING, tuning } from "./tuning.ts";
+import { DEFAULT_TUNING, tuning, type Polyline } from "./tuning.ts";
+import type { Word } from "./words.ts";
 
 export type Tone = 1 | 2 | 3 | 4;
 
@@ -43,10 +44,46 @@ export function gateDurationS(tone: Tone): number {
   return tuning().gateDurationS[tone];
 }
 
-/** Piecewise-linear interpolation of a tone's corridor centreline. t is clamped to [0,1]. */
-export function corridorChaoAt(tone: Tone, t: number): number {
+/**
+ * A corridor: the centreline to fly and how long flying it takes.
+ *
+ * Gates are built from words now, and a word carries its own measured contour
+ * and its own length, so the shape can no longer be looked up from the tone.
+ * Keeping the two together in one object is what holds PRD §6's invariant —
+ * a polyline and a duration that came from different places is exactly the
+ * disagreement that has broken this twice.
+ */
+export interface GateShape {
+  polyline: Polyline;
+  durationS: number;
+}
+
+/** The tone's own default corridor, from tuning. The Lab edits these. */
+export function shapeForTone(tone: Tone): GateShape {
+  const t = tuning();
+  return { polyline: t.polylines[tone], durationS: t.gateDurationS[tone] };
+}
+
+/**
+ * The corridor for a word.
+ *
+ * ⚠ Tone 3 is deliberately not measured. 22 of Jane's 30 T3 takes are her
+ * *natural* T3 — a dip that stays down and never rises — which PRD §6 already
+ * records. Building corridors from those would quietly stop teaching the ˇ
+ * contour that is the game's whole premise, so a T3 gate flies the citation
+ * polyline while still cueing her recording of the word. That is a real
+ * disagreement between demo and corridor, and the only one: it closes by
+ * re-recording T3 in citation form, at which point this branch deletes.
+ */
+export function shapeForWord(word: { tone: Tone; polyline: Polyline; durationS: number }): GateShape {
+  if (word.tone === 3) return shapeForTone(3);
+  return { polyline: word.polyline, durationS: word.durationS };
+}
+
+/** Piecewise-linear interpolation of a corridor centreline. t is clamped to [0,1]. */
+export function corridorChaoAt(shape: GateShape, t: number): number {
   const clamped = Math.min(1, Math.max(0, t));
-  const points = tuning().polylines[tone];
+  const points = shape.polyline;
   for (let i = 0; i < points.length - 1; i++) {
     const [t0, chao0] = points[i];
     const [t1, chao1] = points[i + 1];
@@ -124,19 +161,19 @@ const SLACK_STEPS = 6;
  * this is something the player can see, not a hidden fudge factor.
  */
 export function corridorToleranceAt(
-  tone: Tone,
+  shape: GateShape,
   t: number,
   baseTolChao: number,
 ): number {
-  const dtNorm = tuning().timingSlackS / gateDurationS(tone);
-  const here = corridorChaoAt(tone, t);
+  const dtNorm = tuning().timingSlackS / shape.durationS;
+  const here = corridorChaoAt(shape, t);
   let travel = 0;
   for (let i = 1; i <= SLACK_STEPS; i++) {
     const offset = (i / SLACK_STEPS) * dtNorm;
     travel = Math.max(
       travel,
-      Math.abs(corridorChaoAt(tone, t + offset) - here),
-      Math.abs(corridorChaoAt(tone, t - offset) - here),
+      Math.abs(corridorChaoAt(shape, t + offset) - here),
+      Math.abs(corridorChaoAt(shape, t - offset) - here),
     );
   }
   return (
@@ -147,6 +184,10 @@ export function corridorToleranceAt(
 
 export interface Gate {
   tone: Tone;
+  /** The word being cued and labelled. Null in tests that build a bare gate. */
+  word: Word | null;
+  /** The corridor. Not always the word's own — see `shapeForWord`. */
+  shape: GateShape;
   xStart: number;
   widthPx: number;
   tolChao: number;
@@ -269,12 +310,25 @@ export function nextTone(prev: Tone[], rand: () => number): Tone {
   return candidate;
 }
 
-/** Builds a gate from a tone, its horizontal start position, and current difficulty. */
-export function makeGate(tone: Tone, xStart: number, d: Difficulty): Gate {
+/**
+ * Builds a gate. Pass a word to fly its measured corridor; pass a bare tone to
+ * fly the tuning default, which is what the tutorial and a manifest-less build
+ * fall back to.
+ */
+export function makeGate(
+  source: Word | Tone,
+  xStart: number,
+  d: Difficulty,
+): Gate {
+  const word = typeof source === "number" ? null : source;
+  const tone = typeof source === "number" ? source : source.tone;
+  const shape = word ? shapeForWord(word) : shapeForTone(tone);
   return {
     tone,
+    word,
+    shape,
+    widthPx: d.scrollSpeed * shape.durationS,
     xStart,
-    widthPx: d.scrollSpeed * gateDurationS(tone),
     tolChao: toleranceChao(tone, d.toleranceH),
   };
 }

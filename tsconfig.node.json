@@ -38,6 +38,8 @@
     "api",
     "src/dev/clipCut.ts",
     "src/dev/clipCut.test.ts",
+    "src/dev/manifest.test.ts",
+    "src/game/words.ts",
     "src/dev/clipNormalize.ts",
     "src/dev/clipReview.ts",
     // make-clips normalises each cohort onto the canonical Chao levels, which

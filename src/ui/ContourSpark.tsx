@@ -1,4 +1,4 @@
-import { corridorChaoAt } from "../game/gates.ts";
+import { corridorChaoAt, shapeForTone } from "../game/gates.ts";
 import type { Tone } from "../game/gates.ts";
 
 /** Samples used by the inline contour sparklines. */
@@ -27,7 +27,7 @@ export function ContourSpark({
 }) {
   const points = Array.from({ length: SPARK_STEPS + 1 }, (_, i) => {
     const t = i / SPARK_STEPS;
-    const chao = corridorChaoAt(tone, t);
+    const chao = corridorChaoAt(shapeForTone(tone), t);
     const x = 2 + t * (width - 4);
     // chao 1 at the bottom, 5 at the top.
     const y = height - 3 - ((chao - 1) / 4) * (height - 6);

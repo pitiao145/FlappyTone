@@ -12,7 +12,7 @@ import type { RunSnapshot } from "../game/run.ts";
 import {
   corridorChaoAt,
   corridorToleranceAt,
-  type Tone,
+  type GateShape,
 } from "../game/gates.ts";
 import { loadReduceMotion } from "../game/settings.ts";
 import { tuning } from "../game/tuning.ts";
@@ -253,7 +253,7 @@ function clampY(y: number, height: number): number {
  * has to stay on the canvas.
  */
 export function corridorEdges(
-  tone: Tone,
+  shape: GateShape,
   tolChao: number,
   x0: number,
   x1: number,
@@ -265,11 +265,11 @@ export function corridorEdges(
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     const sx = x0 + t * (x1 - x0);
-    const centre = corridorChaoAt(tone, t);
+    const centre = corridorChaoAt(shape, t);
     // Local tolerance, so the corridor visibly flares where it forgives
     // timing. Collision uses the same function — the wall the player sees is
     // exactly the wall they hit.
-    const tol = corridorToleranceAt(tone, t, tolChao);
+    const tol = corridorToleranceAt(shape, t, tolChao);
     top.push({ x: sx, y: clampY(chaoToY(centre + tol, height), height) });
     bottom.push({ x: sx, y: clampY(chaoToY(centre - tol, height), height) });
   }
@@ -283,10 +283,10 @@ function drawGate(
   gate: RunSnapshot["gates"][number],
   active: boolean,
 ): void {
-  const { x0, x1, tone, tolChao } = gate;
+  const { x0, x1, tone, shape, tolChao } = gate;
   if (x1 < 0 || x0 > width) return;
 
-  const { top, bottom } = corridorEdges(tone, tolChao, x0, x1, height);
+  const { top, bottom } = corridorEdges(shape, tolChao, x0, x1, height);
   const steps = top.length - 1;
 
   const [r, g, b] = TONE_LIGHT[tone] ?? TONE_LIGHT[1];
@@ -347,7 +347,7 @@ function drawGate(
     const t = i / steps;
     centreline.push({
       x: x0 + t * (x1 - x0),
-      y: chaoToY(corridorChaoAt(tone, t), height),
+      y: chaoToY(corridorChaoAt(shape, t), height),
     });
   }
   ctx.beginPath();
@@ -370,7 +370,7 @@ function drawCueDemo(
 ): void {
   const cue = snap.cue;
   if (!cue) return;
-  const raw = (performance.now() - cue.atMs) / cue.durationMs;
+  const raw = (performance.now() - cue.atMs) / cue.sweepMs;
   if (raw < 0) return;
   // After the sweep the dot rests at the contour's endpoint, dimmed — in
   // "pause" style this is the still beat before the world resumes.
@@ -380,7 +380,7 @@ function drawCueDemo(
   if (!gate) return;
 
   const x = gate.x0 + p * (gate.x1 - gate.x0);
-  const y = chaoToY(corridorChaoAt(cue.tone, p), height);
+  const y = chaoToY(corridorChaoAt(cue.shape, p), height);
 
   // A ghost, deliberately: small, hollow, no halo. It was previously drawn
   // solid and glowing while the player's own dot was a 45%-opacity ring, which
@@ -394,7 +394,7 @@ function drawCueDemo(
   for (let i = 0; i <= tailSteps; i++) {
     const tp = Math.max(0, p - (i / tailSteps) * 0.18);
     const tx = gate.x0 + tp * (gate.x1 - gate.x0);
-    const ty = chaoToY(corridorChaoAt(cue.tone, tp), height);
+    const ty = chaoToY(corridorChaoAt(cue.shape, tp), height);
     if (i === 0) ctx.moveTo(tx, ty);
     else ctx.lineTo(tx, ty);
   }

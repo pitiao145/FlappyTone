@@ -13,43 +13,44 @@ import {
   rampDifficulty,
   toleranceChao,
   type Difficulty,
+  shapeForTone,
   type Tone,
 } from "./gates.ts";
 
 describe("corridorChaoAt", () => {
   it("T1 is flat, at the level she actually holds", () => {
     // 4.6, not a textbook 5 — read off the shipped reference clip.
-    expect(corridorChaoAt(1, 0)).toBeCloseTo(4.6);
-    expect(corridorChaoAt(1, 0.5)).toBeCloseTo(4.6);
-    expect(corridorChaoAt(1, 1)).toBeCloseTo(4.6);
+    expect(corridorChaoAt(shapeForTone(1), 0)).toBeCloseTo(4.6);
+    expect(corridorChaoAt(shapeForTone(1), 0.5)).toBeCloseTo(4.6);
+    expect(corridorChaoAt(shapeForTone(1), 1)).toBeCloseTo(4.6);
   });
 
   it("T2 dips below its start before climbing", () => {
-    expect(corridorChaoAt(2, 0)).toBeCloseTo(3);
-    expect(corridorChaoAt(2, 0.3)).toBeCloseTo(1.85);
-    expect(corridorChaoAt(2, 1)).toBeCloseTo(5);
+    expect(corridorChaoAt(shapeForTone(2), 0)).toBeCloseTo(3);
+    expect(corridorChaoAt(shapeForTone(2), 0.3)).toBeCloseTo(1.85);
+    expect(corridorChaoAt(shapeForTone(2), 1)).toBeCloseTo(5);
     // The dip is the point: a correct T2 must be *below* chao 3 early on.
-    expect(corridorChaoAt(2, 0.2)).toBeLessThan(3);
+    expect(corridorChaoAt(shapeForTone(2), 0.2)).toBeLessThan(3);
   });
 
   it("T3 falls, holds on the floor, then rises", () => {
-    expect(corridorChaoAt(3, 0)).toBeCloseTo(2.7);
-    expect(corridorChaoAt(3, 0.5)).toBeCloseTo(1.25);
-    expect(corridorChaoAt(3, 1)).toBeCloseTo(5);
+    expect(corridorChaoAt(shapeForTone(3), 0)).toBeCloseTo(2.7);
+    expect(corridorChaoAt(shapeForTone(3), 0.5)).toBeCloseTo(1.25);
+    expect(corridorChaoAt(shapeForTone(3), 1)).toBeCloseTo(5);
     // The low plateau — time sitting on the floor, which the PRD's
     // two-segment polyline had no room for.
-    expect(corridorChaoAt(3, 0.55)).toBeLessThan(1.3);
-    expect(corridorChaoAt(3, 0.62)).toBeCloseTo(1.22);
+    expect(corridorChaoAt(shapeForTone(3), 0.55)).toBeLessThan(1.3);
+    expect(corridorChaoAt(shapeForTone(3), 0.62)).toBeCloseTo(1.22);
   });
 
   it("T4 holds high, then falls off a cliff", () => {
-    expect(corridorChaoAt(4, 0)).toBeCloseTo(5);
-    expect(corridorChaoAt(4, 1)).toBeCloseTo(1.25);
+    expect(corridorChaoAt(shapeForTone(4), 0)).toBeCloseTo(5);
+    expect(corridorChaoAt(shapeForTone(4), 1)).toBeCloseTo(1.25);
     // Still at the top halfway through — this is what the linear ramp got
     // wrong, and why a native T4 could not fit the old corridor.
-    expect(corridorChaoAt(4, 0.5)).toBeCloseTo(5);
-    expect(corridorChaoAt(4, 0.62)).toBeCloseTo(5);
-    expect(corridorChaoAt(4, 0.9)).toBeCloseTo(1.25);
+    expect(corridorChaoAt(shapeForTone(4), 0.5)).toBeCloseTo(5);
+    expect(corridorChaoAt(shapeForTone(4), 0.62)).toBeCloseTo(5);
+    expect(corridorChaoAt(shapeForTone(4), 0.9)).toBeCloseTo(1.25);
   });
 
   it("every contour completes before the gate ends, then holds", () => {
@@ -58,16 +59,16 @@ describe("corridorChaoAt", () => {
     // corridor still climbing underneath her — 469ms and 512ms excursions on
     // otherwise-correct T2 attempts, 4 Aug 2026.
     for (const tone of [1, 2, 3, 4] as const) {
-      const end = corridorChaoAt(tone, 1);
-      expect(corridorChaoAt(tone, 0.9)).toBeCloseTo(end);
-      expect(corridorChaoAt(tone, 0.95)).toBeCloseTo(end);
+      const end = corridorChaoAt(shapeForTone(tone), 1);
+      expect(corridorChaoAt(shapeForTone(tone), 0.9)).toBeCloseTo(end);
+      expect(corridorChaoAt(shapeForTone(tone), 0.95)).toBeCloseTo(end);
     }
   });
 
   it("clamps t outside [0,1]", () => {
-    expect(corridorChaoAt(1, -0.5)).toBeCloseTo(4.6);
-    expect(corridorChaoAt(4, 1.5)).toBeCloseTo(1.25);
-    expect(corridorChaoAt(4, -1)).toBeCloseTo(5);
+    expect(corridorChaoAt(shapeForTone(1), -0.5)).toBeCloseTo(4.6);
+    expect(corridorChaoAt(shapeForTone(4), 1.5)).toBeCloseTo(1.25);
+    expect(corridorChaoAt(shapeForTone(4), -1)).toBeCloseTo(5);
   });
 });
 
@@ -263,14 +264,14 @@ describe("corridorToleranceAt", () => {
     // T1 never moves, so no timing error can cost vertical room and there is
     // nothing to forgive. The game stays as honest about pitch as it was.
     for (const t of [0, 0.25, 0.5, 0.75, 1]) {
-      expect(corridorToleranceAt(1, t, BASE)).toBeCloseTo(BASE, 10);
+      expect(corridorToleranceAt(shapeForTone(1), t, BASE)).toBeCloseTo(BASE, 10);
     }
   });
 
   it("never returns less than the base tolerance", () => {
     for (const tone of [1, 2, 3, 4] as const) {
       for (let i = 0; i <= 20; i++) {
-        expect(corridorToleranceAt(tone, i / 20, BASE)).toBeGreaterThanOrEqual(
+        expect(corridorToleranceAt(shapeForTone(tone), i / 20, BASE)).toBeGreaterThanOrEqual(
           BASE - 1e-9,
         );
       }
@@ -279,8 +280,8 @@ describe("corridorToleranceAt", () => {
 
   it("widens most where the corridor moves fastest", () => {
     // T4's cliff is at t≈0.63; its plateau at t≈0.3 is flat.
-    const plateau = corridorToleranceAt(4, 0.3, BASE);
-    const cliff = corridorToleranceAt(4, 0.63, BASE);
+    const plateau = corridorToleranceAt(shapeForTone(4), 0.3, BASE);
+    const cliff = corridorToleranceAt(shapeForTone(4), 0.63, BASE);
     expect(plateau).toBeCloseTo(BASE, 10);
     expect(cliff).toBeGreaterThan(plateau * 1.5);
   });
@@ -289,7 +290,7 @@ describe("corridorToleranceAt", () => {
     // The T4 cliff travels further within the slack window than the corridor
     // is wide; without the cap its wall would effectively vanish.
     for (let i = 0; i <= 40; i++) {
-      expect(corridorToleranceAt(4, i / 40, BASE)).toBeLessThanOrEqual(
+      expect(corridorToleranceAt(shapeForTone(4), i / 40, BASE)).toBeLessThanOrEqual(
         BASE * (1 + MAX_TIMING_WIDEN_FACTOR) + 1e-9,
       );
     }
@@ -302,9 +303,9 @@ describe("corridorToleranceAt", () => {
     //
     // T2's rise ends at t=0.8 of a 1.07s gate, which is 214ms back from the
     // end — outside the 90ms window, so the tail is strict.
-    expect(corridorToleranceAt(2, 1, BASE)).toBeCloseTo(BASE, 10);
+    expect(corridorToleranceAt(shapeForTone(2), 1, BASE)).toBeCloseTo(BASE, 10);
     // T4's cliff ends at t=0.9 of a 0.6s gate — only 60ms back, so a player
     // still falling as the gate closes is legitimately late, not wrong.
-    expect(corridorToleranceAt(4, 1, BASE)).toBeGreaterThan(BASE);
+    expect(corridorToleranceAt(shapeForTone(4), 1, BASE)).toBeGreaterThan(BASE);
   });
 });

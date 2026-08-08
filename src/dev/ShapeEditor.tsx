@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { playToneCue } from "../audio/reference.ts";
 import { getMicSession } from "../audio/session.ts";
-import { corridorChaoAt, TONE_INFO, type Tone } from "../game/gates.ts";
+import { corridorChaoAt,
+  shapeForTone, TONE_INFO, type Tone } from "../game/gates.ts";
 import {
   DEFAULT_POLYLINES,
   setTuning,
@@ -271,7 +272,7 @@ function draw(
   for (let i = 0; i <= STEPS; i++) {
     const t = i / STEPS;
     const x = toX(t);
-    const y = toY(corridorChaoAt(tone, t));
+    const y = toY(corridorChaoAt(shapeForTone(tone), t));
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   }

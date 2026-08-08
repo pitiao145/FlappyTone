@@ -12,8 +12,10 @@
 // Until they are loaded (or if fetch/decode fails), playToneCue falls back to
 // the v1 synthetic sweep: the tone's corridor polyline swept through the
 // player's own calibrated pitch range.
-import { corridorChaoAt, GATE_DURATION_S, type Tone } from "../game/gates.ts";
+import { corridorChaoAt,
+  shapeForTone, GATE_DURATION_S, type Tone } from "../game/gates.ts";
 import { RANGE_SEMITONES } from "../pitch/math.ts";
+import type { Word } from "../game/words.ts";
 
 let ctx: AudioContext | null = null;
 
@@ -40,8 +42,10 @@ interface RefClip {
   durationS: number;
 }
 
-const clips = new Map<Tone, RefClip>();
-let loading: Promise<void> | null = null;
+/** Keyed by word id — the inventory is 120 clips now, not four per tone. */
+const clips = new Map<string, RefClip>();
+/** In-flight or finished loads, so a word is fetched at most once. */
+const loads = new Map<string, Promise<void>>();
 
 /** Samples below this fraction of the clip's peak count as silence. */
 const TRIM_FLOOR = 0.03;
@@ -65,33 +69,43 @@ function trimBounds(buffer: AudioBuffer): { offsetS: number; durationS: number }
 }
 
 /**
- * Fetches and decodes the native reference clips (idempotent). Call once the
- * audio context exists; playToneCue uses whichever clips are ready and falls
- * back to the synthetic sweep for the rest. Failures are silent by design —
- * a missing clip must never block a run.
+ * Fetches and decodes one word's clip (idempotent per id). Failures are silent
+ * by design — a missing clip must never block a run; the cue falls back to the
+ * synthetic sweep.
+ *
+ * Fetched per word rather than all at once. Four clips could be preloaded on
+ * game start; 120 cannot, and would not be worth it — a run touches a couple of
+ * dozen. The Run asks for a word two gates ahead of the bird, which is seconds
+ * of warning for a ~100KB file.
  */
-export function loadReferenceClips(audio: AudioContext): Promise<void> {
-  loading ??= Promise.allSettled(
-    ([1, 2, 3, 4] as Tone[]).map(async (tone) => {
-      const url = `${import.meta.env.BASE_URL}ref/ma${tone}.wav`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`${url}: ${res.status}`);
-      const buffer = await audio.decodeAudioData(await res.arrayBuffer());
-      clips.set(tone, { buffer, ...trimBounds(buffer) });
-    }),
-  ).then(() => undefined);
-  return loading;
+export function loadClip(audio: AudioContext, word: Word): Promise<void> {
+  const existing = loads.get(word.id);
+  if (existing) return existing;
+  const load = (async () => {
+    const url = `${import.meta.env.BASE_URL}ref/${word.file}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${url}: ${res.status}`);
+    const buffer = await audio.decodeAudioData(await res.arrayBuffer());
+    clips.set(word.id, { buffer, ...trimBounds(buffer) });
+  })().catch(() => undefined);
+  loads.set(word.id, load);
+  return load;
 }
 
 /**
- * Audible cue length per tone, in ms — the real clip's trimmed duration where
- * loaded, else the synthetic sweep's 500ms. Drives the demo-dot sweep and the
- * pause window, so eye and ear stay in sync (a native Tone 3 is genuinely
- * longer than a Tone 4).
+ * Audible cue length in ms — the real clip's trimmed duration where loaded,
+ * else the gate's own length. Drives the demo-dot sweep and the pause window,
+ * so eye and ear stay in sync.
+ *
+ * The word's manifest duration is the fallback rather than the tone's: a gate
+ * built from a word is exactly as long as that clip, and answering with the
+ * tone default would put the demo and the corridor on different clocks for
+ * however long the fetch takes.
  */
-export function cueDurationMsFor(tone: Tone): number {
-  const clip = clips.get(tone);
-  return clip ? clip.durationS * 1000 : synthCueMsFor(tone);
+export function cueDurationMsFor(word: Word | null, tone: Tone): number {
+  const clip = word ? clips.get(word.id) : undefined;
+  if (clip) return clip.durationS * 1000;
+  return word ? word.durationS * 1000 : synthCueMsFor(tone);
 }
 
 /** Inverse of pitch/math's semitonesToChao: chao -> semitones -> Hz. */
@@ -126,8 +140,9 @@ export function playToneCue(
   tone: Tone,
   f0Center: number,
   rangeSemitones: number = RANGE_SEMITONES,
+  word: Word | null = null,
 ): void {
-  const clip = clips.get(tone);
+  const clip = word ? clips.get(word.id) : undefined;
   if (clip) {
     const src = ctx.createBufferSource();
     src.buffer = clip.buffer;
@@ -149,7 +164,7 @@ export function playToneCue(
   const curve = new Float32Array(CURVE_POINTS);
   for (let i = 0; i < CURVE_POINTS; i++) {
     const t = i / (CURVE_POINTS - 1);
-    const chao = corridorChaoAt(tone, t);
+    const chao = corridorChaoAt(shapeForTone(tone), t);
     curve[i] = chaoToHz(chao, f0Center, rangeSemitones);
   }
   osc.frequency.setValueCurveAtTime(curve, now, durationS);

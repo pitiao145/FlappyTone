@@ -41,6 +41,7 @@
     "src/dev/pull-analytics.ts",
     "src/dev/report-runs.ts",
     "src/dev/import-words.ts",
-    "src/dev/clipCut.test.ts"
+    "src/dev/clipCut.test.ts",
+    "src/dev/manifest.test.ts"
   ]
 }

@@ -4,9 +4,10 @@ import { gateEvent, type RunEndReason } from "../analytics/session.ts";
 import {
   cueDurationMsFor,
   isCueAudible,
-  loadReferenceClips,
+  loadClip,
   playToneCue,
 } from "../audio/reference.ts";
+import { inventoryNow, loadInventory } from "../audio/inventory.ts";
 import { getMicSession, setFrameSink, stopMic } from "../audio/session.ts";
 import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
@@ -221,6 +222,9 @@ export function Game({
       cueStyle,
       // Queried at cue time — clips finish loading after the Run exists.
       cueDurationMsFor,
+      // Whatever the manifest fetch has produced by now. Empty is a valid run:
+      // it flies the tuning defaults with synthetic cues.
+      words: inventoryNow() ?? [],
     });
     runRef.current = run;
     reportedGatesRef.current = 0;
@@ -228,10 +232,8 @@ export function Game({
     // widens the corridor mid-session would otherwise have their easier run
     // read against the harder one's settings.
     track({ type: "run_start", mode, pace, corridor, cue: cueStyle });
-    {
-      const audio = getMicSession()?.ctx;
-      if (audio) void loadReferenceClips(audio);
-    }
+    // If the manifest had not landed when the Run was built, catch it up.
+    if (!inventoryNow()) void loadInventory().then((w) => run.setWords(w));
     let tracker: PitchTracker | null = null;
     let rafId = 0;
     let running = true;
@@ -297,6 +299,7 @@ export function Game({
             snap.cue.tone,
             settings.f0Center,
             settings.rangeSemitones,
+            snap.cue.word,
           );
         }
       }
@@ -321,6 +324,15 @@ export function Game({
       hudTimer = setInterval(() => {
         const snap = run.snapshot();
         setHud(snap);
+        // Fetch the audio for every gate still ahead of the bird. loadClip is
+        // idempotent per id, so this is a no-op once a word is in flight; the
+        // queue runs two gates ahead, which is seconds of warning.
+        {
+          const audio = getMicSession()?.ctx;
+          if (audio) {
+            for (const g of snap.gates) if (g.word) void loadClip(audio, g.word);
+          }
+        }
         // Mirrored every tick, not just at game over, so quitting mid-run or
         // closing the tab still leaves the numbers behind.
         saveGateLog(snap.gateLog, snap.missedUtterances);
@@ -393,6 +405,9 @@ export function Game({
   // tone mid-gate would teach the wrong contour (this matters most in the
   // tutorial, where the cue text is the lesson).
   const displayTone = hud?.activeGate?.tone ?? hud?.upcoming?.tone ?? null;
+  // The word being flown, when there is one. Its own pinyin and hanzi — the
+  // tone's stand-in `ma` is only what a gate without a clip can say.
+  const displayWord = hud?.activeGate?.word ?? hud?.upcoming?.word ?? null;
   const info = displayTone === null ? null : TONE_INFO[displayTone];
 
   // Listen → Your turn: "listen" spans the whole cue phase; "your turn" only
@@ -471,8 +486,8 @@ export function Game({
 
           {info && displayTone !== null && (
             <div className="hud-syllable">
-              <span className="syllable">{info.pinyin}</span>
-              <span className="hanzi">{info.hanzi}</span>
+              <span className="syllable">{displayWord?.pinyin ?? info.pinyin}</span>
+              <span className="hanzi">{displayWord?.hanzi ?? info.hanzi}</span>
               <span className="tone-num">({displayTone})</span>
               {mode === "tutorial" && <span className="cue">{info.cue}</span>}
             </div>

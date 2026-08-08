@@ -13,6 +13,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { Run, type RunSnapshot } from "../game/run.ts";
+import { shapeForTone } from "../game/gates.ts";
 import type { PitchState } from "../pitch/types.ts";
 import { toleranceChao, type Tone } from "../game/gates.ts";
 import { corridorEdges, drawWorld } from "./world.ts";
@@ -245,7 +246,7 @@ describe("corridorEdges", () => {
     // on a 640px canvas) and its bottom to -0.75 (y=680). The wall polygon
     // inverted there and drew nothing at all.
     for (const tone of TONES) {
-      const { top, bottom } = corridorEdges(tone, tol(tone), 0, 260, H);
+      const { top, bottom } = corridorEdges(shapeForTone(tone), tol(tone), 0, 260, H);
       for (const p of [...top, ...bottom]) {
         expect(p.y).toBeGreaterThanOrEqual(0);
         expect(p.y).toBeLessThanOrEqual(H);
@@ -254,12 +255,12 @@ describe("corridorEdges", () => {
   });
 
   it("samples by width, so facet size stays constant as gates get wider", () => {
-    const narrow = corridorEdges(3, tol(3), 0, 120, H).top.length;
-    const wide = corridorEdges(3, tol(3), 0, 480, H).top.length;
+    const narrow = corridorEdges(shapeForTone(3), tol(3), 0, 120, H).top.length;
+    const wide = corridorEdges(shapeForTone(3), tol(3), 0, 480, H).top.length;
     expect(wide).toBeGreaterThan(narrow * 3);
     // Every sample is a quadratic control point in the drawn path, so this is
     // also a cap on per-frame work.
-    expect(corridorEdges(3, tol(3), 0, 5000, H).top.length).toBeLessThanOrEqual(
+    expect(corridorEdges(shapeForTone(3), tol(3), 0, 5000, H).top.length).toBeLessThanOrEqual(
       241,
     );
   });
@@ -269,7 +270,7 @@ describe("corridorEdges", () => {
     // the channel cannot pinch shut or bowtie — which is what would produce a
     // genuinely impossible corridor rather than merely an ugly one.
     for (const tone of TONES) {
-      const { top, bottom } = corridorEdges(tone, tol(tone), 0, 260, H);
+      const { top, bottom } = corridorEdges(shapeForTone(tone), tol(tone), 0, 260, H);
       for (let i = 0; i < top.length; i++) {
         expect(top[i].y).toBeLessThanOrEqual(bottom[i].y);
       }
@@ -279,7 +280,7 @@ describe("corridorEdges", () => {
   it("still flares where the corridor moves fastest", () => {
     // The clamp must not have quietly flattened the timing slack: T4's cliff
     // is the widest part of its corridor.
-    const { top, bottom } = corridorEdges(4, tol(4), 0, 260, H);
+    const { top, bottom } = corridorEdges(shapeForTone(4), tol(4), 0, 260, H);
     const heights = top.map((p, i) => bottom[i].y - p.y);
     const atCliff = heights[Math.round(0.75 * (heights.length - 1))];
     const atPlateau = heights[Math.round(0.2 * (heights.length - 1))];

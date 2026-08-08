@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { corridorChaoAt, gateDurationS, TONE_INFO } from "../game/gates.ts";
+import { corridorChaoAt,
+  shapeForTone, gateDurationS, TONE_INFO } from "../game/gates.ts";
 import type { Tone } from "../game/gates.ts";
 import { loadReduceMotion } from "../game/settings.ts";
 import { rgba } from "../render/palette.ts";
@@ -60,7 +61,7 @@ export function DemoLoop({
       // Progress along the corridor; clamped so the dot rests at the end
       // through the beat before the next tone.
       const t = Math.min(1, elapsed / flightMs);
-      const chao = corridorChaoAt(tone, t);
+      const chao = corridorChaoAt(shapeForTone(tone), t);
       const x = width * (0.08 + t * 0.84);
 
       trail.push({ x, chao, t: now });
@@ -158,7 +159,7 @@ function drawCorridor(
     const t = i / steps;
     return {
       x: x0 + t * (x1 - x0),
-      y: chaoToY(corridorChaoAt(tone, t), height),
+      y: chaoToY(corridorChaoAt(shapeForTone(tone), t), height),
     };
   });
 

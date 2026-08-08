@@ -21,9 +21,11 @@ import {
   type CorridorWidth,
   type Difficulty,
   type Gate,
+  type GateShape,
   type Pace,
   type Tone,
 } from "./gates.ts";
+import { pickWord, type Word } from "./words.ts";
 import {
   applyGate,
   heardUtterance,
@@ -76,13 +78,21 @@ export interface RunConfig {
    */
   cueStyle?: CueStyle;
   /**
-   * Audible cue length per tone, in ms. The host wires this to the loaded
-   * reference clips (audio/reference.ts cueDurationMsFor) so the demo sweep
-   * and pause window match what the player actually hears; queried at cue
-   * time because clips finish loading after the Run is constructed. Defaults
-   * to CUE_DURATION_MS.
+   * Audible cue length, in ms, for the word about to be cued. The host wires
+   * this to the loaded reference clips (audio/reference.ts cueDurationMsFor)
+   * so the demo sweep and pause window match what the player actually hears;
+   * queried at cue time because clips finish loading after the Run is
+   * constructed. `word` is null when the gate is a bare tone, in which case
+   * the tone's synthetic sweep length is the answer. Defaults to
+   * CUE_DURATION_MS.
    */
-  cueDurationMsFor?: (tone: Tone) => number;
+  cueDurationMsFor?: (word: Word | null, tone: Tone) => number;
+  /**
+   * The clip inventory, from `public/ref/manifest.json`. Omitted or empty, the
+   * run builds gates from the tuning defaults and cues them synthetically —
+   * which is what a failed manifest fetch degrades to, deliberately.
+   */
+  words?: Word[];
 }
 
 export type CueStyle = "pause" | "off";
@@ -127,6 +137,10 @@ interface TrailPoint {
 
 export interface GateView {
   tone: Tone;
+  /** The word this gate cues and labels. Null when the gate is a bare tone. */
+  word: Word | null;
+  /** The corridor being drawn. Not always the word's own — see `shapeForWord`. */
+  shape: GateShape;
   /** Left edge in screen px (may be off-screen). */
   x0: number;
   /** Right edge in screen px. */
@@ -143,6 +157,7 @@ export interface GateView {
 
 export interface ActiveGateView {
   tone: Tone;
+  word: Word | null;
   /** Normalized progress through the gate, 0→1. */
   t: number;
   tolChao: number;
@@ -158,12 +173,18 @@ export interface ActiveGateView {
  */
 export interface CueView {
   tone: Tone;
+  /** The clip to play. Null falls back to the tone's synthetic sweep. */
+  word: Word | null;
+  /** The corridor the demo dot traces — the same one the gate will draw. */
+  shape: GateShape;
   /** World-space identity of the cued gate — matches GateView.xStart. */
   xStart: number;
   /** When the cue fired (host clock, same nowMs fed to tick*). */
   atMs: number;
-  /** How long the audible cue (and demo-dot trace) lasts. */
+  /** How long the audible cue lasts — drives the freeze window. */
   durationMs: number;
+  /** How long the demo dot takes to trace the corridor. Usually the same. */
+  sweepMs: number;
 }
 
 /**
@@ -202,7 +223,7 @@ export interface RunSnapshot {
   trail: TrailSample[];
   gates: GateView[];
   activeGate: ActiveGateView | null;
-  upcoming: { tone: Tone; msUntil: number } | null;
+  upcoming: { tone: Tone; word: Word | null; msUntil: number } | null;
   cue: CueView | null;
   phase: RunPhase;
   /** True while the world is frozen for a "pause"-style demo — the renderer dims the scene. */
@@ -347,7 +368,7 @@ export class Run {
   private readonly pace: Pace;
   private readonly corridor: CorridorWidth;
   private cueStyle: CueStyle;
-  private readonly cueDurationMsFor: (tone: Tone) => number;
+  private readonly cueDurationMsFor: (word: Word | null, tone: Tone) => number;
 
   /** Distance the world has scrolled, in px. The bird's world position. */
   private worldX = 0;
@@ -356,6 +377,10 @@ export class Run {
   private gates: Gate[] = [];
   /** Tones already spawned — feeds nextTone's repeat guard, and the tutorial cursor. */
   private spawnedTones: Tone[] = [];
+  /** Words already spawned — feeds pickWord's don't-repeat-yourself window. */
+  private spawnedWords: Word[] = [];
+  /** The clip inventory this run draws from. Empty is a valid run. */
+  private words: Word[];
   private active: ActiveGateState | null = null;
 
   /** Gates resolved, whatever the outcome. Ends the tutorial. */
@@ -406,6 +431,7 @@ export class Run {
     this.corridor = cfg.corridor ?? "normal";
     this.cueStyle = cfg.cueStyle ?? "pause";
     this.cueDurationMsFor = cfg.cueDurationMsFor ?? (() => CUE_DURATION_MS);
+    this.words = cfg.words ?? [];
     this.difficulty = this.difficultyFor(0);
     this.stats = newRunStats(3);
     this.fillQueue();
@@ -460,11 +486,11 @@ export class Run {
     this.preGate = [];
 
     const t = this.progressIn(active.gate);
-    const corridor = corridorChaoAt(active.gate.tone, t);
+    const corridor = corridorChaoAt(active.gate.shape, t);
     const errChao = Math.abs(this.targetChao - corridor);
     // Local, not the gate's base: on a moving stretch of corridor a small
     // timing error is worth more chao than the whole corridor is wide.
-    const tolChao = corridorToleranceAt(active.gate.tone, t, active.gate.tolChao);
+    const tolChao = corridorToleranceAt(active.gate.shape, t, active.gate.tolChao);
     active.samples.push({
       errChao,
       tolChao,
@@ -586,11 +612,37 @@ export class Run {
       this.lastCuedXStart = next.xStart;
       this.cue = {
         tone: next.tone,
+        word: next.word,
+        shape: next.shape,
         xStart: next.xStart,
         atMs: nowMs,
-        durationMs: this.cueDurationMsFor(next.tone),
+        durationMs: this.cueDurationMsFor(next.word, next.tone),
+        // The dot traces the corridor, so it takes the corridor's own time —
+        // which is the audible length for every tone but 3, where the gate
+        // flies the citation polyline while the clip is a shorter natural take
+        // (see `shapeForWord`). Sweeping T3 in the clip's time would show the
+        // contour at more than twice the rate the player is scored against,
+        // the same failure a flat 500ms synthetic demo caused once already.
+        //
+        // Deliberately not folded into `durationMs`: that drives the freeze,
+        // and the response gap has to stay the same for every tone — a beat
+        // that moves with the corridor is what "the pause lands right on top
+        // of a T3 gate" was.
+        sweepMs: next.shape.durationS * 1000,
       };
     }
+  }
+
+  /**
+   * Hands the run its inventory once the manifest has landed.
+   *
+   * Gates already spawned keep the corridor they were built with — rebuilding
+   * a gate the bird is approaching would move the wall underneath it. In
+   * practice the manifest is fetched at app start and resolves long before a
+   * run exists; this is the seam for the case where it does not.
+   */
+  setWords(words: Word[]): void {
+    this.words = words;
   }
 
   /**
@@ -621,6 +673,8 @@ export class Run {
       trail: this.trail.map((s) => this.projectTrail(s)),
       gates: this.gates.map((g) => ({
         tone: g.tone,
+        word: g.word,
+        shape: g.shape,
         x0: this.screenX(g.xStart),
         x1: this.screenX(g.xStart + g.widthPx),
         tolChao: g.tolChao,
@@ -629,14 +683,13 @@ export class Run {
       activeGate: active
         ? {
             tone: active.gate.tone,
+            word: active.gate.word,
             t: this.progressIn(active.gate),
-            tolChao: corridorToleranceAt(
-              active.gate.tone,
+            tolChao: corridorToleranceAt(active.gate.shape,
               this.progressIn(active.gate),
               active.gate.tolChao,
             ),
-            corridorChao: corridorChaoAt(
-              active.gate.tone,
+            corridorChao: corridorChaoAt(active.gate.shape,
               this.progressIn(active.gate),
             ),
           }
@@ -647,6 +700,7 @@ export class Run {
       upcoming: upcoming
         ? {
             tone: upcoming.tone,
+            word: upcoming.word,
             msUntil:
               ((upcoming.xStart - this.worldX) / this.difficulty.scrollSpeed) *
               1000,
@@ -773,8 +827,8 @@ export class Run {
     // MIN_UTTERANCE_MS for a gate the player never actually addressed.
     if (i === 0) return [];
 
-    const corridor = corridorChaoAt(gate.tone, 0);
-    const tolChao = corridorToleranceAt(gate.tone, 0, gate.tolChao);
+    const corridor = corridorChaoAt(gate.shape, 0);
+    const tolChao = corridorToleranceAt(gate.shape, 0, gate.tolChao);
     return buf.slice(i).map((s) => ({
       errChao: Math.abs(s.chao - corridor),
       tolChao,
@@ -901,8 +955,13 @@ export class Run {
     ) {
       const tone = this.pickTone();
       if (tone === null) return;
-      this.gates.push(makeGate(tone, this.nextSpawnX(), this.difficulty));
+      // A word if the inventory has one for this tone, the bare tone if not.
+      // Not having one is normal, not an error: a build whose manifest fetch
+      // failed still plays, on the tuning defaults.
+      const word = pickWord(this.words, tone, this.spawnedWords, this.rand);
+      this.gates.push(makeGate(word ?? tone, this.nextSpawnX(), this.difficulty));
       this.spawnedTones.push(tone);
+      if (word) this.spawnedWords.push(word);
     }
   }
 

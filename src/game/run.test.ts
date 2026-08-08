@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { BIRD_X_FRAC, Run, type RunSnapshot } from "./run.ts";
 import { DEFAULT_TUNING, resetTuning, setTuning, tuning } from "./tuning.ts";
-import { corridorChaoAt, GATE_DURATION_S } from "./gates.ts";
+import {
+  corridorChaoAt,
+  shapeForTone,
+  GATE_DURATION_S,
+} from "./gates.ts";
+import { loadWords, type Word } from "./words.ts";
 import type { PitchState } from "../pitch/types.ts";
 
 const W = 420;
@@ -189,7 +194,7 @@ describe("Run — scoring a gate", () => {
       if (!startingEarly && !inGateStretch) return pitch(null, s.birdChao);
       // Both phases aim at the corridor's starting chao — where seeded samples
       // are scored, and where a T1 corridor stays.
-      return pitch(corridorChaoAt(s.upcoming?.tone ?? s.activeGate!.tone, 0));
+      return pitch(corridorChaoAt(shapeForTone(s.upcoming?.tone ?? s.activeGate!.tone), 0));
     });
 
     const log = snapshots[snapshots.length - 1].gateLog;
@@ -483,7 +488,7 @@ describe("Run — snapshot extras", () => {
     expect(inGate.length).toBeGreaterThan(0);
     for (const s of inGate) {
       const g = s.activeGate!;
-      expect(g.corridorChao).toBeCloseTo(corridorChaoAt(g.tone, g.t), 10);
+      expect(g.corridorChao).toBeCloseTo(corridorChaoAt(shapeForTone(g.tone), g.t), 10);
       expect(g.t).toBeGreaterThanOrEqual(0);
       expect(g.t).toBeLessThanOrEqual(1);
     }
@@ -491,7 +496,7 @@ describe("Run — snapshot extras", () => {
     const t1 = inGate.filter((s) => s.activeGate!.tone === 1);
     expect(t1.length).toBeGreaterThan(0);
     for (const s of t1) {
-      expect(s.activeGate!.corridorChao).toBe(corridorChaoAt(1, 0));
+      expect(s.activeGate!.corridorChao).toBe(corridorChaoAt(shapeForTone(1), 0));
     }
   });
 });
@@ -738,7 +743,9 @@ describe("Run — per-tone cue duration", () => {
       mode: "game",
       width: W,
       rand: seqRand([0, 0, 0.5, 0.75]),
-      cueDurationMsFor: (tone) => 400 + tone * 100,
+      // A wordless run: the inventory is empty, so the host is asked for the
+      // tone's own cue length.
+      cueDurationMsFor: (_word, tone) => 400 + tone * 100,
     });
     const { snapshots } = simulate(run, 400, trackCorridor);
     const cued = snapshots.find((s) => s.cue !== null)!;
@@ -884,7 +891,7 @@ describe("Run — timing slack (a right shape, slightly off the beat)", () => {
       if (!s.activeGate) return pitch(3);
       const { tone, t } = s.activeGate;
       const offsetT = offsetMs / (GATE_DURATION_S[tone] * 1000);
-      return pitch(corridorChaoAt(tone, t + offsetT));
+      return pitch(corridorChaoAt(shapeForTone(tone), t + offsetT));
     };
   }
 
@@ -916,5 +923,80 @@ describe("Run — timing slack (a right shape, slightly off the beat)", () => {
       (o) => o.outcome === "collision",
     );
     expect(collisions.length).toBeGreaterThan(0);
+  });
+});
+
+describe("Run — flying an inventory", () => {
+  /** A minimal manifest: one word per tone, each with its own length and shape. */
+  const words: Word[] = loadWords({
+    clips: [
+      { id: "ba1", hanzi: "八", pinyin: "bā", tone: 1, file: "ba1.wav", durationS: 1.1,
+        polyline: [[0, 4.5], [1, 4.5]] },
+      { id: "ma2", hanzi: "麻", pinyin: "má", tone: 2, file: "ma2.wav", durationS: 0.95,
+        polyline: [[0, 2.5], [0.4, 1.9], [1, 4.6]] },
+      { id: "wo3", hanzi: "我", pinyin: "wǒ", tone: 3, file: "wo3.wav", durationS: 0.4,
+        polyline: [[0, 2.4], [1, 1.6]] },
+      { id: "ba4", hanzi: "爸", pinyin: "bà", tone: 4, file: "ba4.wav", durationS: 0.52,
+        polyline: [[0, 4.5], [0.5, 4.4], [1, 1.3]] },
+    ],
+  });
+
+  function wordRun() {
+    return new Run({ mode: "game", width: W, rand: seqRand([0, 0.3, 0.6, 0.9]), words });
+  }
+
+  it("builds every gate from a word", () => {
+    const { snapshots } = simulate(wordRun(), 300, () => pitch(3));
+    const seen = snapshots.flatMap((s) => s.gates);
+    expect(seen.length).toBeGreaterThan(0);
+    for (const g of seen) expect(g.word).not.toBeNull();
+  });
+
+  it("gives the gate the clip's own length", () => {
+    // Width in px is scrollSpeed * the clip's duration, so a gate lasts exactly
+    // as long as the demo the player just heard (PRD §6).
+    const { snapshots } = simulate(wordRun(), 300, () => pitch(3));
+    const gates = snapshots.flatMap((s) => s.gates).filter((g) => g.word);
+    expect(gates.length).toBeGreaterThan(0);
+    // Every gate's width, divided by its own clip length, is the one scroll
+    // speed — which is the invariant, and holds whichever tones happened to
+    // spawn. T3 is the exception by design: it flies the citation gate length.
+    const speeds = gates
+      .filter((g) => g.tone !== 3)
+      .map((g) => (g.x1 - g.x0) / g.word!.durationS);
+    for (const v of speeds) expect(v).toBeCloseTo(speeds[0], 6);
+  });
+
+  it("draws a T2 corridor from the word, and a T3 corridor from tuning", () => {
+    const { snapshots } = simulate(wordRun(), 400, () => pitch(3));
+    const gates = snapshots.flatMap((s) => s.gates);
+    const t2 = gates.find((g) => g.tone === 2);
+    if (t2) expect(corridorChaoAt(t2.shape, 0.4)).toBeCloseTo(1.9, 2);
+    const t3 = gates.find((g) => g.tone === 3);
+    // The word's own polyline falls to 1.6 and never rises; the citation one does.
+    if (t3) expect(corridorChaoAt(t3.shape, 1)).toBeGreaterThan(4);
+  });
+
+  it("cues the word, so the host knows which clip to play", () => {
+    const { snapshots } = simulate(wordRun(), 400, () => pitch(3));
+    const cued = snapshots.find((s) => s.cue !== null);
+    expect(cued?.cue?.word?.id).toBeTruthy();
+  });
+
+  it("puts the word in the HUD's upcoming slot", () => {
+    const { snapshots } = simulate(wordRun(), 200, () => pitch(3));
+    const withUpcoming = snapshots.find((s) => s.upcoming !== null)!;
+    expect(withUpcoming.upcoming!.word?.pinyin).toBeTruthy();
+  });
+
+  it("still runs on an empty inventory, on the tuning defaults", () => {
+    const run = new Run({ mode: "game", width: W, rand: seqRand([0, 0.3]), words: [] });
+    const { snapshots } = simulate(run, 200, () => pitch(3));
+    const gates = snapshots.flatMap((s) => s.gates);
+    expect(gates.length).toBeGreaterThan(0);
+    for (const g of gates) {
+      expect(g.word).toBeNull();
+      expect(g.shape).toEqual(shapeForTone(g.tone));
+    }
   });
 });

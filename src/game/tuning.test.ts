@@ -8,6 +8,7 @@ import {
 } from "./tuning.ts";
 import {
   corridorChaoAt,
+  shapeForTone,
   corridorToleranceAt,
   rampDifficulty,
   type Tone,
@@ -40,9 +41,9 @@ test("resetTuning restores defaults", () => {
 });
 
 test("gates read tuning live — widening tracks timingSlackS", () => {
-  const base = corridorToleranceAt(4, 0.75, 0.8);
+  const base = corridorToleranceAt(shapeForTone(4), 0.75, 0.8);
   setTuning({ timingSlackS: 0 });
-  expect(corridorToleranceAt(4, 0.75, 0.8)).toBeLessThan(base);
+  expect(corridorToleranceAt(shapeForTone(4), 0.75, 0.8)).toBeLessThan(base);
 });
 
 test("the difficulty ramp reads tuning live", () => {
@@ -61,7 +62,7 @@ test("polylines patch per tone and clone on reset", () => {
 });
 
 test("the corridor follows an edited polyline", () => {
-  expect(corridorChaoAt(1, 0.5)).toBeCloseTo(4.6);
+  expect(corridorChaoAt(shapeForTone(1), 0.5)).toBeCloseTo(4.6);
   setTuning({ polylines: { 1: [[0, 2], [1, 2]] } as Record<Tone, Polyline> });
-  expect(corridorChaoAt(1, 0.5)).toBeCloseTo(2);
+  expect(corridorChaoAt(shapeForTone(1), 0.5)).toBeCloseTo(2);
 });

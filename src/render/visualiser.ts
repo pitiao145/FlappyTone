@@ -8,7 +8,8 @@
  * function of its scene — see src/game/contours.ts for the data.
  */
 
-import { corridorChaoAt, type Tone } from "../game/gates.ts";
+import { corridorChaoAt,
+  shapeForTone, type Tone } from "../game/gates.ts";
 import type { Contour } from "../game/contours.ts";
 import { BACKDROP, chaoToY, drawChaoGrid, drawDot } from "./scene.ts";
 import { rgba } from "./palette.ts";
@@ -93,7 +94,7 @@ function drawTarget(
   for (let i = 0; i <= TARGET_STEPS; i++) {
     const p = i / TARGET_STEPS;
     const x = xFor(p * scene.spanMs, scene.spanMs, width);
-    const y = chaoToY(corridorChaoAt(tone, p), height);
+    const y = chaoToY(corridorChaoAt(shapeForTone(tone), p), height);
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   }
