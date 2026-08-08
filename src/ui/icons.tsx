@@ -1,52 +1,63 @@
 /**
- * The in-run control icons.
+ * The in-run control icons — Phosphor Icons, Regular weight (MIT licensed).
  *
- * Drawn rather than typed: the pause button used to be the glyph `‖`, which is
- * a double vertical line at text weight — at 13px on a phone, over a moving
- * corridor, it read as a rendering artefact rather than a control. These are
- * sized by their container and inherit `currentColor`.
+ * Pasted as inline SVG rather than pulled from `@phosphor-icons/react`: three
+ * icons do not justify a dependency, and inlining keeps them in the same
+ * bundle as everything else.
  *
- * `stroke-width` is in the 24-unit viewBox, so a 24px-wide icon draws at the
- * stated pixel weight and scales with the button.
+ * They are stroked, not filled, and inherit `currentColor` and their size from
+ * the button. Phosphor's own `width`/`height` attributes are dropped for that
+ * reason, as is the transparent 256x256 `<rect>` it wraps every export in —
+ * it has no fill and no stroke, so it draws nothing.
+ *
+ * `stroke-width` is in the 256-unit viewBox: at the 20px these render at, the
+ * shipped 16 draws as 1.25px.
  */
 
-const BOX = { viewBox: "0 0 24 24", "aria-hidden": true, focusable: false };
+const BOX = { viewBox: "0 0 256 256", "aria-hidden": true, focusable: false };
 
-/** Two solid bars. Solid, not stroked — a pause mark is a pair of shapes. */
+const STROKE = {
+  fill: "none",
+  stroke: "currentColor",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  strokeWidth: "16",
+} as const;
+
+/** Phosphor `Pause`, Regular. */
 export function PauseIcon() {
   return (
-    <svg {...BOX} fill="currentColor">
-      <rect x="6.5" y="4.5" width="4" height="15" rx="1.25" />
-      <rect x="13.5" y="4.5" width="4" height="15" rx="1.25" />
-    </svg>
-  );
-}
-
-/** A solid right-pointing triangle, optically centred (nudged right of true). */
-export function PlayIcon() {
-  return (
-    <svg {...BOX} fill="currentColor">
-      <path d="M8 5.2a1 1 0 0 1 1.53-.85l9 6.8a1 1 0 0 1 0 1.7l-9 6.8A1 1 0 0 1 8 18.8Z" />
+    <svg {...BOX}>
+      <rect x="152" y="40" width="56" height="176" rx="8" {...STROKE} />
+      <rect x="48" y="40" width="56" height="176" rx="8" {...STROKE} />
     </svg>
   );
 }
 
 /**
- * A six-tooth gear. Six rather than eight: at 20px the teeth of an eight-tooth
- * gear merge into a circle, and a circle is not a settings icon.
+ * A play triangle drawn to match — same viewBox, same stroke weight and joins,
+ * and the same 40–216 vertical extent as the pause bars, so the two sit level.
+ *
+ * Not a Phosphor export: `Play` was not among the icons supplied. Swap in the
+ * real one if the family resemblance is not close enough.
  */
+export function PlayIcon() {
+  return (
+    <svg {...BOX}>
+      <path d="M72,48,216,128,72,208Z" {...STROKE} />
+    </svg>
+  );
+}
+
+/** Phosphor `Gear`, Regular. */
 export function GearIcon() {
   return (
-    <svg
-      {...BOX}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="3.1" />
-      <path d="M12 2.6v3M12 18.4v3M20.1 7.3l-2.6 1.5M6.5 15.2l-2.6 1.5M20.1 16.7l-2.6-1.5M6.5 8.8 3.9 7.3" />
+    <svg {...BOX}>
+      <circle cx="128" cy="128" r="40" {...STROKE} />
+      <path
+        d="M41.43,178.09A99.14,99.14,0,0,1,31.36,153.8l16.78-21a81.59,81.59,0,0,1,0-9.64l-16.77-21a99.43,99.43,0,0,1,10.05-24.3l26.71-3a81,81,0,0,1,6.81-6.81l3-26.7A99.14,99.14,0,0,1,102.2,31.36l21,16.78a81.59,81.59,0,0,1,9.64,0l21-16.77a99.43,99.43,0,0,1,24.3,10.05l3,26.71a81,81,0,0,1,6.81,6.81l26.7,3a99.14,99.14,0,0,1,10.07,24.29l-16.78,21a81.59,81.59,0,0,1,0,9.64l16.77,21a99.43,99.43,0,0,1-10,24.3l-26.71,3a81,81,0,0,1-6.81,6.81l-3,26.7a99.14,99.14,0,0,1-24.29,10.07l-21-16.78a81.59,81.59,0,0,1-9.64,0l-21,16.77a99.43,99.43,0,0,1-24.3-10l-3-26.71a81,81,0,0,1-6.81-6.81Z"
+        {...STROKE}
+      />
     </svg>
   );
 }

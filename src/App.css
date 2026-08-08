@@ -1140,8 +1140,10 @@
 
 /* 40px, against the 30px this replaced. The old button was a 13px `‖` glyph
    in a 30px circle — under the iOS 44px touch minimum and, over a scrolling
-   corridor, not obviously a control at all. The icon is 20px inside it, so
-   the mark is bigger than the whole old button's type. */
+   corridor, not obviously a control at all. The icon is 22px inside it, so
+   the mark alone is nearly the size of the whole old button. 22 rather than
+   20 because the Phosphor icons are stroked at Regular weight, which carries
+   less ink at a given size than a solid glyph does. */
 .hud-button {
   flex: 0 0 auto;
   width: 40px;
@@ -1162,8 +1164,8 @@
 }
 
 .hud-button svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 
 /* Resume is the one thing a paused player almost always wants, so it carries
