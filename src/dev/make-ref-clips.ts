@@ -16,7 +16,7 @@
  * Prints the durations and decile contours to paste into gates.ts.
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { contourLine, cutClip } from "./clipCut.ts";
 import { decodeWav, encodeWav } from "./wav.ts";
 import speakers from "../../fixtures/captures/speakers.json" with { type: "json" };
@@ -32,6 +32,15 @@ const SOURCES: Array<{ tone: number; file: string }> = [
 
 const f0Center = (speakers as Record<string, number>).jane ?? 168;
 const root = new URL("../../", import.meta.url).pathname;
+/**
+ * Not `public/ref/` any more. The word list contains 麻 `má` with id `ma2`, and
+ * ids are filenames all the way through, so `make-clips` and this script were
+ * both writing `public/ref/ma2.wav` — one of them silently losing. These four
+ * are a measurement of the tone-mark contours, not shipped audio; the game's
+ * cues now come from the manifest.
+ */
+const outDir = `${root}fixtures/anchors`;
+mkdirSync(outDir, { recursive: true });
 
 for (const { tone, file } of SOURCES) {
   const { samples, sampleRate } = decodeWav(
@@ -39,11 +48,11 @@ for (const { tone, file } of SOURCES) {
   );
 
   const clip = cutClip(samples, sampleRate, f0Center);
-  const out = `${root}public/ref/ma${tone}.wav`;
+  const out = `${outDir}/ma${tone}.wav`;
   writeFileSync(out, encodeWav(clip.samples, sampleRate));
 
   console.log(
-    `T${tone}  ${file}  ->  public/ref/ma${tone}.wav  ` +
+    `T${tone}  ${file}  ->  fixtures/anchors/ma${tone}.wav  ` +
       `${clip.durationMs.toFixed(0)}ms  ${(clip.samples.length * 2 + 44) / 1024 | 0}KB  ` +
       `(${clip.contour.length} voiced frames)`,
   );

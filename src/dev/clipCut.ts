@@ -16,6 +16,8 @@
  * through silence. Voicing is what a tone demo is made of.
  */
 
+import { computeF0Center, computeRangeSemitones } from "../pitch/calibration.ts";
+import { hzToSemitones } from "../pitch/math.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 
 export const WIN = 2048;
@@ -26,6 +28,17 @@ export const MERGE_GAP_MS = 120;
 export const PAD_MS = 45;
 /** Click-free edges. */
 export const FADE_MS = 15;
+
+/**
+ * Deliberately wider than any voice, for offline measurement only.
+ *
+ * chao clamps at 1 and 5, so measuring against a realistic range destroys the
+ * evidence at exactly the extremes that matter: half of Jane's T4 clips read as
+ * a flat 5.00 across their whole plateau. A wide range keeps the contour linear
+ * in semitones all the way out; `clipNormalize` then places it and clamps once,
+ * at the end. Her widest excursion across 120 takes is 13.1 st.
+ */
+export const MEASURE_RANGE_SEMITONES = 15;
 
 /** A point on the clip's own normalised timeline: [t in 0..1, chao 1..5]. */
 export type ContourPoint = [number, number];
@@ -70,13 +83,23 @@ function longestVoicedRun(
   return { start: bestStart, end: bestEnd };
 }
 
-/** Measures the contour of an already-cut clip, on its own timeline. */
+/**
+ * Measures the contour of an already-cut clip, on its own timeline.
+ *
+ * `rangeSemitones` is the speaker's own tone space, and it is what stops a
+ * contour from being squashed: chao is the excursion measured against the
+ * range, so a range narrower than the voice pins the whole syllable against
+ * the ceiling and reports a flat line. Six of Jane's T1 clips read as a
+ * constant 5.00 for exactly that reason. Omitted, it falls back to the
+ * tracker's default — see `measurePitchReference`, which measures it.
+ */
 export function measureContour(
   samples: Float32Array,
   sampleRate: number,
   f0Center: number,
+  rangeSemitones?: number,
 ): { contour: ContourPoint[]; pinnedFraction: number } {
-  const tracker = new PitchTracker({ sampleRate, f0Center });
+  const tracker = new PitchTracker({ sampleRate, f0Center, ...(rangeSemitones ? { rangeSemitones } : {}) });
   const contour: ContourPoint[] = [];
   let pinned = 0;
   for (let s = 0; s + WIN <= samples.length; s += HOP) {
@@ -99,6 +122,7 @@ export function cutClip(
   samples: Float32Array,
   sampleRate: number,
   f0Center: number,
+  rangeSemitones?: number,
 ): CutClip {
   const run = longestVoicedRun(samples, sampleRate, f0Center);
   if (!run) throw new Error("no voiced frames");
@@ -114,7 +138,7 @@ export function cutClip(
     cut[cut.length - 1 - i] *= i / fade;
   }
 
-  const { contour, pinnedFraction } = measureContour(cut, sampleRate, f0Center);
+  const { contour, pinnedFraction } = measureContour(cut, sampleRate, f0Center, rangeSemitones);
   return {
     samples: cut,
     sampleRate,
@@ -122,6 +146,140 @@ export function cutClip(
     contour,
     pinnedFraction,
   };
+}
+
+/**
+ * Trim for the corpus range measurement. A player's 10 would discard a fifth of
+ * the excursion citation tones are made of — measured on Jane's 120 takes, p10
+ * gives ±4.8 st and clips both the T2 dip and the T4 floor flat; p2 gives ±7.35
+ * and still trims the 94Hz creak frames that would otherwise stretch it to ±11.5.
+ */
+const CORPUS_TRIM_PERCENT = 2;
+
+/** The speaker's voice, as measured from the takes themselves. */
+export interface PitchReference {
+  f0Center: number;
+  rangeSemitones: number;
+  /** Voiced frames the measurement is drawn from — sparse means don't trust it. */
+  frames: number;
+}
+
+/**
+ * Measures a recording session's own f0Center and tone space.
+ *
+ * A number in `speakers.json` is a measurement of one sitting, and pitch drifts
+ * between them: Jane's 168 was taken from the four `ma` captures and sat below
+ * the register she used a session later, which pinned six T1 clips flat against
+ * chao 5. Measuring per session removes the drift, and measuring the range
+ * removes the assumption that everyone's excursion is the tracker's default 5.
+ *
+ * One pass. The tracker's semitones are computed against a centre, but the slew
+ * clamp only ever compares consecutive frames, so shifting the centre shifts
+ * every value by the same constant — the recentred semitones can be derived
+ * from the f0s directly rather than tracked a second time.
+ *
+ * Returns null when the session is too sparse for `computeF0Center` /
+ * `computeRangeSemitones` to say anything, in which case the caller should keep
+ * whatever it had.
+ */
+export function measurePitchReference(
+  recordings: Array<{ samples: Float32Array; sampleRate: number }>,
+  seedF0Center: number,
+): PitchReference | null {
+  const f0s: number[] = [];
+  for (const { samples, sampleRate } of recordings) {
+    const tracker = new PitchTracker({ sampleRate, f0Center: seedF0Center });
+    for (let s = 0; s + WIN <= samples.length; s += HOP) {
+      const state = tracker.push(samples.subarray(s, s + WIN));
+      if (state.voiced && state.f0) f0s.push(state.f0);
+    }
+  }
+
+  const f0Center = computeF0Center(f0s);
+  if (f0Center === null) return null;
+  const rangeSemitones = computeRangeSemitones(
+    f0s.map((f0) => hzToSemitones(f0, f0Center)),
+    CORPUS_TRIM_PERCENT,
+  );
+  if (rangeSemitones === null) return null;
+  return { f0Center, rangeSemitones, frames: f0s.length };
+}
+
+/**
+ * Reduces a measured contour to a corridor polyline of a handful of vertices.
+ *
+ * A gate wall built from every measured frame is a wall with ~45 corners in it,
+ * and the millisecond wobble between adjacent frames is measurement, not
+ * something a speaker produced or a player should be scored against — the same
+ * argument `COLLISION_SUSTAIN_MS` makes in the time axis. Douglas–Peucker keeps
+ * the vertices that carry the shape (a T4 plateau and its cliff survive; the
+ * jitter along the plateau does not) rather than a fixed grid, which would blur
+ * the cliff and waste vertices on the flat.
+ *
+ * The result spans the full [0,1] gate: the first and last measured chao are
+ * extended outward, because voicing starts after the clip does and stops before
+ * it ends, and a corridor that simply stopped would have no wall there. This is
+ * the "complete, then hold" rule PRD §6 makes load-bearing — a speaker who
+ * finishes her rise and sustains must not be above a corridor still climbing.
+ */
+export function simplifyContour(
+  contour: ContourPoint[],
+  maxPoints = 8,
+  minPoints = 5,
+): ContourPoint[] {
+  if (contour.length === 0) return [];
+
+  const span: ContourPoint[] = [
+    [0, contour[0][1]],
+    ...contour.filter((p) => p[0] > 0 && p[0] < 1),
+    [1, contour[contour.length - 1][1]],
+  ];
+  if (span.length <= minPoints) return span.map(round2);
+
+  // Bisect on the tolerance rather than picking one: the right epsilon depends
+  // on how much a given syllable moves, and the budget is what we actually care
+  // about. Chao spans 4 units, so the bracket covers "keep everything" to
+  // "keep the endpoints".
+  let lo = 0.001;
+  let hi = 4;
+  let best = douglasPeucker(span, lo);
+  for (let i = 0; i < 24 && (best.length > maxPoints || best.length < minPoints); i++) {
+    const mid = (lo + hi) / 2;
+    const candidate = douglasPeucker(span, mid);
+    if (candidate.length > maxPoints) lo = mid;
+    else hi = mid;
+    best = candidate;
+  }
+  // The bracket can bottom out below the minimum on a genuinely simple shape —
+  // a flat T1 really is two points. Prefer too few over a fabricated bend.
+  return (best.length > maxPoints ? douglasPeucker(span, hi) : best).map(round2);
+}
+
+function round2(p: ContourPoint): ContourPoint {
+  return [Number(p[0].toFixed(4)), Number(p[1].toFixed(3))];
+}
+
+/** Vertical distance is the only distance that matters here: t is time, chao is pitch. */
+function douglasPeucker(points: ContourPoint[], epsilon: number): ContourPoint[] {
+  if (points.length < 3) return [...points];
+  const [t0, c0] = points[0];
+  const [t1, c1] = points[points.length - 1];
+  const slope = t1 === t0 ? 0 : (c1 - c0) / (t1 - t0);
+
+  let worst = 0;
+  let worstIndex = 0;
+  for (let i = 1; i < points.length - 1; i++) {
+    const d = Math.abs(points[i][1] - (c0 + slope * (points[i][0] - t0)));
+    if (d > worst) {
+      worst = d;
+      worstIndex = i;
+    }
+  }
+  if (worst <= epsilon) return [points[0], points[points.length - 1]];
+  return [
+    ...douglasPeucker(points.slice(0, worstIndex + 1), epsilon),
+    ...douglasPeucker(points.slice(worstIndex), epsilon).slice(1),
+  ];
 }
 
 /**

@@ -203,7 +203,23 @@ export function track(samples: Float32Array, sampleRate: number, f0Center: numbe
 // shipped clips through the same tracker and match whole utterances against
 // them on all three axes at once.
 
-const REF_DIR = "public/ref";
+/**
+ * The four anchor clips, not the shipped inventory.
+ *
+ * ⚠ Known limitation, deliberately not papered over. This matcher works because
+ * a cue is a playback of a *known* file: same speaker, same absolute pitch,
+ * same length. That held while the inventory was four `ma` clips spread across
+ * the pitch range. Against the 120-word inventory it collapses — the words
+ * cover the whole range densely, so `pierre_ma1` (median 154Hz, 372ms) lands
+ * within 1.4 st and 16% duration of a T3 word clip and reads as a cue, which is
+ * exactly the false positive that would discard a real attempt.
+ *
+ * So this stays pointed at the anchors, and the honest consequence is that a
+ * screen recording of the *word* game has its cues classified as player speech.
+ * Fixing it properly means telling the analyzer which clips a run actually
+ * cued — the gate log knows — rather than matching against everything.
+ */
+const REF_DIR = "fixtures/anchors";
 /** Contour comparison resolution — enough to tell a rise from a dip. */
 const PROFILE_POINTS = 16;
 /** A playback reproduces the clip's absolute pitch; a human voice will not. */
@@ -237,12 +253,12 @@ function profileShape(f0s: number[], medianF0: number): number[] {
 }
 
 /** Profile each shipped clip through the same tracker the game uses. */
-export function loadRefProfiles(f0Center: number): RefProfile[] {
-  if (!existsSync(REF_DIR)) return [];
+export function loadRefProfiles(f0Center: number, dir = REF_DIR): RefProfile[] {
+  if (!existsSync(dir)) return [];
   const profiles: RefProfile[] = [];
-  for (const file of readdirSync(REF_DIR).filter((f) => f.endsWith(".wav")).sort()) {
+  for (const file of readdirSync(dir).filter((f) => f.endsWith(".wav")).sort()) {
     const tone = Number(file.match(/(\d)/)?.[1] ?? 0);
-    const { samples, sampleRate } = decodeWav(readFileSync(join(REF_DIR, file)));
+    const { samples, sampleRate } = decodeWav(readFileSync(join(dir, file)));
     const frames = track(samples, sampleRate, f0Center);
     const f0s = frames.filter((f) => f.voiced && f.f0 !== null).map((f) => f.f0!);
     if (f0s.length < PROFILE_POINTS) continue;

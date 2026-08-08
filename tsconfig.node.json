@@ -37,7 +37,14 @@
     "src/record/takeDetector.test.ts",
     "api",
     "src/dev/clipCut.ts",
+    "src/dev/clipCut.test.ts",
+    "src/dev/clipNormalize.ts",
     "src/dev/clipReview.ts",
+    // make-clips normalises each cohort onto the canonical Chao levels, which
+    // live in the game's tuning defaults — see clipNormalize.ts. Both are
+    // DOM-free, so the Node project can compile them.
+    "src/game/tuning.ts",
+    "src/game/gates.ts",
     "src/dev/make-ref-clips.ts",
     "src/dev/make-clips.ts",
     "src/dev/pull-recordings.ts",

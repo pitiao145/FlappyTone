@@ -26,17 +26,26 @@ function profileOf(path: string, f0Center: number) {
 describe("cue classifier", () => {
   const profiles = loadRefProfiles(JANE_F0);
 
-  it("profiles all four shipped reference clips", () => {
+  it("profiles all four anchor clips", () => {
     expect(profiles.map((p) => p.tone).sort()).toEqual([1, 2, 3, 4]);
   });
 
   for (const tone of [1, 2, 3, 4]) {
-    it(`matches ref clip ma${tone} to itself`, () => {
-      const p = profileOf(`public/ref/ma${tone}.wav`, JANE_F0);
+    it(`matches anchor clip ma${tone} to itself`, () => {
+      const p = profileOf(`fixtures/anchors/ma${tone}.wav`, JANE_F0);
       const match = matchRef(p.f0s, p.medianF0, p.durMs, profiles);
       expect(match?.tone).toBe(tone);
     });
   }
+
+  // The reason REF_DIR is the anchors and not the shipped inventory. Profiling
+  // all 120 words puts a clip within 1.4st and 16% duration of this capture,
+  // and it reads as a cue — see the comment on REF_DIR.
+  it("would mistake a player for a cue if it profiled the whole inventory", () => {
+    const inventory = loadRefProfiles(JANE_F0, "public/ref");
+    const p = profileOf(`fixtures/captures/pierre_ma1.wav`, PIERRE_F0);
+    expect(matchRef(p.f0s, p.medianF0, p.durMs, inventory)).not.toBeNull();
+  });
 
   // Pierre is the player. None of his captures may be mistaken for a cue —
   // this is the false positive that would silently discard real attempts.

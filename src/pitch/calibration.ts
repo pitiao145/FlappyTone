@@ -64,11 +64,21 @@ function percentile(sorted: number[], p: number): number {
  * a wide native speaker at a usable 6.0 where min–max gave 9.5.
  *
  * Returns null when the capture is too sparse to say anything.
+ *
+ * `trimPercent` is 10 for a player, and that is not negotiable there: a preview
+ * capture is a few hundred frames of ordinary speech, so a wider trim is one
+ * creak frame away from sizing the board around an artefact. Offline corpus
+ * measurement is the other case — thousands of frames of deliberate citation
+ * tones, where p10 discards a fifth of the excursion the tones are made of, and
+ * the artefacts are still rare enough for a p2 trim to catch them.
  */
-export function computeRangeSemitones(voicedSemitones: number[]): number | null {
+export function computeRangeSemitones(
+  voicedSemitones: number[],
+  trimPercent = 10,
+): number | null {
   if (voicedSemitones.length < 10) return null;
   const sorted = [...voicedSemitones].sort((a, b) => a - b);
-  const half = (percentile(sorted, 90) - percentile(sorted, 10)) / 2;
+  const half = (percentile(sorted, 100 - trimPercent) - percentile(sorted, trimPercent)) / 2;
   const rounded = Math.round(half * 2) / 2;
   return Math.min(RANGE_SEMITONES_MAX, Math.max(RANGE_SEMITONES_MIN, rounded));
 }
