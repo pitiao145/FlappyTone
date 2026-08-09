@@ -1,4 +1,4 @@
-import { DEFAULT_TUNING } from "./tuning.ts";
+import { DEFAULT_TUNING, setTuning, tuning } from "./tuning.ts";
 import { describe, expect, it } from "vitest";
 import {
   applyCorridorWidth,
@@ -307,5 +307,68 @@ describe("corridorToleranceAt", () => {
     // T4's cliff ends at t=0.9 of a 0.6s gate — only 60ms back, so a player
     // still falling as the gate closes is legitimately late, not wrong.
     expect(corridorToleranceAt(shapeForTone(4), 1, BASE)).toBeGreaterThan(BASE);
+  });
+
+  it("has no cusps — the walls curve rather than spike", () => {
+    // The defect this pins: the widening was a max over a window (a tent, with
+    // a cusp at its apex) passed through a hard min (a second corner), and the
+    // renderer draws the result. Every corner was a visible spike on the
+    // corridor wall.
+    //
+    // A cusp is a step in the *slope*, so the test is on the second difference,
+    // measured at the sample spacing the renderer actually draws at.
+    const STEP = 1 / 240;
+    for (const tone of [1, 2, 3, 4] as const) {
+      const shape = shapeForTone(tone);
+      let worst = 0;
+      for (let t = STEP; t < 1 - STEP; t += STEP) {
+        const a = corridorToleranceAt(shape, t - STEP, BASE);
+        const b = corridorToleranceAt(shape, t, BASE);
+        const c = corridorToleranceAt(shape, t + STEP, BASE);
+        worst = Math.max(worst, Math.abs(c - 2 * b + a));
+      }
+      // Chao units per sample². Measured at slackSmoothS = 0:
+      //   T1 0.000  T2 0.042  T3 0.056  T4 0.045
+      // and at the shipped 0.05:
+      //   T1 0.000  T2 0.002  T3 0.006  T4 0.003
+      // T3 is worst because it is the longest gate, so a radius fixed in
+      // seconds is the smallest fraction of it. An order of magnitude down is
+      // the difference between a spike and an arc.
+      expect(worst, `tone ${tone}`).toBeLessThan(0.008);
+    }
+  });
+
+  it("smoothing stays inside the unsmoothed function's own envelope", () => {
+    // The blur is an average of neighbours, so it can only land between the
+    // smallest and the largest unsmoothed value within its radius. That is the
+    // real guarantee: at a peak it rounds down, at the foot of a moving stretch
+    // it rounds up a little, and nowhere does it invent room the max scan never
+    // found. Anywhere further than (slack + radius) from a moving stretch is
+    // untouched — T1, and the T2 tail above, both pin that.
+    const smoothed = tuning().slackSmoothS;
+    try {
+      for (const tone of [2, 3, 4] as const) {
+        const shape = shapeForTone(tone);
+        const radius = smoothed / shape.durationS;
+        for (let i = 0; i <= 40; i++) {
+          const t = i / 40;
+          setTuning({ slackSmoothS: smoothed });
+          const soft = corridorToleranceAt(shape, t, BASE);
+
+          setTuning({ slackSmoothS: 0 });
+          let lo = Infinity;
+          let hi = -Infinity;
+          for (let k = -12; k <= 12; k++) {
+            const raw = corridorToleranceAt(shape, t + (k / 12) * radius, BASE);
+            lo = Math.min(lo, raw);
+            hi = Math.max(hi, raw);
+          }
+          expect(soft, `tone ${tone} at t=${t}`).toBeGreaterThanOrEqual(lo - 1e-9);
+          expect(soft, `tone ${tone} at t=${t}`).toBeLessThanOrEqual(hi + 1e-9);
+        }
+      }
+    } finally {
+      setTuning({ slackSmoothS: smoothed });
+    }
   });
 });

@@ -148,6 +148,15 @@ export interface Tuning {
   timingSlackS: number;
   /** Cap on timing widening, as a multiple of the gate's base tolerance. */
   maxTimingWidenFactor: number;
+  /**
+   * Blur radius, in seconds of gate time, over the timing widening.
+   *
+   * The widening is a max over a window and is therefore cuspy; the renderer
+   * draws it, so each cusp was a spike on the corridor wall. Applied after the
+   * max, so it can only round a peak, never open the corridor wider than the
+   * max found. 0 restores the old, peaky walls exactly.
+   */
+  slackSmoothS: number;
   /** How far back a gate reaches for an utterance begun before it opened. */
   preGateBufferMs: number;
   /** A voiced run shorter than this is not an attempt. */
@@ -194,6 +203,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   collisionSustainMs: 120,
   timingSlackS: 0.07,
   maxTimingWidenFactor: 1.5,
+  slackSmoothS: 0.05,
   preGateBufferMs: 400,
   minUtteranceMs: 180,
   mergeGapMs: 120,

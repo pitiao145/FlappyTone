@@ -247,6 +247,56 @@ function clampY(y: number, height: number): number {
   return Math.min(height, Math.max(0, y));
 }
 
+interface EdgeProfile {
+  /** The inputs this profile was measured under. A change re-measures it. */
+  key: string;
+  /** Edge chao at each sample, in gate-local t. Screen x is applied per frame. */
+  topChao: number[];
+  bottomChao: number[];
+}
+
+/**
+ * Sampled edge profiles, keyed by the gate's shape object.
+ *
+ * A gate scrolls, but its geometry in gate-local coordinates does not: only
+ * `x0` moves. Re-measuring it every frame was affordable while the tolerance
+ * was one max scan per sample; the smoothing pass multiplies that by the tap
+ * count, and a wide gate is 240 samples. So it is measured once per gate and
+ * the samples are mapped to screen x each frame.
+ *
+ * A WeakMap because the key is the gate's own shape object — nothing here
+ * keeps a finished gate alive. The stored `key` covers everything the Lab can
+ * move mid-run, so a slider still takes effect on the next frame.
+ */
+const edgeProfiles = new WeakMap<GateShape, EdgeProfile>();
+
+function edgeProfile(
+  shape: GateShape,
+  tolChao: number,
+  steps: number,
+): EdgeProfile {
+  const t = tuning();
+  const key = `${tolChao}|${steps}|${t.timingSlackS}|${t.maxTimingWidenFactor}|${t.slackSmoothS}`;
+  const cached = edgeProfiles.get(shape);
+  if (cached && cached.key === key) return cached;
+
+  const topChao: number[] = [];
+  const bottomChao: number[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const tt = i / steps;
+    const centre = corridorChaoAt(shape, tt);
+    // Local tolerance, so the corridor visibly flares where it forgives
+    // timing. Collision uses the same function — the wall the player sees is
+    // exactly the wall they hit.
+    const tol = corridorToleranceAt(shape, tt, tolChao);
+    topChao.push(centre + tol);
+    bottomChao.push(centre - tol);
+  }
+  const profile: EdgeProfile = { key, topChao, bottomChao };
+  edgeProfiles.set(shape, profile);
+  return profile;
+}
+
 /**
  * Both corridor edges, sampled across the gate. Exported for testing: this is
  * the geometry every part of the gate is built from, and it is the thing that
@@ -260,18 +310,13 @@ export function corridorEdges(
   height: number,
 ): { top: Pt[]; bottom: Pt[] } {
   const steps = corridorSteps(x1 - x0);
+  const { topChao, bottomChao } = edgeProfile(shape, tolChao, steps);
   const top: Pt[] = [];
   const bottom: Pt[] = [];
   for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    const sx = x0 + t * (x1 - x0);
-    const centre = corridorChaoAt(shape, t);
-    // Local tolerance, so the corridor visibly flares where it forgives
-    // timing. Collision uses the same function — the wall the player sees is
-    // exactly the wall they hit.
-    const tol = corridorToleranceAt(shape, t, tolChao);
-    top.push({ x: sx, y: clampY(chaoToY(centre + tol, height), height) });
-    bottom.push({ x: sx, y: clampY(chaoToY(centre - tol, height), height) });
+    const sx = x0 + (i / steps) * (x1 - x0);
+    top.push({ x: sx, y: clampY(chaoToY(topChao[i], height), height) });
+    bottom.push({ x: sx, y: clampY(chaoToY(bottomChao[i], height), height) });
   }
   return { top, bottom };
 }
