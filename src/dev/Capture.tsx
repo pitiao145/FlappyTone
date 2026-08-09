@@ -1,7 +1,7 @@
 // Dev-only capture screen: records raw mic audio + per-frame pitch telemetry
-// while clips are played into the laptop mic (e.g. from the phone soundboard),
-// then downloads `<name>.wav` + `<name>.telemetry.json`. The WAV goes into
-// fixtures/captures/ and feeds `npm run report`.
+// while reference clips play into the laptop mic, then downloads `<name>.wav`
+// + `<name>.telemetry.json`. The WAV goes into fixtures/captures/ and feeds
+// `npm run report`.
 import { useEffect, useRef, useState } from "react";
 import { setFrameSink, stopMic } from "../audio/session.ts";
 import { DEFAULT_CONFIG, PitchTracker } from "../pitch/PitchTracker.ts";

@@ -20,10 +20,9 @@ import { Capture } from "./Capture.tsx";
 import { DevPanel } from "./DevPanel.tsx";
 import { GateLogPanel } from "./GateLogPanel.tsx";
 import { ShapeEditor } from "./ShapeEditor.tsx";
-import { Soundboard } from "./Soundboard.tsx";
 import { TuningPanel } from "./TuningPanel.tsx";
 
-type Tab = "play" | "shapes" | "pitch" | "gates" | "capture" | "sounds";
+type Tab = "play" | "shapes" | "pitch" | "gates" | "capture";
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "play", label: "play" },
@@ -31,7 +30,6 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "pitch", label: "pitch" },
   { id: "gates", label: "gates" },
   { id: "capture", label: "capture" },
-  { id: "sounds", label: "sounds" },
 ];
 
 /**
@@ -54,7 +52,7 @@ interface Props {
  * measured and re-tuned, kept out of the player-facing app entirely.
  *
  * Dev builds only — App.tsx imports this lazily behind `import.meta.env.DEV`,
- * so Rollup drops the whole subtree (and Capture, Soundboard and the tuning
+ * so Rollup drops the whole subtree (and Capture and the tuning
  * UI with it) from a production bundle.
  */
 export function Lab({ onBack }: Props) {
@@ -183,7 +181,6 @@ worst excursion ${Math.round(Math.max(0, ...last.gateLog.map((g) => g.worstExcur
 
       {tab === "capture" && <Capture onBack={() => setTab("play")} />}
 
-      {tab === "sounds" && <Soundboard />}
     </div>
   );
 }

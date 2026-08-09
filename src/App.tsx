@@ -36,7 +36,7 @@ type Screen =
 /**
  * The dev Lab is a separate instance of the game for tuning, and it must not
  * reach a player. Loading it lazily behind `import.meta.env.DEV` means Rollup
- * drops the whole subtree — Lab, tuning UI, Capture, Soundboard — from a
+ * drops the whole subtree — Lab, tuning UI, Capture — from a
  * production build rather than merely hiding the button.
  */
 const Lab = import.meta.env.DEV
