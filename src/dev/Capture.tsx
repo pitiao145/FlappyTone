@@ -14,7 +14,7 @@ const READOUT_HZ = 10;
 
 /**
  * f0Center per capture speaker, keyed by the filename prefix
- * (`chen_ma3.wav` → chen). Read from the same file `npm run report` uses, not
+ * (`jane_ma3.wav` → jane). Read from the same file `npm run report` uses, not
  * copied: a trace viewed through the wrong centre clamps flat against chao 1/5
  * and every shape reads as wrong, so the two must never disagree.
  */
@@ -216,7 +216,7 @@ export function Capture({ onBack }: Props) {
       </p>
 
       <label className="note">
-        name (speaker_syllableTone, e.g. chen_ma3)
+        name (speaker_syllableTone, e.g. jane_ma3)
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}

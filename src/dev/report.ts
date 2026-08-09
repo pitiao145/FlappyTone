@@ -9,7 +9,7 @@
 //   voiced% / maxDrop  how much of the utterance was heard, longest gap (ms)
 //
 // The target tone comes from the trailing digit in the filename
-// (chen_ma3.wav → tone 3). Files named *all* are assumed to contain
+// (jane_ma3.wav → tone 3). Files named *all* are assumed to contain
 // utterances of tones 1,2,3,4 in order. f0Center per speaker comes from
 // fixtures/captures/speakers.json ({"pierre": 118, ...}), else --f0, else 120.
 //

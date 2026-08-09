@@ -26,7 +26,6 @@ a name that misses the convention is silently scored at the 120Hz default.
 | `jane_ma3.wav` vs `jane_ma3_natural.wav` | Citation T3 vs conversational T3 | A controlled creak experiment: same speaker, same tone, one careful and one relaxed. The natural one collapses to ~13 voiced frames — that is the creak problem, isolated. |
 | `jane_ma0_neutral.wav` | Neutral tone (轻声) | Out of v1 scope; reference only. Has no tone digit, so `report` skips it. |
 | `pierre_ma1..4.wav`, `pierre_ma2_fast.wav` | Learner voice, incl. conversational speed | The developer's own voice — the one used most during tuning. |
-| `chen_*`, `tan_*` | audio-cmn clips played through a phone speaker into a laptop mic | **Weak evidence.** That round trip is a confound; prefer `jane_*` for any conclusion. Kept for continuity with older tuning runs. |
 
 The wind in the first ~1s of each `jane_*` file doubles as a noise-rejection
 fixture: every frame of it must come back unvoiced.
@@ -144,7 +143,7 @@ room → laptop mic) is tuned with two dev tools built for the purpose:
 
 1. **Capture screen** — laptop, Title → `dev` → `capture`. Record while a clip
    plays; Stop downloads `<name>.wav` + `<name>.telemetry.json`. Naming:
-   `<speaker>_<syllable><tone>[_note]` (e.g. `chen_ma3`, `pierre_ma2_fast`) —
+   `<speaker>_<syllable><tone>[_note]` (e.g. `jane_ma3`, `pierre_ma2_fast`) —
    the trailing digit tells the report CLI which contour to score against.
    Move WAVs into `fixtures/captures/` and commit them.
 2. **Report CLI** — `npm run report [files...] [--set alpha=0.6,clarity=0.8]...
