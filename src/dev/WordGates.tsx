@@ -223,6 +223,17 @@ export function WordGates() {
     );
   }, []);
 
+  const tolH = tuning().baseToleranceH;
+  // Every card on one scale, measured across the whole inventory rather than
+  // the filtered set — switching to T1 must not silently magnify a flat tone.
+  // Memoised because it walks all 120 corridors, and a card re-renders on every
+  // filter click.
+  //
+  // Above the early returns, and it has to stay there: the manifest arrives
+  // after the first render, so a hook below them is called a different number
+  // of times before and after it lands.
+  const band = useMemo(() => bandFor(words ?? [], tolH), [words, tolH]);
+
   if (error) return <p className="error">{error}</p>;
   if (!words) return <p className="param-help">loading the manifest…</p>;
   if (words.length === 0) {
@@ -236,12 +247,6 @@ export function WordGates() {
   }
 
   const shown = tone === "all" ? words : words.filter((w) => w.tone === tone);
-  const tolH = tuning().baseToleranceH;
-  // Every card on one scale, measured across the whole inventory rather than
-  // the filtered set — switching to T1 must not silently magnify a flat tone.
-  // Memoised because it walks all 120 corridors, and a card re-renders on every
-  // filter click.
-  const band = useMemo(() => bandFor(words, tolH), [words, tolH]);
 
   return (
     <div className="word-gates">
