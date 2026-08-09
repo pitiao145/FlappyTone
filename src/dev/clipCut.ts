@@ -30,6 +30,24 @@ export const PAD_MS = 45;
 export const FADE_MS = 15;
 
 /**
+ * How far back the cut may reach for a voiceless onset.
+ *
+ * A Mandarin syllable can begin with up to ~200ms of sound that carries no
+ * pitch at all — the burst and aspiration of ch/c/q/zh/sh/t/k/p, or the
+ * friction of s/f/x/h. `longestVoicedRun` cannot see any of it, so a cut made
+ * on voicing alone starts at the vowel: `chang2` came out as "hang".
+ *
+ * Measured over the 120 takes of session 2026-08-07-xujzgs, the sound before
+ * voicing runs to 171ms at most and 52 clips exceed the 45ms `PAD_MS`. The cap
+ * is what stops the walk when a take has no silence to stop it — a preceding
+ * cough or a neighbouring word would otherwise be swallowed whole.
+ */
+export const MAX_ONSET_MS = 200;
+
+/** Sound this many times above the room floor is the word, not the room. */
+const ONSET_FLOOR_FACTOR = 3;
+
+/**
  * Deliberately wider than any voice, for offline measurement only.
  *
  * chao clamps at 1 and 5, so measuring against a realistic range destroys the
@@ -46,8 +64,18 @@ export type ContourPoint = [number, number];
 export interface CutClip {
   samples: Float32Array;
   sampleRate: number;
+  /**
+   * The tone window — the voiced part plus its pads. This is what the corridor
+   * is measured over and what the gate lasts. Deliberately *not* the length of
+   * `samples`, which also carries the consonant in front of it.
+   */
   durationMs: number;
-  /** Every voiced frame, over the cut clip's timeline. */
+  /**
+   * Consonant audio in front of the tone window, in ms. The demo plays from
+   * sample 0; the corridor starts `onsetMs` later. 0 for a vowel or nasal onset.
+   */
+  onsetMs: number;
+  /** Every voiced frame, over the tone window's timeline. */
   contour: ContourPoint[];
   /** Fraction of voiced frames pinned against chao 1 or 5 — see `pinnedWarning`. */
   pinnedFraction: number;
@@ -81,6 +109,53 @@ function longestVoicedRun(
     }
   }
   return { start: bestStart, end: bestEnd };
+}
+
+function frameRms(samples: Float32Array, start: number, length: number): number {
+  let sum = 0;
+  for (let i = start; i < start + length && i < samples.length; i++) {
+    sum += samples[i] * samples[i];
+  }
+  return Math.sqrt(sum / length);
+}
+
+/**
+ * Walks back from the start of voicing through sound still above the room
+ * floor, and returns where the syllable audibly begins.
+ *
+ * The floor is measured from this take's own lead-in rather than assumed: gain
+ * and room differ per session, and a fixed threshold would either swallow room
+ * tone in a loud room or clip the aspiration in a quiet one. The 20th
+ * percentile rather than the minimum, so one anomalously dead frame cannot
+ * drive the floor to zero and make everything look like speech.
+ *
+ * Self-limiting by construction: on a take with real silence before the vowel
+ * (`ba1`) the very first frame back is at the floor and the walk stops at once.
+ */
+function onsetStart(
+  samples: Float32Array,
+  sampleRate: number,
+  voicedStart: number,
+): number {
+  const firstFrame = Math.max(0, Math.floor((voicedStart - WIN / 2) / HOP));
+  if (firstFrame < 2) return voicedStart;
+
+  const lead: number[] = [];
+  for (let f = 0; f < firstFrame; f++) lead.push(frameRms(samples, f * HOP, WIN));
+  const sorted = [...lead].sort((a, b) => a - b);
+  const floor = sorted[Math.floor(sorted.length * 0.2)] * ONSET_FLOOR_FACTOR;
+
+  const limit = Math.max(0, voicedStart - (MAX_ONSET_MS / 1000) * sampleRate);
+  let f = firstFrame - 1;
+  let steps = 0;
+  while (f >= 0 && f * HOP >= limit && lead[f] > floor) {
+    f--;
+    steps++;
+  }
+  // Frame-quantized: zero steps must return voicedStart exactly, unchanged —
+  // a nasal onset like `m`, voiced throughout, must not gain a false onset
+  // from grid rounding. The four `ma` anchors are the check for this.
+  return steps === 0 ? voicedStart : Math.max(limit, voicedStart - steps * HOP);
 }
 
 /**
@@ -128,21 +203,29 @@ export function cutClip(
   if (!run) throw new Error("no voiced frames");
 
   const pad = (PAD_MS / 1000) * sampleRate;
+  // The tone window, unchanged: this is what the corridor is measured over.
   const a = Math.max(0, Math.round(run.start - pad));
   const b = Math.min(samples.length - 1, Math.round(run.end + pad));
-  const cut = samples.slice(a, b + 1);
+  // The clip window: the same tail, reaching further back for the consonant.
+  const onsetA = Math.min(a, Math.round(onsetStart(samples, sampleRate, a)));
 
+  const cut = samples.slice(onsetA, b + 1);
   const fade = Math.round((FADE_MS / 1000) * sampleRate);
   for (let i = 0; i < fade && i < cut.length; i++) {
     cut[i] *= i / fade;
     cut[cut.length - 1 - i] *= i / fade;
   }
 
-  const { contour, pinnedFraction } = measureContour(cut, sampleRate, f0Center, rangeSemitones);
+  // Measured over the tone window only — a contour normalised over the whole
+  // clip would slide every polyline vertex by the onset's length.
+  const tone = samples.slice(a, b + 1);
+  const { contour, pinnedFraction } = measureContour(tone, sampleRate, f0Center, rangeSemitones);
+
   return {
     samples: cut,
     sampleRate,
-    durationMs: (cut.length / sampleRate) * 1000,
+    durationMs: (tone.length / sampleRate) * 1000,
+    onsetMs: ((a - onsetA) / sampleRate) * 1000,
     contour,
     pinnedFraction,
   };

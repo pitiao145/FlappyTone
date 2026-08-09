@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { cutClip, measurePitchReference, simplifyContour, type ContourPoint } from "./clipCut.ts";
+import { cutClip, measurePitchReference, simplifyContour, MAX_ONSET_MS, type ContourPoint } from "./clipCut.ts";
 import { decodeWav } from "./wav.ts";
 
 const root = new URL("../../", import.meta.url).pathname;
@@ -8,6 +8,16 @@ const root = new URL("../../", import.meta.url).pathname;
 function capture(name: string) {
   return decodeWav(new Uint8Array(readFileSync(`${root}fixtures/captures/${name}.wav`)));
 }
+
+/** A raw take from the recording session the shipped inventory was cut from. */
+function recording(id: string) {
+  return decodeWav(
+    new Uint8Array(readFileSync(`${root}fixtures/recordings/2026-08-07-xujzgs/${id}.wav`)),
+  );
+}
+
+/** That session's own measured f0Center — see manifest.json's `sessions`. */
+const JANE_SESSION_F0 = 201.4;
 
 function contourOf(f: (t: number) => number, n = 45): ContourPoint[] {
   return Array.from({ length: n }, (_, i) => [i / (n - 1), f(i / (n - 1))] as ContourPoint);
@@ -97,5 +107,42 @@ describe("measurePitchReference", () => {
     const b = cutClip(samples, sampleRate, 168, 15);
     expect(b.samples.length).toBe(a.samples.length);
     expect(b.durationMs).toBeCloseTo(a.durationMs, 6);
+  });
+});
+
+describe("consonant onset", () => {
+  // chang2's affricate runs from ~85ms to ~256ms at rms 0.006-0.0135, against
+  // a room floor of 0.0008, and carries no voicing at all. Cutting at the
+  // vowel throws it away and the clip sounds like "hang".
+  it("keeps the aspirated onset of chang2", () => {
+    const { samples, sampleRate } = recording("chang2");
+    const cut = cutClip(samples, sampleRate, JANE_SESSION_F0);
+    expect(cut.onsetMs).toBeGreaterThan(100);
+    expect(cut.onsetMs).toBeLessThanOrEqual(MAX_ONSET_MS);
+  });
+
+  // ba1's stop burst is inside the 45ms pad already, and the 250ms before it
+  // is genuine silence (rms 0.0009 == the floor). Walking back must stop
+  // immediately rather than dragging room tone in.
+  it("takes nothing extra from ba1, which is silent before the vowel", () => {
+    const { samples, sampleRate } = recording("ba1");
+    const cut = cutClip(samples, sampleRate, JANE_SESSION_F0);
+    expect(cut.onsetMs).toBeLessThan(30);
+  });
+
+  // The tone window is what the corridor is measured over. Extending the audio
+  // must not move it, or every shipped polyline and duration shifts.
+  it("does not change the tone window", () => {
+    const { samples, sampleRate } = recording("chang2");
+    const cut = cutClip(samples, sampleRate, JANE_SESSION_F0);
+    // 1.007s is the duration the shipped manifest already records for chang2.
+    expect(cut.durationMs).toBeCloseTo(1007, -1);
+  });
+
+  it("returns audio long enough to hold both windows", () => {
+    const { samples, sampleRate } = recording("chang2");
+    const cut = cutClip(samples, sampleRate, JANE_SESSION_F0);
+    const totalMs = (cut.samples.length / sampleRate) * 1000;
+    expect(totalMs).toBeCloseTo(cut.onsetMs + cut.durationMs, -1);
   });
 });
