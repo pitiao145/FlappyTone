@@ -185,6 +185,15 @@ export interface CueView {
   durationMs: number;
   /** How long the demo dot takes to trace the corridor. Usually the same. */
   sweepMs: number;
+  /**
+   * How long after `atMs` the demo dot starts moving.
+   *
+   * The clip begins with the consonant and the corridor does not, so the dot
+   * has to sit still through it. Separate from `sweepMs` for the same reason
+   * `sweepMs` is separate from `durationMs`: these are three different clocks
+   * and folding any two together has broken the demo once already.
+   */
+  sweepDelayMs: number;
 }
 
 /**
@@ -639,6 +648,7 @@ export class Run {
         // that moves with the corridor is what "the pause lands right on top
         // of a T3 gate" was.
         sweepMs: next.shape.durationS * 1000,
+        sweepDelayMs: (next.word?.onsetS ?? 0) * 1000,
       };
     }
   }

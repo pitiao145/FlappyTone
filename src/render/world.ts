@@ -370,7 +370,9 @@ function drawCueDemo(
 ): void {
   const cue = snap.cue;
   if (!cue) return;
-  const raw = (performance.now() - cue.atMs) / cue.sweepMs;
+  const raw = (performance.now() - cue.atMs - cue.sweepDelayMs) / cue.sweepMs;
+  // Negative through the consonant: the dot appears when the tone starts, not
+  // when the sound does.
   if (raw < 0) return;
   // After the sweep the dot rests at the contour's endpoint, dimmed — in
   // "pause" style this is the still beat before the world resumes.

@@ -1005,3 +1005,41 @@ describe("Run — flying an inventory", () => {
     }
   });
 });
+
+describe("Run — demo dot waits out the consonant", () => {
+  function onsetRun(onsetS: number): Run {
+    const words: Word[] = loadWords({
+      clips: [
+        {
+          id: "ma2",
+          hanzi: "麻",
+          pinyin: "má",
+          tone: 2,
+          file: "ma2.wav",
+          durationS: 1.0,
+          onsetS,
+          polyline: [[0, 2.5], [0.4, 1.9], [1, 4.6]],
+        },
+      ],
+    });
+    return new Run({
+      mode: "game",
+      width: W,
+      rand: seqRand([0, 0.3]),
+      words,
+      cueStyle: "pause",
+    });
+  }
+
+  it("delays the demo dot by the clip's consonant", () => {
+    const { snapshots } = simulate(onsetRun(0.19), 600, () => pitch(3));
+    const cued = snapshots.find((s) => s.cue?.word)!;
+    expect(cued.cue!.sweepDelayMs).toBeCloseTo(190, 0);
+  });
+
+  it("does not delay a dot with no consonant to wait for", () => {
+    const { snapshots } = simulate(onsetRun(0), 600, () => pitch(3));
+    const cued = snapshots.find((s) => s.cue?.word)!;
+    expect(cued.cue!.sweepDelayMs).toBe(0);
+  });
+});
