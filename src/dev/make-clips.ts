@@ -72,6 +72,7 @@ interface Cut {
   session: string;
   reference: PitchReference;
   durationMs: number;
+  onsetMs: number;
   contour: ContourPoint[];
   pinnedFraction: number;
   samples: Float32Array;
@@ -125,6 +126,7 @@ for (const session of sessions) {
         session,
         reference,
         durationMs: clip.durationMs,
+        onsetMs: clip.onsetMs,
         contour: clip.contour,
         pinnedFraction: clip.pinnedFraction,
         samples: clip.samples,
@@ -200,6 +202,7 @@ for (const cut of [...cuts.values()].sort((a, b) => a.id.localeCompare(b.id))) {
     tone: cut.tone,
     file: `${cut.id}.wav`,
     durationS: Number((cut.durationMs / 1000).toFixed(4)),
+    onsetS: Number((cut.onsetMs / 1000).toFixed(3)),
     // What the game builds the corridor from: a handful of vertices, in the
     // same [t, chao] form as `tuning().polylines`, so a measured word and a
     // hand-tuned tone default are the same kind of object downstream.
