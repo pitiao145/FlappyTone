@@ -4,7 +4,6 @@ import { initPostHog } from "./analytics/posthog.ts";
 import { loadInventory } from "./audio/inventory";
 import { MicError } from "./audio/mic";
 import { ensureMic, stopMic } from "./audio/session";
-import { GateLogPanel } from "./dev/GateLogPanel";
 import type { RunSnapshot } from "./game/run";
 import { loadSettings, loadShareData, type CalibrationSettings } from "./game/settings";
 import type { RunStats } from "./game/scoring";
@@ -241,11 +240,6 @@ export default function App() {
         {/* No Play button here: offering it to someone already inside the game
             is the one link on the bar that means nothing where they are. */}
         {showNav && <Nav variant="app" onNavigate={goLanding} />}
-
-        {/* Quitting a run lands here, so the log has to be readable here too. */}
-        {import.meta.env.DEV && screen === "title" && (
-          <GateLogPanel key="gatelog" />
-        )}
 
         {screen === "landing" && (
           <Landing

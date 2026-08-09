@@ -394,7 +394,7 @@
   }
 }
 
-/* Dev-only gate diagnostics (?gatelog) — measures the unheard rate in play. */
+/* Dev-only gate diagnostics (the Lab's gates tab) — the unheard rate in play. */
 .gate-log {
   margin-top: auto;
   padding: 6px 8px;

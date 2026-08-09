@@ -6,8 +6,7 @@
  * localStorage on every gate, so it survives game over, quitting, and a reload,
  * and can be copied out as text.
  *
- * Opt-in via `?gatelog`, **and only in a dev build**. No gameplay depends on
- * any of this.
+ * Dev builds only. No gameplay depends on any of this.
  */
 
 import type { GateLogEntry } from "../game/run.ts";
@@ -15,18 +14,19 @@ import type { GateLogEntry } from "../game/run.ts";
 const KEY = "flappytone.gatelog";
 
 /**
- * `import.meta.env.DEV` first, and deliberately first.
+ * `import.meta.env.DEV`, and nothing else.
  *
  * Vite substitutes it with a literal `false` in a production build, so every
  * `GATE_LOG_ENABLED &&` guard downstream becomes dead code Rollup can drop —
  * which is what keeps the panel out of `dist/` rather than merely hidden in it.
- * A player who typed `?gatelog` used to get a textarea full of diagnostics;
- * that is dev tooling reaching a player, which CLAUDE.md rule 7 exists to stop.
+ * That substitution is the whole boundary (CLAUDE.md rule 7).
+ *
+ * There was also a `?gatelog` query param, and it was never load-bearing: a
+ * query flag hides, it does not remove. All it achieved was gating the
+ * *writing* as well as the reading, so the Lab's gates tab opened on an empty
+ * panel with no way to tell that from a run that logged nothing.
  */
-export const GATE_LOG_ENABLED =
-  import.meta.env.DEV &&
-  typeof location !== "undefined" &&
-  new URLSearchParams(location.search).has("gatelog");
+export const GATE_LOG_ENABLED = import.meta.env.DEV;
 
 export interface StoredGateLog {
   entries: GateLogEntry[];

@@ -19,14 +19,12 @@ import { Game } from "../ui/Game.tsx";
 import { Capture } from "./Capture.tsx";
 import { DevPanel } from "./DevPanel.tsx";
 import { GateLogPanel } from "./GateLogPanel.tsx";
-import { ShapeEditor } from "./ShapeEditor.tsx";
 import { TuningPanel } from "./TuningPanel.tsx";
 
-type Tab = "play" | "shapes" | "pitch" | "gates" | "capture";
+type Tab = "play" | "pitch" | "gates" | "capture";
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "play", label: "play" },
-  { id: "shapes", label: "shapes" },
   { id: "pitch", label: "pitch" },
   { id: "gates", label: "gates" },
   { id: "capture", label: "capture" },
@@ -153,20 +151,6 @@ worst excursion ${Math.round(Math.max(0, ...last.gateLog.map((g) => g.worstExcur
         </div>
       )}
 
-      {tab === "shapes" && (
-        <div className="lab-split">
-          <div className="lab-stage">
-            <ShapeEditor />
-          </div>
-          <div className="lab-controls">
-            <p className="param-help">
-              Edits are live in the play tab — switch across and start a run
-              without losing them. Only a reload restores the shipped shapes.
-            </p>
-          </div>
-        </div>
-      )}
-
       {tab === "pitch" && <PitchTab />}
 
       {tab === "gates" && (
@@ -175,7 +159,8 @@ worst excursion ${Math.round(Math.max(0, ...last.gateLog.map((g) => g.worstExcur
           <p className="param-help">
             The full per-gate log for the last run, live-mirrored to
             localStorage — a run ended by quitting or by closing the tab still
-            leaves its numbers here.
+            leaves its numbers here, and a run flown outside the Lab lands here
+            too.
           </p>
         </div>
       )}

@@ -60,6 +60,8 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
         help: "How far out of step you may be. Only widens where the corridor is moving; flat stretches stay exactly as strict." },
       { key: "maxTimingWidenFactor", label: "slack cap", min: 1, max: 3, step: 0.05,
         help: "Ceiling on that widening, as a multiple of the base tolerance. Without it the T4 cliff's wall disappears." },
+      { key: "slackSmoothS", label: "wall smoothing", min: 0, max: 0.15, step: 0.005,
+        help: "Rounds the corners off the widening, in seconds of gate time. 0 is the old peaky wall. Higher also bleeds the flare further into the flat ground either side, so it is not free." },
     ],
   },
   {
@@ -169,12 +171,15 @@ export function TuningPanel() {
       ))}
 
       <section>
-        <h4>gate length</h4>
+        <h4>gate length — fallback only</h4>
         <p className="param-help">
-          Seconds per tone. These are the shipped reference clips' own lengths —
-          changing one here makes the demo and the corridor disagree, which is a
-          failure this project has hit twice. Re-cut the clip before shipping a
-          new value.
+          Seconds per tone. A gate is built from a word now, and a word carries
+          its own length from manifest.json, so these no longer set the gates
+          you fly. What still reads them: every T3 corridor (her natural T3 does
+          not rise, so T3 flies the citation shape), a gate with no word behind
+          it, and the title screen's demo loop. Moving one makes the demo and
+          the corridor disagree on those, which is a failure this project has
+          hit twice.
         </p>
         {TONES.map((tone) => {
           const value = t.gateDurationS[tone];

@@ -6,12 +6,20 @@ import { formatGateLog, GATE_LOG_ENABLED, loadGateLog } from "./gateLog.ts";
  * with a copy button. Read from localStorage rather than a live snapshot, so a
  * run ended by quitting — or by closing the tab — still shows its numbers.
  *
- * Renders nothing unless `?gatelog` is set.
+ * Dev builds only; see GATE_LOG_ENABLED.
  */
 export function GateLogPanel() {
   const [log] = useState(() => loadGateLog());
   const [copied, setCopied] = useState(false);
-  if (!GATE_LOG_ENABLED || !log) return null;
+  if (!GATE_LOG_ENABLED) return null;
+  if (!log) {
+    return (
+      <p className="param-help">
+        No run logged yet. Fly one in the play tab and come back — the log
+        survives a quit, a game over and a reload.
+      </p>
+    );
+  }
 
   const text = formatGateLog(log);
   const copy = async () => {
