@@ -141,7 +141,14 @@ export function ShapeEditor() {
     const audio = getMicSession()?.ctx;
     const saved = loadSettings();
     if (audio && audio.state === "running" && saved) {
-      playToneCue(audio, tone, saved.f0Center, saved.rangeSemitones);
+      playToneCue(
+        audio,
+        tone,
+        saved.f0Center,
+        saved.rangeSemitones,
+        null,
+        saved.rangeDownSemitones,
+      );
     }
   };
 

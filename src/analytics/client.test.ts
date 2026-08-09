@@ -97,7 +97,7 @@ describe("build gate", () => {
     // quiet on the network, but storing nothing and minting no id either.
     const h = setup({ enabled: false });
     track({ type: "landed" });
-    trackCalibration({ f0Center: 200, rangeSemitones: 5, noiseFloor: 0.002 });
+    trackCalibration({ f0Center: 200, rangeSemitones: 5, rangeDownSemitones: 5, noiseFloor: 0.002 });
     flushSync();
 
     expect(h.calls).toEqual([]);
@@ -196,13 +196,14 @@ describe("track", () => {
 
   it("carries the calibration numbers and nothing more", () => {
     const h = setup();
-    trackCalibration({ f0Center: 198.44, rangeSemitones: 4.812, noiseFloor: 0.00213 });
+    trackCalibration({ f0Center: 198.44, rangeSemitones: 4.812, rangeDownSemitones: 4.812, noiseFloor: 0.00213 });
     track({ type: "landed" });
 
     const rec = loadQueue(h.stores)[0].rec;
     expect(rec.calibration).toEqual({
       f0Center: 198.4,
       rangeSemitones: 4.81,
+      rangeDownSemitones: 4.81,
       noiseFloor: 0.00213,
     });
     expect(rec.device).toBe("ios/safari");

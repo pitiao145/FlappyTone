@@ -30,6 +30,35 @@ describe("hzToSemitones / semitonesToChao", () => {
     expect(semitonesToChao(12)).toBe(5);
     expect(semitonesToChao(-12)).toBe(1);
   });
+
+  it("puts each demonstrated extreme on its own edge of the board", () => {
+    // A speaker reaching 10 st up and 3 st down. Both ends are theirs, and the
+    // knee at chao 3 stays on their speaking pitch.
+    expect(semitonesToChao(10, 10, 3)).toBeCloseTo(5);
+    expect(semitonesToChao(-3, 10, 3)).toBeCloseTo(1);
+    expect(semitonesToChao(0, 10, 3)).toBeCloseTo(3);
+  });
+
+  it("keeps the T3 trough inside a small downward reach", () => {
+    // The reported failure: with one shared half-width of 6.5, a 3 st drop drew
+    // at chao 2.08 and the T3 corridor floor (1.22) was unreachable. Measured
+    // per side, the same drop reaches the floor.
+    expect(semitonesToChao(-3, 6.5)).toBeGreaterThan(2);
+    expect(semitonesToChao(-3, 10, 3)).toBeLessThan(1.22);
+  });
+
+  it("is continuous and monotonic across the knee", () => {
+    const up = semitonesToChao(0.001, 10, 3);
+    const down = semitonesToChao(-0.001, 10, 3);
+    expect(up).toBeGreaterThan(down);
+    expect(up - down).toBeLessThan(0.01);
+  });
+
+  it("reproduces the symmetric board when the halves are equal", () => {
+    for (const st of [-8, -5, -2.5, 0, 2.5, 5, 8]) {
+      expect(semitonesToChao(st, 5, 5)).toBe(semitonesToChao(st, 5));
+    }
+  });
 });
 
 describe("correctOctave", () => {

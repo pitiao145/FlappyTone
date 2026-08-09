@@ -260,6 +260,7 @@ export function Game({
           f0Center: settings.f0Center,
           noiseFloor: settings.noiseFloor,
           rangeSemitones: settings.rangeSemitones,
+          rangeDownSemitones: settings.rangeDownSemitones,
         });
         // Published so the dev Lab's sliders reach the tracker that is
         // actually flying the dot, rather than a tracker nobody is listening to.
@@ -305,6 +306,7 @@ export function Game({
             settings.f0Center,
             settings.rangeSemitones,
             snap.cue.word,
+            settings.rangeDownSemitones,
           );
         }
       }

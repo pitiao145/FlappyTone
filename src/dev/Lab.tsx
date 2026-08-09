@@ -41,6 +41,7 @@ const FALLBACK_SETTINGS: CalibrationSettings = {
   f0Center: DEFAULT_CONFIG.f0Center,
   noiseFloor: DEFAULT_CONFIG.noiseFloor,
   rangeSemitones: DEFAULT_CONFIG.rangeSemitones,
+  rangeDownSemitones: DEFAULT_CONFIG.rangeDownSemitones,
 };
 
 interface Props {
@@ -202,6 +203,7 @@ function PitchTab() {
             f0Center: saved.f0Center,
             noiseFloor: saved.noiseFloor,
             rangeSemitones: saved.rangeSemitones,
+            rangeDownSemitones: saved.rangeDownSemitones,
           }
         : {},
     );

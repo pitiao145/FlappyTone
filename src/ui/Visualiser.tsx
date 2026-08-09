@@ -73,6 +73,7 @@ export function Visualiser({
           f0Center: settings.f0Center,
           noiseFloor: settings.noiseFloor,
           rangeSemitones: settings.rangeSemitones,
+          rangeDownSemitones: settings.rangeDownSemitones,
         });
         setActiveTracker(tracker);
       }
@@ -145,7 +146,14 @@ export function Visualiser({
     const audio = getMicSession()?.ctx;
     // Same context the mic runs on, so it is already gesture-resumed.
     if (audio && audio.state === "running") {
-      playToneCue(audio, tone, settings.f0Center, settings.rangeSemitones);
+      playToneCue(
+        audio,
+        tone,
+        settings.f0Center,
+        settings.rangeSemitones,
+        null,
+        settings.rangeDownSemitones,
+      );
     }
   };
 

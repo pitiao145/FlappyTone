@@ -15,6 +15,7 @@ export const DEFAULT_CONFIG: Omit<PitchTrackerConfig, "sampleRate"> = {
   frameSize: 2048,
   f0Center: 120,
   rangeSemitones: 5,
+  rangeDownSemitones: 5,
   // Tuned via `npm run tune` — median-5 does the de-jitter work, so the
   // exponential smoother can be fast; 0.85 clarity missed too many frames.
   alpha: 0.85,
@@ -55,7 +56,15 @@ export class PitchTracker {
   private smoothedChao = 3;
 
   constructor(config: Partial<PitchTrackerConfig> & { sampleRate: number }) {
-    this.config = { ...DEFAULT_CONFIG, ...config };
+    // A caller that sets only `rangeSemitones` means a symmetric board, and
+    // several do — clipCut measures corridors against ±15 st and must not
+    // silently get 15 up / 5 down from the default. Mirroring here is what
+    // keeps every offline measurement on the mapping it was written for.
+    const mirrored =
+      config.rangeSemitones !== undefined && config.rangeDownSemitones === undefined
+        ? { rangeDownSemitones: config.rangeSemitones }
+        : {};
+    this.config = { ...DEFAULT_CONFIG, ...config, ...mirrored };
   }
 
   /**
@@ -70,8 +79,11 @@ export class PitchTracker {
     this.config.f0Center = hz;
   }
 
-  setRangeSemitones(range: number): void {
+  /** `down` defaults to `up`, keeping the symmetric board for callers that
+   * have only ever had one number (offline measurement, the dev report). */
+  setRangeSemitones(range: number, down: number = range): void {
     this.config.rangeSemitones = range;
+    this.config.rangeDownSemitones = down;
   }
 
   setNoiseFloor(rms: number): void {
@@ -91,6 +103,7 @@ export class PitchTracker {
       sampleRate,
       f0Center,
       rangeSemitones,
+      rangeDownSemitones,
       alpha,
       clarityThreshold,
       noiseFloor,
@@ -162,7 +175,7 @@ export class PitchTracker {
       this.config.maxSlewSemitones,
     );
     this.prevSemitones = semitones;
-    const chao = semitonesToChao(semitones, rangeSemitones);
+    const chao = semitonesToChao(semitones, rangeSemitones, rangeDownSemitones);
     this.smoothedChao += alpha * (chao - this.smoothedChao);
 
     return {

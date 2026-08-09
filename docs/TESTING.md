@@ -96,7 +96,7 @@ All run under Vitest via `npm run test`.
 | `src/pitch/voicing.test.ts` | The voicing decision frame by frame, with numbers lifted from actual `jane_ma4` frames |
 | `src/pitch/PitchTracker.test.ts` | State across unvoiced gaps; the voicing window |
 | `src/pitch/math.test.ts` | Octave correction, Hz→semitone→Chao, slew clamp, median filter |
-| `src/pitch/calibration.test.ts` | Noise floor, `f0Center`, `computeRangeSemitones` |
+| `src/pitch/calibration.test.ts` | Noise floor, `f0Center`, `computeRangeHalves*` (both halves of the board) |
 | `src/game/run.test.ts` | Grace, drift, T3 hold, gate boundaries, scoring outcomes |
 
 ### Shape assertions

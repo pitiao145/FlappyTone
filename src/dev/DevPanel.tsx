@@ -31,6 +31,7 @@ export function DevPanel() {
   const initial = getActiveTracker()?.getConfig() ?? DEFAULT_CONFIG;
   const [f0Center, setF0Center] = useState(initial.f0Center);
   const [range, setRange] = useState(initial.rangeSemitones);
+  const [rangeDown, setRangeDown] = useState(initial.rangeDownSemitones);
   const [alpha, setAlpha] = useState(initial.alpha);
   const [clarityThreshold, setClarityThreshold] = useState(
     initial.clarityThreshold,
@@ -41,12 +42,16 @@ export function DevPanel() {
   const resetSettings = () => {
     setF0Center(DEFAULT_CONFIG.f0Center);
     setRange(DEFAULT_CONFIG.rangeSemitones);
+    setRangeDown(DEFAULT_CONFIG.rangeDownSemitones);
     setAlpha(DEFAULT_CONFIG.alpha);
     setClarityThreshold(DEFAULT_CONFIG.clarityThreshold);
     setEditingUntil(performance.now() + 500);
     const tracker = getActiveTracker();
     tracker?.setF0Center(DEFAULT_CONFIG.f0Center);
-    tracker?.setRangeSemitones(DEFAULT_CONFIG.rangeSemitones);
+    tracker?.setRangeSemitones(
+      DEFAULT_CONFIG.rangeSemitones,
+      DEFAULT_CONFIG.rangeDownSemitones,
+    );
     tracker?.setAlpha(DEFAULT_CONFIG.alpha);
     tracker?.setClarityThreshold(DEFAULT_CONFIG.clarityThreshold);
   };
@@ -62,6 +67,7 @@ export function DevPanel() {
         const c = tracker.getConfig();
         setF0Center(c.f0Center);
         setRange(c.rangeSemitones);
+        setRangeDown(c.rangeDownSemitones);
         setAlpha(c.alpha);
         setClarityThreshold(c.clarityThreshold);
       }
@@ -131,19 +137,39 @@ export function DevPanel() {
       </label>
 
       <label>
-        <span className="param-name">sensitivity — ±{range} semitones</span>
+        <span className="param-name">reach up — {range} semitones to line 5</span>
         <input
           type="range" min={3} max={10} step={0.5} value={range}
           disabled={!live}
           onChange={(e) => {
             const v = Number(e.target.value);
             push(setRange)(v);
-            getActiveTracker()?.setRangeSemitones(v);
+            getActiveTracker()?.setRangeSemitones(v, rangeDown);
           }}
         />
         <span className="param-help">
           How much pitch change fills the screen. Lower = small voice movements
-          move the dot a lot. If you can't reach lines 1 or 5, lower this.
+          move the dot a lot. If you can't reach line 5, lower this.
+        </span>
+      </label>
+
+      <label>
+        <span className="param-name">
+          reach down — {rangeDown} semitones to line 1
+        </span>
+        <input
+          type="range" min={3} max={10} step={0.5} value={rangeDown}
+          disabled={!live}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            push(setRangeDown)(v);
+            getActiveTracker()?.setRangeSemitones(range, v);
+          }}
+        />
+        <span className="param-help">
+          The two halves are separate: a speaking voice sits near the bottom of
+          its own range, so the drop to line 1 is usually the smaller of the
+          two. If you can't reach line 1, lower this.
         </span>
       </label>
 

@@ -66,6 +66,27 @@ Where `RANGE_SEMITONES = 5` by default (a 10-semitone total tone space, adjustab
 > 3–8 — measured speakers land between 3.5 and 6.0, and the old ceiling was
 > low enough that a wide voice could not persist a value that fitted her.
 > The slider still wins; the measurement is a starting point, not a verdict.
+>
+> **⚠️ Superseded again (9 Aug 2026) — the board is not symmetric.** There are
+> two halves, `rangeSemitones` (centre → chao 5) and `rangeDownSemitones`
+> (centre → chao 1), measured from their own sweeps:
+>
+> ```
+> half = semitones >= 0 ? rangeSemitones : rangeDownSemitones
+> chao = clamp(3 + (semitones / half) * 2, 1, 5)
+> ```
+>
+> `f0Center` is the median of *conversational* speech, and a speaking voice
+> sits near the bottom of a speaker's range, not its middle — so one shared
+> half-width is wrong on both sides at once. A player reaching +10 st up and
+> −2 st down was handed a symmetric ±6 board: their entire downward reach drew
+> at chao 2.33 (reported as "the dot stays in the middle when I go low"), the
+> top third of their upward reach was clamped dead against chao 5, and the T3
+> corridor floor at chao 1.22 asked for three times the drop they had just
+> demonstrated they had — which is the *second* reported symptom, and the same
+> defect. Continuous and monotonic across the knee at chao 3, and identical to
+> the old mapping when the halves are equal, which every offline caller
+> (`clipCut`, `tone-synth`, `npm run report`) still is.
 
 Chao 1–5 is the standard Chinese tone-level scale. Map it to the playable vertical band:
 
@@ -136,12 +157,21 @@ Persist to `localStorage` so it isn't re-run every session (this is the one exce
 > | low, 3s | "and as low as is comfortable" | low semitone sweep |
 > | preview | free play + slider | confirmation |
 >
-> `computeRangeFromExtremes(high, low)` seeds the range: half the span from
-> p90 of the high sweep to p10 of the low sweep, trimmed for the same reason
-> `computeRangeSemitones` trims — one octave-error or creak frame at either
-> extreme would otherwise size the whole board around an artefact. The live
-> dot runs during both sweeps, because seeing yourself reach is what makes
-> "as high as is comfortable" legible without more words.
+> `computeRangeHalvesFromExtremes(high, low)` seeds the board: the up half from
+> p90 of the high sweep, the down half from p10 of the low sweep, each trimmed
+> for the same reason `computeRangeSemitones` trims — one octave-error or creak
+> frame at either extreme would otherwise size the whole board around an
+> artefact. **The two sweeps are not averaged into one number**; that was the
+> defect §5.1 records. Both halves are still clamped to 3–10, so a speaker who
+> never drops below their centre gets a floored down half rather than one
+> mirrored from a reach they did not make.
+>
+> The live dot runs during both sweeps, because seeing yourself reach is what
+> makes "as high as is comfortable" legible without more words — and during the
+> sweeps only, it *holds* on unvoiced instead of drifting to chao 3. A low reach
+> goes creaky, creak reads as unvoiced, and snapping the dot back to the middle
+> of the board at the moment the player is asked to look at how far down they
+> got is the same lie the symmetric range told.
 
 ---
 

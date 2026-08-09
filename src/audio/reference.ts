@@ -107,9 +107,19 @@ export function cueDurationMsFor(word: Word | null, tone: Tone): number {
   return word ? word.clipS * 1000 : synthCueMsFor(tone);
 }
 
-/** Inverse of pitch/math's semitonesToChao: chao -> semitones -> Hz. */
-function chaoToHz(chao: number, f0Center: number, rangeSemitones: number): number {
-  const semitones = ((chao - 3) / 2) * rangeSemitones;
+/**
+ * Inverse of pitch/math's semitonesToChao: chao -> semitones -> Hz, with the
+ * same knee at chao 3. It has to invert the *asymmetric* board, or the synth
+ * cue asks for a pitch below anything the player demonstrated they can reach.
+ */
+function chaoToHz(
+  chao: number,
+  f0Center: number,
+  rangeSemitones: number,
+  rangeDownSemitones: number,
+): number {
+  const half = chao >= 3 ? rangeSemitones : rangeDownSemitones;
+  const semitones = ((chao - 3) / 2) * half;
   return f0Center * Math.pow(2, semitones / 12);
 }
 
@@ -140,6 +150,7 @@ export function playToneCue(
   f0Center: number,
   rangeSemitones: number = RANGE_SEMITONES,
   word: Word | null = null,
+  rangeDownSemitones: number = rangeSemitones,
 ): void {
   const clip = word ? clips.get(word.id) : undefined;
   if (clip) {
@@ -166,7 +177,7 @@ export function playToneCue(
   for (let i = 0; i < CURVE_POINTS; i++) {
     const t = i / (CURVE_POINTS - 1);
     const chao = corridorChaoAt(shapeForTone(tone), t);
-    curve[i] = chaoToHz(chao, f0Center, rangeSemitones);
+    curve[i] = chaoToHz(chao, f0Center, rangeSemitones, rangeDownSemitones);
   }
   osc.frequency.setValueCurveAtTime(curve, now, durationS);
 
@@ -189,8 +200,9 @@ export async function playReferenceTone(
   tone: Tone,
   f0Center: number,
   rangeSemitones: number = RANGE_SEMITONES,
+  rangeDownSemitones: number = rangeSemitones,
 ): Promise<void> {
   ctx ??= new AudioContext();
   if (ctx.state === "suspended") await ctx.resume();
-  playToneCue(ctx, tone, f0Center, rangeSemitones);
+  playToneCue(ctx, tone, f0Center, rangeSemitones, null, rangeDownSemitones);
 }

@@ -84,6 +84,21 @@ export function computeRangeSemitones(
 }
 
 /**
+ * The two halves of the tone space: semitones from f0Center up to chao 5, and
+ * down to chao 1. They are measured separately — see `semitonesToChao`.
+ */
+export interface RangeHalves {
+  up: number;
+  down: number;
+}
+
+/** Round to the nearest 0.5 and hold inside the tone-space bounds. */
+function clampHalf(half: number): number {
+  const rounded = Math.round(half * 2) / 2;
+  return Math.min(RANGE_SEMITONES_MAX, Math.max(RANGE_SEMITONES_MIN, rounded));
+}
+
+/**
  * Tone space from a deliberate high sweep and a deliberate low sweep, in
  * semitones relative to f0Center.
  *
@@ -96,16 +111,41 @@ export function computeRangeSemitones(
  * preview version trims: one octave-error or creak frame at either extreme
  * would otherwise size the whole board around a measurement artefact.
  *
+ * ⚠ The two sweeps are *not* averaged into one half-width. They used to be, and
+ * that is the whole defect: a speaker reaching +10 st up and −2 st down was
+ * handed a symmetric ±6 board, on which their deepest note drew at chao 2.33
+ * and chao 1 needed three times the excursion they had just demonstrated they
+ * had. f0Center is not the midpoint between the extremes and was never checked
+ * against them.
+ *
  * Returns null when either sweep is too sparse to say anything.
  */
-export function computeRangeFromExtremes(
+export function computeRangeHalvesFromExtremes(
   high: number[],
   low: number[],
-): number | null {
+): RangeHalves | null {
   if (high.length < 10 || low.length < 10) return null;
   const h = [...high].sort((a, b) => a - b);
   const l = [...low].sort((a, b) => a - b);
-  const half = (percentile(h, 90) - percentile(l, 10)) / 2;
-  const rounded = Math.round(half * 2) / 2;
-  return Math.min(RANGE_SEMITONES_MAX, Math.max(RANGE_SEMITONES_MIN, rounded));
+  return {
+    up: clampHalf(percentile(h, 90)),
+    down: clampHalf(-percentile(l, 10)),
+  };
+}
+
+/**
+ * The preview-capture equivalent, for "Fit to what I just did": each half from
+ * its own trimmed extreme rather than from half the span. Same trim rationale
+ * as `computeRangeSemitones`, which this replaces on the player-facing path.
+ */
+export function computeRangeHalves(
+  voicedSemitones: number[],
+  trimPercent = 10,
+): RangeHalves | null {
+  if (voicedSemitones.length < 10) return null;
+  const sorted = [...voicedSemitones].sort((a, b) => a - b);
+  return {
+    up: clampHalf(percentile(sorted, 100 - trimPercent)),
+    down: clampHalf(-percentile(sorted, trimPercent)),
+  };
 }

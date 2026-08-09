@@ -36,6 +36,7 @@ describe("Settings persistence", () => {
       f0Center: 120,
       noiseFloor: 0.001,
       rangeSemitones: 5,
+      rangeDownSemitones: 5,
     };
     saveSettings(settings);
     const loaded = loadSettings();
@@ -56,6 +57,7 @@ describe("Settings persistence", () => {
       f0Center: 50,
       noiseFloor: 0.001,
       rangeSemitones: 5,
+      rangeDownSemitones: 5,
     };
     storageMap["toneflap.settings.v1"] = JSON.stringify(settings);
     expect(loadSettings()).toBeNull();
@@ -66,6 +68,7 @@ describe("Settings persistence", () => {
       f0Center: 500,
       noiseFloor: 0.001,
       rangeSemitones: 5,
+      rangeDownSemitones: 5,
     };
     storageMap["toneflap.settings.v1"] = JSON.stringify(settings);
     expect(loadSettings()).toBeNull();
@@ -76,6 +79,7 @@ describe("Settings persistence", () => {
       f0Center: 70,
       noiseFloor: 0.001,
       rangeSemitones: 5,
+      rangeDownSemitones: 5,
     };
     storageMap["toneflap.settings.v1"] = JSON.stringify(settings70);
     expect(loadSettings()).toEqual(settings70);
@@ -84,6 +88,7 @@ describe("Settings persistence", () => {
       f0Center: 400,
       noiseFloor: 0.001,
       rangeSemitones: 5,
+      rangeDownSemitones: 5,
     };
     storageMap["toneflap.settings.v1"] = JSON.stringify(settings400);
     expect(loadSettings()).toEqual(settings400);
@@ -94,6 +99,7 @@ describe("Settings persistence", () => {
       f0Center: 120,
       noiseFloor: 0,
       rangeSemitones: 5,
+      rangeDownSemitones: 5,
     };
     storageMap["toneflap.settings.v1"] = JSON.stringify(settings);
     expect(loadSettings()).toBeNull();
@@ -102,6 +108,7 @@ describe("Settings persistence", () => {
       f0Center: 120,
       noiseFloor: -0.001,
       rangeSemitones: 5,
+      rangeDownSemitones: 5,
     };
     storageMap["toneflap.settings.v1"] = JSON.stringify(settingsNegative);
     expect(loadSettings()).toBeNull();
@@ -112,6 +119,7 @@ describe("Settings persistence", () => {
       f0Center: 120,
       noiseFloor: 0.001,
       rangeSemitones: 2,
+      rangeDownSemitones: 2,
     };
     storageMap["toneflap.settings.v1"] = JSON.stringify(settings);
     expect(loadSettings()).toBeNull();
@@ -122,6 +130,7 @@ describe("Settings persistence", () => {
       f0Center: 120,
       noiseFloor: 0.001,
       rangeSemitones: 11,
+      rangeDownSemitones: 11,
     };
     storageMap["toneflap.settings.v1"] = JSON.stringify(settings);
     expect(loadSettings()).toBeNull();
@@ -132,6 +141,7 @@ describe("Settings persistence", () => {
       f0Center: 120,
       noiseFloor: 0.001,
       rangeSemitones: 3,
+      rangeDownSemitones: 3,
     };
     storageMap["toneflap.settings.v1"] = JSON.stringify(settings3);
     expect(loadSettings()).toEqual(settings3);
@@ -140,9 +150,37 @@ describe("Settings persistence", () => {
       f0Center: 120,
       noiseFloor: 0.001,
       rangeSemitones: 10,
+      rangeDownSemitones: 10,
     };
     storageMap["toneflap.settings.v1"] = JSON.stringify(settings10);
     expect(loadSettings()).toEqual(settings10);
+  });
+
+  it("migrates a record saved before the board became asymmetric", () => {
+    // Rejecting it would throw away a working calibration and send the player
+    // back through the flow. Mirroring the up half is the board that record
+    // was actually calibrated on.
+    storageMap["toneflap.settings.v1"] = JSON.stringify({
+      f0Center: 120,
+      noiseFloor: 0.001,
+      rangeSemitones: 6,
+    });
+    expect(loadSettings()).toEqual({
+      f0Center: 120,
+      noiseFloor: 0.001,
+      rangeSemitones: 6,
+      rangeDownSemitones: 6,
+    });
+  });
+
+  it("mirrors an out-of-range down half rather than dropping the record", () => {
+    storageMap["toneflap.settings.v1"] = JSON.stringify({
+      f0Center: 120,
+      noiseFloor: 0.001,
+      rangeSemitones: 6,
+      rangeDownSemitones: 99,
+    });
+    expect(loadSettings()?.rangeDownSemitones).toBe(6);
   });
 
   it("clearSettings removes the settings from localStorage", () => {
@@ -150,6 +188,7 @@ describe("Settings persistence", () => {
       f0Center: 120,
       noiseFloor: 0.001,
       rangeSemitones: 5,
+      rangeDownSemitones: 5,
     };
     saveSettings(settings);
     expect(loadSettings()).not.toBeNull();
@@ -170,6 +209,7 @@ describe("Settings persistence", () => {
       f0Center: "120",
       noiseFloor: 0.001,
       rangeSemitones: 5,
+      rangeDownSemitones: 5,
     });
     expect(loadSettings()).toBeNull();
 
@@ -177,6 +217,7 @@ describe("Settings persistence", () => {
       f0Center: 120,
       noiseFloor: "0.001",
       rangeSemitones: 5,
+      rangeDownSemitones: 5,
     });
     expect(loadSettings()).toBeNull();
 

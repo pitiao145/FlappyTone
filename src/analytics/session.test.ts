@@ -74,11 +74,13 @@ describe("setCalibration", () => {
     const s = setCalibration(session(), {
       f0Center: 198.44444444,
       rangeSemitones: 4.812345,
+      rangeDownSemitones: 4.812345,
       noiseFloor: 0.002134567,
     });
     expect(s.calibration).toEqual({
       f0Center: 198.4,
       rangeSemitones: 4.81,
+      rangeDownSemitones: 4.81,
       noiseFloor: 0.00213,
     });
   });

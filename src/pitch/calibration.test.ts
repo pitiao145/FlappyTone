@@ -4,7 +4,8 @@ import {
   RANGE_SEMITONES_MIN,
   computeF0Center,
   computeNoiseFloor,
-  computeRangeFromExtremes,
+  computeRangeHalves,
+  computeRangeHalvesFromExtremes,
   computeRangeSemitones,
   NOISE_FLOOR_MIN,
   median,
@@ -113,36 +114,74 @@ describe("computeRangeSemitones", () => {
   });
 });
 
-describe("computeRangeFromExtremes", () => {
+describe("computeRangeHalvesFromExtremes", () => {
   const many = (v: number, n = 40) => Array.from({ length: n }, () => v);
 
-  it("is half the span the speaker demonstrated", () => {
-    expect(computeRangeFromExtremes(many(5), many(-5))).toBe(5);
+  it("takes each half from its own sweep", () => {
+    expect(computeRangeHalvesFromExtremes(many(5), many(-5))).toEqual({
+      up: 5,
+      down: 5,
+    });
   });
 
   it("a sparse sweep yields null rather than a confident wrong answer", () => {
-    expect(computeRangeFromExtremes([4, 4, 4], many(-4))).toBeNull();
-    expect(computeRangeFromExtremes(many(4), [-4])).toBeNull();
+    expect(computeRangeHalvesFromExtremes([4, 4, 4], many(-4))).toBeNull();
+    expect(computeRangeHalvesFromExtremes(many(4), [-4])).toBeNull();
   });
 
-  it("clamps into the usable band at both ends", () => {
-    expect(computeRangeFromExtremes(many(40), many(-40))).toBe(
-      RANGE_SEMITONES_MAX,
-    );
-    expect(computeRangeFromExtremes(many(0.2), many(-0.2))).toBe(
-      RANGE_SEMITONES_MIN,
-    );
+  it("clamps each half into the usable band", () => {
+    expect(computeRangeHalvesFromExtremes(many(40), many(-40))).toEqual({
+      up: RANGE_SEMITONES_MAX,
+      down: RANGE_SEMITONES_MAX,
+    });
+    expect(computeRangeHalvesFromExtremes(many(0.2), many(-0.2))).toEqual({
+      up: RANGE_SEMITONES_MIN,
+      down: RANGE_SEMITONES_MIN,
+    });
   });
 
-  it("sizes an asymmetric voice by the span, not by one side", () => {
-    // Someone who reaches 8 st up but never drops below their centre still
-    // gets a board that fits the range they actually have.
-    expect(computeRangeFromExtremes(many(8), many(0))).toBe(4);
+  it("does not spend an upward reach on the downward half", () => {
+    // The defect this replaced. Someone reaching 10 st up and 2 st down was
+    // handed a symmetric +-6 board: their deepest note drew at chao 2.33 and
+    // chao 1 asked for three times the excursion they had just demonstrated.
+    // Each half now answers to the sweep that measured it.
+    expect(computeRangeHalvesFromExtremes(many(10), many(-2))).toEqual({
+      up: 10,
+      down: RANGE_SEMITONES_MIN,
+    });
+  });
+
+  it("floors a speaker who never went below their centre", () => {
+    // Not mirrored from the up half — floored. The board stays legible
+    // without pretending they demonstrated a downward reach they did not.
+    expect(computeRangeHalvesFromExtremes(many(8), many(0))).toEqual({
+      up: 8,
+      down: RANGE_SEMITONES_MIN,
+    });
   });
 
   it("ignores a single wild frame at either extreme", () => {
     const high = [...many(5, 39), 30];
     const low = [...many(-5, 39), -30];
-    expect(computeRangeFromExtremes(high, low)).toBe(5);
+    expect(computeRangeHalvesFromExtremes(high, low)).toEqual({
+      up: 5,
+      down: 5,
+    });
+  });
+});
+
+describe("computeRangeHalves", () => {
+  const ramp = (lo: number, hi: number, n = 100) =>
+    Array.from({ length: n }, (_, i) => lo + ((hi - lo) * i) / (n - 1));
+
+  it("reads each half off its own trimmed extreme", () => {
+    // A preview sitting mostly above centre: the up half is the one that grows.
+    const halves = computeRangeHalves(ramp(-2, 10));
+    expect(halves).not.toBeNull();
+    expect(halves!.up).toBeGreaterThan(halves!.down);
+  });
+
+  it("is null on a capture too sparse to say anything", () => {
+    expect(computeRangeHalves([1, 2, 3])).toBeNull();
   });
 });

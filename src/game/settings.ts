@@ -21,9 +21,13 @@ export interface CalibrationSettings {
   f0Center: number;
   /** Noise floor from the calibration silence capture (RMS). Voicing gate uses noiseFloor*3 as threshold. */
   noiseFloor: number;
-  /** Tone range in semitones from centre to Chao 1/5. Seeded from the speaker's
-   * measured excursion during calibration; bounds in RANGE_SEMITONES_MIN/MAX. */
+  /** Tone range in semitones from centre *up* to Chao 5. Seeded from the
+   * speaker's high sweep; bounds in RANGE_SEMITONES_MIN/MAX. */
   rangeSemitones: number;
+  /** Semitones from centre *down* to Chao 1, from the low sweep. Separate
+   * because a speaking voice is not the middle of its range — see
+   * `semitonesToChao`. Records written before this field mirror the up half. */
+  rangeDownSemitones: number;
 }
 
 const KEY = "toneflap.settings.v1";
@@ -35,6 +39,12 @@ const KEY = "toneflap.settings.v1";
  * - f0Center: 70–400 Hz (human voice range)
  * - noiseFloor: > 0
  * - rangeSemitones: RANGE_SEMITONES_MIN–MAX
+ *
+ * `rangeDownSemitones` is migrated rather than validated away: a record saved
+ * before the board became asymmetric has no such field, and rejecting it would
+ * throw away a working calibration and force everyone through the flow again.
+ * Absent or out-of-range mirrors the up half, which is exactly the board that
+ * record was calibrated on.
  */
 export function loadSettings(): CalibrationSettings | null {
   try {
@@ -53,7 +63,12 @@ export function loadSettings(): CalibrationSettings | null {
     ) {
       return null;
     }
-    return s;
+    const down = s.rangeDownSemitones;
+    const downValid =
+      typeof down === "number" &&
+      down >= RANGE_SEMITONES_MIN &&
+      down <= RANGE_SEMITONES_MAX;
+    return { ...s, rangeDownSemitones: downValid ? down : s.rangeSemitones };
   } catch {
     return null;
   }

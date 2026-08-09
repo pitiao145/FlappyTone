@@ -14,8 +14,9 @@ import {
   RANGE_SEMITONES_MIN,
   computeF0Center,
   computeNoiseFloor,
-  computeRangeFromExtremes,
-  computeRangeSemitones,
+  computeRangeHalves,
+  computeRangeHalvesFromExtremes,
+  type RangeHalves,
 } from "../pitch/calibration.ts";
 import { rmsOf } from "../pitch/math.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
@@ -34,6 +35,53 @@ const QUIET_MS = 1000;
  * the meter fills only while you are actually making a sound, and the step ends
  * when there is enough of it. Silence costs nothing but time.
  */
+
+/**
+ * Move the up half to `up`, carrying the down half at the ratio the sweeps
+ * measured, so one slider retunes a two-sided board without flattening it.
+ * Ratio, not offset: the halves are a shape, and scaling preserves it.
+ */
+function scaleHalves(current: RangeHalves, up: number): RangeHalves {
+  const ratio = current.up > 0 ? current.down / current.up : 1;
+  const down = Math.round(up * ratio * 2) / 2;
+  return {
+    up,
+    down: Math.min(RANGE_SEMITONES_MAX, Math.max(RANGE_SEMITONES_MIN, down)),
+  };
+}
+
+function sameHalves(a: RangeHalves, b: RangeHalves): boolean {
+  return a.up === b.up && a.down === b.down;
+}
+
+/**
+ * Dev-only: what the two sweeps actually contained. The reason this exists is
+ * that "the dot stays at chao 3 on the low sweep" has two very different
+ * causes — a downward reach that was measured and then squashed by a symmetric
+ * board, or one that was never heard at all (creak fails voicing, fMin is
+ * 70Hz, and unvoiced frames drift the dot to REST_CHAO). The percentiles tell
+ * them apart; the clamp line says whether RANGE_SEMITONES_MIN is doing the
+ * squashing instead.
+ */
+function logSweeps(
+  high: number[],
+  low: number[],
+  halves: RangeHalves | null,
+): void {
+  const pct = (xs: number[], p: number) => {
+    if (xs.length === 0) return NaN;
+    const s = [...xs].sort((a, b) => a - b);
+    return s[Math.min(s.length - 1, Math.floor((p / 100) * s.length))];
+  };
+  const fmt = (xs: number[]) =>
+    `n=${xs.length} p10=${pct(xs, 10).toFixed(1)} p50=${pct(xs, 50).toFixed(1)} p90=${pct(xs, 90).toFixed(1)} st`;
+  console.log(`[calibration] high sweep: ${fmt(high)}`);
+  console.log(`[calibration] low  sweep: ${fmt(low)}`);
+  console.log(
+    `[calibration] halves: up=${halves?.up} down=${halves?.down} ` +
+      `(raw down=${(-pct(low, 10)).toFixed(1)}, floor=${RANGE_SEMITONES_MIN})`,
+  );
+}
 
 /** Voiced speech needed to site the centre of someone's range. */
 const TALK_VOICED_MS = 2500;
@@ -133,9 +181,14 @@ export function Calibration({
   const [f0Center, setF0Center] = useState<number | null>(
     existing?.f0Center ?? null,
   );
-  const [range, setRange] = useState(
-    existing?.rangeSemitones ?? RANGE_SEMITONES,
-  );
+  /**
+   * The two halves of the board. Separate, because a speaking voice sits near
+   * the bottom of its own range — see `semitonesToChao`.
+   */
+  const [range, setRange] = useState<RangeHalves>({
+    up: existing?.rangeSemitones ?? RANGE_SEMITONES,
+    down: existing?.rangeDownSemitones ?? existing?.rangeSemitones ?? RANGE_SEMITONES,
+  });
   /**
    * A one-word acknowledgement, and the step it leads to.
    *
@@ -156,7 +209,7 @@ export function Calibration({
   const highRef = useRef<number[]>([]);
   const lowRef = useRef<number[]>([]);
   /** Range the preview thinks fits this voice, or null until enough is heard. */
-  const [fit, setFit] = useState<number | null>(null);
+  const [fit, setFit] = useState<RangeHalves | null>(null);
   /** Every voiced semitone seen during preview. A ref: this fills at frame rate. */
   const observedRef = useRef<number[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -306,7 +359,9 @@ export function Calibration({
       // The live dot runs during the sweeps: seeing yourself reach is what
       // makes "as high as is comfortable" legible without more words.
       const stopLoop = canvasRef.current
-        ? startLoop(canvasRef.current, canvasWidth, canvasHeight)
+        ? startLoop(canvasRef.current, canvasWidth, canvasHeight, {
+            holdOnUnvoiced: true,
+          })
         : null;
       const started = performance.now();
       const ticker = setInterval(() => {
@@ -332,10 +387,12 @@ export function Calibration({
           advance("Nice.", "high");
           return;
         }
-        setRange(
-          computeRangeFromExtremes(highRef.current, lowRef.current) ??
-            RANGE_SEMITONES,
+        const halves = computeRangeHalvesFromExtremes(
+          highRef.current,
+          lowRef.current,
         );
+        if (import.meta.env.DEV) logSweeps(highRef.current, lowRef.current, halves);
+        setRange(halves ?? { up: RANGE_SEMITONES, down: RANGE_SEMITONES });
         advance("Perfect.", "done");
       }, 50);
       return () => {
@@ -350,7 +407,10 @@ export function Calibration({
     if (step === "done") return;
 
     // preview: the Step-0 free-play dot, driven by the tracker we just calibrated.
-    const cfg: Partial<PitchTrackerConfig> = { rangeSemitones: range };
+    const cfg: Partial<PitchTrackerConfig> = {
+      rangeSemitones: range.up,
+      rangeDownSemitones: range.down,
+    };
     if (f0Center !== null) cfg.f0Center = f0Center;
     if (noiseFloor !== null) cfg.noiseFloor = noiseFloor;
     configureTracker(cfg);
@@ -369,7 +429,7 @@ export function Calibration({
       : null;
     // 4Hz, not per frame — the suggestion is UI, and the loop stays outside React.
     const suggesting = setInterval(
-      () => setFit(computeRangeSemitones(observedRef.current)),
+      () => setFit(computeRangeHalves(observedRef.current)),
       250,
     );
     return () => {
@@ -394,7 +454,12 @@ export function Calibration({
   const settingsNow = (): CalibrationSettings | null =>
     f0Center === null || noiseFloor === null
       ? null
-      : { f0Center, noiseFloor, rangeSemitones: range };
+      : {
+          f0Center,
+          noiseFloor,
+          rangeSemitones: range.up,
+          rangeDownSemitones: range.down,
+        };
 
   const save = () => {
     const s = settingsNow();
@@ -413,6 +478,17 @@ export function Calibration({
     // settingsNow closes over the three values in the deps below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, f0Center, noiseFloor, range]);
+
+  /**
+   * The slider stays one control over a board with two halves: it moves the
+   * up half, and the down half follows at the ratio the sweeps measured. A
+   * second slider would ask the player to reason about a board shape they were
+   * never told they had, and the ratio is the part the measurement is for.
+   */
+  const applyRange = (next: RangeHalves) => {
+    setRange(next);
+    getTracker()?.setRangeSemitones(next.up, next.down);
+  };
 
   const sweeping = step === "low" || step === "high";
 
@@ -525,32 +601,25 @@ export function Calibration({
             <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} />
           </div>
           <label className="slider">
-            <span className="param-name">sensitivity — ±{range} semitones</span>
+            <span className="param-name">
+              sensitivity — +{range.up} / −{range.down} semitones
+            </span>
             <input
               type="range"
               min={RANGE_SEMITONES_MIN}
               max={RANGE_SEMITONES_MAX}
               step={0.5}
-              value={range}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setRange(v);
-                getTracker()?.setRangeSemitones(v);
-              }}
+              value={range.up}
+              onChange={(e) => applyRange(scaleHalves(range, Number(e.target.value)))}
             />
             <span className="param-help">
               If you can't reach lines 1 or 5, lower this. If the dot slams into
               the edges, raise it.
             </span>
           </label>
-          {fit !== null && fit !== range && (
-            <button
-              onClick={() => {
-                setRange(fit);
-                getTracker()?.setRangeSemitones(fit);
-              }}
-            >
-              Fit to what I just did (±{fit})
+          {fit !== null && !sameHalves(fit, range) && (
+            <button onClick={() => applyRange(fit)}>
+              Fit to what I just did (+{fit.up} / −{fit.down})
             </button>
           )}
           <button className="primary" onClick={save}>

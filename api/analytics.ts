@@ -52,7 +52,12 @@ const ALLOWED_KEYS = new Set([
   "truncated",
 ]);
 
-const CALIBRATION_KEYS = new Set(["f0Center", "rangeSemitones", "noiseFloor"]);
+const CALIBRATION_KEYS = new Set([
+  "f0Center",
+  "rangeSemitones",
+  "rangeDownSemitones",
+  "noiseFloor",
+]);
 
 /** Buckets `deviceBucket()` can produce. A device string outside this is a fingerprint attempt. */
 const DEVICE = /^(ios|android|desktop)\/(safari|chrome|firefox|edge|other)$/;

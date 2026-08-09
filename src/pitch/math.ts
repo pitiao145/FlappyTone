@@ -4,11 +4,30 @@ export function hzToSemitones(f0: number, f0Center: number): number {
   return 12 * Math.log2(f0 / f0Center);
 }
 
+/**
+ * Voice pitch to Chao 1–5, with a knee at chao 3.
+ *
+ * The two halves are measured independently because a voice is not symmetric
+ * about its own speaking pitch: f0Center is the median of *conversational*
+ * speech, which sits near the bottom of a speaker's range. One shared half-width
+ * therefore squashed the whole downward reach into chao 2.3–3 (it read as "the
+ * dot is stuck in the middle") while clamping the top of the upward reach dead
+ * against chao 5 — and put the T3 trough at 1.22 below anything the speaker
+ * could produce. chao 5 is now their demonstrated high, chao 1 their
+ * demonstrated low, and chao 3 stays their speaking pitch, so REST_CHAO and
+ * T2's starting point keep their meaning.
+ *
+ * Continuous and monotonic across the knee, and identical to the old symmetric
+ * mapping when the two halves are equal — which is the default, and what every
+ * offline caller (clipCut, tone-synth, report) still uses.
+ */
 export function semitonesToChao(
   semitones: number,
   rangeSemitones = RANGE_SEMITONES,
+  rangeDownSemitones = rangeSemitones,
 ): number {
-  const chao = 3 + (semitones / rangeSemitones) * 2;
+  const half = semitones >= 0 ? rangeSemitones : rangeDownSemitones;
+  const chao = 3 + (semitones / half) * 2;
   return Math.min(5, Math.max(1, chao));
 }
 

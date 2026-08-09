@@ -20,7 +20,7 @@ function session(
     startedAt: "2026-08-06T00:00:00.000Z",
     startedAtMs: 0,
     device: "ios/safari",
-    calibration: { f0Center: 200, rangeSemitones: 5, noiseFloor: 0.002 },
+    calibration: { f0Center: 200, rangeSemitones: 5, rangeDownSemitones: 5, noiseFloor: 0.002 },
     events: events.map((e) => ({ ...e, t: (clock += 1000) }) as TimedEvent),
     ...over,
   };
@@ -159,11 +159,11 @@ describe("quit histogram", () => {
 describe("vocal register", () => {
   it("splits players by f0 so a mapping bug is visible", () => {
     const r = buildReport([
-      session({ playerId: "low", calibration: { f0Center: 110, rangeSemitones: 5, noiseFloor: 0.002 } }, [
+      session({ playerId: "low", calibration: { f0Center: 110, rangeSemitones: 5, rangeDownSemitones: 5, noiseFloor: 0.002 } }, [
         gate(3, "collision", 0.2),
         gate(3, "collision", 0.2),
       ]),
-      session({ playerId: "high", calibration: { f0Center: 220, rangeSemitones: 5, noiseFloor: 0.002 } }, [
+      session({ playerId: "high", calibration: { f0Center: 220, rangeSemitones: 5, rangeDownSemitones: 5, noiseFloor: 0.002 } }, [
         gate(3, "perfect", 0.95),
         gate(3, "perfect", 0.95),
       ]),
@@ -200,8 +200,8 @@ describe("formatReport", () => {
       Array.from({ length: 25 }, () => gate(2, outcome, acc));
     const text = formatReport(
       buildReport([
-        session({ playerId: "low", calibration: { f0Center: 110, rangeSemitones: 5, noiseFloor: 0.002 } }, many("collision", 0.2)),
-        session({ playerId: "high", calibration: { f0Center: 220, rangeSemitones: 5, noiseFloor: 0.002 } }, many("perfect", 0.95)),
+        session({ playerId: "low", calibration: { f0Center: 110, rangeSemitones: 5, rangeDownSemitones: 5, noiseFloor: 0.002 } }, many("collision", 0.2)),
+        session({ playerId: "high", calibration: { f0Center: 220, rangeSemitones: 5, rangeDownSemitones: 5, noiseFloor: 0.002 } }, many("perfect", 0.95)),
       ]),
     );
     expect(text).toContain("varies");

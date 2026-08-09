@@ -28,8 +28,8 @@
  * review comment someone has to catch. If you find yourself widening the union
  * to `Record<string, unknown>`, that is the guardrail breaking, not a nuisance.
  *
- * The calibration numbers are the one judgement call here. `f0Center`,
- * `rangeSemitones` and `noiseFloor` are three floats derived from a voice.
+ * The calibration numbers are the one judgement call here. `f0Center`, the two
+ * range halves and `noiseFloor` are four floats derived from a voice.
  * They are not a recording and cannot be turned back into one, and they are
  * the only way to tell "Tone 3 is hard" from "Tone 3 is broken for low
  * voices" — which is a bug in the mapping, not a fact about the player.
@@ -106,7 +106,10 @@ export type TimedEvent = AnalyticsEvent & { t: number };
 
 export interface SessionCalibration {
   f0Center: number;
+  /** Semitones from centre up to Chao 5. */
   rangeSemitones: number;
+  /** Semitones from centre down to Chao 1 — the board is not symmetric. */
+  rangeDownSemitones: number;
   noiseFloor: number;
 }
 
@@ -176,6 +179,7 @@ export function setCalibration(
     calibration: {
       f0Center: round(cal.f0Center, 1),
       rangeSemitones: round(cal.rangeSemitones, 2),
+      rangeDownSemitones: round(cal.rangeDownSemitones, 2),
       noiseFloor: round(cal.noiseFloor, 5),
     },
   };

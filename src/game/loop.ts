@@ -98,10 +98,25 @@ export function handleFrame(frame: Float32Array, sampleRate: number): void {
   }
 }
 
+/**
+ * Options for a preview loop.
+ *
+ * `holdOnUnvoiced` is for the calibration sweeps. Normally an unvoiced dot
+ * drifts back to REST_CHAO, which is right for free play — but during "say ahh
+ * as low as is comfortable" it is exactly wrong: a low reach goes creaky, creak
+ * reads as unvoiced, and the dot snaps back to the middle of the board at the
+ * moment the player is being asked to look at how far down they got. Holding
+ * shows them the reach they made.
+ */
+export interface LoopOptions {
+  holdOnUnvoiced?: boolean;
+}
+
 export function startLoop(
   canvas: HTMLCanvasElement,
   cssWidth: number,
   cssHeight: number,
+  options: LoopOptions = {},
 ): () => void {
   const ctx = scaleForDpr(canvas, cssWidth, cssHeight);
   if (!ctx) throw new Error("Canvas 2D context unavailable");
@@ -112,7 +127,7 @@ export function startLoop(
     lastT = now;
 
     const inGrace = now - state.lastVoicedAt <= tuning().graceMs;
-    if (!state.latest.voiced && !inGrace) {
+    if (!state.latest.voiced && !inGrace && !options.holdOnUnvoiced) {
       const step = (tuning().driftChaoPerSec * dt) / 1000;
       const delta = REST_CHAO - state.targetChao;
       state.targetChao += Math.abs(delta) <= step ? delta : Math.sign(delta) * step;

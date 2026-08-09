@@ -16,8 +16,14 @@ export interface PitchTrackerConfig {
   sampleRate: number;
   frameSize: number;
   f0Center: number;
-  /** Semitones from centre to top/bottom of the Chao scale (PRD: 3–8) */
+  /** Semitones from centre *up* to Chao 5 (PRD: 3–8, measured bounds 3–10) */
   rangeSemitones: number;
+  /**
+   * Semitones from centre *down* to Chao 1. Measured separately, because a
+   * speaking voice sits near the bottom of its own range — see
+   * `semitonesToChao`. Defaults to `rangeSemitones` (the old symmetric board).
+   */
+  rangeDownSemitones: number;
   alpha: number;
   /** Max semitone change per analysis frame; faster jumps are detector errors */
   maxSlewSemitones: number;
