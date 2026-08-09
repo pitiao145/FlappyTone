@@ -77,6 +77,23 @@ by word id. `public/ref/` is the shipped inventory and nothing else — the four
 `ma` anchors moved to `fixtures/anchors/`, because 麻 `má` has id `ma2` and both
 cutters were writing `public/ref/ma2.wav`.
 
+**The clip starts at the consonant; the corridor starts at the tone.** A cut
+made on voicing alone begins at the vowel, so an aspirated onset — ch/c/q/sh/s/
+f/h/x — is discarded entirely and `chang2` plays as "hang". 52 of the 120 takes
+lost more than the 45ms pad. `clipCut` now walks back from the start of voicing
+through sound still above the take's own room floor, capped at `MAX_ONSET_MS`
+(200ms; the worst real case measured 149ms), and `manifest.json` records the gap
+as `onsetS`. The tone window is deliberately untouched — `durationS`, `polyline`
+and `contour` are all still measured over the voiced part alone, so restoring
+the consonant changed no corridor and invalidated no tuning value.
+
+That makes three clocks on one cue, and they must not be folded together:
+`durationMs` freezes the world for the whole audible clip, `sweepMs` traces the
+corridor, and `sweepDelayMs` holds the dot still through the consonant.
+`reference.ts` no longer re-derives any of them — it used to re-trim each clip
+at 3% of peak, a leftover from the audio-cmn mp3s, which is a rule that deletes
+precisely the quiet aspiration this fix restores.
+
 **Level comes from the tone mark, shape from the recording.** Her T4 onsets
 reach ~330Hz against a T1 at ~215 — reproducibly, across both sessions — so a
 contour normalised against her own voice puts "high level" T1 at chao 3.3.

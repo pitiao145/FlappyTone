@@ -317,6 +317,14 @@ Play a native recording of the target syllable **300ms before the gate enters th
 > permission. That removes the audio-cmn CC-BY-SA attribution obligation *and*
 > the speaker mismatch: the corridors are measured from these same takes. The
 > note below applies only if a third-party corpus is ever reintroduced.
+>
+> **⚠️ Amended (9 Aug 2026) — a clip begins at the consonant.** The cut was
+> made on voicing, which starts at the vowel, so every aspirated and fricative
+> onset was thrown away: `chang2` played as "hang", and 52 of the 120 takes lost
+> more than the 45ms pad. Clips now carry the consonant and `manifest.json`
+> records its length as `onsetS`. The corridor is unchanged — it is still
+> measured over the voiced window alone — so this moved audio only. The demo dot
+> waits out `onsetS` before it starts tracing.
 
 **⚠️ Check the licence before shipping publicly.** It's open access for research/education; commercial or redistribution terms need verifying. If it doesn't clear, fall back to [audio-cmn](https://github.com/hugolpz/audio-cmn) (open-licensed) or record a handful of syllables with a local native speaker.
 
