@@ -218,7 +218,18 @@ export function cutClip(
 
   // Measured over the tone window only — a contour normalised over the whole
   // clip would slide every polyline vertex by the onset's length.
+  //
+  // Faded before measuring, exactly as the pre-onset cutter did. The ramp is a
+  // delivery artefact and measuring without it is arguably more correct, but it
+  // is not what the shipped polylines were measured from: unfaded, `kai1` gains
+  // a voiced frame and `yuan3` loses one, which moves two corridors under
+  // players for no reason anyone asked for. Reproducing today's input exactly is
+  // what lets this change claim it moved audio and nothing else.
   const tone = samples.slice(a, b + 1);
+  for (let i = 0; i < fade && i < tone.length; i++) {
+    tone[i] *= i / fade;
+    tone[tone.length - 1 - i] *= i / fade;
+  }
   const { contour, pinnedFraction } = measureContour(tone, sampleRate, f0Center, rangeSemitones);
 
   return {

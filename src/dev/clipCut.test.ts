@@ -9,11 +9,15 @@ function capture(name: string) {
   return decodeWav(new Uint8Array(readFileSync(`${root}fixtures/captures/${name}.wav`)));
 }
 
-/** A raw take from the recording session the shipped inventory was cut from. */
+/**
+ * The two takes the onset behaviour is pinned against, committed because the
+ * rest of `fixtures/captures/` cannot cover this: every `jane_ma*` take is a
+ * nasal onset, which is voiced throughout and so exercises none of the backoff.
+ * `jane_chang2` is the bug case (an aspirated affricate the cutter used to
+ * discard, leaving "hang"); `jane_ba1` is the control that must gain nothing.
+ */
 function recording(id: string) {
-  return decodeWav(
-    new Uint8Array(readFileSync(`${root}fixtures/recordings/2026-08-07-xujzgs/${id}.wav`)),
-  );
+  return capture(`jane_${id}`);
 }
 
 /** That session's own measured f0Center — see manifest.json's `sessions`. */

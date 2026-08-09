@@ -25,6 +25,7 @@ a name that misses the convention is silently scored at the 120Hz default.
 | `jane_ma1..4.wav` | The four tones, native Taiwanese speaker, direct to iPhone mic | **Ground truth.** If the pipeline fails these, the pipeline is wrong, not the speaker (PRD §13). |
 | `jane_ma3.wav` vs `jane_ma3_natural.wav` | Citation T3 vs conversational T3 | A controlled creak experiment: same speaker, same tone, one careful and one relaxed. The natural one collapses to ~13 voiced frames — that is the creak problem, isolated. |
 | `jane_ma0_neutral.wav` | Neutral tone (轻声) | Out of v1 scope; reference only. Has no tone digit, so `report` skips it. |
+| `jane_chang2.wav` / `jane_ba1.wav` | A raw take from `2026-08-07-xujzgs`, committed because no other capture covers it | `clipCut.test.ts`'s onset backoff pin. `chang2` is an aspirated affricate the cutter used to discard, leaving "hang"; `ba1` is the control — genuine silence before the vowel — that must gain nothing. Every `jane_ma*` take is a nasal onset and exercises none of the backoff. |
 
 The wind in the first ~1s of each `jane_*` file doubles as a noise-rejection
 fixture: every frame of it must come back unvoiced.
