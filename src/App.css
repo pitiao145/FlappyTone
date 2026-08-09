@@ -684,6 +684,37 @@
   overflow-y: auto;
 }
 
+/* Dev-only: the whole clip inventory as gates, for reviewing corridor shapes. */
+.word-gates {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.word-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 14px;
+  max-height: 72vh;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.word-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: var(--surface-panel);
+  border-radius: var(--radius-md);
+}
+
+.word-card canvas {
+  background: var(--backdrop, #06080c);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+}
+
 .tuning-panel {
   font-size: 12px;
   font-variant-numeric: tabular-nums;

@@ -20,11 +20,13 @@ import { Capture } from "./Capture.tsx";
 import { DevPanel } from "./DevPanel.tsx";
 import { GateLogPanel } from "./GateLogPanel.tsx";
 import { TuningPanel } from "./TuningPanel.tsx";
+import { WordGates } from "./WordGates.tsx";
 
-type Tab = "play" | "pitch" | "gates" | "capture";
+type Tab = "play" | "words" | "pitch" | "gates" | "capture";
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "play", label: "play" },
+  { id: "words", label: "words" },
   { id: "pitch", label: "pitch" },
   { id: "gates", label: "gates" },
   { id: "capture", label: "capture" },
@@ -150,6 +152,8 @@ worst excursion ${Math.round(Math.max(0, ...last.gateLog.map((g) => g.worstExcur
           </div>
         </div>
       )}
+
+      {tab === "words" && <WordGates />}
 
       {tab === "pitch" && <PitchTab />}
 
