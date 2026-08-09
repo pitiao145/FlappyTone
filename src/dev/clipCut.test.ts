@@ -83,6 +83,44 @@ describe("simplifyContour", () => {
     for (const [, chao] of poly) expect(chao).toBeCloseTo(4.6, 3);
   });
 
+  it("reduces a *wobbly* flat tone to a flat line too", () => {
+    // The defect this replaced: the vertex count was the target, so a level
+    // tone was forced to spend a five-vertex minimum on whatever it had, and
+    // all it had was jitter. `bao1` shipped as five vertices describing 0.10
+    // chao of total excursion, inside a corridor 0.8 chao wide.
+    const poly = simplifyContour(
+      contourOf((t) => 4.45 + Math.sin(t * 97) * 0.06),
+    );
+    expect(poly.length).toBe(2);
+  });
+
+  it("drops a bend worth less than the threshold and keeps one worth more", () => {
+    // A vertex has to mean "the pitch went somewhere". The corridor is 0.8-1.04
+    // chao wide, so a 0.2-chao excursion is not something a player can aim at.
+    const shallow = simplifyContour(
+      contourOf((t) => 3 + (t > 0.4 && t < 0.6 ? 0.2 : 0)),
+    );
+    expect(shallow.length).toBe(2);
+
+    const real = simplifyContour(
+      contourOf((t) => 3 + (t > 0.4 && t < 0.6 ? 0.9 : 0)),
+    );
+    expect(real.length).toBeGreaterThan(2);
+  });
+
+  it("caps a genuinely busy contour without flattening it", () => {
+    // The cap is a safety net, not a target: a shape with more real bends than
+    // the budget raises the threshold until it fits, and keeps the largest
+    // bends it can afford. An earlier version stopped at the first threshold
+    // that fitted, whatever the bracket happened to try, and collapsed this to
+    // a straight line.
+    const poly = simplifyContour(contourOf((t) => 3 + Math.sin(t * 12) * 1.5));
+    expect(poly.length).toBeLessThanOrEqual(8);
+    expect(poly.length).toBeGreaterThan(4);
+    expect(Math.max(...poly.map(([, c]) => c))).toBeGreaterThan(4);
+    expect(Math.min(...poly.map(([, c]) => c))).toBeLessThan(2);
+  });
+
   it("returns nothing for an empty contour rather than inventing a wall", () => {
     expect(simplifyContour([])).toEqual([]);
   });

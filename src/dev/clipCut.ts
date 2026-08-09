@@ -312,6 +312,24 @@ export function measurePitchReference(
 }
 
 /**
+ * How much a vertex has to be worth, in chao, to exist at all.
+ *
+ * This used to be a vertex *budget*: bisect epsilon until the polyline has
+ * between 5 and 8 points. A count is the wrong target, because it forces a
+ * shape onto a tone that does not have one — `bao1` came out as five vertices
+ * describing a total excursion of 0.10 chao, and across the inventory 46% of
+ * interior vertices represented a bend under 0.3 chao. Against a corridor
+ * tolerance of 0.8–1.04, none of that is flyable: it is measurement wobble
+ * drawn as an obstacle, and it is what made the corridors look busy.
+ *
+ * 0.3 is a bit over a third of the narrowest tolerance — big enough that a
+ * vertex means "the pitch went somewhere", small enough to keep the T2 dip
+ * (~0.9 chao below its start) and the T3 floor. The same argument
+ * COLLISION_SUSTAIN_MS makes in the time axis, made in the pitch axis.
+ */
+export const MIN_BEND_CHAO = 0.3;
+
+/**
  * Reduces a measured contour to a corridor polyline of a handful of vertices.
  *
  * A gate wall built from every measured frame is a wall with ~45 corners in it,
@@ -331,7 +349,7 @@ export function measurePitchReference(
 export function simplifyContour(
   contour: ContourPoint[],
   maxPoints = 8,
-  minPoints = 5,
+  minBendChao = MIN_BEND_CHAO,
 ): ContourPoint[] {
   if (contour.length === 0) return [];
 
@@ -340,25 +358,35 @@ export function simplifyContour(
     ...contour.filter((p) => p[0] > 0 && p[0] < 1),
     [1, contour[contour.length - 1][1]],
   ];
-  if (span.length <= minPoints) return span.map(round2);
 
-  // Bisect on the tolerance rather than picking one: the right epsilon depends
-  // on how much a given syllable moves, and the budget is what we actually care
-  // about. Chao spans 4 units, so the bracket covers "keep everything" to
-  // "keep the endpoints".
-  let lo = 0.001;
-  let hi = 4;
-  let best = douglasPeucker(span, lo);
-  for (let i = 0; i < 24 && (best.length > maxPoints || best.length < minPoints); i++) {
-    const mid = (lo + hi) / 2;
-    const candidate = douglasPeucker(span, mid);
-    if (candidate.length > maxPoints) lo = mid;
-    else hi = mid;
-    best = candidate;
+  // One fixed threshold, not a search for a vertex count. See MIN_BEND_CHAO.
+  let best = douglasPeucker(span, minBendChao);
+
+  // The cap is a safety net for a contour that really is that busy, not a
+  // target. Raise the threshold until the shape fits rather than lowering it
+  // until the budget is spent.
+  //
+  // The bisection runs to completion rather than stopping at the first
+  // threshold that fits: the first one to fit is whatever the bracket happened
+  // to try, and on a contour with several real bends that is a coarse guess.
+  // Stopping early collapsed a two-cycle oscillation of ±1.5 chao to a straight
+  // line. What is wanted is the *smallest* threshold inside the cap, so the
+  // shape keeps every bend it can afford.
+  if (best.length > maxPoints) {
+    let lo = minBendChao;
+    let hi = 4;
+    best = douglasPeucker(span, hi);
+    for (let i = 0; i < 24; i++) {
+      const mid = (lo + hi) / 2;
+      const candidate = douglasPeucker(span, mid);
+      if (candidate.length > maxPoints) lo = mid;
+      else {
+        hi = mid;
+        best = candidate;
+      }
+    }
   }
-  // The bracket can bottom out below the minimum on a genuinely simple shape —
-  // a flat T1 really is two points. Prefer too few over a fabricated bend.
-  return (best.length > maxPoints ? douglasPeucker(span, hi) : best).map(round2);
+  return best.map(round2);
 }
 
 function round2(p: ContourPoint): ContourPoint {
