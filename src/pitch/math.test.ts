@@ -42,7 +42,7 @@ describe("correctOctave", () => {
   });
 
   it("keeps the raw f0 when the previous frame was the wrong octave", () => {
-    // pierre_ma1 regression: first frame read 77 Hz (half of the true 154);
+    // learner-capture regression: first frame read 77 Hz (half of the true 154);
     // the correct 154 Hz frames that follow must not be dragged down to it.
     expect(correctOctave(154, 77, 115)).toBe(154);
   });

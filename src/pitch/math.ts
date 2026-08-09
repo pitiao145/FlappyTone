@@ -17,7 +17,7 @@ export function semitonesToChao(
  * the detector may have flipped octave layers — but *either* frame could be
  * the wrong one. Snapping blindly toward the previous frame lets one bad
  * onset frame drag every correct frame after it into the wrong octave
- * (observed on fixtures/captures/pierre_ma1.wav: a 77 Hz first frame pinned a
+ * (observed on a learner capture since removed: a 77 Hz first frame pinned a
  * 154 Hz syllable to the floor). So on ambiguity, keep whichever octave lies
  * closer to the speaker's calibrated f0Center — tones live within ±8
  * semitones of it, well under the 12 an octave flip introduces.

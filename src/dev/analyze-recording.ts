@@ -210,7 +210,7 @@ export function track(samples: Float32Array, sampleRate: number, f0Center: numbe
  * a cue is a playback of a *known* file: same speaker, same absolute pitch,
  * same length. That held while the inventory was four `ma` clips spread across
  * the pitch range. Against the 120-word inventory it collapses — the words
- * cover the whole range densely, so `pierre_ma1` (median 154Hz, 372ms) lands
+ * cover the whole range densely, so a 154Hz, 372ms learner capture lands
  * within 1.4 st and 16% duration of a T3 word clip and reads as a cue, which is
  * exactly the false positive that would discard a real attempt.
  *

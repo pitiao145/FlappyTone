@@ -25,7 +25,6 @@ a name that misses the convention is silently scored at the 120Hz default.
 | `jane_ma1..4.wav` | The four tones, native Taiwanese speaker, direct to iPhone mic | **Ground truth.** If the pipeline fails these, the pipeline is wrong, not the speaker (PRD §13). |
 | `jane_ma3.wav` vs `jane_ma3_natural.wav` | Citation T3 vs conversational T3 | A controlled creak experiment: same speaker, same tone, one careful and one relaxed. The natural one collapses to ~13 voiced frames — that is the creak problem, isolated. |
 | `jane_ma0_neutral.wav` | Neutral tone (轻声) | Out of v1 scope; reference only. Has no tone digit, so `report` skips it. |
-| `pierre_ma1..4.wav`, `pierre_ma2_fast.wav` | Learner voice, incl. conversational speed | The developer's own voice — the one used most during tuning. |
 
 The wind in the first ~1s of each `jane_*` file doubles as a noise-rejection
 fixture: every frame of it must come back unvoiced.
@@ -143,7 +142,7 @@ room → laptop mic) is tuned with two dev tools built for the purpose:
 
 1. **Capture screen** — laptop, Title → `dev` → `capture`. Record while a clip
    plays; Stop downloads `<name>.wav` + `<name>.telemetry.json`. Naming:
-   `<speaker>_<syllable><tone>[_note]` (e.g. `jane_ma3`, `pierre_ma2_fast`) —
+   `<speaker>_<syllable><tone>[_note]` (e.g. `jane_ma3`, `jane_ma3_natural`) —
    the trailing digit tells the report CLI which contour to score against.
    Move WAVs into `fixtures/captures/` and commit them.
 2. **Report CLI** — `npm run report [files...] [--set alpha=0.6,clarity=0.8]...
@@ -192,8 +191,7 @@ It reports:
   player, and mistaking one for the other inverts every conclusion. Cues are
   identified by matching `public/ref/ma{1-4}.wav` on absolute pitch, duration
   *and* contour together — an energy envelope alone matches every syllable.
-  Pinned by `analyze-recording.test.ts`: each clip must match itself, and no
-  `pierre_*` capture may match any clip.
+  Pinned by `analyze-recording.test.ts`: each clip must match itself.
 - **call → response gaps**, per cue. This is B3's pacing claim as a number.
 - **frames**, as a coarse sweep plus a dense burst around each player
   utterance — the frames showing what was on screen while they were speaking.

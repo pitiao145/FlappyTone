@@ -8,7 +8,6 @@ import { loadRefProfiles, matchRef, track } from "./analyze-recording.ts";
 import { decodeWav } from "./wav.ts";
 
 const JANE_F0 = 168;
-const PIERRE_F0 = 115;
 
 function profileOf(path: string, f0Center: number) {
   const { samples, sampleRate } = decodeWav(readFileSync(path));
@@ -38,23 +37,10 @@ describe("cue classifier", () => {
     });
   }
 
-  // The reason REF_DIR is the anchors and not the shipped inventory. Profiling
-  // all 120 words puts a clip within 1.4st and 16% duration of this capture,
-  // and it reads as a cue — see the comment on REF_DIR.
-  it("would mistake a player for a cue if it profiled the whole inventory", () => {
-    const inventory = loadRefProfiles(JANE_F0, "public/ref");
-    const p = profileOf(`fixtures/captures/pierre_ma1.wav`, PIERRE_F0);
-    expect(matchRef(p.f0s, p.medianF0, p.durMs, inventory)).not.toBeNull();
-  });
-
-  // Pierre is the player. None of his captures may be mistaken for a cue —
-  // this is the false positive that would silently discard real attempts.
-  for (const name of ["pierre_ma1", "pierre_ma2", "pierre_ma3", "pierre_ma4"]) {
-    it(`does not mistake ${name} for a reference clip`, () => {
-      const p = profileOf(`fixtures/captures/${name}.wav`, PIERRE_F0);
-      expect(matchRef(p.f0s, p.medianF0, p.durMs, profiles)).toBeNull();
-    });
-  }
+  // The player-voice negative cases (five tests) were removed on 9 Aug 2026
+  // with the pierre_* captures. The classifier's false-positive behaviour —
+  // mistaking a real attempt for the game's own cue, and discarding it — is
+  // now unguarded. Re-record a non-native voice to restore it.
 
   // Jane's original captures are the *source* of the clips but not the cut
   // takes, so they may or may not match. What must hold is that the

@@ -44,7 +44,7 @@ function download(filename: string, blob: Blob): void {
 }
 
 export function Capture({ onBack }: Props) {
-  const [name, setName] = useState("pierre_ma1");
+  const [name, setName] = useState("jane_ma1");
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [live, setLive] = useState<PitchState | null>(null);
