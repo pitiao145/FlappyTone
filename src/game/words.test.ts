@@ -137,11 +137,59 @@ describe("onsetS", () => {
     }
   });
 
-  // The onset sits in front of the tone, inside the same clip. One longer than
-  // the tone itself is a measurement error, not a syllable.
-  it("rejects an onset longer than the tone window", () => {
-    const [w] = loadWords({ clips: [{ ...base, onsetS: 2 }] });
+  // The onset sits in front of the tone, inside the same file. One that runs
+  // past the end of the file is a measurement error, not a syllable.
+  it("rejects an onset longer than the clip", () => {
+    const [w] = loadWords({ clips: [{ ...base, clipS: 1.4, onsetS: 2 }] });
     expect(w.onsetS).toBe(0);
+  });
+
+  // The clip is the whole take now, so lead-in plus consonant can easily run
+  // longer than a short tone — seven of the shipped T3 words do. Bounding the
+  // onset by the tone window instead of the file zeroed exactly those, which
+  // starts the demo dot at the top of the consonant.
+  it("keeps an onset longer than the tone but shorter than the clip", () => {
+    const [w] = loadWords({ clips: [{ ...base, durationS: 0.35, clipS: 1.4, onsetS: 0.6 }] });
+    expect(w.onsetS).toBe(0.6);
+  });
+});
+
+describe("clipS", () => {
+  const base = {
+    id: "ba3", hanzi: "把", pinyin: "bǎ", english: "hold",
+    tone: 3, file: "ba3.wav", durationS: 0.346, onsetS: 0.851,
+    polyline: [[0, 3], [1, 1.5]],
+  };
+
+  it("reads the clip length when present", () => {
+    const [w] = loadWords({ clips: [{ ...base, clipS: 1.325 }] });
+    expect(w.clipS).toBe(1.325);
+  });
+
+  // Before the clips became the raw takes, the file *was* the onset plus the
+  // tone window. So that sum is not a guess for an older manifest — it is what
+  // those clips measured.
+  it("falls back to onset + tone window when the manifest predates the field", () => {
+    const [w] = loadWords({ clips: [{ ...base, onsetS: 0.19, durationS: 1.007 }] });
+    expect(w.clipS).toBeCloseTo(1.197, 5);
+  });
+
+  it("falls back rather than dropping the clip when the value is nonsense", () => {
+    // Same shape as an older manifest: an onset that fits inside its own tone
+    // window, which is what the pre-take clips always had.
+    const legacy = { ...base, onsetS: 0.19, durationS: 1.007 };
+    for (const bad of ["1.3", NaN, Infinity, -1, 0, 30, null]) {
+      const words = loadWords({ clips: [{ ...legacy, clipS: bad }] });
+      expect(words.length, String(bad)).toBe(1);
+      expect(words[0].clipS, String(bad)).toBeCloseTo(1.197, 5);
+    }
+  });
+
+  // A file cannot be shorter than the tone inside it. Trusting a bad value
+  // would cut the world freeze short and re-open the mic mid-cue.
+  it("never reports a clip shorter than its own tone window", () => {
+    const [w] = loadWords({ clips: [{ ...base, durationS: 1.0, clipS: 0.4 }] });
+    expect(w.clipS).toBe(1.0);
   });
 });
 

@@ -77,22 +77,38 @@ by word id. `public/ref/` is the shipped inventory and nothing else — the four
 `ma` anchors moved to `fixtures/anchors/`, because 麻 `má` has id `ma2` and both
 cutters were writing `public/ref/ma2.wav`.
 
-**The clip starts at the consonant; the corridor starts at the tone.** A cut
-made on voicing alone begins at the vowel, so an aspirated onset — ch/c/q/sh/s/
-f/h/x — is discarded entirely and `chang2` plays as "hang". 52 of the 120 takes
-lost more than the 45ms pad. `clipCut` now walks back from the start of voicing
-through sound still above the take's own room floor, capped at `MAX_ONSET_MS`
-(200ms; the worst real case measured 149ms), and `manifest.json` records the gap
-as `onsetS`. The tone window is deliberately untouched — `durationS`, `polyline`
-and `contour` are all still measured over the voiced part alone, so restoring
-the consonant changed no corridor and invalidated no tuning value.
+**The clip is the take; the corridor is the voiced part of it.** `make-clips`
+copies `fixtures/recordings/<session>/<id>.wav` to `public/ref/<id>.wav`
+verbatim, apart from a 15ms fade at each end for click-free edges. Nothing is
+cut. Every attempt to define the audio by voicing failed the same way, twice:
+first at the front (an aspirated onset carries no pitch, so `chang2` played as
+"hang"), then at the back, worst on the tone where voicing detection is weakest
+— `yuan3` shipped as 453ms of a 1495ms take, `ni3` 474 of 1495, `wo3` 367 of
+1389, because creak reads as unvoiced. Median loss across the 120 takes was
+360ms. The raw takes carry a median of 64ms of lead silence and none at the
+end, so there was never dead air worth cutting.
+
+Voicing still defines the **corridor**: `durationS`, `polyline` and `contour`
+are measured over the voiced window alone, exactly as before, so shipping the
+takes moved audio and nothing else — all 120 polylines are byte-identical
+across the change. `clipCut` still cuts for the four anchors; for `make-clips`
+it only measures, reporting `toneStartMs` and `sourceMs` so the tone window can
+be located inside the file.
 
 That makes three clocks on one cue, and they must not be folded together:
-`durationMs` freezes the world for the whole audible clip, `sweepMs` traces the
-corridor, and `sweepDelayMs` holds the dot still through the consonant.
-`reference.ts` no longer re-derives any of them — it used to re-trim each clip
-at 3% of peak, a leftover from the audio-cmn mp3s, which is a rule that deletes
-precisely the quiet aspiration this fix restores.
+
+| manifest | `run.ts` | what it is |
+|---|---|---|
+| `clipS` | `durationMs` | the whole file — how long the world freezes and the mic stays shut |
+| `onsetS` | `sweepDelayMs` | file start → tone start; the dot holds through it |
+| `durationS` | `sweepMs` | the tone window; the gate and the corridor |
+
+`clipS` is not `onsetS + durationS` — there are 106–832ms of audio after the
+tone window ends. Reading the cue's length off the tone window is what let a
+cue play into a live mic. And `onsetS` is bounded by `clipS`, never by
+`durationS`: seven words have more lead-in than tone, and the old bound zeroed
+exactly those. `reference.ts` re-derives none of the three — it used to re-trim
+each clip at 3% of peak, a leftover from the audio-cmn mp3s.
 
 **Level comes from the tone mark, shape from the recording.** Her T4 onsets
 reach ~330Hz against a T1 at ~215 — reproducibly, across both sessions — so a
@@ -110,12 +126,14 @@ form. It is the only place demo and corridor disagree.
 
 Five more rules hold this together:
 
-1. **`src/dev/clipCut.ts` is the only cutter.** `make-ref-clips` (the four
+1. **`src/dev/clipCut.ts` is the only measurement.** `make-ref-clips` (the four
    anchor `ma` clips, now `fixtures/anchors/`) and `make-clips` (everything Jane
-   records) both call it, so the demo audio, the corridor shape and the timeline
-   both run on are one measurement. PRD §6 calls their agreement an invariant;
-   two past failures came from those three disagreeing. After touching it,
-   regenerate and check `git diff fixtures/anchors` is empty.
+   records) both call it, so the corridor shape and the timeline the demo runs
+   on are one measurement. PRD §6 calls their agreement an invariant; two past
+   failures came from those disagreeing. It is still a cutter for the anchors
+   only — `make-clips` uses its offsets and ignores its samples. After touching
+   it, regenerate and check `git diff fixtures/anchors` is empty, and that the
+   `polyline`/`contour` fields of `manifest.json` did not move.
 2. **`takeDetector` and `clipCut` must find the same voiced run.**
    `takeDetector.test.ts` pins this against Jane's four captures to the
    millisecond. If one moves and the other doesn't, the shared segmentation is

@@ -75,6 +75,16 @@ export interface CutClip {
    * sample 0; the corridor starts `onsetMs` later. 0 for a vowel or nasal onset.
    */
   onsetMs: number;
+  /**
+   * Where the tone window starts, measured from sample 0 of the *source* take.
+   *
+   * `onsetMs` is the same distance measured from the start of `samples`; these
+   * differ by whatever lead-in the cut dropped. `make-clips` ships the take
+   * itself rather than `samples`, so it needs the offset into the original.
+   */
+  toneStartMs: number;
+  /** Length of the source take, for the same reason. */
+  sourceMs: number;
   /** Every voiced frame, over the tone window's timeline. */
   contour: ContourPoint[];
   /** Fraction of voiced frames pinned against chao 1 or 5 — see `pinnedWarning`. */
@@ -237,6 +247,8 @@ export function cutClip(
     sampleRate,
     durationMs: (tone.length / sampleRate) * 1000,
     onsetMs: ((a - onsetA) / sampleRate) * 1000,
+    toneStartMs: (a / sampleRate) * 1000,
+    sourceMs: (samples.length / sampleRate) * 1000,
     contour,
     pinnedFraction,
   };

@@ -318,13 +318,21 @@ Play a native recording of the target syllable **300ms before the gate enters th
 > the speaker mismatch: the corridors are measured from these same takes. The
 > note below applies only if a third-party corpus is ever reintroduced.
 >
-> **⚠️ Amended (9 Aug 2026) — a clip begins at the consonant.** The cut was
-> made on voicing, which starts at the vowel, so every aspirated and fricative
-> onset was thrown away: `chang2` played as "hang", and 52 of the 120 takes lost
-> more than the 45ms pad. Clips now carry the consonant and `manifest.json`
-> records its length as `onsetS`. The corridor is unchanged — it is still
-> measured over the voiced window alone — so this moved audio only. The demo dot
-> waits out `onsetS` before it starts tracing.
+> **⚠️ Amended again (9 Aug 2026) — a clip is the whole take.** The first
+> amendment restored the consonant at the front; the same bug was still eating
+> the back. Cutting on voicing dropped a median of 360ms of audible material,
+> and up to a second on Tone 3, where creak reads as unvoiced: `yuan3` shipped
+> as 453ms of a 1495ms recording. Since the raw takes hold a median of 64ms of
+> lead silence and none at the end, there was nothing to gain by cutting at all.
+> `make-clips` now copies the recording verbatim (15ms fade at each end, so the
+> takes that stop on the waveform do not click).
+>
+> The corridor is unchanged — still measured over the voiced window alone, and
+> all 120 polylines are byte-identical across the change — so this moved audio
+> and clocks only. `manifest.json` carries three lengths per clip: `clipS` (the
+> file, and how long the world freezes), `onsetS` (file start → tone start, which
+> the demo dot waits out) and `durationS` (the tone window, which is the gate).
+> `clipS` is not the sum of the other two.
 
 **⚠️ Check the licence before shipping publicly.** It's open access for research/education; commercial or redistribution terms need verifying. If it doesn't clear, fall back to [audio-cmn](https://github.com/hugolpz/audio-cmn) (open-licensed) or record a handful of syllables with a local native speaker.
 

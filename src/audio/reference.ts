@@ -48,6 +48,14 @@ interface RefClip {
   onsetS: number;
   /** The tone window — what the corridor lasts. */
   durationS: number;
+  /**
+   * The whole file — what is actually audible.
+   *
+   * Since the clips became the raw takes, the audio does not end where the tone
+   * does: `onsetS + durationS` under-reports it, which would both cut the world
+   * freeze short and re-open the mic while the cue is still playing.
+   */
+  clipS: number;
 }
 
 /** Keyed by word id — the inventory is 120 clips now, not four per tone. */
@@ -73,16 +81,20 @@ export function loadClip(audio: AudioContext, word: Word): Promise<void> {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`${url}: ${res.status}`);
     const buffer = await audio.decodeAudioData(await res.arrayBuffer());
-    clips.set(word.id, { buffer, onsetS: word.onsetS, durationS: word.durationS });
+    clips.set(word.id, {
+      buffer,
+      onsetS: word.onsetS,
+      durationS: word.durationS,
+      clipS: word.clipS,
+    });
   })().catch(() => undefined);
   loads.set(word.id, load);
   return load;
 }
 
 /**
- * Audible cue length in ms — the real clip's full audible length, consonant
- * included, where loaded, else the gate's own length. Drives the demo-dot
- * sweep and the pause window, so eye and ear stay in sync.
+ * Audible cue length in ms — the whole file, where loaded, else the word's own
+ * manifest length. Drives the pause window, so eye and ear stay in sync.
  *
  * The word's manifest duration is the fallback rather than the tone's: a gate
  * built from a word is exactly as long as that clip, and answering with the
@@ -91,8 +103,8 @@ export function loadClip(audio: AudioContext, word: Word): Promise<void> {
  */
 export function cueDurationMsFor(word: Word | null, tone: Tone): number {
   const clip = word ? clips.get(word.id) : undefined;
-  if (clip) return (clip.onsetS + clip.durationS) * 1000;
-  return word ? (word.onsetS + word.durationS) * 1000 : synthCueMsFor(tone);
+  if (clip) return clip.clipS * 1000;
+  return word ? word.clipS * 1000 : synthCueMsFor(tone);
 }
 
 /** Inverse of pitch/math's semitonesToChao: chao -> semitones -> Hz. */
@@ -136,7 +148,7 @@ export function playToneCue(
     src.connect(ctx.destination);
     // From 0: the consonant is the front of the syllable, not silence to skip.
     src.start(ctx.currentTime);
-    const audibleMs = (clip.onsetS + clip.durationS) * 1000;
+    const audibleMs = clip.clipS * 1000;
     cueAudibleUntilMs = performance.now() + audibleMs + CUE_TAIL_MS;
     return;
   }

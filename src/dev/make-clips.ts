@@ -26,6 +26,7 @@ import {
   cutClip,
   measurePitchReference,
   simplifyContour,
+  FADE_MS,
   MEASURE_RANGE_SEMITONES,
   type ContourPoint,
   type PitchReference,
@@ -73,10 +74,34 @@ interface Cut {
   reference: PitchReference;
   durationMs: number;
   onsetMs: number;
+  clipMs: number;
   contour: ContourPoint[];
   pinnedFraction: number;
   samples: Float32Array;
   sampleRate: number;
+}
+
+/**
+ * The take itself, with click-free edges — this is what ships.
+ *
+ * Nothing is removed. Cutting the audio down to the voiced run is what this
+ * whole change undoes: the raw takes carry a median of 64ms of lead silence and
+ * none at all at the end, so the ~360ms the cut used to drop was sound, and on
+ * a creaky Tone 3 it was up to a second of the word (`yuan3` 1495ms -> 453ms).
+ * Voicing still defines the *corridor* — see `cutClip` — but it no longer
+ * defines what the player hears.
+ *
+ * The fade is the one edit: several takes end on the waveform rather than on
+ * silence, and a demo that clicks on its last sample is worse than 15ms of ramp.
+ */
+function fadeEdges(samples: Float32Array, sampleRate: number): Float32Array {
+  const out = samples.slice();
+  const fade = Math.round((FADE_MS / 1000) * sampleRate);
+  for (let i = 0; i < fade && i < out.length; i++) {
+    out[i] *= i / fade;
+    out[out.length - 1 - i] *= i / fade;
+  }
+  return out;
 }
 
 const cuts = new Map<string, Cut>();
@@ -126,10 +151,12 @@ for (const session of sessions) {
         session,
         reference,
         durationMs: clip.durationMs,
-        onsetMs: clip.onsetMs,
+        // From the start of the *file*, not of the cut: the file is the take.
+        onsetMs: clip.toneStartMs,
+        clipMs: clip.sourceMs,
         contour: clip.contour,
         pinnedFraction: clip.pinnedFraction,
-        samples: clip.samples,
+        samples: fadeEdges(samples, sampleRate),
         sampleRate,
       });
     } catch (err) {
@@ -203,6 +230,10 @@ for (const cut of [...cuts.values()].sort((a, b) => a.id.localeCompare(b.id))) {
     file: `${cut.id}.wav`,
     durationS: Number((cut.durationMs / 1000).toFixed(4)),
     onsetS: Number((cut.onsetMs / 1000).toFixed(3)),
+    // The audible clock: the whole file. Not `onsetS + durationS` — the take
+    // carries audio after the tone window ends too, and a cue whose length is
+    // read from the tone window would let its own tail play into a live mic.
+    clipS: Number((cut.clipMs / 1000).toFixed(4)),
     // What the game builds the corridor from: a handful of vertices, in the
     // same [t, chao] form as `tuning().polylines`, so a measured word and a
     // hand-tuned tone default are the same kind of object downstream.
@@ -215,7 +246,8 @@ for (const cut of [...cuts.values()].sort((a, b) => a.id.localeCompare(b.id))) {
 
   const mark = flags.length ? "⚠" : " ";
   console.log(
-    `${mark} ${cut.id.padEnd(10)} T${cut.tone}  ${cut.durationMs.toFixed(0).padStart(5)}ms  ` +
+    `${mark} ${cut.id.padEnd(10)} T${cut.tone}  ${cut.durationMs.toFixed(0).padStart(5)}ms tone / ` +
+      `${cut.clipMs.toFixed(0).padStart(5)}ms clip  ` +
       `${String(cut.contour.length).padStart(3)} frames  (${cut.session})`,
   );
   console.log(`    ${contourLine(cut.contour)}`);

@@ -28,17 +28,31 @@ export interface Word {
   tone: Tone;
   /** Filename under `public/ref/`. */
   file: string;
-  /** The clip's own length — the gate lasts exactly as long as the demo. */
+  /**
+   * The tone window — the gate lasts exactly as long as the tone does.
+   *
+   * Not the length of the audio file: the clip is the whole take, which also
+   * carries the consonant in front of the tone and whatever follows it. See
+   * `clipS`. Three clocks, deliberately not folded together.
+   */
   durationS: number;
   /**
-   * Seconds of consonant audio in front of the tone, inside the same file.
+   * Seconds of audio in front of the tone, inside the same file — the lead-in
+   * and the consonant.
    *
    * The clip plays from 0 so the player hears the whole syllable; the corridor
    * and the demo dot start `onsetS` later, so the tone still begins at gate
-   * t=0. 0 for a vowel or nasal onset, and 0 for any manifest that predates
-   * the field.
+   * t=0. 0 for any manifest that predates the field.
    */
   onsetS: number;
+  /**
+   * The whole file, in seconds — how long the cue is actually audible.
+   *
+   * What freezes the world during "listen", and what `isCueAudible` counts
+   * down. Falls back to `onsetS + durationS` for a manifest written before the
+   * clips became the raw takes, which is exactly what those clips were.
+   */
+  clipS: number;
   /** The measured contour, simplified to corridor vertices. */
   polyline: Polyline;
 }
@@ -52,10 +66,28 @@ const MAX_DURATION_S = 3;
  * rejecting — falling back to 0 is exactly the pre-onset behaviour, which was
  * wrong but playable.
  */
-function readOnsetS(value: unknown, durationS: number): number {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value < durationS
+function readOnsetS(value: unknown, limitS: number): number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value < limitS
     ? value
     : 0;
+}
+
+/**
+ * The file's length, and the bound the onset is checked against.
+ *
+ * A clip is the whole take now, so the onset can legitimately be longer than
+ * the tone window it precedes — a T3 with 250ms of lead-in in front of a 350ms
+ * tone is ordinary. Checking the onset against `durationS`, as this did when
+ * the clip *was* the tone window, would silently zero exactly those.
+ *
+ * Absent, it means a manifest from before the clips became the takes. There
+ * `onsetS + durationS` was the whole file by construction, so that is both the
+ * right length and the right bound.
+ */
+function readClipS(value: unknown, durationS: number): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 && value <= MAX_DURATION_S
+    ? Math.max(value, durationS)
+    : null;
 }
 
 function isPolyline(value: unknown): value is Polyline {
@@ -109,6 +141,8 @@ export function loadWords(manifest: unknown): Word[] {
       continue;
     }
     seen.add(c.id);
+    const clipS = readClipS(c.clipS, c.durationS);
+    const onsetS = readOnsetS(c.onsetS, clipS ?? c.durationS);
     words.push({
       id: c.id,
       hanzi: c.hanzi,
@@ -117,7 +151,8 @@ export function loadWords(manifest: unknown): Word[] {
       tone: c.tone as Tone,
       file: c.file,
       durationS: c.durationS,
-      onsetS: readOnsetS(c.onsetS, c.durationS),
+      onsetS,
+      clipS: clipS ?? onsetS + c.durationS,
       polyline: c.polyline,
     });
   }

@@ -150,3 +150,29 @@ describe("consonant onset", () => {
     expect(totalMs).toBeCloseTo(cut.onsetMs + cut.durationMs, -1);
   });
 });
+
+describe("the source-relative offsets", () => {
+  // `make-clips` ships the take itself and never touches `cut.samples`, so the
+  // tone window has to be located in the *file*, not in the cut. These two
+  // fields are the only thing carrying that, and getting them wrong points the
+  // demo dot and the world freeze at the wrong part of the audio.
+  it("reports where the tone window sits in the source", () => {
+    const { samples, sampleRate } = recording("chang2");
+    const cut = cutClip(samples, sampleRate, JANE_SESSION_F0);
+    // The cut drops the lead-in; the difference between the two onsets is
+    // exactly what it dropped, so the file-relative one is never the smaller.
+    expect(cut.toneStartMs).toBeGreaterThanOrEqual(cut.onsetMs);
+    expect(cut.sourceMs).toBeCloseTo((samples.length / sampleRate) * 1000, 6);
+    // Everything after the tone window still fits inside the take.
+    expect(cut.toneStartMs + cut.durationMs).toBeLessThanOrEqual(cut.sourceMs + 1);
+  });
+
+  // ba1 begins with ~250ms of genuine silence. That silence is in the shipped
+  // clip now, and the dot must hold through it rather than starting at t=0.
+  it("counts the lead-in silence even where the onset takes nothing", () => {
+    const { samples, sampleRate } = recording("ba1");
+    const cut = cutClip(samples, sampleRate, JANE_SESSION_F0);
+    expect(cut.onsetMs).toBeLessThan(30);
+    expect(cut.toneStartMs).toBeGreaterThan(100);
+  });
+});

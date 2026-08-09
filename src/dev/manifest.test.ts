@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { loadWords } from "../game/words.ts";
 import { shapeForWord } from "../game/gates.ts";
+import { decodeWav } from "./wav.ts";
 
 const root = new URL("../../", import.meta.url).pathname;
 const manifestPath = `${root}public/ref/manifest.json`;
@@ -53,10 +54,25 @@ describe("the shipped manifest", () => {
     // The field crossing the cutter/game seam. If make-clips stops writing it
     // or loadWords stops reading it, every clip silently reverts to starting
     // at the vowel — which is audible but not detectable from the code.
+    //
+    // Bounded by the file, not by the tone window: since the clips became the
+    // raw takes, seven of these words have more audio in front of the tone than
+    // the tone itself lasts, and the old `< durationS` bound zeroed exactly
+    // those.
     for (const w of words) {
       expect(Number.isFinite(w.onsetS), w.id).toBe(true);
       expect(w.onsetS, w.id).toBeGreaterThanOrEqual(0);
-      expect(w.onsetS, w.id).toBeLessThan(w.durationS);
+      expect(w.onsetS, w.id).toBeLessThan(w.clipS);
+    }
+  });
+
+  it("gives every word a file longer than the tone inside it", () => {
+    // The third clock. `clipS` is what freezes the world and what `isCueAudible`
+    // counts down, so a manifest where it collapses back onto the tone window
+    // would re-open the mic while the cue's own tail is still playing.
+    for (const w of words) {
+      expect(w.clipS, w.id).toBeGreaterThanOrEqual(w.onsetS + w.durationS);
+      expect(w.clipS, w.id).toBeLessThanOrEqual(3);
     }
   });
 
@@ -69,10 +85,17 @@ describe("the shipped manifest", () => {
     }
   });
 
-  it("takes nothing extra where the syllable starts silent", () => {
-    // ba1's stop burst is inside the pad already; a nonzero onset here would
-    // mean the backoff is dragging room tone in.
-    expect(words.find((x) => x.id === "ba1")!.onsetS).toBeLessThan(0.03);
+  it("ships the whole take, at the length the manifest claims", () => {
+    // The clip is the recording now — nothing is cut out of it — so `clipS` and
+    // the file on disk are two statements of one fact and must agree. A drift
+    // here is the cue and the world freeze coming apart by however much the
+    // cutter dropped.
+    for (const w of words) {
+      const { samples, sampleRate } = decodeWav(
+        new Uint8Array(readFileSync(`${root}public/ref/${w.file}`)),
+      );
+      expect(samples.length / sampleRate, w.id).toBeCloseTo(w.clipS, 3);
+    }
   });
 
   it("gives every word a corridor that spans the whole gate", () => {
