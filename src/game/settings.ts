@@ -5,6 +5,7 @@
  */
 
 import {
+  RANGE_DOWN_SEMITONES_MIN,
   RANGE_SEMITONES_MAX,
   RANGE_SEMITONES_MIN,
 } from "../pitch/calibration.ts";
@@ -66,7 +67,7 @@ export function loadSettings(): CalibrationSettings | null {
     const down = s.rangeDownSemitones;
     const downValid =
       typeof down === "number" &&
-      down >= RANGE_SEMITONES_MIN &&
+      down >= RANGE_DOWN_SEMITONES_MIN &&
       down <= RANGE_SEMITONES_MAX;
     return { ...s, rangeDownSemitones: downValid ? down : s.rangeSemitones };
   } catch {

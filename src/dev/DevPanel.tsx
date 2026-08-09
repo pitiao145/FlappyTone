@@ -158,7 +158,7 @@ export function DevPanel() {
           reach down — {rangeDown} semitones to line 1
         </span>
         <input
-          type="range" min={3} max={10} step={0.5} value={rangeDown}
+          type="range" min={2} max={10} step={0.5} value={rangeDown}
           disabled={!live}
           onChange={(e) => {
             const v = Number(e.target.value);

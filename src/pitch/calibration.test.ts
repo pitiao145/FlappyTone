@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  RANGE_DOWN_SEMITONES_MIN,
   RANGE_SEMITONES_MAX,
   RANGE_SEMITONES_MIN,
   computeF0Center,
@@ -136,7 +137,7 @@ describe("computeRangeHalvesFromExtremes", () => {
     });
     expect(computeRangeHalvesFromExtremes(many(0.2), many(-0.2))).toEqual({
       up: RANGE_SEMITONES_MIN,
-      down: RANGE_SEMITONES_MIN,
+      down: RANGE_DOWN_SEMITONES_MIN,
     });
   });
 
@@ -147,7 +148,7 @@ describe("computeRangeHalvesFromExtremes", () => {
     // Each half now answers to the sweep that measured it.
     expect(computeRangeHalvesFromExtremes(many(10), many(-2))).toEqual({
       up: 10,
-      down: RANGE_SEMITONES_MIN,
+      down: 2,
     });
   });
 
@@ -156,7 +157,18 @@ describe("computeRangeHalvesFromExtremes", () => {
     // without pretending they demonstrated a downward reach they did not.
     expect(computeRangeHalvesFromExtremes(many(8), many(0))).toEqual({
       up: 8,
-      down: RANGE_SEMITONES_MIN,
+      down: RANGE_DOWN_SEMITONES_MIN,
+    });
+  });
+
+  it("keeps a measured downward reach off the floor", () => {
+    // A real measurement, 9 Aug 2026: +10.9 / -2.7 st. The down half must
+    // follow the 2.7 rather than round up to a floor that puts chao 1 -- and
+    // with it the T3 corridor trough -- past the deepest note he has.
+    const many27 = Array.from({ length: 40 }, () => -2.7);
+    expect(computeRangeHalvesFromExtremes(many(10.9), many27)).toEqual({
+      up: RANGE_SEMITONES_MAX,
+      down: 2.5,
     });
   });
 

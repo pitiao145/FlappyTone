@@ -162,9 +162,15 @@ Persist to `localStorage` so it isn't re-run every session (this is the one exce
 > for the same reason `computeRangeSemitones` trims — one octave-error or creak
 > frame at either extreme would otherwise size the whole board around an
 > artefact. **The two sweeps are not averaged into one number**; that was the
-> defect §5.1 records. Both halves are still clamped to 3–10, so a speaker who
-> never drops below their centre gets a floored down half rather than one
-> mirrored from a reach they did not make.
+> defect §5.1 records. The up half is clamped to 3–10 and the down half to
+> **2**–10: the 3 is a floor on how much space the four contours need to stay
+> apart, which is a property of the whole board, not of each half. Measured on
+> a player at +10.9 / −2.7 st (9 Aug 2026), a per-half floor of 3 rounded his
+> down half up and put chao 1 — and with it the T3 corridor trough — just past
+> the deepest note he has. His total board is 13.6 st, which is normal: Jane's
+> widest excursion across 120 takes is 13.1. A speaker who never drops below
+> their centre still gets a floored down half rather than one mirrored from a
+> reach they did not make.
 >
 > The live dot runs during both sweeps, because seeing yourself reach is what
 > makes "as high as is comfortable" legible without more words — and during the

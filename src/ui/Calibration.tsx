@@ -10,6 +10,7 @@ import {
 } from "../game/loop.ts";
 import { saveSettings, type CalibrationSettings } from "../game/settings.ts";
 import {
+  RANGE_DOWN_SEMITONES_MIN,
   RANGE_SEMITONES_MAX,
   RANGE_SEMITONES_MIN,
   computeF0Center,
@@ -46,7 +47,10 @@ function scaleHalves(current: RangeHalves, up: number): RangeHalves {
   const down = Math.round(up * ratio * 2) / 2;
   return {
     up,
-    down: Math.min(RANGE_SEMITONES_MAX, Math.max(RANGE_SEMITONES_MIN, down)),
+    down: Math.min(
+      RANGE_SEMITONES_MAX,
+      Math.max(RANGE_DOWN_SEMITONES_MIN, down),
+    ),
   };
 }
 
@@ -79,7 +83,7 @@ function logSweeps(
   console.log(`[calibration] low  sweep: ${fmt(low)}`);
   console.log(
     `[calibration] halves: up=${halves?.up} down=${halves?.down} ` +
-      `(raw down=${(-pct(low, 10)).toFixed(1)}, floor=${RANGE_SEMITONES_MIN})`,
+      `(raw down=${(-pct(low, 10)).toFixed(1)}, floor=${RANGE_DOWN_SEMITONES_MIN})`,
   );
 }
 

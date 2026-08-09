@@ -48,6 +48,22 @@ export function computeF0Center(voicedF0s: number[]): number | null {
 export const RANGE_SEMITONES_MIN = 3;
 export const RANGE_SEMITONES_MAX = 10;
 
+/**
+ * The downward half gets its own, lower floor.
+ *
+ * The 3 above is a floor on how much pitch space the four contours need to
+ * stay distinguishable, and that is a property of the *whole* board, not of
+ * each half. Applying it per half was measurement to spare — a player measured
+ * on 9 Aug 2026 at +10.9 / −2.7 st (a 4:1 voice, and a 13.6 st board, which is
+ * a normal total: Jane's widest excursion across 120 takes is 13.1) had his
+ * down half rounded up to 3, which puts chao 1 slightly past the deepest note
+ * he has. Chao 1 must be reachable or the T3 corridor floor is a wall.
+ *
+ * Not lower than this: below ~2 st the downward half is small enough that
+ * ordinary pitch wobble swings the dot across the bottom two Chao lines.
+ */
+export const RANGE_DOWN_SEMITONES_MIN = 2;
+
 /** Nearest-rank percentile of an already-sorted array. */
 function percentile(sorted: number[], p: number): number {
   const i = Math.floor((p / 100) * sorted.length);
@@ -93,9 +109,9 @@ export interface RangeHalves {
 }
 
 /** Round to the nearest 0.5 and hold inside the tone-space bounds. */
-function clampHalf(half: number): number {
+function clampHalf(half: number, min = RANGE_SEMITONES_MIN): number {
   const rounded = Math.round(half * 2) / 2;
-  return Math.min(RANGE_SEMITONES_MAX, Math.max(RANGE_SEMITONES_MIN, rounded));
+  return Math.min(RANGE_SEMITONES_MAX, Math.max(min, rounded));
 }
 
 /**
@@ -129,7 +145,7 @@ export function computeRangeHalvesFromExtremes(
   const l = [...low].sort((a, b) => a - b);
   return {
     up: clampHalf(percentile(h, 90)),
-    down: clampHalf(-percentile(l, 10)),
+    down: clampHalf(-percentile(l, 10), RANGE_DOWN_SEMITONES_MIN),
   };
 }
 
@@ -146,6 +162,6 @@ export function computeRangeHalves(
   const sorted = [...voicedSemitones].sort((a, b) => a - b);
   return {
     up: clampHalf(percentile(sorted, 100 - trimPercent)),
-    down: clampHalf(-percentile(sorted, trimPercent)),
+    down: clampHalf(-percentile(sorted, trimPercent), RANGE_DOWN_SEMITONES_MIN),
   };
 }
