@@ -36,9 +36,17 @@ const CURVE_POINTS = 50;
 
 interface RefClip {
   buffer: AudioBuffer;
-  /** Seconds of leading silence to skip when playing. */
-  offsetS: number;
-  /** Audible length in seconds (silence trimmed both ends). */
+  /**
+   * Consonant audio before the tone begins, from the manifest.
+   *
+   * Not re-derived from the samples here. It used to be — a 3%-of-peak trim
+   * left over from when these were third-party mp3s — and that rule deletes
+   * quiet audio from the front of a clip, which is exactly what an aspirated
+   * onset is. Two measurements of the same thing is one too many; the cutter's
+   * is the one the corridor was built from.
+   */
+  onsetS: number;
+  /** The tone window — what the corridor lasts. */
   durationS: number;
 }
 
@@ -46,27 +54,6 @@ interface RefClip {
 const clips = new Map<string, RefClip>();
 /** In-flight or finished loads, so a word is fetched at most once. */
 const loads = new Map<string, Promise<void>>();
-
-/** Samples below this fraction of the clip's peak count as silence. */
-const TRIM_FLOOR = 0.03;
-
-function trimBounds(buffer: AudioBuffer): { offsetS: number; durationS: number } {
-  const data = buffer.getChannelData(0);
-  let peak = 0;
-  for (let i = 0; i < data.length; i++) {
-    const a = Math.abs(data[i]);
-    if (a > peak) peak = a;
-  }
-  const floor = peak * TRIM_FLOOR;
-  let start = 0;
-  while (start < data.length && Math.abs(data[start]) < floor) start++;
-  let end = data.length - 1;
-  while (end > start && Math.abs(data[end]) < floor) end--;
-  return {
-    offsetS: start / buffer.sampleRate,
-    durationS: (end - start + 1) / buffer.sampleRate,
-  };
-}
 
 /**
  * Fetches and decodes one word's clip (idempotent per id). Failures are silent
@@ -86,16 +73,16 @@ export function loadClip(audio: AudioContext, word: Word): Promise<void> {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`${url}: ${res.status}`);
     const buffer = await audio.decodeAudioData(await res.arrayBuffer());
-    clips.set(word.id, { buffer, ...trimBounds(buffer) });
+    clips.set(word.id, { buffer, onsetS: word.onsetS, durationS: word.durationS });
   })().catch(() => undefined);
   loads.set(word.id, load);
   return load;
 }
 
 /**
- * Audible cue length in ms — the real clip's trimmed duration where loaded,
- * else the gate's own length. Drives the demo-dot sweep and the pause window,
- * so eye and ear stay in sync.
+ * Audible cue length in ms — the real clip's full audible length, consonant
+ * included, where loaded, else the gate's own length. Drives the demo-dot
+ * sweep and the pause window, so eye and ear stay in sync.
  *
  * The word's manifest duration is the fallback rather than the tone's: a gate
  * built from a word is exactly as long as that clip, and answering with the
@@ -104,8 +91,8 @@ export function loadClip(audio: AudioContext, word: Word): Promise<void> {
  */
 export function cueDurationMsFor(word: Word | null, tone: Tone): number {
   const clip = word ? clips.get(word.id) : undefined;
-  if (clip) return clip.durationS * 1000;
-  return word ? word.durationS * 1000 : synthCueMsFor(tone);
+  if (clip) return (clip.onsetS + clip.durationS) * 1000;
+  return word ? (word.onsetS + word.durationS) * 1000 : synthCueMsFor(tone);
 }
 
 /** Inverse of pitch/math's semitonesToChao: chao -> semitones -> Hz. */
@@ -147,8 +134,10 @@ export function playToneCue(
     const src = ctx.createBufferSource();
     src.buffer = clip.buffer;
     src.connect(ctx.destination);
-    src.start(ctx.currentTime, clip.offsetS, clip.durationS);
-    cueAudibleUntilMs = performance.now() + clip.durationS * 1000 + CUE_TAIL_MS;
+    // From 0: the consonant is the front of the syllable, not silence to skip.
+    src.start(ctx.currentTime);
+    const audibleMs = (clip.onsetS + clip.durationS) * 1000;
+    cueAudibleUntilMs = performance.now() + audibleMs + CUE_TAIL_MS;
     return;
   }
   const osc = ctx.createOscillator();
