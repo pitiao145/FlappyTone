@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { isCueAudible, playToneCue } from "../audio/reference.ts";
-import { getMicSession, setFrameSink, stopMic } from "../audio/session.ts";
+import { getMicSession, setFrameSink } from "../audio/session.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { ContourRecorder } from "../game/contours.ts";
 import { TONE_INFO, type Tone } from "../game/gates.ts";
@@ -137,7 +137,6 @@ export function Visualiser({
       document.removeEventListener("visibilitychange", onVisibility);
       setFrameSink(null);
       setActiveTracker(null);
-      stopMic();
     };
   }, [settings, canvasWidth, canvasHeight]);
 
