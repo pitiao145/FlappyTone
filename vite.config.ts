@@ -12,7 +12,7 @@ export default defineConfig({
   // prerenderLanding writes the landing copy into index.html so a crawler (and
   // every link-preview bot, none of which run JS) sees more than an empty root.
   plugins: [react(), basicSsl(), prerenderLanding()],
-  // Reachable from the phone on the LAN (soundboard + on-device testing).
+  // Reachable from the phone on the LAN, for on-device testing.
   server: { host: true },
   build: {
     rollupOptions: {

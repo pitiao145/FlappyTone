@@ -30,7 +30,6 @@
     "src/dev/make-icons.ts",
     "src/dev/make-tones.ts",
     "src/dev/report.ts",
-    "src/dev/fetch-clips.ts",
     "src/dev/tone-synth.ts",
     "src/dev/wav.ts",
     "src/pitch",

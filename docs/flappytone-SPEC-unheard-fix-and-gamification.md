@@ -1,5 +1,10 @@
 # FlappyTone — spec: fix the "couldn't hear that" bug, then gamify
 
+> **⚠️ Stale as of 9 Aug 2026.** This spec predates the fixture cleanup: the
+> `pierre_*`, `chen_*` and `tan_*` captures and the dev soundboard it refers to
+> no longer exist. Its fixture trust-ordering is superseded by `CLAUDE.md`.
+> Kept as the record of what was specified at the time.
+
 **Date:** 4 Aug 2026
 **Repo:** `~/repos/Pierrebuilds/FlappyTone`
 **Status:** Part A done · B1–B6 done. Nothing in this spec is outstanding; see

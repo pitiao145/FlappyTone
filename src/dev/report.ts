@@ -11,7 +11,7 @@
 // The target tone comes from the trailing digit in the filename
 // (jane_ma3.wav → tone 3). Files named *all* are assumed to contain
 // utterances of tones 1,2,3,4 in order. f0Center per speaker comes from
-// fixtures/captures/speakers.json ({"pierre": 118, ...}), else --f0, else 120.
+// fixtures/captures/speakers.json ({"jane": 168}), else --f0, else 120.
 //
 // --json dumps full frame series + metrics — the machine-readable artifact
 // for parameter tuning.

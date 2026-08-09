@@ -6,8 +6,8 @@
  * normalized autocorrelation grows a tall subharmonic peak near the window
  * edge (~22 Hz for a 2048 window @ 44.1k; ~45 Hz for 1024) that outscores the
  * true pitch precisely where the vowel is loudest — so tone *bodies* went
- * unvoiced while onsets survived (see fixtures/captures, jane_ma2 frame
- * dumps). PRD §5.2 says to band-limit the *search*,
+ * unvoiced while onsets survived (observed on a learner capture since
+ * removed). PRD §5.2 says to band-limit the *search*,
  * not just reject out-of-band results; this does that: lags outside
  * [sr/fMax, sr/fMin] are never candidates.
  */
