@@ -31,7 +31,16 @@ export interface CalibrationSettings {
   rangeDownSemitones: number;
 }
 
-const KEY = "toneflap.settings.v1";
+/**
+ * v2 because v1 records cannot be trusted, and cannot be told apart.
+ *
+ * Between the asymmetric-board commits and `REACH_TO_TONE_SPACE`, calibrations
+ * were saved with each half set to the speaker's raw maximum reach — a board on
+ * which Tone 1 asks for a shout and an ordinary Tone 2 onset draws on the floor.
+ * A good v1 record and a bad one look identical from here, so the whole key is
+ * retired rather than migrated. The cost is one 15-second flow, once.
+ */
+const KEY = "toneflap.settings.v2";
 
 /**
  * Load calibration settings from localStorage.

@@ -115,6 +115,23 @@ function clampHalf(half: number, min = RANGE_SEMITONES_MIN): number {
 }
 
 /**
+ * The fraction of a demonstrated maximum reach that the tone space occupies.
+ *
+ * A sweep asks the speaker to go as high and as low as they comfortably can.
+ * That is their *reach*, and it is much wider than the space Mandarin tones
+ * live in: Jane's own Tone 1 measures at chao 3.3 against her own voice — about
+ * +0.75 st above her conversational median — before `clipNormalize` lifts the
+ * T1 cohort to canonical chao 5. Handing a player chao 5 = the top of a
+ * sustained "ahh" therefore asks them to shout their first tone, which is what
+ * the un-scaled board did: a player measured at +10.9 st up could no longer
+ * clear a T1 gate he used to clear.
+ *
+ * So the sweeps bound the board rather than being the board. 0.6 is flown, not
+ * derived — retune it in the Lab, not here.
+ */
+export const REACH_TO_TONE_SPACE = 0.6;
+
+/**
  * Tone space from a deliberate high sweep and a deliberate low sweep, in
  * semitones relative to f0Center.
  *
@@ -127,12 +144,20 @@ function clampHalf(half: number, min = RANGE_SEMITONES_MIN): number {
  * preview version trims: one octave-error or creak frame at either extreme
  * would otherwise size the whole board around a measurement artefact.
  *
- * ⚠ The two sweeps are *not* averaged into one half-width. They used to be, and
- * that is the whole defect: a speaker reaching +10 st up and −2 st down was
- * handed a symmetric ±6 board, on which their deepest note drew at chao 2.33
- * and chao 1 needed three times the excursion they had just demonstrated they
- * had. f0Center is not the midpoint between the extremes and was never checked
- * against them.
+ * Two failures are pinned here, and a fix for either one alone re-introduces
+ * the other:
+ *
+ * ⚠ The two sweeps are *not* averaged into one half-width. A speaker reaching
+ * +10 st up and −2 st down was handed a symmetric ±6 board, on which their
+ * deepest note drew at chao 2.33 and chao 1 needed three times the excursion
+ * they had just demonstrated they had. f0Center is not the midpoint between the
+ * extremes and was never checked against them.
+ *
+ * ⚠ Neither half is the raw reach. Un-scaled, the same measurement put chao 5
+ * at the ceiling of a comfortable "ahh" (Tone 1 became unreachable) and chao 1
+ * at 2.7 st below the speaking voice (an ordinary Tone 2 onset drew on the
+ * floor). Both are the same category error — a reach is not a tone space. See
+ * `REACH_TO_TONE_SPACE`.
  *
  * Returns null when either sweep is too sparse to say anything.
  */
@@ -143,9 +168,14 @@ export function computeRangeHalvesFromExtremes(
   if (high.length < 10 || low.length < 10) return null;
   const h = [...high].sort((a, b) => a - b);
   const l = [...low].sort((a, b) => a - b);
+  // Scale first, clamp second: the bounds are on the board that gets played,
+  // not on the reach that was measured.
   return {
-    up: clampHalf(percentile(h, 90)),
-    down: clampHalf(-percentile(l, 10), RANGE_DOWN_SEMITONES_MIN),
+    up: clampHalf(REACH_TO_TONE_SPACE * percentile(h, 90)),
+    down: clampHalf(
+      REACH_TO_TONE_SPACE * -percentile(l, 10),
+      RANGE_DOWN_SEMITONES_MIN,
+    ),
   };
 }
 
@@ -153,6 +183,13 @@ export function computeRangeHalvesFromExtremes(
  * The preview-capture equivalent, for "Fit to what I just did": each half from
  * its own trimmed extreme rather than from half the span. Same trim rationale
  * as `computeRangeSemitones`, which this replaces on the player-facing path.
+ *
+ * ⚠ Deliberately *not* scaled by `REACH_TO_TONE_SPACE`, and that is not an
+ * oversight to tidy up. The preview capture is free play — the player producing
+ * tones — so it already measures a tone space, where a sweep measures a reach.
+ * Keeping the two paths different is what makes them a cross-check: a
+ * sweep-derived board and a preview-derived board for the same voice should
+ * land close to each other, and a large gap says the factor above is wrong.
  */
 export function computeRangeHalves(
   voicedSemitones: number[],

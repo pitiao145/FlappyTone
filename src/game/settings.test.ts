@@ -48,7 +48,7 @@ describe("Settings persistence", () => {
   });
 
   it("loadSettings returns null on corrupt JSON", () => {
-    storageMap["toneflap.settings.v1"] = "not valid json {";
+    storageMap["toneflap.settings.v2"] = "not valid json {";
     expect(loadSettings()).toBeNull();
   });
 
@@ -59,7 +59,7 @@ describe("Settings persistence", () => {
       rangeSemitones: 5,
       rangeDownSemitones: 5,
     };
-    storageMap["toneflap.settings.v1"] = JSON.stringify(settings);
+    storageMap["toneflap.settings.v2"] = JSON.stringify(settings);
     expect(loadSettings()).toBeNull();
   });
 
@@ -70,7 +70,7 @@ describe("Settings persistence", () => {
       rangeSemitones: 5,
       rangeDownSemitones: 5,
     };
-    storageMap["toneflap.settings.v1"] = JSON.stringify(settings);
+    storageMap["toneflap.settings.v2"] = JSON.stringify(settings);
     expect(loadSettings()).toBeNull();
   });
 
@@ -81,7 +81,7 @@ describe("Settings persistence", () => {
       rangeSemitones: 5,
       rangeDownSemitones: 5,
     };
-    storageMap["toneflap.settings.v1"] = JSON.stringify(settings70);
+    storageMap["toneflap.settings.v2"] = JSON.stringify(settings70);
     expect(loadSettings()).toEqual(settings70);
 
     const settings400: CalibrationSettings = {
@@ -90,7 +90,7 @@ describe("Settings persistence", () => {
       rangeSemitones: 5,
       rangeDownSemitones: 5,
     };
-    storageMap["toneflap.settings.v1"] = JSON.stringify(settings400);
+    storageMap["toneflap.settings.v2"] = JSON.stringify(settings400);
     expect(loadSettings()).toEqual(settings400);
   });
 
@@ -101,7 +101,7 @@ describe("Settings persistence", () => {
       rangeSemitones: 5,
       rangeDownSemitones: 5,
     };
-    storageMap["toneflap.settings.v1"] = JSON.stringify(settings);
+    storageMap["toneflap.settings.v2"] = JSON.stringify(settings);
     expect(loadSettings()).toBeNull();
 
     const settingsNegative: CalibrationSettings = {
@@ -110,7 +110,7 @@ describe("Settings persistence", () => {
       rangeSemitones: 5,
       rangeDownSemitones: 5,
     };
-    storageMap["toneflap.settings.v1"] = JSON.stringify(settingsNegative);
+    storageMap["toneflap.settings.v2"] = JSON.stringify(settingsNegative);
     expect(loadSettings()).toBeNull();
   });
 
@@ -121,7 +121,7 @@ describe("Settings persistence", () => {
       rangeSemitones: 2,
       rangeDownSemitones: 2,
     };
-    storageMap["toneflap.settings.v1"] = JSON.stringify(settings);
+    storageMap["toneflap.settings.v2"] = JSON.stringify(settings);
     expect(loadSettings()).toBeNull();
   });
 
@@ -132,7 +132,7 @@ describe("Settings persistence", () => {
       rangeSemitones: 11,
       rangeDownSemitones: 11,
     };
-    storageMap["toneflap.settings.v1"] = JSON.stringify(settings);
+    storageMap["toneflap.settings.v2"] = JSON.stringify(settings);
     expect(loadSettings()).toBeNull();
   });
 
@@ -143,7 +143,7 @@ describe("Settings persistence", () => {
       rangeSemitones: 3,
       rangeDownSemitones: 3,
     };
-    storageMap["toneflap.settings.v1"] = JSON.stringify(settings3);
+    storageMap["toneflap.settings.v2"] = JSON.stringify(settings3);
     expect(loadSettings()).toEqual(settings3);
 
     const settings10: CalibrationSettings = {
@@ -152,7 +152,7 @@ describe("Settings persistence", () => {
       rangeSemitones: 10,
       rangeDownSemitones: 10,
     };
-    storageMap["toneflap.settings.v1"] = JSON.stringify(settings10);
+    storageMap["toneflap.settings.v2"] = JSON.stringify(settings10);
     expect(loadSettings()).toEqual(settings10);
   });
 
@@ -160,7 +160,7 @@ describe("Settings persistence", () => {
     // Rejecting it would throw away a working calibration and send the player
     // back through the flow. Mirroring the up half is the board that record
     // was actually calibrated on.
-    storageMap["toneflap.settings.v1"] = JSON.stringify({
+    storageMap["toneflap.settings.v2"] = JSON.stringify({
       f0Center: 120,
       noiseFloor: 0.001,
       rangeSemitones: 6,
@@ -174,7 +174,7 @@ describe("Settings persistence", () => {
   });
 
   it("mirrors an out-of-range down half rather than dropping the record", () => {
-    storageMap["toneflap.settings.v1"] = JSON.stringify({
+    storageMap["toneflap.settings.v2"] = JSON.stringify({
       f0Center: 120,
       noiseFloor: 0.001,
       rangeSemitones: 6,
@@ -197,7 +197,7 @@ describe("Settings persistence", () => {
   });
 
   it("loadSettings returns null when fields are missing", () => {
-    storageMap["toneflap.settings.v1"] = JSON.stringify({
+    storageMap["toneflap.settings.v2"] = JSON.stringify({
       f0Center: 120,
       noiseFloor: 0.001,
     });
@@ -205,7 +205,7 @@ describe("Settings persistence", () => {
   });
 
   it("loadSettings returns null when fields are the wrong type", () => {
-    storageMap["toneflap.settings.v1"] = JSON.stringify({
+    storageMap["toneflap.settings.v2"] = JSON.stringify({
       f0Center: "120",
       noiseFloor: 0.001,
       rangeSemitones: 5,
@@ -213,7 +213,7 @@ describe("Settings persistence", () => {
     });
     expect(loadSettings()).toBeNull();
 
-    storageMap["toneflap.settings.v1"] = JSON.stringify({
+    storageMap["toneflap.settings.v2"] = JSON.stringify({
       f0Center: 120,
       noiseFloor: "0.001",
       rangeSemitones: 5,
@@ -221,7 +221,7 @@ describe("Settings persistence", () => {
     });
     expect(loadSettings()).toBeNull();
 
-    storageMap["toneflap.settings.v1"] = JSON.stringify({
+    storageMap["toneflap.settings.v2"] = JSON.stringify({
       f0Center: 120,
       noiseFloor: 0.001,
       rangeSemitones: "5",

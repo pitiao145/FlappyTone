@@ -104,6 +104,26 @@ const CONFIRM_MS = 900;
 /** Below this many voiced frames a sweep tells us nothing — ask for another go. */
 const MIN_SWEEP_SAMPLES = 10;
 
+/*
+ * The low sweep is heard through a looser voicing gate than anything else.
+ *
+ * The bottom of a reach goes creaky, creak is aperiodic, and aperiodic reads as
+ * unvoiced — the same mechanism PRD §6 documents for Tone 3, arriving here
+ * instead. Only voiced frames feed `lowRef`, so the deepest part of the reach
+ * was measured out of existence: the up half came back whole and the down half
+ * came back short, which is half of why the board was lopsided.
+ *
+ * It also shaped the player. An unvoiced frame does not advance the voiced
+ * clock, so the meter stalls exactly when they go deep enough to creak, and the
+ * obvious response is to back off the low note until the step ends.
+ *
+ * Only the capture is loosened, never play: `configureTracker` replaces its
+ * overrides wholesale (src/game/loop.ts), so leaving this step restores the
+ * shipped gate. Do not merge this branch into the shared sweep config.
+ */
+const SWEEP_LOW_CLARITY = 0.5;
+const SWEEP_LOW_RESCUE_RMS = 5;
+
 type Step = "quiet" | "talk" | "low" | "high" | "done" | "preview";
 
 interface Props {
@@ -348,6 +368,12 @@ export function Calibration({
       const cfg: Partial<PitchTrackerConfig> = {};
       if (f0Center !== null) cfg.f0Center = f0Center;
       if (noiseFloor !== null) cfg.noiseFloor = noiseFloor;
+      // See SWEEP_LOW_CLARITY: creak at the bottom of the reach is the part of
+      // the measurement that was being thrown away.
+      if (step === "low") {
+        cfg.clarityThreshold = SWEEP_LOW_CLARITY;
+        cfg.rescueRmsMult = SWEEP_LOW_RESCUE_RMS;
+      }
       configureTracker(cfg);
       const into = step === "high" ? highRef : lowRef;
       into.current = [];

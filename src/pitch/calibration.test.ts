@@ -10,6 +10,7 @@ import {
   computeRangeSemitones,
   NOISE_FLOOR_MIN,
   median,
+  REACH_TO_TONE_SPACE,
 } from "./calibration.ts";
 
 describe("median", () => {
@@ -120,8 +121,17 @@ describe("computeRangeHalvesFromExtremes", () => {
 
   it("takes each half from its own sweep", () => {
     expect(computeRangeHalvesFromExtremes(many(5), many(-5))).toEqual({
-      up: 5,
-      down: 5,
+      up: 3,
+      down: 3,
+    });
+  });
+
+  it("puts the tone space inside the reach, not at its edge", () => {
+    // The reported defect: chao 5 sat at the top of a comfortable "ahh", so
+    // Tone 1 asked for a shout. A reach bounds the board; it is not the board.
+    expect(computeRangeHalvesFromExtremes(many(10), many(-10))).toEqual({
+      up: 10 * REACH_TO_TONE_SPACE,
+      down: 10 * REACH_TO_TONE_SPACE,
     });
   });
 
@@ -147,8 +157,8 @@ describe("computeRangeHalvesFromExtremes", () => {
     // chao 1 asked for three times the excursion they had just demonstrated.
     // Each half now answers to the sweep that measured it.
     expect(computeRangeHalvesFromExtremes(many(10), many(-2))).toEqual({
-      up: 10,
-      down: 2,
+      up: 6,
+      down: RANGE_DOWN_SEMITONES_MIN,
     });
   });
 
@@ -156,28 +166,30 @@ describe("computeRangeHalvesFromExtremes", () => {
     // Not mirrored from the up half — floored. The board stays legible
     // without pretending they demonstrated a downward reach they did not.
     expect(computeRangeHalvesFromExtremes(many(8), many(0))).toEqual({
-      up: 8,
+      up: 5,
       down: RANGE_DOWN_SEMITONES_MIN,
     });
   });
 
-  it("keeps a measured downward reach off the floor", () => {
-    // A real measurement, 9 Aug 2026: +10.9 / -2.7 st. The down half must
-    // follow the 2.7 rather than round up to a floor that puts chao 1 -- and
-    // with it the T3 corridor trough -- past the deepest note he has.
+  it("never puts chao 1 past the deepest note the speaker demonstrated", () => {
+    // A real measurement, 9 Aug 2026: +10.9 / -2.7 st. Unscaled, this board
+    // made Tone 1 unreachable (chao 5 at +10 st) and drew an ordinary Tone 2
+    // onset on the floor (chao 1 at -2.7). The floor still applies to the
+    // scaled 1.62, and that is fine -- what must never happen is chao 1
+    // landing below the 2.7 he actually reached, which is where the T3
+    // corridor trough would become a wall.
     const many27 = Array.from({ length: 40 }, () => -2.7);
-    expect(computeRangeHalvesFromExtremes(many(10.9), many27)).toEqual({
-      up: RANGE_SEMITONES_MAX,
-      down: 2.5,
-    });
+    const halves = computeRangeHalvesFromExtremes(many(10.9), many27)!;
+    expect(halves).toEqual({ up: 6.5, down: RANGE_DOWN_SEMITONES_MIN });
+    expect(halves.down).toBeLessThanOrEqual(2.7);
   });
 
   it("ignores a single wild frame at either extreme", () => {
     const high = [...many(5, 39), 30];
     const low = [...many(-5, 39), -30];
     expect(computeRangeHalvesFromExtremes(high, low)).toEqual({
-      up: 5,
-      down: 5,
+      up: 3,
+      down: 3,
     });
   });
 });
@@ -195,5 +207,13 @@ describe("computeRangeHalves", () => {
 
   it("is null on a capture too sparse to say anything", () => {
     expect(computeRangeHalves([1, 2, 3])).toBeNull();
+  });
+
+  it("is not scaled by the reach factor, unlike the sweeps", () => {
+    // Deliberate, and the cross-check between the two paths: a preview is the
+    // player producing tones, so it already measures a tone space. A sweep is
+    // a reach. Scaling this one too would shrink the board twice.
+    // p90 and p10 of this ramp are +-4.09 st; scaled they would be 2.5.
+    expect(computeRangeHalves(ramp(-5, 5))).toEqual({ up: 4, down: 4 });
   });
 });
