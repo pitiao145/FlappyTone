@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { loadInventory } from "../audio/inventory.ts";
 import { loadClip, playToneCue } from "../audio/reference.ts";
 import {
@@ -13,7 +13,7 @@ import { tuning } from "../game/tuning.ts";
 import type { Word } from "../game/words.ts";
 import { DEFAULT_CONFIG } from "../pitch/PitchTracker.ts";
 import { corridorEdges } from "../render/world.ts";
-import { chaoToY, traceSmoothPath } from "../render/scene.ts";
+import { traceSmoothPath } from "../render/scene.ts";
 
 /**
  * The whole inventory as gates, side by side.
@@ -34,8 +34,43 @@ import { chaoToY, traceSmoothPath } from "../render/scene.ts";
 
 const CARD_W = 210;
 const CARD_H = 150;
-/** The card is not 9:16, so the corridor is drawn against a taller virtual canvas. */
-const VIRTUAL_H = CARD_H / 0.6;
+/** The corridor is measured against a full-height canvas, then mapped to the card. */
+const VIRTUAL_H = 1000;
+
+interface Band {
+  top: number;
+  bottom: number;
+}
+
+/**
+ * The chao band every card is drawn against.
+ *
+ * Not 1–5. A corridor is a centreline *plus* a tolerance, and the tolerance
+ * flares where the contour moves — so a T1 centred at chao 4.6 has its top
+ * wall above 5, and a T4 cliff's flare reaches further still. Mapping 1–5 to
+ * the card cut both off, and half a gate is not a review surface.
+ *
+ * Measured across the whole shown set rather than per card, deliberately: a
+ * card that rescaled to fit its own gate would make every shape look the same
+ * size, which is the one thing this view exists to compare.
+ */
+function bandFor(words: Word[], tolH: number): Band {
+  let top = 5;
+  let bottom = 1;
+  for (const word of words) {
+    const shape = shapeForWord(word);
+    const tol = toleranceChao(word.tone, tolH);
+    const { top: t, bottom: b } = corridorEdges(shape, tol, 0, CARD_W, VIRTUAL_H);
+    for (const p of t) top = Math.max(top, yToChao(p.y));
+    for (const p of b) bottom = Math.min(bottom, yToChao(p.y));
+  }
+  return { top: top + 0.15, bottom: bottom - 0.15 };
+}
+
+/** Inverse of chaoToY, so an edge measured in pixels can be read back in chao. */
+function yToChao(y: number): number {
+  return 1 + ((0.8 * VIRTUAL_H - y) / (0.6 * VIRTUAL_H)) * 4;
+}
 
 const TONE_COLOR: Record<Tone, string> = {
   1: "rgba(150, 200, 255,",
@@ -54,7 +89,12 @@ function vertexCount(shape: GateShape): number {
   return shape.polyline.length;
 }
 
-function drawWord(canvas: HTMLCanvasElement, word: Word, tolH: number): void {
+function drawWord(
+  canvas: HTMLCanvasElement,
+  word: Word,
+  tolH: number,
+  band: Band,
+): void {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const dpr = window.devicePixelRatio || 1;
@@ -67,9 +107,8 @@ function drawWord(canvas: HTMLCanvasElement, word: Word, tolH: number): void {
   const tol = toleranceChao(word.tone, tolH);
   const tint = TONE_COLOR[word.tone];
 
-  // The card shows the chao band only, so shift the 9:16 mapping up: chao 5
-  // sits at 0.20 of a full screen, and that offset is dead space here.
-  const y = (chao: number) => chaoToY(chao, VIRTUAL_H) - 0.2 * VIRTUAL_H;
+  const y = (chao: number) =>
+    ((band.top - chao) / (band.top - band.bottom)) * CARD_H;
 
   // Chao 1–5, as faint as in the game: guides recede, walls do not.
   ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
@@ -83,7 +122,7 @@ function drawWord(canvas: HTMLCanvasElement, word: Word, tolH: number): void {
 
   const { top, bottom } = corridorEdges(shape, tol, 0, CARD_W, VIRTUAL_H);
   const lift = (pts: { x: number; y: number }[]) =>
-    pts.map((p) => ({ x: p.x, y: p.y - 0.2 * VIRTUAL_H }));
+    pts.map((p) => ({ x: p.x, y: y(yToChao(p.y)) }));
 
   // The channel, then its two walls — the same two edges collision uses.
   ctx.fillStyle = `${tint} 0.10)`;
@@ -127,11 +166,11 @@ function drawWord(canvas: HTMLCanvasElement, word: Word, tolH: number): void {
   }
 }
 
-function Card({ word, tolH }: { word: Word; tolH: number }) {
+function Card({ word, tolH, band }: { word: Word; tolH: number; band: Band }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    if (ref.current) drawWord(ref.current, word, tolH);
-  }, [word, tolH]);
+    if (ref.current) drawWord(ref.current, word, tolH, band);
+  }, [word, tolH, band]);
 
   const shape = shapeForWord(word);
   const synthetic = word.tone === 3;
@@ -198,6 +237,11 @@ export function WordGates() {
 
   const shown = tone === "all" ? words : words.filter((w) => w.tone === tone);
   const tolH = tuning().baseToleranceH;
+  // Every card on one scale, measured across the whole inventory rather than
+  // the filtered set — switching to T1 must not silently magnify a flat tone.
+  // Memoised because it walks all 120 corridors, and a card re-renders on every
+  // filter click.
+  const band = useMemo(() => bandFor(words, tolH), [words, tolH]);
 
   return (
     <div className="word-gates">
@@ -223,7 +267,7 @@ export function WordGates() {
       </div>
       <div className="word-grid">
         {shown.map((w) => (
-          <Card key={w.id} word={w} tolH={tolH} />
+          <Card key={w.id} word={w} tolH={tolH} band={band} />
         ))}
       </div>
     </div>
