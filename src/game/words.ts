@@ -30,12 +30,33 @@ export interface Word {
   file: string;
   /** The clip's own length — the gate lasts exactly as long as the demo. */
   durationS: number;
+  /**
+   * Seconds of consonant audio in front of the tone, inside the same file.
+   *
+   * The clip plays from 0 so the player hears the whole syllable; the corridor
+   * and the demo dot start `onsetS` later, so the tone still begins at gate
+   * t=0. 0 for a vowel or nasal onset, and 0 for any manifest that predates
+   * the field.
+   */
+  onsetS: number;
   /** The measured contour, simplified to corridor vertices. */
   polyline: Polyline;
 }
 
 /** Longest a clip may be and still be a gate, in seconds. */
 const MAX_DURATION_S = 3;
+
+/**
+ * A bad onset costs the consonant; a dropped clip costs the whole word. So
+ * unlike every other field here, a nonsense value defaults rather than
+ * rejecting — falling back to 0 is exactly the pre-onset behaviour, which was
+ * wrong but playable.
+ */
+function readOnsetS(value: unknown, durationS: number): number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value < durationS
+    ? value
+    : 0;
+}
 
 function isPolyline(value: unknown): value is Polyline {
   return (
@@ -96,6 +117,7 @@ export function loadWords(manifest: unknown): Word[] {
       tone: c.tone as Tone,
       file: c.file,
       durationS: c.durationS,
+      onsetS: readOnsetS(c.onsetS, c.durationS),
       polyline: c.polyline,
     });
   }

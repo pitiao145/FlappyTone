@@ -109,6 +109,42 @@ describe("pickWord", () => {
   });
 });
 
+describe("onsetS", () => {
+  const base = {
+    id: "chang2", hanzi: "長", pinyin: "cháng", english: "long",
+    tone: 2, file: "chang2.wav", durationS: 1.007,
+    polyline: [[0, 3], [1, 5]],
+  };
+
+  it("reads the onset when present", () => {
+    const [w] = loadWords({ clips: [{ ...base, onsetS: 0.19 }] });
+    expect(w.onsetS).toBe(0.19);
+  });
+
+  // An older manifest predates the field. Defaulting keeps those clips
+  // playable at the old behaviour; treating the field as required would drop
+  // all 120 and degrade to the tuning defaults, which looks like a working game.
+  it("defaults to 0 when the manifest predates the field", () => {
+    const [w] = loadWords({ clips: [base] });
+    expect(w.onsetS).toBe(0);
+  });
+
+  it("defaults to 0 rather than dropping the clip when the value is nonsense", () => {
+    for (const bad of ["0.19", NaN, Infinity, -0.5, null]) {
+      const words = loadWords({ clips: [{ ...base, onsetS: bad }] });
+      expect(words.length, String(bad)).toBe(1);
+      expect(words[0].onsetS, String(bad)).toBe(0);
+    }
+  });
+
+  // The onset sits in front of the tone, inside the same clip. One longer than
+  // the tone itself is a measurement error, not a syllable.
+  it("rejects an onset longer than the tone window", () => {
+    const [w] = loadWords({ clips: [{ ...base, onsetS: 2 }] });
+    expect(w.onsetS).toBe(0);
+  });
+});
+
 describe("availableTones", () => {
   it("reports only the tones the inventory can build a gate for", () => {
     expect(availableTones([word({ tone: 1 }), word({ id: "b", tone: 4 })])).toEqual([1, 4]);

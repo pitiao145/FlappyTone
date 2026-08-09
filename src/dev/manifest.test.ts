@@ -49,6 +49,32 @@ describe("the shipped manifest", () => {
     expect(onDisk.filter((f) => !listed.has(f))).toEqual([]);
   });
 
+  it("carries an onset for every word", () => {
+    // The field crossing the cutter/game seam. If make-clips stops writing it
+    // or loadWords stops reading it, every clip silently reverts to starting
+    // at the vowel — which is audible but not detectable from the code.
+    for (const w of words) {
+      expect(Number.isFinite(w.onsetS), w.id).toBe(true);
+      expect(w.onsetS, w.id).toBeGreaterThanOrEqual(0);
+      expect(w.onsetS, w.id).toBeLessThan(w.durationS);
+    }
+  });
+
+  it("restores the consonant on the aspirated onsets", () => {
+    // The bug this field exists for: cut on voicing alone, chang2 said "hang".
+    // These four were measured at 149-171ms of pre-voicing sound.
+    for (const id of ["chang2", "chi1", "qi1", "shou3"]) {
+      const w = words.find((x) => x.id === id)!;
+      expect(w.onsetS, id).toBeGreaterThan(0.08);
+    }
+  });
+
+  it("takes nothing extra where the syllable starts silent", () => {
+    // ba1's stop burst is inside the pad already; a nonzero onset here would
+    // mean the backoff is dragging room tone in.
+    expect(words.find((x) => x.id === "ba1")!.onsetS).toBeLessThan(0.03);
+  });
+
   it("gives every word a corridor that spans the whole gate", () => {
     for (const w of words) {
       const { polyline } = shapeForWord(w);
