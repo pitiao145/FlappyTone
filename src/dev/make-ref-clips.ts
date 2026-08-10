@@ -17,7 +17,7 @@
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { contourLine, cutClip } from "./clipCut.ts";
+import { contourLine, cutClip, templateContour } from "./clipCut.ts";
 import { decodeWav, encodeWav } from "./wav.ts";
 import speakers from "../../fixtures/captures/speakers.json" with { type: "json" };
 
@@ -56,5 +56,7 @@ for (const { tone, file } of SOURCES) {
       `${clip.durationMs.toFixed(0)}ms  ${(clip.samples.length * 2 + 44) / 1024 | 0}KB  ` +
       `(${clip.contour.length} voiced frames)`,
   );
-  console.log(`    ${contourLine(clip.contour)}\n`);
+  console.log(`    ${contourLine(clip.contour)}`);
+  const template = templateContour(tone as 1 | 2 | 3 | 4, clip.contour);
+  console.log(`    ${JSON.stringify(template)}\n`);
 }

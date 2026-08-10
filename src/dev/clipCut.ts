@@ -19,6 +19,7 @@
 import { computeF0Center, computeRangeSemitones } from "../pitch/calibration.ts";
 import { hzToSemitones } from "../pitch/math.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
+import type { Tone } from "../game/gates.ts";
 
 export const WIN = 2048;
 export const HOP = 1024;
@@ -312,108 +313,137 @@ export function measurePitchReference(
 }
 
 /**
- * How much a vertex has to be worth, in chao, to exist at all.
+ * How much of a contour's edges to ignore when hunting for its real dip or
+ * peak.
  *
- * This used to be a vertex *budget*: bisect epsilon until the polyline has
- * between 5 and 8 points. A count is the wrong target, because it forces a
- * shape onto a tone that does not have one — `bao1` came out as five vertices
- * describing a total excursion of 0.10 chao, and across the inventory 46% of
- * interior vertices represented a bend under 0.3 chao. Against a corridor
- * tolerance of 0.8–1.04, none of that is flyable: it is measurement wobble
- * drawn as an obstacle, and it is what made the corridors look busy.
- *
- * 0.3 is a bit over a third of the narrowest tolerance — big enough that a
- * vertex means "the pitch went somewhere", small enough to keep the T2 dip
- * (~0.9 chao below its start) and the T3 floor. The same argument
- * COLLISION_SUSTAIN_MS makes in the time axis, made in the pitch axis.
+ * Voicing starts mid-consonant and creak often takes the last frames, so the
+ * loudest excursion near either edge is frequently onset/offset noise, not the
+ * tone. Trimmed the same way `computeRangeSemitones` trims a speaker's range:
+ * an artefact at the very edge should not get to define the shape.
  */
-export const MIN_BEND_CHAO = 0.3;
+export const EXTREMUM_TRIM_FRAC = 0.08;
 
 /**
- * Reduces a measured contour to a corridor polyline of a handful of vertices.
+ * Reduces a measured contour to a corridor polyline with a *fixed* node count
+ * and role per tone, rather than however many Douglas–Peucker bends survive a
+ * threshold. Words of the same tone used to come out with different vertex
+ * counts and different shapes — some picked up extra bends from measurement
+ * wobble — so the tunnels didn't read as one consistent shape per tone. Fixing
+ * the template (what each node *means*) while still measuring each node's
+ * value and time from that word's own contour keeps natural per-word timing
+ * without the noise:
  *
- * A gate wall built from every measured frame is a wall with ~45 corners in it,
- * and the millisecond wobble between adjacent frames is measurement, not
- * something a speaker produced or a player should be scored against — the same
- * argument `COLLISION_SUSTAIN_MS` makes in the time axis. Douglas–Peucker keeps
- * the vertices that carry the shape (a T4 plateau and its cliff survive; the
- * jitter along the plateau does not) rather than a fixed grid, which would blur
- * the cliff and waste vertices on the flat.
+ * | Tone | Nodes | Roles |
+ * |---|---|---|
+ * | 1 | 2 | start, end — both forced to the same value (flat) |
+ * | 2 | 3 | start, interior min, end |
+ * | 3 | 4 | start, interior min, mid-rise (real sample nearest halfway between the min and the end), end |
+ * | 4 | 3 | start, interior max, end |
  *
- * The result spans the full [0,1] gate: the first and last measured chao are
- * extended outward, because voicing starts after the clip does and stops before
- * it ends, and a corridor that simply stopped would have no wall there. This is
- * the "complete, then hold" rule PRD §6 makes load-bearing — a speaker who
- * finishes her rise and sustains must not be above a corridor still climbing.
+ * `start` extends outward to t=0 exactly as the old simplifier did — voicing
+ * starts after the clip does, and a corridor that simply stopped would have no
+ * wall there.
+ *
+ * `end` does *not* just take the last measured frame: a syllable's pitch often
+ * releases after the tone completes (T2 here falls back from its peak toward
+ * ~3 once the vowel is done), and PRD §6 is explicit that the release is not
+ * part of the tone and must not be modelled. So `end` holds at the furthest
+ * point reached in the tone's direction of travel *after* its interior
+ * extremum — the peak for a rising tone, the floor for a falling one — rather
+ * than wherever voicing happens to trail off.
  */
-export function simplifyContour(
-  contour: ContourPoint[],
-  maxPoints = 8,
-  minBendChao = MIN_BEND_CHAO,
-): ContourPoint[] {
+export function templateContour(tone: Tone, contour: ContourPoint[]): ContourPoint[] {
   if (contour.length === 0) return [];
 
-  const span: ContourPoint[] = [
-    [0, contour[0][1]],
-    ...contour.filter((p) => p[0] > 0 && p[0] < 1),
-    [1, contour[contour.length - 1][1]],
-  ];
+  const start: ContourPoint = [0, contour[0][1]];
 
-  // One fixed threshold, not a search for a vertex count. See MIN_BEND_CHAO.
-  let best = douglasPeucker(span, minBendChao);
+  if (tone === 1) {
+    const level = trimmedMean(contour);
+    const flat: ContourPoint[] = [[0, level], [1, level]];
+    return flat.map(round2);
+  }
 
-  // The cap is a safety net for a contour that really is that busy, not a
-  // target. Raise the threshold until the shape fits rather than lowering it
-  // until the budget is spent.
-  //
-  // The bisection runs to completion rather than stopping at the first
-  // threshold that fits: the first one to fit is whatever the bracket happened
-  // to try, and on a contour with several real bends that is a coarse guess.
-  // Stopping early collapsed a two-cycle oscillation of ±1.5 chao to a straight
-  // line. What is wanted is the *smallest* threshold inside the cap, so the
-  // shape keeps every bend it can afford.
-  if (best.length > maxPoints) {
-    let lo = minBendChao;
-    let hi = 4;
-    best = douglasPeucker(span, hi);
-    for (let i = 0; i < 24; i++) {
-      const mid = (lo + hi) / 2;
-      const candidate = douglasPeucker(span, mid);
-      if (candidate.length > maxPoints) lo = mid;
-      else {
-        hi = mid;
-        best = candidate;
-      }
+  if (tone === 2) {
+    const min = trimmedExtremum(contour, "min");
+    const end = holdValue(contour, min[0], "max");
+    return [start, min, end].map(round2);
+  }
+
+  if (tone === 4) {
+    const max = trimmedExtremum(contour, "max");
+    const end = holdValue(contour, max[0], "min");
+    return [start, max, end].map(round2);
+  }
+
+  // Tone 3: start, min, a real sample near the temporal midpoint of the rise, end.
+  const min = trimmedExtremum(contour, "min");
+  const midT = (min[0] + 1) / 2;
+  const midRise = nearestSample(contour, midT);
+  const end = holdValue(contour, midRise[0], "max");
+  return [start, min, midRise, end].map(round2);
+}
+
+/**
+ * The furthest chao reached (min or max) from `fromT` to the end of the
+ * contour, held at t=1 — the "complete, then hold" value for a tone's final
+ * node. See `templateContour`.
+ */
+function holdValue(contour: ContourPoint[], fromT: number, kind: "min" | "max"): ContourPoint {
+  const tail = contour.filter((p) => p[0] >= fromT);
+  const pool = tail.length > 0 ? tail : contour;
+  let best = pool[0];
+  for (const p of pool) {
+    if (kind === "min" ? p[1] < best[1] : p[1] > best[1]) best = p;
+  }
+  return [1, best[1]];
+}
+
+/** The interior of a contour, excluding the first/last EXTREMUM_TRIM_FRAC. */
+function trimmedInterior(contour: ContourPoint[]): ContourPoint[] {
+  if (contour.length < 3) return contour;
+  const lo = EXTREMUM_TRIM_FRAC;
+  const hi = 1 - EXTREMUM_TRIM_FRAC;
+  const trimmed = contour.filter((p) => p[0] >= lo && p[0] <= hi);
+  return trimmed.length > 0 ? trimmed : contour;
+}
+
+/** Mean chao over the trimmed interior — the level a "flat" tone should hold. */
+function trimmedMean(contour: ContourPoint[]): number {
+  const interior = trimmedInterior(contour);
+  return interior.reduce((sum, p) => sum + p[1], 0) / interior.length;
+}
+
+/**
+ * The interior point of lowest ("min") or highest ("max") chao.
+ *
+ * Real measured contours essentially never tie exactly, so a tie-break rule
+ * only matters on paper; this keeps the first occurrence, same as before.
+ */
+function trimmedExtremum(contour: ContourPoint[], kind: "min" | "max"): ContourPoint {
+  const interior = trimmedInterior(contour);
+  let best = interior[0];
+  for (const p of interior) {
+    if (kind === "min" ? p[1] < best[1] : p[1] > best[1]) best = p;
+  }
+  return best;
+}
+
+/** The measured point whose time is closest to `t`. */
+function nearestSample(contour: ContourPoint[], t: number): ContourPoint {
+  let best = contour[0];
+  let bestDist = Math.abs(best[0] - t);
+  for (const p of contour) {
+    const d = Math.abs(p[0] - t);
+    if (d < bestDist) {
+      best = p;
+      bestDist = d;
     }
   }
-  return best.map(round2);
+  return best;
 }
 
 function round2(p: ContourPoint): ContourPoint {
   return [Number(p[0].toFixed(4)), Number(p[1].toFixed(3))];
-}
-
-/** Vertical distance is the only distance that matters here: t is time, chao is pitch. */
-function douglasPeucker(points: ContourPoint[], epsilon: number): ContourPoint[] {
-  if (points.length < 3) return [...points];
-  const [t0, c0] = points[0];
-  const [t1, c1] = points[points.length - 1];
-  const slope = t1 === t0 ? 0 : (c1 - c0) / (t1 - t0);
-
-  let worst = 0;
-  let worstIndex = 0;
-  for (let i = 1; i < points.length - 1; i++) {
-    const d = Math.abs(points[i][1] - (c0 + slope * (points[i][0] - t0)));
-    if (d > worst) {
-      worst = d;
-      worstIndex = i;
-    }
-  }
-  if (worst <= epsilon) return [points[0], points[points.length - 1]];
-  return [
-    ...douglasPeucker(points.slice(0, worstIndex + 1), epsilon),
-    ...douglasPeucker(points.slice(worstIndex), epsilon).slice(1),
-  ];
 }
 
 /**

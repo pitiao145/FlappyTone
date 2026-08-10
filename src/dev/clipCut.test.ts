@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { cutClip, measurePitchReference, simplifyContour, MAX_ONSET_MS, type ContourPoint } from "./clipCut.ts";
+import { cutClip, measurePitchReference, templateContour, MAX_ONSET_MS, type ContourPoint } from "./clipCut.ts";
 import { decodeWav } from "./wav.ts";
 
 const root = new URL("../../", import.meta.url).pathname;
@@ -39,90 +39,91 @@ function chaoAt(poly: ContourPoint[], t: number): number {
   return poly[poly.length - 1][1];
 }
 
-describe("simplifyContour", () => {
-  it("spans the whole gate, holding the first and last measured value", () => {
-    // Voicing starts after the clip does and stops before it ends. A corridor
-    // that stopped where the voicing did would have no wall at either end.
+describe("templateContour", () => {
+  it("spans the whole gate, holding the first measured value at t=0", () => {
+    // Voicing starts after the clip does. A corridor that started where the
+    // voicing did would have no wall at the front.
     const contour: ContourPoint[] = [
       [0.12, 4.4],
       [0.5, 4.4],
       [0.88, 4.4],
     ];
-    const poly = simplifyContour(contour);
+    const poly = templateContour(1, contour);
     expect(poly[0]).toEqual([0, 4.4]);
-    expect(poly[poly.length - 1]).toEqual([1, 4.4]);
   });
 
-  it("stays inside the vertex budget", () => {
-    // Noise on top of a rise: every frame is a corner, none of them is shape.
-    const poly = simplifyContour(
-      contourOf((t) => 2 + 3 * t + Math.sin(t * 97) * 0.05),
-    );
-    expect(poly.length).toBeLessThanOrEqual(8);
+  it("gives every tone its fixed node count", () => {
+    expect(templateContour(1, contourOf(() => 4.6)).length).toBe(2);
+    expect(
+      templateContour(2, contourOf((t) => (t < 0.3 ? 3 - t * 3 : 2 + (t - 0.3) * 4))).length,
+    ).toBe(3);
+    expect(
+      templateContour(
+        3,
+        contourOf((t) => (t < 0.5 ? 3 - t * 3.5 : 1.25 + Math.max(0, t - 0.7) * 12)),
+      ).length,
+    ).toBe(4);
+    expect(
+      templateContour(4, contourOf((t) => (t < 0.6 ? 5 : 5 - ((t - 0.6) / 0.35) * 4))).length,
+    ).toBe(3);
   });
 
-  it("spends its vertices on the shape, not on the flat", () => {
-    // A T4: plateau to 0.6, then a cliff. The cliff must survive.
-    const poly = simplifyContour(contourOf((t) => (t < 0.6 ? 5 : 5 - ((t - 0.6) / 0.35) * 4)));
-    expect(chaoAt(poly, 0.3)).toBeCloseTo(5, 1);
-    expect(chaoAt(poly, 0.55)).toBeGreaterThan(4.5);
-    expect(chaoAt(poly, 0.95)).toBeLessThan(1.5);
-  });
-
-  it("keeps a T3 dip and the rise after it", () => {
-    const poly = simplifyContour(
-      contourOf((t) => (t < 0.5 ? 3 - t * 3.5 : 1.25 + Math.max(0, t - 0.7) * 12)),
-    );
-    expect(chaoAt(poly, 0.5)).toBeLessThan(1.6);
-    expect(chaoAt(poly, 1)).toBeGreaterThan(4);
-  });
-
-  it("reduces a flat tone to a flat line", () => {
-    const poly = simplifyContour(contourOf(() => 4.6));
-    expect(poly.length).toBeLessThanOrEqual(3);
-    for (const [, chao] of poly) expect(chao).toBeCloseTo(4.6, 3);
-  });
-
-  it("reduces a *wobbly* flat tone to a flat line too", () => {
-    // The defect this replaced: the vertex count was the target, so a level
-    // tone was forced to spend a five-vertex minimum on whatever it had, and
-    // all it had was jitter. `bao1` shipped as five vertices describing 0.10
-    // chao of total excursion, inside a corridor 0.8 chao wide.
-    const poly = simplifyContour(
-      contourOf((t) => 4.45 + Math.sin(t * 97) * 0.06),
-    );
+  it("reduces a flat tone to a flat line, even a wobbly one", () => {
+    const poly = templateContour(1, contourOf((t) => 4.45 + Math.sin(t * 97) * 0.06));
     expect(poly.length).toBe(2);
+    expect(poly[0][1]).toBeCloseTo(poly[1][1], 3);
   });
 
-  it("drops a bend worth less than the threshold and keeps one worth more", () => {
-    // A vertex has to mean "the pitch went somewhere". The corridor is 0.8-1.04
-    // chao wide, so a 0.2-chao excursion is not something a player can aim at.
-    const shallow = simplifyContour(
-      contourOf((t) => 3 + (t > 0.4 && t < 0.6 ? 0.2 : 0)),
+  it("puts T2's interior node on the real dip and holds the peak, not the release", () => {
+    // Rises to a peak at t=0.8, then releases back down — the release is not
+    // part of the tone and must not be modelled.
+    const poly = templateContour(
+      2,
+      contourOf((t) => (t < 0.3 ? 3 - t * 4 : t < 0.8 ? 1.8 + (t - 0.3) * 6.4 : 5 - (t - 0.8) * 5)),
     );
-    expect(shallow.length).toBe(2);
-
-    const real = simplifyContour(
-      contourOf((t) => 3 + (t > 0.4 && t < 0.6 ? 0.9 : 0)),
-    );
-    expect(real.length).toBeGreaterThan(2);
+    expect(poly.length).toBe(3);
+    expect(chaoAt(poly, 0.3)).toBeLessThan(2.5);
+    expect(poly[2][0]).toBe(1);
+    expect(poly[2][1]).toBeGreaterThan(4.5);
   });
 
-  it("caps a genuinely busy contour without flattening it", () => {
-    // The cap is a safety net, not a target: a shape with more real bends than
-    // the budget raises the threshold until it fits, and keeps the largest
-    // bends it can afford. An earlier version stopped at the first threshold
-    // that fitted, whatever the bracket happened to try, and collapsed this to
-    // a straight line.
-    const poly = simplifyContour(contourOf((t) => 3 + Math.sin(t * 12) * 1.5));
-    expect(poly.length).toBeLessThanOrEqual(8);
-    expect(poly.length).toBeGreaterThan(4);
-    expect(Math.max(...poly.map(([, c]) => c))).toBeGreaterThan(4);
-    expect(Math.min(...poly.map(([, c]) => c))).toBeLessThan(2);
+  it("keeps a T3 dip and the rise after it, with a real sample as the mid-rise node", () => {
+    // A slight downward slope through the "floor" (real contours never hold
+    // an exact tie) so the true minimum sits near where the rise begins.
+    const contour = contourOf((t) =>
+      t < 0.5 ? 3 - t * 3.5 : t < 0.7 ? 1.25 - (t - 0.5) * 0.1 : 1.23 + (t - 0.7) * 12,
+    );
+    const poly = templateContour(3, contour);
+    expect(poly.length).toBe(4);
+    expect(poly[1][1]).toBeLessThan(1.6); // the min node itself
+    expect(chaoAt(poly, 1)).toBeGreaterThan(4);
+    // The mid-rise node is an actual measured sample, not an invented point.
+    expect(
+      contour.some(([t, c]) => Math.abs(t - poly[2][0]) < 1e-3 && Math.abs(c - poly[2][1]) < 1e-3),
+    ).toBe(true);
+  });
+
+  it("holds T4's floor rather than any recovery after it", () => {
+    const poly = templateContour(
+      4,
+      contourOf((t) => (t < 0.6 ? 5 : t < 0.9 ? 5 - ((t - 0.6) / 0.3) * 4 : 1 + (t - 0.9) * 3)),
+    );
+    expect(poly.length).toBe(3);
+    expect(poly[2][0]).toBe(1);
+    expect(poly[2][1]).toBeLessThan(1.5);
+  });
+
+  it("ignores an edge spike when hunting for the real extremum", () => {
+    // A loud onset spike right at t=0 must not be picked over the real dip.
+    const poly = templateContour(
+      2,
+      contourOf((t) => (t < 0.03 ? 0.5 : t < 0.3 ? 3 - t * 2 : 2.4 + (t - 0.3) * 4)),
+    );
+    expect(poly[1][1]).toBeGreaterThan(1);
   });
 
   it("returns nothing for an empty contour rather than inventing a wall", () => {
-    expect(simplifyContour([])).toEqual([]);
+    expect(templateContour(1, [])).toEqual([]);
   });
 });
 

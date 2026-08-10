@@ -55,37 +55,41 @@ export type Polyline = Array<[number, number]>;
  * Caveat on the evidence: one speaker, one syllable (`ma`), citation register.
  * That is thin, and it is still a large improvement on a hand-drawn diagram.
  * Widen it with more speakers and syllables before treating these as settled.
+ *
+ * Fixed at a 2/3/4/3-vertex template per tone, printed by `npm run
+ * make-ref-clips` via `templateContour` — the same function every recorded
+ * word's own polyline goes through, so the tutorial/fallback shapes and the
+ * 120-word inventory are built by one rule. `corridorChaoAt` then interpolates
+ * these with a smooth (monotone cubic) spline, not straight segments — see
+ * its doc comment in gates.ts.
  */
 export const DEFAULT_POLYLINES: Record<Tone, Polyline> = {
-  // Flat, and at 4.6 rather than a textbook 5 — that is where she actually
+  // Flat, and at 4.58 rather than a textbook 5 — that is where she actually
   // holds a high level tone.
   1: [
-    [0, 4.6],
-    [1, 4.6],
+    [0, 4.584],
+    [1, 4.584],
   ],
-  // Dips well below its start before climbing. The PRD's straight 3→5 ramp
-  // missed the dip entirely, so a correct T2 began by leaving the corridor.
+  // Dips well below its start before climbing, and holds the peak it reaches
+  // rather than the release that follows it.
   2: [
-    [0, 3.0],
-    [0.3, 1.85],
-    [0.8, 5.0],
-    [1, 5.0],
+    [0, 2.989],
+    [0.2788, 1.832],
+    [1, 5],
   ],
-  // Falls to the floor, sits there, then rises — the low plateau is the part
-  // the PRD's two-segment polyline had no room for.
+  // Falls to the floor, then a real sample partway up the rise, then holds
+  // the peak — the low dip is the part a two-segment polyline had no room for.
   3: [
-    [0, 2.7],
-    [0.5, 1.25],
-    [0.62, 1.22],
-    [0.9, 5.0],
-    [1, 5.0],
+    [0, 2.234],
+    [0.5465, 1.185],
+    [0.7715, 2.751],
+    [1, 5],
   ],
-  // A plateau and a cliff, not a slide.
+  // Reaches a peak early, then falls to the floor and holds it.
   4: [
-    [0, 5.0],
-    [0.62, 5.0],
-    [0.9, 1.25],
-    [1, 1.25],
+    [0, 4.7],
+    [0.6024, 5],
+    [1, 1.213],
   ],
 };
 

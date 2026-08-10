@@ -62,7 +62,7 @@ test("polylines patch per tone and clone on reset", () => {
 });
 
 test("the corridor follows an edited polyline", () => {
-  expect(corridorChaoAt(shapeForTone(1), 0.5)).toBeCloseTo(4.6);
+  expect(corridorChaoAt(shapeForTone(1), 0.5)).toBeCloseTo(4.584);
   setTuning({ polylines: { 1: [[0, 2], [1, 2]] } as Record<Tone, Polyline> });
   expect(corridorChaoAt(shapeForTone(1), 0.5)).toBeCloseTo(2);
 });

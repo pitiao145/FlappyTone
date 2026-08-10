@@ -25,7 +25,7 @@ import {
   contourLine,
   cutClip,
   measurePitchReference,
-  simplifyContour,
+  templateContour,
   FADE_MS,
   MEASURE_RANGE_SEMITONES,
   type ContourPoint,
@@ -67,7 +67,7 @@ const sessions = readdirSync(recordingsDir, { withFileTypes: true })
 
 interface Cut {
   id: string;
-  tone: number;
+  tone: Tone;
   hanzi: string;
   pinyin: string;
   session: string;
@@ -237,7 +237,7 @@ for (const cut of [...cuts.values()].sort((a, b) => a.id.localeCompare(b.id))) {
     // What the game builds the corridor from: a handful of vertices, in the
     // same [t, chao] form as `tuning().polylines`, so a measured word and a
     // hand-tuned tone default are the same kind of object downstream.
-    polyline: simplifyContour(cut.contour),
+    polyline: templateContour(cut.tone, cut.contour),
     // Every measured voiced frame, not a resampling: the evidence the polyline
     // was fitted to, kept so the Lab can draw one against the other and so a
     // better fit can be derived later without re-cutting.

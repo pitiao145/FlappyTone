@@ -496,7 +496,7 @@ describe("Run — snapshot extras", () => {
     const t1 = inGate.filter((s) => s.activeGate!.tone === 1);
     expect(t1.length).toBeGreaterThan(0);
     for (const s of t1) {
-      expect(s.activeGate!.corridorChao).toBe(corridorChaoAt(shapeForTone(1), 0));
+      expect(s.activeGate!.corridorChao).toBeCloseTo(corridorChaoAt(shapeForTone(1), 0), 10);
     }
   });
 });

@@ -6,7 +6,7 @@ import {
   pinnedFractionOf,
   polylineSpan,
 } from "./clipNormalize.ts";
-import { simplifyContour, type ContourPoint } from "./clipCut.ts";
+import { templateContour, type ContourPoint } from "./clipCut.ts";
 import { DEFAULT_POLYLINES } from "../game/tuning.ts";
 
 /** A contour sampled from a function, at the hop rate clipCut measures at. */
@@ -47,7 +47,7 @@ describe("chaoMapFor", () => {
     // T1's corridor is flat: there is no span to stretch onto, only a height.
     const map = chaoMapFor({ low: 2.9, high: 3.5 }, polylineSpan(DEFAULT_POLYLINES[1]));
     expect(map.a).toBe(1);
-    expect(map.a * 3.2 + map.b).toBeCloseTo(4.6, 5);
+    expect(map.a * 3.2 + map.b).toBeCloseTo(4.584, 5);
   });
 
   it("offsets without scaling when the cohort itself is flat", () => {
@@ -125,10 +125,15 @@ describe("the whole placement, on tone-shaped cohorts", () => {
     expect(mapped[mapped.length - 1][1]).toBeLessThan(2);
   });
 
-  it("survives simplification with its shape intact", () => {
+  it("survives templating with its shape intact", () => {
+    // A slight rise through the "plateau" (real contours never hold an exact
+    // tie) so the true maximum sits near where the fall begins, at t≈0.6.
+    const rising = contourOf((t) =>
+      t < 0.6 ? 4.0 + t * 0.1 : 4.06 - ((t - 0.6) / 0.3) * 1.8,
+    );
     const map = chaoMapFor(cohortSpan(t4), polylineSpan(DEFAULT_POLYLINES[4]));
-    const poly = simplifyContour(applyChaoMap(t4[0], map));
-    expect(poly.length).toBeLessThanOrEqual(8);
+    const poly = templateContour(4, applyChaoMap(rising, map));
+    expect(poly.length).toBe(3);
     expect(poly[0][0]).toBe(0);
     expect(poly[poly.length - 1][0]).toBe(1);
     // A plateau then a cliff: still high at 0.5, still low at the end.

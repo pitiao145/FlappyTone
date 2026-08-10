@@ -18,57 +18,59 @@ import {
 } from "./gates.ts";
 
 describe("corridorChaoAt", () => {
+  // DEFAULT_POLYLINES is now a fixed 2/3/4/3-vertex template per tone (see
+  // templateContour in clipCut.ts), interpolated with a monotone cubic spline
+  // rather than straight segments — so these pin the spline's actual output,
+  // not a hand-derived line equation.
+
   it("T1 is flat, at the level she actually holds", () => {
-    // 4.6, not a textbook 5 — read off the shipped reference clip.
-    expect(corridorChaoAt(shapeForTone(1), 0)).toBeCloseTo(4.6);
-    expect(corridorChaoAt(shapeForTone(1), 0.5)).toBeCloseTo(4.6);
-    expect(corridorChaoAt(shapeForTone(1), 1)).toBeCloseTo(4.6);
+    // 4.584, not a textbook 5 — read off the shipped reference clip.
+    expect(corridorChaoAt(shapeForTone(1), 0)).toBeCloseTo(4.584);
+    expect(corridorChaoAt(shapeForTone(1), 0.5)).toBeCloseTo(4.584);
+    expect(corridorChaoAt(shapeForTone(1), 1)).toBeCloseTo(4.584);
   });
 
   it("T2 dips below its start before climbing", () => {
-    expect(corridorChaoAt(shapeForTone(2), 0)).toBeCloseTo(3);
-    expect(corridorChaoAt(shapeForTone(2), 0.3)).toBeCloseTo(1.85);
+    expect(corridorChaoAt(shapeForTone(2), 0)).toBeCloseTo(2.989);
+    expect(corridorChaoAt(shapeForTone(2), 0.2788)).toBeCloseTo(1.832);
     expect(corridorChaoAt(shapeForTone(2), 1)).toBeCloseTo(5);
-    // The dip is the point: a correct T2 must be *below* chao 3 early on.
-    expect(corridorChaoAt(shapeForTone(2), 0.2)).toBeLessThan(3);
+    // The dip is the point: a correct T2 must be *below* its start early on.
+    expect(corridorChaoAt(shapeForTone(2), 0.2)).toBeLessThan(2.989);
   });
 
-  it("T3 falls, holds on the floor, then rises", () => {
-    expect(corridorChaoAt(shapeForTone(3), 0)).toBeCloseTo(2.7);
-    expect(corridorChaoAt(shapeForTone(3), 0.5)).toBeCloseTo(1.25);
+  it("T3 falls, then rises through a real mid-rise sample", () => {
+    expect(corridorChaoAt(shapeForTone(3), 0)).toBeCloseTo(2.234);
+    expect(corridorChaoAt(shapeForTone(3), 0.5465)).toBeCloseTo(1.185);
+    expect(corridorChaoAt(shapeForTone(3), 0.7715)).toBeCloseTo(2.751);
     expect(corridorChaoAt(shapeForTone(3), 1)).toBeCloseTo(5);
-    // The low plateau — time sitting on the floor, which the PRD's
-    // two-segment polyline had no room for.
-    expect(corridorChaoAt(shapeForTone(3), 0.55)).toBeLessThan(1.3);
-    expect(corridorChaoAt(shapeForTone(3), 0.62)).toBeCloseTo(1.22);
+    // Still low well past the floor — the dip the PRD's two-segment
+    // polyline had no room for.
+    expect(corridorChaoAt(shapeForTone(3), 0.6)).toBeLessThan(1.5);
   });
 
-  it("T4 holds high, then falls off a cliff", () => {
-    expect(corridorChaoAt(shapeForTone(4), 0)).toBeCloseTo(5);
-    expect(corridorChaoAt(shapeForTone(4), 1)).toBeCloseTo(1.25);
-    // Still at the top halfway through — this is what the linear ramp got
-    // wrong, and why a native T4 could not fit the old corridor.
-    expect(corridorChaoAt(shapeForTone(4), 0.5)).toBeCloseTo(5);
-    expect(corridorChaoAt(shapeForTone(4), 0.62)).toBeCloseTo(5);
-    expect(corridorChaoAt(shapeForTone(4), 0.9)).toBeCloseTo(1.25);
+  it("T4 holds high, then falls toward the floor", () => {
+    expect(corridorChaoAt(shapeForTone(4), 0)).toBeCloseTo(4.7);
+    expect(corridorChaoAt(shapeForTone(4), 0.6024)).toBeCloseTo(5);
+    expect(corridorChaoAt(shapeForTone(4), 1)).toBeCloseTo(1.213);
+    // Still near the top approaching the peak — the plateau a linear 5→1
+    // ramp got wrong, and why a native T4 could not fit the old corridor.
+    expect(corridorChaoAt(shapeForTone(4), 0.5)).toBeGreaterThan(4.5);
   });
 
-  it("every contour completes before the gate ends, then holds", () => {
-    // A speaker who finishes a natural rise early and sustains the final note
-    // must still be inside the corridor. Without this tail she sat above a
-    // corridor still climbing underneath her — 469ms and 512ms excursions on
-    // otherwise-correct T2 attempts, 4 Aug 2026.
+  it("is exact at every vertex, tone by tone", () => {
+    // C0 continuity: whatever the spline does between vertices, it must pass
+    // through each of them exactly.
     for (const tone of [1, 2, 3, 4] as const) {
-      const end = corridorChaoAt(shapeForTone(tone), 1);
-      expect(corridorChaoAt(shapeForTone(tone), 0.9)).toBeCloseTo(end);
-      expect(corridorChaoAt(shapeForTone(tone), 0.95)).toBeCloseTo(end);
+      for (const [t, chao] of shapeForTone(tone).polyline) {
+        expect(corridorChaoAt(shapeForTone(tone), t)).toBeCloseTo(chao, 6);
+      }
     }
   });
 
   it("clamps t outside [0,1]", () => {
-    expect(corridorChaoAt(shapeForTone(1), -0.5)).toBeCloseTo(4.6);
-    expect(corridorChaoAt(shapeForTone(4), 1.5)).toBeCloseTo(1.25);
-    expect(corridorChaoAt(shapeForTone(4), -1)).toBeCloseTo(5);
+    expect(corridorChaoAt(shapeForTone(1), -0.5)).toBeCloseTo(4.584);
+    expect(corridorChaoAt(shapeForTone(4), 1.5)).toBeCloseTo(1.213);
+    expect(corridorChaoAt(shapeForTone(4), -1)).toBeCloseTo(4.7);
   });
 });
 
@@ -279,10 +281,11 @@ describe("corridorToleranceAt", () => {
   });
 
   it("widens most where the corridor moves fastest", () => {
-    // T4's cliff is at t≈0.63; its plateau at t≈0.3 is flat.
+    // T4's cliff is at t≈0.63; near its start at t≈0.3 the corridor is still
+    // close to its peak and barely moving.
     const plateau = corridorToleranceAt(shapeForTone(4), 0.3, BASE);
     const cliff = corridorToleranceAt(shapeForTone(4), 0.63, BASE);
-    expect(plateau).toBeCloseTo(BASE, 10);
+    expect(plateau).toBeLessThan(BASE * 1.1);
     expect(cliff).toBeGreaterThan(plateau * 1.5);
   });
 
@@ -297,15 +300,13 @@ describe("corridorToleranceAt", () => {
   });
 
   it("keeps the tail open only while the move is still within reach", () => {
-    // Both contours finish before t=1 and hold, but the slack window looks
-    // *backwards* too — so whether the tail forgives depends on whether the
-    // movement is still inside it.
+    // The slack window looks *backwards* too — so whether the tail forgives
+    // depends on whether the corridor is still moving right up to the end.
     //
-    // T2's rise ends at t=0.8 of a 1.07s gate, which is 214ms back from the
-    // end — outside the 90ms window, so the tail is strict.
-    expect(corridorToleranceAt(shapeForTone(2), 1, BASE)).toBeCloseTo(BASE, 10);
-    // T4's cliff ends at t=0.9 of a 0.6s gate — only 60ms back, so a player
-    // still falling as the gate closes is legitimately late, not wrong.
+    // T1 never moves, so its tail stays strict.
+    expect(corridorToleranceAt(shapeForTone(1), 1, BASE)).toBeCloseTo(BASE, 10);
+    // T4's fall is still under way as the gate closes — a player still
+    // falling then is legitimately late, not wrong.
     expect(corridorToleranceAt(shapeForTone(4), 1, BASE)).toBeGreaterThan(BASE);
   });
 

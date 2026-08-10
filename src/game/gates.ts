@@ -80,16 +80,80 @@ export function shapeForWord(word: { tone: Tone; polyline: Polyline; durationS: 
   return { polyline: word.polyline, durationS: word.durationS };
 }
 
-/** Piecewise-linear interpolation of a corridor centreline. t is clamped to [0,1]. */
+/**
+ * Monotone cubic Hermite tangents (Fritsch–Carlson) for a polyline.
+ *
+ * Plain Catmull-Rom can overshoot past a vertex's neighbours, which here would
+ * mean a corridor briefly leaving [1,5] or the shape between two vertices
+ * inverting — Fritsch–Carlson's slope limiting guarantees it never does, at
+ * the cost of nothing on a genuinely monotone stretch.
+ */
+function monotoneTangents(points: Polyline): number[] {
+  const n = points.length;
+  const secants: number[] = [];
+  for (let i = 0; i < n - 1; i++) {
+    const [t0, c0] = points[i];
+    const [t1, c1] = points[i + 1];
+    secants.push(t1 === t0 ? 0 : (c1 - c0) / (t1 - t0));
+  }
+
+  const m: number[] = new Array(n);
+  m[0] = secants[0] ?? 0;
+  m[n - 1] = secants[n - 2] ?? 0;
+  for (let i = 1; i < n - 1; i++) {
+    const d0 = secants[i - 1];
+    const d1 = secants[i];
+    m[i] = d0 === 0 || d1 === 0 || (d0 < 0) !== (d1 < 0) ? 0 : (d0 + d1) / 2;
+  }
+
+  for (let i = 0; i < n - 1; i++) {
+    const d = secants[i];
+    if (d === 0) {
+      m[i] = 0;
+      m[i + 1] = 0;
+      continue;
+    }
+    const alpha = m[i] / d;
+    const beta = m[i + 1] / d;
+    const sq = alpha * alpha + beta * beta;
+    if (sq > 9) {
+      const tau = 3 / Math.sqrt(sq);
+      m[i] = tau * alpha * d;
+      m[i + 1] = tau * beta * d;
+    }
+  }
+  return m;
+}
+
+/**
+ * Smooth interpolation of a corridor centreline: a monotone cubic Hermite
+ * spline through the polyline's vertices, C0 at every vertex and C1
+ * (continuous tangent) everywhere else — no sharp corners at a vertex, and no
+ * overshoot past a vertex's neighbours. t is clamped to [0,1].
+ *
+ * Replaces plain piecewise-linear interpolation: with tone polylines now a
+ * fixed 2–4 vertices (see `templateContour`), a straight-segment corridor drew
+ * a visible, collidable corner at each one. This is the single function
+ * rendering (world.ts), collision, and scoring (run.ts) all read, so smoothing
+ * it fixes the hitbox and the drawing together.
+ */
 export function corridorChaoAt(shape: GateShape, t: number): number {
   const clamped = Math.min(1, Math.max(0, t));
   const points = shape.polyline;
+  if (points.length < 2) return points[0]?.[1] ?? 0;
+
+  const tangents = monotoneTangents(points);
   for (let i = 0; i < points.length - 1; i++) {
-    const [t0, chao0] = points[i];
-    const [t1, chao1] = points[i + 1];
+    const [t0, c0] = points[i];
+    const [t1, c1] = points[i + 1];
     if (clamped >= t0 && clamped <= t1) {
-      const frac = t1 === t0 ? 0 : (clamped - t0) / (t1 - t0);
-      return chao0 + frac * (chao1 - chao0);
+      const dt = t1 === t0 ? 1 : t1 - t0;
+      const s = (clamped - t0) / dt;
+      const h00 = 2 * s ** 3 - 3 * s ** 2 + 1;
+      const h10 = s ** 3 - 2 * s ** 2 + s;
+      const h01 = -2 * s ** 3 + 3 * s ** 2;
+      const h11 = s ** 3 - s ** 2;
+      return h00 * c0 + h10 * dt * tangents[i] + h01 * c1 + h11 * dt * tangents[i + 1];
     }
   }
   return points[points.length - 1][1];
@@ -205,8 +269,8 @@ function softCap(x: number, cap: number): number {
  * within TIMING_SLACK_S either side.
  *
  * Expressed as the corridor's own movement rather than as slope × slack
- * because that is the quantity being forgiven, and it stays exact at the
- * polyline's vertices and plateaus, where a slope is discontinuous or zero.
+ * because that is the quantity being forgiven, and it stays exact on flat
+ * plateaus, where the slope is zero.
  *
  * Flat stretches — all of T1, the T4 plateau, the T3 floor — widen by nothing,
  * so the game stays exactly as strict about *pitch*. Only the moving parts,
