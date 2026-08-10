@@ -12,12 +12,14 @@ import { Nav } from "./Nav.tsx";
 const TONES: Tone[] = [1, 2, 3, 4];
 
 interface Props {
-  /** Enter the app proper. The mic is already open when this fires. */
+  /** Go to the main game menu (Title). No mic needed — Title opens it itself. */
   onPlay: () => void;
   /** Straight to the visualiser. Mic already open. */
   onVisualiser: () => void;
-  /** The launcher screen — tutorial, settings, how-to. No mic needed. */
-  onMenu: () => void;
+  /** Straight to the tutorial. Mic already open. */
+  onTutorial: () => void;
+  /** Straight to settings. No mic needed. */
+  onSettings: () => void;
 }
 
 /**
@@ -32,7 +34,7 @@ interface Props {
  * layout. Keep it that way — the whole point is that a re-brand touches two
  * files, not fifteen JSX strings.
  */
-export function Landing({ onPlay, onVisualiser, onMenu }: Props) {
+export function Landing({ onPlay, onVisualiser, onTutorial, onSettings }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -55,7 +57,7 @@ export function Landing({ onPlay, onVisualiser, onMenu }: Props) {
 
   return (
     <div className="landing">
-      <Nav variant="landing" onNavigate={() => {}} onPlay={go(onPlay)} disabled={busy} />
+      <Nav variant="landing" onNavigate={() => {}} onPlay={onPlay} disabled={busy} />
 
       <header id="top" className="landing-hero">
         {/* The h1 is the headline, not the brand name — see brand.headline. */}
@@ -63,11 +65,14 @@ export function Landing({ onPlay, onVisualiser, onMenu }: Props) {
         <p className="hero-tagline">{brand.tagline}</p>
         <p className="hero-pitch">{brand.pitch}</p>
         <div className="hero-actions">
-          <button className="primary" disabled={busy} onClick={go(onPlay)}>
+          <button className="primary" disabled={busy} onClick={onPlay}>
             Play
           </button>
-          <button disabled={busy} onClick={onMenu}>
-            Tutorial &amp; settings
+          <button disabled={busy} onClick={go(onTutorial)}>
+            Tutorial
+          </button>
+          <button disabled={busy} onClick={onSettings}>
+            Settings
           </button>
         </div>
         <p className="note">{brand.requirement}</p>
@@ -116,10 +121,10 @@ export function Landing({ onPlay, onVisualiser, onMenu }: Props) {
           A run is a couple of minutes. First time through, a short calibration
           learns your voice — then the tutorial takes one tone at a time.
         </p>
-        <button className="primary" disabled={busy} onClick={go(onPlay)}>
+        <button className="primary" disabled={busy} onClick={onPlay}>
           Play now
         </button>
-        <button className="link" disabled={busy} onClick={onMenu}>
+        <button className="link" disabled={busy} onClick={go(onTutorial)}>
           or start with the tutorial
         </button>
       </section>

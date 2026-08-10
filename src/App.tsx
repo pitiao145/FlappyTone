@@ -243,9 +243,10 @@ export default function App() {
 
         {screen === "landing" && (
           <Landing
-            onPlay={() => startFromTitle("game")}
+            onPlay={() => setScreen("title")}
             onVisualiser={() => startFromTitle("visualiser")}
-            onMenu={() => setScreen("title")}
+            onTutorial={() => startFromTitle("tutorial")}
+            onSettings={() => setScreen("settings")}
           />
         )}
 

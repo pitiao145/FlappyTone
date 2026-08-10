@@ -17,7 +17,7 @@ import {
 beforeEach(() => resetTuning());
 
 test("defaults match the shipped constants", () => {
-  expect(tuning().collisionSustainMs).toBe(140);
+  expect(tuning().collisionSustainMs).toBe(160);
   expect(tuning().gateDurationS[4]).toBe(0.6);
   expect(tuning().baseScrollSpeed).toBe(220);
 });

@@ -240,10 +240,10 @@ describe("Run — scoring a gate", () => {
   });
 
   it("a sustained excursion still collides and costs a heart", () => {
-    // 150ms off-corridor — comfortably past COLLISION_SUSTAIN_MS.
+    // 220ms off-corridor — comfortably past COLLISION_SUSTAIN_MS.
     const run = newGameRun();
     let offFrames = 0;
-    const offLimit = Math.ceil(150 / DT);
+    const offLimit = Math.ceil(220 / DT);
     const { snapshots } = simulate(run, 400, (s) => {
       if (!s.activeGate) return pitch(3);
       const off = s.activeGate.t > 0.4 && offFrames < offLimit;

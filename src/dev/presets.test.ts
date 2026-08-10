@@ -36,10 +36,10 @@ test("no diff when nothing has been changed", () => {
 });
 
 test("diff reports only the fields that moved", () => {
-  setTuning({ baseRestMs: 1300, collisionSustainMs: 160 });
+  setTuning({ baseRestMs: 1300, collisionSustainMs: 180 });
   expect(tuningDiff(tuning())).toEqual({
     baseRestMs: 1300,
-    collisionSustainMs: 160,
+    collisionSustainMs: 180,
   });
 });
 

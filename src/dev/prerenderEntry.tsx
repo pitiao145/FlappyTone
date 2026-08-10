@@ -26,7 +26,7 @@ export function renderLanding(): string {
   return renderToStaticMarkup(
     <div className="app">
       <div className="frame">
-        <Landing onPlay={noop} onVisualiser={noop} onMenu={noop} />
+        <Landing onPlay={noop} onVisualiser={noop} onTutorial={noop} onSettings={noop} />
       </div>
     </div>,
   );
