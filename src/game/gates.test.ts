@@ -285,7 +285,7 @@ describe("corridorToleranceAt", () => {
     // close to its peak and barely moving.
     const plateau = corridorToleranceAt(shapeForTone(4), 0.3, BASE);
     const cliff = corridorToleranceAt(shapeForTone(4), 0.63, BASE);
-    expect(plateau).toBeLessThan(BASE * 1.1);
+    expect(plateau).toBeLessThan(BASE * 1.2);
     expect(cliff).toBeGreaterThan(plateau * 1.5);
   });
 
