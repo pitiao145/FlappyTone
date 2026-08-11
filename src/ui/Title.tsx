@@ -32,14 +32,19 @@ export function Title({
   onSettings,
 }: Props) {
   const [ownError, setOwnError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [pendingIntent, setPendingIntent] = useState<StartIntent | null>(null);
+  const busy = pendingIntent !== null;
   const error = ownError ?? externalError;
 
   // The mic is opened here, inside the click handler, because iOS Safari only
   // grants getUserMedia/resume during a user gesture — a mount effect on the
-  // next screen would be too late.
+  // next screen would be too late. `pendingIntent` (rather than a plain
+  // boolean) exists so the exact button that was pressed can show it heard
+  // the click immediately — the mic permission round-trip can take a moment,
+  // and an unstyled `disabled` state alone reads as the click doing nothing.
   const go = (intent: StartIntent) => async () => {
-    setBusy(true);
+    if (busy) return;
+    setPendingIntent(intent);
     setOwnError(null);
     try {
       await ensureMic();
@@ -50,7 +55,7 @@ export function Title({
         setOwnError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
       }
     } finally {
-      setBusy(false);
+      setPendingIntent(null);
     }
   };
 
@@ -63,13 +68,13 @@ export function Title({
 
       <div className="menu">
         <button className="primary" disabled={busy} onClick={go("game")}>
-          Play
+          {pendingIntent === "game" ? "Opening mic…" : "Play"}
         </button>
         <button disabled={busy} onClick={go("tutorial")}>
-          Tutorial
+          {pendingIntent === "tutorial" ? "Opening mic…" : "Tutorial"}
         </button>
         <button disabled={busy} onClick={go("visualiser")}>
-          Tone visualiser
+          {pendingIntent === "visualiser" ? "Opening mic…" : "Tone visualiser"}
         </button>
         <button disabled={busy} onClick={onSettings}>
           Settings

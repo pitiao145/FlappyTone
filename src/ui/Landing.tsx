@@ -94,6 +94,13 @@ export function Landing({ onPlay, onVisualiser, onTutorial, onSettings }: Props)
           {brand.howItWorks.map((step, i) => (
             <article key={step.title}>
               <span className="step-num">{i + 1}</span>
+              {i === 1 && (
+                <div className="tone-mark-row" aria-hidden="true">
+                  {TONES.map((tone) => (
+                    <ContourSpark key={tone} tone={tone} width={30} height={20} />
+                  ))}
+                </div>
+              )}
               <h3>{step.title}</h3>
               <p>{step.body}</p>
             </article>

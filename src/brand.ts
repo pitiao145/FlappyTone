@@ -57,7 +57,7 @@ export const brand = {
     },
     {
       title: "The corridor is the tone mark",
-      body: "ˉ ˊ ˇ ˋ are pitch diagrams. The gap you fly through is the shape you have to say, so the obstacle and the lesson are the same thing.",
+      body: "The four tone marks are pitch diagrams. The gap you fly through is the shape you have to say, so the obstacle and the lesson are the same thing.",
     },
     {
       title: "Hear it, then answer it",
