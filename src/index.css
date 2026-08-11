@@ -9,6 +9,8 @@
 html,
 body {
   background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font);
   color-scheme: dark;
 }
 

@@ -10,57 +10,64 @@
  * The --*-rgb pairs exist because the canvas composites almost everything with
  * a per-frame alpha, so it needs the components rather than a finished colour.
  * Keep each pair in sync with its hex twin.
+ *
+ * Palette: "ink tones" — a warm near-black paper with jade (primary) and
+ * vermillion (destructive/alert) ink, named for the brushstroke motif in the
+ * tone marks themselves. Variable names are kept stable across the reskin
+ * (only values changed) since App.css and palette.ts reference them by name
+ * throughout.
  */
 
 :root {
   /* ---- surfaces */
-  --surface: #05070a;
-  --surface-rgb: 5, 7, 10;
-  --surface-panel: #111318;
-  --surface-deep: #0b0d12;
+  --surface: #100d0e;
+  --surface-rgb: 16, 13, 14;
+  --surface-panel: #181415;
+  --surface-deep: #211c1d;
   /* The canvas's darkest value. Walls are cut from this — see render/world.ts. */
-  --canvas-backdrop: #141821;
-  --canvas-backdrop-rgb: 20, 24, 33;
+  --canvas-backdrop: #120f10;
+  --canvas-backdrop-rgb: 18, 15, 16;
 
   /* ---- ink */
-  --ink: #dfe5ec;
-  --ink-muted: #9aa4b0;
-  --ink-soft: #8e99a6;
-  --ink-dim: #6b7684;
+  --ink: #f5f1ea;
+  --ink-muted: #a79e93;
+  --ink-soft: #8f8579;
+  --ink-dim: #6f665d;
 
-  /* ---- accent */
-  --accent: #60cdff;
-  --accent-rgb: 96, 205, 255;
+  /* ---- accent (jade) */
+  --accent: #3ea88f;
+  --accent-rgb: 62, 168, 143;
   /* Text drawn *on* the accent. */
-  --accent-ink: #05070a;
-  --accent-bright: #eaf4ff;
+  --accent-ink: #0d1512;
+  --accent-bright: #b7e4d8;
 
   /* ---- semantic */
-  --good: #78e6aa;
-  --good-rgb: 120, 230, 170;
-  --good-dim: #9fd8b8;
-  --warn: #ffd282;
-  --warn-strong: #f0b866;
-  --danger: #ff9d9d;
-  --danger-rgb: 255, 110, 110;
-  --danger-strong: #ff5d5d;
+  --good: #5fc298;
+  --good-rgb: 95, 194, 152;
+  --good-dim: #a8ddc4;
+  --warn: #e7b26a;
+  --warn-strong: #d69a4a;
+  --danger: #e2543d;
+  --danger-rgb: 226, 84, 61;
+  --danger-strong: #c23f2a;
 
   /* Canvas-only accents: the demo trace and the guide grid. */
   --demo-rgb: 235, 208, 170;
-  --grid-rgb: 150, 180, 215;
+  --grid-rgb: 143, 133, 121;
 
   /* ---- lines */
-  --line: rgba(255, 255, 255, 0.15);
-  --line-soft: rgba(255, 255, 255, 0.1);
-  --line-strong: #262b33;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-soft: rgba(255, 255, 255, 0.05);
+  --line-strong: rgba(255, 255, 255, 0.14);
 
   /* ---- shape */
   --radius-pill: 999px;
-  --radius-md: 8px;
-  --radius-sm: 6px;
+  --radius-md: 14px;
+  --radius-sm: 8px;
 
   /* ---- type */
-  --font: system-ui, sans-serif;
+  --font: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", "Iowan Old Style", serif;
   --font-mono: ui-monospace, monospace;
   --text-xs: 0.75rem;
   --text-sm: 0.85rem;
