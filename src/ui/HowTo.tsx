@@ -13,7 +13,7 @@ export function HowTo({ onBack }: { onBack: () => void }) {
         <h3>The idea</h3>
         <p>
           The dot is your pitch. Speak or sing higher and it rises; lower and it
-          falls. Each corridor is the shape of a Mandarin tone — say the
+          falls. Each corridor is the shape of a Mandarin tone, say the
           syllable with that shape and you fly straight through it.
         </p>
         <p className="note">
@@ -38,7 +38,7 @@ export function HowTo({ onBack }: { onBack: () => void }) {
         </ul>
         <p className="note">
           These curves are measured from a native speaker, not copied from the
-          tone marks. Real tones hold, then move fast — tone 4 sits at the top
+          tone marks. Real tones hold, then move fast: tone 4 sits at the top
           for most of the syllable before it drops.
         </p>
       </section>
@@ -47,13 +47,13 @@ export function HowTo({ onBack }: { onBack: () => void }) {
         <h3>How a gate goes</h3>
         <ol className="facts">
           <li>You hear the example, and a faint dot traces its shape.</li>
-          <li>The world starts moving again — that's your turn.</li>
+          <li>The world starts moving again, that's your turn.</li>
           <li>Say the syllable. Your pitch flies the corridor.</li>
           <li>The path you actually flew lights up behind you.</li>
         </ol>
         <p className="note">
           Three outcomes: through cleanly (points, and a combo if you keep it
-          up), into a wall (a heart), or <strong>“couldn't hear that”</strong> —
+          up), into a wall (a heart), or <strong>“couldn't hear that”</strong>,
           which costs nothing at all. When the app isn't sure, it says so rather
           than scoring you wrong.
         </p>

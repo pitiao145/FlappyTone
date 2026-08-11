@@ -338,7 +338,7 @@ export function Calibration({
       const ticker = setInterval(() => {
         setProgress(Math.min(1, heard.ms / TALK_VOICED_MS));
         if (heard.ms === 0 && performance.now() - started > NUDGE_AFTER_MS) {
-          setHint("Take your time — I'm still listening.");
+          setHint("Take your time, I'm still listening.");
         }
         if (heard.ms < TALK_VOICED_MS) return;
         clearInterval(ticker);
@@ -347,7 +347,7 @@ export function Calibration({
         if (centre === null) {
           // Never blame the player — the app failed to hear, not the speaker.
           setFrameSink(null);
-          setHint("Couldn't hear that — let's try again.");
+          setHint("Couldn't hear that, let's try again.");
           return;
         }
         setHint(null);
@@ -397,7 +397,7 @@ export function Calibration({
       const ticker = setInterval(() => {
         setProgress(Math.min(1, heard.ms / SWEEP_VOICED_MS));
         if (heard.ms === 0 && performance.now() - started > NUDGE_AFTER_MS) {
-          setHint("Whenever you're ready — I'm still listening.");
+          setHint("Whenever you're ready, I'm still listening.");
         }
         if (heard.ms < SWEEP_VOICED_MS) return;
         clearInterval(ticker);
@@ -409,7 +409,7 @@ export function Calibration({
         // the range maths actually needs.
         if (into.current.length < MIN_SWEEP_SAMPLES) {
           setFrameSink(null);
-          setHint("Didn't quite catch that — one more go?");
+          setHint("Didn't quite catch that, one more go?");
           return;
         }
         setHint(null);
@@ -545,7 +545,7 @@ export function Calibration({
             <li>How you got here today</li>
           </ul>
           <p className="note">
-            Start whenever you like — the bar fills while I can hear you.
+            Start whenever you like, the bar fills while I can hear you.
           </p>
           {hint ? (
             <>
@@ -580,7 +580,7 @@ export function Calibration({
               : "Like a surprised “ooh?”. Hold it. Don't strain."}
           </p>
           <p className="note">
-            Take your time — the bar fills while you're making the sound.
+            Take your time, the bar fills while you're making the sound.
           </p>
           {hint ? (
             <>
@@ -624,7 +624,7 @@ export function Calibration({
       {step === "preview" && (
         <>
           <p className="note">
-            Does this feel right? Try a few sounds — high, low, and a slide
+            Does this feel right? Try a few sounds: high, low, and a slide
             between them.
           </p>
           <div className="stage">
@@ -632,7 +632,7 @@ export function Calibration({
           </div>
           <label className="slider">
             <span className="param-name">
-              sensitivity — +{range.up} / −{range.down} semitones
+              sensitivity: +{range.up} / −{range.down} semitones
             </span>
             <input
               type="range"
@@ -684,7 +684,7 @@ export function Calibration({
 
       {paused && (
         <div className="overlay" onClick={resume}>
-          <p>paused — tap to continue</p>
+          <p>paused, tap to continue</p>
         </div>
       )}
     </div>

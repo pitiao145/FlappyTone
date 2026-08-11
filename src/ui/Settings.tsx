@@ -78,7 +78,7 @@ export function Settings({
         <h3>Your voice</h3>
         {settings ? (
           <p className="note">
-            Centred on <strong>{Math.round(settings.f0Center)} Hz</strong> —
+            Centred on <strong>{Math.round(settings.f0Center)} Hz</strong>,
             your speaking pitch, which sits on line 3. Reaching{" "}
             <strong>{settings.rangeSemitones} semitones</strong> above it gets
             you to line 5, and{" "}

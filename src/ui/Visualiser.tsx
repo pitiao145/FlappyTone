@@ -163,7 +163,7 @@ export function Visualiser({
 
         {paused && (
           <div className="overlay" onClick={() => resumeRef.current()}>
-            <p>paused — tap to continue</p>
+            <p>paused, tap to continue</p>
           </div>
         )}
       </div>
@@ -189,7 +189,7 @@ export function Visualiser({
       <p className="note">
         {tone === null
           ? "Say anything. The line is your pitch, left to right."
-          : `${TONE_INFO[tone].pinyin} ${TONE_INFO[tone].hanzi} — ${TONE_INFO[tone].cue}. Match the dashed shape.`}
+          : `${TONE_INFO[tone].pinyin} ${TONE_INFO[tone].hanzi}, ${TONE_INFO[tone].cue}. Match the dashed shape.`}
       </p>
 
       <div className="setting-actions">

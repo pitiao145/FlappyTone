@@ -64,7 +64,7 @@ export function Title({
       <h1>{brand.name}</h1>
       <p className="tagline">{brand.tagline}</p>
 
-      {tutorialDone && <p className="prompt">Nice — ready to play?</p>}
+      {tutorialDone && <p className="prompt">Nice, ready to play?</p>}
 
       <div className="menu">
         <button className="primary" disabled={busy} onClick={go("game")}>
@@ -87,7 +87,7 @@ export function Title({
       <p className="note">{brand.requirement}</p>
       {!calibrated && (
         <p className="note">
-          First run starts with a short calibration — talk normally, then reach
+          First run starts with a short calibration: talk normally, then reach
           high and low.
         </p>
       )}

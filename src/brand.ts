@@ -41,35 +41,33 @@ export const brand = {
    * search demand, and a brand-name `h1` is part of what got the sibling
    * project deindexed. The wordmark in `Nav` carries the name instead.
    */
-  headline: "Practice Mandarin tones with your voice",
+  headline: "Practice Mandarin tones the fun way",
   tagline: "Your voice is the controller.",
   /** One sentence, under the tagline. Say what it does, not what it feels like. */
   pitch:
     "Fly through corridors shaped like Mandarin tone marks by producing the matching tone. Your pitch is the flight path.",
   /** PRD §8 requires this to be visible before the mic is ever requested. */
   requirement: "Needs a microphone and a quiet room.",
-  /**
-   * Trust line under `requirement`. Verified against the codebase, not just
-   * asserted: `src/pitch/` has zero Web Audio imports (CLAUDE.md hard rule,
-   * grepped clean), and `src/analytics/session.ts` — the sole outbound path
-   * from the player-facing game (src/record/ is a separate, operator-only
-   * entry point at /record, used to capture reference clips — not reachable
-   * from the game a player interacts with), gated on consent before an id is
-   * even minted — never carries audio or per-frame pitch, only gameplay
-   * outcomes and four derived calibration floats. The voice itself never
-   * leaves the device.
-   */
+
+  /** Hero's second button — scrolls to the #mobile home-screen instructions. */
+  installCta: "Install on your phone",
+
   privacyNote:
-    "Your voice is processed on your device, never uploaded or stored. Anonymous play analytics are separate and optional.",
+    "Your voice is processed on your device, never uploaded or stored.",
 
   /** Caption under the demo loop. */
-  demoCaption: "A real run — no sound needed to see the shape.",
+  demoCaption: "Flappytone in action.",
+
+  /** Subhead + lead-in above the four tone cards. */
+  toneDataTitle: "Based on real-life data",
+  toneDataIntro:
+    "These aren't the textbook tone marks. Every corridor is measured from a native Taiwanese speaker's own voice.",
 
   /** The three beats under "How it works". */
   howItWorks: [
     {
       title: "Your pitch moves the dot",
-      body: "The game listens and maps your voice onto the screen, live. Higher voice, higher dot — no buttons, no taps.",
+      body: "The game listens and maps your voice onto the screen, live. Higher voice, higher dot, no buttons, no taps.",
     },
     {
       title: "The corridor is the tone mark",
@@ -77,7 +75,7 @@ export const brand = {
     },
     {
       title: "Hear it, then answer it",
-      body: "Each gate plays a native recording first. You listen, then you say it — and you see your contour against the target as you go.",
+      body: "Each gate plays a native recording first. You listen, then you say it, and you see your contour against the target as you go.",
     },
   ],
 
@@ -97,30 +95,47 @@ export const brand = {
 
   /** PRD §11, stated in the product rather than only in the spec. */
   limits: [
-    "It checks your pitch contour, not your pronunciation — humming will beat it. It's a tone trainer, not a pronunciation checker.",
+    "It checks your pitch contour, not your pronunciation, humming will beat it. It's a tone trainer, not a pronunciation checker.",
     "Single syllables only. No sandhi, no connected speech, no sentences yet.",
   ],
 
   visualiser: {
-    title: "Can't hear the difference between mǎ and mà? Watch it instead.",
-    body: "Say a tone as many times as you like and watch every attempt stack on the target shape — no gates, no score, no pressure. It's the fastest way to see what your voice is actually doing.",
+    title: "Can't hear the difference between mǎ and mà? Visualise it instead.",
+    body: "Say a tone as many times as you like and watch every attempt stack on the target shape, no gates, no score, no pressure. It's the fastest way to see what your voice is actually doing.",
     cta: "Try the visualiser",
   },
 
   mobile: {
     title: "Mobile app",
-    summary: "iOS and Android — not yet",
-    body: "A native app is planned. It would add offline play, practice reminders and a streak you can keep. There is nothing to install from a store today.",
-    meantime:
-      "In the meantime it installs from the browser, and it's better that way — full screen, no URL bar eating a fifth of the display.",
-    ios: "iPhone / iPad: open this in Safari, tap Share, then Add to Home Screen.",
-    android: "Android: open the ⋮ menu in Chrome, then Install app.",
-    note: "Add it from the game screen or from here — either one opens straight into the game.",
+    body: "iOS and Android apps aren't out yet. A native app would add offline play, practice reminders and a streak you can keep, but there's nothing to install from a store today.",
+    notify: {
+      placeholder: "you@example.com",
+      cta: "Notify me",
+      disclaimer: "Only for FlappyTone updates. No spam, unsubscribe anytime.",
+    },
+    homeScreen: {
+      title: "In the meantime, add it to your home screen",
+      body: "Same effect as an app icon: full screen, no URL bar eating a fifth of the display.",
+      ios: {
+        label: "iPhone / iPad (Safari or Chrome)",
+        steps: [
+          { icon: "share", text: "Open this page, then tap Share" },
+          { icon: "add", text: "Tap Add to Home Screen" },
+        ],
+      },
+      android: {
+        label: "Android",
+        steps: [
+          { icon: "menu", text: "Open this page in Chrome, then tap ⋮" },
+          { icon: "add", text: "Tap Install app" },
+        ],
+      },
+    },
   },
 
   comingSoon: {
-    title: "More words, and your own tone history — coming next",
-    body: "Right now it's one syllable, four tones — enough to test whether the mechanic works. Next up: a bigger word list, and a page that shows how your tone shapes change over time as you practice. Want to know when it ships?",
+    title: "More words, and your own tone history, coming next",
+    body: "Right now it's one syllable, four tones, enough to test whether the mechanic works. Next up: a bigger word list, and a page that shows how your tone shapes change over time as you practice. Want to know when it ships?",
     placeholder: "you@example.com",
     cta: "Notify me",
     disclaimer: "Only for FlappyTone updates. No spam, unsubscribe anytime.",
@@ -128,7 +143,7 @@ export const brand = {
 
   /** Footer credit for the reference clips. Jane recorded them; say so. */
   attribution:
-    "Reference audio: Jane, a native Taiwanese speaker, recorded direct to mic and used with permission.",
+    "Reference audio: Jane, a native Taiwanese speaker, used with permission.",
 
   /**
    * Footer content beyond the attribution line above: a brand blurb, a
@@ -139,7 +154,7 @@ export const brand = {
    */
   footer: {
     blurb: "A tiny voice-controlled game for practicing Mandarin tones.",
-    builtBy: "Built by Pierre, an indie dev in Taiwan.",
+    builtByPrefix: "Built while 🏄 by",
     connectHeading: "Connect",
     connect: [
       { href: "https://pierrebuilds.dev", label: "pierrebuilds.dev", external: true, icon: "web" },

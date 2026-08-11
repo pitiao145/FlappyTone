@@ -10,14 +10,14 @@ const CONNECT_ICONS = {
 
 /**
  * Page footer: brand blurb + built-by line, a Connect column of external
- * links, then the existing clip-attribution line (kept visually distinct —
- * it's a credit, not a nav item). All copy comes from `brand.footer` /
- * `brand.attribution`; this file is layout only, same rule as `Landing.tsx`.
+ * links, then an attribution + copyright row. All copy comes from
+ * `brand.footer` / `brand.attribution`; this file is layout only, same rule
+ * as `Landing.tsx`.
  *
- * Adapted from `docs/redesign/footer-template.tsx` — see that file's header
- * comment for what was dropped from the EasyCard original (legal column,
- * newsletter modal) and why. No email capture here; that ask lives in
- * `ComingSoon.tsx`, higher up the page.
+ * Same navy/gold footer as the EasyCard app it was adapted from, minus what
+ * doesn't apply here: EasyCard-specific copy, the Legal column, the
+ * newsletter signup box, the "independent tool" disclaimer, and the
+ * card-number handling notice.
  */
 export function Footer() {
   return (
@@ -25,7 +25,12 @@ export function Footer() {
       <div className="footer-grid">
         <div className="footer-brand">
           <p className="footer-blurb">{brand.footer.blurb}</p>
-          <p className="footer-builtby">{brand.footer.builtBy}</p>
+          <p className="footer-builtby">
+            {brand.footer.builtByPrefix}{" "}
+            <a href="https://pierrebuilds.dev" target="_blank" rel="noopener noreferrer" className="footer-builtby-link">
+              pierrebuilds.dev
+            </a>
+          </p>
         </div>
 
         <div className="footer-connect">
@@ -52,7 +57,10 @@ export function Footer() {
         </div>
       </div>
 
-      <p className="note footer-attribution">{brand.attribution}</p>
+      <div className="footer-bottom">
+        <p className="footer-copyright">© {new Date().getFullYear()} pierrebuilds.dev</p>
+        <p className="footer-attribution">{brand.attribution}</p>
+      </div>
     </footer>
   );
 }

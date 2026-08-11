@@ -118,6 +118,39 @@ export function MailIcon() {
   );
 }
 
+/** Phosphor `Export`, Regular — iOS Safari's Share glyph. */
+export function ShareIcon() {
+  return (
+    <svg {...BOX}>
+      <line x1="128" y1="24" x2="128" y2="152" {...STROKE} />
+      <polyline points="88,64 128,24 168,64" {...STROKE} />
+      <path d="M192,104h16a8,8,0,0,1,8,8v96a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V112a8,8,0,0,1,8-8H64" {...STROKE} />
+    </svg>
+  );
+}
+
+/** Phosphor `DotsThreeVertical`, Regular — Chrome's overflow menu glyph. */
+export function DotsThreeVerticalIcon() {
+  return (
+    <svg {...BOX}>
+      <circle cx="128" cy="128" r="16" fill="currentColor" />
+      <circle cx="128" cy="60" r="16" fill="currentColor" />
+      <circle cx="128" cy="196" r="16" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** Phosphor `PlusSquare`, Regular — the "Add to Home Screen" / "Install app" glyph. */
+export function PlusSquareIcon() {
+  return (
+    <svg {...BOX}>
+      <rect x="40" y="40" width="176" height="176" rx="8" {...STROKE} />
+      <line x1="88" y1="128" x2="168" y2="128" {...STROKE} />
+      <line x1="128" y1="88" x2="128" y2="168" {...STROKE} />
+    </svg>
+  );
+}
+
 /** Phosphor `Gear`, Regular. */
 export function GearIcon() {
   return (

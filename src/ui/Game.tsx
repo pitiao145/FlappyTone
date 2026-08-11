@@ -417,11 +417,16 @@ export function Game({
   const displayWord = hud?.activeGate?.word ?? hud?.upcoming?.word ?? null;
   const info = displayTone === null ? null : TONE_INFO[displayTone];
 
-  // Listen → Your turn: "listen" spans the whole cue phase; "your turn" only
-  // flashes over the active gate's first stretch, then clears the screen.
+  // Listen → Your turn: "listen" spans only the frozen demo + hold
+  // (`cuePaused`), not the whole cue phase. Once the world unfreezes the
+  // player is meant to be answering already — during `cueApproachMs` of
+  // travel toward the gate — so "your turn" starts there, not at gate entry.
+  // It then carries through the active gate's first stretch before clearing.
   const banner =
     hud?.phase === "listen"
-      ? ("listen" as const)
+      ? hud.cuePaused
+        ? ("listen" as const)
+        : ("your-turn" as const)
       : hud?.phase === "active" &&
           (hud.activeGate?.t ?? 1) < YOUR_TURN_MAX_T
         ? ("your-turn" as const)
@@ -505,61 +510,68 @@ export function Game({
             </div>
           )}
 
-          {/* Bottom-of-stage status line: the same cue copy the tutorial
-              shows inline, made available on every mode. Pinned to the
-              bottom of the flex `.hud` column (margin-top: auto) so it
-              never competes with the score/hearts row up top. */}
-          {info && displayTone !== null && (
+          {/* Tutorial-only cue text ("say mā, say it flat and high") — the
+              lesson copy that teaches each tone shape. Outside the tutorial
+              the player is meant to answer the demo clip, not read a script,
+              so this stays out of game/practice mode. */}
+          {mode === "tutorial" && info && displayTone !== null && (
             <div className="hud-status">
-              say {info.pinyin} — {info.cue}
+              say {info.pinyin}, {info.cue}
             </div>
           )}
 
-          {banner === "listen" && (
-            <div className="phase-banner listen">🔊 listen…</div>
-          )}
-          {banner === "your-turn" && (
-            <div className="phase-banner your-turn">
-              your turn!
-              {/* Decorative only: a CSS-only pulse, not a real mic-level
-                  meter. It never reads RMS/frame data — see CLAUDE.md's
-                  src/pitch and src/audio boundary. */}
-              <span className="listening-bars" aria-hidden="true">
-                <span className="listening-bar" />
-                <span className="listening-bar" />
-                <span className="listening-bar" />
-                <span className="listening-bar" />
-              </span>
-            </div>
-          )}
-
-          {showHint && (
-            <div key={flash!.atMs} className="toast unheard-toast">
-              {HINT_TEXT[flash!.hint ?? "generic"]}
-            </div>
-          )}
-          {hud?.noisy && <div className="hint">it's noisy in here</div>}
-
-          {GATE_LOG_ENABLED && hud && (
-            <div className="gate-log">
-              <div>
-                unheard{" "}
-                {hud.gateLog.filter((g) => g.outcome === "unheard").length}/
-                {hud.gateLog.length} · missed early {hud.missedUtterances}
+          {/* Single group pinned to the bottom of the flex `.hud` column via
+              one margin-top: auto on the wrapper. Each child used to carry
+              its own auto margin, which meant two present at once (the
+              banner and the dev gate-log) split the leftover space between
+              them instead of stacking together at the bottom. */}
+          <div className="hud-bottom">
+            {banner === "listen" && (
+              <div className="phase-banner listen">🔊 listen…</div>
+            )}
+            {banner === "your-turn" && (
+              <div className="phase-banner your-turn">
+                your turn!
+                {/* Decorative only: a CSS-only pulse, not a real mic-level
+                    meter. It never reads RMS/frame data — see CLAUDE.md's
+                    src/pitch and src/audio boundary. */}
+                <span className="listening-bars" aria-hidden="true">
+                  <span className="listening-bar" />
+                  <span className="listening-bar" />
+                  <span className="listening-bar" />
+                  <span className="listening-bar" />
+                </span>
               </div>
-              {hud.gateLog
-                .slice(-GATE_LOG_ON_SCREEN)
-                .reverse()
-                .map((g) => (
-                  <div key={g.atMs}>
-                    T{g.tone} {g.outcome} · {g.voiced}/{g.samples} (
-                    {Math.round(g.voicedFraction * 100)}%) ·{" "}
-                    {Math.round(g.utteranceMs)}ms
-                    {g.seeded > 0 ? ` · +${g.seeded} early` : ""}
-                  </div>
-                ))}
-            </div>
-          )}
+            )}
+
+            {showHint && (
+              <div key={flash!.atMs} className="toast unheard-toast">
+                {HINT_TEXT[flash!.hint ?? "generic"]}
+              </div>
+            )}
+            {hud?.noisy && <div className="hint">it's noisy in here</div>}
+
+            {GATE_LOG_ENABLED && hud && (
+              <div className="gate-log">
+                <div>
+                  unheard{" "}
+                  {hud.gateLog.filter((g) => g.outcome === "unheard").length}/
+                  {hud.gateLog.length} · missed early {hud.missedUtterances}
+                </div>
+                {hud.gateLog
+                  .slice(-GATE_LOG_ON_SCREEN)
+                  .reverse()
+                  .map((g) => (
+                    <div key={g.atMs}>
+                      T{g.tone} {g.outcome} · {g.voiced}/{g.samples} (
+                      {Math.round(g.voicedFraction * 100)}%) ·{" "}
+                      {Math.round(g.utteranceMs)}ms
+                      {g.seeded > 0 ? ` · +${g.seeded} early` : ""}
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Shown once, ever. A notice rather than a consent gate: sharing is
@@ -570,8 +582,8 @@ export function Game({
           <div className="overlay tutorial-card">
             <h3>Still in testing</h3>
             <p>
-              I'm sending anonymous data about how the game goes — which gates
-              you hit or miss, and how your voice maps to the screen — so I can
+              I'm sending anonymous data about how the game goes, which gates
+              you hit or miss, and how your voice maps to the screen, so I can
               tune it.
             </p>
             <p className="note">

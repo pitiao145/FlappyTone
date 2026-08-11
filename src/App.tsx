@@ -248,7 +248,6 @@ export default function App() {
           <Landing
             onPlay={() => setScreen("title")}
             onVisualiser={() => startFromTitle("visualiser")}
-            onTutorial={() => startFromTitle("tutorial")}
           />
         )}
 
