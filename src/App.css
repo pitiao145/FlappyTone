@@ -1760,9 +1760,26 @@
   font-style: normal;
 }
 
-.coming-soon-success {
-  color: var(--accent);
+.newsletter-success,
+.newsletter-error {
+  border: 2px solid;
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: var(--text-sm);
   font-weight: 600;
+  text-align: left;
+}
+
+.newsletter-success {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.1);
+}
+
+.newsletter-error {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: rgba(var(--danger-rgb), 0.1);
 }
 
 .landing-steps {

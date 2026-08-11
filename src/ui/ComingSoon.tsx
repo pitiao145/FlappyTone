@@ -13,7 +13,7 @@ export function ComingSoon() {
       <h2>{brand.comingSoon.title}</h2>
       <p>{brand.comingSoon.body}</p>
       {status === "success" ? (
-        <p className="coming-soon-success">You&rsquo;re on the list.</p>
+        <p className="newsletter-success">You&rsquo;re on the list.</p>
       ) : (
         <form
           className="coming-soon-form"
@@ -42,7 +42,7 @@ export function ComingSoon() {
         </form>
       )}
       {error && (
-        <p className="error" role="alert">
+        <p className="newsletter-error" role="alert">
           {error}
         </p>
       )}

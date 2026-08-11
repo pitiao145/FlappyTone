@@ -174,7 +174,7 @@ export function Landing({ onPlay, onVisualiser }: Props) {
         <p>{brand.mobile.body}</p>
 
         {mobileNewsletter.status === "success" ? (
-          <p className="coming-soon-success">You&rsquo;re on the list.</p>
+          <p className="newsletter-success">You&rsquo;re on the list.</p>
         ) : (
           <form
             className="coming-soon-form"
@@ -207,7 +207,7 @@ export function Landing({ onPlay, onVisualiser }: Props) {
           </form>
         )}
         {mobileNewsletter.error && (
-          <p className="error" role="alert">
+          <p className="newsletter-error" role="alert">
             {mobileNewsletter.error}
           </p>
         )}
