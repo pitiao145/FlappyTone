@@ -48,6 +48,15 @@ export const brand = {
     "Fly through corridors shaped like Mandarin tone marks by producing the matching tone. Your pitch is the flight path.",
   /** PRD §8 requires this to be visible before the mic is ever requested. */
   requirement: "Needs a microphone and a quiet room.",
+  /**
+   * Trust line under `requirement`. Verified against the codebase, not just
+   * asserted: `src/pitch/` has zero Web Audio imports (CLAUDE.md hard rule,
+   * grepped clean), and `src/analytics/session.ts` — the sole outbound data
+   * path, gated on consent before an id is even minted — never carries audio
+   * or per-frame pitch, only gameplay outcomes and four derived calibration
+   * floats. The voice itself never leaves the device.
+   */
+  privacyNote: "Your voice is processed on your device, never uploaded or stored.",
 
   /** Caption under the demo loop. */
   demoCaption: "A real run — no sound needed to see the shape.",

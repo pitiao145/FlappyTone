@@ -91,6 +91,7 @@ export function Landing({ onPlay, onVisualiser, onTutorial }: Props) {
             </button>
           </div>
           <p className="note">{brand.requirement}</p>
+          <p className="note">{brand.privacyNote}</p>
           {error && <p className="error">{error}</p>}
         </header>
 
