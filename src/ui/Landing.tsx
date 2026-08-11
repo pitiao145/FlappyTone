@@ -132,6 +132,15 @@ export function Landing({ onPlay, onVisualiser, onTutorial }: Props) {
             </article>
           ))}
         </div>
+        <div className="tone-average-grid">
+          {TONES.map((tone) => (
+            <ToneAverageCard key={tone} tone={tone} words={wordsByTone.get(tone) ?? []} />
+          ))}
+        </div>
+        <p className="note">
+          Every clip in the inventory, resampled and averaged — the bold line
+          is the mean, the faint lines behind it are what she actually said.
+        </p>
       </section>
 
       <section id="play" className="landing-section landing-cta">

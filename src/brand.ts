@@ -125,7 +125,7 @@ export const brand = {
       inNav: true,
     },
     { id: "play", title: "Play", navLabel: "Play", inNav: true },
-    { id: "mobile", title: "Mobile app", navLabel: "Mobile", inNav: true },
     { id: "limits", title: "What it doesn't do" },
+    { id: "mobile", title: "Mobile app", navLabel: "Mobile", inNav: true },
   ] as LandingSection[],
 } as const;
