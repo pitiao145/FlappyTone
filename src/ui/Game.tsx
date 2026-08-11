@@ -499,7 +499,6 @@ export function Game({
               <span className="syllable">{displayWord?.pinyin ?? info.pinyin}</span>
               <span className="hanzi">{displayWord?.hanzi ?? info.hanzi}</span>
               <span className="tone-num">({displayTone})</span>
-              {mode === "tutorial" && <span className="cue">{info.cue}</span>}
             </div>
           )}
 
