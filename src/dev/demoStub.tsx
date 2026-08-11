@@ -1,17 +1,17 @@
 /**
  * `DemoLoop`'s stand-in for the build-time render, wired in by an alias in
- * `src/dev/prerender.ts`. The real one is a `requestAnimationFrame` loop over a
- * canvas: there is nothing for it to draw in Node, and pulling it in would drag
- * the renderer and the game's gate geometry into a render that should be markup
- * and nothing else.
+ * `src/dev/prerender.ts`. The real one is a `<video>` playing a recorded
+ * clip: there is nothing for it to play in Node, and pulling it in would
+ * drag browser media APIs into a render that should be markup and nothing
+ * else.
  *
- * It reserves the same box the canvas will occupy — same max-width, same 420:280
- * ratio, same border — so React swapping the live demo in shifts nothing below
- * it.
+ * It reserves the same box the video will occupy — same max-width, same
+ * 862:1520 ratio (the clip's native pixel size), same border — so React
+ * swapping the live demo in shifts nothing below it.
  */
 export function DemoLoop({
-  width = 420,
-  height = 280,
+  width = 300,
+  height = Math.round((300 * 1520) / 862),
 }: {
   width?: number;
   height?: number;

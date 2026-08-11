@@ -223,23 +223,28 @@ export default function App() {
   }, [screen]);
 
   /**
-   * Screens that carry the nav. Deliberately not the ones you are *inside* —
-   * a run, a calibration, the visualiser — where a site nav would compete with
-   * the thing the screen exists for, and where a stray tap would abandon work
-   * in progress. The pause menu is the way out of a run.
+   * Menu shells carry the nav; immersive screens (a run, calibration, the
+   * visualiser) do not — the pause menu is the way out of a run. Landing has
+   * its own bar. The app frame is phone-width, so nav-app always uses the
+   * hamburger layout via a container query in App.css.
    */
   const showNav =
     screen === "title" ||
     screen === "howto" ||
     screen === "settings" ||
-    screen === "gameover";
+    screen === "gameover" ||
+    screen === "lab";
 
   return (
     <div className="app">
       <div className="frame">
-        {/* No Play button here: offering it to someone already inside the game
-            is the one link on the bar that means nothing where they are. */}
-        {showNav && <Nav variant="app" onNavigate={goLanding} />}
+        {showNav && (
+          <Nav
+            variant="app"
+            onNavigate={goLanding}
+            onPlay={screen === "title" ? undefined : goHome}
+          />
+        )}
 
         {screen === "landing" && (
           <Landing

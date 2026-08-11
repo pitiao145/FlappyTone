@@ -59,32 +59,34 @@ export function Landing({ onPlay, onVisualiser, onTutorial, onSettings }: Props)
     <div className="landing">
       <Nav variant="landing" onNavigate={() => {}} onPlay={onPlay} disabled={busy} />
 
-      <header id="top" className="landing-hero">
-        {/* The h1 is the headline, not the brand name — see brand.headline. */}
-        <h1>{brand.headline}</h1>
-        <p className="hero-tagline">{brand.tagline}</p>
-        <p className="hero-pitch">{brand.pitch}</p>
-        <div className="hero-actions">
-          <button className="primary" disabled={busy} onClick={onPlay}>
-            Play
-          </button>
-          <button disabled={busy} onClick={go(onTutorial)}>
-            Tutorial
-          </button>
-          <button disabled={busy} onClick={onSettings}>
-            Settings
-          </button>
-        </div>
-        <p className="note">{brand.requirement}</p>
-        {error && <p className="error">{error}</p>}
-      </header>
+      <div className="hero-row">
+        <header id="top" className="landing-hero">
+          {/* The h1 is the headline, not the brand name — see brand.headline. */}
+          <h1>{brand.headline}</h1>
+          <p className="hero-tagline">{brand.tagline}</p>
+          <p className="hero-pitch">{brand.pitch}</p>
+          <div className="hero-actions">
+            <button className="primary" disabled={busy} onClick={onPlay}>
+              Play
+            </button>
+            <button disabled={busy} onClick={go(onTutorial)}>
+              Tutorial
+            </button>
+            <button disabled={busy} onClick={onSettings}>
+              Settings
+            </button>
+          </div>
+          <p className="note">{brand.requirement}</p>
+          {error && <p className="error">{error}</p>}
+        </header>
 
-      <section id="demo" className="landing-section landing-demo">
-        <DemoLoop />
-        <p className="note">
-          No sound, no microphone — this is just the game playing itself.
-        </p>
-      </section>
+        <section id="demo" className="landing-section landing-demo">
+          <DemoLoop />
+          <p className="note">
+            No sound, no microphone — this is just the game playing itself.
+          </p>
+        </section>
+      </div>
 
       <section id="how-it-works" className="landing-section">
         <h2>How it works</h2>

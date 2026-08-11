@@ -35,6 +35,8 @@
   max-width: 420px;
   max-width: min(420px, calc((100svh - 40px) * 9 / 16));
   margin-inline: auto;
+  container-type: inline-size;
+  container-name: frame;
 }
 
 .frame:has(.lab-screen) {
@@ -933,7 +935,7 @@
 
 .landing {
   width: 100%;
-  max-width: 760px;
+  max-width: 72rem;
   margin-inline: auto;
   display: flex;
   flex-direction: column;
@@ -945,9 +947,10 @@
 .landing-nav {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 10;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-3);
   padding: 10px 0;
   background: color-mix(in srgb, var(--surface) 88%, transparent);
@@ -955,23 +958,50 @@
   border-bottom: 1px solid var(--line-soft);
 }
 
-.landing-nav .wordmark {
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--ink);
-  text-decoration: none;
-  flex: 0 0 auto;
+.landing-nav.nav-menu-open {
+  z-index: 110;
+  background: var(--surface);
+  border-bottom-color: transparent;
 }
 
-/* On a narrow screen the links scroll sideways rather than wrapping into a
-   second row that would push the Play button off the bar. */
-.landing-nav-links {
+.nav-brand {
   display: flex;
-  gap: var(--space-3);
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: none;
+  color: inherit;
+}
+
+.nav-logo {
+  display: block;
+  border-radius: var(--radius-sm);
+}
+
+.nav-name {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-size: var(--text-sm);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* Centered in the bar on wide screens; hidden behind the drawer below 901px. */
+.landing-nav-links {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  gap: var(--space-4);
   overflow-x: auto;
   scrollbar-width: none;
-  flex: 1 1 auto;
-  min-width: 0;
+  max-width: min(52vw, 420px);
+  padding-inline: var(--space-2);
 }
 
 .landing-nav-links::-webkit-scrollbar {
@@ -989,11 +1019,263 @@
   color: var(--ink);
 }
 
-/* The one control that must survive every viewport. */
-.landing .nav-play {
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* Shady CTA — accent fill with a hard offset shadow, adapted to the dark palette. */
+.nav-cta {
+  position: relative;
+}
+
+.nav-cta-shady {
+  position: relative;
+}
+
+.nav-cta-shady::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-pill);
+  background: var(--accent-ink);
+  transform: translate(3px, 3px);
+}
+
+.nav-cta-btn {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 12px 22px;
+  border: 2px solid var(--accent-ink);
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: var(--text-base);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.nav-cta-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, white);
+}
+
+.nav-cta-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.nav-cta-chevron {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s ease;
+}
+
+.nav-cta-btn[aria-expanded="true"] .nav-cta-chevron {
+  transform: rotate(180deg);
+}
+
+.nav-cta-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 3;
+  min-width: 196px;
+  padding: var(--space-1);
+  border: 2px solid var(--accent-ink);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  box-shadow: 4px 4px 0 var(--accent-ink);
+}
+
+.nav-cta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
   font-size: var(--text-sm);
-  padding: 8px 18px;
+  text-align: left;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+}
+
+.nav-cta-item:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.nav-cta-item-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.nav-cta-soon {
+  font-style: italic;
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+}
+
+.nav-cta-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+/* Hamburger — mobile only; desktop uses centered text links. */
+.nav-hamburger {
+  display: none;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-panel);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.nav-hamburger:hover {
+  background: color-mix(in srgb, var(--ink) 8%, var(--surface-panel));
+}
+
+.nav-hamburger-icon {
+  width: 22px;
+  height: 22px;
+}
+
+/* Shared shady pill — used by the mobile nav drawer. */
+.nav-shady {
+  position: relative;
+  width: min(280px, 100%);
+}
+
+.nav-shady::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-pill);
+  background: var(--accent-ink);
+  transform: translate(3px, 3px);
+}
+
+.nav-mobile-menu .nav-shady-btn {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  padding: 14px 28px;
+  border: 2px solid var(--accent-ink);
+  border-radius: var(--radius-pill);
+  background: var(--accent-bright);
+  color: var(--accent-ink);
+  font: inherit;
+  font-size: var(--text-base);
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.nav-mobile-menu .nav-shady-btn:hover {
+  background: var(--accent);
+}
+
+.nav-mobile-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: 88px var(--space-6) var(--space-6);
+  background: var(--surface);
+}
+
+@media (min-width: 901px) {
+  .nav-landing .landing-nav-links {
+    display: flex;
+  }
+
+  .nav-landing .nav-hamburger {
+    display: none;
+  }
+}
+
+.nav-menu-open .nav-brand,
+.nav-menu-open .nav-actions {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 900px) {
+  .nav-landing .nav-hamburger {
+    display: inline-flex;
+  }
+
+  .nav-cta-btn {
+    padding: 10px 18px;
+    font-size: var(--text-sm);
+  }
+}
+
+/* App shell (~420px frame): hamburger always; desktop links only in the Lab. */
+@container frame (max-width: 900px) {
+  .nav-app .nav-hamburger {
+    display: inline-flex;
+  }
+}
+
+@container frame (min-width: 901px) {
+  .nav-app .landing-nav-links {
+    display: flex;
+  }
+
+  .nav-app .nav-hamburger {
+    display: none;
+  }
+}
+
+/* Hero text + demo video: stacked on mobile, side by side from 901px up. */
+.hero-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+@media (min-width: 901px) {
+  .hero-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 48px;
+  }
+
+  .hero-row .landing-hero {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-top: 0;
+  }
+
+  .hero-row .landing-demo {
+    flex: 0 0 auto;
+  }
 }
 
 .landing-hero {
@@ -1031,7 +1313,7 @@
   margin-top: var(--space-2);
 }
 
-.landing button {
+.landing button:not(.nav-cta-btn):not(.nav-hamburger):not(.nav-shady-btn) {
   font-size: var(--text-base);
   padding: 12px 20px;
   border-radius: var(--radius-pill);
@@ -1116,7 +1398,7 @@
 .demo-canvas {
   display: block;
   width: 100%;
-  max-width: 420px;
+  max-width: 300px;
   height: auto;
   border-radius: var(--radius-md);
   border: 1px solid var(--line-soft);
@@ -1349,16 +1631,20 @@
 
 /* Same bar as the landing page's, but the links are buttons: inside the app
    there is no page under them to anchor to, so they change screen and scroll
-   on arrival. Narrower, because it sits over a 420px board. */
+   on arrival. Matches the game frame width; widens in the Lab. */
 .nav-app {
   width: 100%;
-  max-width: 420px;
+  max-width: min(420px, calc((100svh - 40px) * 9 / 16));
   margin-inline: auto;
   margin-bottom: var(--space-2);
   padding: 6px 0;
 }
 
-.nav-app .wordmark,
+.frame:has(.lab-screen) .nav-app {
+  max-width: 72rem;
+}
+
+.nav-app .nav-brand,
 .nav-link {
   border: none;
   background: transparent;
@@ -1367,11 +1653,8 @@
   font: inherit;
 }
 
-.nav-app .wordmark {
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--ink);
-  font-size: var(--text-sm);
+.nav-app .nav-name {
+  font-size: var(--text-xs);
 }
 
 .nav-link {
