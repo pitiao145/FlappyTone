@@ -26,7 +26,7 @@ import {
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawWorld, refreshMotionPreference } from "../render/world.ts";
-import { GearIcon, PauseIcon, PlayIcon } from "./icons.tsx";
+import { GearIcon, HeartIcon, PauseIcon, PlayIcon } from "./icons.tsx";
 import { PauseOptions } from "./PauseOptions.tsx";
 
 /** HUD refresh rate. React never renders per frame — the rAF loop owns the canvas. */
@@ -451,14 +451,14 @@ export function Game({
               <span className="hearts">
                 {Array.from({ length: hearts }, (_, i) => (
                   <span key={i} className="heart">
-                    ♥
+                    <HeartIcon filled />
                   </span>
                 ))}
                 {/* The heart just lost, shown mid-break then gone. Without it
                     a collision simply removed a glyph, which read as nothing. */}
                 {breaking && (
                   <span key={flash!.atMs} className="heart breaking">
-                    ♥
+                    <HeartIcon filled />
                   </span>
                 )}
               </span>

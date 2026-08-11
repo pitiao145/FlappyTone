@@ -49,6 +49,22 @@ export function PlayIcon() {
   );
 }
 
+/**
+ * Phosphor `Heart`, Regular (outline) and Bold-ish fill for the filled state.
+ *
+ * `filled` swaps the fill-only heart in for the stroked outline — both share
+ * the same path so the two line up exactly when one replaces the other.
+ */
+export function HeartIcon({ filled }: { filled: boolean }) {
+  const path =
+    "M128,224.15c-3.94,0-7.75-1.53-10.62-4.29L46.14,151.4a76.05,76.05,0,0,1-24-72.32A76.62,76.62,0,0,1,80.31,25a75.31,75.31,0,0,1,47.69,17,75.31,75.31,0,0,1,47.69-17,76.62,76.62,0,0,1,58.17,54.08,76.05,76.05,0,0,1-24,72.32l-71.24,68.46A15.16,15.16,0,0,1,128,224.15Z";
+  return (
+    <svg {...BOX}>
+      <path d={path} {...(filled ? { fill: "currentColor" } : STROKE)} />
+    </svg>
+  );
+}
+
 /** Phosphor `Gear`, Regular. */
 export function GearIcon() {
   return (
