@@ -81,7 +81,7 @@ export function Landing({ onPlay, onVisualiser, onTutorial, onSettings }: Props)
         </header>
 
         <section id="demo" className="landing-section landing-demo">
-          <DemoLoop />
+          <DemoLoop width={380} />
           <p className="note">
             No sound, no microphone — this is just the game playing itself.
           </p>
