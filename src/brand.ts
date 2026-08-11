@@ -106,11 +106,11 @@ export const brand = {
   },
 
   comingSoon: {
-    title: "Get notified",
-    body: "A mobile app is planned, with offline play and a streak worth keeping. Leave your email and I'll let you know when it ships — nothing else.",
+    title: "More words, and your own tone history — coming next",
+    body: "Right now it's one syllable, four tones — enough to test whether the mechanic works. Next up: a bigger word list, and a page that shows how your tone shapes change over time as you practice. Want to know when it ships?",
     placeholder: "you@example.com",
     cta: "Notify me",
-    disclaimer: "One email, when the app ships. No spam, no newsletter.",
+    disclaimer: "Only for FlappyTone updates. No spam, unsubscribe anytime.",
   },
 
   /** Footer credit for the reference clips. Jane recorded them; say so. */
