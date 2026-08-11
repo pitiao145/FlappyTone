@@ -101,6 +101,8 @@
 .note {
   color: var(--ink-muted);
   font-size: 0.9rem;
+  font-style: italic;
+  text-align: center;
 }
 
 .prompt {
@@ -1568,9 +1570,13 @@
 }
 
 .landing button.primary {
+  font-size: var(--text-base);
+  padding: 12px 20px;
+  border-radius: var(--radius-pill);
   border: none;
   background: var(--accent);
   color: var(--accent-ink);
+  cursor: pointer;
 }
 
 .landing button.primary:hover:not(:disabled) {
