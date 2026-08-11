@@ -1667,6 +1667,55 @@
   align-items: flex-start;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.coming-soon-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.coming-soon-form input {
+  flex: 1 1 240px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-base);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.coming-soon-form input:hover {
+  border-color: var(--ink-soft);
+}
+
+.coming-soon-form input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.coming-soon-form button.primary {
+  border-radius: var(--radius-pill);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.coming-soon-form button.primary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .landing-steps {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

@@ -5,6 +5,7 @@ import { ensureMic, MicCancelled } from "../audio/session.ts";
 import { loadInventory } from "../audio/inventory.ts";
 import type { Tone } from "../game/gates.ts";
 import type { Word } from "../game/words.ts";
+import { ComingSoon } from "./ComingSoon.tsx";
 import { ContourSpark } from "./ContourSpark.tsx";
 import { DemoLoop } from "./DemoLoop.tsx";
 import { micErrorCopy } from "./micErrors.ts";
@@ -156,6 +157,8 @@ export function Landing({ onPlay, onVisualiser, onTutorial }: Props) {
           or start with the tutorial
         </button>
       </section>
+
+      <ComingSoon />
 
       <section id="limits" className="landing-section">
         <h2>What it doesn't do</h2>

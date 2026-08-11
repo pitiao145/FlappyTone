@@ -105,6 +105,14 @@ export const brand = {
     note: "Add it from the game screen or from here — either one opens straight into the game.",
   },
 
+  comingSoon: {
+    title: "Get notified",
+    body: "A mobile app is planned, with offline play and a streak worth keeping. Leave your email and I'll let you know when it ships — nothing else.",
+    placeholder: "you@example.com",
+    cta: "Notify me",
+    disclaimer: "One email, when the app ships. No spam, no newsletter.",
+  },
+
   /** Footer credit for the reference clips. Jane recorded them; say so. */
   attribution:
     "Reference audio: Jane, a native Taiwanese speaker, recorded direct to mic and used with permission.",
@@ -125,6 +133,7 @@ export const brand = {
       inNav: true,
     },
     { id: "play", title: "Play", navLabel: "Play", inNav: true },
+    { id: "coming-soon", title: "Get notified" },
     { id: "limits", title: "What it doesn't do" },
     { id: "mobile", title: "Mobile app", navLabel: "Mobile", inNav: true },
   ] as LandingSection[],
