@@ -22,6 +22,14 @@ const FALLBACK = {
   demo: "235, 208, 170",
   /** The Chao guide grid. Recedes behind everything. */
   grid: "150, 180, 215",
+  /** Ink at full strength, for canvas strokes that composite with alpha. */
+  ink: "245, 241, 234",
+  /** Gate outcome: "ok" (amber), deliberately outside the brand's colour language. */
+  gateOk: "210, 200, 140",
+  /** Gate outcome: "unheard" (neutral grey). */
+  gateUnheard: "180, 180, 190",
+  /** Gate edge glow when pinned at the top/bottom of the range. */
+  gateGlow: "255, 220, 120",
 } as const;
 
 type Token = keyof typeof FALLBACK;
@@ -34,6 +42,10 @@ const CSS_VAR: Record<Token, string> = {
   danger: "--danger-rgb",
   demo: "--demo-rgb",
   grid: "--grid-rgb",
+  ink: "--ink-rgb",
+  gateOk: "--gate-ok-rgb",
+  gateUnheard: "--gate-unheard-rgb",
+  gateGlow: "--gate-glow-rgb",
 };
 
 let resolved: Record<Token, string> | null = null;

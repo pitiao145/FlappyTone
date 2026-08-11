@@ -91,9 +91,9 @@ function appendSmooth(ctx: CanvasRenderingContext2D, pts: readonly Pt[]): void {
 const OUTCOME_COLOR: Record<string, string> = {
   perfect: `rgba(${rgb("good")},`,
   good: `rgba(${rgb("accent")},`,
-  ok: "rgba(210, 200, 140,",
+  ok: `rgba(${rgb("gateOk")},`,
   collision: `rgba(${rgb("danger")},`,
-  unheard: "rgba(180, 180, 190,",
+  unheard: `rgba(${rgb("gateUnheard")},`,
 };
 
 /**
@@ -200,7 +200,7 @@ function drawCueVeil(
 ): void {
   if (!snap.cuePaused || !snap.cue) return;
   const fadeIn = Math.min(1, (performance.now() - snap.cue.atMs) / 150);
-  ctx.fillStyle = `rgba(6, 8, 12, ${0.6 * fadeIn})`;
+  ctx.fillStyle = `rgba(${rgb("backdrop")}, ${0.6 * fadeIn})`;
   ctx.fillRect(0, 0, width, height);
 
   const gate = snap.gates.find((g) => g.xStart === snap.cue!.xStart);
@@ -341,7 +341,9 @@ function drawGate(
 
   // 1. The wall — near-black, opaque enough to swallow the grid behind it, so
   //    the guide lines survive only inside the open channel.
-  ctx.fillStyle = active ? "rgba(6, 8, 12, 0.97)" : "rgba(8, 10, 15, 0.82)";
+  ctx.fillStyle = active
+    ? `rgba(${rgb("backdrop")}, 0.97)`
+    : `rgba(${rgb("backdrop")}, 0.82)`;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
   ctx.beginPath();
@@ -471,11 +473,11 @@ function drawPinFlash(
   const grad = ctx.createLinearGradient(0, y, 0, y + bandH);
   const edgeAlpha = 0.35;
   if (pinned === "high") {
-    grad.addColorStop(0, `rgba(255, 220, 120, ${edgeAlpha})`);
-    grad.addColorStop(1, "rgba(255, 220, 120, 0)");
+    grad.addColorStop(0, `rgba(${rgb("gateGlow")}, ${edgeAlpha})`);
+    grad.addColorStop(1, `rgba(${rgb("gateGlow")}, 0)`);
   } else {
-    grad.addColorStop(0, "rgba(255, 220, 120, 0)");
-    grad.addColorStop(1, `rgba(255, 220, 120, ${edgeAlpha})`);
+    grad.addColorStop(0, `rgba(${rgb("gateGlow")}, 0)`);
+    grad.addColorStop(1, `rgba(${rgb("gateGlow")}, ${edgeAlpha})`);
   }
   ctx.fillStyle = grad;
   ctx.fillRect(0, y, width, bandH);
@@ -551,7 +553,7 @@ function drawIgnition(
     ctx.lineWidth = lineWidth;
     strokePath(ctx, height, last.path);
   }
-  ctx.strokeStyle = `rgba(255, 255, 255, ${0.75 * intensity})`;
+  ctx.strokeStyle = `rgba(${rgb("ink")}, ${0.75 * intensity})`;
   ctx.lineWidth = width * 0.006;
   strokePath(ctx, height, last.path);
 
@@ -659,7 +661,7 @@ function drawUnheardPulse(
   ctx.save();
   ctx.beginPath();
   ctx.arc(cx, cy, width * (0.04 + 0.09 * p), 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(190, 200, 215, ${0.5 * (1 - p)})`;
+  ctx.strokeStyle = `rgba(${rgb("ink")}, ${0.5 * (1 - p)})`;
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.restore();

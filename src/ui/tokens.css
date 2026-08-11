@@ -54,6 +54,14 @@
   /* Canvas-only accents: the demo trace and the guide grid. */
   --demo-rgb: 235, 208, 170;
   --grid-rgb: 143, 133, 121;
+  /* Ink at full strength, for canvas strokes that composite with alpha. */
+  --ink-rgb: 245, 241, 234;
+  /* Gate-outcome feedback colours — deliberately outside the brand's colour
+     language (amber "ok" and neutral "unheard" grey), unchanged in value from
+     the pre-tokenised literals, just centralised here. */
+  --gate-ok-rgb: 210, 200, 140;
+  --gate-unheard-rgb: 180, 180, 190;
+  --gate-glow-rgb: 255, 220, 120;
 
   /* ---- lines */
   --line: rgba(255, 255, 255, 0.08);
