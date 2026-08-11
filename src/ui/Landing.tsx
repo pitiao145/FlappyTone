@@ -20,8 +20,6 @@ interface Props {
   onVisualiser: () => void;
   /** Straight to the tutorial. Mic already open. */
   onTutorial: () => void;
-  /** Straight to settings. No mic needed. */
-  onSettings: () => void;
 }
 
 /**
@@ -36,7 +34,7 @@ interface Props {
  * layout. Keep it that way — the whole point is that a re-brand touches two
  * files, not fifteen JSX strings.
  */
-export function Landing({ onPlay, onVisualiser, onTutorial, onSettings }: Props) {
+export function Landing({ onPlay, onVisualiser, onTutorial }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [words, setWords] = useState<Word[] | null>(null);
@@ -90,9 +88,6 @@ export function Landing({ onPlay, onVisualiser, onTutorial, onSettings }: Props)
             <button disabled={busy} onClick={go(onTutorial)}>
               Tutorial
             </button>
-            <button disabled={busy} onClick={onSettings}>
-              Settings
-            </button>
           </div>
           <p className="note">{brand.requirement}</p>
           {error && <p className="error">{error}</p>}
@@ -101,7 +96,7 @@ export function Landing({ onPlay, onVisualiser, onTutorial, onSettings }: Props)
         <section id="demo" className="landing-section landing-demo">
           <DemoLoop width={380} />
           <p className="note">
-            Demo of the game.
+            {brand.demoCaption}
           </p>
         </section>
       </div>

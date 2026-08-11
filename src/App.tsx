@@ -249,7 +249,6 @@ export default function App() {
             onPlay={() => setScreen("title")}
             onVisualiser={() => startFromTitle("visualiser")}
             onTutorial={() => startFromTitle("tutorial")}
-            onSettings={() => setScreen("settings")}
           />
         )}
 

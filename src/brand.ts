@@ -49,6 +49,9 @@ export const brand = {
   /** PRD §8 requires this to be visible before the mic is ever requested. */
   requirement: "Needs a microphone and a quiet room.",
 
+  /** Caption under the demo loop. */
+  demoCaption: "A real run — no sound needed to see the shape.",
+
   /** The three beats under "How it works". */
   howItWorks: [
     {
