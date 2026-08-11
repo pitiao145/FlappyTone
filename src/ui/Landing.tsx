@@ -101,6 +101,19 @@ export function Landing({ onPlay, onVisualiser, onTutorial }: Props) {
         </section>
       </div>
 
+      <section id="visualiser" className="landing-section">
+        <h2>{brand.visualiser.title}</h2>
+        <p>{brand.visualiser.body}</p>
+        <div className="tone-average-grid">
+          {([1, 3] as Tone[]).map((tone) => (
+            <ToneAverageCard key={tone} tone={tone} words={wordsByTone.get(tone) ?? []} />
+          ))}
+        </div>
+        <button disabled={busy} onClick={go(onVisualiser)}>
+          {brand.visualiser.cta}
+        </button>
+      </section>
+
       <section id="how-it-works" className="landing-section">
         <h2>How it works</h2>
         <div className="landing-steps">
@@ -119,15 +132,6 @@ export function Landing({ onPlay, onVisualiser, onTutorial }: Props) {
             </article>
           ))}
         </div>
-        <div className="tone-average-grid">
-          {TONES.map((tone) => (
-            <ToneAverageCard key={tone} tone={tone} words={wordsByTone.get(tone) ?? []} />
-          ))}
-        </div>
-        <p className="note">
-          Every clip in the inventory, resampled and averaged — the bold line
-          is the mean, the faint lines behind it are what she actually said.
-        </p>
       </section>
 
       <section id="play" className="landing-section landing-cta">
@@ -144,12 +148,13 @@ export function Landing({ onPlay, onVisualiser, onTutorial }: Props) {
         </button>
       </section>
 
-      <section id="visualiser" className="landing-section">
-        <h2>{brand.visualiser.title}</h2>
-        <p>{brand.visualiser.body}</p>
-        <button disabled={busy} onClick={go(onVisualiser)}>
-          {brand.visualiser.cta}
-        </button>
+      <section id="limits" className="landing-section">
+        <h2>What it doesn't do</h2>
+        <ul className="facts">
+          {brand.limits.map((l) => (
+            <li key={l}>{l}</li>
+          ))}
+        </ul>
       </section>
 
       <section id="mobile" className="landing-section">
@@ -164,15 +169,6 @@ export function Landing({ onPlay, onVisualiser, onTutorial }: Props) {
           </ul>
           <p className="note">{brand.mobile.note}</p>
         </details>
-      </section>
-
-      <section id="limits" className="landing-section">
-        <h2>What it doesn't do</h2>
-        <ul className="facts">
-          {brand.limits.map((l) => (
-            <li key={l}>{l}</li>
-          ))}
-        </ul>
       </section>
 
       <footer className="landing-footer">

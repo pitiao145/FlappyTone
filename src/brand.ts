@@ -89,9 +89,9 @@ export const brand = {
   ],
 
   visualiser: {
-    title: "Tone visualiser",
-    body: "The game with the game taken out: no gates, no scrolling, no score. Say a tone as many times as you like and watch your attempts stack on top of the target.",
-    cta: "Open the visualiser",
+    title: "See your tone against the target",
+    body: "Every clip in the inventory, averaged into one target contour per tone — the bold line is the mean, the faint lines behind it are what she actually said. The visualiser is the game with the game taken out: no gates, no scrolling, no score. Say a tone as many times as you like and watch your own attempts stack on top of the target, so a miss shows exactly where it went wrong.",
+    cta: "Open the full visualiser",
   },
 
   mobile: {
@@ -113,18 +113,18 @@ export const brand = {
     { id: "top", title: "FlappyTone" },
     { id: "demo", title: "See it" },
     {
+      id: "visualiser",
+      title: "Tone visualiser",
+      navLabel: "Visualiser",
+      inNav: true,
+    },
+    {
       id: "how-it-works",
       title: "How it works",
       navLabel: "How it works",
       inNav: true,
     },
     { id: "play", title: "Play", navLabel: "Play", inNav: true },
-    {
-      id: "visualiser",
-      title: "Tone visualiser",
-      navLabel: "Visualiser",
-      inNav: true,
-    },
     { id: "mobile", title: "Mobile app", navLabel: "Mobile", inNav: true },
     { id: "limits", title: "What it doesn't do" },
   ] as LandingSection[],
