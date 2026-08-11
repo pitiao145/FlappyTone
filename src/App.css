@@ -1633,25 +1633,32 @@
 
 .landing-steps {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--space-4);
+  align-items: stretch;
 }
 
 .landing-steps article {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
 }
 
 .step-num {
-  width: 24px;
-  height: 24px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
   border-radius: var(--radius-pill);
   background: rgba(var(--accent-rgb), 0.14);
   color: var(--accent);
-  font-size: var(--text-xs);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
 }
 
 /* The four tone-mark contours, standing in for the ˉˊˇˋ glyphs literal text
@@ -1661,7 +1668,53 @@
   display: flex;
   gap: var(--space-2);
   color: var(--accent);
-  margin-top: var(--space-1);
+}
+
+.tone-average-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+.tone-average-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+}
+
+.tone-average-card canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+  background: var(--canvas-backdrop);
+}
+
+.tone-average-card figcaption {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+}
+
+.tone-average-card .syllable {
+  font-size: var(--text-lg);
+  color: var(--ink);
+}
+
+.tone-average-card .hanzi {
+  font-size: var(--text-base);
+  color: var(--ink);
+}
+
+.tone-average-card .cue {
+  color: var(--ink-muted);
 }
 
 .landing-demo {

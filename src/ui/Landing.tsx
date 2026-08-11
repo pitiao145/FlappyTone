@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { brand } from "../brand.ts";
 import { MicError } from "../audio/mic.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
-import { TONE_INFO } from "../game/gates.ts";
+import { loadInventory } from "../audio/inventory.ts";
 import type { Tone } from "../game/gates.ts";
+import type { Word } from "../game/words.ts";
 import { ContourSpark } from "./ContourSpark.tsx";
 import { DemoLoop } from "./DemoLoop.tsx";
 import { micErrorCopy } from "./micErrors.ts";
 import { Nav } from "./Nav.tsx";
+import { ToneAverageCard } from "./ToneAverageCard.tsx";
 
 const TONES: Tone[] = [1, 2, 3, 4];
 
@@ -37,6 +39,22 @@ interface Props {
 export function Landing({ onPlay, onVisualiser, onTutorial, onSettings }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [words, setWords] = useState<Word[] | null>(null);
+
+  // The "how it works" cards want the same measured contours the corridors
+  // are built from — loadInventory is already warm by app start (App.tsx
+  // kicks it off), this just reads the result once it lands.
+  useEffect(() => {
+    loadInventory().then(setWords, () => setWords([]));
+  }, []);
+
+  const wordsByTone = useMemo(() => {
+    const map = new Map<Tone, Word[]>();
+    for (const t of TONES) {
+      map.set(t, (words ?? []).filter((w) => w.tone === t));
+    }
+    return map;
+  }, [words]);
 
   // iOS Safari grants getUserMedia only inside the gesture, so the mic opens
   // here rather than on the destination screen's mount. Same rule as Title.
@@ -83,7 +101,7 @@ export function Landing({ onPlay, onVisualiser, onTutorial, onSettings }: Props)
         <section id="demo" className="landing-section landing-demo">
           <DemoLoop width={380} />
           <p className="note">
-            No sound, no microphone — this is just the game playing itself.
+            Demo of the game.
           </p>
         </section>
       </div>
@@ -106,21 +124,14 @@ export function Landing({ onPlay, onVisualiser, onTutorial, onSettings }: Props)
             </article>
           ))}
         </div>
-        <ul className="tone-list">
+        <div className="tone-average-grid">
           {TONES.map((tone) => (
-            <li key={tone}>
-              <ContourSpark tone={tone} />
-              <span className="syllable">{TONE_INFO[tone].pinyin}</span>
-              <span className="hanzi">{TONE_INFO[tone].hanzi}</span>
-              <span className="cue">
-                ({tone}) {TONE_INFO[tone].cue}
-              </span>
-            </li>
+            <ToneAverageCard key={tone} tone={tone} words={wordsByTone.get(tone) ?? []} />
           ))}
-        </ul>
+        </div>
         <p className="note">
-          These curves are measured from a native speaker, not traced from the
-          tone marks.
+          Every clip in the inventory, resampled and averaged — the bold line
+          is the mean, the faint lines behind it are what she actually said.
         </p>
       </section>
 
