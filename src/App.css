@@ -1037,7 +1037,7 @@
   padding: 10px 0;
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line);
 }
 
 .landing-nav.nav-menu-open {
@@ -1191,10 +1191,10 @@
   z-index: 3;
   min-width: 196px;
   padding: var(--space-1);
-  border: 2px solid var(--accent-ink);
+  border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface-panel);
-  box-shadow: 4px 4px 0 var(--accent-ink);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 20%, transparent);
 }
 
 .nav-cta-item {
@@ -1250,15 +1250,16 @@
   width: 40px;
   height: 40px;
   padding: 0;
-  border: 2px solid var(--line-strong);
+  border: none;
   border-radius: var(--radius-sm);
-  background: var(--surface-panel);
-  color: var(--ink);
+  background: transparent;
+  color: var(--ink-muted);
   cursor: pointer;
 }
 
 .nav-hamburger:hover {
-  background: color-mix(in srgb, var(--ink) 8%, var(--surface-panel));
+  color: var(--ink);
+  background: var(--surface-panel);
 }
 
 .nav-hamburger:focus-visible {
@@ -1323,7 +1324,8 @@
   justify-content: center;
   gap: var(--space-3);
   padding: 88px var(--space-6) var(--space-6);
-  background: var(--surface);
+  background: var(--surface-panel);
+  border-left: 1px solid var(--line);
 }
 
 @media (min-width: 901px) {
