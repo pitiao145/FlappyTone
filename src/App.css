@@ -401,6 +401,7 @@
 
 .phase-banner.your-turn {
   color: var(--good);
+  background: var(--surface-panel);
   animation: your-turn-pop 0.25s ease-out;
 }
 
@@ -411,6 +412,60 @@
   }
   to {
     transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Decorative "mic is listening" indicator beside the your-turn badge.
+   Purely cosmetic — a staggered CSS pulse, not a real amplitude meter.
+   It never reads mic RMS/frame data. */
+.listening-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.listening-bar {
+  width: 2px;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--accent);
+  transform-origin: bottom;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .listening-bar {
+    animation: listening-bar-pulse 0.9s ease-in-out infinite;
+  }
+
+  .listening-bar:nth-child(1) {
+    animation-delay: 0ms;
+  }
+
+  .listening-bar:nth-child(2) {
+    animation-delay: 150ms;
+  }
+
+  .listening-bar:nth-child(3) {
+    animation-delay: 300ms;
+  }
+
+  .listening-bar:nth-child(4) {
+    animation-delay: 450ms;
+  }
+}
+
+@keyframes listening-bar-pulse {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scaleY(1);
     opacity: 1;
   }
 }
@@ -453,6 +508,12 @@
   .phase-banner.your-turn {
     animation-duration: 0.01ms;
     animation-iteration-count: 1;
+  }
+
+  .listening-bar {
+    animation: none;
+    transform: scaleY(0.7);
+    opacity: 0.85;
   }
 }
 

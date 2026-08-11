@@ -516,7 +516,18 @@ export function Game({
             <div className="phase-banner listen">🔊 listen…</div>
           )}
           {banner === "your-turn" && (
-            <div className="phase-banner your-turn">your turn!</div>
+            <div className="phase-banner your-turn">
+              your turn!
+              {/* Decorative only: a CSS-only pulse, not a real mic-level
+                  meter. It never reads RMS/frame data — see CLAUDE.md's
+                  src/pitch and src/audio boundary. */}
+              <span className="listening-bars" aria-hidden="true">
+                <span className="listening-bar" />
+                <span className="listening-bar" />
+                <span className="listening-bar" />
+                <span className="listening-bar" />
+              </span>
+            </div>
           )}
 
           {showHint && (
