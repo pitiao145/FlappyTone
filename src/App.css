@@ -19,6 +19,16 @@
   font-family: var(--font);
 }
 
+/* Nav (when shown) stacks above the frame, always at its own width — not
+   the frame's, which varies per screen (game canvas vs. menu shell vs.
+   lab). One header, sized the same way on every screen it appears on. */
+.app-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
 /* Desktop only: the phone-width frame is deliberate (see the width cap
    above), but bare surface colour on either side of it read as unstyled
    rather than a composition choice. An ambient wash makes the choice look
@@ -125,6 +135,38 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* The pill-list reads fine on a phone-width column, but on the wider menu
+   shell (see .frame:has(.title-screen, ...) above) five stacked pills left
+   most of the card empty. Play stays the featured full-width action; the
+   rest become a 2-up grid of bigger, left-aligned cards instead of thin
+   pills, so the wider frame actually gets used. */
+@media (min-width: 901px) {
+  .title-screen .menu {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
+  }
+
+  .title-screen .menu button {
+    padding: var(--space-6) var(--space-5);
+    border-radius: var(--radius-md);
+    font-size: var(--text-lg);
+    text-align: left;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .title-screen .menu button:hover:not(:disabled) {
+    transform: translateY(-2px);
+  }
+
+  .title-screen .menu button.primary {
+    grid-column: 1 / -1;
+    padding: var(--space-6) var(--space-5);
+    font-size: var(--text-xl);
+    text-align: center;
+  }
 }
 
 .screen button {
@@ -1997,13 +2039,14 @@
 
 /* ------------------------------------------------------- nav, app variant */
 
-/* Same bar as the landing page's, same width: it fills whatever .frame it's
-   in rather than clamping itself back to the game's 420px, so it matches
-   the menu-shell frame width set above (title/how-to/settings/game-over) and
-   the narrower game-canvas frame width everywhere else, without a special
-   case per screen. */
+/* Same bar as the landing page's, same width: a sibling of .frame (see
+   .app-main in App.tsx), not a child of it, so it's sized the same way on
+   every screen regardless of whether that screen's own .frame is the
+   420px game canvas, the 640px menu shell, or the full-width Lab. */
 .nav-app {
   width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
   margin-bottom: var(--space-2);
 }
 

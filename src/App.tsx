@@ -235,7 +235,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <div className="frame">
+      <div className="app-main">
         {showNav && (
           <Nav
             variant="app"
@@ -243,8 +243,8 @@ export default function App() {
             onPlay={screen === "title" ? undefined : goHome}
           />
         )}
-
-        {screen === "landing" && (
+        <div className="frame">
+          {screen === "landing" && (
           <Landing
             onPlay={() => setScreen("title")}
             onVisualiser={() => startFromTitle("visualiser")}
@@ -340,8 +340,8 @@ export default function App() {
             onHome={goHome}
           />
         )}
+        </div>
       </div>
-
     </div>
   );
 }
