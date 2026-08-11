@@ -222,12 +222,17 @@ export function Nav({ variant, onNavigate, onPlay, disabled }: Props) {
                   <IconWeb />
                   <span>Web</span>
                 </button>
-                <button type="button" className="nav-cta-item nav-cta-item-disabled" role="menuitem" disabled>
+                <a
+                  href="#mobile"
+                  className="nav-cta-item"
+                  role="menuitem"
+                  onClick={() => setPlayMenuOpen(false)}
+                >
                   <IconIos />
                   <span>
                     iOS <em className="nav-cta-soon">coming soon</em>
                   </span>
-                </button>
+                </a>
               </div>
             )}
           </div>

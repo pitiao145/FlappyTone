@@ -1375,6 +1375,7 @@
   font: inherit;
   font-size: var(--text-sm);
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   margin-bottom: 0.5rem;
 }
