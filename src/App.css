@@ -848,6 +848,12 @@
   .app {
     flex-direction: column;
     align-items: center;
+    /* Base rule's justify-content: center centers a row's leftover
+       horizontal space on desktop; in this column layout it's the main
+       (vertical) axis instead, so it centered the whole nav+content block
+       in the viewport rather than anchoring it to the top — the sticky nav
+       had nothing above it to scroll past, so it never looked stuck. */
+    justify-content: flex-start;
   }
   .dev-panel {
     width: 100%;
