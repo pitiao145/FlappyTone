@@ -45,6 +45,7 @@ describe("api/ deploy surface", () => {
     expect(files.filter((f) => !f.startsWith("_")).sort()).toEqual([
       "analytics.ts",
       "auth.ts",
+      "newsletter.ts",
       "upload.ts",
     ]);
   });
