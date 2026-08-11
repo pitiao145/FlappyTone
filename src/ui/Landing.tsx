@@ -5,6 +5,7 @@ import { ensureMic, MicCancelled } from "../audio/session.ts";
 import { loadInventory } from "../audio/inventory.ts";
 import type { Tone } from "../game/gates.ts";
 import type { Word } from "../game/words.ts";
+import { capturePostHogEvent } from "../analytics/posthog.ts";
 import { ComingSoon } from "./ComingSoon.tsx";
 import { DemoLoop } from "./DemoLoop.tsx";
 import { Footer } from "./Footer.tsx";
@@ -47,7 +48,7 @@ export function Landing({ onPlay, onVisualiser }: Props) {
   const [words, setWords] = useState<Word[] | null>(null);
   const mobileEmailId = useId();
   const [mobileEmail, setMobileEmail] = useState("");
-  const mobileNewsletter = useNewsletterSubscribe();
+  const mobileNewsletter = useNewsletterSubscribe("mobile");
 
   // The "how it works" cards want the same measured contours the corridors
   // are built from — loadInventory is already warm by app start (App.tsx
@@ -92,7 +93,14 @@ export function Landing({ onPlay, onVisualiser }: Props) {
           <p className="hero-tagline">{brand.tagline}</p>
           <p className="hero-pitch">{brand.pitch}</p>
           <div className="hero-actions">
-            <button className="primary" disabled={busy} onClick={onPlay}>
+            <button
+              className="primary"
+              disabled={busy}
+              onClick={() => {
+                capturePostHogEvent("landing_cta_clicked", { cta: "play", location: "hero" });
+                onPlay();
+              }}
+            >
               Play
             </button>
             <a href="#mobile" className="hero-secondary">
@@ -116,7 +124,14 @@ export function Landing({ onPlay, onVisualiser }: Props) {
         <div className="visualiser-row">
           <div className="visualiser-text">
             <p>{brand.visualiser.body}</p>
-            <button className="primary visualiser-cta" disabled={busy} onClick={go(onVisualiser)}>
+            <button
+              className="primary visualiser-cta"
+              disabled={busy}
+              onClick={() => {
+                capturePostHogEvent("landing_cta_clicked", { cta: "visualiser", location: "visualiser_section" });
+                void go(onVisualiser)();
+              }}
+            >
               {brand.visualiser.cta}
             </button>
           </div>
@@ -156,7 +171,14 @@ export function Landing({ onPlay, onVisualiser }: Props) {
           A run is a couple of minutes. First time through, a short calibration
           learns your voice, then the tutorial takes one tone at a time.
         </p>
-        <button className="primary" disabled={busy} onClick={onPlay}>
+        <button
+          className="primary"
+          disabled={busy}
+          onClick={() => {
+            capturePostHogEvent("landing_cta_clicked", { cta: "play", location: "play_section" });
+            onPlay();
+          }}
+        >
           Try now
         </button>
 

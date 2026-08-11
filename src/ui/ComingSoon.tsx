@@ -6,7 +6,7 @@ import { useNewsletterSubscribe } from "./useNewsletterSubscribe.ts";
 export function ComingSoon() {
   const inputId = useId();
   const [email, setEmail] = useState("");
-  const { status, error, submit } = useNewsletterSubscribe();
+  const { status, error, submit } = useNewsletterSubscribe("coming_soon");
 
   return (
     <section id="coming-soon" className="landing-section landing-coming-soon">

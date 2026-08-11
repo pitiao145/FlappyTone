@@ -87,6 +87,23 @@ export function initPostHog(consent: boolean): void {
 }
 
 /**
+ * Fires a named traffic/funnel event — CTA clicks, newsletter signup outcome.
+ * `properties` must stay the same shape as everything else this file sends:
+ * no email, no gate/score/pitch data, primitives only. A silent no-op before
+ * the chunk loads or opt-out is unfortunate, not incorrect — see `capture()`
+ * usage sites for why the events chosen are re-derivable from a pageview funnel
+ * anyway, so a few dropped early clicks don't corrupt the count.
+ */
+export function capturePostHogEvent(name: string, properties?: Record<string, string | number | boolean>): void {
+  try {
+    if (!ph) return;
+    ph.capture(name, properties);
+  } catch {
+    // Same posture as everywhere else in this file.
+  }
+}
+
+/**
  * Mirrors the "Anonymous game data" toggle. Opting out stops capture and drops
  * the stored distinct id, the same posture `forgetEverything()` takes for the
  * gameplay queue — off means erased, not held back.
