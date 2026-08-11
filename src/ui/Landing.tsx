@@ -113,13 +113,17 @@ export function Landing({ onPlay, onVisualiser }: Props) {
 
       <section id="visualiser" className="landing-section">
         <h2>{brand.visualiser.title}</h2>
-        <p>{brand.visualiser.body}</p>
-        <div className="tone-average-grid">
-          <ToneAverageCard tone={3} words={wordsByTone.get(3) ?? []} />
+        <div className="visualiser-row">
+          <div className="visualiser-text">
+            <p>{brand.visualiser.body}</p>
+            <button className="primary visualiser-cta" disabled={busy} onClick={go(onVisualiser)}>
+              {brand.visualiser.cta}
+            </button>
+          </div>
+          <div className="tone-average-grid">
+            <ToneAverageCard tone={3} words={wordsByTone.get(3) ?? []} />
+          </div>
         </div>
-        <button className="primary visualiser-cta" disabled={busy} onClick={go(onVisualiser)}>
-          {brand.visualiser.cta}
-        </button>
       </section>
 
       <section id="how-it-works" className="landing-section">
