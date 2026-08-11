@@ -1997,19 +1997,14 @@
 
 /* ------------------------------------------------------- nav, app variant */
 
-/* Same bar as the landing page's, but the links are buttons: inside the app
-   there is no page under them to anchor to, so they change screen and scroll
-   on arrival. Matches the game frame width; widens in the Lab. */
+/* Same bar as the landing page's, same width: it fills whatever .frame it's
+   in rather than clamping itself back to the game's 420px, so it matches
+   the menu-shell frame width set above (title/how-to/settings/game-over) and
+   the narrower game-canvas frame width everywhere else, without a special
+   case per screen. */
 .nav-app {
   width: 100%;
-  max-width: min(420px, calc((100svh - 40px) * 9 / 16));
-  margin-inline: auto;
   margin-bottom: var(--space-2);
-  padding: 6px 0;
-}
-
-.frame:has(.lab-screen) .nav-app {
-  max-width: 72rem;
 }
 
 .nav-app .nav-brand,

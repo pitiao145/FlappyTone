@@ -223,17 +223,15 @@ export default function App() {
   }, [screen]);
 
   /**
-   * Menu shells carry the nav; immersive screens (a run, calibration, the
-   * visualiser) do not — the pause menu is the way out of a run. Landing has
-   * its own bar. The app frame is phone-width, so nav-app always uses the
-   * hamburger layout via a container query in App.css.
+   * One nav, everywhere except an actual run: a game/tutorial screen has the
+   * pause menu as its way out, and stacking a header on top of the corridor
+   * would eat playable height for a bar with nowhere useful to send you.
+   * Landing renders its own copy of the same bar (`variant="landing"`)
+   * because its links are real anchors into the page under them, not
+   * screen changes.
    */
   const showNav =
-    screen === "title" ||
-    screen === "howto" ||
-    screen === "settings" ||
-    screen === "gameover" ||
-    screen === "lab";
+    screen !== "landing" && screen !== "game" && screen !== "tutorial";
 
   return (
     <div className="app">
