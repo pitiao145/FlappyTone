@@ -136,6 +136,7 @@ export const brand = {
   footer: {
     blurb: "A tiny voice-controlled game for practicing Mandarin tones.",
     builtBy: "Built by Pierre, an indie dev in Taiwan.",
+    connectHeading: "Connect",
     connect: [
       { href: "https://pierrebuilds.dev", label: "pierrebuilds.dev", external: true, icon: "web" },
       { href: "https://x.com/PierreBuilds", label: "Follow on X", external: true, icon: "x" },

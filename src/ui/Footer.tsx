@@ -29,7 +29,7 @@ export function Footer() {
         </div>
 
         <div className="footer-connect">
-          <h3>Connect</h3>
+          <h3>{brand.footer.connectHeading}</h3>
           <ul>
             {brand.footer.connect.map((link) => {
               const Icon = CONNECT_ICONS[link.icon];
