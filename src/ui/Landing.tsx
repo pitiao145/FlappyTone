@@ -8,6 +8,7 @@ import type { Word } from "../game/words.ts";
 import { ComingSoon } from "./ComingSoon.tsx";
 import { ContourSpark } from "./ContourSpark.tsx";
 import { DemoLoop } from "./DemoLoop.tsx";
+import { Footer } from "./Footer.tsx";
 import { micErrorCopy } from "./micErrors.ts";
 import { Nav } from "./Nav.tsx";
 import { ToneAverageCard } from "./ToneAverageCard.tsx";
@@ -184,9 +185,7 @@ export function Landing({ onPlay, onVisualiser, onTutorial }: Props) {
         </details>
       </section>
 
-      <footer className="landing-footer">
-        <p className="note">{brand.attribution}</p>
-      </footer>
+      <Footer />
     </div>
   );
 }

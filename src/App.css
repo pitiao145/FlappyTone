@@ -1865,6 +1865,86 @@
   padding-top: var(--space-4);
 }
 
+.footer-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-6);
+  margin-bottom: var(--space-5);
+}
+
+.footer-brand {
+  max-width: 32em;
+}
+
+.footer-blurb {
+  color: var(--ink);
+  margin: 0 0 var(--space-2);
+}
+
+.footer-builtby {
+  color: var(--ink-muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.footer-connect h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  margin: 0 0 var(--space-3);
+}
+
+.footer-connect ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+}
+
+.footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-muted);
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  padding: 4px 6px;
+  margin: -4px -6px;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+.footer-link-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.footer-link-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.footer-link:hover {
+  color: var(--ink);
+  background-color: var(--surface-panel);
+}
+
+.footer-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.footer-attribution {
+  border-top: 1px solid var(--line-soft);
+  padding-top: var(--space-4);
+}
+
 /* ---------------------------------------------------------- pause menu */
 
 /* The always-visible run controls. Two buttons, not one: pausing and changing

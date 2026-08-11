@@ -65,6 +65,59 @@ export function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
+/**
+ * Footer "Connect" icons, Phosphor Regular, redrawn from the 24-unit paths in
+ * `docs/redesign/footer-template.tsx` into this file's 256-unit convention
+ * (same BOX/STROKE spread as every icon above) rather than pasted verbatim —
+ * a 24-unit path in a 256 viewBox draws as a speck in the corner.
+ */
+
+/** Phosphor `ArrowsLeftRight`-style external link glyph (web). */
+export function WebIcon() {
+  return (
+    <svg {...BOX}>
+      <polyline points="152,64 216,64 216,128" {...STROKE} />
+      <line x1="216" y1="64" x2="112" y2="168" {...STROKE} />
+      <path d="M184,136v64a8,8,0,0,1-8,8H56a8,8,0,0,1-8-8V80a8,8,0,0,1,8-8h64" {...STROKE} />
+    </svg>
+  );
+}
+
+/** X (formerly Twitter) wordmark glyph — filled, not stroked, like the source. */
+export function XIcon() {
+  return (
+    <svg {...BOX}>
+      <path
+        d="M197.58,20H235L146.71,110.7,251,236H169.75L106,157.15,33,236H0L94.72,138.44,0,20H83.25l57.6,72.19ZM183.15,214H206.6L69.05,42H44.13Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+/** Phosphor `Coffee`, Regular. */
+export function CoffeeIcon() {
+  return (
+    <svg {...BOX}>
+      <path d="M184,88h16a40,40,0,0,1,0,80H180" {...STROKE} />
+      <path d="M24,88H184v88a16,16,0,0,1-16,16H64a16,16,0,0,1-16-16V88a0,0,0,0,1,0,0Z" {...STROKE} />
+      <line x1="72" y1="24" x2="72" y2="48" {...STROKE} />
+      <line x1="112" y1="24" x2="112" y2="48" {...STROKE} />
+      <line x1="152" y1="24" x2="152" y2="48" {...STROKE} />
+    </svg>
+  );
+}
+
+/** Phosphor `EnvelopeSimple`, Regular. */
+export function MailIcon() {
+  return (
+    <svg {...BOX}>
+      <rect x="24" y="56" width="208" height="144" rx="8" {...STROKE} />
+      <polyline points="223.83,64.65 128,133.15 32.17,64.65" {...STROKE} />
+    </svg>
+  );
+}
+
 /** Phosphor `Gear`, Regular. */
 export function GearIcon() {
   return (

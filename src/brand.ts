@@ -126,6 +126,29 @@ export const brand = {
   attribution:
     "Reference audio: Jane, a native Taiwanese speaker, recorded direct to mic and used with permission.",
 
+  /**
+   * Footer content beyond the attribution line above: a brand blurb, a
+   * built-by line, and the Connect column of external links. See
+   * `docs/redesign/footer-template.tsx` for the layout this was adapted from
+   * — that file explains what was deliberately dropped (no legal/newsletter
+   * columns; FlappyTone has neither yet).
+   */
+  footer: {
+    blurb: "A tiny voice-controlled game for practicing Mandarin tones.",
+    builtBy: "Built by Pierre, an indie dev in Taiwan.",
+    connect: [
+      { href: "https://pierrebuilds.dev", label: "pierrebuilds.dev", external: true, icon: "web" },
+      { href: "https://x.com/PierreBuilds", label: "Follow on X", external: true, icon: "x" },
+      {
+        href: "https://www.buymeacoffee.com/pierrebuilds",
+        label: "Buy me a bubble tea",
+        external: true,
+        icon: "coffee",
+      },
+      { href: "mailto:pierre@pierrebuilds.dev", label: "pierre@pierrebuilds.dev", external: false, icon: "mail" },
+    ],
+  },
+
   sections: [
     { id: "top", title: "FlappyTone" },
     { id: "demo", title: "See it" },
