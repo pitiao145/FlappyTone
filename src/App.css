@@ -61,6 +61,14 @@
   max-width: 100%;
 }
 
+/* Menu shells (title, how-to, settings, game-over) aren't the 9:16 game
+   board — they're a column of buttons/text with room to breathe on a wide
+   viewport, so they get a wider cap than the game frame while staying well
+   short of the landing page's full-bleed width. */
+.frame:has(.title-screen, .howto-screen, .settings-screen, .gameover-screen) {
+  max-width: 640px;
+}
+
 .stage {
   position: relative;
 }
@@ -1429,11 +1437,13 @@
 }
 
 @media (min-width: 901px) {
-  .nav-landing .landing-nav-links {
+  .nav-landing .landing-nav-links,
+  .nav-app .landing-nav-links {
     display: flex;
   }
 
-  .nav-landing .nav-hamburger {
+  .nav-landing .nav-hamburger,
+  .nav-app .nav-hamburger {
     display: none;
   }
 }
@@ -1445,30 +1455,14 @@
 }
 
 @media (max-width: 900px) {
-  .nav-landing .nav-hamburger {
+  .nav-landing .nav-hamburger,
+  .nav-app .nav-hamburger {
     display: inline-flex;
   }
 
   .nav-cta-btn {
     padding: 10px 18px;
     font-size: var(--text-sm);
-  }
-}
-
-/* App shell (~420px frame): hamburger always; desktop links only in the Lab. */
-@container frame (max-width: 900px) {
-  .nav-app .nav-hamburger {
-    display: inline-flex;
-  }
-}
-
-@container frame (min-width: 901px) {
-  .nav-app .landing-nav-links {
-    display: flex;
-  }
-
-  .nav-app .nav-hamburger {
-    display: none;
   }
 }
 
