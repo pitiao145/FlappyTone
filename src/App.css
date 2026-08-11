@@ -124,10 +124,24 @@
   cursor: pointer;
 }
 
+.screen button:hover:not(:disabled) {
+  border-color: var(--ink-soft);
+  color: var(--ink);
+}
+
+.screen button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .screen button.primary {
   border: none;
   background: var(--accent);
   color: var(--surface);
+}
+
+.screen button.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, white);
 }
 
 .screen button.link {
@@ -135,6 +149,11 @@
   color: var(--ink-muted);
   font-size: 0.85rem;
   padding: 6px;
+}
+
+.screen button.link:hover:not(:disabled) {
+  color: var(--ink);
+  text-decoration: underline;
 }
 
 .pace-row {
@@ -165,6 +184,10 @@
   font-size: 11px !important;
   padding: 4px 10px !important;
   color: var(--ink-dim) !important;
+}
+
+.dev-toggle:hover:not(:disabled) {
+  color: var(--ink-muted) !important;
 }
 
 /* ------------------------------------------------------------ how to play */
@@ -528,6 +551,15 @@
   cursor: pointer;
 }
 
+.overlay button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, white);
+}
+
+.overlay button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .overlay .error {
   color: var(--danger);
 }
@@ -543,6 +575,17 @@
   background: rgba(var(--surface-rgb), 0.6);
   color: var(--danger);
   cursor: pointer;
+}
+
+.mic-stop:hover:not(:disabled) {
+  border-color: var(--danger-strong);
+  color: var(--danger-strong);
+  background: rgba(var(--danger-rgb), 0.12);
+}
+
+.mic-stop:focus-visible {
+  outline: 2px solid var(--danger-strong);
+  outline-offset: 2px;
 }
 
 .ref-tones {
@@ -567,6 +610,17 @@
   cursor: pointer;
 }
 
+.ref-tone-buttons button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.18);
+  color: var(--accent-bright);
+}
+
+.ref-tone-buttons button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .reset-button {
   padding: 8px;
   font-size: 12px;
@@ -575,6 +629,16 @@
   background: transparent;
   color: var(--ink-muted);
   cursor: pointer;
+}
+
+.reset-button:hover:not(:disabled) {
+  border-color: var(--ink-soft);
+  color: var(--ink);
+}
+
+.reset-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .dev-panel {
@@ -996,6 +1060,16 @@
   color: inherit;
 }
 
+.nav-brand:hover .nav-name {
+  color: var(--accent);
+}
+
+.nav-brand:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
 .nav-logo {
   display: block;
   border-radius: var(--radius-sm);
@@ -1035,6 +1109,11 @@
 
 .landing-nav-links a:hover {
   color: var(--ink);
+}
+
+.landing-nav-links a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .nav-actions {
@@ -1083,6 +1162,11 @@
 
 .nav-cta-btn:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent) 88%, white);
+}
+
+.nav-cta-btn:focus-visible {
+  outline: 2px solid var(--accent-bright);
+  outline-offset: 3px;
 }
 
 .nav-cta-btn:disabled {
@@ -1134,6 +1218,11 @@
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
+.nav-cta-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 .nav-cta-item-disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -1170,6 +1259,11 @@
 
 .nav-hamburger:hover {
   background: color-mix(in srgb, var(--ink) 8%, var(--surface-panel));
+}
+
+.nav-hamburger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .nav-hamburger-icon {
@@ -1212,6 +1306,11 @@
 
 .nav-mobile-menu .nav-shady-btn:hover {
   background: var(--accent);
+}
+
+.nav-mobile-menu .nav-shady-btn:focus-visible {
+  outline: 2px solid var(--accent-bright);
+  outline-offset: 3px;
 }
 
 .nav-mobile-menu {
@@ -1341,10 +1440,24 @@
   cursor: pointer;
 }
 
+.landing button:not(.nav-cta-btn):not(.nav-hamburger):not(.nav-shady-btn):hover:not(:disabled) {
+  border-color: var(--ink-soft);
+  color: var(--ink);
+}
+
+.landing button:not(.nav-cta-btn):not(.nav-hamburger):not(.nav-shady-btn):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .landing button.primary {
   border: none;
   background: var(--accent);
   color: var(--accent-ink);
+}
+
+.landing button.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, white);
 }
 
 .landing button.link {
@@ -1354,6 +1467,11 @@
   padding: 6px 0;
   text-align: left;
   align-self: flex-start;
+}
+
+.landing button.link:hover:not(:disabled) {
+  color: var(--ink);
+  text-decoration: underline;
 }
 
 .landing-section {
@@ -1512,8 +1630,19 @@
   transition: opacity 120ms ease;
 }
 
+.hud-button:hover:not(:disabled) {
+  opacity: 1;
+}
+
 .hud-button:active {
   opacity: 1;
+}
+
+.hud-button:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 /* 26px — bigger than the 22 it replaced, and bigger again than the 13px glyph
@@ -1560,6 +1689,16 @@
   height: 17px;
 }
 
+.options-reveal:hover:not(:disabled) {
+  border-color: var(--ink-soft);
+  color: var(--ink-muted);
+}
+
+.options-reveal:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* Near-opaque, unlike the pause overlay it grew out of. That one showed a
    single line of text over a frozen game and 0.75 was atmospheric; this one is
    a menu with controls in it, and the corridor showing through made the
@@ -1585,6 +1724,12 @@
   color: var(--danger);
   font-size: 12px;
   padding: 6px 12px;
+}
+
+.pause-menu .mic-stop:hover:not(:disabled) {
+  border-color: var(--danger-strong);
+  color: var(--danger-strong);
+  background: rgba(var(--danger-rgb), 0.12);
 }
 
 .pause-title {
@@ -1632,6 +1777,16 @@
   border: 1px solid var(--line);
   background: transparent;
   color: var(--ink-muted);
+}
+
+.pause-options .choice-option:hover:not(:disabled):not(.active) {
+  border-color: var(--ink-soft);
+  color: var(--ink);
+}
+
+.pause-options .choice-option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .pause-options .choice-option.active {
@@ -1695,6 +1850,11 @@
   color: var(--ink);
 }
 
+.nav-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* Quit and "home page" sit together at the foot of the pause menu: both leave
    the run, and neither should look like the way back into it. */
 .pause-exits {
@@ -1720,4 +1880,9 @@
 .pause-menu .link:hover {
   border-color: var(--ink-soft);
   color: var(--ink);
+}
+
+.pause-menu .link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
