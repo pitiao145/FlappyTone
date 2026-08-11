@@ -108,9 +108,7 @@ export function Landing({ onPlay, onVisualiser, onTutorial }: Props) {
         <h2>{brand.visualiser.title}</h2>
         <p>{brand.visualiser.body}</p>
         <div className="tone-average-grid">
-          {([1, 3] as Tone[]).map((tone) => (
-            <ToneAverageCard key={tone} tone={tone} words={wordsByTone.get(tone) ?? []} />
-          ))}
+          <ToneAverageCard tone={3} words={wordsByTone.get(3) ?? []} />
         </div>
         <button disabled={busy} onClick={go(onVisualiser)}>
           {brand.visualiser.cta}

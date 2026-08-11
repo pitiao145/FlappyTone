@@ -37,7 +37,7 @@ export function ComingSoon() {
           {brand.comingSoon.cta}
         </button>
       </form>
-      <p className="note">{brand.comingSoon.disclaimer}</p>
+      <p className="coming-soon-disclaimer">{brand.comingSoon.disclaimer}</p>
     </section>
   );
 }

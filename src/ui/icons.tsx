@@ -72,7 +72,7 @@ export function HeartIcon({ filled }: { filled: boolean }) {
  * a 24-unit path in a 256 viewBox draws as a speck in the corner.
  */
 
-/** Phosphor `ArrowsLeftRight`-style external link glyph (web). */
+/** Phosphor `ArrowSquareOut`-style external link glyph (web). */
 export function WebIcon() {
   return (
     <svg {...BOX}>

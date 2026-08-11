@@ -51,12 +51,16 @@ export const brand = {
   /**
    * Trust line under `requirement`. Verified against the codebase, not just
    * asserted: `src/pitch/` has zero Web Audio imports (CLAUDE.md hard rule,
-   * grepped clean), and `src/analytics/session.ts` — the sole outbound data
-   * path, gated on consent before an id is even minted — never carries audio
-   * or per-frame pitch, only gameplay outcomes and four derived calibration
-   * floats. The voice itself never leaves the device.
+   * grepped clean), and `src/analytics/session.ts` — the sole outbound path
+   * from the player-facing game (src/record/ is a separate, operator-only
+   * entry point at /record, used to capture reference clips — not reachable
+   * from the game a player interacts with), gated on consent before an id is
+   * even minted — never carries audio or per-frame pitch, only gameplay
+   * outcomes and four derived calibration floats. The voice itself never
+   * leaves the device.
    */
-  privacyNote: "Your voice is processed on your device, never uploaded or stored.",
+  privacyNote:
+    "Your voice is processed on your device, never uploaded or stored. Anonymous play analytics are separate and optional.",
 
   /** Caption under the demo loop. */
   demoCaption: "A real run — no sound needed to see the shape.",
@@ -98,9 +102,9 @@ export const brand = {
   ],
 
   visualiser: {
-    title: "See your tone against the target",
-    body: "Every clip in the inventory, averaged into one target contour per tone — the bold line is the mean, the faint lines behind it are what she actually said. The visualiser is the game with the game taken out: no gates, no scrolling, no score. Say a tone as many times as you like and watch your own attempts stack on top of the target, so a miss shows exactly where it went wrong.",
-    cta: "Open the full visualiser",
+    title: "Can't hear the difference between mǎ and mà? Watch it instead.",
+    body: "Say a tone as many times as you like and watch every attempt stack on the target shape — no gates, no score, no pressure. It's the fastest way to see what your voice is actually doing.",
+    cta: "Try the visualiser",
   },
 
   mobile: {
