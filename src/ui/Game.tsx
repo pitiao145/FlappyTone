@@ -503,6 +503,16 @@ export function Game({
             </div>
           )}
 
+          {/* Bottom-of-stage status line: the same cue copy the tutorial
+              shows inline, made available on every mode. Pinned to the
+              bottom of the flex `.hud` column (margin-top: auto) so it
+              never competes with the score/hearts row up top. */}
+          {info && displayTone !== null && (
+            <div className="hud-status">
+              say {info.pinyin} — {info.cue}
+            </div>
+          )}
+
           {banner === "listen" && (
             <div className="phase-banner listen">🔊 listen…</div>
           )}

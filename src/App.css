@@ -377,6 +377,16 @@
   color: var(--ink-muted);
 }
 
+/* Bottom-of-stage cue line, pinned there by the `.hud` flex column via
+   margin-top: auto so it stays clear of the score/hearts row. */
+.hud-status {
+  margin-top: auto;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
 .phase-banner {
   margin-top: 6px;
   padding: 4px 14px;
