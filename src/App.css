@@ -140,7 +140,7 @@
 .screen button.primary {
   border: none;
   background: var(--accent);
-  color: var(--surface);
+  color: var(--accent-ink);
 }
 
 .screen button.primary:hover:not(:disabled) {
@@ -377,10 +377,14 @@
   color: var(--ink-muted);
 }
 
-/* Bottom-of-stage cue line, pinned there by the `.hud` flex column via
-   margin-top: auto so it stays clear of the score/hearts row. */
+/* Sits below the syllable, above the phase banner/toast/gate-log group.
+   Those three use margin-top: auto to pin themselves as a block to the
+   bottom of the `.hud` flex column — in a flex column, only the FIRST
+   auto margin in DOM order absorbs the free space, so `.hud-status` must
+   not also claim `margin-top: auto` here or it grabs that slot ahead of
+   them and pushes the "your turn" banner further down than intended. */
 .hud-status {
-  margin-top: auto;
+  margin-top: 6px;
   margin-bottom: 4px;
   font-size: 0.85rem;
   color: var(--ink-soft);
@@ -631,7 +635,12 @@
   cursor: pointer;
 }
 
-.overlay button:hover:not(:disabled) {
+/* Direct children only: buttons nested deeper (.choice-option, .mic-stop,
+   .link inside .pause-menu) have their own intentional hover styling, and a
+   plain `.overlay button:hover` descendant selector was outranking all three
+   on specificity for the `background` property. See the comment near
+   `.pause-menu .mic-stop` below. */
+.overlay > button:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent) 88%, white);
 }
 
@@ -1132,7 +1141,7 @@
 
 .landing-nav.nav-menu-open {
   z-index: 110;
-  background: var(--surface);
+  background: var(--surface-panel);
   border-bottom-color: transparent;
 }
 
@@ -1415,7 +1424,6 @@
   gap: var(--space-3);
   padding: 88px var(--space-6) var(--space-6);
   background: var(--surface-panel);
-  border-left: 1px solid var(--line);
 }
 
 @media (min-width: 901px) {
@@ -1522,7 +1530,7 @@
   margin-top: var(--space-2);
 }
 
-.landing button:not(.nav-cta-btn):not(.nav-hamburger):not(.nav-shady-btn) {
+.landing button:not(.nav-cta-btn):not(.nav-hamburger):not(.nav-shady-btn):not(.primary) {
   font-size: var(--text-base);
   padding: 12px 20px;
   border-radius: var(--radius-pill);
@@ -1532,12 +1540,12 @@
   cursor: pointer;
 }
 
-.landing button:not(.nav-cta-btn):not(.nav-hamburger):not(.nav-shady-btn):hover:not(:disabled) {
+.landing button:not(.nav-cta-btn):not(.nav-hamburger):not(.nav-shady-btn):not(.primary):hover:not(:disabled) {
   border-color: var(--ink-soft);
   color: var(--ink);
 }
 
-.landing button:not(.nav-cta-btn):not(.nav-hamburger):not(.nav-shady-btn):focus-visible {
+.landing button:not(.nav-cta-btn):not(.nav-hamburger):not(.nav-shady-btn):not(.primary):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }

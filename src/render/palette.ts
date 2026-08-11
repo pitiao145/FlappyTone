@@ -12,16 +12,16 @@
  * are the shipped values and are what those paths get.
  */
 
-const FALLBACK = {
-  surface: "5, 7, 10",
-  backdrop: "20, 24, 33",
-  accent: "96, 205, 255",
-  good: "120, 230, 170",
-  danger: "255, 110, 110",
+export const FALLBACK = {
+  surface: "16, 13, 14",
+  backdrop: "18, 15, 16",
+  accent: "62, 168, 143",
+  good: "95, 194, 152",
+  danger: "226, 84, 61",
   /** The demo / reference trace: warm, so it never reads as the player's own line. */
   demo: "235, 208, 170",
   /** The Chao guide grid. Recedes behind everything. */
-  grid: "150, 180, 215",
+  grid: "143, 133, 121",
   /** Ink at full strength, for canvas strokes that composite with alpha. */
   ink: "245, 241, 234",
   /** Gate outcome: "ok" (amber), deliberately outside the brand's colour language. */
@@ -34,7 +34,7 @@ const FALLBACK = {
 
 type Token = keyof typeof FALLBACK;
 
-const CSS_VAR: Record<Token, string> = {
+export const CSS_VAR: Record<Token, string> = {
   surface: "--surface-rgb",
   backdrop: "--canvas-backdrop-rgb",
   accent: "--accent-rgb",

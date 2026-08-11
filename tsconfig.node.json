@@ -53,6 +53,7 @@
     "src/dev/report-runs.ts",
     "src/record/wordlist.ts",
     "src/record/pinyin.ts",
-    "src/dev/import-words.ts"
+    "src/dev/import-words.ts",
+    "src/render/palette.test.ts"
   ]
 }

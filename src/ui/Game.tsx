@@ -431,6 +431,9 @@ export function Game({
   const showHint = flash?.outcome === "unheard";
   const breaking = flash?.outcome === "collision";
   const hearts = Math.max(0, hud?.hearts ?? 3);
+  // Matches newRunStats()'s default in src/game/scoring.ts — a run starts
+  // with 3 hearts, so 3 slots are always shown, lost ones as outlines.
+  const MAX_HEARTS = 3;
 
   return (
     <div className="screen game-screen">
@@ -449,9 +452,9 @@ export function Game({
             </span>
             {mode === "game" && (
               <span className="hearts">
-                {Array.from({ length: hearts }, (_, i) => (
+                {Array.from({ length: MAX_HEARTS }, (_, i) => (
                   <span key={i} className="heart">
-                    <HeartIcon filled />
+                    <HeartIcon filled={i < hearts} />
                   </span>
                 ))}
                 {/* The heart just lost, shown mid-break then gone. Without it
