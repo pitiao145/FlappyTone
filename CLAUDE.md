@@ -153,73 +153,80 @@ Five more rules hold this together:
 
 ## Play analytics
 
-Every session writes one JSON file to Blob at
-`analytics/<day>/<sessionId>.json`. Read it back with:
+Gameplay and traffic analytics both go through PostHog now
+(`src/analytics/posthog.ts`), proxied through this domain at `/relay/...`
+(`vercel.json`) rather than hitting `us.i.posthog.com` directly — ad/tracker
+blockers (Brave, uBlock's EasyPrivacy list) block PostHog's own domains by
+name, and without the proxy that silently drops every event from a blocked
+player, not a random sample. Read the funnel/per-tone/quit-histogram numbers
+as live PostHog Insights, not a local report script — there is no
+`pull-analytics`/`report-runs` anymore.
 
-```bash
-npm run pull-analytics [YYYY-MM-DD]   # Blob -> fixtures/analytics/ (gitignored)
-npm run report-runs [YYYY-MM-DD]      # funnel, per-tone outcomes, quit histogram
-```
+This replaced a Vercel Blob-backed pipeline (one JSON file per session,
+`npm run pull-analytics` + `npm run report-runs`) that hit Blob's Hobby-plan
+"advanced operations" cap as player volume grew, because every flush was a
+`put()`. See the migration design doc for the full reasoning and the
+reliability trade accepted along the way.
 
 **Production reports; a dev build does not.** A dev session is you flying the
 same four gates twenty times, and mixing that in would move the numbers the
-tuning decisions are read from. `?analytics` forces it on in dev — needed
-because the durability paths (offline retry, `sendBeacon` on tab close) can
-otherwise only be exercised by deploying. Note a Vercel **preview** deploy is a
+tuning decisions are read from. `?analytics` forces it on in dev, matching
+`initPostHog`'s own enable check. Note a Vercel **preview** deploy is a
 production build, so playing on a preview URL does report.
 
-To exercise it locally you need `npm run dev:api` (`vercel dev`), **not**
-`npm run dev` — plain Vite does not serve `api/`, so the POST 404s, and the
-client treats any 4xx as a payload the server will never accept and drops the
-session. It looks like it worked and nothing arrives.
+Four rules hold this together:
 
-```bash
-npm run dev:api        # http://localhost:3999/?analytics
-```
+1. **`src/analytics/session.ts` decides what a gameplay event can contain, and
+   `posthog.ts`'s `before_send` re-enforces it at the transport boundary.**
+   `AnalyticsEvent` is a closed discriminated union, so a forbidden field on a
+   gate/run/calibration event is a type error rather than a review someone has
+   to catch; `before_send` then reduces every *sent* property on those event
+   names to that same closed set, dropping PostHog's own `$`-prefixed defaults
+   ($current_url, $browser, $device_id, etc.). Never *sent by this app's code*:
+   audio, per-frame pitch or contour data, raw user-agent, precise geolocation,
+   cookies. Country-level geo (`$geoip_country_name`/`code` only) is the one
+   deliberate exception on the geolocation front — it answers a real open
+   product question (PRD §14: Taiwan vs. Beijing reference audio) at a
+   re-identification risk no higher than the `device` bucket already sent.
+   City, region, and lat/long are stripped by `before_send` regardless. Raw IP
+   is a separate matter: the PostHog project (id 426310, "Default project") is
+   **shared across several of Pierre's apps**, not FlappyTone-specific, and its
+   `anonymize_ips` project setting is deliberately left as the other apps had
+   it rather than changed on FlappyTone's behalf — check the current value
+   with `project-get` before assuming either way, and raise any change with
+   Pierre first since it is project-wide, not scoped to this app. Marketing
+   events (CTA clicks, `$pageview`) are untouched by the `before_send`
+   allowlist — it only applies to the gameplay event names.
+2. **Analytics never breaks a run.** Every entry point in `client.ts` and
+   `posthog.ts` swallows its own failures, the same posture `saveGateLog`
+   takes for quota errors. If this code can throw into a caller, that is the
+   bug.
+3. **Consent is checked before capture starts**, not after, and it is one flag
+   for both traffic and gameplay events — `setSharingEnabled`/
+   `setPostHogConsent` are two names for the same toggle. Opting out in
+   Settings resets the PostHog id and stops capture immediately.
+4. **A disabled build stores nothing.** `initPostHog` never starts the SDK
+   outside production (or `?analytics`), so every capture call is a true
+   no-op — no id, no queued events, no listener — and a dev run cannot leak
+   into the numbers a production build reports.
 
-The trade: `vercel dev` serves plain HTTP, which is a secure context on
-`localhost` (so the mic works) but **not** over the LAN — so it cannot be used
-for on-phone testing. `npm run dev` has HTTPS via basic-ssl for the phone but no
-`api/`. On-device analytics testing therefore means a preview deploy, where
-reporting is on by default.
-
-Five rules hold this together:
-
-1. **`src/analytics/session.ts` decides what is sent, and nothing else does.**
-   `AnalyticsEvent` is a closed discriminated union, so a forbidden field is a
-   type error rather than a review someone has to catch. Never sent: audio,
-   per-frame pitch or contour data, raw user-agent, IP, geolocation, cookies.
-   `api/analytics.ts` re-enforces this from the other side by requiring every
-   event to be a **flat object of primitives** — the shape bulk data would
-   arrive in is refused, so no blocklist of field names has to be maintained.
-2. **localStorage is the source of truth; the network is a mirror.** A session
-   is deleted locally only once the server acknowledges it, and the next page
-   load re-sends whatever is still queued. `sendBeacon` alone does not survive
-   airplane mode or a force-quit; the retry-on-load is what makes it lossless.
-   Every flush PUTs the whole session to the same key with `allowOverwrite`, so
-   a retry is a plain repeat — **there is deliberately no dedupe logic on
-   either side, and adding any would be a sign the idempotence broke.**
-3. **Analytics never breaks a run.** Every entry point in `client.ts` swallows
-   its own failures, the same posture `saveGateLog` takes for quota errors. If
-   this code can throw into a caller, that is the bug.
-4. **Consent is checked before an id is minted**, not after. Opting out in
-   Settings erases the queue and the anonymous player id immediately.
-5. **A disabled build stores nothing**, rather than storing and withholding.
-   `initAnalytics` leaves `deps` null, so every entry point no-ops — no id, no
-   queue, no listener — and a dev run will not drain a queue a production build
-   left on the same origin.
-
-`api/analytics.ts` is public and unauthenticated — it has to be, since every
-player posts to it and a bundled secret is not a secret. Its defence is the size
-cap, the strict id regex, and the schema. `validate()` is the security boundary
-and is tested directly in `api/_analytics.test.ts`.
+**The accepted reliability gap:** PostHog's JS SDK does not persist a queue
+across a tab close, force-quit, or offline period — unlike the Blob pipeline's
+old localStorage-backed retry-on-load, which existed specifically to survive
+that. The mitigation is a short batch window (`request_queue_config.flush_interval_ms`,
+250ms) plus `send_instantly` on `run_end`, which shrinks the loss window to
+"the last event or two before a crash" rather than a whole unflushed session.
+This is a deliberate trade for not maintaining that machinery, not an
+oversight — do not silently try to rebuild the old durability queue on top of
+PostHog.
 
 **Node-only CLI scripts must be listed in `tsconfig.app.json`'s `exclude` and
 `tsconfig.node.json`'s `include`.** Skipping this leaks `@types/node` into the
 DOM project, where `setInterval` starts returning `Timeout` and unrelated files
 fail to compile. For the same reason `session.ts` restates `MicErrorKind`
-instead of importing it — importing would drag Web Audio into a graph the Node
-report has to typecheck. `session.test.ts` pins the two together.
+instead of importing it — importing would drag Web Audio into a graph the
+payload module has to stay free of, the same separation `src/pitch/` keeps.
+`session.test.ts` pins the two together.
 
 ## Testing
 

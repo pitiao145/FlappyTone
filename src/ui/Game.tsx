@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { flush, track } from "../analytics/client.ts";
+import { track } from "../analytics/client.ts";
 import { gateEvent, type RunEndReason } from "../analytics/session.ts";
 import {
   cueDurationMsFor,
@@ -171,9 +171,9 @@ export function Game({
   }, []);
 
   /**
-   * Closes out a run. `flush` is deliberately not awaited — the player is on
-   * their way to the game-over screen or the title, and the send is already
-   * durable in localStorage whether or not it completes.
+   * Closes out a run. `track` sends `run_end` instantly rather than joining
+   * PostHog's short batch window (see `posthog.ts`), since this is the single
+   * most valuable event to not lose to the navigation that follows.
    */
   const reportRunEnd = useCallback(
     (snap: RunSnapshot, reason: RunEndReason): void => {
@@ -186,7 +186,6 @@ export function Game({
         bestMult: snap.stats.bestMultiplier,
         missedEarly: snap.missedUtterances,
       });
-      void flush();
     },
     [reportGates],
   );

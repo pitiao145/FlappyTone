@@ -1,13 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  appendEvent,
-  deviceBucket,
-  gateEvent,
-  MAX_EVENTS,
-  newSession,
-  setCalibration,
-  type SessionRecord,
-} from "./session.ts";
+import { deviceBucket, gateEvent, roundCalibration } from "./session.ts";
 import type { GateLogEntry } from "../game/run.ts";
 import type { MicFailureReason } from "./session.ts";
 import type { MicErrorKind } from "../audio/mic.ts";
@@ -26,58 +18,16 @@ const _micMatchesReason: MicFailureReason = null as unknown as MicErrorKind;
 void _reasonMatchesMic;
 void _micMatchesReason;
 
-const T0 = 1_000_000;
-
-function session(): SessionRecord {
-  return newSession("sess1234", "play1234", "ios/safari", T0, "2026-08-06T00:00:00.000Z");
-}
-
-describe("newSession", () => {
-  it("carries one absolute timestamp and no events", () => {
-    const s = session();
-    expect(s.startedAt).toBe("2026-08-06T00:00:00.000Z");
-    expect(s.events).toEqual([]);
-    expect(s.calibration).toBeNull();
-  });
-});
-
-describe("appendEvent", () => {
-  it("stamps t as ms since session start, not wall clock", () => {
-    const s = appendEvent(session(), { type: "landed" }, T0 + 2500);
-    expect(s.events[0]).toEqual({ type: "landed", t: 2500 });
-  });
-
-  it("does not mutate the record it is given", () => {
-    const before = session();
-    appendEvent(before, { type: "landed" }, T0);
-    expect(before.events).toHaveLength(0);
-  });
-
-  it("clamps a clock that ran backwards rather than emitting a negative t", () => {
-    // Phones adjust their clock mid-session; a negative offset would sort wrong.
-    const s = appendEvent(session(), { type: "landed" }, T0 - 5000);
-    expect(s.events[0].t).toBe(0);
-  });
-
-  it("stops at MAX_EVENTS and marks the record truncated", () => {
-    let s = session();
-    for (let i = 0; i < MAX_EVENTS + 10; i++) {
-      s = appendEvent(s, { type: "landed" }, T0 + i);
-    }
-    expect(s.events).toHaveLength(MAX_EVENTS);
-    expect(s.truncated).toBe(true);
-  });
-});
-
-describe("setCalibration", () => {
+describe("roundCalibration", () => {
   it("rounds away meaningless precision", () => {
-    const s = setCalibration(session(), {
-      f0Center: 198.44444444,
-      rangeSemitones: 4.812345,
-      rangeDownSemitones: 4.812345,
-      noiseFloor: 0.002134567,
-    });
-    expect(s.calibration).toEqual({
+    expect(
+      roundCalibration({
+        f0Center: 198.44444444,
+        rangeSemitones: 4.812345,
+        rangeDownSemitones: 4.812345,
+        noiseFloor: 0.002134567,
+      }),
+    ).toEqual({
       f0Center: 198.4,
       rangeSemitones: 4.81,
       rangeDownSemitones: 4.81,

@@ -1,351 +1,71 @@
 /**
- * The live analytics client: the one impure piece.
+ * The gameplay analytics call sites' entry point.
  *
- * Everything here is fire-and-forget and every entry point swallows its own
- * failures. Analytics must never break a run — the same posture `saveGateLog`
- * takes for quota errors, for the same reason. If this file ever throws into a
- * caller, that is the bug, whatever else was also wrong.
+ * This used to own a localStorage queue, a debounced flush, `sendBeacon`, and
+ * a retry-on-load drain — the durability design that made the old Blob-backed
+ * pipeline lossless across an offline period or a force-quit. That design
+ * moved to PostHog (`./posthog.ts`), which does not offer the same
+ * across-reload guarantee; the trade was accepted deliberately (see the
+ * migration design doc) in exchange for not maintaining this machinery.
+ * `initAnalytics`/`track`/`trackCalibration`/`setSharingEnabled` keep their
+ * names and shapes so every call site — `App.tsx`, `Game.tsx`,
+ * `Calibration.tsx`, `src/audio/session.ts` — needed no changes.
  *
- * ## When the payload is sent
- *
- * Never per event — that would be a request per gate. Four triggers:
- *
- * | when                          | how                    | catches                          |
- * |-------------------------------|------------------------|----------------------------------|
- * | run end                       | `fetch` + `keepalive`  | the normal case                  |
- * | `FLUSH_DEBOUNCE_MS` after an event | `fetch`           | a crash mid-run loses ≤10s       |
- * | page hidden                   | `sendBeacon`           | tab switch, home button, lock    |
- * | next page load                | `fetch` per unsent     | offline, force-quit, server 5xx  |
- *
- * The last row is what actually makes this lossless, and it works because
- * every flush PUTs the *whole* session to the same key with `allowOverwrite`.
- * A retry of an already-received session rewrites identical bytes, so there is
- * no dedupe logic anywhere — client or server.
- *
- * ## Consent
- *
- * `loadShareData()` is checked before anything is stored or sent, and crucially
- * before `playerId()` is called: opting out means an id is never minted, not
- * that one is minted and withheld.
+ * Consent is still checked before anything is captured: `loadShareData()` is
+ * read by `initAnalytics` and threaded through to `initPostHog`, which mints
+ * no id at all when the player has opted out.
  */
 
+import { loadShareData, type CalibrationSettings } from "../game/settings.ts";
+import { deviceBucket, type AnalyticsEvent } from "./session.ts";
 import {
-  loadShareData,
-  type CalibrationSettings,
-} from "../game/settings.ts";
-import {
-  appendEvent,
-  newSession,
-  setCalibration,
-  deviceBucket,
-  type AnalyticsEvent,
-  type SessionRecord,
-} from "./session.ts";
-import {
-  forgetEverything,
-  markSent,
-  playerId,
-  saveSession,
-  sessionId,
-  unsent,
-  type Stores,
-} from "./store.ts";
+  captureGameEvent,
+  initPostHog,
+  setCalibrationProperties,
+  setDeviceProperty,
+  setPostHogConsent,
+} from "./posthog.ts";
 
-export const ENDPOINT = "/api/analytics";
-/** Long enough that a run's gates coalesce into one request, short enough that a crash costs little. */
-export const FLUSH_DEBOUNCE_MS = 10_000;
-
-interface Deps {
-  stores: Stores;
-  fetchImpl: typeof fetch;
-  /** `null` where `sendBeacon` is unavailable; the fetch path covers it. */
-  beacon: ((url: string, body: BodyInit) => boolean) | null;
-  now: () => number;
-  nowIso: () => string;
-  userAgent: string;
-  consent: () => boolean;
-  /**
-   * Whether this build reports at all. Production only — a dev session is the
-   * developer flying the same four gates twenty times, and mixing that into
-   * the data would move the numbers the tuning decisions are read from.
-   */
-  enabled: boolean;
-}
+let initialized = false;
 
 /**
- * Production builds report. A dev build does not, unless `?analytics` is set.
- *
- * The escape hatch is not a convenience: without it the durability paths —
- * offline retry, `sendBeacon` on tab close — could only ever be exercised by
- * deploying, which is the worst place to first find out they are broken.
- *
- * Note that a Vercel *preview* deploy is a production build, so a session on a
- * preview URL does report.
+ * Starts the PostHog client. Call once, from app start — later calls are
+ * ignored so a React strict-mode double-mount cannot start it twice.
  */
-function reportingEnabled(): boolean {
-  if (import.meta.env.PROD) return true;
-  try {
-    return (
-      typeof location !== "undefined" &&
-      new URLSearchParams(location.search).has("analytics")
-    );
-  } catch {
-    return false;
+export function initAnalytics(): void {
+  if (initialized) return;
+  initialized = true;
+  initPostHog(loadShareData());
+  if (typeof navigator !== "undefined") {
+    setDeviceProperty(deviceBucket(navigator.userAgent));
   }
 }
 
-let deps: Deps | null = null;
-let live: SessionRecord | null = null;
-let debounce: ReturnType<typeof setTimeout> | null = null;
-/** The in-flight retry drain, so concurrent callers share one pass. */
-let retrying: Promise<void> | null = null;
-
-/**
- * Browser defaults, each guarded independently. A test supplies only the parts
- * it cares about; a missing `window` yields `null` for `stores`, which is the
- * one dependency with no sensible stand-in.
- */
-function defaultDeps(): Omit<Deps, "stores"> & { stores: Stores | null } {
-  const hasWindow = typeof window !== "undefined";
-  return {
-    stores: hasWindow ? { local: window.localStorage, session: window.sessionStorage } : null,
-    fetchImpl: hasWindow ? window.fetch.bind(window) : (() => Promise.reject(new Error("no fetch"))),
-    beacon:
-      typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function"
-        ? (url, body) => navigator.sendBeacon(url, body)
-        : null,
-    now: () => Date.now(),
-    nowIso: () => new Date().toISOString(),
-    userAgent: typeof navigator === "undefined" ? "" : navigator.userAgent,
-    consent: loadShareData,
-    enabled: reportingEnabled(),
-  };
-}
-
-/**
- * Wires the client up and drains anything a previous visit failed to send.
- *
- * Call once, from app start. Safe to call again — later calls are ignored so a
- * React strict-mode double-mount cannot register two visibility listeners.
- */
-export function initAnalytics(overrides: Partial<Deps> = {}): void {
-  try {
-    if (deps) return;
-    const base = defaultDeps();
-    const stores = overrides.stores ?? base.stores;
-    if (!stores) return;
-    const resolved: Deps = { ...base, ...overrides, stores };
-
-    // Left as null rather than stored: `track` and every other entry point
-    // no-ops on a null `deps`, so a dev build records nothing at all — no id
-    // minted, no queue written, no listener registered.
-    if (!resolved.enabled) return;
-    deps = resolved;
-
-    if (!deps.consent()) {
-      // Opted out before this visit: make sure nothing lingers from before.
-      forgetEverything(deps.stores);
-      deps = null;
-      return;
-    }
-
-    if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", onHidden);
-      // `pagehide` fires on iOS where `visibilitychange` sometimes does not.
-      window.addEventListener("pagehide", onHidden);
-    }
-    void retryUnsent();
-  } catch {
-    deps = null;
-  }
-}
-
-/** Test seam: forget all module state so each test starts clean. */
-export function resetAnalyticsForTest(): void {
-  if (typeof document !== "undefined") {
-    document.removeEventListener("visibilitychange", onHidden);
-    window.removeEventListener("pagehide", onHidden);
-  }
-  if (debounce !== null) clearTimeout(debounce);
-  debounce = null;
-  retrying = null;
-  deps = null;
-  live = null;
-}
-
-function onHidden(): void {
-  try {
-    if (typeof document !== "undefined" && document.visibilityState !== "hidden") {
-      return;
-    }
-    flushSync();
-  } catch {
-    // ignore
-  }
-}
-
-function ensureLive(): SessionRecord | null {
-  if (!deps) return null;
-  if (!deps.consent()) return null;
-  if (live) return live;
-  // playerId() mints on first read — so it is reached only past the consent
-  // check above, never for an opted-out player.
-  live = newSession(
-    sessionId(deps.stores),
-    playerId(deps.stores),
-    deviceBucket(deps.userAgent),
-    deps.now(),
-    deps.nowIso(),
-  );
-  return live;
-}
-
-/** Records an event. Persists immediately; sends later. */
+/** Records a gameplay event. Never throws — analytics must not break a run. */
 export function track(event: AnalyticsEvent): void {
   try {
-    const d = deps;
-    const rec = ensureLive();
-    if (!d || !rec) return;
-    live = appendEvent(rec, event, d.now());
-    saveSession(d.stores, live);
-    scheduleFlush();
+    captureGameEvent(event);
   } catch {
     // ignore
   }
 }
 
-/** Stamps the calibration numbers onto the session. Overwrites on re-calibration. */
+/** Stamps the calibration numbers, as person properties and as an event. */
 export function trackCalibration(cal: CalibrationSettings): void {
   try {
-    const d = deps;
-    const rec = ensureLive();
-    if (!d || !rec) return;
-    live = setCalibration(rec, cal);
-    saveSession(d.stores, live);
-  } catch {
-    // ignore
-  }
-}
-
-function scheduleFlush(): void {
-  if (debounce !== null) return;
-  debounce = setTimeout(() => {
-    debounce = null;
-    void flush();
-  }, FLUSH_DEBOUNCE_MS);
-}
-
-/**
- * Sends the live session now. Awaited at run end, where the payload matters
- * most and the player is looking at a game-over screen anyway.
- */
-export async function flush(): Promise<void> {
-  try {
-    if (debounce !== null) {
-      clearTimeout(debounce);
-      debounce = null;
-    }
-    const d = deps;
-    if (!d || !live || live.events.length === 0) return;
-    await send(d, live, true);
+    setCalibrationProperties(cal);
   } catch {
     // ignore
   }
 }
 
 /**
- * The page-is-going-away path. Must not await: the browser will not keep the
- * tab alive for a promise, and `sendBeacon` is the only thing that reliably
- * survives an iOS home-button press.
- */
-export function flushSync(): void {
-  try {
-    const d = deps;
-    if (!d || !live || live.events.length === 0) return;
-    const body = JSON.stringify(live);
-    const count = live.events.length;
-    const id = live.sessionId;
-    if (d.beacon) {
-      // Optimistic: the browser gives no completion callback. If it silently
-      // failed, the queue entry is gone — which is why the *next* page load
-      // also re-sends anything still unacknowledged rather than trusting this.
-      if (d.beacon(ENDPOINT, new Blob([body], { type: "application/json" }))) {
-        markSent(d.stores, id, count);
-        return;
-      }
-    }
-    void send(d, live, true);
-  } catch {
-    // ignore
-  }
-}
-
-/**
- * Drains sessions from earlier visits that were never acknowledged.
- *
- * Concurrent calls share one drain. `initAnalytics` starts one without
- * awaiting it, so without this a caller invoking it too would upload every
- * queued session twice — harmless, since writes are idempotent, but it doubles
- * the requests on exactly the slow connection that caused the backlog.
- */
-export function retryUnsent(): Promise<void> {
-  if (retrying) return retrying;
-  retrying = (async () => {
-    try {
-      const d = deps;
-      if (!d) return;
-      for (const rec of unsent(d.stores)) {
-        if (rec.sessionId === live?.sessionId) continue;
-        await send(d, rec, false);
-      }
-    } catch {
-      // ignore
-    } finally {
-      retrying = null;
-    }
-  })();
-  return retrying;
-}
-
-async function send(d: Deps, rec: SessionRecord, keepalive: boolean): Promise<void> {
-  const count = rec.events.length;
-  try {
-    const res = await d.fetchImpl(ENDPOINT, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(rec),
-      keepalive,
-    });
-    // 4xx means this payload will never be accepted — a schema change, an id
-    // the server rejects. Drop it rather than retrying it every page load
-    // forever. 5xx and network errors stay queued.
-    if (res.ok || (res.status >= 400 && res.status < 500)) {
-      markSent(d.stores, rec.sessionId, count);
-    }
-  } catch {
-    // Offline. It stays in the queue for the next page load — the case this
-    // whole retry design exists for.
-  }
-}
-
-/**
- * Applies an opt-out immediately: stops the client and erases the queue, the
- * player id and the session id. Opting back in mints a fresh player id, so it
- * is genuinely a new anonymous player rather than a resumed one.
+ * Mirrors the "Anonymous game data" toggle. Off erases the stored id and
+ * stops capture immediately; on resumes capture under a fresh anonymous id.
  */
 export function setSharingEnabled(enabled: boolean): void {
   try {
-    if (enabled) {
-      live = null;
-      if (!deps) initAnalytics();
-      return;
-    }
-    if (deps) forgetEverything(deps.stores);
-    live = null;
-    if (debounce !== null) {
-      clearTimeout(debounce);
-      debounce = null;
-    }
+    setPostHogConsent(enabled);
   } catch {
     // ignore
   }

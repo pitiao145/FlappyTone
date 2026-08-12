@@ -6,6 +6,13 @@
  * whole payload testable without a browser, and it is why the privacy rules
  * below can be checked by reading one file.
  *
+ * The transport (`src/analytics/posthog.ts`, `client.ts`) sends each event
+ * individually rather than assembling a `SessionRecord` to POST, but this
+ * file's `AnalyticsEvent` union and `SessionCalibration` are still the closed
+ * vocabulary both sides agree on — `posthog.ts`'s `before_send` re-enforces
+ * the same allowlist at the transport boundary that `api/analytics.ts` used
+ * to enforce server-side.
+ *
  * ## What is sent
  *
  * Gameplay outcomes only. Per gate: the tone asked for, what happened, how
@@ -23,10 +30,10 @@
  * - No name, handle, email, or anything the player typed. The game has no
  *   text input; keep it that way.
  *
- * `AnalyticsEvent` is a closed discriminated union and `appendEvent` accepts
- * nothing else, so adding a forbidden field is a type error rather than a
- * review comment someone has to catch. If you find yourself widening the union
- * to `Record<string, unknown>`, that is the guardrail breaking, not a nuisance.
+ * `AnalyticsEvent` is a closed discriminated union, so adding a forbidden
+ * field is a type error rather than a review comment someone has to catch. If
+ * you find yourself widening the union to `Record<string, unknown>`, that is
+ * the guardrail breaking, not a nuisance.
  *
  * The calibration numbers are the one judgement call here. `f0Center`, the two
  * range halves and `noiseFloor` are four floats derived from a voice.
@@ -39,9 +46,6 @@ import type { CorridorWidth, Pace, Tone } from "../game/gates.ts";
 import type { CueStyle, GateLogEntry, RunMode } from "../game/run.ts";
 import type { GateOutcome } from "../game/scoring.ts";
 
-/** Bumped only when the payload shape changes incompatibly. */
-export const SCHEMA_VERSION = 1;
-
 /** Why a run stopped. `quit` covers the pause menu's exits, which otherwise leave no trace. */
 export type RunEndReason = "out_of_hearts" | "finished" | "quit";
 
@@ -52,10 +56,9 @@ export type CalibStep = "quiet" | "talk" | "low" | "high" | "done" | "preview";
  * Restated rather than imported from `audio/mic.ts`.
  *
  * Importing it would pull the whole Web Audio stack into this module's import
- * graph, and `report-runs.ts` reads these types from Node, where there is no
- * DOM lib — the build breaks on `AudioContext` in a file the report never
- * touches. Keeping the payload module free of that dependency is the same
- * separation `src/pitch/` maintains against Web Audio.
+ * graph, and this file stays free of that dependency for the same reason
+ * `src/pitch/` stays free of Web Audio — it is what makes it testable without
+ * a browser.
  *
  * `session.test.ts` asserts this stays identical to `MicErrorKind`, so the two
  * cannot drift apart silently.
@@ -101,9 +104,6 @@ export type AnalyticsEvent =
       missedEarly: number;
     };
 
-/** An event stamped with ms since session start. */
-export type TimedEvent = AnalyticsEvent & { t: number };
-
 export interface SessionCalibration {
   f0Center: number;
   /** Semitones from centre up to Chao 5. */
@@ -113,75 +113,17 @@ export interface SessionCalibration {
   noiseFloor: number;
 }
 
-export interface SessionRecord {
-  v: number;
-  sessionId: string;
-  /** Stable across visits, so "did anyone play twice" is answerable (PRD §14). */
-  playerId: string;
-  /** The single absolute timestamp in the file; every event's `t` is relative to it. */
-  startedAt: string;
-  startedAtMs: number;
-  device: string;
-  calibration: SessionCalibration | null;
-  events: TimedEvent[];
-  /** Set once `MAX_EVENTS` is hit, so a truncated file is never mistaken for a short session. */
-  truncated?: true;
-}
-
 /**
- * A session left open in a background tab would otherwise grow without bound.
- * Generous enough for a long sitting — a run is ~25 events.
+ * Rounds away meaningless precision before calibration numbers are sent.
+ * The raw floats carry ~15 significant digits from the pitch math; none of
+ * that is signal.
  */
-export const MAX_EVENTS = 2000;
-
-export function newSession(
-  sessionId: string,
-  playerId: string,
-  device: string,
-  nowMs: number,
-  nowIso: string,
-): SessionRecord {
+export function roundCalibration(cal: SessionCalibration): SessionCalibration {
   return {
-    v: SCHEMA_VERSION,
-    sessionId,
-    playerId,
-    startedAt: nowIso,
-    startedAtMs: nowMs,
-    device,
-    calibration: null,
-    events: [],
-  };
-}
-
-/**
- * Returns a new record with the event appended. Never mutates — the caller
- * persists whatever comes back, so a half-applied append cannot exist.
- */
-export function appendEvent(
-  rec: SessionRecord,
-  event: AnalyticsEvent,
-  nowMs: number,
-): SessionRecord {
-  if (rec.events.length >= MAX_EVENTS) {
-    return rec.truncated ? rec : { ...rec, truncated: true };
-  }
-  const t = Math.max(0, Math.round(nowMs - rec.startedAtMs));
-  return { ...rec, events: [...rec.events, { ...event, t }] };
-}
-
-/** Calibration lands mid-session, so it is stamped on rather than passed to `newSession`. */
-export function setCalibration(
-  rec: SessionRecord,
-  cal: SessionCalibration,
-): SessionRecord {
-  return {
-    ...rec,
-    calibration: {
-      f0Center: round(cal.f0Center, 1),
-      rangeSemitones: round(cal.rangeSemitones, 2),
-      rangeDownSemitones: round(cal.rangeDownSemitones, 2),
-      noiseFloor: round(cal.noiseFloor, 5),
-    },
+    f0Center: round(cal.f0Center, 1),
+    rangeSemitones: round(cal.rangeSemitones, 2),
+    rangeDownSemitones: round(cal.rangeDownSemitones, 2),
+    noiseFloor: round(cal.noiseFloor, 5),
   };
 }
 

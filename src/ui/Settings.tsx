@@ -144,7 +144,7 @@ export function Settings({
         />
         <p className="param-help">
           {sharing === "on"
-            ? "Sends which gates you hit or miss and your calibration numbers, so the game can be tuned against real attempts. No audio, no recordings, no location, and nothing that identifies you."
+            ? "Sends which gates you hit or miss and your calibration numbers, so the game can be tuned against real attempts. No audio, no recordings, no precise location (country only), and nothing that identifies you."
             : "Nothing is sent, and anything already stored on this device has been deleted."}
         </p>
       </section>

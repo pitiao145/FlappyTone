@@ -37,8 +37,6 @@
     "src/record/takeDetector.test.ts",
     "src/dev/make-clips.ts",
     "src/dev/pull-recordings.ts",
-    "src/dev/pull-analytics.ts",
-    "src/dev/report-runs.ts",
     "src/dev/import-words.ts",
     "src/dev/clipCut.test.ts",
     "src/dev/manifest.test.ts",
