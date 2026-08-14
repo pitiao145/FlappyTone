@@ -213,11 +213,16 @@ function drawCueVeil(
  * that a clip reads as changing between gates and that the corridor carries
  * *which* tone you are flying, not enough to turn the scene into a rainbow.
  */
+// Was a pastel/light set, tuned to glow against a near-black canvas. The
+// canvas backdrop is paper now, so a light tone colour at these alphas
+// barely separates from the paper at all — the corridor read as a pale
+// smear with no wall/channel contrast (see the 14 Aug bug report). Same
+// hues, darkened enough to read as saturated ink strokes on paper instead.
 const TONE_LIGHT: Record<number, [number, number, number]> = {
-  1: [150, 205, 255], // level — cool, steady
-  2: [130, 225, 190], // rising — green
-  3: [190, 170, 255], // dip then rise — violet
-  4: [255, 190, 140], // falling — amber
+  1: [25, 70, 150], // level — cool, steady
+  2: [15, 110, 65], // rising — green
+  3: [85, 45, 140], // dip then rise — violet
+  4: [150, 75, 15], // falling — amber
 };
 
 /**
@@ -335,12 +340,17 @@ function drawGate(
   const steps = top.length - 1;
 
   const [r, g, b] = TONE_LIGHT[tone] ?? TONE_LIGHT[1];
-  const lit = active ? 1 : 0.42;
+  // Was 0.42 for an approaching gate — tuned for when the rim/channel alphas
+  // below were themselves higher-contrast to begin with. On paper, a dimmer
+  // rim needs a higher floor to stay above the 3:1 line at all.
+  const lit = active ? 1 : 0.6;
 
   ctx.save();
 
-  // 1. The wall — near-black, opaque enough to swallow the grid behind it, so
-  //    the guide lines survive only inside the open channel.
+  // 1. The wall — opaque enough to swallow the grid behind it, so the guide
+  //    lines survive only inside the open channel. (Doesn't itself separate
+  //    from the canvas — canvas and wall share the same backdrop colour by
+  //    design — the channel tint and rim below are what carry the shape.)
   ctx.fillStyle = active
     ? `rgba(${rgb("backdrop")}, 0.97)`
     : `rgba(${rgb("backdrop")}, 0.82)`;
@@ -368,13 +378,13 @@ function drawGate(
   appendSmooth(ctx, [...bottom].reverse());
   ctx.closePath();
   ctx.clip();
-  ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.13 * lit})`;
+  ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.28 * lit})`;
   ctx.fillRect(x0, 0, x1 - x0, height);
   ctx.restore();
 
   // 3. Rims. A hard edge is what actually tells you where the wall starts —
   //    the gradient alone reads as fog.
-  ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.55 * lit})`;
+  ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.9 * lit})`;
   ctx.lineWidth = active ? 2 : 1.25;
   for (const edge of [top, bottom]) {
     ctx.beginPath();

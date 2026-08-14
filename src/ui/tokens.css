@@ -11,62 +11,70 @@
  * a per-frame alpha, so it needs the components rather than a finished colour.
  * Keep each pair in sync with its hex twin.
  *
- * Palette: "ink tones" — a warm near-black paper with jade (primary) and
- * vermillion (destructive/alert) ink, named for the brushstroke motif in the
- * tone marks themselves. Variable names are kept stable across the reskin
- * (only values changed) since App.css and palette.ts reference them by name
- * throughout.
+ * Palette: "ink tones" — warm paper with jade (primary) and vermillion
+ * (destructive/alert) ink, named for the brushstroke motif in the tone marks
+ * themselves. Was a near-black paper (dark ink on dark paper reads as "just
+ * dark"); this is the same family read the other way — dark ink on light
+ * paper, which is what "ink tones" actually depicts. Variable names are kept
+ * stable across the reskin (only values changed) since App.css and
+ * palette.ts reference them by name throughout, including inside the canvas
+ * (walls, grid, dot, demo trace all resolve from these same tokens).
  */
 
 :root {
   /* ---- surfaces */
-  --surface: #100d0e;
-  --surface-rgb: 16, 13, 14;
-  --surface-panel: #181415;
-  --surface-deep: #211c1d;
-  /* The canvas's darkest value. Walls are cut from this — see render/world.ts. */
-  --canvas-backdrop: #120f10;
-  --canvas-backdrop-rgb: 18, 15, 16;
+  --surface: #f7f1e3;
+  --surface-rgb: 247, 241, 227;
+  --surface-panel: #efe6d1;
+  --surface-deep: #e2d5b8;
+  /* The canvas's lightest value now, not its darkest — walls are cut from
+     this, see render/world.ts. */
+  --canvas-backdrop: #eee4cc;
+  --canvas-backdrop-rgb: 238, 228, 204;
 
   /* ---- ink */
-  --ink: #f5f1ea;
-  --ink-muted: #a79e93;
-  --ink-soft: #8f8579;
-  --ink-dim: #6f665d;
+  --ink: #241d15;
+  --ink-muted: #6b6151;
+  --ink-soft: #857a65;
+  --ink-dim: #a89a80;
 
   /* ---- accent (jade) */
-  --accent: #3ea88f;
-  --accent-rgb: 62, 168, 143;
-  /* Text drawn *on* the accent. */
-  --accent-ink: #0d1512;
-  --accent-bright: #b7e4d8;
+  --accent: #1c7a63;
+  --accent-rgb: 28, 122, 99;
+  /* Text drawn *on* the accent — the paper colour, not white. */
+  --accent-ink: #f7f1e3;
+  --accent-bright: #145c4a;
 
   /* ---- semantic */
-  --good: #5fc298;
-  --good-rgb: 95, 194, 152;
-  --good-dim: #a8ddc4;
-  --warn: #e7b26a;
-  --warn-strong: #d69a4a;
-  --danger: #e2543d;
-  --danger-rgb: 226, 84, 61;
-  --danger-strong: #c23f2a;
+  --good: #2c8f61;
+  --good-rgb: 44, 143, 97;
+  --good-dim: #1c6543;
+  --warn: #a8672a;
+  --warn-strong: #8a5320;
+  --danger: #a3341f;
+  --danger-rgb: 163, 52, 31;
+  --danger-strong: #832718;
 
   /* Canvas-only accents: the demo trace and the guide grid. */
-  --demo-rgb: 235, 208, 170;
-  --grid-rgb: 143, 133, 121;
+  --demo-rgb: 168, 108, 32;
+  /* Close to --ink, not the old mid-tone: at the low alphas drawChaoGrid
+     composites with, a mid-tone barely separates from a light backdrop —
+     measured contrast topped out under 3:1 even at 80% alpha. Dark-and-faint
+     reads clearly; mid-tone-and-faint reads as nothing. */
+  --grid-rgb: 60, 52, 42;
   /* Ink at full strength, for canvas strokes that composite with alpha. */
-  --ink-rgb: 245, 241, 234;
+  --ink-rgb: 36, 29, 21;
   /* Gate-outcome feedback colours — deliberately outside the brand's colour
-     language (amber "ok" and neutral "unheard" grey), unchanged in value from
-     the pre-tokenised literals, just centralised here. */
-  --gate-ok-rgb: 210, 200, 140;
-  --gate-unheard-rgb: 180, 180, 190;
-  --gate-glow-rgb: 255, 220, 120;
+     language (amber "ok" and neutral "unheard" grey), unchanged in role from
+     the pre-tokenised literals, just re-darkened to hold contrast on paper. */
+  --gate-ok-rgb: 150, 118, 40;
+  --gate-unheard-rgb: 130, 122, 108;
+  --gate-glow-rgb: 196, 140, 30;
 
   /* ---- lines */
-  --line: rgba(255, 255, 255, 0.08);
-  --line-soft: rgba(255, 255, 255, 0.05);
-  --line-strong: rgba(255, 255, 255, 0.14);
+  --line: rgba(36, 29, 21, 0.12);
+  --line-soft: rgba(36, 29, 21, 0.06);
+  --line-strong: rgba(36, 29, 21, 0.2);
 
   /* ---- shape */
   --radius-pill: 999px;

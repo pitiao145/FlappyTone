@@ -7,13 +7,15 @@
   align-items: flex-start;
   justify-content: center;
   gap: 16px;
-  padding: 16px;
-  /* viewport-fit=cover plus a translucent iOS status bar means the layout runs
-     under the notch and the home indicator; put it back inside them. */
-  padding-top: max(16px, env(safe-area-inset-top));
-  padding-bottom: max(16px, env(safe-area-inset-bottom));
-  padding-left: max(16px, env(safe-area-inset-left));
-  padding-right: max(16px, env(safe-area-inset-right));
+  /* No baseline padding: the frame/nav/footer should reach the true
+     viewport edge, not sit inset by an arbitrary gutter. viewport-fit=cover
+     plus a translucent iOS status bar means the layout runs under the notch
+     and the home indicator without it, so safe-area is still reserved —
+     just nothing beyond what the notch/home-indicator actually need. */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
   background: var(--surface);
   color: var(--ink);
   font-family: var(--font);
@@ -56,12 +58,16 @@
  * svh, not dvh: svh is the viewport with browser chrome *showing*, so the game
  * still fits at the URL bar's largest. Sizing to dvh would fit only while the
  * bar was hidden and clip the moment it slid back in.
+ *
+ * The 88px reserve is the nav bar's own height (it now sits above the frame
+ * on every screen, game and tutorial included) — .app itself carries no
+ * padding to budget for any more.
  */
 .frame,
 .stage {
   width: 100%;
   max-width: 420px;
-  max-width: min(420px, calc((100svh - 40px) * 9 / 16));
+  max-width: min(420px, calc((100svh - 88px) * 9 / 16));
   margin-inline: auto;
   container-type: inline-size;
   container-name: frame;
@@ -69,6 +75,10 @@
 
 .frame:has(.lab-screen) {
   max-width: 100%;
+}
+
+.frame:not(:has(.stage)) {
+  padding: 16px;
 }
 
 /* Menu shells (title, how-to, settings, game-over) aren't the 9:16 game
@@ -81,6 +91,7 @@
 
 .stage {
   position: relative;
+  margin-top: 16px;
 }
 
 /* ---------------------------------------------------------------- screens */
@@ -1205,8 +1216,14 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: 10px 0;
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  /* Full-bleed, same trick as .landing-footer: escapes .app's own side
+     padding so the bar reaches the true viewport edge at every width,
+     instead of floating inset by .app's 16px gutter. */
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: 10px max(16px, env(safe-area-inset-left));
+  background: color-mix(in srgb, var(--surface-panel) 88%, transparent);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
@@ -1295,7 +1312,7 @@
   margin-left: auto;
 }
 
-/* Shady CTA — accent fill with a hard offset shadow, adapted to the dark palette. */
+/* Shady CTA — accent fill with a hard offset shadow. */
 .nav-cta {
   position: relative;
 }
@@ -1309,7 +1326,12 @@
   position: absolute;
   inset: 0;
   border-radius: var(--radius-pill);
-  background: var(--accent-ink);
+  /* var(--ink), not var(--accent-ink): accent-ink is the *text* colour for
+     content sitting on the accent fill, which is the paper colour in this
+     (light) theme — using it for the offset shadow drew a pale double-outline
+     instead of a shadow. --ink is the dark stroke this hard-shadow effect
+     actually needs. */
+  background: var(--ink);
   transform: translate(3px, 3px);
 }
 
@@ -1320,7 +1342,7 @@
   align-items: center;
   gap: var(--space-2);
   padding: 12px 22px;
-  border: 2px solid var(--accent-ink);
+  border: 2px solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--accent);
   color: var(--accent-ink);
@@ -1455,7 +1477,8 @@
   position: absolute;
   inset: 0;
   border-radius: var(--radius-pill);
-  background: var(--accent-ink);
+  /* See the comment on .nav-cta-shady::before — same fix, same reason. */
+  background: var(--ink);
   transform: translate(3px, 3px);
 }
 
@@ -1465,7 +1488,7 @@
   display: block;
   width: 100%;
   padding: 14px 28px;
-  border: 2px solid var(--accent-ink);
+  border: 2px solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--accent-bright);
   color: var(--accent-ink);
@@ -1567,6 +1590,11 @@
   text-align: center;
   gap: var(--space-4);
   padding-top: var(--space-4);
+  /* This is #top, the nav wordmark's anchor target. Same reserve as
+     .landing-section below, and for the same reason: the nav is sticky, so
+     without it the jump lands the hero flush at scrollTop 0 and the sticky
+     bar covers its first ~88px rather than sitting above it. */
+  scroll-margin-top: 88px;
 }
 
 /* The h1 is a sentence now, not the one-word wordmark it used to be: smaller,
@@ -2259,21 +2287,22 @@ section.hero-cards {
   height: 18px;
 }
 
-/* Darker than --surface, same ink/jade family as the rest of the page —
-   scoped to this block so it doesn't touch the site's light-mode tokens.
+/* Same panel colour as .landing-section-panel — the nav, footer, and the
+   visualiser section now read as one family of surfaces instead of the
+   footer standing apart as its own dark island.
    Full-bleed: breaks out of both `.landing`'s max-width and `.app`'s own
    padding (horizontally via the 100vw trick, and at the bottom by eating
    `.app`'s bottom safe-area padding) so it reaches every edge of the
    viewport rather than sitting as an inset card. */
 .landing-footer {
-  --footer-bg: #08070a;
-  --footer-accent: var(--accent-bright);
+  --footer-bg: var(--surface-panel);
+  --footer-accent: var(--accent);
   width: 100vw;
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
   margin-bottom: calc(-1 * max(16px, env(safe-area-inset-bottom)));
   background: var(--footer-bg);
-  color: rgb(255 255 255 / 75%);
+  color: color-mix(in srgb, var(--ink) 75%, transparent);
   padding: 40px max(24px, env(safe-area-inset-left));
   padding-bottom: calc(40px + max(16px, env(safe-area-inset-bottom)));
 }
@@ -2297,18 +2326,18 @@ section.hero-cards {
 }
 
 .footer-blurb {
-  color: #fff;
+  color: var(--ink);
   margin: 0 0 var(--space-2);
 }
 
 .footer-builtby {
-  color: rgb(255 255 255 / 65%);
+  color: color-mix(in srgb, var(--ink) 65%, transparent);
   font-size: var(--text-sm);
   margin: 0;
 }
 
 .footer-builtby-link {
-  color: rgb(255 255 255 / 75%);
+  color: color-mix(in srgb, var(--ink) 75%, transparent);
   transition: color 0.15s ease;
 }
 
@@ -2321,7 +2350,7 @@ section.hero-cards {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: rgb(255 255 255 / 50%);
+  color: color-mix(in srgb, var(--ink) 50%, transparent);
   margin: 0 0 var(--space-3);
 }
 
@@ -2338,7 +2367,7 @@ section.hero-cards {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: rgb(255 255 255 / 75%);
+  color: color-mix(in srgb, var(--ink) 75%, transparent);
   text-decoration: none;
   font-size: var(--text-sm);
   transition: color 0.15s ease;
@@ -2352,8 +2381,8 @@ section.hero-cards {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: rgb(255 255 255 / 10%);
-  color: rgb(255 255 255 / 70%);
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  color: color-mix(in srgb, var(--ink) 70%, transparent);
   transition: color 0.15s ease, background-color 0.15s ease;
 }
 
@@ -2363,11 +2392,11 @@ section.hero-cards {
 }
 
 .footer-link:hover {
-  color: #fff;
+  color: var(--ink);
 }
 
 .footer-link:hover .footer-link-icon {
-  background: rgb(255 255 255 / 15%);
+  background: color-mix(in srgb, var(--ink) 15%, transparent);
   color: var(--footer-accent);
 }
 
@@ -2383,10 +2412,10 @@ section.hero-cards {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  border-top: 1px solid rgb(255 255 255 / 10%);
+  border-top: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
   padding-top: var(--space-4);
   font-size: var(--text-xs);
-  color: rgb(255 255 255 / 55%);
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
 }
 
 .footer-attribution {

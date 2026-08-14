@@ -223,15 +223,13 @@ export default function App() {
   }, [screen]);
 
   /**
-   * One nav, everywhere except an actual run: a game/tutorial screen has the
-   * pause menu as its way out, and stacking a header on top of the corridor
-   * would eat playable height for a bar with nowhere useful to send you.
-   * Landing renders its own copy of the same bar (`variant="landing"`)
-   * because its links are real anchors into the page under them, not
-   * screen changes.
+   * One nav, everywhere except the landing page itself — which renders its
+   * own copy of the same bar (`variant="landing"`) because its links are
+   * real anchors into the page under them, not screen changes. It now shows
+   * during an actual run too; `.frame`'s height budget in App.css reserves
+   * space for it so the canvas doesn't grow underneath it.
    */
-  const showNav =
-    screen !== "landing" && screen !== "game" && screen !== "tutorial";
+  const showNav = screen !== "landing";
 
   return (
     <div className="app">

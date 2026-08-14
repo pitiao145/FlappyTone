@@ -59,14 +59,14 @@ export function drawChaoGrid(
     // Chao 3 is the rest line the dot returns to — the one guide worth reading.
     const isRest = chao === 3;
     ctx.strokeStyle = isRest
-      ? rgba("grid", 0.13)
-      : rgba("grid", 0.06);
+      ? rgba("grid", 0.65)
+      : rgba("grid", 0.42);
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
     ctx.stroke();
-    ctx.fillStyle = rgba("grid", isRest ? 0.3 : 0.18);
+    ctx.fillStyle = rgba("grid", isRest ? 0.85 : 0.6);
     ctx.fillText(String(chao), 8, y);
   }
 }

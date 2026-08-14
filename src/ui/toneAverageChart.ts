@@ -1,5 +1,6 @@
 import type { Tone } from "../game/gates.ts";
 import type { Word } from "../game/words.ts";
+import { rgba } from "../render/palette.ts";
 
 /**
  * Draws a tone's measured clips (faint) and their averaged polyline (bold)
@@ -12,11 +13,15 @@ const SAMPLES = 60;
 const TOP = 5.5;
 const BOTTOM = 0.5;
 
+// Saturated enough to hold ~4.5:1 contrast against the paper card background
+// (`--canvas-backdrop`) at the bold-line alpha below. The old pastel set was
+// tuned for the near-black card this sat on before the reskin — unreadable
+// once the card went light.
 export const TONE_AVERAGE_COLOR: Record<Tone, string> = {
-  1: "rgba(150, 200, 255,",
-  2: "rgba(150, 235, 190,",
-  3: "rgba(235, 200, 140,",
-  4: "rgba(230, 165, 160,",
+  1: "rgba(55, 100, 180,",
+  2: "rgba(35, 130, 90,",
+  3: "rgba(150, 100, 25,",
+  4: "rgba(165, 65, 55,",
 };
 
 /** Piecewise-linear read of a raw polyline at t in [0,1]. */
@@ -62,7 +67,7 @@ export function drawToneAverageChart(
   const y = (chao: number) => ((TOP - chao) / (TOP - BOTTOM)) * height;
   const tint = TONE_AVERAGE_COLOR[tone];
 
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+  ctx.strokeStyle = rgba("grid", 0.35);
   ctx.lineWidth = 1;
   for (let chao = 1; chao <= 5; chao++) {
     ctx.beginPath();

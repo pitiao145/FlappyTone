@@ -13,23 +13,23 @@
  */
 
 export const FALLBACK = {
-  surface: "16, 13, 14",
-  backdrop: "18, 15, 16",
-  accent: "62, 168, 143",
-  good: "95, 194, 152",
-  danger: "226, 84, 61",
+  surface: "247, 241, 227",
+  backdrop: "238, 228, 204",
+  accent: "28, 122, 99",
+  good: "44, 143, 97",
+  danger: "163, 52, 31",
   /** The demo / reference trace: warm, so it never reads as the player's own line. */
-  demo: "235, 208, 170",
+  demo: "168, 108, 32",
   /** The Chao guide grid. Recedes behind everything. */
-  grid: "143, 133, 121",
+  grid: "60, 52, 42",
   /** Ink at full strength, for canvas strokes that composite with alpha. */
-  ink: "245, 241, 234",
+  ink: "36, 29, 21",
   /** Gate outcome: "ok" (amber), deliberately outside the brand's colour language. */
-  gateOk: "210, 200, 140",
+  gateOk: "150, 118, 40",
   /** Gate outcome: "unheard" (neutral grey). */
-  gateUnheard: "180, 180, 190",
+  gateUnheard: "130, 122, 108",
   /** Gate edge glow when pinned at the top/bottom of the range. */
-  gateGlow: "255, 220, 120",
+  gateGlow: "196, 140, 30",
 } as const;
 
 type Token = keyof typeof FALLBACK;
