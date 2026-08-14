@@ -166,38 +166,44 @@ export function Visualiser({
             <p>paused, tap to continue</p>
           </div>
         )}
-      </div>
 
-      <div className="choice">
-        <button
-          className={tone === null ? "choice-option active" : "choice-option"}
-          onClick={() => setTone(null)}
-        >
-          free
-        </button>
-        {TONES.map((t) => (
-          <button
-            key={t}
-            className={tone === t ? "choice-option active" : "choice-option"}
-            onClick={() => setTone(t)}
-          >
-            {TONE_INFO[t].pinyin}
-          </button>
-        ))}
-      </div>
+        {/* Layered on the canvas rather than stacked below it — the canvas
+            already fills the frame's whole height budget (see App.css's
+            .frame,.stage sizing), so a second block of controls under it
+            pushed the page past one screen and forced a scroll. */}
+        <div className="visualiser-overlay">
+          <div className="choice">
+            <button
+              className={tone === null ? "choice-option active" : "choice-option"}
+              onClick={() => setTone(null)}
+            >
+              free
+            </button>
+            {TONES.map((t) => (
+              <button
+                key={t}
+                className={tone === t ? "choice-option active" : "choice-option"}
+                onClick={() => setTone(t)}
+              >
+                {TONE_INFO[t].pinyin}
+              </button>
+            ))}
+          </div>
 
-      <p className="note">
-        {tone === null
-          ? "Say anything. The line is your pitch, left to right."
-          : `${TONE_INFO[tone].pinyin} ${TONE_INFO[tone].hanzi}, ${TONE_INFO[tone].cue}. Match the dashed shape.`}
-      </p>
+          <p className="note">
+            {tone === null
+              ? "Say anything. The line is your pitch, left to right."
+              : `${TONE_INFO[tone].pinyin} ${TONE_INFO[tone].hanzi}, ${TONE_INFO[tone].cue}. Match the dashed shape.`}
+          </p>
 
-      <div className="setting-actions">
-        {tone !== null && <button onClick={playExample}>Play the example</button>}
-        <button onClick={() => recorderRef.current?.clear()}>Clear</button>
-        <button className="primary" onClick={onBack}>
-          Back
-        </button>
+          <div className="setting-actions">
+            {tone !== null && <button onClick={playExample}>Play the example</button>}
+            <button onClick={() => recorderRef.current?.clear()}>Clear</button>
+            <button className="primary" onClick={onBack}>
+              Back
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
