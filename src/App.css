@@ -79,6 +79,7 @@
 
 .frame:not(:has(.stage)) {
   padding: 16px;
+  padding-top: 0px;
 }
 
 /* Menu shells (title, how-to, settings, game-over) aren't the 9:16 game
