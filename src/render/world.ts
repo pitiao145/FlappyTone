@@ -326,7 +326,8 @@ export function corridorEdges(
   return { top, bottom };
 }
 
-function drawGate(
+/** Exported for the Lab's single-gate preview: one gate, paused, no run. */
+export function drawGate(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,

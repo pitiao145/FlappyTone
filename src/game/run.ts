@@ -43,7 +43,7 @@ import { REST_CHAO } from "./dynamics.ts";
 import { DEFAULT_TUNING, tuning } from "./tuning.ts";
 import type { PitchState } from "../pitch/types.ts";
 
-export type RunMode = "game" | "tutorial";
+export type RunMode = "game" | "tutorial" | "single";
 
 export interface RunConfig {
   mode: RunMode;
@@ -93,6 +93,12 @@ export interface RunConfig {
    * which is what a failed manifest fetch degrades to, deliberately.
    */
   words?: Word[];
+  /**
+   * The one word a "single" mode run flies — a Lab-only mode that flies
+   * exactly one hand-picked gate through the real collision/scoring pipeline,
+   * then ends. Required when `mode === "single"`, ignored otherwise.
+   */
+  singleWord?: Word;
 }
 
 export type CueStyle = "pause" | "off";
@@ -400,6 +406,8 @@ export class Run {
   private spawnedWords: Word[] = [];
   /** The clip inventory this run draws from. Empty is a valid run. */
   private words: Word[];
+  /** The one word a "single" mode run flies. Unused otherwise. */
+  private readonly singleWord: Word | null;
   private active: ActiveGateState | null = null;
 
   /** Gates resolved, whatever the outcome. Ends the tutorial. */
@@ -451,6 +459,7 @@ export class Run {
     this.cueStyle = cfg.cueStyle ?? "pause";
     this.cueDurationMsFor = cfg.cueDurationMsFor ?? (() => CUE_DURATION_MS);
     this.words = cfg.words ?? [];
+    this.singleWord = cfg.singleWord ?? null;
     this.difficulty = this.difficultyFor(0);
     this.stats = newRunStats(3);
     this.fillQueue();
@@ -747,9 +756,9 @@ export class Run {
   // ------------------------------------------------------------- internals
 
   private isOver(): boolean {
-    return this.mode === "tutorial"
-      ? this.gatesFinished >= TUTORIAL_GATE_COUNT
-      : this.stats.hearts <= 0;
+    if (this.mode === "tutorial") return this.gatesFinished >= TUTORIAL_GATE_COUNT;
+    if (this.mode === "single") return this.gatesFinished >= 1;
+    return this.stats.hearts <= 0;
   }
 
   private inGrace(nowMs: number): boolean {
@@ -977,19 +986,29 @@ export class Run {
       if (tone === null) return;
       // A word if the inventory has one for this tone, the bare tone if not.
       // Not having one is normal, not an error: a build whose manifest fetch
-      // failed still plays, on the tuning defaults.
-      const word = pickWord(this.words, tone, this.spawnedWords, this.rand);
+      // failed still plays, on the tuning defaults. "single" mode flies the
+      // one word it was handed rather than drawing from the pool.
+      const word =
+        this.mode === "single"
+          ? this.singleWord
+          : pickWord(this.words, tone, this.spawnedWords, this.rand);
       this.gates.push(makeGate(word ?? tone, this.nextSpawnX(), this.difficulty));
       this.spawnedTones.push(tone);
       if (word) this.spawnedWords.push(word);
     }
   }
 
-  /** Tutorial follows a fixed order and stops; game mode is endless. */
+  /**
+   * Tutorial follows a fixed order and stops; "single" flies its one word's
+   * tone once and stops; game mode is endless.
+   */
   private pickTone(): Tone | null {
     if (this.mode === "tutorial") {
       const i = this.spawnedTones.length;
       return i < TUTORIAL_GATE_COUNT ? TUTORIAL_TONES[i] : null;
+    }
+    if (this.mode === "single") {
+      return this.spawnedTones.length < 1 ? (this.singleWord?.tone ?? null) : null;
     }
     return nextTone(this.spawnedTones, this.rand);
   }

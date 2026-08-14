@@ -881,7 +881,7 @@
 
 .lab-screen {
   width: 100%;
-  max-width: 1100px;
+  max-width: 1800px;
   gap: 12px;
   align-items: stretch;
   text-align: left;
@@ -922,25 +922,94 @@
   flex-wrap: wrap;
 }
 
+.lab-play-grid {
+  display: grid;
+  grid-template-columns: 260px minmax(360px, 440px) 1fr;
+  gap: 20px;
+  /* stretch (the default), not start: a live Game's `.screen.game-screen`
+     child has no width of its own, so its `.stage` (width: 100%) needs a
+     definite-width ancestor to resolve against. `align-items: center` here
+     made this flex item shrink-to-fit instead, and a percentage width
+     inside a shrink-to-fit ancestor resolves to 0 — the canvas silently
+     collapsed to nothing the moment a run started. */
+  align-items: stretch;
+}
+
 .lab-stage {
-  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  align-items: center;
+  align-items: stretch;
 }
 
+.lab-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+/* The idle canvas preview and the "full run instead" fallback both want a
+   fixed width matching the game's own canvas, centered in the (wider)
+   stretched column — align-self overrides the stretch above for just these. */
 .lab-idle {
   display: flex;
   flex-direction: column;
   gap: 10px;
   width: 360px;
+  align-self: center;
 }
 
 .lab-controls {
   flex: 1 1 320px;
-  max-height: 78vh;
+}
+
+.gate-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  min-height: 0;
+}
+
+.gate-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+.gate-picker-item {
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  color: var(--ink-muted);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.gate-picker-item.active {
+  background: var(--surface-panel);
+  color: var(--ink);
+}
+
+.game-settings-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.game-settings-row .param-name {
+  flex: 0 0 90px;
+}
+
+.game-settings-row .choice {
+  flex: 1 1 auto;
 }
 
 /* Dev-only: the whole clip inventory as gates, for reviewing corridor shapes. */
@@ -977,13 +1046,17 @@
 .tuning-panel {
   font-size: 12px;
   font-variant-numeric: tabular-nums;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  column-count: 2;
+  column-gap: 24px;
   padding: 12px;
   background: var(--surface-panel);
   border-radius: var(--radius-md);
   color: var(--ink-muted);
+}
+
+.tuning-panel section {
+  break-inside: avoid;
+  margin-bottom: 16px;
 }
 
 .tuning-panel h4 {
@@ -1064,8 +1137,11 @@
     flex-direction: column;
     align-items: stretch;
   }
-  .lab-controls {
-    max-height: none;
+  .lab-play-grid {
+    grid-template-columns: 1fr;
+  }
+  .tuning-panel {
+    column-count: 1;
   }
 }
 

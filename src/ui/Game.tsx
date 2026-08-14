@@ -13,6 +13,7 @@ import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { TONE_INFO } from "../game/gates.ts";
 import { Run, type RunMode, type RunSnapshot } from "../game/run.ts";
+import type { Word } from "../game/words.ts";
 import type { GateOutcome, UnheardHint } from "../game/scoring.ts";
 import {
   loadCorridorWidth,
@@ -70,6 +71,8 @@ interface Props {
   onQuit: () => void;
   /** Leave the run for the landing page. Offered only from the pause menu. */
   onLanding: () => void;
+  /** The word `mode: "single"` flies. Ignored otherwise. */
+  singleWord?: Word;
 }
 
 export function Game({
@@ -80,6 +83,7 @@ export function Game({
   onOver,
   onQuit,
   onLanding,
+  singleWord,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hud, setHud] = useState<RunSnapshot | null>(null);
@@ -113,9 +117,11 @@ export function Game({
    *
    * Not shown before the tutorial: that is a first-timer's first screen, and a
    * disclosure about data is easier to read once they know what the game is.
+   * Not shown for "single" either — that's a Lab tuning flight, not a player
+   * run, and the card would just be in the way of a tight tune loop.
    */
   const [notice, setNotice] = useState(
-    () => mode !== "tutorial" && !loadNoticeSeen(),
+    () => mode === "game" && !loadNoticeSeen(),
   );
   const noticeRef = useRef(notice);
   /** Gate log entries already reported, so each gate is sent exactly once. */
@@ -229,6 +235,7 @@ export function Game({
       // Whatever the manifest fetch has produced by now. Empty is a valid run:
       // it flies the tuning defaults with synthetic cues.
       words: inventoryNow() ?? [],
+      singleWord,
     });
     runRef.current = run;
     reportedGatesRef.current = 0;
@@ -405,7 +412,15 @@ export function Game({
     };
     // reportGates/reportRunEnd are stable (useCallback with no changing deps),
     // so listing them cannot rebuild the run mid-play.
-  }, [mode, settings, canvasWidth, canvasHeight, reportGates, reportRunEnd]);
+  }, [
+    mode,
+    settings,
+    canvasWidth,
+    canvasHeight,
+    singleWord,
+    reportGates,
+    reportRunEnd,
+  ]);
 
   // Show the *active* gate's tone while flying it — showing the next gate's
   // tone mid-gate would teach the wrong contour (this matters most in the
