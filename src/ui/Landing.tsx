@@ -7,7 +7,7 @@ import type { Tone } from "../game/gates.ts";
 import type { Word } from "../game/words.ts";
 import { capturePostHogEvent } from "../analytics/posthog.ts";
 import { ComingSoon } from "./ComingSoon.tsx";
-import { DemoLoop } from "./DemoLoop.tsx";
+import { DemoLoop, VisualiserDemoLoop } from "./DemoLoop.tsx";
 import { Footer } from "./Footer.tsx";
 import { DotsThreeVerticalIcon, PlusSquareIcon, ShareIcon } from "./icons.tsx";
 import { micErrorCopy } from "./micErrors.ts";
@@ -88,26 +88,32 @@ export function Landing({ onPlay, onVisualiser }: Props) {
 
       <div className="hero-row">
         <header id="top" className="landing-hero">
+          <p className="section-eyebrow">{brand.heroEyebrow}</p>
           {/* The h1 is the headline, not the brand name — see brand.headline. */}
           <h1>{brand.headline}</h1>
-          <p className="hero-tagline">{brand.tagline}</p>
           <p className="hero-pitch">{brand.pitch}</p>
           <div className="hero-actions">
             <button
               className="primary"
               disabled={busy}
               onClick={() => {
-                capturePostHogEvent("landing_cta_clicked", { cta: "play", location: "hero" });
+                capturePostHogEvent("landing_cta_clicked", { cta: "play", location: "hero_actions" });
                 onPlay();
               }}
             >
-              Play
+              {brand.heroCards.play.cta}
             </button>
-            <a href="#mobile" className="hero-secondary">
-              {brand.installCta}
-            </a>
+            <button
+              className="secondary"
+              disabled={busy}
+              onClick={() => {
+                capturePostHogEvent("landing_cta_clicked", { cta: "visualiser", location: "hero_actions" });
+                void go(onVisualiser)();
+              }}
+            >
+              {brand.heroCards.visualise.cta}
+            </button>
           </div>
-          <p className="note">{brand.requirement} {brand.privacyNote}</p>
           {error && <p className="error">{error}</p>}
         </header>
 
@@ -119,10 +125,61 @@ export function Landing({ onPlay, onVisualiser }: Props) {
         </section>
       </div>
 
-      <section id="visualiser" className="landing-section">
-        <h2>{brand.visualiser.title}</h2>
+      <section id="play" className="landing-section hero-cards">
+        <article className="hero-card">
+          <p className="section-eyebrow">{brand.heroCards.play.eyebrow}</p>
+          <h3>{brand.heroCards.play.title}</h3>
+          <p>{brand.heroCards.play.body}</p>
+          <button
+            className="primary"
+            disabled={busy}
+            onClick={() => {
+              capturePostHogEvent("landing_cta_clicked", { cta: "play", location: "hero" });
+              onPlay();
+            }}
+          >
+            {brand.heroCards.play.cta}
+          </button>
+        </article>
+        <article className="hero-card hero-card-accent">
+          <p className="section-eyebrow">{brand.heroCards.visualise.eyebrow}</p>
+          <h3>{brand.heroCards.visualise.title}</h3>
+          <p>{brand.heroCards.visualise.body}</p>
+          <button
+            className="secondary"
+            disabled={busy}
+            onClick={() => {
+              capturePostHogEvent("landing_cta_clicked", { cta: "visualiser", location: "hero" });
+              void go(onVisualiser)();
+            }}
+          >
+            {brand.heroCards.visualise.cta}
+          </button>
+        </article>
+      <p className="note hero-requirement">{brand.requirement} {brand.privacyNote}</p>
+      </section>
+
+      <section id="how-it-works" className="landing-section">
+        <p className="section-eyebrow">{brand.whyThisWorks.eyebrow}</p>
+        <div className="why-this-works-content">
+          <div className="why-this-works-text">
+          <h2 className="title-multiline">{brand.whyThisWorks.title}</h2>
+          <p>{brand.whyThisWorks.body}</p></div>
+          <div className="visualiser-figure">
+            <ToneAverageCard tone={3} words={wordsByTone.get(3) ?? []} />
+            <p className="visualiser-caption">{brand.visualiser.imageCaption}</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="visualiser" className="landing-section landing-section-panel">
         <div className="visualiser-row">
+          <div className="visualiser-demo">
+            <VisualiserDemoLoop width={300} />
+          </div>
           <div className="visualiser-text">
+            <p className="section-eyebrow">{brand.visualiser.eyebrow}</p>
+            <h2>{brand.visualiser.title}</h2>
             <p>{brand.visualiser.body}</p>
             <button
               className="primary visualiser-cta"
@@ -135,131 +192,109 @@ export function Landing({ onPlay, onVisualiser }: Props) {
               {brand.visualiser.cta}
             </button>
           </div>
-          <div className="tone-average-grid">
-            <ToneAverageCard tone={3} words={wordsByTone.get(3) ?? []} />
+        </div>
+      </section>
+
+      <section id="real-speech" className="landing-section">
+        <div className="real-speech-row">
+          <div className="real-speech-text">
+            <p className="section-eyebrow">{brand.toneDataEyebrow}</p>
+            <h2>{brand.toneDataTitle}</h2>
+            <p>{brand.toneDataIntro}</p>
+          </div>
+          <div className="real-speech-data">
+            <div className="tone-average-grid">
+              {TONES.map((tone) => (
+                <ToneAverageCard key={tone} tone={tone} words={wordsByTone.get(tone) ?? []} />
+              ))}
+            </div>
+            <p className="note">
+              Every clip in the inventory, resampled and averaged: the bold line
+              is the mean, the faint lines behind it are what she actually said.
+            </p>
           </div>
         </div>
-      </section>
-
-      <section id="how-it-works" className="landing-section">
-        <h2>How it works</h2>
-        <div className="landing-steps">
-          {brand.howItWorks.map((step, i) => (
-            <article key={step.title}>
-              <span className="step-num">{i + 1}</span>
-              <h3>{step.title}</h3>
-              <p>{step.body}</p>
-            </article>
-          ))}
-        </div>
-        <h3 className="tone-data-title">{brand.toneDataTitle}</h3>
-        <p>{brand.toneDataIntro}</p>
-        <div className="tone-average-grid">
-          {TONES.map((tone) => (
-            <ToneAverageCard key={tone} tone={tone} words={wordsByTone.get(tone) ?? []} />
-          ))}
-        </div>
-        <p className="note">
-          Every clip in the inventory, resampled and averaged: the bold line
-          is the mean, the faint lines behind it are what she actually said.
-        </p>
-      </section>
-
-      <section id="play" className="landing-section landing-cta">
-        <h2>Play</h2>
-        <p>
-          A run is a couple of minutes. First time through, a short calibration
-          learns your voice, then the tutorial takes one tone at a time.
-        </p>
-        <button
-          className="primary"
-          disabled={busy}
-          onClick={() => {
-            capturePostHogEvent("landing_cta_clicked", { cta: "play", location: "play_section" });
-            onPlay();
-          }}
-        >
-          Try now
-        </button>
-
-      </section>
-
-      <ComingSoon />
-
-      <section id="limits" className="landing-section">
-        <h2>What it doesn't do</h2>
-        <ul className="facts">
+        <ul className="tag-pills tag-pills-centered">
           {brand.limits.map((l) => (
             <li key={l}>{l}</li>
           ))}
         </ul>
       </section>
 
+      <ComingSoon />
+
       <section id="mobile" className="landing-section">
-        <h2>{brand.mobile.title}</h2>
-        <p>{brand.mobile.body}</p>
+        <div className="mobile-row">
+          <div className="mobile-text">
+            <p className="section-eyebrow">{brand.mobile.eyebrow}</p>
+            <h2>{brand.mobile.title}</h2>
+            <p>{brand.mobile.body}</p>
 
-        {mobileNewsletter.status === "success" ? (
-          <p className="newsletter-success">You&rsquo;re on the list.</p>
-        ) : (
-          <form
-            className="coming-soon-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              mobileNewsletter.submit(mobileEmail);
-            }}
-          >
-            <label htmlFor={mobileEmailId} className="visually-hidden">
-              Email address
-            </label>
-            <input
-              id={mobileEmailId}
-              type="email"
-              name="email"
-              placeholder={brand.mobile.notify.placeholder}
-              autoComplete="email"
-              required
-              value={mobileEmail}
-              onChange={(e) => setMobileEmail(e.target.value)}
-              disabled={mobileNewsletter.status === "loading"}
-            />
-            <button
-              type="submit"
-              className="primary"
-              disabled={mobileNewsletter.status === "loading"}
-            >
-              {mobileNewsletter.status === "loading" ? "Joining…" : brand.mobile.notify.cta}
-            </button>
-          </form>
-        )}
-        {mobileNewsletter.error && (
-          <p className="newsletter-error" role="alert">
-            {mobileNewsletter.error}
-          </p>
-        )}
-        <p className="coming-soon-disclaimer">{brand.mobile.notify.disclaimer}</p>
+            {mobileNewsletter.status === "success" ? (
+              <p className="newsletter-success">You&rsquo;re on the list.</p>
+            ) : (
+              <form
+                className="coming-soon-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  mobileNewsletter.submit(mobileEmail);
+                }}
+              >
+                <label htmlFor={mobileEmailId} className="visually-hidden">
+                  Email address
+                </label>
+                <input
+                  id={mobileEmailId}
+                  type="email"
+                  name="email"
+                  placeholder={brand.mobile.notify.placeholder}
+                  autoComplete="email"
+                  required
+                  value={mobileEmail}
+                  onChange={(e) => setMobileEmail(e.target.value)}
+                  disabled={mobileNewsletter.status === "loading"}
+                />
+                <button
+                  type="submit"
+                  className="primary"
+                  disabled={mobileNewsletter.status === "loading"}
+                >
+                  {mobileNewsletter.status === "loading" ? "Joining…" : brand.mobile.notify.cta}
+                </button>
+              </form>
+            )}
+            {mobileNewsletter.error && (
+              <p className="newsletter-error" role="alert">
+                {mobileNewsletter.error}
+              </p>
+            )}
+            <p className="coming-soon-disclaimer">{brand.mobile.notify.disclaimer}</p>
+          </div>
 
-        <h3>{brand.mobile.homeScreen.title}</h3>
-        <p className="note">{brand.mobile.homeScreen.body}</p>
-        <div className="home-screen-guide">
-          {[brand.mobile.homeScreen.ios, brand.mobile.homeScreen.android].map((platform) => (
-            <div className="home-screen-platform" key={platform.label}>
-              <h4>{platform.label}</h4>
-              <ol className="home-screen-step-list">
-                {platform.steps.map((step, i) => {
-                  const Icon = HOME_SCREEN_ICONS[step.icon];
-                  return (
-                    <li key={i}>
-                      <span className="home-screen-step-icon">
-                        <Icon />
-                      </span>
-                      <span>{step.text}</span>
-                    </li>
-                  );
-                })}
-              </ol>
+          <div className="mobile-instructions">
+            <h3>{brand.mobile.homeScreen.title}</h3>
+            <div className="home-screen-guide">
+              {[brand.mobile.homeScreen.ios, brand.mobile.homeScreen.android].map((platform) => (
+                <div className="home-screen-platform" key={platform.label}>
+                  <h4>{platform.label}</h4>
+                  <ol className="home-screen-step-list">
+                    {platform.steps.map((step, i) => {
+                      const Icon = HOME_SCREEN_ICONS[step.icon];
+                      return (
+                        <li key={i}>
+                          <span className="home-screen-step-icon">
+                            <Icon />
+                          </span>
+                          <span>{step.text}</span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+              ))}
+              <p className="note">{brand.mobile.homeScreen.body}</p>
             </div>
-          ))}
+          </div>
         </div>
       </section>
 

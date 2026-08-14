@@ -41,16 +41,15 @@ export const brand = {
    * search demand, and a brand-name `h1` is part of what got the sibling
    * project deindexed. The wordmark in `Nav` carries the name instead.
    */
-  headline: "Practice Mandarin tones the fun way",
+  /** Small caps label above the h1. */
+  heroEyebrow: "A tone-training game, not a fluency app",
+  headline: "A visual way to train your Mandarin tones",
   tagline: "Your voice is the controller.",
-  /** One sentence, under the tagline. Say what it does, not what it feels like. */
+  /** One sentence, under the h1. Say what it does, not what it feels like. */
   pitch:
-    "Fly through corridors shaped like Mandarin tone marks by producing the matching tone. Your pitch is the flight path.",
+    "Tones can be hard to grasp for non-Mandarin speakers. FlappyTone lets you practice tones intuitively, while having fun!",
   /** PRD §8 requires this to be visible before the mic is ever requested. */
   requirement: "Needs a microphone and a quiet room.",
-
-  /** Hero's second button — scrolls to the #mobile home-screen instructions. */
-  installCta: "Install on your phone",
 
   privacyNote:
     "Your voice is processed on your device, never uploaded or stored.",
@@ -58,26 +57,34 @@ export const brand = {
   /** Caption under the demo loop. */
   demoCaption: "Flappytone in action.",
 
-  /** Subhead + lead-in above the four tone cards. */
-  toneDataTitle: "Based on real-life data",
-  toneDataIntro:
-    "These aren't the textbook tone marks. Every corridor is measured from a native Taiwanese speaker's own voice.",
+  /** The two teaser cards directly under the hero: Play vs. Visualise. */
+  heroCards: {
+    play: {
+      eyebrow: "For practice",
+      title: "Fly through corridors with your voice",
+      body: "Fly through gates shaped like tone contours. Ace the pitch, clear the gate. This builds muscle memory without you even thinking about it.",
+      cta: "Play the game",
+    },
+    visualise: {
+      eyebrow: "For understanding",
+      title: "Visualiser: understand how to use your voice",
+      body: "No gates, no score. Watch your voice trace the tone shape in real time against a native speaker's. Wait for the \"aha!\" moment and then go try out the game!",
+      cta: "Try the visualiser",
+    },
+  },
 
-  /** The three beats under "How it works". */
-  howItWorks: [
-    {
-      title: "Your pitch moves the dot",
-      body: "The game listens and maps your voice onto the screen, live. Higher voice, higher dot, no buttons, no taps.",
-    },
-    {
-      title: "The corridor is the tone mark",
-      body: "The four tone marks are pitch diagrams. The gap you fly through is the shape you have to say, so the obstacle and the lesson are the same thing.",
-    },
-    {
-      title: "Hear it, then answer it",
-      body: "Each gate plays a native recording first. You listen, then you say it, and you see your contour against the target as you go.",
-    },
-  ],
+  /** "Why this works" — text only, no image, sits above the visualiser section. */
+  whyThisWorks: {
+    eyebrow: "How this works",
+    title: "You know how tones look like on paper.\nThis makes you understand them.",
+    body: "mā, má, mǎ, mà trace four different pitch shapes every time a native speaker says them, that's literally what the tone marks are. Say a tone enough times while watching its shape and you will start recognizing it before you can explain why. You're effectively creating a visual memory of pitch, pretty cool!",
+  },
+
+  /** Subhead + lead-in above the four tone cards. */
+  toneDataTitle: "Trained on the voice of a native Mandarin speaker from Taiwan",
+  toneDataEyebrow: "Based on real speech, not the textbook",
+  toneDataIntro:
+    "Every corridor is measured from Jane, a native Taiwanese speaker. The gate shapes therefore represent the exact path of her voice at the moment of recording. So if a shape doesn't match a textbook you've used, that's not a bug, it's a real accent. More accents, and eventually other tonal languages, are on the roadmap.",
 
   /**
    * The four tones, as the landing page names them.
@@ -93,19 +100,27 @@ export const brand = {
     4: { pinyin: "mà", hanzi: "骂", cue: "drop sharply top to bottom" },
   },
 
-  /** PRD §11, stated in the product rather than only in the spec. */
+  /**
+   * PRD §11, stated in the product rather than only in the spec. Shown as
+   * small pill tags at the foot of the "based on real speech" section.
+   */
   limits: [
-    "It checks your pitch contour, not your pronunciation, humming will beat it. It's a tone trainer, not a pronunciation checker.",
-    "Single syllables only. No sandhi, no connected speech, no sentences yet.",
+    "Not pronunciation scoring",
+    "Not a fluency app",
+    "One syllable at a time",
+    "Humming beats it (for now)",
   ],
 
   visualiser: {
-    title: "Can't hear the difference between mǎ and mà? Visualise it instead.",
-    body: "Say a tone as many times as you like and watch every attempt stack on the target shape, no gates, no score, no pressure. It's the fastest way to see what your voice is actually doing.",
-    cta: "Try the visualiser",
+    eyebrow: "The other half of the app",
+    title: "Understand how to use your voice",
+    body: "Say mǎ ten times in a row and watch every attempt stack on the target shape. No score, no pressure, no gate to clear. Helps you understand how to voice each tone properly.",
+    cta: "Open the visualiser",
+    imageCaption: "mǎ — three attempts stacked on the target shape",
   },
 
   mobile: {
+    eyebrow: "On mobile",
     title: "Mobile app",
     body: "iOS and Android apps aren't out yet. A native app would add offline play, practice reminders and a streak you can keep, but there's nothing to install from a store today.",
     notify: {
@@ -134,11 +149,17 @@ export const brand = {
   },
 
   comingSoon: {
-    title: "More words, and your own tone history, coming next",
-    body: "Right now it's one syllable, four tones, enough to test whether the mechanic works. Next up: a bigger word list, and a page that shows how your tone shapes change over time as you practice. Want to know when it ships?",
+    eyebrow: "Coming next",
+    title: "More tones to fly, coming next",
+    body: "Right now it's one syllable and four tones. Good for starters. Next: a bigger word list, tone-pair drills and eventually more accents. Get notified when new words ship.",
+    items: [
+      { label: "Next", title: "A bigger word list" },
+      { label: "Then", title: "Tone-pair drills" },
+      { label: "Later", title: "More accents & languages" },
+    ],
     placeholder: "you@example.com",
     cta: "Notify me",
-    disclaimer: "Only for FlappyTone updates. No spam, unsubscribe anytime.",
+    disclaimer: "One list. Only for FlappyTone updates, no spam, unsubscribe anytime.",
   },
 
   /** Footer credit for the reference clips. Jane recorded them; say so. */
@@ -169,9 +190,19 @@ export const brand = {
     ],
   },
 
+  /** In DOM order as they appear in `Landing.tsx` — Nav renders `inNav`
+   *  entries in this array's order, so a section moved in the page has to
+   *  move here too or the nav links stop matching the scroll order. */
   sections: [
     { id: "top", title: "FlappyTone" },
     { id: "demo", title: "See it" },
+    { id: "play", title: "Play", navLabel: "Play", inNav: true },
+    {
+      id: "how-it-works",
+      title: "How it works",
+      navLabel: "How it works",
+      inNav: true,
+    },
     {
       id: "visualiser",
       title: "Tone visualiser",
@@ -179,14 +210,12 @@ export const brand = {
       inNav: true,
     },
     {
-      id: "how-it-works",
-      title: "How it works",
-      navLabel: "How it works",
+      id: "real-speech",
+      title: "Based on real speech, not the textbook",
+      navLabel: "Real speech",
       inNav: true,
     },
-    { id: "play", title: "Play", navLabel: "Play", inNav: true },
     { id: "coming-soon", title: "Get notified" },
-    { id: "limits", title: "What it doesn't do" },
     { id: "mobile", title: "Mobile app", navLabel: "Mobile", inNav: true },
   ] as LandingSection[],
 } as const;

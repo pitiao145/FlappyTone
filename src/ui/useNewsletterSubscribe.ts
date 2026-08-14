@@ -20,7 +20,7 @@ export function useNewsletterSubscribe(source: "coming_soon" | "mobile") {
       const res = await fetch("/api/newsletter", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, source }),
       });
       let data: { error?: string } = {};
       try {

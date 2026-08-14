@@ -6,25 +6,35 @@ import { ContourSpark } from "./ContourSpark.tsx";
 
 const TONES: Tone[] = [1, 2, 3, 4];
 
-/** Native pixel size of the recorded clip — sets the box's aspect ratio. */
-const CLIP_WIDTH = 862;
-const CLIP_HEIGHT = 1520;
+/** Native pixel size of the recorded hero clip — sets the box's aspect ratio. */
+const HERO_CLIP_WIDTH = 862;
+const HERO_CLIP_HEIGHT = 1520;
+
+/** Native pixel size of the recorded visualiser clip. */
+const VISUALISER_CLIP_WIDTH = 894;
+const VISUALISER_CLIP_HEIGHT = 1788;
 
 /**
- * The landing page's "see it" panel: a real recorded run — mostly clean tone
- * corridors, one wall collision near the end — looping on mute.
+ * A muted, looping recorded clip — shared shape for every "see it before you
+ * grant a mic" panel on the landing page.
  *
  * Deliberately **mute and mic-free**: the `<video>` has no audio track at
  * all, and this module must not import from `src/audio/` or construct an
  * `AudioContext`. Someone deciding whether this is for them should be able
  * to watch the mechanic before granting anything.
  */
-export function DemoLoop({
-  width = 300,
-  height = Math.round((300 * CLIP_HEIGHT) / CLIP_WIDTH),
+function VideoLoop({
+  webmSrc,
+  mp4Src,
+  ariaLabel,
+  width,
+  height,
 }: {
-  width?: number;
-  height?: number;
+  webmSrc: string;
+  mp4Src: string;
+  ariaLabel: string;
+  width: number;
+  height: number;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   // Read once per mount: this decides between playback and a static figure,
@@ -78,11 +88,51 @@ export function DemoLoop({
       loop
       playsInline
       preload="auto"
-      aria-label="A recorded run of the game: the bird tracing each tone's corridor, mostly clean with one wall collision near the end."
+      aria-label={ariaLabel}
     >
-      <source src="/hero/hero-flappytone.webm" type="video/webm" />
-      <source src="/hero/hero-flappytone.mp4" type="video/mp4" />
+      <source src={webmSrc} type="video/webm" />
+      <source src={mp4Src} type="video/mp4" />
     </video>
+  );
+}
+
+/** The landing page's "see it" panel: a real recorded run — mostly clean tone
+ * corridors, one wall collision near the end. */
+export function DemoLoop({
+  width = 300,
+  height = Math.round((width * HERO_CLIP_HEIGHT) / HERO_CLIP_WIDTH),
+}: {
+  width?: number;
+  height?: number;
+}) {
+  return (
+    <VideoLoop
+      webmSrc="/hero/hero-flappytone.webm"
+      mp4Src="/hero/hero-flappytone.mp4"
+      ariaLabel="A recorded run of the game: the bird tracing each tone's corridor, mostly clean with one wall collision near the end."
+      width={width}
+      height={height}
+    />
+  );
+}
+
+/** The visualiser section's own demo: a recorded run of the visualiser
+ * screen, showing repeated attempts stacking on the target contour. */
+export function VisualiserDemoLoop({
+  width = 300,
+  height = Math.round((width * VISUALISER_CLIP_HEIGHT) / VISUALISER_CLIP_WIDTH),
+}: {
+  width?: number;
+  height?: number;
+}) {
+  return (
+    <VideoLoop
+      webmSrc="/visualiser/visualiser-demo.webm"
+      mp4Src="/visualiser/visualiser-demo.mp4"
+      ariaLabel="A recorded run of the visualiser: repeated attempts at a tone stacking on the target contour."
+      width={width}
+      height={height}
+    />
   );
 }
 

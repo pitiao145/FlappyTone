@@ -10,43 +10,58 @@ export function ComingSoon() {
 
   return (
     <section id="coming-soon" className="landing-section landing-coming-soon">
-      <h2>{brand.comingSoon.title}</h2>
-      <p>{brand.comingSoon.body}</p>
-      {status === "success" ? (
-        <p className="newsletter-success">You&rsquo;re on the list.</p>
-      ) : (
-        <form
-          className="coming-soon-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit(email);
-          }}
-        >
-          <label htmlFor={inputId} className="visually-hidden">
-            Email address
-          </label>
-          <input
-            id={inputId}
-            type="email"
-            name="email"
-            placeholder={brand.comingSoon.placeholder}
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={status === "loading"}
-          />
-          <button type="submit" className="primary" disabled={status === "loading"}>
-            {status === "loading" ? "Joining…" : brand.comingSoon.cta}
-          </button>
-        </form>
-      )}
-      {error && (
-        <p className="newsletter-error" role="alert">
-          {error}
-        </p>
-      )}
-      <p className="coming-soon-disclaimer">{brand.comingSoon.disclaimer}</p>
+      <div className="roadmap-header">
+        <div className="roadmap-header-text">
+          <p className="section-eyebrow">{brand.comingSoon.eyebrow}</p>
+          <h2>{brand.comingSoon.title}</h2>
+          <p>{brand.comingSoon.body}</p>
+        </div>
+        <div className="roadmap-header-form">
+          {status === "success" ? (
+            <p className="newsletter-success">You&rsquo;re on the list.</p>
+          ) : (
+            <form
+              className="coming-soon-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                submit(email);
+              }}
+            >
+              <label htmlFor={inputId} className="visually-hidden">
+                Email address
+              </label>
+              <input
+                id={inputId}
+                type="email"
+                name="email"
+                placeholder={brand.comingSoon.placeholder}
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={status === "loading"}
+              />
+              <button type="submit" className="primary" disabled={status === "loading"}>
+                {status === "loading" ? "Joining…" : brand.comingSoon.cta}
+              </button>
+            </form>
+          )}
+          {error && (
+            <p className="newsletter-error" role="alert">
+              {error}
+            </p>
+          )}
+          <p className="coming-soon-disclaimer">{brand.comingSoon.disclaimer}</p>
+        </div>
+      </div>
+      <div className="roadmap-grid">
+        {brand.comingSoon.items.map((item) => (
+          <div className="roadmap-item" key={item.label}>
+            <p className="roadmap-label">{item.label}</p>
+            <p className="roadmap-title">{item.title}</p>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
