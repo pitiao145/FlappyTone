@@ -1233,17 +1233,20 @@
   text-align: left;
 }
 
+/* Two boxes, not one: the bar is full-bleed (background reaches the true
+   viewport edge on every screen, game/menu/landing alike — same trick as
+   .landing-footer, escaping .app's own side padding), and .nav-inner below
+   is the actual content row, capped at the same width as the rest of the
+   page's content so brand/links/Play don't stretch to the screen edges on
+   a wide viewport. Used to be one element with the cap only applying on
+   landing (because .landing itself happened to be centered and capped) —
+   .nav-app then re-capped app screens to a *different* width, which is why
+   the bar's width and even its own height (a different --nav-name
+   font-size) used to drift between the landing page and everywhere else. */
 .landing-nav {
   position: sticky;
   top: 0;
   z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  /* Full-bleed, same trick as .landing-footer: escapes .app's own side
-     padding so the bar reaches the true viewport edge at every width,
-     instead of floating inset by .app's 16px gutter. */
   width: 100vw;
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
@@ -1251,6 +1254,17 @@
   background: color-mix(in srgb, var(--surface-panel) 88%, transparent);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
+}
+
+.nav-inner {
+  position: relative;
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
 .landing-nav.nav-menu-open {
@@ -2676,17 +2690,10 @@ section.hero-cards {
 
 /* ------------------------------------------------------- nav, app variant */
 
-/* Same bar as the landing page's, same width: a sibling of .frame (see
-   .app-main in App.tsx), not a child of it, so it's sized the same way on
-   every screen regardless of whether that screen's own .frame is the
-   420px game canvas, the 640px menu shell, or the full-width Lab. */
-.nav-app {
-  width: 100%;
-  max-width: 72rem;
-  margin-inline: auto;
-  margin-bottom: var(--space-2);
-}
-
+/* Sizing (width, height, max-width) is unified in .landing-nav/.nav-inner —
+   both variants share those now. What's left here is behavioural: on app
+   screens the nav items are buttons calling onNavigate, not real anchors
+   (see Nav.tsx), so they need the anchor/button reset a real <a> doesn't. */
 .nav-app .nav-brand,
 .nav-link {
   border: none;
@@ -2694,10 +2701,6 @@ section.hero-cards {
   cursor: pointer;
   padding: 0;
   font: inherit;
-}
-
-.nav-app .nav-name {
-  font-size: var(--text-xs);
 }
 
 .nav-link {

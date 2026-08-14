@@ -182,75 +182,77 @@ export function Nav({ variant, onNavigate, onPlay, disabled }: Props) {
 
   return (
     <nav ref={navRef} className={`landing-nav nav-${variant}${navMenuOpen ? " nav-menu-open" : ""}`}>
-      {brandMark}
+      <div className="nav-inner">
+        {brandMark}
 
-      <div className="landing-nav-links">{items.map((s) => desktopLink(s.id, s.navLabel ?? s.title))}</div>
+        <div className="landing-nav-links">{items.map((s) => desktopLink(s.id, s.navLabel ?? s.title))}</div>
 
-      <div className="nav-actions">
-        {onPlay && (
-          <div className="nav-cta" ref={playRef}>
-            <div className="nav-cta-shady">
-              <button
-                type="button"
-                className="nav-cta-btn"
-                disabled={disabled}
-                aria-expanded={playMenuOpen}
-                aria-haspopup="menu"
-                aria-controls={playMenuId}
-                onClick={() => {
-                  setNavMenuOpen(false);
-                  setPlayMenuOpen((open) => !open);
-                }}
-              >
-                Play
-                <IconChevron />
-              </button>
-            </div>
-
-            {playMenuOpen && (
-              <div className="nav-cta-menu" id={playMenuId} role="menu">
+        <div className="nav-actions">
+          {onPlay && (
+            <div className="nav-cta" ref={playRef}>
+              <div className="nav-cta-shady">
                 <button
                   type="button"
-                  className="nav-cta-item"
-                  role="menuitem"
+                  className="nav-cta-btn"
                   disabled={disabled}
+                  aria-expanded={playMenuOpen}
+                  aria-haspopup="menu"
+                  aria-controls={playMenuId}
                   onClick={() => {
-                    setPlayMenuOpen(false);
-                    onPlay();
+                    setNavMenuOpen(false);
+                    setPlayMenuOpen((open) => !open);
                   }}
                 >
-                  <IconWeb />
-                  <span>Web</span>
+                  Play
+                  <IconChevron />
                 </button>
-                <a
-                  href="#mobile"
-                  className="nav-cta-item"
-                  role="menuitem"
-                  onClick={() => setPlayMenuOpen(false)}
-                >
-                  <IconIos />
-                  <span>
-                    iOS <em className="nav-cta-soon">coming soon</em>
-                  </span>
-                </a>
               </div>
-            )}
-          </div>
-        )}
 
-        <button
-          type="button"
-          className="nav-hamburger"
-          aria-expanded={navMenuOpen}
-          aria-controls={navMenuId}
-          aria-label={navMenuOpen ? "Close menu" : "Open menu"}
-          onClick={() => {
-            setPlayMenuOpen(false);
-            setNavMenuOpen((open) => !open);
-          }}
-        >
-          {navMenuOpen ? <IconClose /> : <IconMenu />}
-        </button>
+              {playMenuOpen && (
+                <div className="nav-cta-menu" id={playMenuId} role="menu">
+                  <button
+                    type="button"
+                    className="nav-cta-item"
+                    role="menuitem"
+                    disabled={disabled}
+                    onClick={() => {
+                      setPlayMenuOpen(false);
+                      onPlay();
+                    }}
+                  >
+                    <IconWeb />
+                    <span>Web</span>
+                  </button>
+                  <a
+                    href="#mobile"
+                    className="nav-cta-item"
+                    role="menuitem"
+                    onClick={() => setPlayMenuOpen(false)}
+                  >
+                    <IconIos />
+                    <span>
+                      iOS <em className="nav-cta-soon">coming soon</em>
+                    </span>
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="nav-hamburger"
+            aria-expanded={navMenuOpen}
+            aria-controls={navMenuId}
+            aria-label={navMenuOpen ? "Close menu" : "Open menu"}
+            onClick={() => {
+              setPlayMenuOpen(false);
+              setNavMenuOpen((open) => !open);
+            }}
+          >
+            {navMenuOpen ? <IconClose /> : <IconMenu />}
+          </button>
+        </div>
       </div>
 
       {navMenuOpen &&
