@@ -179,7 +179,7 @@ export const brand = {
     connectHeading: "Connect",
     connect: [
       { href: "https://pierrebuilds.dev", label: "pierrebuilds.dev", external: true, icon: "web" },
-      { href: "https://x.com/PierreBuilds", label: "Follow on X", external: true, icon: "x" },
+      { href: "https://x.com/pierreBuildsDev", label: "Follow on X", external: true, icon: "x" },
       {
         href: "https://www.buymeacoffee.com/pierrebuilds",
         label: "Buy me a bubble tea",
