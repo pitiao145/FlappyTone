@@ -151,7 +151,7 @@ export const brand = {
   comingSoon: {
     eyebrow: "Coming next",
     title: "More tones to fly, coming next",
-    body: "Right now it's one syllable and four tones. Good for starters. Next: a bigger word list, tone-pair drills and eventually more accents. Get notified when new words ship.",
+    body: "Right now it's 120 one-syllable words and four tones. Good for starters. Next: a bigger word list, tone-pair drills and eventually more accents. Get notified when new words ship.",
     items: [
       { label: "Next", title: "A bigger word list" },
       { label: "Then", title: "Tone-pair drills" },
