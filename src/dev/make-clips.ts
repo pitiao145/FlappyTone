@@ -142,7 +142,7 @@ for (const session of sessions) {
   for (const { id, samples, sampleRate } of takes) {
     const word = byId.get(id)!;
     try {
-      const clip = cutClip(samples, sampleRate, reference.f0Center, MEASURE_RANGE_SEMITONES);
+      const clip = cutClip(samples, sampleRate, reference.f0Center, MEASURE_RANGE_SEMITONES, word.tone);
       cuts.set(id, {
         id,
         tone: word.tone,

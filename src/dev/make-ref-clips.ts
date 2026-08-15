@@ -47,7 +47,7 @@ for (const { tone, file } of SOURCES) {
     new Uint8Array(readFileSync(`${root}fixtures/captures/${file}.wav`)),
   );
 
-  const clip = cutClip(samples, sampleRate, f0Center);
+  const clip = cutClip(samples, sampleRate, f0Center, undefined, tone as 1 | 2 | 3 | 4);
   const out = `${outDir}/ma${tone}.wav`;
   writeFileSync(out, encodeWav(clip.samples, sampleRate));
 

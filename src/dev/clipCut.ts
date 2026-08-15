@@ -93,6 +93,55 @@ export interface CutClip {
 }
 
 /**
+ * Widens the glide rescue for Tone 3 measurement only — never touches live
+ * gameplay, which always constructs its own `PitchTracker` with the shared
+ * `DEFAULT_CONFIG`.
+ *
+ * The stock rescue (`DEFAULT_VOICING` in `src/pitch/math.ts`) is tuned for
+ * fast, *loud* pitch glides — a Tone-4 fall stays loud while its clarity
+ * collapses. Tone 3's trough is the opposite failure: creak is quiet and
+ * erratic, not fast, so `rescueRmsMult: 10` (needing 10x the noise floor)
+ * rejects exactly the frames it would need to bridge.
+ *
+ * Checked against the raw captures for `wu3`, `xiang3` and `yan3` (session
+ * 2026-08-07-xujzgs, 15 Aug 2026): all three show a clear rise back toward
+ * chao 5 in the pitch trace once `f0Center` is set correctly, but the
+ * measured `manifest.json` polyline for each ends flat at the dip — the
+ * rescue never re-armed after the trough went quiet. This lowers the rms
+ * floor toward the primary gate's own 3x and gives the rescue more frames to
+ * find its way back to voicing, so the trough can be crossed without
+ * loosening the primary `clarityThreshold` (which would risk voicing real
+ * silence, not just creak).
+ *
+ * A measurement-only knob: no fixture test pins live gameplay to these
+ * numbers, and `cutClip`'s existing tests (chang2/ba1/ma4/ma1) don't touch
+ * tone 3, so this cannot move anything already pinned.
+ *
+ * The rescue alone was not enough: on `wu3` it recovers every frame around
+ * the trough (clarity 0.76–0.99 throughout) except one 149ms silent gap right
+ * at the bottom — 29ms past the 120ms `MERGE_GAP_MS` `longestVoicedRun` uses
+ * to stitch runs together. That one gap was enough to split the utterance
+ * into a 448ms "fall" run and a 341ms "rise" run and keep only the longer
+ * (the fall), discarding the rise before `measureContour` ever saw it. See
+ * `TONE_3_MERGE_GAP_MS` below — the two knobs fix the two distinct failures.
+ */
+const TONE_3_RESCUE = {
+  rescueClarity: 0.3,
+  rescueRmsMult: 4,
+  rescueMaxFrames: 8,
+};
+
+/**
+ * Wider run-merge gap for Tone 3 only. A genuine creak bottom-out can go
+ * fully silent for longer than `MERGE_GAP_MS` even with `TONE_3_RESCUE`
+ * applied; this is what lets `longestVoicedRun` treat the fall and the rise
+ * as one utterance instead of picking whichever half is longer. 250ms clears
+ * the 149ms gap measured on `wu3` with room to spare, while staying well
+ * under a real inter-word pause.
+ */
+const TONE_3_MERGE_GAP_MS = 250;
+
+/**
  * Longest voiced run in `samples`, as sample indices, merging short gaps.
  * The same segmentation `longestUtteranceMs()` and the recording booth use.
  */
@@ -100,15 +149,20 @@ function longestVoicedRun(
   samples: Float32Array,
   sampleRate: number,
   f0Center: number,
+  tone?: Tone,
 ): { start: number; end: number } | null {
-  const tracker = new PitchTracker({ sampleRate, f0Center });
+  const tracker = new PitchTracker({
+    sampleRate,
+    f0Center,
+    ...(tone === 3 ? TONE_3_RESCUE : {}),
+  });
   const voiced: number[] = [];
   for (let s = 0; s + WIN <= samples.length; s += HOP) {
     if (tracker.push(samples.subarray(s, s + WIN)).voiced) voiced.push(s + WIN / 2);
   }
   if (voiced.length === 0) return null;
 
-  const gap = (MERGE_GAP_MS / 1000) * sampleRate;
+  const gap = ((tone === 3 ? TONE_3_MERGE_GAP_MS : MERGE_GAP_MS) / 1000) * sampleRate;
   let bestStart = voiced[0];
   let bestEnd = voiced[0];
   let runStart = voiced[0];
@@ -184,8 +238,14 @@ export function measureContour(
   sampleRate: number,
   f0Center: number,
   rangeSemitones?: number,
+  tone?: Tone,
 ): { contour: ContourPoint[]; pinnedFraction: number } {
-  const tracker = new PitchTracker({ sampleRate, f0Center, ...(rangeSemitones ? { rangeSemitones } : {}) });
+  const tracker = new PitchTracker({
+    sampleRate,
+    f0Center,
+    ...(rangeSemitones ? { rangeSemitones } : {}),
+    ...(tone === 3 ? TONE_3_RESCUE : {}),
+  });
   const contour: ContourPoint[] = [];
   let pinned = 0;
   for (let s = 0; s + WIN <= samples.length; s += HOP) {
@@ -209,8 +269,9 @@ export function cutClip(
   sampleRate: number,
   f0Center: number,
   rangeSemitones?: number,
+  tone?: Tone,
 ): CutClip {
-  const run = longestVoicedRun(samples, sampleRate, f0Center);
+  const run = longestVoicedRun(samples, sampleRate, f0Center, tone);
   if (!run) throw new Error("no voiced frames");
 
   const pad = (PAD_MS / 1000) * sampleRate;
@@ -236,17 +297,17 @@ export function cutClip(
   // a voiced frame and `yuan3` loses one, which moves two corridors under
   // players for no reason anyone asked for. Reproducing today's input exactly is
   // what lets this change claim it moved audio and nothing else.
-  const tone = samples.slice(a, b + 1);
-  for (let i = 0; i < fade && i < tone.length; i++) {
-    tone[i] *= i / fade;
-    tone[tone.length - 1 - i] *= i / fade;
+  const toneSamples = samples.slice(a, b + 1);
+  for (let i = 0; i < fade && i < toneSamples.length; i++) {
+    toneSamples[i] *= i / fade;
+    toneSamples[toneSamples.length - 1 - i] *= i / fade;
   }
-  const { contour, pinnedFraction } = measureContour(tone, sampleRate, f0Center, rangeSemitones);
+  const { contour, pinnedFraction } = measureContour(toneSamples, sampleRate, f0Center, rangeSemitones, tone);
 
   return {
     samples: cut,
     sampleRate,
-    durationMs: (tone.length / sampleRate) * 1000,
+    durationMs: (toneSamples.length / sampleRate) * 1000,
     onsetMs: ((a - onsetA) / sampleRate) * 1000,
     toneStartMs: (a / sampleRate) * 1000,
     sourceMs: (samples.length / sampleRate) * 1000,
