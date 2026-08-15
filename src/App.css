@@ -1034,6 +1034,13 @@
   flex: 1 1 auto;
 }
 
+.lab-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
 /* The play tab's speed/tunnel-width row, now sitting under the canvas
    instead of beside it — full-size pills (built for a standalone settings
    screen) ran three options wide and wrapped awkwardly at this column

@@ -6,10 +6,11 @@ import { REST_CHAO } from "../game/dynamics.ts";
 import {
   applyCorridorWidth,
   applyPace,
+  corridorChaoAt,
   CORRIDOR_WIDTHS,
   newDifficulty,
   PACES,
-  shapeForWord,
+  shapeForTone,
   toleranceChao,
   type CorridorWidth,
   type Pace,
@@ -33,7 +34,7 @@ import {
 import { tuning } from "../game/tuning.ts";
 import type { Word } from "../game/words.ts";
 import { DEFAULT_CONFIG } from "../pitch/PitchTracker.ts";
-import { BACKDROP, drawChaoGrid, drawDot } from "../render/scene.ts";
+import { BACKDROP, chaoToY, drawChaoGrid, drawDot } from "../render/scene.ts";
 import { drawGate } from "../render/world.ts";
 import { Choice } from "../ui/Choice.tsx";
 import { Game } from "../ui/Game.tsx";
@@ -125,6 +126,16 @@ export function Lab({ onBack }: Props) {
    */
   const [pace, setPace] = useState<Pace>(loadPace);
   const [corridorWidth, setCorridorWidth] = useState<CorridorWidth>(loadCorridorWidth);
+  /**
+   * Lab-only inspection toggle — overlays the citation T3 polyline (the shape
+   * `shapeForWord` substitutes in for every T3 gate, per its comment in
+   * gates.ts) on top of the word's own measured contour, so the two can be
+   * compared. `GatePreview` never calls `shapeForWord` for its primary
+   * corridor — it always draws `word.polyline` — so this is purely a paused,
+   * dev-only canvas overlay. It touches no exported game function, so real
+   * gates (`makeGate`/`shapeForWord`) are unaffected either way.
+   */
+  const [showCitation, setShowCitation] = useState(false);
 
   useEffect(() => {
     loadInventory().then(
@@ -208,7 +219,22 @@ export function Lab({ onBack }: Props) {
               />
             ) : (
               <div className="lab-idle">
-                <GatePreview word={selectedWord} pace={pace} corridorWidth={corridorWidth} />
+                <GatePreview
+                  word={selectedWord}
+                  pace={pace}
+                  corridorWidth={corridorWidth}
+                  showCitation={showCitation}
+                />
+                {selectedWord?.tone === 3 && (
+                  <label className="param-help lab-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={showCitation}
+                      onChange={(e) => setShowCitation(e.target.checked)}
+                    />
+                    overlay citation T3 shape (what the game actually flies)
+                  </label>
+                )}
                 {gateError && <p className="error">{gateError}</p>}
                 <button
                   className="primary"
@@ -452,15 +478,28 @@ tolerance in chao   ${TONE_LIST.map((t) => `T${t} ${toleranceChao(t, d.tolerance
  * The gate starts (t=0) at the bird's x, matching the moment the player
  * begins flying it in a live run — the dot sits at the gate's own entrance
  * rather than partway through the corridor.
+ *
+ * The corridor drawn here is always the word's own measured shape
+ * (`word.polyline`/`word.durationS`), never `shapeForWord`'s output — for
+ * every tone but 3 those are the same thing, but for T3 `shapeForWord`
+ * substitutes the citation polyline (see its comment in gates.ts: 22 of 30
+ * T3 takes are her natural, non-rising T3). This view exists to *see* that
+ * substitution, so it must not itself apply it. `showCitation` optionally
+ * overlays the citation shape `shapeForWord` would actually fly, as a second
+ * dashed line, so the two can be compared directly. Neither of these calls
+ * `shapeForWord` or touches anything `makeGate`/a real run reads — this is a
+ * paused canvas-only overlay, gameplay is untouched either way.
  */
 function GatePreview({
   word,
   pace,
   corridorWidth,
+  showCitation,
 }: {
   word: Word | null;
   pace: Pace;
   corridorWidth: CorridorWidth;
+  showCitation: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -476,7 +515,7 @@ function GatePreview({
         ctx.fillRect(0, 0, width, height);
         drawChaoGrid(ctx, width, height);
         if (word) {
-          const shape = shapeForWord(word);
+          const shape = { polyline: word.polyline, durationS: word.durationS };
           const baseTol = toleranceChao(word.tone, tuning().baseToleranceH);
           const d = applyCorridorWidth(
             applyPace({ scrollSpeed: tuning().baseScrollSpeed, toleranceH: baseTol, restMs: 0 }, pace),
@@ -484,6 +523,8 @@ function GatePreview({
           );
           const widthPx = d.scrollSpeed * shape.durationS;
           const dotX = width * birdXFrac();
+          const x0 = dotX;
+          const x1 = dotX + widthPx;
           drawGate(
             ctx,
             width,
@@ -492,13 +533,16 @@ function GatePreview({
               tone: word.tone,
               word,
               shape,
-              x0: dotX,
-              x1: dotX + widthPx,
+              x0,
+              x1,
               tolChao: d.toleranceH,
               xStart: 0,
             },
             true,
           );
+          if (showCitation && word.tone === 3) {
+            drawCentrelineOverlay(ctx, height, shapeForTone(3), x0, x1);
+          }
         }
         drawChaoGrid(ctx, width, height);
         drawDot(ctx, width, height, REST_CHAO, width * birdXFrac(), true, 0);
@@ -507,13 +551,44 @@ function GatePreview({
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [word, pace, corridorWidth]);
+  }, [word, pace, corridorWidth, showCitation]);
 
   return (
     <div className="stage">
       <canvas ref={canvasRef} width={360} height={640} />
     </div>
   );
+}
+
+/**
+ * A single dashed centreline for a shape, drawn over an already-rendered
+ * gate — the "what the game actually flies" overlay for T3. Deliberately
+ * bare compared to `drawGate`'s own ghost centreline (no corridor fill or
+ * wall): the primary gate already carries that, and a second wall here would
+ * just be visual noise on top of it.
+ */
+function drawCentrelineOverlay(
+  ctx: CanvasRenderingContext2D,
+  height: number,
+  shape: Parameters<typeof corridorChaoAt>[0],
+  x0: number,
+  x1: number,
+): void {
+  const steps = 60;
+  ctx.save();
+  ctx.setLineDash([3, 5]);
+  ctx.strokeStyle = "rgba(200, 60, 60, 0.85)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const x = x0 + t * (x1 - x0);
+    const y = chaoToY(corridorChaoAt(shape, t), height);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.restore();
 }
 
 /**
