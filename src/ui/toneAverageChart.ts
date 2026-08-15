@@ -1,6 +1,7 @@
 import type { Tone } from "../game/gates.ts";
 import type { Word } from "../game/words.ts";
 import { rgba } from "../render/palette.ts";
+import { chaoToY } from "../render/scene.ts";
 
 /**
  * Draws a tone's measured clips (faint) and their averaged polyline (bold)
@@ -55,6 +56,15 @@ export function drawToneAverageChart(
   tone: Tone,
   width: number,
   height: number,
+  /**
+   * Card default (false): chao 5.5–0.5 filling the whole canvas — deliberately
+   * more zoomed-in than the game so a small "how it works" card still reads.
+   * `true` (the Lab's averages tab) uses the game's own `chaoToY` — chao 1–5
+   * mapped to 0.80H–0.20H, PRD §5.1 — so a tone's vertical excursion here is
+   * the same fraction of card height it would be of the actual play canvas,
+   * not an independently-chosen crop.
+   */
+  gameScale = false,
 ): void {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -64,7 +74,9 @@ export function drawToneAverageChart(
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, width, height);
 
-  const y = (chao: number) => ((TOP - chao) / (TOP - BOTTOM)) * height;
+  const y = gameScale
+    ? (chao: number) => chaoToY(chao, height)
+    : (chao: number) => ((TOP - chao) / (TOP - BOTTOM)) * height;
   const tint = TONE_AVERAGE_COLOR[tone];
 
   ctx.strokeStyle = rgba("grid", 0.35);

@@ -980,6 +980,14 @@
   flex: 1 1 320px;
 }
 
+/* `.lab-controls`'s flex-basis is written for the play tab's flex-row, where
+   it sets a width. `.word-gates` (the words/averages tabs) is a flex-
+   *column*, where the same basis instead demands a 320px height under a
+   couple of lines of text — see WordGates.tsx's intro block. */
+.word-gates > .lab-controls {
+  flex: 0 0 auto;
+}
+
 .gate-picker {
   display: flex;
   flex-direction: column;
@@ -1078,9 +1086,37 @@
 }
 
 .word-card canvas {
-  background: var(--backdrop, #06080c);
+  /* Was `var(--backdrop, ...)` — that custom property is never defined
+     anywhere (palette.ts's "backdrop" token resolves through
+     `--canvas-backdrop-rgb`/`--canvas-backdrop`, not a bare `--backdrop`), so
+     this always fell through to the dark fallback while every other canvas
+     in the app (the game itself, GatePreview) painted the paper backdrop. */
+  background: var(--canvas-backdrop);
   border-radius: var(--radius-sm, 6px);
   cursor: pointer;
+}
+
+/**
+ * The averages tab's cards, at 320×220, share `.word-grid` with the words
+ * tab's 210×150 cards. `repeat(auto-fill, minmax(210px, 1fr))` sizes tracks
+ * off that 210px floor and creates as many of them as the container is wide
+ * enough for — with only 4 cards in this tab the tracks came out narrower
+ * than 320px, and the canvas's fixed inline pixel width overflowed into the
+ * next card (the touching/overlapping cards bug). `auto-fit` collapses unused
+ * tracks instead of leaving them empty and taking up 1fr, and the taller
+ * floor matches this tab's own card width; the canvas itself is sized by CSS
+ * to the resulting track rather than to a hardcoded pixel width, so it can
+ * never again claim more space than its grid cell has.
+ */
+.tone-average-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.tone-average-card canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 320 / 220;
+  cursor: default;
 }
 
 .tuning-panel {
