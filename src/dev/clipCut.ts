@@ -135,11 +135,18 @@ const TONE_3_RESCUE = {
  * Wider run-merge gap for Tone 3 only. A genuine creak bottom-out can go
  * fully silent for longer than `MERGE_GAP_MS` even with `TONE_3_RESCUE`
  * applied; this is what lets `longestVoicedRun` treat the fall and the rise
- * as one utterance instead of picking whichever half is longer. 250ms clears
- * the 149ms gap measured on `wu3` with room to spare, while staying well
- * under a real inter-word pause.
+ * as one utterance instead of picking whichever half is longer.
+ *
+ * 250ms (the first value tried) cleared `wu3`'s 149ms gap but left 9 of 30
+ * words still flagged flat. Diagnosed against the raw captures (15 Aug
+ * 2026): every one of those 9 has a real, clearly-voiced rise back to chao
+ * 4.8–5.0 later in the take — `ba3` 405ms, `ma3b` 448ms, `wo3` 384ms,
+ * `yuan3` 363ms, `hao3`/`ni3` ~300ms — just gapped wider than 250ms could
+ * bridge. 600ms clears the widest of those (448ms) with margin. Each of
+ * these takes is a single isolated syllable in a controlled recording
+ * session, so there is no adjacent word this could wrongly stitch to.
  */
-const TONE_3_MERGE_GAP_MS = 250;
+const TONE_3_MERGE_GAP_MS = 600;
 
 /**
  * Longest voiced run in `samples`, as sample indices, merging short gaps.
