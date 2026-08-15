@@ -191,7 +191,42 @@ export function Lab({ onBack }: Props) {
           </div>
 
           <div className="lab-stage">
-            <div className="lab-idle game-settings">
+            {flyingGate && selectedWord ? (
+              <Game
+                key={gateKey}
+                mode="single"
+                singleWord={selectedWord}
+                settings={settings}
+                canvasWidth={360}
+                canvasHeight={640}
+                onOver={(snap) => {
+                  setGateResult(snap);
+                  setFlyingGate(false);
+                }}
+                onQuit={stopGate}
+                onLanding={stopGate}
+              />
+            ) : (
+              <div className="lab-idle">
+                <GatePreview word={selectedWord} pace={pace} corridorWidth={corridorWidth} />
+                {gateError && <p className="error">{gateError}</p>}
+                <button
+                  className="primary"
+                  disabled={!selectedWord}
+                  onClick={() => void testGate()}
+                >
+                  test
+                </button>
+                {gateResult?.gateLog[0] && (
+                  <p className="param-help">
+                    {gateResult.gateLog[0].outcome} · accuracy{" "}
+                    {Math.round(gateResult.gateLog[0].accuracy * 100)}%
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="lab-idle game-settings game-settings-compact">
               <div className="game-settings-row">
                 <span className="param-name">speed</span>
                 <Choice
@@ -221,41 +256,6 @@ export function Lab({ onBack }: Props) {
               </p>
               <EffectiveSettings pace={pace} corridorWidth={corridorWidth} />
             </div>
-
-            {flyingGate && selectedWord ? (
-              <Game
-                key={gateKey}
-                mode="single"
-                singleWord={selectedWord}
-                settings={settings}
-                canvasWidth={360}
-                canvasHeight={640}
-                onOver={(snap) => {
-                  setGateResult(snap);
-                  setFlyingGate(false);
-                }}
-                onQuit={stopGate}
-                onLanding={stopGate}
-              />
-            ) : (
-              <div className="lab-idle">
-                <GatePreview word={selectedWord} corridorWidth={corridorWidth} />
-                {gateError && <p className="error">{gateError}</p>}
-                <button
-                  className="primary"
-                  disabled={!selectedWord}
-                  onClick={() => void testGate()}
-                >
-                  test
-                </button>
-                {gateResult?.gateLog[0] && (
-                  <p className="param-help">
-                    {gateResult.gateLog[0].outcome} · accuracy{" "}
-                    {Math.round(gateResult.gateLog[0].accuracy * 100)}%
-                  </p>
-                )}
-              </div>
-            )}
 
             <details className="lab-idle">
               <summary className="param-help">full run instead</summary>
@@ -441,13 +441,25 @@ tolerance in chao   ${TONE_LIST.map((t) => `T${t} ${toleranceChao(t, d.tolerance
  * `corridorWidth` is the player's speed/width setting (see `game-settings`
  * above), applied the same way `Run` applies it — through `toleranceChao`,
  * then `applyCorridorWidth` — so "narrow" and "wide" flare the drawn tunnel
- * exactly as much as they would in an actual run.
+ * exactly as much as they would in an actual run. `pace` likewise sets the
+ * corridor's pixel width the same way `makeGate` does: `scrollSpeed *
+ * shape.durationS`. Stretching the polyline across the full canvas instead
+ * (the previous behaviour) drew every gate at the same width regardless of
+ * the tone's actual duration or the chosen pace, which flattened or steepened
+ * corridors relative to how they actually fly — pace changes gate *width* on
+ * screen, never how long the tone takes to fly through, so the preview must
+ * use the same pixel width the game computes or it stops matching gameplay.
+ * The gate starts (t=0) at the bird's x, matching the moment the player
+ * begins flying it in a live run — the dot sits at the gate's own entrance
+ * rather than partway through the corridor.
  */
 function GatePreview({
   word,
+  pace,
   corridorWidth,
 }: {
   word: Word | null;
+  pace: Pace;
   corridorWidth: CorridorWidth;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -464,11 +476,14 @@ function GatePreview({
         ctx.fillRect(0, 0, width, height);
         drawChaoGrid(ctx, width, height);
         if (word) {
+          const shape = shapeForWord(word);
           const baseTol = toleranceChao(word.tone, tuning().baseToleranceH);
-          const { toleranceH: tolChao } = applyCorridorWidth(
-            { scrollSpeed: 0, toleranceH: baseTol, restMs: 0 },
+          const d = applyCorridorWidth(
+            applyPace({ scrollSpeed: tuning().baseScrollSpeed, toleranceH: baseTol, restMs: 0 }, pace),
             corridorWidth,
           );
+          const widthPx = d.scrollSpeed * shape.durationS;
+          const dotX = width * birdXFrac();
           drawGate(
             ctx,
             width,
@@ -476,10 +491,10 @@ function GatePreview({
             {
               tone: word.tone,
               word,
-              shape: shapeForWord(word),
-              x0: 0,
-              x1: width,
-              tolChao,
+              shape,
+              x0: dotX,
+              x1: dotX + widthPx,
+              tolChao: d.toleranceH,
               xStart: 0,
             },
             true,
@@ -492,7 +507,7 @@ function GatePreview({
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [word, corridorWidth]);
+  }, [word, pace, corridorWidth]);
 
   return (
     <div className="stage">

@@ -933,6 +933,11 @@
      inside a shrink-to-fit ancestor resolves to 0 — the canvas silently
      collapsed to nothing the moment a run started. */
   align-items: stretch;
+  /* Bounded height so `.lab-picker`'s `overflow-y: auto` has something to
+     shrink against — without it the row grows to fit the full word list and
+     the whole page scrolls instead of just the picker. */
+  height: calc(100svh - 160px);
+  min-height: 0;
 }
 
 .lab-stage {
@@ -940,6 +945,8 @@
   flex-direction: column;
   gap: 10px;
   align-items: stretch;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .lab-picker {
@@ -947,16 +954,25 @@
   flex-direction: column;
   gap: 10px;
   min-height: 0;
+  height: 100%;
 }
 
-/* The idle canvas preview and the "full run instead" fallback both want a
-   fixed width matching the game's own canvas, centered in the (wider)
-   stretched column — align-self overrides the stretch above for just these. */
+/* The idle canvas preview and the "full run instead" fallback both want to
+   sit centred in the (wider) stretched column rather than stretching full
+   width themselves — align-self overrides the stretch above for just these.
+   Was a hardcoded `width: 360px`, which pinned the paused preview to the
+   canvas's raw pixel size while a flown `<Game>` sits straight in
+   `.lab-stage` with no such cap and scales its `.stage` (see `.stage canvas`
+   above: width 100%, capped at min(420px, viewport-derived)) to fill the grid
+   column — up to 420px. The two were rendering at different on-screen widths
+   for the identical 360×640 canvas. `max-width: 420px` matches `.stage`'s own
+   cap so the paused preview scales exactly like the live game does. */
 .lab-idle {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: 360px;
+  width: 100%;
+  max-width: 420px;
   align-self: center;
 }
 
@@ -978,6 +994,12 @@
   gap: 4px;
   flex: 1;
   min-height: 0;
+  /* `.lab-picker`'s flex-column ancestors never resolve a definite height —
+     the grid row sizes to content, not the viewport — so `flex: 1` alone
+     never triggers overflow: the list simply grows and pushes the whole
+     page down instead of scrolling in place. A viewport-relative cap gives
+     it something concrete to overflow against. */
+  max-height: calc(100vh - 260px);
   overflow-y: auto;
   overflow-x: hidden;
   width: 100%;
@@ -1010,6 +1032,17 @@
 
 .game-settings-row .choice {
   flex: 1 1 auto;
+}
+
+/* The play tab's speed/tunnel-width row, now sitting under the canvas
+   instead of beside it — full-size pills (built for a standalone settings
+   screen) ran three options wide and wrapped awkwardly at this column
+   width. Smaller, non-growing pills so "relaxed / normal / fast" sits on
+   one line instead of each option claiming equal flex width. */
+.game-settings-compact .choice-option {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  font-size: 12px;
 }
 
 /* Dev-only: the whole clip inventory as gates, for reviewing corridor shapes. */
