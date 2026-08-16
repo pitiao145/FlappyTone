@@ -232,7 +232,7 @@ export function Lab({ onBack }: Props) {
                       checked={showCitation}
                       onChange={(e) => setShowCitation(e.target.checked)}
                     />
-                    overlay citation T3 shape (what the game actually flies)
+                    overlay old citation T3 shape (no longer what the game flies)
                   </label>
                 )}
                 {gateError && <p className="error">{gateError}</p>}
@@ -480,15 +480,15 @@ tolerance in chao   ${TONE_LIST.map((t) => `T${t} ${toleranceChao(t, d.tolerance
  * rather than partway through the corridor.
  *
  * The corridor drawn here is always the word's own measured shape
- * (`word.polyline`/`word.durationS`), never `shapeForWord`'s output — for
- * every tone but 3 those are the same thing, but for T3 `shapeForWord`
- * substitutes the citation polyline (see its comment in gates.ts: 22 of 30
- * T3 takes are her natural, non-rising T3). This view exists to *see* that
- * substitution, so it must not itself apply it. `showCitation` optionally
- * overlays the citation shape `shapeForWord` would actually fly, as a second
- * dashed line, so the two can be compared directly. Neither of these calls
- * `shapeForWord` or touches anything `makeGate`/a real run reads — this is a
- * paused canvas-only overlay, gameplay is untouched either way.
+ * (`word.polyline`/`word.durationS`) — as of 16 Aug 2026 this is what
+ * `shapeForWord` returns for every tone including 3, now that `clipCut.ts`
+ * measures all 30 T3 words' real dip-and-rise instead of falling back to one
+ * synthetic citation polyline. `showCitation` optionally overlays that old
+ * citation shape (`shapeForTone(3)`) as a second dashed line, kept as a
+ * historical/QA comparison — it is no longer what a real run flies for any
+ * word. Neither of these calls `shapeForWord` or touches anything
+ * `makeGate`/a real run reads — this is a paused canvas-only overlay,
+ * gameplay is untouched either way.
  */
 function GatePreview({
   word,
@@ -515,12 +515,12 @@ function GatePreview({
         ctx.fillRect(0, 0, width, height);
         drawChaoGrid(ctx, width, height);
         if (word) {
-          const shape = { polyline: word.polyline, durationS: word.durationS };
           const baseTol = toleranceChao(word.tone, tuning().baseToleranceH);
           const d = applyCorridorWidth(
             applyPace({ scrollSpeed: tuning().baseScrollSpeed, toleranceH: baseTol, restMs: 0 }, pace),
             corridorWidth,
           );
+          const shape = { polyline: word.polyline, durationS: word.durationS };
           const widthPx = d.scrollSpeed * shape.durationS;
           const dotX = width * birdXFrac();
           const x0 = dotX;

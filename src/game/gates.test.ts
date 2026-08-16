@@ -94,39 +94,39 @@ describe("toleranceChao", () => {
 describe("newDifficulty", () => {
   it("exposes the PRD base values", () => {
     const d = newDifficulty();
-    expect(d.scrollSpeed).toBeCloseTo(220);
+    expect(d.scrollSpeed).toBeCloseTo(DEFAULT_TUNING.baseScrollSpeed);
     expect(d.toleranceH).toBeCloseTo(DEFAULT_TUNING.baseToleranceH);
     expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.baseRestMs);
   });
 });
 
 describe("rampDifficulty", () => {
-  const base: Difficulty = { scrollSpeed: 220, toleranceH: DEFAULT_TUNING.baseToleranceH, restMs: DEFAULT_TUNING.baseRestMs };
+  const base: Difficulty = { scrollSpeed: DEFAULT_TUNING.baseScrollSpeed, toleranceH: DEFAULT_TUNING.baseToleranceH, restMs: DEFAULT_TUNING.baseRestMs };
 
   it("leaves difficulty unchanged below 5 cleared", () => {
     expect(rampDifficulty(0)).toEqual(base);
     expect(rampDifficulty(4)).toEqual(base);
   });
 
-  it("applies one ramp step at 5 cleared", () => {
+  it("applies one ramp step at 5 cleared, leaving scrollSpeed fixed", () => {
     const d = rampDifficulty(5);
-    expect(d.scrollSpeed).toBeCloseTo(220 * 1.08);
+    expect(d.scrollSpeed).toBe(DEFAULT_TUNING.baseScrollSpeed);
     expect(d.toleranceH).toBeCloseTo(DEFAULT_TUNING.baseToleranceH * 0.95);
     expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.baseRestMs * 0.95);
   });
 
-  it("caps scrollSpeed at 2.2x base and floors tolerance/rest at 100 cleared", () => {
+  it("floors tolerance/rest at 100 cleared, scrollSpeed still fixed", () => {
     const d = rampDifficulty(100);
-    expect(d.scrollSpeed).toBeCloseTo(484);
+    expect(d.scrollSpeed).toBe(DEFAULT_TUNING.baseScrollSpeed);
     expect(d.toleranceH).toBeCloseTo(0.07);
     expect(d.restMs).toBeCloseTo(600);
   });
 
-  it("does not compound across repeated incremental calls", () => {
+  it("does not compound tolerance across repeated incremental calls", () => {
     const d1 = rampDifficulty(5);
     const d2 = rampDifficulty(10);
-    expect(d1.scrollSpeed).toBeCloseTo(220 * Math.pow(1.08, 1));
-    expect(d2.scrollSpeed).toBeCloseTo(220 * Math.pow(1.08, 2));
+    expect(d1.toleranceH).toBeCloseTo(DEFAULT_TUNING.baseToleranceH * Math.pow(0.95, 1));
+    expect(d2.toleranceH).toBeCloseTo(DEFAULT_TUNING.baseToleranceH * Math.pow(0.95, 2));
   });
 });
 
@@ -182,7 +182,7 @@ describe("makeGate", () => {
     const g = makeGate(1, 500, d);
     expect(g.tone).toBe(1);
     expect(g.xStart).toBe(500);
-    expect(g.widthPx).toBeCloseTo(220 * GATE_DURATION_S[1]);
+    expect(g.widthPx).toBeCloseTo(DEFAULT_TUNING.baseScrollSpeed * GATE_DURATION_S[1]);
     expect(g.tolChao).toBeCloseTo(toleranceChao(1, DEFAULT_TUNING.baseToleranceH));
   });
 
@@ -213,20 +213,20 @@ describe("applyPace", () => {
     expect(applyPace(d, "fast")).toEqual(d);
   });
 
-  it("normal slows scroll and stretches rest, leaving tolerance alone", () => {
+  it("normal stretches rest, leaving scrollSpeed and tolerance alone", () => {
     const d = applyPace(newDifficulty(), "normal");
-    expect(d.scrollSpeed).toBeCloseTo(220 * 0.9);
+    expect(d.scrollSpeed).toBe(DEFAULT_TUNING.baseScrollSpeed);
     expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.baseRestMs * 1.5);
     expect(d.toleranceH).toBeCloseTo(DEFAULT_TUNING.baseToleranceH);
   });
 
-  it("relaxed slows further and doubles the rest interval", () => {
+  it("relaxed doubles the rest interval, leaving scrollSpeed alone", () => {
     const d = applyPace(newDifficulty(), "relaxed");
-    expect(d.scrollSpeed).toBeCloseTo(220 * 0.75);
+    expect(d.scrollSpeed).toBe(DEFAULT_TUNING.baseScrollSpeed);
     expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.baseRestMs * 2);
   });
 
-  it("keeps each tone's gate duration intact — width scales with paced speed", () => {
+  it("keeps each tone's gate duration intact — width scales with the fixed speed", () => {
     const d = applyPace(newDifficulty(), "relaxed");
     const g = makeGate(1, 0, d);
     expect(g.widthPx / d.scrollSpeed).toBeCloseTo(GATE_DURATION_S[1]);
@@ -242,7 +242,7 @@ describe("applyCorridorWidth", () => {
   it("narrow tightens tolerance to 0.75x, leaving speed and rest alone", () => {
     const d = applyCorridorWidth(newDifficulty(), "narrow");
     expect(d.toleranceH).toBeCloseTo(DEFAULT_TUNING.baseToleranceH * 0.75);
-    expect(d.scrollSpeed).toBeCloseTo(220);
+    expect(d.scrollSpeed).toBeCloseTo(DEFAULT_TUNING.baseScrollSpeed);
     expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.baseRestMs);
   });
 

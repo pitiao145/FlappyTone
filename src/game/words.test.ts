@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { availableTones, loadWords, pickWord, wordsOfTone, type Word } from "./words.ts";
 import { corridorChaoAt, makeGate, newDifficulty, shapeForTone, shapeForWord } from "./gates.ts";
-import { DEFAULT_TUNING } from "./tuning.ts";
 
 function clip(over: Partial<Word> = {}): Record<string, unknown> {
   return {
@@ -209,14 +208,16 @@ describe("a word's corridor", () => {
   });
 
   /**
-   * 22 of Jane's 30 T3 takes are her natural T3 — a dip that stays down. A
-   * corridor built from those would stop teaching the ˇ contour, so T3 flies
-   * the citation polyline until they are re-recorded. See `shapeForWord`.
+   * `clipCut.ts`'s voicing rescue and run-merge gap now measure all 30 T3
+   * words' real dip-and-rise, so tone 3 flies its own word's shape like every
+   * other tone — see `shapeForWord`. It used to fall back to one synthetic
+   * citation polyline; that branch is gone.
    */
-  it("is the citation polyline for tone 3, whatever the clip did", () => {
-    const falling = word({ tone: 3, durationS: 0.4, polyline: [[0, 3], [1, 1.5]] });
-    expect(shapeForWord(falling)).toEqual(shapeForTone(3));
-    expect(shapeForWord(falling).durationS).toBe(DEFAULT_TUNING.gateDurationS[3]);
+  it("is the word's own shape for tone 3 too, not the citation fallback", () => {
+    const w = word({ tone: 3, durationS: 0.4, polyline: [[0, 3], [1, 1.5]] });
+    const shape = shapeForWord(w);
+    expect(shape.durationS).toBe(0.4);
+    expect(corridorChaoAt(shape, 1)).toBeCloseTo(1.5, 1);
   });
 
   it("sets the gate's width from the clip, so demo and corridor share a clock", () => {

@@ -197,15 +197,15 @@ export interface Tuning {
 }
 
 export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
-  baseScrollSpeed: 220,
-  baseToleranceH: 0.1,
+  baseScrollSpeed: 200,
+  baseToleranceH: 0.11,
   baseRestMs: 1200,
   restMsFloor: 600,
-  cuePauseHoldMs: 750,
-  birdXFrac: 0.18,
-  cueApproachMs: 1000,
+  cuePauseHoldMs: 800,
+  birdXFrac: 0.13,
+  cueApproachMs: 825,
   collisionSustainMs: 160,
-  timingSlackS: 0.1,
+  timingSlackS: 0.11,
   maxTimingWidenFactor: 1.5,
   slackSmoothS: 0.15,
   preGateBufferMs: 400,

@@ -350,15 +350,15 @@ describe("Run — Tone 3 handling", () => {
 });
 
 describe("Run — difficulty ramp", () => {
-  it("scroll speed increases after 5 gates cleared", () => {
+  it("scroll speed stays fixed as gates clear; tolerance still tightens", () => {
     const run = newGameRun();
     // Long enough to clear five gates at the shipped rest interval.
     const { snapshots } = simulate(run, 2400, trackCorridor);
     const speeds = snapshots.map((s) => s.difficulty.scrollSpeed);
-    expect(speeds[0]).toBe(220);
-    // The first ramp step lands exactly on base * 1.08 after 5 gates.
-    expect(speeds.some((s) => Math.abs(s - 220 * 1.08) < 1e-9)).toBe(true);
-    expect(Math.max(...speeds)).toBeGreaterThan(220 * 1.08);
+    // scrollSpeed is fixed game-wide now — see gates.ts's rampDifficulty.
+    expect(speeds.every((s) => s === DEFAULT_TUNING.baseScrollSpeed)).toBe(true);
+    const tolerances = snapshots.map((s) => s.difficulty.toleranceH);
+    expect(Math.min(...tolerances)).toBeLessThan(DEFAULT_TUNING.baseToleranceH);
   });
 
   it("does not ramp on gates the player failed", () => {
@@ -367,7 +367,7 @@ describe("Run — difficulty ramp", () => {
     const run = newGameRun();
     const { snapshots } = simulate(run, 2000, () => pitch(1));
     const speeds = snapshots.map((s) => s.difficulty.scrollSpeed);
-    expect(Math.max(...speeds)).toBe(220);
+    expect(Math.max(...speeds)).toBe(DEFAULT_TUNING.baseScrollSpeed);
   });
 
   it("does not ramp on gates it couldn't hear", () => {
@@ -376,7 +376,7 @@ describe("Run — difficulty ramp", () => {
     expect(outcomesOf(snapshots).length).toBeGreaterThanOrEqual(5);
     expect(
       Math.max(...snapshots.map((s) => s.difficulty.scrollSpeed)),
-    ).toBe(220);
+    ).toBe(DEFAULT_TUNING.baseScrollSpeed);
   });
 });
 
@@ -504,28 +504,28 @@ describe("Run — snapshot extras", () => {
 describe("Run — pace", () => {
   it("defaults to the PRD baseline difficulty", () => {
     const run = new Run({ mode: "game", width: 420, rand: () => 0.1 });
-    expect(run.snapshot().difficulty.scrollSpeed).toBeCloseTo(220);
+    expect(run.snapshot().difficulty.scrollSpeed).toBeCloseTo(DEFAULT_TUNING.baseScrollSpeed);
     expect(run.snapshot().difficulty.restMs).toBeCloseTo(
       DEFAULT_TUNING.baseRestMs,
     );
   });
 
-  it("a relaxed pace slows scroll and stretches rest for the whole run", () => {
+  it("a relaxed pace stretches rest for the whole run, leaving scrollSpeed fixed", () => {
     const run = new Run({
       mode: "game",
       width: 420,
       rand: () => 0.1,
       pace: "relaxed",
     });
-    expect(run.snapshot().difficulty.scrollSpeed).toBeCloseTo(220 * 0.75);
+    expect(run.snapshot().difficulty.scrollSpeed).toBeCloseTo(DEFAULT_TUNING.baseScrollSpeed);
     expect(run.snapshot().difficulty.restMs).toBeCloseTo(
       DEFAULT_TUNING.baseRestMs * 2,
     );
   });
 
-  it("pace also applies in tutorial mode", () => {
+  it("pace's rest stretch also applies in tutorial mode, scrollSpeed still fixed", () => {
     const run = new Run({ mode: "tutorial", width: 420, pace: "normal" });
-    expect(run.snapshot().difficulty.scrollSpeed).toBeCloseTo(220 * 0.9);
+    expect(run.snapshot().difficulty.scrollSpeed).toBeCloseTo(DEFAULT_TUNING.baseScrollSpeed);
   });
 });
 
@@ -964,22 +964,21 @@ describe("Run — flying an inventory", () => {
     const gates = snapshots.flatMap((s) => s.gates).filter((g) => g.word);
     expect(gates.length).toBeGreaterThan(0);
     // Every gate's width, divided by its own clip length, is the one scroll
-    // speed — which is the invariant, and holds whichever tones happened to
-    // spawn. T3 is the exception by design: it flies the citation gate length.
-    const speeds = gates
-      .filter((g) => g.tone !== 3)
-      .map((g) => (g.x1 - g.x0) / g.word!.durationS);
+    // speed — which is the invariant, and holds for every tone including 3
+    // now that shapeForWord flies a word's own measured shape throughout.
+    const speeds = gates.map((g) => (g.x1 - g.x0) / g.word!.durationS);
     for (const v of speeds) expect(v).toBeCloseTo(speeds[0], 6);
   });
 
-  it("draws a T2 corridor from the word, and a T3 corridor from tuning", () => {
+  it("draws every tone's corridor from its own word, including 3", () => {
     const { snapshots } = simulate(wordRun(), 400, () => pitch(3));
     const gates = snapshots.flatMap((s) => s.gates);
     const t2 = gates.find((g) => g.tone === 2);
     if (t2) expect(corridorChaoAt(t2.shape, 0.4)).toBeCloseTo(1.9, 2);
     const t3 = gates.find((g) => g.tone === 3);
-    // The word's own polyline falls to 1.6 and never rises; the citation one does.
-    if (t3) expect(corridorChaoAt(t3.shape, 1)).toBeGreaterThan(4);
+    // The fixture's T3 word falls to 1.6 and never rises — shapeForWord no
+    // longer substitutes the citation shape, so the corridor should match.
+    if (t3) expect(corridorChaoAt(t3.shape, 1)).toBeCloseTo(1.6, 1);
   });
 
   it("cues the word, so the host knows which clip to play", () => {

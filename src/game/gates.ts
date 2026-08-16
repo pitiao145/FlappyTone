@@ -65,18 +65,21 @@ export function shapeForTone(tone: Tone): GateShape {
 }
 
 /**
- * The corridor for a word.
+ * The corridor for a word: its own measured polyline and duration, for every
+ * tone including 3.
  *
- * ⚠ Tone 3 is deliberately not measured. 22 of Jane's 30 T3 takes are her
- * *natural* T3 — a dip that stays down and never rises — which PRD §6 already
- * records. Building corridors from those would quietly stop teaching the ˇ
- * contour that is the game's whole premise, so a T3 gate flies the citation
- * polyline while still cueing her recording of the word. That is a real
- * disagreement between demo and corridor, and the only one: it closes by
- * re-recording T3 in citation form, at which point this branch deletes.
+ * T3 used to fly a single synthetic citation polyline instead — 22 of Jane's
+ * 30 T3 takes had been measured as a dip that stays down and never rises, so
+ * building corridors from those would have quietly stopped teaching the ˇ
+ * contour that is the game's whole premise. That measurement was the defect:
+ * `clipCut.ts`'s voicing rescue and run-merge gap were too narrow for T3's
+ * creaky trough, and the "never rises" reading was the trough's rise being
+ * discarded before it was ever measured, not a fact about how she spoke (15
+ * Aug 2026 — see `TONE_3_RESCUE`/`TONE_3_MERGE_GAP_MS` in clipCut.ts). With
+ * that fixed, all 30 T3 words now measure a real dip-and-rise, so the citation
+ * fallback is gone: a word's own recording is the corridor for every tone.
  */
 export function shapeForWord(word: { tone: Tone; polyline: Polyline; durationS: number }): GateShape {
-  if (word.tone === 3) return shapeForTone(3);
   return { polyline: word.polyline, durationS: word.durationS };
 }
 
@@ -334,7 +337,6 @@ export interface Difficulty {
   restMs: number;
 }
 
-const SPEED_CAP_FACTOR = 2.2;
 const TOLERANCE_FLOOR = 0.07;
 
 /** The PRD's base difficulty values (§6), as currently tuned. */
@@ -348,27 +350,28 @@ export function newDifficulty(): Difficulty {
 }
 
 /**
- * Player-selectable pacing. "fast" is the PRD §6 baseline; the slower paces
- * scale scroll speed down and stretch the rest interval between gates.
- * Gate duration is unaffected (width is derived from scroll speed), so a
- * syllable is always ~600ms — pace only changes how much breathing room
- * sits between gates and how quickly the world moves.
+ * Player-selectable pacing. Scroll speed is fixed game-wide now (16 Aug
+ * 2026) — a gate's pixel width has to be a stable function of `scrollSpeed *
+ * shape.durationS` alone for the corridor to approximate the recording's own
+ * shape, and that stops being true the moment speed varies. Pace still
+ * stretches the rest interval between gates — how much breathing room the
+ * player gets — which doesn't touch corridor shape at all.
  */
 export type Pace = "relaxed" | "normal" | "fast";
 
 export const PACES: Pace[] = ["relaxed", "normal", "fast"];
 
-const PACE_FACTORS: Record<Pace, { speed: number; rest: number }> = {
-  relaxed: { speed: 0.75, rest: 2.0 },
-  normal: { speed: 0.9, rest: 1.5 },
-  fast: { speed: 1.0, rest: 1.0 },
+const PACE_FACTORS: Record<Pace, { rest: number }> = {
+  relaxed: { rest: 2.0 },
+  normal: { rest: 1.5 },
+  fast: { rest: 1.0 },
 };
 
-/** Scales a (possibly ramped) difficulty by the chosen pace. */
+/** Scales a (possibly ramped) difficulty by the chosen pace. Speed is untouched — see `Pace`. */
 export function applyPace(d: Difficulty, pace: Pace): Difficulty {
   const f = PACE_FACTORS[pace];
   return {
-    scrollSpeed: d.scrollSpeed * f.speed,
+    scrollSpeed: d.scrollSpeed,
     toleranceH: d.toleranceH,
     restMs: d.restMs * f.rest,
   };
@@ -397,8 +400,12 @@ export function applyCorridorWidth(
 }
 
 /**
- * Applies the PRD difficulty ramp: every 5 gates cleared, scrollSpeed *= 1.08
- * (cap 2.2x base), toleranceH *= 0.95 (floor 0.07), restMs *= 0.95 (floor 600ms).
+ * Applies the PRD difficulty ramp: every 5 gates cleared, toleranceH *= 0.95
+ * (floor 0.07), restMs *= 0.95 (floor 600ms). scrollSpeed no longer ramps
+ * (16 Aug 2026) — see `Pace` — so a gate's pixel width stays a stable
+ * function of the word's own recorded duration throughout a run; difficulty
+ * still climbs, just through a tighter corridor and less breathing room
+ * instead of a faster world.
  * Always ramps from the fixed base constants keyed by total gatesCleared, so
  * repeated calls with growing gatesCleared do not compound earlier steps.
  */
@@ -406,10 +413,7 @@ export function rampDifficulty(gatesCleared: number): Difficulty {
   const steps = Math.floor(gatesCleared / 5);
   const t = tuning();
   return {
-    scrollSpeed: Math.min(
-      t.baseScrollSpeed * Math.pow(1.08, steps),
-      t.baseScrollSpeed * SPEED_CAP_FACTOR,
-    ),
+    scrollSpeed: t.baseScrollSpeed,
     toleranceH: Math.max(
       t.baseToleranceH * Math.pow(0.95, steps),
       TOLERANCE_FLOOR,
@@ -449,12 +453,15 @@ export function nextTone(prev: Tone[], rand: () => number): Tone {
  * Builds a gate. Pass a word to fly its measured corridor; pass a bare tone to
  * fly the tuning default, which is what the tutorial and a manifest-less build
  * fall back to.
+ *
+ * `widthPx` is `scrollSpeed * shape.durationS` — with `scrollSpeed` now fixed
+ * (see `newDifficulty`/`rampDifficulty`), a gate's pixel width is a direct,
+ * stable function of the word's own recorded tone length: the corridor's
+ * shape on screen approximates the recording's own ASCII contour as closely
+ * as this rendering can, rather than being stretched or squeezed by pace or
+ * the difficulty ramp.
  */
-export function makeGate(
-  source: Word | Tone,
-  xStart: number,
-  d: Difficulty,
-): Gate {
+export function makeGate(source: Word | Tone, xStart: number, d: Difficulty): Gate {
   const word = typeof source === "number" ? null : source;
   const tone = typeof source === "number" ? source : source.tone;
   const shape = word ? shapeForWord(word) : shapeForTone(tone);
