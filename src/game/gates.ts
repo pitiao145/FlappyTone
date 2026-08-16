@@ -129,20 +129,18 @@ function monotoneTangents(points: Polyline): number[] {
 }
 
 /**
- * Smooth interpolation of a corridor centreline: a monotone cubic Hermite
- * spline through the polyline's vertices, C0 at every vertex and C1
- * (continuous tangent) everywhere else — no sharp corners at a vertex, and no
- * overshoot past a vertex's neighbours. t is clamped to [0,1].
+ * Smooth interpolation through any polyline's vertices: a monotone cubic
+ * Hermite spline, C0 at every vertex and C1 (continuous tangent) everywhere
+ * else — no sharp corners at a vertex, and no overshoot past a vertex's
+ * neighbours. t is clamped to [0,1].
  *
- * Replaces plain piecewise-linear interpolation: with tone polylines now a
- * fixed 2–4 vertices (see `templateContour`), a straight-segment corridor drew
- * a visible, collidable corner at each one. This is the single function
- * rendering (world.ts), collision, and scoring (run.ts) all read, so smoothing
- * it fixes the hitbox and the drawing together.
+ * Not specific to a corridor centreline — `corridorToleranceAt` runs the
+ * tolerance at each vertex through this same evaluator, so a wall gets the
+ * identical smoothness guarantee the centreline does, from the same code
+ * rather than a second hand-rolled smoothing pass.
  */
-export function corridorChaoAt(shape: GateShape, t: number): number {
+function splineAt(points: Polyline, t: number): number {
   const clamped = Math.min(1, Math.max(0, t));
-  const points = shape.polyline;
   if (points.length < 2) return points[0]?.[1] ?? 0;
 
   const tangents = monotoneTangents(points);
@@ -160,6 +158,20 @@ export function corridorChaoAt(shape: GateShape, t: number): number {
     }
   }
   return points[points.length - 1][1];
+}
+
+/**
+ * A corridor centreline: a monotone cubic Hermite spline through the
+ * polyline's vertices — see `splineAt`. This is the single function
+ * rendering (world.ts), collision, and scoring (run.ts) all read, so
+ * smoothing it fixes the hitbox and the drawing together.
+ *
+ * Replaces plain piecewise-linear interpolation: with tone polylines now a
+ * fixed 2–4 vertices (see `templateContour`), a straight-segment corridor drew
+ * a visible, collidable corner at each one.
+ */
+export function corridorChaoAt(shape: GateShape, t: number): number {
+  return splineAt(shape.polyline, t);
 }
 
 /**
@@ -203,62 +215,28 @@ export function toleranceChao(tone: Tone, baseTolH: number): number {
  * unfixable with the wide-tunnel setting, which scales the whole corridor
  * while the problem lives in the steep fifth of it.
  */
-export const TIMING_SLACK_S = 0.09;
 /**
  * Ceiling on the widening, as a multiple of the gate's base tolerance. The T4
- * cliff falls further inside the slack window than the entire corridor is
+ * cliff moves further within the slack window than the entire corridor is
  * wide, so without a cap its wall would effectively disappear.
  */
 export const MAX_TIMING_WIDEN_FACTOR = 1.5;
-/** Offsets sampled either side of t when measuring the corridor's travel. */
-const SLACK_STEPS = 6;
-/**
- * Taps either side of t in the smoothing pass.
- *
- * Each tap is a shifted copy of the cuspy raw function, so a cusp survives at
- * 1/(2·TAPS+1) of its original size — the count is what decides whether a
- * spike is gone or merely smaller. 3 taps left a fifth of it, which still drew
- * as a kink. Cost is paid once per gate (see the edge cache in world.ts), not
- * once per frame.
- */
-const SMOOTH_TAPS = 16;
 /**
  * Where the cap's knee starts, as a fraction of the cap. Below it the widening
- * is exactly `travel`; above it, it bends over rather than cornering.
+ * is exactly the segment's own travel; above it, it bends over rather than
+ * cornering.
  */
 const CAP_KNEE_FRAC = 0.75;
 
 /**
- * The raw widening at `t`: how far the centreline travels within the slack
- * window either side.
- *
- * A max over a window is not smooth — it is a tent whose apex is a cusp, and
- * it corners again wherever the window's extremum swaps. That is what drew the
- * spikes on the corridor walls. `corridorToleranceAt` smooths this; nothing
- * else should call it raw.
- */
-function travelAt(shape: GateShape, t: number, dtNorm: number): number {
-  const here = corridorChaoAt(shape, t);
-  let travel = 0;
-  for (let i = 1; i <= SLACK_STEPS; i++) {
-    const offset = (i / SLACK_STEPS) * dtNorm;
-    travel = Math.max(
-      travel,
-      Math.abs(corridorChaoAt(shape, t + offset) - here),
-      Math.abs(corridorChaoAt(shape, t - offset) - here),
-    );
-  }
-  return travel;
-}
-
-/**
  * Saturates `x` toward `cap` without a corner at the ceiling.
  *
- * A plain `Math.min(x, cap)` is a second cusp, and it fires exactly where the
- * corridor is steepest — the T4 cliff, where the flare is largest and the
- * spike most visible. Below the knee this is the identity, so nothing changes
- * on the tones that never approach the cap; at the knee the two pieces meet
- * with equal slope, and above it the curve approaches `cap` and never crosses.
+ * A plain `Math.min(x, cap)` is a corner, and it fires exactly where the
+ * corridor is steepest — the T4 cliff, where the widening is largest and a
+ * spike would be most visible. Below the knee this is the identity, so
+ * nothing changes on the tones that never approach the cap; at the knee the
+ * two pieces meet with equal slope, and above it the curve approaches `cap`
+ * and never crosses.
  */
 function softCap(x: number, cap: number): number {
   const knee = cap * (1 - CAP_KNEE_FRAC);
@@ -268,56 +246,70 @@ function softCap(x: number, cap: number): number {
 }
 
 /**
- * Corridor half-height at `t`, widened by however far the centreline travels
- * within TIMING_SLACK_S either side.
+ * How far segment `i` travels, in chao, over one slack window — treating the
+ * segment as a straight line at its own average slope, uncapped.
+ */
+function segmentWiden(points: Polyline, i: number, dtNorm: number): number {
+  const [t0, c0] = points[i];
+  const [t1, c1] = points[i + 1];
+  const slope = t1 === t0 ? 0 : (c1 - c0) / (t1 - t0);
+  return Math.abs(slope) * dtNorm;
+}
+
+/**
+ * How much extra room vertex `i` gets: the widening of the segment leading
+ * *into* it (the one just before it), or — for the first vertex, which has
+ * none before it — the segment leading out. This is what gives a steep
+ * climb's final vertex the most room of any point on the corridor: its
+ * incoming segment is the climb itself.
+ */
+function vertexWiden(points: Polyline, i: number, dtNorm: number): number {
+  const seg = i === 0 ? 0 : i - 1;
+  return segmentWiden(points, seg, dtNorm);
+}
+
+/**
+ * Corridor half-height at `t`: the gate's base tolerance, plus a widening
+ * spline through the polyline's own vertices — the same argument as before (a
+ * single tolerance for the whole gate charges wildly different amounts for
+ * the same timing error, because what being late *costs* depends on how fast
+ * the corridor is moving underneath you), just fit through the vertices
+ * directly instead of scanned fresh at every t or blended segment-by-segment.
  *
- * Expressed as the corridor's own movement rather than as slope × slack
- * because that is the quantity being forgiven, and it stays exact on flat
- * plateaus, where the slope is zero.
+ * Each vertex's own widening — see `vertexWiden` — is exactly the "copy the
+ * polyline's points, offset each one, and give the last ones more" shape:
+ * the vertex ending a steep climb gets the most room, tapering back toward
+ * the base tolerance at flatter vertices. Running that per-vertex profile
+ * through `splineAt`, the same evaluator the centreline itself uses, is what
+ * keeps the wall smooth without a second hand-rolled smoothing pass — no
+ * blending logic to get subtly wrong, no seam where one segment's forgiveness
+ * meets the next's. A `travel`-scanned or segment-blended widening both
+ * pinch back toward zero at a genuine local min/max (the corridor is
+ * momentarily flat right there) and flare either side of it, which is what
+ * drew the double-notch "weird offshoot" on T3's floor (16 Aug 2026) — a
+ * spline through the vertices' own values has no local window to pinch.
  *
- * Flat stretches — all of T1, the T4 plateau, the T3 floor — widen by nothing,
- * so the game stays exactly as strict about *pitch*. Only the moving parts,
- * where no speaker can be sample-accurate, open up. And because the renderer
- * draws the same function, the corridor visibly flares where it forgives:
- * this is something the player can see, not a hidden fudge factor.
- *
- * The widening is smoothed before it is added, in two places, for one reason:
- * the corridor's *walls* were peaky where its centreline is not. Both `travel`
- * (a max over a window) and the cap (a `min`) are corner-producing, and the
- * renderer draws this function directly, so every corner became a visible
- * spike — reported as "the tunnel edges look peaky", most clearly on the T4
- * cliff and either side of the T2 dip.
- *
- * The blur runs *after* the max, never before, and it is an average — so the
- * result always lies between the smallest and the largest unsmoothed value
- * within the radius. It rounds a peak down and lifts the foot of a moving
- * stretch a little; it cannot invent room the max scan never found, cannot
- * narrow the corridor below `baseTolChao`, and cannot cross the cap. What it
- * does cost is reach: the widening now bleeds `slackSmoothS` further into the
- * flat ground either side of a move. At the shipped 50ms against a 70ms slack
- * window that is small, but it is a real loosening, not a free repaint.
+ * Because the renderer draws this same function (see `edgeProfile` in
+ * world.ts), the corridor visibly widens where it forgives — this is
+ * something the player can see, not a hidden fudge factor.
  */
 export function corridorToleranceAt(
   shape: GateShape,
   t: number,
   baseTolChao: number,
 ): number {
+  const points = shape.polyline;
+  if (points.length < 2) return baseTolChao;
+
   const tun = tuning();
   const dtNorm = tun.timingSlackS / shape.durationS;
   const cap = baseTolChao * tun.maxTimingWidenFactor;
-  const radius = tun.slackSmoothS / shape.durationS;
+  const widenProfile: Polyline = points.map(([tt], i) => [
+    tt,
+    softCap(vertexWiden(points, i, dtNorm), cap),
+  ]);
 
-  if (radius <= 0) return baseTolChao + softCap(travelAt(shape, t, dtNorm), cap);
-
-  let sum = 0;
-  let weight = 0;
-  for (let i = -SMOOTH_TAPS; i <= SMOOTH_TAPS; i++) {
-    const frac = i / SMOOTH_TAPS;
-    const w = Math.exp(-2 * frac * frac);
-    sum += w * softCap(travelAt(shape, t + frac * radius, dtNorm), cap);
-    weight += w;
-  }
-  return baseTolChao + sum / weight;
+  return baseTolChao + splineAt(widenProfile, t);
 }
 
 export interface Gate {

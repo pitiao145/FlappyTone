@@ -280,13 +280,21 @@ describe("corridorToleranceAt", () => {
     }
   });
 
-  it("widens most where the corridor moves fastest", () => {
-    // T4's cliff is at t≈0.63; near its start at t≈0.3 the corridor is still
-    // close to its peak and barely moving.
+  it("stays flat across a plateau, then widens progressively across a steep segment", () => {
+    // Each vertex's widening comes from the segment behind it (see
+    // `vertexWiden`), so T4's plateau (t 0→0.6024) has the same value at both
+    // ends and is exactly flat throughout — no bleed from the cliff that
+    // follows it. The cliff itself (t 0.6024→1) ramps smoothly from that
+    // plateau value up to its own peak at t=1, rather than jumping to full
+    // forgiveness the instant it begins.
     const plateau = corridorToleranceAt(shapeForTone(4), 0.3, BASE);
-    const cliff = corridorToleranceAt(shapeForTone(4), 0.63, BASE);
+    const cliffStart = corridorToleranceAt(shapeForTone(4), 0.65, BASE);
+    const cliffMid = corridorToleranceAt(shapeForTone(4), 0.8, BASE);
+    const cliffEnd = corridorToleranceAt(shapeForTone(4), 1, BASE);
     expect(plateau).toBeLessThan(BASE * 1.2);
-    expect(cliff).toBeGreaterThan(plateau * 1.5);
+    expect(cliffStart).toBeLessThan(cliffMid);
+    expect(cliffMid).toBeLessThan(cliffEnd);
+    expect(cliffEnd).toBeGreaterThan(plateau * 1.5);
   });
 
   it("caps the widening so a fast fall still has walls", () => {
