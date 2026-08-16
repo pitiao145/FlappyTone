@@ -249,7 +249,43 @@ A **gate** is a corridor whose centreline traces the target tone's Chao contour.
 **Gate duration:** ~~600ms of travel. Gate width in px = `scrollSpeed * 0.6`.~~
 **Rest interval between gates:** 900ms at start, shrinking to a floor of 600ms.
 
-**Difficulty ramp:** every 5 gates cleared — `scrollSpeed *= 1.08` (cap 2.2× base), `tolerance *= 0.95` (floor 0.07H), `restInterval *= 0.95` (floor 600ms). Base `scrollSpeed = 220 px/s`.
+**Difficulty ramp:** ~~every 5 gates cleared — `scrollSpeed *= 1.08` (cap 2.2× base), `tolerance *= 0.95` (floor 0.07H), `restInterval *= 0.95` (floor 600ms). Base `scrollSpeed = 220 px/s`.~~
+
+> **⚠️ Superseded (16 Aug 2026) — `scrollSpeed` is fixed game-wide, ramp or
+> no ramp.** It no longer varies by pace (relaxed/normal/fast) or by the
+> difficulty ramp — `rampDifficulty`/`applyPace` in `gates.ts` both return the
+> same `baseScrollSpeed` untouched. Reasoning: gate width in px is
+> `scrollSpeed * shape.durationS`, and that only approximates a word's own
+> recorded contour — the point of using each word's own measured shape at all
+> — if `scrollSpeed` holds still. With it fixed, the corridor a player flies is
+> a stable, direct rendering of the recording's own timing, at every point in
+> a run and at every pace setting. Difficulty still climbs — tolerance still
+> tightens (`toleranceH *= 0.95` per 5 gates, floor 0.07H) and rest still
+> shrinks (`restMs *= 0.95`, floor 600ms) — just never by making the world
+> move faster. Pace (relaxed/normal/fast) still exists as a player setting,
+> but now only stretches the rest interval between gates; it no longer touches
+> scroll speed at all. `baseScrollSpeed` itself moved too, from 220 to 200
+> px/s, as part of the same tuning pass (`DEFAULT_TUNING` in `tuning.ts`).
+> Difficulty ramp is now: `tolerance *= 0.95` (floor 0.07H), `restInterval *=
+> 0.95` (floor 600ms). Base `scrollSpeed = 200 px/s`, fixed.
+
+> **⚠️ Superseded (16 Aug 2026) — corridor tolerance widens per vertex, not
+> per scanned window.** The "Corridor tolerance" line above (`0.12*H` fixed)
+> is stale: `corridorToleranceAt` in `gates.ts` adds a timing-forgiveness
+> widening on top of the base tolerance,
+> shaped like a tiny second polyline through the same t-coordinates as the
+> tone's own corridor vertices, run through the identical spline evaluator the
+> centreline uses (`splineAt`). Each vertex's own widening comes from the
+> polyline segment immediately behind it, so a steep climb's *final* vertex —
+> where a speaker's timing error costs the most — gets the most forgiveness,
+> tapering back to nothing across genuinely flat stretches (T1 throughout,
+> T4's plateau, T3's floor). Two earlier implementations of this same idea (a
+> windowed max-scan with a 33-tap Gaussian blur, then a per-segment blend)
+> both drew a visible "double-notch" flare-pinch-flare on T3's wall, most
+> visible where the fall and rise meet at the floor — reported directly
+> against screenshots of the Lab's paused gate preview. Fitting a spline
+> through the vertices' own values, the same way the centreline already does,
+> removed the notch because there is no local window left to pinch.
 
 ### Tone 3 needs special handling
 
@@ -343,10 +379,14 @@ Play a native recording of the target syllable **300ms before the gate enters th
 > carries its own corridor polyline and its own length in `manifest.json`, and
 > the gate is built from the clip the player is about to hear — so §6's
 > "demo length == gate length == polyline timeline" now holds per word rather
-> than per tone. Two exceptions, both deliberate and both documented in
-> CLAUDE.md: T3 corridors are still the citation polyline (her natural T3 does
-> not rise), and a clip's absolute Chao level comes from the tone mark rather
-> than from her voice (her T1 measures at chao 3.3).
+> than per tone. One exception remains, deliberate and documented in
+> CLAUDE.md: a clip's absolute Chao level comes from the tone mark rather than
+> from her voice (her T1 measures at chao 3.3). The other exception this note
+> used to list — T3 flying a citation polyline instead of its own word's
+> shape — is gone (16 Aug 2026): that was a measurement defect in
+> `clipCut.ts`, not a fact about her T3, and fixing the voicing rescue and the
+> run-merge gap means all 30 T3 words now measure a real dip-and-rise. Every
+> tone, including 3, flies its own recording's shape.
 >
 > **⚠️ Superseded — the shipped clips are Jane's own recordings**, cut from
 > `fixtures/captures/jane_ma*.wav` by `npm run make-ref-clips`, used with her

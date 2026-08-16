@@ -119,10 +119,18 @@ shared height is taken from the mark. Contours are measured against a
 deliberately wide range (`MEASURE_RANGE_SEMITONES`) and clamped once, after
 placement — clamping first destroys the anchors.
 
-**Tone 3 corridors are still synthetic.** 22 of her 30 T3 takes are the natural
-falling third, so a T3 gate flies the citation polyline while cueing her word.
-One branch, in `shapeForWord`, to delete once T3 is re-recorded in citation
-form. It is the only place demo and corridor disagree.
+**Tone 3 corridors are no longer synthetic (16 Aug 2026).** They used to be:
+22 of her 30 T3 takes measured as a falling third that never rises, so a T3
+gate flew one citation polyline while cueing her actual word — the only place
+demo and corridor disagreed. That "22 of 30" reading was itself the defect:
+`clipCut.ts`'s voicing rescue (`TONE_3_RESCUE`) and run-merge gap
+(`TONE_3_MERGE_GAP_MS`, 600ms) were both too narrow for T3's creaky trough, so
+the rise was being discarded before it was ever measured, not absent from her
+speech. Raw-trace diagnostics on the raw captures confirmed a real rise on
+every word checked. With that fixed, all 30 T3 words measure a real
+dip-and-rise, `shapeForWord` no longer special-cases tone 3, and the citation
+fallback in `gates.ts` is gone — every tone, including 3, flies its own
+recording's shape.
 
 Five more rules hold this together:
 
