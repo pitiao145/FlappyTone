@@ -19,35 +19,6 @@ interface Props {
   disabled?: boolean;
 }
 
-function IconWeb() {
-  return (
-    <svg className="nav-cta-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="2" y="4" width="20" height="14" rx="2" fill="none" stroke="currentColor" strokeWidth="1.75" />
-      <path d="M8 20h8" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-      <path d="M12 18v2" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconIos() {
-  return (
-    <svg className="nav-cta-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M16.365 1.43c0 1.14-.493 2.036-1.497 2.688-.903.612-1.997.912-3.088.857-.145-1.08.402-2.036 1.285-2.688.924-.672 2.088-1.152 3.3-.857zm3.097 17.25c-.753 1.74-1.667 3.48-3.007 3.48-1.14 0-1.425-.72-2.655-.72-1.23 0-1.605.75-2.685.75-1.32 0-2.475-1.32-3.228-3.06C5.94 16.62 5.1 13.2 6.72 10.68c.81-1.23 2.085-2.01 3.465-2.01 1.29 0 2.1.75 3.165.75 1.035 0 1.665-.75 3.165-.75 1.23 0 2.355.675 3.165 1.86-2.79 1.53-2.34 5.52.672 6.6z"
-      />
-    </svg>
-  );
-}
-
-function IconChevron() {
-  return (
-    <svg className="nav-cta-chevron" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function IconMenu() {
   return (
     <svg className="nav-hamburger-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -73,28 +44,10 @@ function IconClose() {
  */
 export function Nav({ variant, onNavigate, onPlay, disabled }: Props) {
   const items = brand.sections.filter((s) => s.inNav);
-  const [playMenuOpen, setPlayMenuOpen] = useState(false);
   const [navMenuOpen, setNavMenuOpen] = useState(false);
-  const playRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
-  const playMenuId = useId();
   const navMenuId = useId();
-
-  useEffect(() => {
-    if (!playMenuOpen) return;
-    const close = (e: MouseEvent | KeyboardEvent) => {
-      if (e instanceof KeyboardEvent && e.key !== "Escape") return;
-      if (e instanceof MouseEvent && playRef.current?.contains(e.target as Node)) return;
-      setPlayMenuOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("mousedown", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, [playMenuOpen]);
 
   useEffect(() => {
     if (!navMenuOpen) return;
@@ -189,53 +142,20 @@ export function Nav({ variant, onNavigate, onPlay, disabled }: Props) {
 
         <div className="nav-actions">
           {onPlay && (
-            <div className="nav-cta" ref={playRef}>
+            <div className="nav-cta">
               <div className="nav-cta-shady">
                 <button
                   type="button"
                   className="nav-cta-btn"
                   disabled={disabled}
-                  aria-expanded={playMenuOpen}
-                  aria-haspopup="menu"
-                  aria-controls={playMenuId}
                   onClick={() => {
                     setNavMenuOpen(false);
-                    setPlayMenuOpen((open) => !open);
+                    onPlay();
                   }}
                 >
                   Play
-                  <IconChevron />
                 </button>
               </div>
-
-              {playMenuOpen && (
-                <div className="nav-cta-menu" id={playMenuId} role="menu">
-                  <button
-                    type="button"
-                    className="nav-cta-item"
-                    role="menuitem"
-                    disabled={disabled}
-                    onClick={() => {
-                      setPlayMenuOpen(false);
-                      onPlay();
-                    }}
-                  >
-                    <IconWeb />
-                    <span>Web</span>
-                  </button>
-                  <a
-                    href="#mobile"
-                    className="nav-cta-item"
-                    role="menuitem"
-                    onClick={() => setPlayMenuOpen(false)}
-                  >
-                    <IconIos />
-                    <span>
-                      iOS <em className="nav-cta-soon">coming soon</em>
-                    </span>
-                  </a>
-                </div>
-              )}
             </div>
           )}
 
@@ -245,10 +165,7 @@ export function Nav({ variant, onNavigate, onPlay, disabled }: Props) {
             aria-expanded={navMenuOpen}
             aria-controls={navMenuId}
             aria-label={navMenuOpen ? "Close menu" : "Open menu"}
-            onClick={() => {
-              setPlayMenuOpen(false);
-              setNavMenuOpen((open) => !open);
-            }}
+            onClick={() => setNavMenuOpen((open) => !open)}
           >
             {navMenuOpen ? <IconClose /> : <IconMenu />}
           </button>
