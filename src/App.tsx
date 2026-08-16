@@ -324,7 +324,6 @@ export default function App() {
             canvasHeight={CANVAS_H}
             onOver={onRunOver}
             onQuit={goHome}
-            onLanding={() => goLanding("top")}
           />
         )}
 

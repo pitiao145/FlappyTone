@@ -501,31 +501,13 @@ describe("Run — snapshot extras", () => {
   });
 });
 
-describe("Run — pace", () => {
+describe("Run — base difficulty", () => {
   it("defaults to the PRD baseline difficulty", () => {
     const run = new Run({ mode: "game", width: 420, rand: () => 0.1 });
     expect(run.snapshot().difficulty.scrollSpeed).toBeCloseTo(DEFAULT_TUNING.baseScrollSpeed);
     expect(run.snapshot().difficulty.restMs).toBeCloseTo(
       DEFAULT_TUNING.baseRestMs,
     );
-  });
-
-  it("a relaxed pace stretches rest for the whole run, leaving scrollSpeed fixed", () => {
-    const run = new Run({
-      mode: "game",
-      width: 420,
-      rand: () => 0.1,
-      pace: "relaxed",
-    });
-    expect(run.snapshot().difficulty.scrollSpeed).toBeCloseTo(DEFAULT_TUNING.baseScrollSpeed);
-    expect(run.snapshot().difficulty.restMs).toBeCloseTo(
-      DEFAULT_TUNING.baseRestMs * 2,
-    );
-  });
-
-  it("pace's rest stretch also applies in tutorial mode, scrollSpeed still fixed", () => {
-    const run = new Run({ mode: "tutorial", width: 420, pace: "normal" });
-    expect(run.snapshot().difficulty.scrollSpeed).toBeCloseTo(DEFAULT_TUNING.baseScrollSpeed);
   });
 });
 

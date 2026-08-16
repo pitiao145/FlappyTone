@@ -1,28 +1,15 @@
 import { useState } from "react";
-import {
-  CORRIDOR_WIDTHS,
-  PACES,
-  type CorridorWidth,
-  type Pace,
-} from "../game/gates.ts";
+import { CORRIDOR_WIDTHS, type CorridorWidth } from "../game/gates.ts";
 import type { CueStyle } from "../game/run.ts";
 import {
   loadCorridorWidth,
   loadCueStyle,
-  loadPace,
   loadShowTranslation,
   saveCorridorWidth,
   saveCueStyle,
-  savePace,
   saveShowTranslation,
 } from "../game/settings.ts";
 import { Choice } from "./Choice.tsx";
-
-const PACE_HELP: Record<Pace, string> = {
-  relaxed: "Slowest scroll, longest breather between gates.",
-  normal: "A little calmer than the original tuning.",
-  fast: "The original pace. Gates come quickly.",
-};
 
 const WIDTH_HELP: Record<CorridorWidth, string> = {
   narrow: "Demanding. Your pitch has to sit close to the line.",
@@ -32,9 +19,9 @@ const WIDTH_HELP: Record<CorridorWidth, string> = {
 
 interface Props {
   /**
-   * Applies the demo choice to the run in flight. Speed and width have no
-   * live equivalent — both would move the world under a gate already being
-   * flown — so they are saved and picked up by the next run.
+   * Applies the demo choice to the run in flight. Width has no live
+   * equivalent — it would move the world under a gate already being flown —
+   * so it is saved and picked up by the next run.
    */
   onCueStyle?: (style: CueStyle) => void;
   /**
@@ -54,26 +41,12 @@ interface Props {
  * localStorage as it is made, so it also becomes the default for future runs.
  */
 export function PauseOptions({ onCueStyle, onShowTranslation }: Props) {
-  const [pace, setPace] = useState<Pace>(loadPace);
   const [width, setWidth] = useState<CorridorWidth>(loadCorridorWidth);
   const [cueStyle, setCueStyle] = useState<CueStyle>(loadCueStyle);
   const [translation, setTranslation] = useState<boolean>(loadShowTranslation);
 
   return (
     <div className="pause-options">
-      <section>
-        <h4>Speed</h4>
-        <Choice
-          options={PACES}
-          value={pace}
-          onChange={(p) => {
-            setPace(p);
-            savePace(p);
-          }}
-        />
-        <p className="param-help">{PACE_HELP[pace]} Takes effect next run.</p>
-      </section>
-
       <section>
         <h4>Tunnel width</h4>
         <Choice

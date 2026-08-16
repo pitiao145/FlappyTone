@@ -11,7 +11,6 @@
 
 import {
   applyCorridorWidth,
-  applyPace,
   corridorChaoAt,
   corridorToleranceAt,
   makeGate,
@@ -22,7 +21,6 @@ import {
   type Difficulty,
   type Gate,
   type GateShape,
-  type Pace,
   type Tone,
 } from "./gates.ts";
 import { pickWord, type Word } from "./words.ts";
@@ -54,12 +52,6 @@ export interface RunConfig {
   width: number;
   /** Injected for deterministic tests. Defaults to Math.random. */
   rand?: () => number;
-  /**
-   * Pacing selected by the player (see gates.ts). Defaults to "fast", the
-   * PRD baseline, so existing callers and tests are unaffected; the UI passes
-   * the persisted choice (default "normal").
-   */
-  pace?: Pace;
   /**
    * Corridor width chosen by the player (see gates.ts). Defaults to "normal"
    * (the PRD tolerance); the UI passes the persisted choice.
@@ -390,7 +382,6 @@ export class Run {
   private readonly mode: RunMode;
   private readonly width: number;
   private readonly rand: () => number;
-  private readonly pace: Pace;
   private readonly corridor: CorridorWidth;
   private cueStyle: CueStyle;
   private readonly cueDurationMsFor: (word: Word | null, tone: Tone) => number;
@@ -454,7 +445,6 @@ export class Run {
     this.mode = cfg.mode;
     this.width = cfg.width;
     this.rand = cfg.rand ?? Math.random;
-    this.pace = cfg.pace ?? "fast";
     this.corridor = cfg.corridor ?? "normal";
     this.cueStyle = cfg.cueStyle ?? "pause";
     this.cueDurationMsFor = cfg.cueDurationMsFor ?? (() => CUE_DURATION_MS);
@@ -680,8 +670,8 @@ export class Run {
    * Live rather than next-run because this is the one option whose effect is
    * obvious the moment you resume, and because turning it off is usually what
    * someone does when the call-and-response beat is in their way *right now*.
-   * Pace and corridor width stay next-run: both would move the world under a
-   * gate already in flight.
+   * Corridor width stays next-run: it would move the world under a gate
+   * already in flight.
    */
   setCueStyle(style: CueStyle): void {
     this.cueStyle = style;
@@ -962,7 +952,7 @@ export class Run {
       this.mode === "tutorial"
         ? { ...base, toleranceH: base.toleranceH * TUTORIAL_TOLERANCE_FACTOR }
         : base;
-    return applyCorridorWidth(applyPace(withTutorial, this.pace), this.corridor);
+    return applyCorridorWidth(withTutorial, this.corridor);
   }
 
   /** Drops gates that have scrolled off the left edge. */

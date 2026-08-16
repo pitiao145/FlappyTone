@@ -3,11 +3,9 @@ import {
   type CalibrationSettings,
   clearSettings,
   loadCorridorWidth,
-  loadPace,
   loadReduceMotion,
   saveCorridorWidth,
   loadSettings,
-  savePace,
   saveReduceMotion,
   saveSettings,
 } from "./settings.ts";
@@ -227,35 +225,6 @@ describe("Settings persistence", () => {
       rangeSemitones: "5",
     });
     expect(loadSettings()).toBeNull();
-  });
-});
-
-describe("Pace persistence", () => {
-  beforeEach(() => {
-    const map: Record<string, string> = {};
-    vi.stubGlobal("localStorage", {
-      getItem: (key: string) => map[key] ?? null,
-      setItem: (key: string, value: string) => {
-        map[key] = value;
-      },
-      removeItem: (key: string) => {
-        delete map[key];
-      },
-    } as Storage);
-  });
-
-  it("defaults to relaxed when unset", () => {
-    expect(loadPace()).toBe("relaxed");
-  });
-
-  it("round-trips a saved pace", () => {
-    savePace("fast");
-    expect(loadPace()).toBe("fast");
-  });
-
-  it("falls back to relaxed on a corrupt value", () => {
-    localStorage.setItem("toneflap.pace.v1", "warp");
-    expect(loadPace()).toBe("relaxed");
   });
 });
 

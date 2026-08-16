@@ -342,36 +342,8 @@ export function newDifficulty(): Difficulty {
 }
 
 /**
- * Player-selectable pacing. Scroll speed is fixed game-wide now (16 Aug
- * 2026) — a gate's pixel width has to be a stable function of `scrollSpeed *
- * shape.durationS` alone for the corridor to approximate the recording's own
- * shape, and that stops being true the moment speed varies. Pace still
- * stretches the rest interval between gates — how much breathing room the
- * player gets — which doesn't touch corridor shape at all.
- */
-export type Pace = "relaxed" | "normal" | "fast";
-
-export const PACES: Pace[] = ["relaxed", "normal", "fast"];
-
-const PACE_FACTORS: Record<Pace, { rest: number }> = {
-  relaxed: { rest: 2.0 },
-  normal: { rest: 1.5 },
-  fast: { rest: 1.0 },
-};
-
-/** Scales a (possibly ramped) difficulty by the chosen pace. Speed is untouched — see `Pace`. */
-export function applyPace(d: Difficulty, pace: Pace): Difficulty {
-  const f = PACE_FACTORS[pace];
-  return {
-    scrollSpeed: d.scrollSpeed,
-    toleranceH: d.toleranceH,
-    restMs: d.restMs * f.rest,
-  };
-}
-
-/**
  * Player-selectable corridor width. Scales the tolerance (tunnel half-height)
- * only — speed and rest are the pace's job. Applied after the ramp, so the
+ * only — speed and rest are fixed elsewhere. Applied after the ramp, so the
  * ramp's tolerance floor scales proportionally too.
  */
 export type CorridorWidth = "narrow" | "normal" | "wide";
@@ -393,11 +365,11 @@ export function applyCorridorWidth(
 
 /**
  * Applies the PRD difficulty ramp: every 5 gates cleared, toleranceH *= 0.95
- * (floor 0.07), restMs *= 0.95 (floor 600ms). scrollSpeed no longer ramps
- * (16 Aug 2026) — see `Pace` — so a gate's pixel width stays a stable
- * function of the word's own recorded duration throughout a run; difficulty
- * still climbs, just through a tighter corridor and less breathing room
- * instead of a faster world.
+ * (floor 0.07), restMs *= 0.95 (floor `restMsFloor`). scrollSpeed no longer
+ * ramps (16 Aug 2026), so a gate's pixel width stays a stable function of the
+ * word's own recorded duration throughout a run; difficulty still climbs,
+ * just through a tighter corridor and less breathing room instead of a
+ * faster world.
  * Always ramps from the fixed base constants keyed by total gatesCleared, so
  * repeated calls with growing gatesCleared do not compound earlier steps.
  */
@@ -450,8 +422,8 @@ export function nextTone(prev: Tone[], rand: () => number): Tone {
  * (see `newDifficulty`/`rampDifficulty`), a gate's pixel width is a direct,
  * stable function of the word's own recorded tone length: the corridor's
  * shape on screen approximates the recording's own ASCII contour as closely
- * as this rendering can, rather than being stretched or squeezed by pace or
- * the difficulty ramp.
+ * as this rendering can, rather than being stretched or squeezed by the
+ * difficulty ramp.
  */
 export function makeGate(source: Word | Tone, xStart: number, d: Difficulty): Gate {
   const word = typeof source === "number" ? null : source;

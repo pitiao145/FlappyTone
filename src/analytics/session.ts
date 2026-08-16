@@ -42,7 +42,7 @@
  * voices" — which is a bug in the mapping, not a fact about the player.
  */
 
-import type { CorridorWidth, Pace, Tone } from "../game/gates.ts";
+import type { CorridorWidth, Tone } from "../game/gates.ts";
 import type { CueStyle, GateLogEntry, RunMode } from "../game/run.ts";
 import type { GateOutcome } from "../game/scoring.ts";
 
@@ -79,7 +79,6 @@ export type AnalyticsEvent =
   | {
       type: "run_start";
       mode: RunMode;
-      pace: Pace;
       corridor: CorridorWidth;
       cue: CueStyle;
     }

@@ -96,7 +96,7 @@ export const DEFAULT_POLYLINES: Record<Tone, Polyline> = {
 
 export interface Tuning {
   // ---- pacing
-  /** Base world scroll speed in px/s before pace and ramp (PRD §6). */
+  /** Base world scroll speed in px/s before ramp (PRD §6). */
   baseScrollSpeed: number;
   /** Base corridor half-height as a fraction of canvas height. */
   baseToleranceH: number;
@@ -199,8 +199,11 @@ export interface Tuning {
 export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   baseScrollSpeed: 200,
   baseToleranceH: 0.11,
-  baseRestMs: 1200,
-  restMsFloor: 600,
+  // These absorb the old default pace's (relaxed, ×2.0) multiplier now that
+  // pace is gone (16 Aug 2026 removal) — was 1200/600 before scaling, so
+  // removing the multiplier doesn't silently halve breathing room in play.
+  baseRestMs: 2400,
+  restMsFloor: 1200,
   cuePauseHoldMs: 800,
   birdXFrac: 0.13,
   cueApproachMs: 825,

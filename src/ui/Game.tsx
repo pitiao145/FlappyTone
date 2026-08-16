@@ -14,12 +14,15 @@ import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { TONE_INFO } from "../game/gates.ts";
 import { Run, type RunMode, type RunSnapshot } from "../game/run.ts";
 import type { Word } from "../game/words.ts";
-import type { GateOutcome, UnheardHint } from "../game/scoring.ts";
+import {
+  toneBreakdown,
+  type GateOutcome,
+  type UnheardHint,
+} from "../game/scoring.ts";
 import {
   loadCorridorWidth,
   loadCueStyle,
   loadNoticeSeen,
-  loadPace,
   loadShowTranslation,
   saveNoticeSeen,
   type CalibrationSettings,
@@ -69,8 +72,6 @@ interface Props {
   canvasHeight: number;
   onOver: (snapshot: RunSnapshot) => void;
   onQuit: () => void;
-  /** Leave the run for the landing page. Offered only from the pause menu. */
-  onLanding: () => void;
   /** The word `mode: "single"` flies. Ignored otherwise. */
   singleWord?: Word;
 }
@@ -82,7 +83,6 @@ export function Game({
   canvasHeight,
   onOver,
   onQuit,
-  onLanding,
   singleWord,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -217,17 +217,15 @@ export function Game({
     const ctx2d = canvas ? scaleForDpr(canvas, canvasWidth, canvasHeight) : null;
     if (!canvas || !ctx2d) return;
 
-    // Game remounts per run, so this picks up the latest saved pace — and the
-    // latest motion preference, which the renderer caches.
+    // Game remounts per run, so this picks up the latest saved corridor
+    // width — and the latest motion preference, which the renderer caches.
     refreshMotionPreference();
 
-    const pace = loadPace();
     const corridor = loadCorridorWidth();
     const cueStyle = loadCueStyle();
     const run = new Run({
       mode,
       width: canvasWidth,
-      pace,
       corridor,
       cueStyle,
       // Queried at cue time — clips finish loading after the Run exists.
@@ -242,7 +240,7 @@ export function Game({
     // The settings are stamped on the run rather than the session: a player who
     // widens the corridor mid-session would otherwise have their easier run
     // read against the harder one's settings.
-    track({ type: "run_start", mode, pace, corridor, cue: cueStyle });
+    track({ type: "run_start", mode, corridor, cue: cueStyle });
     // If the manifest had not landed when the Run was built, catch it up.
     if (!inventoryNow()) void loadInventory().then((w) => run.setWords(w));
     let tracker: PitchTracker | null = null;
@@ -654,6 +652,37 @@ export function Game({
               Resume
             </button>
 
+            {/* A player who paused to check how they're doing shouldn't have
+                to quit to see it — score, hearts and per-tone progress so
+                far, read straight off the same live snapshot the HUD uses. */}
+            {mode === "game" && hud && (
+              <div className="pause-stats">
+                <div className="pause-stats-summary">
+                  <span className="pause-stats-score">{hud.score} pts</span>
+                  <span className="pause-stats-hearts">
+                    {Array.from({ length: MAX_HEARTS }, (_, i) => (
+                      <span key={i} className="heart">
+                        <HeartIcon filled={i < hearts} />
+                      </span>
+                    ))}
+                  </span>
+                  {hud.comboMult > 1 && (
+                    <span className="combo">×{hud.comboMult}</span>
+                  )}
+                </div>
+                <div className="pause-stats-breakdown">
+                  {toneBreakdown(hud.stats).map((b) => (
+                    <div className="pause-stats-row" key={b.tone}>
+                      <span className="syllable">Tone {b.tone}</span>
+                      <span className="pct">
+                        {b.pct === null ? "—" : `${Math.round(b.pct)}%`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {optionsOpen ? (
               <PauseOptions
                 onCueStyle={(style) => runRef.current?.setCueStyle(style)}
@@ -668,25 +697,22 @@ export function Game({
                 onClick={() => setOptionsOpen(true)}
               >
                 <GearIcon />
-                Speed, width, translation &amp; example
+                Width, translation &amp; example
               </button>
             )}
 
-            <div className="pause-exits">
-              <button
-                className="mic-stop"
-                onClick={exitRun(onQuit)}
-                title="End the run"
-              >
-                ■ quit
-              </button>
-              {/* The nav bar is hidden during a run, so this is the way back
-                  to the site from inside one. It ends the run — there is
-                  nothing to come back to. */}
-              <button className="link" onClick={exitRun(onLanding)}>
-                home page
-              </button>
-            </div>
+            {/* Same outline-pill treatment as Options above — quit is the
+                only other button on this screen, and the danger color alone
+                is enough to mark it as the destructive one. No "home page"
+                exit here: the navbar is the way back to the site everywhere
+                else, and duplicating it just added a second exit to scan. */}
+            <button
+              className="mic-stop"
+              onClick={exitRun(onQuit)}
+              title="End the run"
+            >
+              ■ quit
+            </button>
           </div>
         )}
       </div>

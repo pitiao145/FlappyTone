@@ -252,22 +252,28 @@ A **gate** is a corridor whose centreline traces the target tone's Chao contour.
 **Difficulty ramp:** ~~every 5 gates cleared — `scrollSpeed *= 1.08` (cap 2.2× base), `tolerance *= 0.95` (floor 0.07H), `restInterval *= 0.95` (floor 600ms). Base `scrollSpeed = 220 px/s`.~~
 
 > **⚠️ Superseded (16 Aug 2026) — `scrollSpeed` is fixed game-wide, ramp or
-> no ramp.** It no longer varies by pace (relaxed/normal/fast) or by the
-> difficulty ramp — `rampDifficulty`/`applyPace` in `gates.ts` both return the
-> same `baseScrollSpeed` untouched. Reasoning: gate width in px is
-> `scrollSpeed * shape.durationS`, and that only approximates a word's own
+> no ramp.** It no longer varies by the difficulty ramp — `rampDifficulty` in
+> `gates.ts` returns `baseScrollSpeed` untouched. Reasoning: gate width in px
+> is `scrollSpeed * shape.durationS`, and that only approximates a word's own
 > recorded contour — the point of using each word's own measured shape at all
 > — if `scrollSpeed` holds still. With it fixed, the corridor a player flies is
 > a stable, direct rendering of the recording's own timing, at every point in
-> a run and at every pace setting. Difficulty still climbs — tolerance still
-> tightens (`toleranceH *= 0.95` per 5 gates, floor 0.07H) and rest still
-> shrinks (`restMs *= 0.95`, floor 600ms) — just never by making the world
-> move faster. Pace (relaxed/normal/fast) still exists as a player setting,
-> but now only stretches the rest interval between gates; it no longer touches
-> scroll speed at all. `baseScrollSpeed` itself moved too, from 220 to 200
-> px/s, as part of the same tuning pass (`DEFAULT_TUNING` in `tuning.ts`).
-> Difficulty ramp is now: `tolerance *= 0.95` (floor 0.07H), `restInterval *=
-> 0.95` (floor 600ms). Base `scrollSpeed = 200 px/s`, fixed.
+> a run. Difficulty still climbs — tolerance still tightens (`toleranceH *=
+> 0.95` per 5 gates, floor 0.07H) and rest still shrinks (`restMs *= 0.95`,
+> floor `restMsFloor`) — just never by making the world move faster.
+> `baseScrollSpeed` itself moved too, from 220 to 200 px/s, as part of the
+> same tuning pass (`DEFAULT_TUNING` in `tuning.ts`). Difficulty ramp is now:
+> `tolerance *= 0.95` (floor 0.07H), `restInterval *= 0.95` (floor
+> `restMsFloor`). Base `scrollSpeed = 200 px/s`, fixed.
+>
+> **⚠️ Superseded again (16 Aug 2026) — player-selectable pace is gone.** The
+> relaxed/normal/fast pace setting (its only remaining effect after the
+> change above: stretching the rest interval) has been removed entirely — it
+> no longer changed anything a player could actually feel differently enough
+> to justify a menu control, since scroll speed was already fixed. Rest
+> interval is now the fixed constant the old "relaxed" default computed to
+> (`baseRestMs`/`restMsFloor` in `tuning.ts`, doubled from their pre-pace
+> values to preserve the shipped default breathing room).
 
 > **⚠️ Superseded (16 Aug 2026) — corridor tolerance widens per vertex, not
 > per scanned window.** The "Corridor tolerance" line above (`0.12*H` fixed)

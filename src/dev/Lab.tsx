@@ -5,15 +5,12 @@ import { setActiveTracker } from "../game/activeTracker.ts";
 import { REST_CHAO } from "../game/dynamics.ts";
 import {
   applyCorridorWidth,
-  applyPace,
   corridorChaoAt,
   CORRIDOR_WIDTHS,
   newDifficulty,
-  PACES,
   shapeForTone,
   toleranceChao,
   type CorridorWidth,
-  type Pace,
   type Tone,
 } from "../game/gates.ts";
 import {
@@ -25,10 +22,8 @@ import { birdXFrac, type RunSnapshot } from "../game/run.ts";
 import {
   loadCorridorWidth,
   loadCueStyle,
-  loadPace,
   loadSettings,
   saveCorridorWidth,
-  savePace,
   type CalibrationSettings,
 } from "../game/settings.ts";
 import { tuning } from "../game/tuning.ts";
@@ -118,13 +113,12 @@ export function Lab({ onBack }: Props) {
   const [gateResult, setGateResult] = useState<RunSnapshot | null>(null);
   const [gateError, setGateError] = useState<string | null>(null);
   /**
-   * The player-facing speed/width settings — same localStorage the pause
-   * menu writes to, so a choice made here is also what "test" (which reads
-   * them fresh via `loadPace`/`loadCorridorWidth` at mount) and a full run
-   * actually fly. Without this the preview's tolerance and the tolerance a
-   * test gate is scored against could silently disagree with what's shown.
+   * The player-facing width setting — same localStorage the pause menu
+   * writes to, so a choice made here is also what "test" (which reads it
+   * fresh via `loadCorridorWidth` at mount) and a full run actually fly.
+   * Without this the preview's tolerance and the tolerance a test gate is
+   * scored against could silently disagree with what's shown.
    */
-  const [pace, setPace] = useState<Pace>(loadPace);
   const [corridorWidth, setCorridorWidth] = useState<CorridorWidth>(loadCorridorWidth);
   /**
    * Lab-only inspection toggle — overlays the citation T3 polyline (the shape
@@ -215,13 +209,11 @@ export function Lab({ onBack }: Props) {
                   setFlyingGate(false);
                 }}
                 onQuit={stopGate}
-                onLanding={stopGate}
               />
             ) : (
               <div className="lab-idle">
                 <GatePreview
                   word={selectedWord}
-                  pace={pace}
                   corridorWidth={corridorWidth}
                   showCitation={showCitation}
                 />
@@ -254,17 +246,6 @@ export function Lab({ onBack }: Props) {
 
             <div className="lab-idle game-settings game-settings-compact">
               <div className="game-settings-row">
-                <span className="param-name">speed</span>
-                <Choice
-                  options={PACES}
-                  value={pace}
-                  onChange={(p) => {
-                    setPace(p);
-                    savePace(p);
-                  }}
-                />
-              </div>
-              <div className="game-settings-row">
                 <span className="param-name">tunnel width</span>
                 <Choice
                   options={CORRIDOR_WIDTHS}
@@ -276,11 +257,11 @@ export function Lab({ onBack }: Props) {
                 />
               </div>
               <p className="param-help">
-                Same settings the pause menu writes. Both are a factor on top
-                of the tuning sliders, not a slider of their own — the actual
+                Same setting the pause menu writes. It is a factor on top of
+                the tuning sliders, not a slider of its own — the actual
                 numbers a run flies with:
               </p>
-              <EffectiveSettings pace={pace} corridorWidth={corridorWidth} />
+              <EffectiveSettings corridorWidth={corridorWidth} />
             </div>
 
             <details className="lab-idle">
@@ -297,14 +278,11 @@ export function Lab({ onBack }: Props) {
                     setRunning(false);
                   }}
                   onQuit={stop}
-                  // The Lab is not the product and has no landing page to
-                  // return to; leaving the throwaway run is the same action.
-                  onLanding={stop}
                 />
               ) : (
                 <div className="lab-idle">
                   <p className="param-help">
-                    Runs on {loadPace()} pace · {loadCorridorWidth()} tunnel ·{" "}
+                    Runs on {loadCorridorWidth()} tunnel ·{" "}
                     demo {loadCueStyle() === "off" ? "off" : "on"}, and on your saved calibration
                     {loadSettings() === null ? " (none — using defaults)" : ""}.
                   </p>
@@ -421,10 +399,8 @@ const TONE_LIST: Tone[] = [1, 2, 3, 4];
  * has no event this component could listen for.
  */
 function EffectiveSettings({
-  pace,
   corridorWidth,
 }: {
-  pace: Pace;
   corridorWidth: CorridorWidth;
 }) {
   const [, tick] = useState(0);
@@ -433,7 +409,7 @@ function EffectiveSettings({
     return () => clearInterval(id);
   }, []);
 
-  const d = applyCorridorWidth(applyPace(newDifficulty(), pace), corridorWidth);
+  const d = applyCorridorWidth(newDifficulty(), corridorWidth);
 
   return (
     <pre className="diff">
@@ -464,17 +440,16 @@ tolerance in chao   ${TONE_LIST.map((t) => `T${t} ${toleranceChao(t, d.tolerance
  * everything else in PACING/DOT/JUDGING is a timing or animation behaviour
  * that only exists while a gate is being flown, so "test" is what shows those.
  *
- * `corridorWidth` is the player's speed/width setting (see `game-settings`
- * above), applied the same way `Run` applies it — through `toleranceChao`,
- * then `applyCorridorWidth` — so "narrow" and "wide" flare the drawn tunnel
- * exactly as much as they would in an actual run. `pace` likewise sets the
- * corridor's pixel width the same way `makeGate` does: `scrollSpeed *
+ * `corridorWidth` is the player's width setting (see `game-settings` above),
+ * applied the same way `Run` applies it — through `toleranceChao`, then
+ * `applyCorridorWidth` — so "narrow" and "wide" flare the drawn tunnel
+ * exactly as much as they would in an actual run. The gate's pixel width
+ * comes from the same formula `makeGate` uses: `scrollSpeed *
  * shape.durationS`. Stretching the polyline across the full canvas instead
  * (the previous behaviour) drew every gate at the same width regardless of
- * the tone's actual duration or the chosen pace, which flattened or steepened
- * corridors relative to how they actually fly — pace changes gate *width* on
- * screen, never how long the tone takes to fly through, so the preview must
- * use the same pixel width the game computes or it stops matching gameplay.
+ * the tone's actual duration, which flattened or steepened corridors
+ * relative to how they actually fly — the preview must use the same pixel
+ * width the game computes or it stops matching gameplay.
  * The gate starts (t=0) at the bird's x, matching the moment the player
  * begins flying it in a live run — the dot sits at the gate's own entrance
  * rather than partway through the corridor.
@@ -492,12 +467,10 @@ tolerance in chao   ${TONE_LIST.map((t) => `T${t} ${toleranceChao(t, d.tolerance
  */
 function GatePreview({
   word,
-  pace,
   corridorWidth,
   showCitation,
 }: {
   word: Word | null;
-  pace: Pace;
   corridorWidth: CorridorWidth;
   showCitation: boolean;
 }) {
@@ -517,7 +490,7 @@ function GatePreview({
         if (word) {
           const baseTol = toleranceChao(word.tone, tuning().baseToleranceH);
           const d = applyCorridorWidth(
-            applyPace({ scrollSpeed: tuning().baseScrollSpeed, toleranceH: baseTol, restMs: 0 }, pace),
+            { scrollSpeed: tuning().baseScrollSpeed, toleranceH: baseTol, restMs: 0 },
             corridorWidth,
           );
           const shape = { polyline: word.polyline, durationS: word.durationS };
@@ -551,7 +524,7 @@ function GatePreview({
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [word, pace, corridorWidth, showCitation]);
+  }, [word, corridorWidth, showCitation]);
 
   return (
     <div className="stage">

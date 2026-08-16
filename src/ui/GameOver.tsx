@@ -1,4 +1,3 @@
-import { TONE_INFO } from "../game/gates.ts";
 import { takeaway, toneBreakdown, type RunStats } from "../game/scoring.ts";
 import { GateLogPanel } from "../dev/GateLogPanel.tsx";
 
@@ -22,8 +21,7 @@ export function GameOver({ stats, busy, onRetry, onHome }: Props) {
       <div className="breakdown">
         {breakdown.map((b) => (
           <div className="breakdown-row" key={b.tone}>
-            <span className="syllable">{TONE_INFO[b.tone].pinyin}</span>
-            <span className="tone-num">({b.tone})</span>
+            <span className="syllable">Tone {b.tone}</span>
             <span className="bar">
               <span
                 className="bar-fill"

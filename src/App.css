@@ -2703,6 +2703,7 @@ section.hero-cards {
    game has options at all. */
 .options-reveal {
   display: inline-flex;
+  align-self: stretch;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
@@ -2745,16 +2746,22 @@ section.hero-cards {
 
 /* The quit button is the one destructive action here — it must not be the
    most prominent thing on the screen, which the blanket .overlay button rule
-   below would otherwise make it. */
+   below would otherwise make it. Same shape as .options-reveal (full-width
+   outline pill) so the two secondary actions read as one family; color is
+   the only thing marking this one as destructive. */
 .pause-menu .mic-stop {
   position: static;
-  align-self: center;
+  align-self: stretch;
   margin-top: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-pill);
   background: transparent;
   border: 1px solid rgba(var(--danger-rgb), 0.4);
   color: var(--danger);
-  font-size: 12px;
-  padding: 6px 12px;
+  font-size: 14px;
 }
 
 .pause-menu .mic-stop:hover:not(:disabled) {
@@ -2767,6 +2774,62 @@ section.hero-cards {
   font-size: var(--text-lg);
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+/* The run's progress so far, read straight from the same snapshot the HUD
+   uses — so checking your score doesn't require quitting. Condensed relative
+   to the game-over breakdown: no bars, no "couldn't hear" detail, just the
+   number that answers "how am I doing." */
+.pause-stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.pause-stats-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  font-size: 0.95rem;
+  color: var(--ink-muted);
+}
+
+.pause-stats-score {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pause-stats-hearts {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.pause-stats-hearts .heart svg {
+  width: 16px;
+  height: 16px;
+}
+
+.pause-stats-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+}
+
+.pause-stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+}
+
+.pause-stats-row .pct {
+  font-variant-numeric: tabular-nums;
   color: var(--ink-muted);
 }
 
@@ -2871,34 +2934,3 @@ section.hero-cards {
   outline-offset: 2px;
 }
 
-/* Quit and "home page" sit together at the foot of the pause menu: both leave
-   the run, and neither should look like the way back into it. */
-.pause-exits {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-1);
-  margin-top: var(--space-2);
-}
-
-.pause-menu .link {
-  align-self: center;
-  border: 1px solid var(--line-strong);
-  background: transparent;
-  color: var(--ink-muted);
-  font-size: 12px;
-  padding: 6px 12px;
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-
-.pause-menu .link:hover {
-  border-color: var(--ink-soft);
-  color: var(--ink);
-}
-
-.pause-menu .link:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}

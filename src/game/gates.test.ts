@@ -2,7 +2,6 @@ import { DEFAULT_TUNING, setTuning, tuning } from "./tuning.ts";
 import { describe, expect, it } from "vitest";
 import {
   applyCorridorWidth,
-  applyPace,
   corridorChaoAt,
   corridorToleranceAt,
   GATE_DURATION_S,
@@ -119,7 +118,7 @@ describe("rampDifficulty", () => {
     const d = rampDifficulty(100);
     expect(d.scrollSpeed).toBe(DEFAULT_TUNING.baseScrollSpeed);
     expect(d.toleranceH).toBeCloseTo(0.07);
-    expect(d.restMs).toBeCloseTo(600);
+    expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.restMsFloor);
   });
 
   it("does not compound tolerance across repeated incremental calls", () => {
@@ -204,32 +203,6 @@ describe("makeGate", () => {
     expect(g.tolChao).toBeCloseTo(
       toleranceChao(1, DEFAULT_TUNING.baseToleranceH) * 1.3,
     );
-  });
-});
-
-describe("applyPace", () => {
-  it("fast is the identity (PRD baseline)", () => {
-    const d = newDifficulty();
-    expect(applyPace(d, "fast")).toEqual(d);
-  });
-
-  it("normal stretches rest, leaving scrollSpeed and tolerance alone", () => {
-    const d = applyPace(newDifficulty(), "normal");
-    expect(d.scrollSpeed).toBe(DEFAULT_TUNING.baseScrollSpeed);
-    expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.baseRestMs * 1.5);
-    expect(d.toleranceH).toBeCloseTo(DEFAULT_TUNING.baseToleranceH);
-  });
-
-  it("relaxed doubles the rest interval, leaving scrollSpeed alone", () => {
-    const d = applyPace(newDifficulty(), "relaxed");
-    expect(d.scrollSpeed).toBe(DEFAULT_TUNING.baseScrollSpeed);
-    expect(d.restMs).toBeCloseTo(DEFAULT_TUNING.baseRestMs * 2);
-  });
-
-  it("keeps each tone's gate duration intact — width scales with the fixed speed", () => {
-    const d = applyPace(newDifficulty(), "relaxed");
-    const g = makeGate(1, 0, d);
-    expect(g.widthPx / d.scrollSpeed).toBeCloseTo(GATE_DURATION_S[1]);
   });
 });
 

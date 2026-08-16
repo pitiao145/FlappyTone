@@ -152,7 +152,7 @@ export function Settings({
       <section className="setting">
         <h3>Playing</h3>
         <p className="param-help">
-          Speed, tunnel width and the spoken example are in the pause menu, so
+          Tunnel width and the spoken example are in the pause menu, so
           you can change them while you can feel what they do. Tap ‖ during a
           run.
         </p>

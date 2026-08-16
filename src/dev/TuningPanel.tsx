@@ -47,7 +47,7 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
       { key: "cuePauseHoldMs", label: "post-demo hold", min: 0, max: 1200, step: 25,
         help: "Still beat after the demo finishes tracing, before the world moves again." },
       { key: "baseScrollSpeed", label: "scroll speed", min: 100, max: 400, step: 5,
-        help: "px/s before pace and difficulty ramp. Gate width scales with it, so tone tempo is unaffected." },
+        help: "px/s before the difficulty ramp. Gate width scales with it, so tone tempo is unaffected." },
     ],
   },
   {

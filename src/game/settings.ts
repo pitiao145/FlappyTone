@@ -1,7 +1,7 @@
 /**
  * Settings persistence via localStorage.
  * CalibrationSettings holds the user's mic calibration (f0 centre, noise floor)
- * and their preferred tone range. Also persists the chosen game pace.
+ * and their preferred tone range.
  */
 
 import {
@@ -9,12 +9,7 @@ import {
   RANGE_SEMITONES_MAX,
   RANGE_SEMITONES_MIN,
 } from "../pitch/calibration.ts";
-import {
-  CORRIDOR_WIDTHS,
-  PACES,
-  type CorridorWidth,
-  type Pace,
-} from "./gates.ts";
+import { CORRIDOR_WIDTHS, type CorridorWidth } from "./gates.ts";
 import { CUE_STYLES, type CueStyle } from "./run.ts";
 
 export interface CalibrationSettings {
@@ -96,32 +91,6 @@ export function saveSettings(s: CalibrationSettings): void {
  */
 export function clearSettings(): void {
   localStorage.removeItem(KEY);
-}
-
-// ---------------------------------------------------------------- game pace
-
-const PACE_KEY = "toneflap.pace.v1";
-const DEFAULT_PACE: Pace = "relaxed";
-
-/**
- * Load the player's chosen pace. Defaults to "relaxed" when unset or corrupt.
- *
- * It was "normal", one notch down from the PRD baseline, and that was still
- * too fast: the 7 Aug analytics show walls as the dominant outcome on every
- * tone including T1, the one corridor with no rate demand at all. A first-time
- * player is learning the pitch mapping and the tone at once; the scroll speed
- * is the part of that we can simply hand them. Anyone who wants the pressure
- * moves the slider up, and the choice sticks.
- */
-export function loadPace(): Pace {
-  const raw = localStorage.getItem(PACE_KEY);
-  return raw !== null && (PACES as string[]).includes(raw)
-    ? (raw as Pace)
-    : DEFAULT_PACE;
-}
-
-export function savePace(pace: Pace): void {
-  localStorage.setItem(PACE_KEY, pace);
 }
 
 // ------------------------------------------------------------ corridor width
