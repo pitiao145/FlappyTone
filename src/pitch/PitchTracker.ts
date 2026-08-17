@@ -30,6 +30,7 @@ export const DEFAULT_CONFIG: Omit<PitchTrackerConfig, "sampleRate"> = {
   // Frames that miss here can still be recovered by the glide rescue — see
   // isFrameVoiced() in math.ts, which is what keeps fast Tone 4 falls alive.
   clarityThreshold: 0.7,
+  rmsMult: DEFAULT_VOICING.rmsMult,
   rescueClarity: DEFAULT_VOICING.rescueClarity,
   rescueRmsMult: DEFAULT_VOICING.rescueRmsMult,
   rescueMaxSemitones: DEFAULT_VOICING.rescueMaxSemitones,
@@ -135,6 +136,7 @@ export class PitchTracker {
       {
         clarityThreshold,
         noiseFloor,
+        rmsMult: this.config.rmsMult,
         rescueClarity: this.config.rescueClarity,
         rescueRmsMult: this.config.rescueRmsMult,
         rescueMaxSemitones: this.config.rescueMaxSemitones,

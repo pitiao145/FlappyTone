@@ -83,6 +83,8 @@ export interface VoicingFrame {
 export interface VoicingConfig {
   clarityThreshold: number;
   noiseFloor: number;
+  /** Primary gate requires rms >= noiseFloor * this. Defaults to 3. */
+  rmsMult: number;
   /** Clarity floor for the glide rescue; below this a frame is never voiced */
   rescueClarity: number;
   /** Rescue requires rms >= noiseFloor * this (vs * 3 for the primary gate) */
@@ -101,6 +103,7 @@ export interface VoicingConfig {
 export const DEFAULT_VOICING: VoicingConfig = {
   clarityThreshold: 0.7,
   noiseFloor: 0.0033,
+  rmsMult: 3,
   rescueClarity: 0.4,
   rescueRmsMult: 10,
   rescueMaxSemitones: 3,
@@ -127,7 +130,7 @@ export const DEFAULT_VOICING: VoicingConfig = {
 export function isFrameVoiced(frame: VoicingFrame, config: VoicingConfig): boolean {
   const { f0, clarity, rms, prevVoicedF0, framesSinceVoiced } = frame;
   if (f0 <= 0) return false;
-  if (rms < config.noiseFloor * 3) return false;
+  if (rms < config.noiseFloor * config.rmsMult) return false;
 
   if (clarity >= config.clarityThreshold) return true;
 

@@ -89,7 +89,13 @@ function logSweeps(
 }
 
 /** Voiced speech needed to site the centre of someone's range. */
-const TALK_VOICED_MS = 2500;
+const TALK_VOICED_MS = 8000;
+// Looser than the default 3: the primary gate is tuned to reject background
+// noise during gameplay, but that same strictness throws away most of a
+// normal-volume "just talk" sample and keeps only the loudest, often
+// higher-pitched moments — biasing f0Center upward. f0Center only needs a
+// fair sample here, not noise rejection under a scrolling game.
+const TALK_RMS_MULT = 1.5;
 /** One deliberate reach. Short, because reaching is tiring. */
 const SWEEP_VOICED_MS = 900;
 /**
@@ -336,7 +342,9 @@ export function Calibration({
       let tracker: PitchTracker | null = null;
       setFrameSink((frame, sampleRate) => {
         tracker ??= new PitchTracker(
-          noiseFloor === null ? { sampleRate } : { sampleRate, noiseFloor },
+          noiseFloor === null
+            ? { sampleRate, rmsMult: TALK_RMS_MULT }
+            : { sampleRate, noiseFloor, rmsMult: TALK_RMS_MULT },
         );
         const p = tracker.push(frame);
         if (p.voiced && p.f0 !== null) {
@@ -593,7 +601,7 @@ export function Calibration({
           <p className="big">
             {step === "low"
               ? "Now go as low as you comfortably can."
-              : "Now say a flat, high “ahh” — like at the dentist."}
+              : "Like a first tone: high and flat."}
           </p>
           {/* An example to imitate beats an instruction to interpret. The
               high step deliberately asks for a natural held note rather than
@@ -602,7 +610,7 @@ export function Calibration({
           <p className="note">
             {step === "low"
               ? "Like a sleepy “ohhhh”. Hold it. Don't strain."
-              : "Not a shout — just a clear, held note. Hold it, don't strain."}
+              : "A clear, held “ahh” — not a shout, don't strain."}
           </p>
           <p className="note">
             Take your time, the bar fills while you're making the sound.

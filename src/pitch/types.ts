@@ -28,6 +28,8 @@ export interface PitchTrackerConfig {
   /** Max semitone change per analysis frame; faster jumps are detector errors */
   maxSlewSemitones: number;
   clarityThreshold: number;
+  /** Primary gate requires rms >= noiseFloor * this (vs default 3). */
+  rmsMult: number;
   /** Clarity floor for the glide rescue; below this a frame is never voiced */
   rescueClarity: number;
   /** Rescue requires rms >= noiseFloor * this (vs * 3 for the primary gate) */

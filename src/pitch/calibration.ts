@@ -80,8 +80,17 @@ export const RANGE_DOWN_SEMITONES_MIN = 2;
  * making Tone 1 harder to reach than an unfloored value would have. Legibility
  * at 2 is already the shipped default on the down side; nothing suggests the
  * up side is different.
+ *
+ * Dropped 2 → 1 (17 Aug 2026): a second real calibration measured a natural,
+ * un-hesitant "flat, high ahh" sweep landing at chao ~2.5-3.8 against a 126Hz
+ * centre — under 2 semitones for almost the whole sweep, so the floor was
+ * still clamping Tone 1's target above what the speaker's own natural high
+ * register produces. This is a genuine tone-1-sits-near-baseline case, not a
+ * bad reading — see the analysis in the 17 Aug session. 1 is a smaller safety
+ * net than 2, not zero: it still stops a near-flat sweep from collapsing the
+ * board to a hair-trigger sliver.
  */
-export const RANGE_UP_SEMITONES_MIN = 2;
+export const RANGE_UP_SEMITONES_MIN = 1;
 
 /** Nearest-rank percentile of an already-sorted array. */
 function percentile(sorted: number[], p: number): number {
@@ -127,9 +136,9 @@ export interface RangeHalves {
   down: number;
 }
 
-/** Round to the nearest 0.5 and hold inside the tone-space bounds. */
+/** Round to the nearest quarter-semitone and hold inside the tone-space bounds. */
 function clampHalf(half: number, min = RANGE_SEMITONES_MIN): number {
-  const rounded = Math.round(half * 2) / 2;
+  const rounded = Math.round(half * 4) / 4;
   return Math.min(RANGE_SEMITONES_MAX, Math.max(min, rounded));
 }
 
