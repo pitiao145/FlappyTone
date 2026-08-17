@@ -179,6 +179,39 @@ Persist to `localStorage` so it isn't re-run every session (this is the one exce
 > of the board at the moment the player is asked to look at how far down they
 > got is the same lie the symmetric range told.
 
+> **⚠️ Superseded again (17 Aug 2026) — the high sweep asks for a natural
+> Tone 1, not a maximum reach.** "Say ahh as high as is comfortable" measured
+> a *reach*, not the pitch Tone 1 actually uses: Jane's own Tone 1 measures at
+> chao 3.3 against her own voice, a modest lift over her speaking pitch, not
+> the ceiling of a sustained "ahh." Reported symptom (17 Aug 2026): players
+> doing a correct Tone 1 sometimes couldn't make the dot reach the top of the
+> grid. Root cause traced to the old shared `REACH_TO_TONE_SPACE` (0.6):
+> clawing back 40% of a genuine maximum-reach sweep still overshoots how far
+> above centre a real Tone 1 sits, for a lot of voices — so chao 5 stayed out
+> of reach for a technically correct attempt.
+>
+> The high step's prompt changed instead of only its multiplier: it now asks
+> for "a flat, high 'ahh' — like at the dentist," a natural sustained note in
+> Tone 1's own register rather than a reach. `REACH_TO_TONE_SPACE` split into
+> `REACH_TO_TONE_SPACE_UP` and `REACH_TO_TONE_SPACE_DOWN` (0.6, unchanged —
+> the low end was never implicated, and nothing about T3's floor moved).
+>
+> A first real calibration against the new prompt (17 Aug 2026) showed the
+> high sweep's own p90 landing at 2.8 st — already inside the space real
+> tones use, not a reach needing claw-back — and it was landing on
+> `RANGE_SEMITONES_MIN` (3), the shared board-legibility floor, *increasing*
+> `up` past what the speaker had actually measured. Two changes followed:
+> `REACH_TO_TONE_SPACE_UP` moved to **1** (no claw-back, starting point —
+> still very little data behind it) and the upward floor split into its own
+> constant, `RANGE_UP_SEMITONES_MIN` (2), separate from the shared
+> `RANGE_SEMITONES_MIN` that `computeRangeSemitones` still uses for the
+> reference-clip tooling in `dev/clipCut.ts`/`clipNormalize.ts` — touching
+> the shared constant would have risked moving shipped corridor polylines
+> that have nothing to do with a player's calibration. `RANGE_UP_SEMITONES_MIN`
+> matches `RANGE_DOWN_SEMITONES_MIN`, already 2 in production. Both scale
+> constants are exposed in `tuning.ts` (`reachToToneSpaceUp`/`Down`) so they
+> can be retuned live in the Lab as more real calibrations come in.
+
 ---
 
 ## 6. Tone gate geometry

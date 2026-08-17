@@ -295,6 +295,7 @@ export default function App() {
             canvasWidth={CANVAS_W}
             canvasHeight={CANVAS_H}
             onDone={onCalibrated}
+            onSaved={setSettings}
             onCancel={goHome}
           />
         )}
@@ -311,6 +312,7 @@ export default function App() {
               setSettings(s);
               setScreen("settings");
             }}
+            onSaved={setSettings}
             onCancel={() => setScreen("settings")}
           />
         )}

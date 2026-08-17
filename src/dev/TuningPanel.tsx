@@ -94,6 +94,16 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
         help: "Seconds of your contour kept on screen." },
     ],
   },
+  {
+    title: "calibration",
+    note: "how much of a sweep's reach becomes the board's half-width. Needs live retuning against real calibrations, not derived.",
+    knobs: [
+      { key: "reachToToneSpaceUp", label: "up scale", min: 0.3, max: 1.2, step: 0.05,
+        help: "Fraction of the high-sweep reach that becomes the board's upward half. Higher = Tone 1/2/4's high end easier to reach." },
+      { key: "reachToToneSpaceDown", label: "down scale", min: 0.3, max: 1.2, step: 0.05,
+        help: "Fraction of the low-sweep reach that becomes the board's downward half. Leave alone unless T3's floor itself needs retuning." },
+    ],
+  },
 ];
 
 const TONES: Tone[] = [1, 2, 3, 4];

@@ -9,10 +9,11 @@ import {
   startLoop,
 } from "../game/loop.ts";
 import { saveSettings, type CalibrationSettings } from "../game/settings.ts";
+import { tuning } from "../game/tuning.ts";
 import {
   RANGE_DOWN_SEMITONES_MIN,
   RANGE_SEMITONES_MAX,
-  RANGE_SEMITONES_MIN,
+  RANGE_UP_SEMITONES_MIN,
   computeF0Center,
   computeNoiseFloor,
   computeRangeHalves,
@@ -64,8 +65,8 @@ function sameHalves(a: RangeHalves, b: RangeHalves): boolean {
  * causes — a downward reach that was measured and then squashed by a symmetric
  * board, or one that was never heard at all (creak fails voicing, fMin is
  * 70Hz, and unvoiced frames drift the dot to REST_CHAO). The percentiles tell
- * them apart; the clamp line says whether RANGE_SEMITONES_MIN is doing the
- * squashing instead.
+ * them apart; the clamp line says whether RANGE_UP_SEMITONES_MIN/
+ * RANGE_DOWN_SEMITONES_MIN is doing the squashing instead.
  */
 function logSweeps(
   high: number[],
@@ -130,6 +131,16 @@ interface Props {
   canvasWidth: number;
   canvasHeight: number;
   onDone: (settings: CalibrationSettings) => void;
+  /**
+   * Fires the instant a fresh calibration is auto-saved (arrival at "done"),
+   * separate from `onDone` because `onDone` also navigates away — firing it
+   * early would skip the "you're all set" confirmation the player never
+   * asked to skip. This exists purely to keep the app's in-memory settings in
+   * sync with what just hit localStorage, so a screen seeded from in-memory
+   * state (Settings → Fine-tune) can't show stale numbers just because the
+   * player navigated away before tapping "Start playing".
+   */
+  onSaved?: (settings: CalibrationSettings) => void;
   onCancel: () => void;
   /**
    * Where to start. "preview" is Settings' Fine-tune: it skips the capture and
@@ -189,6 +200,7 @@ export function Calibration({
   canvasWidth,
   canvasHeight,
   onDone,
+  onSaved,
   onCancel,
   startAt = "quiet",
   existing = null,
@@ -420,6 +432,8 @@ export function Calibration({
         const halves = computeRangeHalvesFromExtremes(
           highRef.current,
           lowRef.current,
+          tuning().reachToToneSpaceUp,
+          tuning().reachToToneSpaceDown,
         );
         if (import.meta.env.DEV) logSweeps(highRef.current, lowRef.current, halves);
         setRange(halves ?? { up: RANGE_SEMITONES, down: RANGE_SEMITONES });
@@ -501,10 +515,18 @@ export function Calibration({
   // Persist on *arrival* at the last card rather than on its button: someone
   // who closes the tab there has still done the work, and making them redo it
   // because they never pressed a button would be the app's fault, not theirs.
+  // `onSaved` fires here too — without it, a player who navigates away before
+  // tapping "Start playing" leaves the app's in-memory settings pointing at
+  // the *previous* calibration while localStorage already has the new one,
+  // and anything seeded from in-memory state (Fine-tune) shows stale numbers
+  // until a full reload.
   useEffect(() => {
     if (step !== "done") return;
     const s = settingsNow();
-    if (s) saveSettings(s);
+    if (s) {
+      saveSettings(s);
+      onSaved?.(s);
+    }
     // settingsNow closes over the three values in the deps below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, f0Center, noiseFloor, range]);
@@ -571,13 +593,16 @@ export function Calibration({
           <p className="big">
             {step === "low"
               ? "Now go as low as you comfortably can."
-              : "And now as high as you comfortably can."}
+              : "Now say a flat, high “ahh” — like at the dentist."}
           </p>
-          {/* An example to imitate beats an instruction to interpret. */}
+          {/* An example to imitate beats an instruction to interpret. The
+              high step deliberately asks for a natural held note rather than
+              a maximum reach — that reach was the thing making Tone 1 feel
+              unreachable in play (see REACH_TO_TONE_SPACE_UP). */}
           <p className="note">
             {step === "low"
               ? "Like a sleepy “ohhhh”. Hold it. Don't strain."
-              : "Like a surprised “ooh?”. Hold it. Don't strain."}
+              : "Not a shout — just a clear, held note. Hold it, don't strain."}
           </p>
           <p className="note">
             Take your time, the bar fills while you're making the sound.
@@ -636,7 +661,7 @@ export function Calibration({
             </span>
             <input
               type="range"
-              min={RANGE_SEMITONES_MIN}
+              min={RANGE_UP_SEMITONES_MIN}
               max={RANGE_SEMITONES_MAX}
               step={0.5}
               value={range.up}

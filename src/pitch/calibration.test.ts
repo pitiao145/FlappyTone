@@ -3,6 +3,7 @@ import {
   RANGE_DOWN_SEMITONES_MIN,
   RANGE_SEMITONES_MAX,
   RANGE_SEMITONES_MIN,
+  RANGE_UP_SEMITONES_MIN,
   computeF0Center,
   computeNoiseFloor,
   computeRangeHalves,
@@ -10,8 +11,10 @@ import {
   computeRangeSemitones,
   NOISE_FLOOR_MIN,
   median,
-  REACH_TO_TONE_SPACE,
+  REACH_TO_TONE_SPACE_UP,
+  REACH_TO_TONE_SPACE_DOWN,
 } from "./calibration.ts";
+import { semitonesToChao } from "./math.ts";
 
 describe("median", () => {
   it("finds the middle element of an odd-length array", () => {
@@ -121,7 +124,7 @@ describe("computeRangeHalvesFromExtremes", () => {
 
   it("takes each half from its own sweep", () => {
     expect(computeRangeHalvesFromExtremes(many(5), many(-5))).toEqual({
-      up: 3,
+      up: 5,
       down: 3,
     });
   });
@@ -130,8 +133,8 @@ describe("computeRangeHalvesFromExtremes", () => {
     // The reported defect: chao 5 sat at the top of a comfortable "ahh", so
     // Tone 1 asked for a shout. A reach bounds the board; it is not the board.
     expect(computeRangeHalvesFromExtremes(many(10), many(-10))).toEqual({
-      up: 10 * REACH_TO_TONE_SPACE,
-      down: 10 * REACH_TO_TONE_SPACE,
+      up: 10 * REACH_TO_TONE_SPACE_UP,
+      down: 10 * REACH_TO_TONE_SPACE_DOWN,
     });
   });
 
@@ -146,7 +149,7 @@ describe("computeRangeHalvesFromExtremes", () => {
       down: RANGE_SEMITONES_MAX,
     });
     expect(computeRangeHalvesFromExtremes(many(0.2), many(-0.2))).toEqual({
-      up: RANGE_SEMITONES_MIN,
+      up: RANGE_UP_SEMITONES_MIN,
       down: RANGE_DOWN_SEMITONES_MIN,
     });
   });
@@ -157,7 +160,7 @@ describe("computeRangeHalvesFromExtremes", () => {
     // chao 1 asked for three times the excursion they had just demonstrated.
     // Each half now answers to the sweep that measured it.
     expect(computeRangeHalvesFromExtremes(many(10), many(-2))).toEqual({
-      up: 6,
+      up: 10,
       down: RANGE_DOWN_SEMITONES_MIN,
     });
   });
@@ -166,7 +169,7 @@ describe("computeRangeHalvesFromExtremes", () => {
     // Not mirrored from the up half — floored. The board stays legible
     // without pretending they demonstrated a downward reach they did not.
     expect(computeRangeHalvesFromExtremes(many(8), many(0))).toEqual({
-      up: 5,
+      up: 8,
       down: RANGE_DOWN_SEMITONES_MIN,
     });
   });
@@ -175,12 +178,12 @@ describe("computeRangeHalvesFromExtremes", () => {
     // A real measurement, 9 Aug 2026: +10.9 / -2.7 st. Unscaled, this board
     // made Tone 1 unreachable (chao 5 at +10 st) and drew an ordinary Tone 2
     // onset on the floor (chao 1 at -2.7). The floor still applies to the
-    // scaled 1.62, and that is fine -- what must never happen is chao 1
+    // scaled down half, and that is fine -- what must never happen is chao 1
     // landing below the 2.7 he actually reached, which is where the T3
     // corridor trough would become a wall.
     const many27 = Array.from({ length: 40 }, () => -2.7);
     const halves = computeRangeHalvesFromExtremes(many(10.9), many27)!;
-    expect(halves).toEqual({ up: 6.5, down: RANGE_DOWN_SEMITONES_MIN });
+    expect(halves).toEqual({ up: RANGE_SEMITONES_MAX, down: RANGE_DOWN_SEMITONES_MIN });
     expect(halves.down).toBeLessThanOrEqual(2.7);
   });
 
@@ -188,9 +191,28 @@ describe("computeRangeHalvesFromExtremes", () => {
     const high = [...many(5, 39), 30];
     const low = [...many(-5, 39), -30];
     expect(computeRangeHalvesFromExtremes(high, low)).toEqual({
-      up: 3,
+      up: 5,
       down: 3,
     });
+  });
+
+  it("reads a real T1 excursion much closer to chao 5 than the old shared scale did", () => {
+    // The regression this split targets: a natural, correctly-produced Tone 1
+    // (measured off fixtures/captures/jane_ma1.wav — clean f0 ~211-234 Hz
+    // against her f0Center of 168 Hz, i.e. ~4-5.7 semitones above centre)
+    // should draw much closer to the top of the board than the old shared
+    // 0.6 scale allowed for a plausible "as high as comfortable" sweep.
+    const plausibleSweepP90 = 6; // a moderate, not-maximal, comfortable reach
+    const halves = computeRangeHalvesFromExtremes(
+      many(plausibleSweepP90),
+      many(-9),
+    )!;
+    const realT1Semitones = 5;
+    const chao = semitonesToChao(realT1Semitones, halves.up, halves.down);
+    // 4.5 isn't arbitrary: base corridor tolerance is baseToleranceH 0.11 of
+    // a 4-chao-unit span, i.e. within ~0.44 chao — so this bar is "inside the
+    // wall", not just "an improvement."
+    expect(chao).toBeGreaterThanOrEqual(4.5);
   });
 });
 

@@ -180,6 +180,21 @@ export interface Tuning {
   /** Seconds of movement kept in the trail. */
   trailSeconds: number;
 
+  // ---- calibration
+  /**
+   * Fraction of the high-sweep reach that becomes the board's upward half —
+   * see `REACH_TO_TONE_SPACE_UP` in `pitch/calibration.ts` for the reasoning.
+   * Flown, not derived; the value most likely to need retuning from real
+   * calibrations once the new "flat, high ahh" prompt is in front of players.
+   */
+  reachToToneSpaceUp: number;
+  /**
+   * Fraction of the low-sweep reach that becomes the board's downward half —
+   * see `REACH_TO_TONE_SPACE_DOWN`. Left at its original value on purpose;
+   * the low sweep's prompt and behavior are untouched by the Tone 1 fix.
+   */
+  reachToToneSpaceDown: number;
+
   /**
    * Per-tone gate length in seconds.
    *
@@ -219,6 +234,8 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   easeTauMs: 35,
   driftChaoPerSec: 5.33,
   trailSeconds: 1.0,
+  reachToToneSpaceUp: 1,
+  reachToToneSpaceDown: 0.6,
   gateDurationS: Object.freeze({ 1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6 }),
   polylines: DEFAULT_POLYLINES,
 }) as Readonly<Tuning>;

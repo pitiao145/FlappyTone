@@ -7,7 +7,7 @@
 import {
   RANGE_DOWN_SEMITONES_MIN,
   RANGE_SEMITONES_MAX,
-  RANGE_SEMITONES_MIN,
+  RANGE_UP_SEMITONES_MIN,
 } from "../pitch/calibration.ts";
 import { CORRIDOR_WIDTHS, type CorridorWidth } from "./gates.ts";
 import { CUE_STYLES, type CueStyle } from "./run.ts";
@@ -18,7 +18,7 @@ export interface CalibrationSettings {
   /** Noise floor from the calibration silence capture (RMS). Voicing gate uses noiseFloor*3 as threshold. */
   noiseFloor: number;
   /** Tone range in semitones from centre *up* to Chao 5. Seeded from the
-   * speaker's high sweep; bounds in RANGE_SEMITONES_MIN/MAX. */
+   * speaker's high sweep; bounds in RANGE_UP_SEMITONES_MIN/MAX. */
   rangeSemitones: number;
   /** Semitones from centre *down* to Chao 1, from the low sweep. Separate
    * because a speaking voice is not the middle of its range — see
@@ -43,7 +43,7 @@ const KEY = "toneflap.settings.v2";
  * Validation:
  * - f0Center: 70–400 Hz (human voice range)
  * - noiseFloor: > 0
- * - rangeSemitones: RANGE_SEMITONES_MIN–MAX
+ * - rangeSemitones: RANGE_UP_SEMITONES_MIN–MAX
  *
  * `rangeDownSemitones` is migrated rather than validated away: a record saved
  * before the board became asymmetric has no such field, and rejecting it would
@@ -63,7 +63,7 @@ export function loadSettings(): CalibrationSettings | null {
       typeof s.noiseFloor !== "number" ||
       s.noiseFloor <= 0 ||
       typeof s.rangeSemitones !== "number" ||
-      s.rangeSemitones < RANGE_SEMITONES_MIN ||
+      s.rangeSemitones < RANGE_UP_SEMITONES_MIN ||
       s.rangeSemitones > RANGE_SEMITONES_MAX
     ) {
       return null;
