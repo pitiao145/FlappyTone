@@ -101,7 +101,13 @@ export type AnalyticsEvent =
       score: number;
       bestMult: number;
       missedEarly: number;
-    };
+    }
+  /**
+   * The native clip wasn't loaded yet when its cue was due, so the synthetic
+   * sweep played instead (see src/audio/reference.ts's `playToneCue`). Should
+   * be rare to nonexistent in production; this exists to confirm that.
+   */
+  | { type: "cue_fallback"; tone: Tone };
 
 export interface SessionCalibration {
   f0Center: number;

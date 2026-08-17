@@ -108,6 +108,7 @@ const GAME_EVENTS = new Set<string>([
   "run_start",
   "gate",
   "run_end",
+  "cue_fallback",
 ]);
 
 /** The only `$`-prefixed properties allowed through on a gameplay event. */

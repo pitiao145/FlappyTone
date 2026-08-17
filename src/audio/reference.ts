@@ -144,6 +144,11 @@ export function isCueAudible(): boolean {
   return performance.now() < cueAudibleUntilMs;
 }
 
+/**
+ * Returns true when the native clip played, false when it fell back to the
+ * synthetic sweep — so a caller can report the fallback without duplicating
+ * the `clips` lookup.
+ */
 export function playToneCue(
   ctx: AudioContext,
   tone: Tone,
@@ -151,7 +156,7 @@ export function playToneCue(
   rangeSemitones: number = RANGE_SEMITONES,
   word: Word | null = null,
   rangeDownSemitones: number = rangeSemitones,
-): void {
+): boolean {
   const clip = word ? clips.get(word.id) : undefined;
   if (clip) {
     const src = ctx.createBufferSource();
@@ -161,7 +166,7 @@ export function playToneCue(
     src.start(ctx.currentTime);
     const audibleMs = clip.clipS * 1000;
     cueAudibleUntilMs = performance.now() + audibleMs + CUE_TAIL_MS;
-    return;
+    return true;
   }
   const osc = ctx.createOscillator();
   osc.type = "sine";
@@ -189,6 +194,7 @@ export function playToneCue(
   osc.start(now);
   osc.stop(now + durationS);
   cueAudibleUntilMs = performance.now() + durationS * 1000 + CUE_TAIL_MS;
+  return false;
 }
 
 /**

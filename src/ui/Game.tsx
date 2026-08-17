@@ -304,7 +304,7 @@ export function Game({
         const audio = getMicSession()?.ctx;
         // Same context the mic runs on, so it is already gesture-resumed.
         if (audio && audio.state === "running") {
-          playToneCue(
+          const playedClip = playToneCue(
             audio,
             snap.cue.tone,
             settings.f0Center,
@@ -312,6 +312,9 @@ export function Game({
             snap.cue.word,
             settings.rangeDownSemitones,
           );
+          if (!playedClip) {
+            track({ type: "cue_fallback", tone: snap.cue.tone });
+          }
         }
       }
 
