@@ -59,6 +59,15 @@ function sameHalves(a: RangeHalves, b: RangeHalves): boolean {
   return a.up === b.up && a.down === b.down;
 }
 
+/** A two- or three-digit number to read aloud. Never the same one twice running. */
+function randomReadout(last: string | null): string {
+  let next: string;
+  do {
+    next = String(Math.floor(10 + Math.random() * 890));
+  } while (next === last);
+  return next;
+}
+
 /**
  * Dev-only: what the two sweeps actually contained. The reason this exists is
  * that "the dot stays at chao 3 on the low sweep" has two very different
@@ -118,6 +127,16 @@ const NUDGE_AFTER_MS = 7000;
 
 /** How long a "Got it." sits on screen before the next instruction. */
 const CONFIRM_MS = 900;
+/**
+ * How long one flashed number sits before the next, during "talk".
+ *
+ * Replaced "count to ten / say your breakfast" as the prompt: those ask the
+ * player to compose something, which is exactly the kind of freeze a blank
+ * "say something" prompt causes. A number on screen needs no thought — just
+ * read it — and reading numbers still produces normal, varied-pitch speech,
+ * which is all this step needs.
+ */
+const NUMBER_FLASH_MS = 1700;
 /** Below this many voiced frames a sweep tells us nothing — ask for another go. */
 const MIN_SWEEP_SAMPLES = 10;
 
@@ -226,6 +245,8 @@ export function Calibration({
   const [attempt, setAttempt] = useState(0);
   const [hint, setHint] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  /** The number currently flashed for the "talk" step to read aloud. */
+  const [readout, setReadout] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
   const [noiseFloor, setNoiseFloor] = useState<number | null>(
     existing?.noiseFloor ?? null,
@@ -363,6 +384,8 @@ export function Calibration({
         }
       });
       const started = performance.now();
+      setReadout(randomReadout(null));
+      let lastReadout: string | null = null;
       // 20Hz: the meter reacts to the voice, and the step ends when the meter
       // is full. No clock is running against the player.
       const ticker = setInterval(() => {
@@ -372,6 +395,7 @@ export function Calibration({
         }
         if (heard.ms < TALK_VOICED_MS) return;
         clearInterval(ticker);
+        clearInterval(flasher);
         setProgress(0);
         const centre = computeF0Center(f0s);
         if (centre === null) {
@@ -386,8 +410,18 @@ export function Calibration({
         lowRef.current = [];
         advance("Got it.", "low");
       }, 50);
+      // Its own slower clock: the number is there to give the voice something
+      // to read, not to time the step. Tying it to the 20Hz ticker would
+      // flash a fresh one on the same beat progress redraws.
+      const flasher = setInterval(() => {
+        setReadout((cur) => {
+          lastReadout = randomReadout(cur ?? lastReadout);
+          return lastReadout;
+        });
+      }, NUMBER_FLASH_MS);
       return () => {
         clearInterval(ticker);
+        clearInterval(flasher);
         setFrameSink(null);
       };
     }
@@ -577,16 +611,8 @@ export function Calibration({
 
       {step === "talk" && !confirm && (
         <>
-          <p className="big">Now just talk, in your normal voice.</p>
-          {/* Concrete options, because "say something" is where people freeze. */}
-          <ul className="facts prompts">
-            <li>Count to ten</li>
-            <li>What you had for breakfast</li>
-            <li>How you got here today</li>
-          </ul>
-          <p className="note">
-            Start whenever you like, the bar fills while I can hear you.
-          </p>
+          <p className="note">Just talk normally — read these out loud.</p>
+          <p className="big readout">{readout}</p>
           {hint ? (
             <>
               <p className="prompt">{hint}</p>
@@ -606,49 +632,55 @@ export function Calibration({
         </>
       )}
 
-      {sweeping && !confirm && (
-        <>
-          <p className="big">
-            {step === "low"
-              ? "Now go as low as you comfortably can."
-              : "Like a first tone: high and flat."}
-          </p>
-          {/* An example to imitate beats an instruction to interpret. The
-              high step deliberately asks for a natural held note rather than
-              a maximum reach — that reach was the thing making Tone 1 feel
-              unreachable in play (see REACH_TO_TONE_SPACE_UP). */}
-          <p className="note">
-            {step === "low"
-              ? "Like a sleepy “ohhhh”. Hold it. Don't strain."
-              : "A clear, held “ahh” — not a shout, don't strain."}
-          </p>
-          <p className="note">
-            Take your time, the bar fills while you're making the sound.
-          </p>
-          {hint ? (
-            <>
-              <p className="prompt">{hint}</p>
-              <button
-                className="primary"
-                onClick={() => {
-                  setHint(null);
-                  setAttempt((a) => a + 1);
-                }}
-              >
-                Try again
-              </button>
-            </>
-          ) : (
-            <Meter value={progress} />
-          )}
-        </>
-      )}
-
-      {/* Outside the block above so the acknowledgement between the two sweeps
-          does not unmount the canvas the live dot is drawing into. */}
+      {/* The instructions live over the canvas (not stacked above it) so the
+          full Chao grid stays on screen throughout the sweep — the low sweep
+          in particular needs the bottom of the grid visible, which stacked
+          text above it pushed past the viewport. Outside the `!confirm`
+          check so the acknowledgement between the two sweeps does not unmount
+          the canvas the live dot is drawing into. */}
       {sweeping && (
         <div className="stage">
           <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} />
+
+          {!confirm && (
+            <div className="calibrate-overlay">
+              {/* A scenario to act out beats an instruction to interpret —
+                  same idea as the "talk" readout, one thing to do rather
+                  than a rule to follow. The high step's wording still asks
+                  for a held, steady note, not a shout or a reach: an "as
+                  high as comfortable" reach was the thing that made a real
+                  Tone 1 feel unreachable in play (see REACH_TO_TONE_SPACE_UP
+                  in CLAUDE.md), and "surprised" swung the sweep up and back
+                  down instead of holding. Doctor's-visit "ahh" holds one
+                  steady note instead. */}
+              <p className="big">
+                {step === "low"
+                  ? "Something just let you down."
+                  : "The doctor wants a look at your throat."}
+              </p>
+              <p className="note">
+                {step === "low"
+                  ? "Sigh it out — “ohhhh...”"
+                  : "Open wide, hold it — “ahhhh...”"}
+              </p>
+              {hint ? (
+                <>
+                  <p className="prompt">{hint}</p>
+                  <button
+                    className="primary"
+                    onClick={() => {
+                      setHint(null);
+                      setAttempt((a) => a + 1);
+                    }}
+                  >
+                    Try again
+                  </button>
+                </>
+              ) : (
+                <Meter value={progress} />
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -656,7 +688,12 @@ export function Calibration({
         <>
           <p className="big">You're all set.</p>
           <p className="note">
-            That's your voice mapped. You can change it any time in Settings.
+            Your range: +{range.up} / −{range.down} semitones.
+          </p>
+          <p className="note">
+            That's how far above and below your normal voice the game will
+            track. It'll keep fine-tuning itself over your first few runs, so
+            don't worry about getting it perfect now.
           </p>
           <button className="primary" onClick={save}>
             Start playing

@@ -307,6 +307,14 @@
   font-size: 1.3rem;
 }
 
+/* The number the "talk" step flashes for the player to read aloud — sized to
+   read at arm's length without more instruction than "say this". */
+.readout {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .slider {
   display: flex;
   flex-direction: column;
@@ -1344,6 +1352,33 @@
 }
 
 .visualiser-overlay .note {
+  margin: 0;
+}
+
+/* Same idea as .visualiser-overlay, pinned to the top instead: calibration's
+   sweep instructions (§5.4 low/high) used to sit above .stage as ordinary
+   flow, pushing the grid below the viewport on the low sweep — exactly where
+   the player most needs to see the dot land. Layering the text over the
+   canvas keeps the whole grid on screen throughout. */
+.calibrate-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 12px 18px;
+  background: linear-gradient(
+    to bottom,
+    rgba(var(--surface-rgb), 0.95) 40%,
+    rgba(var(--surface-rgb), 0)
+  );
+}
+
+.calibrate-overlay .note,
+.calibrate-overlay .big {
   margin: 0;
 }
 
