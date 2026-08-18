@@ -1,5 +1,9 @@
+import { useState } from "react";
 import { takeaway, toneBreakdown, type RunStats } from "../game/scoring.ts";
 import { GateLogPanel } from "../dev/GateLogPanel.tsx";
+import { recalibrationSuggestion } from "../game/recalibration.ts";
+import { saveSettings, type CalibrationSettings } from "../game/settings.ts";
+import type { RangeHalves } from "../pitch/calibration.ts";
 
 interface Props {
   stats: RunStats;
@@ -7,10 +11,38 @@ interface Props {
   busy: boolean;
   onRetry: () => void;
   onHome: () => void;
+  settings: CalibrationSettings | null;
+  measuredRange: RangeHalves | null;
+  onRecalibrate: (s: CalibrationSettings) => void;
 }
 
-export function GameOver({ stats, busy, onRetry, onHome }: Props) {
+export function GameOver({
+  stats,
+  busy,
+  onRetry,
+  onHome,
+  settings,
+  measuredRange,
+  onRecalibrate,
+}: Props) {
   const breakdown = toneBreakdown(stats);
+  const [dismissed, setDismissed] = useState(false);
+  const suggestion =
+    settings && measuredRange
+      ? recalibrationSuggestion(settings, measuredRange)
+      : null;
+
+  const applySuggestion = () => {
+    if (!settings || !suggestion) return;
+    const next: CalibrationSettings = {
+      ...settings,
+      rangeSemitones: suggestion.up,
+      rangeDownSemitones: suggestion.down,
+    };
+    saveSettings(next);
+    onRecalibrate(next);
+    setDismissed(true);
+  };
 
   return (
     <div className="screen gameover-screen">
@@ -40,6 +72,18 @@ export function GameOver({ stats, busy, onRetry, onHome }: Props) {
       </div>
 
       <p className="prompt">{takeaway(breakdown)}</p>
+
+      {suggestion && !dismissed && (
+        <div className="recal-card">
+          <p>Your range in this run looked different from your calibration — update it?</p>
+          <div className="recal-actions">
+            <button className="primary" onClick={applySuggestion}>
+              Update
+            </button>
+            <button onClick={() => setDismissed(true)}>Not now</button>
+          </div>
+        </div>
+      )}
 
       {/* Guarded here as well as inside the panel: the internal guard hides it,
           this one lets Rollup drop the component from the production bundle

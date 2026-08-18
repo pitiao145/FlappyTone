@@ -6,6 +6,7 @@ import { MicError } from "./audio/mic";
 import { ensureMic, stopMic } from "./audio/session";
 import type { RunSnapshot } from "./game/run";
 import { loadSettings, loadShareData, type CalibrationSettings } from "./game/settings";
+import type { RangeHalves } from "./pitch/calibration.ts";
 import type { RunStats } from "./game/scoring";
 import { Calibration } from "./ui/Calibration";
 import { Game } from "./ui/Game";
@@ -74,6 +75,7 @@ export default function App() {
     loadSettings(),
   );
   const [stats, setStats] = useState<RunStats | null>(null);
+  const [measuredRange, setMeasuredRange] = useState<RangeHalves | null>(null);
   const [tutorialDone, setTutorialDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryBusy, setRetryBusy] = useState(false);
@@ -164,6 +166,7 @@ export default function App() {
       return;
     }
     setStats(snap.stats);
+    setMeasuredRange(snap.measuredRange);
     setScreen("gameover");
   }, []);
 
@@ -335,6 +338,9 @@ export default function App() {
             busy={retryBusy}
             onRetry={() => void retry()}
             onHome={goHome}
+            settings={settings}
+            measuredRange={measuredRange}
+            onRecalibrate={setSettings}
           />
         )}
         </div>

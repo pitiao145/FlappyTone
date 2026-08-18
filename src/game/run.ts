@@ -40,6 +40,7 @@ import {
 import { REST_CHAO } from "./dynamics.ts";
 import { DEFAULT_TUNING, tuning } from "./tuning.ts";
 import type { PitchState } from "../pitch/types.ts";
+import { computeRangeHalves, type RangeHalves } from "../pitch/calibration.ts";
 
 export type RunMode = "game" | "tutorial" | "single";
 
@@ -251,6 +252,12 @@ export interface RunSnapshot {
   gateLog: GateLogEntry[];
   /** Voiced runs of >=150ms that occurred while no gate was active. */
   missedUtterances: number;
+  /**
+   * The range the player actually produced this run, measured the same way
+   * calibration measures a preview capture (`computeRangeHalves`). Null
+   * until the run is over, or if too few voiced frames were captured.
+   */
+  measuredRange: RangeHalves | null;
 }
 
 const TUTORIAL_TONES: Tone[] = [1, 1, 4, 4, 2, 2, 3, 3];
@@ -408,6 +415,14 @@ export class Run {
   private stats: RunStats;
   private lastOutcome: LastOutcomeState | null = null;
 
+  /** Every voiced frame's raw semitones this run, whole-run and gate-agnostic. */
+  private voicedSemitones: number[] = [];
+  /**
+   * `computeRangeHalves` on `voicedSemitones`, computed once at run-end.
+   * `undefined` means not computed yet; `null` means computed but sparse.
+   */
+  private suggestedRange: RangeHalves | null | undefined = undefined;
+
   /** Where the bird actually is, in chao — the value scoring uses. */
   private targetChao = REST_CHAO;
   /** Eased render position. Visual only. */
@@ -473,6 +488,7 @@ export class Run {
     if (p.voiced) {
       this.targetChao = p.smoothedChao;
       this.lastVoicedAt = nowMs;
+      if (p.semitones !== null) this.voicedSemitones.push(p.semitones);
       this.pinned =
         p.chao !== null && p.chao >= 5 - PIN_EPSILON
           ? "high"
@@ -685,6 +701,9 @@ export class Run {
   snapshot(): RunSnapshot {
     const active = this.active;
     const upcoming = this.gates.find((g) => g.xStart > this.worldX) ?? null;
+    if (this.isOver() && this.suggestedRange === undefined) {
+      this.suggestedRange = computeRangeHalves(this.voicedSemitones);
+    }
     return {
       birdChao: this.displayChao,
       voiced: this.voiced || this.inGrace(this.nowMs),
@@ -740,6 +759,7 @@ export class Run {
       difficulty: this.difficulty,
       gateLog: this.gateLog,
       missedUtterances: this.missedUtterances,
+      measuredRange: this.suggestedRange ?? null,
     };
   }
 
