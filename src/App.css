@@ -569,6 +569,12 @@
   justify-content: center;
 }
 
+.recal-applied {
+  background: rgba(var(--accent-rgb), 0.16);
+  border: 1px solid var(--accent);
+  color: var(--ink);
+}
+
 .toast,
 .hint {
   margin-top: 6px;

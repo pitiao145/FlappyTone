@@ -27,6 +27,7 @@ export function GameOver({
 }: Props) {
   const breakdown = toneBreakdown(stats);
   const [dismissed, setDismissed] = useState(false);
+  const [applied, setApplied] = useState(false);
   const suggestion =
     settings && measuredRange
       ? recalibrationSuggestion(settings, measuredRange)
@@ -41,7 +42,7 @@ export function GameOver({
     };
     saveSettings(next);
     onRecalibrate(next);
-    setDismissed(true);
+    setApplied(true);
   };
 
   return (
@@ -73,7 +74,12 @@ export function GameOver({
 
       <p className="prompt">{takeaway(breakdown)}</p>
 
-      {suggestion && !dismissed && (
+      {applied && (
+        <div className="recal-card recal-applied">
+          <p>Calibration updated — the new range applies from your next run.</p>
+        </div>
+      )}
+      {suggestion && !dismissed && !applied && (
         <div className="recal-card">
           <p>Your range in this run looked different from your calibration — update it?</p>
           <div className="recal-actions">

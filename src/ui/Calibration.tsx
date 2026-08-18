@@ -88,8 +88,18 @@ function logSweeps(
   );
 }
 
-/** Voiced speech needed to site the centre of someone's range. */
-const TALK_VOICED_MS = 8000;
+/**
+ * Voiced speech needed to site the centre of someone's range.
+ *
+ * Was 2500, raised to 8000 (17 Aug 2026) chasing a biased f0Center sample —
+ * but that fix was really `TALK_RMS_MULT` (below), which stopped discarding
+ * normal-volume speech in the first place. Once the gate stopped throwing
+ * samples away, 8s of *required* voiced speech just made the step feel
+ * endless without adding real accuracy — reported directly ("f0 calibration
+ * still takes way too long"). Landing at 4000 keeps more than double the
+ * original sample size while giving the looser gate room to work.
+ */
+const TALK_VOICED_MS = 4000;
 // Looser than the default 3: the primary gate is tuned to reject background
 // noise during gameplay, but that same strictness throws away most of a
 // normal-volume "just talk" sample and keeps only the loudest, often
