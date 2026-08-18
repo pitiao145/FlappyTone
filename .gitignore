@@ -36,3 +36,5 @@ fixtures/analytics/
 *.sln
 *.sw?
 .env*.local
+
+.worktrees/
