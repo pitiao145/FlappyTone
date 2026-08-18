@@ -1317,10 +1317,125 @@
   gap: 12px;
 }
 
-/* Pinned to the bottom of .stage, over the canvas — see the comment in
-   Visualiser.tsx. The scrim fades from opaque (readable controls) to
-   transparent (doesn't eat into the grid above it). */
-.visualiser-overlay {
+.visualiser-body {
+  position: relative;
+}
+
+/* ---------------------------------------------------------------- mobile */
+/* Mobile and desktop render genuinely different markups (see the comment in
+   Visualiser.tsx), not one CSS-reflowed set of controls — mobile needed a
+   collapsed tone picker and a vertical word rail to keep the grid from being
+   crowded by everything sitting in one bottom scrim. Everything under this
+   header is hidden again at the desktop breakpoint below. */
+
+/* Outside the grid, not overlaid on it — a plain "< back" link sitting above
+   .stage, the same way every other screen's back control reads. */
+.vis-back-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  padding: 4px 6px;
+}
+
+.vis-back-link svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* The collapsed tone picker: a loose cluster of four separate circular pills
+   (each tone mark is its own pill), not four dots inside one bordered box —
+   the box read as a fifth, unrelated shape. Still one tappable button. */
+.vis-tone-toggle {
+  position: absolute;
+  top: 3%;
+  right: 3%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.tone-toggle-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  border: 1px solid var(--line);
+  background: rgba(var(--surface-rgb), 0.85);
+}
+
+.tone-toggle-dot.active {
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.18);
+  color: var(--accent-bright);
+}
+
+/* Vertical strip on the right edge, replacing the old bottom horizontal
+   scroller — this is what actually frees up the bottom of the grid. */
+.word-rail {
+  position: absolute;
+  top: 15%;
+  right: 3%;
+  bottom: 22%;
+  width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-dim) transparent;
+}
+
+.word-rail::-webkit-scrollbar {
+  width: 4px;
+}
+
+.word-rail::-webkit-scrollbar-thumb {
+  background: var(--ink-dim);
+  border-radius: 2px;
+}
+
+.word-rail::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.word-rail .word-chip {
+  width: 100%;
+}
+
+.tone-popover-backdrop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--ink-rgb), 0.45);
+  z-index: 5;
+}
+
+.tone-popover {
+  display: flex;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.vis-bottom-bar {
   position: absolute;
   left: 0;
   right: 0;
@@ -1328,8 +1443,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 18px 12px calc(14px + env(safe-area-inset-bottom));
+  gap: 8px;
+  padding: 14px 12px calc(12px + env(safe-area-inset-bottom));
   background: linear-gradient(
     to top,
     rgba(var(--surface-rgb), 0.95) 40%,
@@ -1337,8 +1452,146 @@
   );
 }
 
-.visualiser-overlay .note {
+.vis-bottom-bar .note {
   margin: 0;
+}
+
+/* Tone picker pill — round, holding the tone mark itself (ˉ ˊ ˇ ˋ), not the
+   syllable "mā"/"má"/"mǎ"/"mà" — reusing one syllable for all four read as
+   four variants of one word rather than four tones. Used by both the mobile
+   popover and the desktop tone-rail. */
+.tone-pill {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.tone-pill.tone-pill-free {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.word-chip {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1.2;
+  min-width: 44px;
+}
+
+.word-chip-hanzi {
+  font-size: 15px;
+}
+
+.word-chip-pinyin {
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+
+.choice-option.active .word-chip-pinyin {
+  color: inherit;
+}
+
+/* Desktop-only panel — hidden entirely on mobile (see below). Built and laid
+   out only inside the desktop media query, since none of it applies at
+   phone width. */
+.visualiser-panel {
+  display: none;
+}
+
+/* Desktop: room to spare, so stop pretending it's a phone. The canvas keeps
+   its own 9:16 cap (.frame,.stage above) and moves to the left; the panel
+   becomes a real column on the right — big centred tone pills on top, then
+   every word of that tone in a 2-column grid (30 words -> 15 rows, no
+   scrolling needed), note and actions below. */
+@media (min-width: 720px) {
+  .frame:has(.visualiser-screen) {
+    max-width: 900px;
+  }
+
+  .visualiser-body {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 28px;
+  }
+
+  .stage {
+    flex: 0 0 auto;
+  }
+
+  .vis-back-link,
+  .vis-tone-toggle,
+  .word-rail,
+  .tone-popover-backdrop,
+  .vis-bottom-bar {
+    display: none;
+  }
+
+  .visualiser-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: static;
+    flex: 1 1 320px;
+    min-width: 280px;
+    align-self: stretch;
+    background: none;
+    padding: 0;
+    align-items: stretch;
+    text-align: left;
+  }
+
+  .visualiser-panel .tone-rail {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .tone-pill {
+    width: 68px;
+    height: 68px;
+    font-size: 32px;
+  }
+
+  .tone-pill.tone-pill-free {
+    font-size: 14px;
+  }
+
+  .visualiser-panel .word-strip {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: min-content;
+    gap: 8px 12px;
+  }
+
+  .visualiser-panel .word-chip {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+    padding: 8px 10px;
+  }
+
+  .visualiser-panel .note {
+    margin: 0;
+    text-align: left;
+  }
+
+  .visualiser-panel .setting-actions {
+    justify-content: flex-start;
+  }
 }
 
 /* ------------------------------------------------ how to play & tutorial */

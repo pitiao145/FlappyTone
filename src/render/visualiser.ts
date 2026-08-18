@@ -9,14 +9,21 @@
  */
 
 import { corridorChaoAt,
-  shapeForTone, type Tone } from "../game/gates.ts";
+  shapeForTone, shapeForWord, type Tone } from "../game/gates.ts";
 import type { Contour } from "../game/contours.ts";
+import type { Word } from "../game/words.ts";
 import { BACKDROP, chaoToY, drawChaoGrid, drawDot } from "./scene.ts";
 import { rgba } from "./palette.ts";
 
 export interface VisualiserScene {
   /** Target contour ghosted across the panel, or null for free play. */
   tone: Tone | null;
+  /**
+   * The specific word to trace, or null to fall back to the tone's generic
+   * shape. Lets the target match exactly what the game flies for that word
+   * rather than the idealised tone-mark corridor.
+   */
+  word: Word | null;
   /** The utterance in progress. */
   live: Contour | null;
   /** Previous attempts, oldest first — drawn fainter the older they are. */
@@ -26,6 +33,13 @@ export interface VisualiserScene {
   /** Where the dot sits right now, in chao. */
   chao: number;
   voiced: boolean;
+  /**
+   * Combined accuracy across every attempt at the current word, or null when
+   * no word is selected (free play, or a tone with nothing tapped yet) or no
+   * attempt has finished. Resets whenever the word changes — see
+   * Visualiser.tsx's `wordStatsRef`.
+   */
+  accuracy: { value: number; attempts: number } | null;
 }
 
 /** Samples used to trace the target contour. */
@@ -72,11 +86,64 @@ export function drawVisualiser(
     ? xFor(head.tMs, scene.spanMs, width)
     : xFor(0, scene.spanMs, width);
   drawDot(ctx, width, height, scene.chao, dotX, scene.voiced, performance.now());
+
+  if (scene.accuracy) drawAccuracy(ctx, width, height, scene.accuracy);
 }
 
 /**
- * The target contour, dashed — guidance, not an obstacle. Drawn over the same
- * span as the player's own trace so the two are directly comparable.
+ * Combined accuracy for the current word, top-right. Colour tiers reuse the
+ * same 85%/60% cut points the game's perfect/good/ok outcomes use, purely as
+ * a familiar green/amber/red banding — the number itself is `visualAccuracy`
+ * (visualAccuracy.ts), not the game's own `scoreGate`. A small "ACCURACY"
+ * label sits above it: without one, a bare "82%" with no axis or units on
+ * screen reads as an unexplained number.
+ */
+function drawAccuracy(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  accuracy: { value: number; attempts: number },
+): void {
+  const pct = Math.round(accuracy.value * 100);
+  const token = accuracy.value >= 0.85 ? "good" : accuracy.value >= 0.6 ? "gateOk" : "danger";
+  const x = width * (1 - PAD_FRAC);
+  ctx.save();
+  ctx.textAlign = "right";
+  ctx.textBaseline = "top";
+
+  ctx.font = `600 ${Math.round(height * 0.014)}px system-ui, sans-serif`;
+  ctx.fillStyle = rgba("grid", 0.75);
+  ctx.fillText("ACCURACY", x, height * 0.02);
+
+  ctx.font = `700 ${Math.round(height * 0.034)}px system-ui, sans-serif`;
+  ctx.fillStyle = rgba(token, 0.92);
+  ctx.fillText(`${pct}%`, x, height * 0.02 + height * 0.024);
+
+  ctx.font = `${Math.round(height * 0.016)}px system-ui, sans-serif`;
+  ctx.fillStyle = rgba("grid", 0.8);
+  ctx.fillText(
+    accuracy.attempts === 1 ? "1 try" : `${accuracy.attempts} tries`,
+    x,
+    height * 0.02 + height * 0.024 + height * 0.04,
+  );
+  ctx.restore();
+}
+
+/**
+ * The target contour, dashed — guidance, not an obstacle. Drawn on the same
+ * time axis as the player's own trace (real milliseconds, not a 0-1 fraction
+ * of the panel), so it moves at the recording's actual pace instead of being
+ * stretched across the whole `spanMs` window.
+ *
+ * Stops exactly at the shape's own duration and draws nothing after — it
+ * does not hold a flat line out to fill the rest of the panel. That matches
+ * the live game exactly: a gate's on-screen width is `scrollSpeed *
+ * shape.durationS` (see `widthPx` in `gates.ts`'s `makeGate`), so the
+ * corridor a player is actually scored against never extends past the clip's
+ * own length either. An earlier version of this held the final chao out to
+ * `spanMs`, which asked the player to sustain the last note for no reason —
+ * `spanMs` only exists so multiple attempts share one panel width, it isn't
+ * part of the tone.
  */
 function drawTarget(
   ctx: CanvasRenderingContext2D,
@@ -86,15 +153,17 @@ function drawTarget(
 ): void {
   const tone = scene.tone;
   if (tone === null) return;
+  const shape = scene.word ? shapeForWord(scene.word) : shapeForTone(tone);
+  const durationMs = shape.durationS * 1000;
   ctx.save();
   ctx.setLineDash([6, 8]);
   ctx.strokeStyle = rgba("demo", 0.55);
   ctx.lineWidth = 2;
   ctx.beginPath();
   for (let i = 0; i <= TARGET_STEPS; i++) {
-    const p = i / TARGET_STEPS;
-    const x = xFor(p * scene.spanMs, scene.spanMs, width);
-    const y = chaoToY(corridorChaoAt(shapeForTone(tone), p), height);
+    const shapeT = i / TARGET_STEPS;
+    const x = xFor(shapeT * durationMs, scene.spanMs, width);
+    const y = chaoToY(corridorChaoAt(shape, shapeT), height);
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   }

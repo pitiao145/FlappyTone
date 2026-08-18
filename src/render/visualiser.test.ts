@@ -41,6 +41,8 @@ function draw(scene: Partial<VisualiserScene>): Op[] {
   const { ctx, ops } = recorder();
   drawVisualiser(ctx, W, H, {
     tone: null,
+    word: null,
+    accuracy: null,
     live: null,
     finished: [],
     spanMs: 1500,
