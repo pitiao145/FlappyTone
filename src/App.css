@@ -1343,20 +1343,51 @@
   height: 15px;
 }
 
-/* The collapsed tone picker: a loose cluster of four separate circular pills
-   (each tone mark is its own pill), not four dots inside one bordered box —
-   the box read as a fifth, unrelated shape. Still one tappable button. */
-.vis-tone-toggle {
+/* Right-hand column: tone filter + word chips, centred on one axis and
+   starting below the canvas accuracy block (~2–10% of stage height). */
+.vis-right-rail {
   position: absolute;
-  top: 3%;
+  top: 14%;
   right: 3%;
+  bottom: 22%;
+  width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.vis-tone-label {
+  flex: 0 0 auto;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  line-height: 1;
+}
+
+/* The collapsed tone picker: a loose cluster of four circular pills, not
+   four dots inside one bordered box — `.screen button` would otherwise
+   stamp a pill border and padding onto this (higher specificity than a
+   lone class). Still one tappable button. */
+.visualiser-screen .vis-tone-toggle {
+  flex: 0 0 auto;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 6px;
-  border: none;
-  background: none;
+  width: auto;
+  margin: 0;
   padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
   cursor: pointer;
+}
+
+.visualiser-screen .vis-tone-toggle:hover:not(:disabled) {
+  border: none;
+  color: inherit;
 }
 
 .tone-toggle-dot {
@@ -1379,14 +1410,11 @@
   color: var(--accent-bright);
 }
 
-/* Vertical strip on the right edge, replacing the old bottom horizontal
-   scroller — this is what actually frees up the bottom of the grid. */
+/* Fills the rest of the right-hand column under the tone picker. */
 .word-rail {
-  position: absolute;
-  top: 15%;
-  right: 3%;
-  bottom: 22%;
-  width: 60px;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1510,9 +1538,9 @@
 
 /* Desktop: room to spare, so stop pretending it's a phone. The canvas keeps
    its own 9:16 cap (.frame,.stage above) and moves to the left; the panel
-   becomes a real column on the right — big centred tone pills on top, then
-   every word of that tone in a 2-column grid (30 words -> 15 rows, no
-   scrolling needed), note and actions below. */
+   becomes a real column on the right — tone filter on top, then every word
+   of that tone in a 2-column grid (30 words -> 15 rows, no scrolling needed),
+   with the cue note below. Back sits above the row; Clear sits on the canvas. */
 @media (min-width: 720px) {
   .frame:has(.visualiser-screen) {
     max-width: 900px;
@@ -1525,15 +1553,20 @@
     gap: 28px;
   }
 
-  .stage {
+  .visualiser-screen .stage {
     flex: 0 0 auto;
+    margin-top: 0;
   }
 
-  .vis-back-link,
+  .vis-right-rail,
   .vis-tone-toggle,
   .word-rail,
-  .tone-popover-backdrop,
-  .vis-bottom-bar {
+  .tone-popover-backdrop {
+    display: none;
+  }
+
+  /* Cue copy lives in the panel; Clear stays on the canvas, centred. */
+  .vis-bottom-bar .note {
     display: none;
   }
 
@@ -1553,19 +1586,31 @@
 
   .visualiser-panel .tone-rail {
     display: flex;
-    justify-content: center;
-    gap: 16px;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
     width: 100%;
   }
 
-  .tone-pill {
-    width: 68px;
-    height: 68px;
-    font-size: 32px;
+  .visualiser-panel .tone-rail-pills {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
   }
 
-  .tone-pill.tone-pill-free {
-    font-size: 14px;
+  .visualiser-panel .vis-tone-label {
+    font-size: 10px;
+  }
+
+  .visualiser-panel .tone-pill {
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    font-size: 22px;
+  }
+
+  .visualiser-panel .tone-pill.tone-pill-free {
+    font-size: 12px;
   }
 
   .visualiser-panel .word-strip {
@@ -1589,8 +1634,11 @@
     text-align: left;
   }
 
-  .visualiser-panel .setting-actions {
-    justify-content: flex-start;
+  /* Free play has no word list — park the cue in the empty column. */
+  .visualiser-panel.is-free .note {
+    margin-top: auto;
+    margin-bottom: auto;
+    text-align: center;
   }
 }
 

@@ -274,7 +274,7 @@ export function Visualiser({
           uncluttered; desktop has room for everything laid out flat. Both
           markups always render; App.css's `min-width: 720px` query is what
           picks one. */}
-      {/* Mobile only (see App.css) — sits above the grid, not overlaid on it. */}
+      {/* Above the grid, not overlaid on it — same control on mobile and desktop. */}
       <button className="link vis-back-link" onClick={onBack}>
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path
@@ -299,23 +299,31 @@ export function Visualiser({
           )}
 
           {/* ---------------------------------------------------- mobile */}
-          <button
-            className="vis-tone-toggle"
-            onClick={() => setTonePopoverOpen((v) => !v)}
-            aria-label="Choose tone"
-            aria-expanded={tonePopoverOpen}
-          >
-            {TONES.map((t) => (
-              <span
-                key={t}
-                className={tone === t ? "tone-toggle-dot active" : "tone-toggle-dot"}
-              >
-                {TONE_MARKS[t]}
-              </span>
-            ))}
-          </button>
+          {/* One right-hand column so the 2×2 tone picker and the word chips
+              share a centre line, and so both sit below the canvas accuracy
+              score instead of covering it. */}
+          <div className="vis-right-rail">
+            <span className="vis-tone-label" aria-hidden="true">
+              by tone
+            </span>
+            <button
+              className="vis-tone-toggle"
+              onClick={() => setTonePopoverOpen((v) => !v)}
+              aria-label="Filter by tone"
+              aria-expanded={tonePopoverOpen}
+            >
+              {TONES.map((t) => (
+                <span
+                  key={t}
+                  className={tone === t ? "tone-toggle-dot active" : "tone-toggle-dot"}
+                >
+                  {TONE_MARKS[t]}
+                </span>
+              ))}
+            </button>
 
-          {tone !== null && <div className="word-rail">{wordsForTone.map(wordChip)}</div>}
+            {tone !== null && <div className="word-rail">{wordsForTone.map(wordChip)}</div>}
+          </div>
 
           {tonePopoverOpen && (
             <div className="tone-popover-backdrop" onClick={() => setTonePopoverOpen(false)}>
@@ -353,40 +361,38 @@ export function Visualiser({
         </div>
 
         {/* --------------------------------------------------- desktop */}
-        <div className="visualiser-panel">
+        <div className={tone === null ? "visualiser-panel is-free" : "visualiser-panel"}>
           <div className="tone-rail">
-            <button
-              className={
-                tone === null
-                  ? "choice-option tone-pill tone-pill-free active"
-                  : "choice-option tone-pill tone-pill-free"
-              }
-              onClick={() => chooseTone(null)}
-            >
-              free
-            </button>
-            {TONES.map((t) => (
+            <span className="vis-tone-label" aria-hidden="true">
+              filter
+            </span>
+            <div className="tone-rail-pills">
               <button
-                key={t}
-                className={tone === t ? "choice-option tone-pill active" : "choice-option tone-pill"}
-                onClick={() => chooseTone(t)}
-                aria-label={`${TONE_INFO[t].pinyin}, tone ${t}`}
+                className={
+                  tone === null
+                    ? "choice-option tone-pill tone-pill-free active"
+                    : "choice-option tone-pill tone-pill-free"
+                }
+                onClick={() => chooseTone(null)}
               >
-                {TONE_MARKS[t]}
+                free
               </button>
-            ))}
+              {TONES.map((t) => (
+                <button
+                  key={t}
+                  className={tone === t ? "choice-option tone-pill active" : "choice-option tone-pill"}
+                  onClick={() => chooseTone(t)}
+                  aria-label={`${TONE_INFO[t].pinyin}, tone ${t}`}
+                >
+                  {TONE_MARKS[t]}
+                </button>
+              ))}
+            </div>
           </div>
 
           {tone !== null && <div className="word-strip">{wordsForTone.map(wordChip)}</div>}
 
           <p className="note">{noteText}</p>
-
-          <div className="setting-actions">
-            <button onClick={resetAttempts}>Clear</button>
-            <button className="primary" onClick={onBack}>
-              Back
-            </button>
-          </div>
         </div>
       </div>
     </div>
