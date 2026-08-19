@@ -1331,27 +1331,374 @@
   gap: 12px;
 }
 
-/* Pinned to the bottom of .stage, over the canvas — see the comment in
-   Visualiser.tsx. The scrim fades from opaque (readable controls) to
-   transparent (doesn't eat into the grid above it). */
-.visualiser-overlay {
+/* Mobile only (desktop's own `max-width: 900px` below is untouched) — the
+   shared `.frame,.stage` rule caps width from *available height*
+   (`calc((100svh - 88px) * 9 / 16)`), which exists so a full-width canvas
+   never grows taller than the screen. The visualiser's canvas isn't
+   full-width any more (75% of the row, see `.visualiser-screen .stage`
+   below), so it's already well short of that height budget — meaning this
+   screen doesn't need a height-derived cap at all, and inheriting one was
+   the bug: `100svh` shrinks with a browser's own address-bar chrome but not
+   in a home-screen-installed PWA (no chrome to shrink it), so the *same*
+   formula produced a narrow frame with visible side margins in a browser
+   tab and a flush-edge one standalone. A flat width + fixed padding removes
+   that swing entirely rather than trying to tune it per display mode. */
+.frame:has(.visualiser-screen) {
+  max-width: 480px;
+  padding-inline: max(env(safe-area-inset-left), 14px) max(env(safe-area-inset-right), 14px);
+}
+
+/* Two real columns now, not a canvas with an overlay — the canvas itself is
+   narrower (75/25 split, flex-grow ratios so it holds at any viewport
+   width). This applies on both breakpoints; the desktop media query below
+   re-balances it and hides the mobile-only pieces. */
+.visualiser-body {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.visualiser-screen .stage {
+  flex: 4 1 0;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  margin-top: 0;
+}
+
+/* ---------------------------------------------------------------- mobile */
+/* Mobile and desktop render genuinely different markups (see the comment in
+   Visualiser.tsx), not one CSS-reflowed set of controls — mobile needed a
+   collapsed tone picker and a vertical word rail to keep the grid from being
+   crowded by everything sitting in one bottom scrim. Everything under this
+   header is hidden again at the desktop breakpoint below. */
+
+/* Outside the grid, not overlaid on it — a plain "< back" link sitting above
+   .stage, the same way every other screen's back control reads. */
+.vis-back-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  padding: 4px 6px;
+}
+
+.vis-back-link svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* The tone-mark contour icon, wherever it's used (filter pill, popover rows,
+   desktop tone-rail pills) — sized and coloured by its container. */
+.tone-mark-icon {
+  width: 18px;
+  height: 13.5px;
+  color: currentColor;
+}
+
+/* Right-hand column: a real sibling of .stage now (25% of the row via
+   flex-grow), not an overlay — accuracy on top, then the filter, then the
+   word list filling what's left, never taller than the canvas.
+   `min-height: 0` alone does not get this right: a flex item's *hypothetical*
+   size (what the flex line's own height is computed from, before stretch is
+   even applied) still comes from its content, so a 30-word list would size
+   the row — and the page — by its own full height, then "stretch" to that
+   same size, i.e. no cap at all. The fix is `.word-rail-wrap` below, not
+   this rule: taking the list out of flow there is what keeps it from ever
+   contributing to this column's size in the first place. */
+.vis-side-panel {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  overflow: hidden;
+}
+
+.vis-accuracy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vis-accuracy-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.vis-accuracy-value {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.vis-accuracy-value.tier-good {
+  color: var(--good);
+}
+
+.vis-accuracy-value.tier-ok {
+  color: rgb(var(--gate-ok-rgb));
+}
+
+.vis-accuracy-value.tier-bad {
+  color: var(--danger);
+}
+
+.vis-accuracy-value.vis-accuracy-empty {
+  color: var(--ink-dim);
+}
+
+.vis-accuracy-tries {
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+
+.vis-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vis-filter-caption {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+/* The collapsed filter — one small pill: an icon (the 2x2 tone-mark grid
+   when browsing everything, or the one selected tone's mark) and a chevron
+   that flips when the popover is open. No text label.
+   Two-class selector (`.vis-filter-group .vis-filter-btn`, not just
+   `.vis-filter-btn`) deliberately: the base `.screen button` rule is
+   `.screen button` (a class + an element), which beats a single class on
+   specificity alone and would otherwise win the border/padding/color fight. */
+.vis-filter-group .vis-filter-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent);
+  background: rgba(var(--accent-rgb), 0.08);
+  cursor: pointer;
+}
+
+.vis-filter-icon {
+  width: 22px;
+  height: 17px;
+  color: var(--accent);
+}
+
+.vis-filter-btn .tone-mark-icon {
+  width: 22px;
+  height: 16.5px;
+  color: var(--accent);
+}
+
+.vis-filter-chevron {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: var(--accent);
+  transition: transform 0.15s ease;
+}
+
+/* The flex item is this wrapper, not .word-rail — an empty box (its child is
+   taken out of flow below) has no intrinsic content of its own, so it can't
+   inflate `.vis-side-panel`'s hypothetical size the way the scrollable list
+   itself would. That's what actually makes the list respect the canvas's
+   height instead of just being told to (see the long comment on
+   `.vis-side-panel`). `position: relative` here, `position: absolute; inset:
+   0` on `.word-rail`, is what turns "flex-grow: 1 of whatever's left" into a
+   real, bounded box for the list to scroll inside. */
+.word-rail-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+}
+
+.word-rail {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-dim) transparent;
+}
+
+.word-rail::-webkit-scrollbar {
+  width: 4px;
+}
+
+.word-rail::-webkit-scrollbar-thumb {
+  background: var(--ink-dim);
+  border-radius: 2px;
+}
+
+.word-rail::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.word-rail .word-chip {
+  width: 100%;
+  padding: 10px 6px;
+}
+
+/* Anchored to .visualiser-body (position: relative, spans both columns),
+   not .stage — the popover isn't scoped to the canvas any more. */
+.tone-popover-backdrop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 10%;
+  background: rgba(var(--ink-rgb), 0.45);
+  z-index: 5;
+}
+
+.tone-popover {
+  display: flex;
+  flex-direction: column;
+  width: min(88%, 320px);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.tone-popover-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+}
+
+/* `.tone-popover-tabs .tone-popover-tab` / `.tone-popover-list
+   .tone-popover-row`, not bare single-class selectors — same reason as
+   `.vis-filter-group .vis-filter-btn` above: `.screen button` outweighs one
+   class on specificity and would win the border/padding/color fight. */
+.tone-popover-tabs .tone-popover-tab {
+  flex: 1 1 0;
+  padding: 12px 10px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--ink-dim);
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.tone-popover-tabs .tone-popover-tab.active {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+.tone-popover-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.tone-popover-list .tone-popover-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--ink);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tone-popover-list .tone-popover-row.active {
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.1);
+}
+
+.tone-popover-row-icon {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--accent-rgb), 0.12);
+  color: var(--accent);
+}
+
+.tone-popover-row-icon-free {
+  font-size: 15px;
+  color: var(--ink-dim);
+  background: var(--surface-panel);
+}
+
+.tone-popover-wordlists {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+.tone-popover-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+
+.word-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  color: var(--ink-dim);
+}
+
+.word-list-soon {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+/* Normal flow now, below both columns — nothing to overlay any more now
+   that the canvas has its own real width instead of running full-bleed. */
+.vis-bottom-bar {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 18px 12px calc(14px + env(safe-area-inset-bottom));
-  background: linear-gradient(
-    to top,
-    rgba(var(--surface-rgb), 0.95) 40%,
-    rgba(var(--surface-rgb), 0)
-  );
+  gap: 8px;
+  padding-top: 4px;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
-.visualiser-overlay .note {
+.vis-bottom-bar .note {
   margin: 0;
 }
 
@@ -1380,6 +1727,184 @@
 .calibrate-overlay .note,
 .calibrate-overlay .big {
   margin: 0;
+}
+
+/* Tone picker pill — round, holding the tone-mark icon, not the syllable
+   "mā"/"má"/"mǎ"/"mà" (reusing one syllable for all four read as four
+   variants of one word rather than four tones). Desktop's tone-rail only. */
+.tone-pill {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.tone-pill.tone-pill-free {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.word-chip {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1.2;
+  min-width: 44px;
+  border-radius: var(--radius-md);
+}
+
+.word-chip-hanzi {
+  font-size: 15px;
+}
+
+.word-chip-pinyin {
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+
+.choice-option.active .word-chip-pinyin {
+  color: inherit;
+}
+
+/* The selected voice clip — the same solid green as a primary button, not
+   the pale tint every other "active" choice pill uses, so the one clip
+   you're actually about to hear stands out from a full list of options. */
+.word-chip.active {
+  border: none;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Desktop-only panel — hidden entirely on mobile (see below). Built and laid
+   out only inside the desktop media query, since none of it applies at
+   phone width. */
+.visualiser-panel {
+  display: none;
+}
+
+/* Desktop: room to spare, so stop pretending it's a phone. The canvas keeps
+   its own 9:16 cap (.frame,.stage above) and moves to the left; the panel
+   becomes a real column on the right — tone filter on top, then every word
+   of that tone in a 2-column grid (30 words -> 15 rows, no scrolling needed),
+   with the cue note below. Back sits above the row; Clear sits below both
+   columns, in the shared `.vis-bottom-bar` (its `.note` is hidden here, since
+   the panel already shows the same text). */
+@media (min-width: 720px) {
+  .frame:has(.visualiser-screen) {
+    max-width: 900px;
+  }
+
+  .visualiser-body {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 28px;
+  }
+
+  /* Restores the width/max-width the mobile-first override above zeroes out
+     (needed there so flex-basis, not the shared cap, drives the canvas's
+     75% share of the row) — desktop goes back to `.frame,.stage`'s own 9:16
+     cap, since here .stage sizes itself rather than sharing a flex-basis. */
+  .visualiser-screen .stage {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: min(420px, calc((100svh - 88px) * 9 / 16));
+    margin-top: 0;
+  }
+
+  .vis-side-panel,
+  .word-rail,
+  .tone-popover-backdrop {
+    display: none;
+  }
+
+  .vis-bottom-bar .note {
+    display: none;
+  }
+
+  .visualiser-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: static;
+    flex: 1 1 320px;
+    min-width: 280px;
+    align-self: stretch;
+    background: none;
+    padding: 0;
+    align-items: stretch;
+    text-align: left;
+  }
+
+  .visualiser-panel .tone-rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .visualiser-panel .tone-rail-pills {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .visualiser-panel .vis-tone-label {
+    font-size: 10px;
+  }
+
+  .visualiser-panel .tone-pill {
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    font-size: 22px;
+  }
+
+  .visualiser-panel .tone-pill .tone-mark-icon {
+    width: 24px;
+    height: 18px;
+  }
+
+  .visualiser-panel .tone-pill.tone-pill-free {
+    font-size: 12px;
+  }
+
+  .visualiser-panel .word-strip {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: min-content;
+    gap: 8px 12px;
+  }
+
+  .visualiser-panel .word-chip {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+    padding: 8px 10px;
+  }
+
+  .visualiser-panel .note {
+    margin: 0;
+    text-align: left;
+  }
+
+  /* Free play has no word list — park the cue in the empty column. */
+  .visualiser-panel.is-free .note {
+    margin-top: auto;
+    margin-bottom: auto;
+    text-align: center;
+  }
 }
 
 /* ------------------------------------------------ how to play & tutorial */

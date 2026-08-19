@@ -6,17 +6,28 @@
  * point: with the world held still, two attempts at the same tone land on top
  * of each other and on top of the target, so the *shape* is comparable. Pure
  * function of its scene — see src/game/contours.ts for the data.
+ *
+ * The accuracy readout is a DOM element now (Visualiser.tsx's `.vis-accuracy`),
+ * not drawn here — it lives in a real right-hand column alongside the canvas,
+ * not overlaid on top of it, so it has no place in this draw path.
  */
 
 import { corridorChaoAt,
-  shapeForTone, type Tone } from "../game/gates.ts";
+  shapeForTone, shapeForWord, type Tone } from "../game/gates.ts";
 import type { Contour } from "../game/contours.ts";
+import type { Word } from "../game/words.ts";
 import { BACKDROP, chaoToY, drawChaoGrid, drawDot } from "./scene.ts";
 import { rgba } from "./palette.ts";
 
 export interface VisualiserScene {
   /** Target contour ghosted across the panel, or null for free play. */
   tone: Tone | null;
+  /**
+   * The specific word to trace, or null to fall back to the tone's generic
+   * shape. Lets the target match exactly what the game flies for that word
+   * rather than the idealised tone-mark corridor.
+   */
+  word: Word | null;
   /** The utterance in progress. */
   live: Contour | null;
   /** Previous attempts, oldest first — drawn fainter the older they are. */
@@ -75,8 +86,20 @@ export function drawVisualiser(
 }
 
 /**
- * The target contour, dashed — guidance, not an obstacle. Drawn over the same
- * span as the player's own trace so the two are directly comparable.
+ * The target contour, dashed — guidance, not an obstacle. Drawn on the same
+ * time axis as the player's own trace (real milliseconds, not a 0-1 fraction
+ * of the panel), so it moves at the recording's actual pace instead of being
+ * stretched across the whole `spanMs` window.
+ *
+ * Stops exactly at the shape's own duration and draws nothing after — it
+ * does not hold a flat line out to fill the rest of the panel. That matches
+ * the live game exactly: a gate's on-screen width is `scrollSpeed *
+ * shape.durationS` (see `widthPx` in `gates.ts`'s `makeGate`), so the
+ * corridor a player is actually scored against never extends past the clip's
+ * own length either. An earlier version of this held the final chao out to
+ * `spanMs`, which asked the player to sustain the last note for no reason —
+ * `spanMs` only exists so multiple attempts share one panel width, it isn't
+ * part of the tone.
  */
 function drawTarget(
   ctx: CanvasRenderingContext2D,
@@ -86,15 +109,17 @@ function drawTarget(
 ): void {
   const tone = scene.tone;
   if (tone === null) return;
+  const shape = scene.word ? shapeForWord(scene.word) : shapeForTone(tone);
+  const durationMs = shape.durationS * 1000;
   ctx.save();
   ctx.setLineDash([6, 8]);
   ctx.strokeStyle = rgba("demo", 0.55);
   ctx.lineWidth = 2;
   ctx.beginPath();
   for (let i = 0; i <= TARGET_STEPS; i++) {
-    const p = i / TARGET_STEPS;
-    const x = xFor(p * scene.spanMs, scene.spanMs, width);
-    const y = chaoToY(corridorChaoAt(shapeForTone(tone), p), height);
+    const shapeT = i / TARGET_STEPS;
+    const x = xFor(shapeT * durationMs, scene.spanMs, width);
+    const y = chaoToY(corridorChaoAt(shape, shapeT), height);
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   }
