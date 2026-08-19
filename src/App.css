@@ -1849,6 +1849,12 @@
     text-align: left;
   }
 
+  .visualiser-panel .vis-accuracy {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+  }
+
   .visualiser-panel .tone-rail {
     display: flex;
     flex-direction: column;

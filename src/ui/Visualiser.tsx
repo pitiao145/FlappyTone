@@ -264,6 +264,25 @@ export function Visualiser({
         ? `${selectedWord.pinyin} ${selectedWord.hanzi} — tap again to replay.`
         : `${TONE_INFO[tone].pinyin} ${TONE_INFO[tone].hanzi}, ${TONE_INFO[tone].cue}. Tap a word to hear it.`;
 
+  /** Shared by the mobile side panel and the desktop panel — same readout, two layouts. */
+  const accuracyReadout = (
+    <div className="vis-accuracy">
+      <span className="vis-accuracy-label">accuracy</span>
+      {accuracyDisplay ? (
+        <>
+          <strong className={`vis-accuracy-value tier-${accuracyTier(accuracyDisplay.value)}`}>
+            {Math.round(accuracyDisplay.value * 100)}%
+          </strong>
+          <span className="vis-accuracy-tries">
+            {accuracyDisplay.attempts === 1 ? "1 try" : `${accuracyDisplay.attempts} tries`}
+          </span>
+        </>
+      ) : (
+        <span className="vis-accuracy-value vis-accuracy-empty">–</span>
+      )}
+    </div>
+  );
+
   const wordChip = (w: Word) => (
     <button
       key={w.id}
@@ -314,21 +333,7 @@ export function Visualiser({
         {/* A real column, not an overlay on the canvas — the canvas is
             narrower now (75/25 split, App.css), not just narrower-plotted. */}
         <div className="vis-side-panel">
-          <div className="vis-accuracy">
-            <span className="vis-accuracy-label">accuracy</span>
-            {accuracyDisplay ? (
-              <>
-                <strong className={`vis-accuracy-value tier-${accuracyTier(accuracyDisplay.value)}`}>
-                  {Math.round(accuracyDisplay.value * 100)}%
-                </strong>
-                <span className="vis-accuracy-tries">
-                  {accuracyDisplay.attempts === 1 ? "1 try" : `${accuracyDisplay.attempts} tries`}
-                </span>
-              </>
-            ) : (
-              <span className="vis-accuracy-value vis-accuracy-empty">–</span>
-            )}
-          </div>
+          {accuracyReadout}
 
           <div className="vis-filter-group">
             <span className="vis-filter-caption">filter</span>
@@ -365,6 +370,8 @@ export function Visualiser({
 
         {/* --------------------------------------------------- desktop */}
         <div className={tone === null ? "visualiser-panel is-free" : "visualiser-panel"}>
+          {accuracyReadout}
+
           <div className="tone-rail">
             <span className="vis-tone-label" aria-hidden="true">
               filter
