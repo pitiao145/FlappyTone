@@ -11,7 +11,7 @@
  */
 export function DemoLoop({
   width = 300,
-  height = Math.round((300 * 1520) / 862),
+  height = Math.round((300 * 1584) / 878),
 }: {
   width?: number;
   height?: number;
@@ -26,10 +26,10 @@ export function DemoLoop({
   );
 }
 
-/** Stand-in for `VisualiserDemoLoop` — 894:1788, the visualiser clip's native size. */
+/** Stand-in for `VisualiserDemoLoop` — 878:1394, the visualiser clip's native size. */
 export function VisualiserDemoLoop({
   width = 300,
-  height = Math.round((300 * 1788) / 894),
+  height = Math.round((300 * 1394) / 878),
 }: {
   width?: number;
   height?: number;
