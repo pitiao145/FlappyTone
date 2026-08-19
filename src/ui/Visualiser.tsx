@@ -53,7 +53,7 @@ export function Visualiser({
   onBack,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [tone, setTone] = useState<Tone | null>(null);
+  const [tone, setTone] = useState<Tone | null>(1);
   const [words, setWords] = useState<Word[]>(() => inventoryNow() ?? []);
   const [selectedWord, setSelectedWord] = useState<Word | null>(null);
   const [paused, setPaused] = useState(false);
