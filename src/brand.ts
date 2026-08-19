@@ -122,7 +122,7 @@ export const brand = {
   mobile: {
     eyebrow: "On mobile",
     title: "Mobile app",
-    body: "iOS and Android apps aren't out yet. A native app would add offline play, practice reminders and a streak you can keep, but there's nothing to install from a store today.",
+    body: "iOS and Android apps aren't out yet. A native app would add offline play, practice reminders and a streak you can keep, sign up below to get notified when it's out!",
     notify: {
       placeholder: "you@example.com",
       cta: "Notify me",

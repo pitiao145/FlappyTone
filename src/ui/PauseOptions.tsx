@@ -13,7 +13,7 @@ import { Choice } from "./Choice.tsx";
 
 const WIDTH_HELP: Record<CorridorWidth, string> = {
   narrow: "Demanding. Your pitch has to sit close to the line.",
-  normal: "The tuned default.",
+  normal: "Moderate difficulty. Good for practice.",
   wide: "Forgiving on pitch. Good while a tone is still new.",
 };
 
@@ -42,7 +42,12 @@ interface Props {
  */
 export function PauseOptions({ onCueStyle, onShowTranslation }: Props) {
   const [width, setWidth] = useState<CorridorWidth>(loadCorridorWidth);
-  const [cueStyle, setCueStyle] = useState<CueStyle>(loadCueStyle);
+  // "off" is disabled below (broken), so a previously-persisted "off" is
+  // coerced back to "pause" rather than silently staying selected.
+  const [cueStyle, setCueStyle] = useState<CueStyle>(() => {
+    const loaded = loadCueStyle();
+    return loaded === "off" ? "pause" : loaded;
+  });
   const [translation, setTranslation] = useState<boolean>(loadShowTranslation);
 
   return (
@@ -85,6 +90,7 @@ export function PauseOptions({ onCueStyle, onShowTranslation }: Props) {
           options={["pause", "off"] as CueStyle[]}
           value={cueStyle}
           label={(s) => (s === "pause" ? "on" : "off")}
+          disabled={(s) => s === "off"}
           onChange={(s) => {
             setCueStyle(s);
             saveCueStyle(s);
@@ -92,9 +98,8 @@ export function PauseOptions({ onCueStyle, onShowTranslation }: Props) {
           }}
         />
         <p className="param-help">
-          {cueStyle === "pause"
-            ? "The world stops while a native speaker says the syllable, then it's your turn."
-            : "No example. The corridors just arrive."}
+          The world stops while a native speaker says the syllable, then
+          it's your turn. Turning it off is coming in a future update.
         </p>
       </section>
     </div>
