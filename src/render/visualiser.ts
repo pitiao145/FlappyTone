@@ -6,6 +6,10 @@
  * point: with the world held still, two attempts at the same tone land on top
  * of each other and on top of the target, so the *shape* is comparable. Pure
  * function of its scene — see src/game/contours.ts for the data.
+ *
+ * The accuracy readout is a DOM element now (Visualiser.tsx's `.vis-accuracy`),
+ * not drawn here — it lives in a real right-hand column alongside the canvas,
+ * not overlaid on top of it, so it has no place in this draw path.
  */
 
 import { corridorChaoAt,
@@ -33,13 +37,6 @@ export interface VisualiserScene {
   /** Where the dot sits right now, in chao. */
   chao: number;
   voiced: boolean;
-  /**
-   * Combined accuracy across every attempt at the current word, or null when
-   * no word is selected (free play, or a tone with nothing tapped yet) or no
-   * attempt has finished. Resets whenever the word changes — see
-   * Visualiser.tsx's `wordStatsRef`.
-   */
-  accuracy: { value: number; attempts: number } | null;
 }
 
 /** Samples used to trace the target contour. */
@@ -86,47 +83,6 @@ export function drawVisualiser(
     ? xFor(head.tMs, scene.spanMs, width)
     : xFor(0, scene.spanMs, width);
   drawDot(ctx, width, height, scene.chao, dotX, scene.voiced, performance.now());
-
-  if (scene.accuracy) drawAccuracy(ctx, width, height, scene.accuracy);
-}
-
-/**
- * Combined accuracy for the current word, top-right. Colour tiers reuse the
- * same 85%/60% cut points the game's perfect/good/ok outcomes use, purely as
- * a familiar green/amber/red banding — the number itself is `visualAccuracy`
- * (visualAccuracy.ts), not the game's own `scoreGate`. A small "ACCURACY"
- * label sits above it: without one, a bare "82%" with no axis or units on
- * screen reads as an unexplained number.
- */
-function drawAccuracy(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  accuracy: { value: number; attempts: number },
-): void {
-  const pct = Math.round(accuracy.value * 100);
-  const token = accuracy.value >= 0.85 ? "good" : accuracy.value >= 0.6 ? "gateOk" : "danger";
-  const x = width * (1 - PAD_FRAC);
-  ctx.save();
-  ctx.textAlign = "right";
-  ctx.textBaseline = "top";
-
-  ctx.font = `600 ${Math.round(height * 0.014)}px system-ui, sans-serif`;
-  ctx.fillStyle = rgba("grid", 0.75);
-  ctx.fillText("ACCURACY", x, height * 0.02);
-
-  ctx.font = `700 ${Math.round(height * 0.034)}px system-ui, sans-serif`;
-  ctx.fillStyle = rgba(token, 0.92);
-  ctx.fillText(`${pct}%`, x, height * 0.02 + height * 0.024);
-
-  ctx.font = `${Math.round(height * 0.016)}px system-ui, sans-serif`;
-  ctx.fillStyle = rgba("grid", 0.8);
-  ctx.fillText(
-    accuracy.attempts === 1 ? "1 try" : `${accuracy.attempts} tries`,
-    x,
-    height * 0.02 + height * 0.024 + height * 0.04,
-  );
-  ctx.restore();
 }
 
 /**

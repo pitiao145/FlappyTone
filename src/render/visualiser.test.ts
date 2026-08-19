@@ -42,7 +42,6 @@ function draw(scene: Partial<VisualiserScene>): Op[] {
   drawVisualiser(ctx, W, H, {
     tone: null,
     word: null,
-    accuracy: null,
     live: null,
     finished: [],
     spanMs: 1500,
