@@ -76,6 +76,8 @@ export type AnalyticsEvent =
   | { type: "calib_step"; step: CalibStep }
   | { type: "calib_done" }
   | { type: "calib_abandoned"; step: CalibStep }
+  | { type: "recal_offered" }
+  | { type: "recal_resolved"; outcome: "accepted" | "dismissed" }
   | {
       type: "run_start";
       mode: RunMode;

@@ -8,7 +8,11 @@ import {
   handleFrame,
   startLoop,
 } from "../game/loop.ts";
-import { saveSettings, type CalibrationSettings } from "../game/settings.ts";
+import {
+  resetRecalTracking,
+  saveSettings,
+  type CalibrationSettings,
+} from "../game/settings.ts";
 import { tuning } from "../game/tuning.ts";
 import {
   RANGE_DOWN_SEMITONES_MIN,
@@ -561,6 +565,9 @@ export function Calibration({
     const s = settingsNow();
     if (!s) return;
     saveSettings(s);
+    // A real visit here — first-run flow or Settings -> Fine-tune — is what
+    // starts a fresh, short tracking window; see recalibration.ts.
+    resetRecalTracking();
     onDone(s);
   };
 
@@ -577,6 +584,7 @@ export function Calibration({
     const s = settingsNow();
     if (s) {
       saveSettings(s);
+      resetRecalTracking();
       onSaved?.(s);
     }
     // settingsNow closes over the three values in the deps below.

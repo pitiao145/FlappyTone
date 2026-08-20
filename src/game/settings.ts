@@ -10,6 +10,10 @@ import {
   RANGE_UP_SEMITONES_MIN,
 } from "../pitch/calibration.ts";
 import { CORRIDOR_WIDTHS, type CorridorWidth } from "./gates.ts";
+import {
+  INITIAL_TRACKING_WINDOW,
+  type RecalTrackingState,
+} from "./recalibration.ts";
 import { CUE_STYLES, type CueStyle } from "./run.ts";
 
 export interface CalibrationSettings {
@@ -91,6 +95,48 @@ export function saveSettings(s: CalibrationSettings): void {
  */
 export function clearSettings(): void {
   localStorage.removeItem(KEY);
+}
+
+// -------------------------------------------------- recalibration tracking
+
+const RECAL_TRACKING_KEY = "toneflap.recal.tracking.v1";
+
+function freshRecalTracking(): RecalTrackingState {
+  return { windowSize: INITIAL_TRACKING_WINDOW, samples: [] };
+}
+
+/**
+ * The window of per-run measured ranges `App.tsx` is accumulating toward the
+ * next recalibration judgment. See `recalibration.ts`'s `RecalTrackingState`
+ * for why the window size varies between calls.
+ */
+export function loadRecalTracking(): RecalTrackingState {
+  try {
+    const raw = localStorage.getItem(RECAL_TRACKING_KEY);
+    if (!raw) return freshRecalTracking();
+    const s = JSON.parse(raw) as RecalTrackingState;
+    if (typeof s.windowSize !== "number" || !Array.isArray(s.samples)) {
+      return freshRecalTracking();
+    }
+    return s;
+  } catch {
+    return freshRecalTracking();
+  }
+}
+
+export function saveRecalTracking(state: RecalTrackingState): void {
+  localStorage.setItem(RECAL_TRACKING_KEY, JSON.stringify(state));
+}
+
+/**
+ * Called only from a genuine visit to the calibration tool (`Calibration.tsx`'s
+ * `save()`, covering both the first-run flow and Settings → Fine-tune) — never
+ * from accepting a game-over suggestion, which already starts its next window
+ * fresh at the moment the check fires. See `recalibration.ts` for the full
+ * reasoning.
+ */
+export function resetRecalTracking(): void {
+  saveRecalTracking(freshRecalTracking());
 }
 
 // ------------------------------------------------------------ corridor width

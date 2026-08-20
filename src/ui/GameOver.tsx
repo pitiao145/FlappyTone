@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { takeaway, toneBreakdown, type RunStats } from "../game/scoring.ts";
 import { GateLogPanel } from "../dev/GateLogPanel.tsx";
-import { recalibrationSuggestion } from "../game/recalibration.ts";
+import { track } from "../analytics/client.ts";
 import { saveSettings, type CalibrationSettings } from "../game/settings.ts";
 import type { RangeHalves } from "../pitch/calibration.ts";
 
@@ -12,7 +12,13 @@ interface Props {
   onRetry: () => void;
   onHome: () => void;
   settings: CalibrationSettings | null;
-  measuredRange: RangeHalves | null;
+  /**
+   * What to offer, already decided by `App.tsx` from the windowed,
+   * multi-run average — see `recalibration.ts`. `null` means don't show the
+   * card at all, whether because the window isn't full yet or because the
+   * average was within threshold.
+   */
+  suggestion: RangeHalves | null;
   onRecalibrate: (s: CalibrationSettings) => void;
 }
 
@@ -22,16 +28,12 @@ export function GameOver({
   onRetry,
   onHome,
   settings,
-  measuredRange,
+  suggestion,
   onRecalibrate,
 }: Props) {
   const breakdown = toneBreakdown(stats);
   const [dismissed, setDismissed] = useState(false);
   const [applied, setApplied] = useState(false);
-  const suggestion =
-    settings && measuredRange
-      ? recalibrationSuggestion(settings, measuredRange)
-      : null;
 
   const applySuggestion = () => {
     if (!settings || !suggestion) return;
@@ -43,6 +45,12 @@ export function GameOver({
     saveSettings(next);
     onRecalibrate(next);
     setApplied(true);
+    track({ type: "recal_resolved", outcome: "accepted" });
+  };
+
+  const dismissSuggestion = () => {
+    setDismissed(true);
+    track({ type: "recal_resolved", outcome: "dismissed" });
   };
 
   return (
@@ -86,7 +94,7 @@ export function GameOver({
             <button className="primary" onClick={applySuggestion}>
               Update
             </button>
-            <button onClick={() => setDismissed(true)}>Not now</button>
+            <button onClick={dismissSuggestion}>Not now</button>
           </div>
         </div>
       )}

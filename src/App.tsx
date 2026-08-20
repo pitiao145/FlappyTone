@@ -4,8 +4,20 @@ import { initPostHog } from "./analytics/posthog.ts";
 import { loadInventory } from "./audio/inventory";
 import { MicError } from "./audio/mic";
 import { ensureMic, stopMic } from "./audio/session";
+import {
+  averageRangeHalves,
+  COOLDOWN_TRACKING_WINDOW,
+  recalibrationSuggestion,
+  recordTrackedRun,
+} from "./game/recalibration.ts";
 import type { RunSnapshot } from "./game/run";
-import { loadSettings, loadShareData, type CalibrationSettings } from "./game/settings";
+import {
+  loadRecalTracking,
+  loadSettings,
+  loadShareData,
+  saveRecalTracking,
+  type CalibrationSettings,
+} from "./game/settings";
 import type { RangeHalves } from "./pitch/calibration.ts";
 import type { RunStats } from "./game/scoring";
 import { Calibration } from "./ui/Calibration";
@@ -75,7 +87,15 @@ export default function App() {
     loadSettings(),
   );
   const [stats, setStats] = useState<RunStats | null>(null);
-  const [measuredRange, setMeasuredRange] = useState<RangeHalves | null>(null);
+  /**
+   * What GameOver should offer, if anything — decided here, once the
+   * tracking window for this run fills. Not the raw measurement: see
+   * `recalibration.ts` for why judging a single run's measured range was
+   * replaced with judging the average of a multi-run window.
+   */
+  const [recalSuggestion, setRecalSuggestion] = useState<RangeHalves | null>(
+    null,
+  );
   const [tutorialDone, setTutorialDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryBusy, setRetryBusy] = useState(false);
@@ -166,9 +186,25 @@ export default function App() {
       return;
     }
     setStats(snap.stats);
-    setMeasuredRange(snap.measuredRange);
+
+    // Windowed recalibration check — see recalibration.ts. Only a completed,
+    // non-tutorial run reaches here, so tutorial runs never pollute the
+    // window (the early return above already routed those away).
+    const tracking = recordTrackedRun(loadRecalTracking(), snap.measuredRange);
+    if (tracking.samples.length >= tracking.windowSize) {
+      const avg = averageRangeHalves(tracking.samples);
+      const suggestion =
+        avg && settings ? recalibrationSuggestion(settings, avg) : null;
+      setRecalSuggestion(suggestion);
+      if (suggestion) track({ type: "recal_offered" });
+      saveRecalTracking({ windowSize: COOLDOWN_TRACKING_WINDOW, samples: [] });
+    } else {
+      setRecalSuggestion(null);
+      saveRecalTracking(tracking);
+    }
+
     setScreen("gameover");
-  }, []);
+  }, [settings]);
 
   const retry = useCallback(async () => {
     setError(null);
@@ -339,7 +375,7 @@ export default function App() {
             onRetry={() => void retry()}
             onHome={goHome}
             settings={settings}
-            measuredRange={measuredRange}
+            suggestion={recalSuggestion}
             onRecalibrate={setSettings}
           />
         )}

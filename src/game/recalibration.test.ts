@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { recalibrationSuggestion } from "./recalibration.ts";
+import {
+  averageRangeHalves,
+  recalibrationSuggestion,
+  recordTrackedRun,
+  type RecalTrackingState,
+} from "./recalibration.ts";
 
 const CURRENT = { rangeSemitones: 5, rangeDownSemitones: 4 };
 
@@ -36,11 +41,60 @@ describe("recalibrationSuggestion", () => {
     ).toBeNull();
   });
 
-  it("does not suggest when absolute delta clears but relative delta is under 30%", () => {
+  it("does not suggest when absolute delta clears but relative delta is under 35%", () => {
     // up=20 case: 1.2st absolute delta is only 6% relative.
     const big = { rangeSemitones: 20, rangeDownSemitones: 4 };
     expect(
       recalibrationSuggestion(big, { up: 21.2, down: 4 }),
     ).toBeNull();
+  });
+
+  it("does not suggest a delta that cleared the old 30% threshold but not 35%", () => {
+    // up=5 -> 6.5 is a 30% relative delta (1.5st absolute).
+    expect(
+      recalibrationSuggestion(CURRENT, { up: 6.5, down: 4 }),
+    ).toBeNull();
+  });
+});
+
+describe("averageRangeHalves", () => {
+  it("returns null for an empty window", () => {
+    expect(averageRangeHalves([])).toBeNull();
+  });
+
+  it("returns the sample itself for a single-sample window", () => {
+    expect(averageRangeHalves([{ up: 6, down: 3 }])).toEqual({
+      up: 6,
+      down: 3,
+    });
+  });
+
+  it("averages up and down independently across several samples", () => {
+    expect(
+      averageRangeHalves([
+        { up: 4, down: 2 },
+        { up: 6, down: 4 },
+        { up: 8, down: 6 },
+      ]),
+    ).toEqual({ up: 6, down: 4 });
+  });
+});
+
+describe("recordTrackedRun", () => {
+  const empty: RecalTrackingState = { windowSize: 2, samples: [] };
+
+  it("appends a non-null measurement", () => {
+    const next = recordTrackedRun(empty, { up: 5, down: 3 });
+    expect(next.samples).toEqual([{ up: 5, down: 3 }]);
+    expect(next.windowSize).toBe(2);
+  });
+
+  it("drops a null measurement without advancing the window", () => {
+    expect(recordTrackedRun(empty, null)).toEqual(empty);
+  });
+
+  it("does not mutate the state passed in", () => {
+    recordTrackedRun(empty, { up: 5, down: 3 });
+    expect(empty.samples).toEqual([]);
   });
 });

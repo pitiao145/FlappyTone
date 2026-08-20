@@ -105,6 +105,8 @@ const GAME_EVENTS = new Set<string>([
   "calib_done",
   "calib_abandoned",
   "calib_numbers",
+  "recal_offered",
+  "recal_resolved",
   "run_start",
   "gate",
   "run_end",
