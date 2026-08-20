@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { inventoryNow, loadInventory } from "../audio/inventory.ts";
 import { isCueAudible, loadClip, playToneCue } from "../audio/reference.ts";
 import { getMicSession, setFrameSink } from "../audio/session.ts";
+import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { ContourRecorder } from "../game/contours.ts";
 import { shapeForWord, TONE_INFO, type Tone } from "../game/gates.ts";
@@ -201,6 +202,8 @@ export function Visualiser({
       running = true;
       lastT = performance.now();
       rafId = requestAnimationFrame(tick);
+      // No touch input drives this screen either — same rationale as Game.tsx.
+      void acquireWakeLock();
     };
     resumeRef.current = () => {
       const audio = getMicSession()?.ctx;
@@ -215,6 +218,7 @@ export function Visualiser({
       running = false;
       cancelAnimationFrame(rafId);
       void getMicSession()?.ctx.suspend();
+      releaseWakeLock();
       setPaused(true);
     };
     document.addEventListener("visibilitychange", onVisibility);
@@ -225,6 +229,7 @@ export function Visualiser({
       running = false;
       cancelAnimationFrame(rafId);
       document.removeEventListener("visibilitychange", onVisibility);
+      releaseWakeLock();
       setFrameSink(null);
       setActiveTracker(null);
     };

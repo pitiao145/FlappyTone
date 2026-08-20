@@ -9,6 +9,7 @@ import {
 } from "../audio/reference.ts";
 import { inventoryNow, loadInventory } from "../audio/inventory.ts";
 import { getMicSession, setFrameSink, stopMic } from "../audio/session.ts";
+import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { TONE_INFO } from "../game/gates.ts";
@@ -327,6 +328,7 @@ export function Game({
         clearInterval(hudTimer);
         setFrameSink(null);
         stopMic();
+        releaseWakeLock();
         onOverRef.current(snap);
         return;
       }
@@ -359,6 +361,10 @@ export function Game({
       lastT = performance.now();
       rafId = requestAnimationFrame(tick);
       startHud();
+      // Voice is the only input, so there's no touch to keep the OS from
+      // dimming the screen — the browser silently drops this lock whenever
+      // the tab goes hidden, hence re-requesting it here rather than once.
+      void acquireWakeLock();
     };
     // One pause, two triggers: the player's button and the tab going away.
     // They must do the same thing — a run that keeps scrolling behind a menu,
@@ -374,6 +380,7 @@ export function Game({
       cancelAnimationFrame(rafId);
       clearInterval(hudTimer);
       void getMicSession()?.ctx.suspend();
+      releaseWakeLock();
       setPaused(true);
     };
     pauseRef.current = pause;
@@ -407,6 +414,7 @@ export function Game({
       cancelAnimationFrame(rafId);
       clearInterval(hudTimer);
       document.removeEventListener("visibilitychange", onVisibility);
+      releaseWakeLock();
       setFrameSink(null);
       setActiveTracker(null);
       runRef.current = null;
