@@ -150,17 +150,16 @@ describe("classifyTone", () => {
 
   describe("tone 1 continuous confidence", () => {
     it("still recognizes T1 when an onset swing inflates the raw excursion", () => {
-      // Before the onset trim existed, this exact shape — a swing for the
-      // first fraction of the utterance, then a genuinely flat rest — would
-      // have measured a large raw excursion and never been offered to T1's
-      // flatness check at all under the old binary gate. The ramp finishes
-      // well inside the default 15% trim window (100ms of an eventual
-      // ~900ms span), so nothing but flat chao survives trimming.
-      const onsetMs = 100;
+      // A swing for the first fraction of the utterance, then a genuinely
+      // flat rest. The onset trim (now a small 5% by default — see
+      // toneClassifierOnsetTrimFraction) alone would not fully clear a
+      // swing this size; it's T1's own tail-only judging window
+      // (toneClassifierT1TailFraction) that ignores it regardless.
+      const onsetMs = 300;
       const flatMs = 800;
       const onset: ContourPoint[] = Array.from({ length: 6 }, (_, k) => ({
         tMs: (k / 5) * onsetMs,
-        chao: 1 + (k / 5) * 3.5, // swings well past the old binary threshold
+        chao: 1 + (k / 5) * 3.5,
       }));
       const flat: ContourPoint[] = Array.from({ length: 10 }, (_, k) => ({
         tMs: onsetMs + (k / 9) * flatMs,
@@ -172,6 +171,34 @@ describe("classifyTone", () => {
         endedAtMs: onsetMs + flatMs,
       });
       expect(result?.tone).toBe(1);
+    });
+
+    it("is the tail window doing the rescue, not the (now small) shared trim", () => {
+      // Same shape as above, but with the shared onset trim forced to 0 —
+      // if T1 were still relying on trimOnset for protection, this would
+      // fail. It shouldn't, because toneClassifierT1TailFraction ignores
+      // the front of the sample independently of trimOnset.
+      try {
+        setTuning({ toneClassifierOnsetTrimFraction: 0 });
+        const onsetMs = 300;
+        const flatMs = 800;
+        const onset: ContourPoint[] = Array.from({ length: 6 }, (_, k) => ({
+          tMs: (k / 5) * onsetMs,
+          chao: 1 + (k / 5) * 3.5,
+        }));
+        const flat: ContourPoint[] = Array.from({ length: 10 }, (_, k) => ({
+          tMs: onsetMs + (k / 9) * flatMs,
+          chao: 4.5,
+        }));
+        const result = classifyTone({
+          points: [...onset, ...flat],
+          startedAtMs: 0,
+          endedAtMs: onsetMs + flatMs,
+        });
+        expect(result?.tone).toBe(1);
+      } finally {
+        resetTuning();
+      }
     });
 
     it("scores flatness continuously rather than as a binary gate", () => {
@@ -203,6 +230,53 @@ describe("classifyTone", () => {
         // just the raw confidence floor.
         setTuning({ toneClassifierMarginThreshold: 0.95 });
         expect(classifyTone(attempt)?.tone).toBe("none");
+      } finally {
+        resetTuning();
+      }
+    });
+  });
+
+  describe("T2/T3 dip detection", () => {
+    it("does not nudge a genuine T2 attempt toward T3 at the shipped default", () => {
+      // Regression guard for the exact false-positive risk this mechanism
+      // carries: T2's own averaged template has an interior dip nearly as
+      // deep as T3's (~0.94 vs ~0.99 chao at 16-point resolution), so a
+      // naively low threshold would boost T3 during ordinary correct T2
+      // attempts too. The shipped default sits above both.
+      expect(classifyTone(contourFromTone(2, 800))?.tone).toBe(2);
+    });
+
+    it("nudges an ambiguous dip-shaped attempt toward T3 once the dip bonus is strengthened", () => {
+      try {
+        // A shape whose correlation alone favors T2 but not confidently
+        // (T2 ≈0.93, T3 ≈0.85 — margin ≈0.09, under the default 0.12 floor)
+        // and whose interior dip (≈0.95 chao) sits just under the shipped
+        // default dip threshold (1.1), so the bonus doesn't fire yet.
+        const n = 16;
+        const points: ContourPoint[] = Array.from({ length: n }, (_, k) => {
+          const t = k / (n - 1);
+          const chao =
+            t < 0.45 ? 3 - 1.5 * (t / 0.45) : 1.5 + 2.5 * ((t - 0.45) / 0.55);
+          return { tMs: t * 900, chao };
+        });
+        const contour: Contour = { points, startedAtMs: 0, endedAtMs: 900 };
+
+        // At the shipped default, the correlation margin alone isn't
+        // confident enough — ambiguous.
+        expect(classifyTone(contour)?.tone).toBe("none");
+
+        // Lowering the dip threshold below this shape's own depth and
+        // strengthening the bonus (and, since T3's boosted score clamps at
+        // 1, also loosening the margin floor to let that clamped score
+        // actually clear it) flips the same input to a confident T3 pick —
+        // proving the bonus is actually wired into the final score, not
+        // just present in the tuning object.
+        setTuning({
+          toneClassifierDipThresholdChao: 0.9,
+          toneClassifierDipBonus: 0.3,
+          toneClassifierMarginThreshold: 0.05,
+        });
+        expect(classifyTone(contour)?.tone).toBe(3);
       } finally {
         resetTuning();
       }

@@ -178,19 +178,29 @@ export interface Tuning {
   toneClassifierMinConfidence: number;
   /**
    * Fraction of the contour's own span (by time) dropped from the front
-   * before any processing — the onset ramp from silence/consonant to target
-   * pitch is mechanical noise, not tonal signal, and was throwing off both
-   * the flatness check and the correlation.
+   * before any processing — small on purpose, just enough to clear a click
+   * or brief silence right at the very start. A bigger shared cut risked
+   * shaving into genuine early signal (T3's dip starts early); tones that
+   * need more onset protection get their own dedicated window instead (see
+   * `toneClassifierT1TailFraction`).
    */
   toneClassifierOnsetTrimFraction: number;
   /**
    * The chao-excursion at which a shape counts as "definitely not flat", for
    * tone 1's continuous confidence score (1 at zero excursion, 0 at or past
-   * this value). T1 has no correlation to compute — its target is level —
-   * so this is what lets it compete against T2–T4's correlation scores on
-   * equal footing instead of a binary flat/not-flat gate.
+   * this value), judged only over the last `toneClassifierT1TailFraction` of
+   * the sample. T1 has no correlation to compute — its target is level — so
+   * this is what lets it compete against T2–T4's correlation scores on equal
+   * footing instead of a binary flat/not-flat gate.
    */
   toneClassifierFlatnessScaleChao: number;
+  /**
+   * How much of the sample's *end* tone 1's flatness score is judged over —
+   * the voice may still be settling early on even after the onset trim, so
+   * only the tail (where it's had time to settle) is checked. 0.45 = the
+   * last 45%.
+   */
+  toneClassifierT1TailFraction: number;
   /**
    * The winning score must beat the runner-up by at least this much, or the
    * attempt is "none" (ambiguous) rather than a confident pick — a near-tie
@@ -198,6 +208,18 @@ export interface Tuning {
    * winner alone clears `toneClassifierMinConfidence`.
    */
   toneClassifierMarginThreshold: number;
+  /**
+   * How deep (below the sample's own mean) an interior low point must dip
+   * before `classifyTone` nudges tone 3's score up — a direct,
+   * correlation-independent signal for T2-vs-T3, since both are "dip then
+   * rise" and differ mainly in where/how deep the dip sits. Set well above
+   * both tones' own measured average dip depth (T2 ~0.94 chao, T3 ~0.99 —
+   * see `detectDip`'s doc comment) so this stays a rare nudge, not a
+   * default-on effect, until it's tuned against real attempts in the Lab.
+   */
+  toneClassifierDipThresholdChao: number;
+  /** Added to tone 3's score when `toneClassifierDipThresholdChao` is cleared. */
+  toneClassifierDipBonus: number;
 
   // ---- dot dynamics
   /** Hold the last position for this long after voicing stops. */
@@ -261,9 +283,12 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   minUtteranceMs: 160,
   mergeGapMs: 150,
   toneClassifierMinConfidence: 0.5,
-  toneClassifierOnsetTrimFraction: 0.15,
+  toneClassifierOnsetTrimFraction: 0.05,
   toneClassifierFlatnessScaleChao: 1.25,
+  toneClassifierT1TailFraction: 0.45,
   toneClassifierMarginThreshold: 0.12,
+  toneClassifierDipThresholdChao: 1.1,
+  toneClassifierDipBonus: 0.15,
   graceMs: 120,
   t3GraceMs: 250,
   easeTauMs: 35,

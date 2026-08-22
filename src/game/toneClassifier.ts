@@ -41,11 +41,13 @@ const RESAMPLE_POINTS = 16;
 
 /**
  * Drops the first `trimFraction` of the contour's own span (by time, not
- * sample count). The first ~10–20% of any utterance is dominated by pitch
- * ramping up from silence/onset consonant to the actual target — mechanical
- * noise, not tonal signal — and it was throwing off both the flatness check
- * and the correlation. Applied once, before everything else downstream
- * (resampling, flatness, correlation) so all of it sees the trimmed shape.
+ * sample count) — a small cut (see `toneClassifierOnsetTrimFraction`'s
+ * default), meant only to clear a click or brief silence right at the very
+ * start, not a real chunk of the tone. A larger shared trim here risked
+ * shaving into genuine early signal (T3's dip starts early); the tones that
+ * need more protection from a slow onset ramp get their own dedicated
+ * window in `classifyTone` instead (T1's tail-only judging window) rather
+ * than a bigger blanket cut applied to everything.
  *
  * Falls back to the untrimmed points if trimming would leave fewer than 2
  * (a very short utterance) — better to classify on the full noisy shape than
@@ -132,6 +134,45 @@ function correlation(a: number[], b: number[]): number | null {
   return cov / Math.sqrt(varA * varB);
 }
 
+/** How far into the sample a dip must sit to count as "interior" rather than an edge. */
+const DIP_INTERIOR_LOW = 0.15;
+const DIP_INTERIOR_HIGH = 0.85;
+
+interface DipInfo {
+  /** Whether the sample's lowest point sits away from either edge. */
+  isInterior: boolean;
+  /** How far the low point sits below the sample's own mean. */
+  depth: number;
+}
+
+/**
+ * Finds the sample's lowest point and asks whether it sits in the interior
+ * (not right at either edge) and how deep it dips below the sample's own
+ * mean — a direct, correlation-independent signal for T2/T3 disambiguation.
+ *
+ * Correlation alone rewards clean shape-matching, but T2 and T3 are both
+ * "dip then rise" — they differ in *where* and *how deep* the dip sits, not
+ * just in overall shape, and a correlation contest can miss that. Measured
+ * against this project's own averaged templates (`AVERAGED_TONE_SHAPE`,
+ * 16-point resample): T2's own dip is 0.94 chao deep at ~31% through, T3's is
+ * 0.99 chao deep at ~50% through — close enough that depth alone barely
+ * discriminates them; both comfortably clear a naive "0.4-0.5 chao" floor.
+ * `toneClassifierDipThresholdChao` defaults well above both, so the bonus
+ * below stays a rare nudge rather than a default-on effect until it's been
+ * tuned against real attempts in the Lab.
+ */
+function detectDip(sample: number[]): DipInfo {
+  let minIdx = 0;
+  for (let i = 1; i < sample.length; i++) {
+    if (sample[i] < sample[minIdx]) minIdx = i;
+  }
+  const n = sample.length;
+  const isInterior =
+    minIdx > DIP_INTERIOR_LOW * n && minIdx < DIP_INTERIOR_HIGH * n;
+  const mean = sample.reduce((s, v) => s + v, 0) / n;
+  return { isInterior, depth: mean - sample[minIdx] };
+}
+
 /**
  * Which of the four tones `contour` most resembles, or `"none"` if it
  * doesn't resemble any of them well enough, or is too close a call between
@@ -139,30 +180,60 @@ function correlation(a: number[], b: number[]): number | null {
  * anything at all (fewer than 2 points) — the same "not enough evidence"
  * posture `heardUtterance`/`unheardHint` take in `scoring.ts`.
  *
- * Tone 1 does not get a correlation — its target is level, so there is
- * nothing to correlate a shape *against* — but it competes on equal footing
- * with T2–T4 rather than short-circuiting them: its score is a continuous
- * "how flat is this" confidence (`toneClassifierFlatnessScaleChao`), and the
- * highest score across all four wins. That replaced a binary flat/not-flat
- * gate that, combined with the onset transient inflating the measured
- * excursion, was rejecting genuinely flat T1 attempts outright.
+ * The onset trim here is deliberately small (`toneClassifierOnsetTrimFraction`,
+ * default 5%) — just enough to drop a click/silence artifact right at the
+ * start, not a real chunk of the tone. A larger shared trim risked shaving
+ * into genuine early signal (T3's dip starts early), so the tones that need
+ * more protection from the onset get their own dedicated handling instead of
+ * a bigger blanket cut:
+ *
+ * - **Tone 1** doesn't get a correlation — its target is level, so there's
+ *   nothing to correlate a shape *against* — but it does get its own
+ *   judging window: only the *last* `toneClassifierT1TailFraction` of the
+ *   sample (where the voice has actually settled), not the whole shape,
+ *   which may still be transitioning early on. Its score is a continuous
+ *   "how flat is this tail" confidence, competing against T2–T4's
+ *   correlation on equal footing — not a binary gate that short-circuits
+ *   everything else.
+ * - **T2 vs T3** additionally gets a direct, correlation-independent check:
+ *   `detectDip` finds the sample's own lowest point and, if it sits away
+ *   from the edges and dips deep enough below the mean
+ *   (`toneClassifierDipThresholdChao`), nudges T3's score up
+ *   (`toneClassifierDipBonus`) — see `detectDip`'s doc comment for why this
+ *   threshold needs real tuning, not just the two tones' correlation shapes
+ *   fighting it out.
  */
 export function classifyTone(contour: Contour): ToneClassification | null {
   if (contour.points.length < 2) return null;
 
   const trimmed = trimOnset(contour.points, tuning().toneClassifierOnsetTrimFraction);
   const sample = resample(trimmed, RESAMPLE_POINTS);
-  const excursion = Math.max(...sample) - Math.min(...sample);
+
+  const tailStart = Math.floor(
+    RESAMPLE_POINTS * (1 - tuning().toneClassifierT1TailFraction),
+  );
+  const t1Window = sample.slice(tailStart);
+  const t1Excursion = Math.max(...t1Window) - Math.min(...t1Window);
 
   const scores = new Map<Tone, number>();
   scores.set(
     1,
-    1 - Math.min(1, Math.max(0, excursion / tuning().toneClassifierFlatnessScaleChao)),
+    1 - Math.min(1, Math.max(0, t1Excursion / tuning().toneClassifierFlatnessScaleChao)),
   );
   for (const tone of [2, 3, 4] as Tone[]) {
     const template = resampleFixed(AVERAGED_TONE_SHAPE[tone], RESAMPLE_POINTS);
     const r = correlation(sample, template);
     if (r !== null) scores.set(tone, Math.min(1, Math.max(0, r)));
+  }
+
+  const dip = detectDip(sample);
+  const t3Score = scores.get(3);
+  if (
+    t3Score !== undefined &&
+    dip.isInterior &&
+    dip.depth > tuning().toneClassifierDipThresholdChao
+  ) {
+    scores.set(3, Math.min(1, t3Score + tuning().toneClassifierDipBonus));
   }
 
   let best: Tone | null = null;
