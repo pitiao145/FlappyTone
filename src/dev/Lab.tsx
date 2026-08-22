@@ -33,6 +33,7 @@ import { BACKDROP, chaoToY, drawChaoGrid, drawDot } from "../render/scene.ts";
 import { drawGate } from "../render/world.ts";
 import { Choice } from "../ui/Choice.tsx";
 import { Game } from "../ui/Game.tsx";
+import { Visualiser } from "../ui/Visualiser.tsx";
 import { Capture } from "./Capture.tsx";
 import { DevPanel } from "./DevPanel.tsx";
 import { GateLogPanel } from "./GateLogPanel.tsx";
@@ -40,7 +41,14 @@ import { ToneAverages } from "./ToneAverages.tsx";
 import { TuningPanel } from "./TuningPanel.tsx";
 import { WordGates } from "./WordGates.tsx";
 
-type Tab = "play" | "words" | "averages" | "pitch" | "gates" | "capture";
+type Tab =
+  | "play"
+  | "words"
+  | "averages"
+  | "pitch"
+  | "gates"
+  | "capture"
+  | "visualiser";
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "play", label: "play" },
@@ -49,6 +57,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "pitch", label: "pitch" },
   { id: "gates", label: "gates" },
   { id: "capture", label: "capture" },
+  { id: "visualiser", label: "visualiser" },
 ];
 
 /**
@@ -326,6 +335,24 @@ worst excursion ${Math.round(Math.max(0, ...last.gateLog.map((g) => g.worstExcur
       )}
 
       {tab === "capture" && <Capture onBack={() => setTab("play")} />}
+
+      {/* Same component the title screen's "visualiser" opens — a second,
+          disposable instance living in the Lab so a tone-recognition
+          algorithm can be tested against live attempts without a full run
+          around it. See docs/PRD.md §8 (screen 2c) for what this screen is
+          for; this tab adds no behavior of its own, only a place to reach it
+          from while tuning. */}
+      {tab === "visualiser" && (
+        <div className="lab-controls">
+          <Visualiser
+            settings={settings}
+            canvasWidth={360}
+            canvasHeight={640}
+            onBack={() => setTab("play")}
+            showRecognizedTone
+          />
+        </div>
+      )}
 
     </div>
   );

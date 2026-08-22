@@ -79,6 +79,14 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
     ],
   },
   {
+    title: "tone classifier",
+    note: "the Lab visualiser's standalone tone recognizer — separate from gate judging, nothing here feeds scoreGate.",
+    knobs: [
+      { key: "toneClassifierMinConfidence", label: "min confidence", min: 0, max: 1, step: 0.05,
+        help: "Below this correlation, the recognizer reports \"none\" rather than picking a tone." },
+    ],
+  },
+  {
     title: "dot",
     note: "visual only, except grace and drift, which move the scored position.",
     knobs: [

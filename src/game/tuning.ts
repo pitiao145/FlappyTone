@@ -168,6 +168,15 @@ export interface Tuning {
   /** Voiced runs separated by less than this are one utterance. */
   mergeGapMs: number;
 
+  // ---- tone classifier
+  /**
+   * Below this correlation, `classifyTone` reports "none" rather than
+   * picking a winner — the shape didn't resemble any of the four tones
+   * closely enough to call. See `src/game/toneClassifier.ts`. Standalone
+   * from gate judging: nothing here feeds `scoreGate`.
+   */
+  toneClassifierMinConfidence: number;
+
   // ---- dot dynamics
   /** Hold the last position for this long after voicing stops. */
   graceMs: number;
@@ -229,6 +238,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   preGateBufferMs: 400,
   minUtteranceMs: 160,
   mergeGapMs: 150,
+  toneClassifierMinConfidence: 0.5,
   graceMs: 120,
   t3GraceMs: 250,
   easeTauMs: 35,
