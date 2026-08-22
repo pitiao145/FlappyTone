@@ -1,15 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { classifyTone } from "./toneClassifier.ts";
-import { corridorChaoAt, shapeForTone, type Tone } from "./gates.ts";
+import type { Tone } from "./gates.ts";
+import { AVERAGED_TONE_SHAPE } from "./toneAverages.ts";
 import type { Contour, ContourPoint } from "./contours.ts";
 
 const TONES: Tone[] = [1, 2, 3, 4];
 
+/** Linear lookup into a fixed, evenly-spaced-over-[0,1] shape array. */
+function chaoAtT(shape: number[], t: number): number {
+  const idx = t * (shape.length - 1);
+  const i0 = Math.floor(idx);
+  const i1 = Math.min(shape.length - 1, i0 + 1);
+  const frac = idx - i0;
+  return shape[i0] + (shape[i1] - shape[i0]) * frac;
+}
+
 /**
- * Builds a synthetic contour by sampling a tone's own canonical shape
- * (`corridorChaoAt`/`shapeForTone` — the same functions the game itself
- * flies) — so "the real T3 shape" isn't hand-copied here, it's generated
- * the same way the classifier's own templates are.
+ * Builds a synthetic contour by sampling a tone's own baked average shape
+ * (`AVERAGED_TONE_SHAPE` — the classifier's actual templates) — so "the real
+ * T3 shape" isn't hand-copied here, it's read from the same generated file
+ * the classifier itself reads.
  *
  * `amplitudeScale` compresses the shape around its own mean (1 = untouched,
  * 0.3 = a shallow/quiet attempt) — for proving correlation-based matching is
@@ -21,10 +31,8 @@ function contourFromTone(
   amplitudeScale = 1,
   n = 20,
 ): Contour {
-  const shape = shapeForTone(tone);
-  const raw = Array.from({ length: n }, (_, k) =>
-    corridorChaoAt(shape, k / (n - 1)),
-  );
+  const shape = AVERAGED_TONE_SHAPE[tone];
+  const raw = Array.from({ length: n }, (_, k) => chaoAtT(shape, k / (n - 1)));
   const mean = raw.reduce((s, v) => s + v, 0) / raw.length;
   const points: ContourPoint[] = raw.map((chao, k) => ({
     tMs: (k / (n - 1)) * durationMs,

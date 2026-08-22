@@ -12,10 +12,18 @@
  * shape work gets proven here first. `classifyTone` has no dependency on
  * anything Lab- or Visualiser-specific, so plugging it into the game later
  * is a matter of calling it from `run.ts`, not a rewrite.
+ *
+ * Templates come from `AVERAGED_TONE_SHAPE` (`src/game/toneAverages.ts`,
+ * generated — see `src/dev/make-tone-averages.ts`): each tone's chao value
+ * averaged across every one of its recorded words' own measured polyline,
+ * not a single citation take. Baked in offline so this stays zero-I/O;
+ * rerun the generator and commit the regenerated file when the recording
+ * inventory changes.
  */
 
 import type { Contour } from "./contours.ts";
-import { corridorChaoAt, shapeForTone, type Tone } from "./gates.ts";
+import type { Tone } from "./gates.ts";
+import { AVERAGED_TONE_SHAPE } from "./toneAverages.ts";
 import { tuning } from "./tuning.ts";
 
 export type ClassifiedTone = Tone | "none";
@@ -64,6 +72,25 @@ function resample(points: { tMs: number; chao: number }[], n: number): number[] 
   return out;
 }
 
+/**
+ * Resamples a fixed, evenly-spaced-over-[0,1] array (`AVERAGED_TONE_SHAPE`'s
+ * 61 values) down to `n` points, linearly interpolating by index. Kept
+ * separate from `resample` above: this operates on an already time-
+ * normalized array with no timestamps, decoupling the classifier's own
+ * resolution (`RESAMPLE_POINTS`) from however many samples the baked file
+ * happens to store.
+ */
+function resampleFixed(values: number[], n: number): number[] {
+  const lastIdx = values.length - 1;
+  return Array.from({ length: n }, (_, k) => {
+    const idx = (k / (n - 1)) * lastIdx;
+    const i0 = Math.floor(idx);
+    const i1 = Math.min(lastIdx, i0 + 1);
+    const frac = idx - i0;
+    return values[i0] + (values[i1] - values[i0]) * frac;
+  });
+}
+
 /** Pearson correlation between two equal-length vectors. Null if either has zero variance. */
 function correlation(a: number[], b: number[]): number | null {
   const n = a.length;
@@ -104,10 +131,7 @@ export function classifyTone(contour: Contour): ToneClassification | null {
   let best: Tone | null = null;
   let bestScore = -Infinity;
   for (const tone of TONES) {
-    const shape = shapeForTone(tone);
-    const template = Array.from({ length: RESAMPLE_POINTS }, (_, k) =>
-      corridorChaoAt(shape, k / (RESAMPLE_POINTS - 1)),
-    );
+    const template = resampleFixed(AVERAGED_TONE_SHAPE[tone], RESAMPLE_POINTS);
     const score = correlation(sample, template);
     if (score !== null && score > bestScore) {
       bestScore = score;
