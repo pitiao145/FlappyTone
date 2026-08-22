@@ -281,5 +281,35 @@ describe("classifyTone", () => {
         resetTuning();
       }
     });
+
+    it("position gate blocks the bonus for a deep dip that sits early (T2-shaped), not late", () => {
+      try {
+        const n = 16;
+        const dipT = 0.28;
+        const points: ContourPoint[] = Array.from({ length: n }, (_, k) => {
+          const t = k / (n - 1);
+          const chao =
+            t < dipT
+              ? 3 - 1.5 * (t / dipT)
+              : 1.5 + 2.5 * ((t - dipT) / (1 - dipT));
+          return { tMs: t * 900, chao };
+        });
+        const contour: Contour = { points, startedAtMs: 0, endedAtMs: 900 };
+
+        // A deep (≈1.0 chao) interior dip, but at ~20% through — T2's
+        // natural position, not T3's (≈50%). Correlation alone already
+        // favors T2 comfortably (≈0.98 vs ≈0.61). Lowering the depth
+        // threshold and cranking the bonus enough that, unguarded by
+        // position, T3 (0.61 + 0.5, clamped to 1) would sail past T2
+        // (0.98) — the position gate is the only thing stopping that.
+        setTuning({
+          toneClassifierDipThresholdChao: 0.5,
+          toneClassifierDipBonus: 0.5,
+        });
+        expect(classifyTone(contour)?.tone).toBe(2);
+      } finally {
+        resetTuning();
+      }
+    });
   });
 });

@@ -93,9 +93,11 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
       { key: "toneClassifierMarginThreshold", label: "margin threshold", min: 0, max: 0.4, step: 0.01,
         help: "The winner must beat the runner-up by at least this much, or the attempt is \"none\" (ambiguous) rather than a confident pick." },
       { key: "toneClassifierDipThresholdChao", label: "T3 dip threshold", min: 0.3, max: 2, step: 0.05,
-        help: "How deep an interior low point must dip below the sample's mean before T3's score gets a nudge. T2 and T3 both dip naturally (~0.94/~0.99 chao in the shipped templates), so this needs care — see toneClassifier.ts." },
+        help: "How deep an interior low point must dip below the sample's mean before T3's score gets a nudge. T2 and T3 both dip naturally (~0.94/~0.99 chao in the shipped templates), so depth alone barely discriminates — see the position knob below." },
+      { key: "toneClassifierDipMinPositionFrac", label: "T3 dip position", min: 0, max: 1, step: 0.05,
+        help: "How far into the sample (0-1) the low point must sit to count as T3-shaped. T2 dips at ~31% through, T3 at ~50% in the shipped templates — this is what actually separates them." },
       { key: "toneClassifierDipBonus", label: "T3 dip bonus", min: 0, max: 0.5, step: 0.01,
-        help: "How much the dip threshold above adds to T3's score when cleared." },
+        help: "How much score T3 gets when the depth and position dip gates are both cleared." },
     ],
   },
   {

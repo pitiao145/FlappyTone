@@ -143,23 +143,28 @@ interface DipInfo {
   isInterior: boolean;
   /** How far the low point sits below the sample's own mean. */
   depth: number;
+  /** Where the low point sits, as a fraction of the sample's own span (0–1). */
+  positionFrac: number;
 }
 
 /**
- * Finds the sample's lowest point and asks whether it sits in the interior
- * (not right at either edge) and how deep it dips below the sample's own
- * mean — a direct, correlation-independent signal for T2/T3 disambiguation.
+ * Finds the sample's lowest point and reports whether it sits in the
+ * interior (not right at either edge), how deep it dips below the sample's
+ * own mean, and *where* it sits — a direct, correlation-independent signal
+ * for T2/T3 disambiguation.
  *
  * Correlation alone rewards clean shape-matching, but T2 and T3 are both
  * "dip then rise" — they differ in *where* and *how deep* the dip sits, not
  * just in overall shape, and a correlation contest can miss that. Measured
  * against this project's own averaged templates (`AVERAGED_TONE_SHAPE`,
  * 16-point resample): T2's own dip is 0.94 chao deep at ~31% through, T3's is
- * 0.99 chao deep at ~50% through — close enough that depth alone barely
- * discriminates them; both comfortably clear a naive "0.4-0.5 chao" floor.
- * `toneClassifierDipThresholdChao` defaults well above both, so the bonus
- * below stays a rare nudge rather than a default-on effect until it's been
- * tuned against real attempts in the Lab.
+ * 0.99 chao deep at ~50% through. Depth alone barely discriminates them —
+ * both comfortably clear a naive "0.4-0.5 chao" floor — but *position* does:
+ * T2 dips early, T3 dips later, closer to the middle. `classifyTone` gates
+ * the bonus on both: deep enough (`toneClassifierDipThresholdChao`, kept
+ * conservative since depth alone is weak) *and* late enough
+ * (`toneClassifierDipMinPositionFrac`) to look like T3's dip rather than
+ * T2's.
  */
 function detectDip(sample: number[]): DipInfo {
   let minIdx = 0;
@@ -170,7 +175,11 @@ function detectDip(sample: number[]): DipInfo {
   const isInterior =
     minIdx > DIP_INTERIOR_LOW * n && minIdx < DIP_INTERIOR_HIGH * n;
   const mean = sample.reduce((s, v) => s + v, 0) / n;
-  return { isInterior, depth: mean - sample[minIdx] };
+  return {
+    isInterior,
+    depth: mean - sample[minIdx],
+    positionFrac: minIdx / (n - 1),
+  };
 }
 
 /**
@@ -196,12 +205,13 @@ function detectDip(sample: number[]): DipInfo {
  *   correlation on equal footing — not a binary gate that short-circuits
  *   everything else.
  * - **T2 vs T3** additionally gets a direct, correlation-independent check:
- *   `detectDip` finds the sample's own lowest point and, if it sits away
- *   from the edges and dips deep enough below the mean
- *   (`toneClassifierDipThresholdChao`), nudges T3's score up
- *   (`toneClassifierDipBonus`) — see `detectDip`'s doc comment for why this
- *   threshold needs real tuning, not just the two tones' correlation shapes
- *   fighting it out.
+ *   `detectDip` finds the sample's own lowest point, and if it sits away
+ *   from the edges, dips deep enough below the mean
+ *   (`toneClassifierDipThresholdChao`), *and* sits late enough
+ *   (`toneClassifierDipMinPositionFrac` — T2 dips early, T3 dips later),
+ *   nudges T3's score up (`toneClassifierDipBonus`) — see `detectDip`'s doc
+ *   comment for why depth alone isn't a reliable discriminator here and
+ *   position is what actually separates the two.
  */
 export function classifyTone(contour: Contour): ToneClassification | null {
   if (contour.points.length < 2) return null;
@@ -231,7 +241,8 @@ export function classifyTone(contour: Contour): ToneClassification | null {
   if (
     t3Score !== undefined &&
     dip.isInterior &&
-    dip.depth > tuning().toneClassifierDipThresholdChao
+    dip.depth > tuning().toneClassifierDipThresholdChao &&
+    dip.positionFrac >= tuning().toneClassifierDipMinPositionFrac
   ) {
     scores.set(3, Math.min(1, t3Score + tuning().toneClassifierDipBonus));
   }

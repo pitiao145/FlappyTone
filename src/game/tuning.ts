@@ -218,7 +218,16 @@ export interface Tuning {
    * default-on effect, until it's tuned against real attempts in the Lab.
    */
   toneClassifierDipThresholdChao: number;
-  /** Added to tone 3's score when `toneClassifierDipThresholdChao` is cleared. */
+  /**
+   * How far into the sample (0–1, as a fraction of its own span) an interior
+   * low point must sit before it counts as T3-shaped rather than T2-shaped —
+   * T2's own dip sits at ~31% through, T3's at ~50%, in the shipped
+   * templates. This is the discriminator that actually separates the two;
+   * depth alone (`toneClassifierDipThresholdChao`) barely does, since their
+   * natural dip depths are nearly identical.
+   */
+  toneClassifierDipMinPositionFrac: number;
+  /** Added to tone 3's score when both the depth and position dip gates are cleared. */
   toneClassifierDipBonus: number;
 
   // ---- dot dynamics
@@ -288,6 +297,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   toneClassifierT1TailFraction: 0.45,
   toneClassifierMarginThreshold: 0.12,
   toneClassifierDipThresholdChao: 1.1,
+  toneClassifierDipMinPositionFrac: 0.4,
   toneClassifierDipBonus: 0.15,
   graceMs: 120,
   t3GraceMs: 250,
