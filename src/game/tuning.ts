@@ -170,12 +170,34 @@ export interface Tuning {
 
   // ---- tone classifier
   /**
-   * Below this correlation, `classifyTone` reports "none" rather than
-   * picking a winner — the shape didn't resemble any of the four tones
-   * closely enough to call. See `src/game/toneClassifier.ts`. Standalone
-   * from gate judging: nothing here feeds `scoreGate`.
+   * Below this score, `classifyTone` reports "none" rather than picking a
+   * winner — the shape didn't resemble any of the four tones closely enough
+   * to call. See `src/game/toneClassifier.ts`. Standalone from gate judging:
+   * nothing here feeds `scoreGate`.
    */
   toneClassifierMinConfidence: number;
+  /**
+   * Fraction of the contour's own span (by time) dropped from the front
+   * before any processing — the onset ramp from silence/consonant to target
+   * pitch is mechanical noise, not tonal signal, and was throwing off both
+   * the flatness check and the correlation.
+   */
+  toneClassifierOnsetTrimFraction: number;
+  /**
+   * The chao-excursion at which a shape counts as "definitely not flat", for
+   * tone 1's continuous confidence score (1 at zero excursion, 0 at or past
+   * this value). T1 has no correlation to compute — its target is level —
+   * so this is what lets it compete against T2–T4's correlation scores on
+   * equal footing instead of a binary flat/not-flat gate.
+   */
+  toneClassifierFlatnessScaleChao: number;
+  /**
+   * The winning score must beat the runner-up by at least this much, or the
+   * attempt is "none" (ambiguous) rather than a confident pick — a near-tie
+   * between two tones is not a confident read of the winner, even if the
+   * winner alone clears `toneClassifierMinConfidence`.
+   */
+  toneClassifierMarginThreshold: number;
 
   // ---- dot dynamics
   /** Hold the last position for this long after voicing stops. */
@@ -239,6 +261,9 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   minUtteranceMs: 160,
   mergeGapMs: 150,
   toneClassifierMinConfidence: 0.5,
+  toneClassifierOnsetTrimFraction: 0.15,
+  toneClassifierFlatnessScaleChao: 1.25,
+  toneClassifierMarginThreshold: 0.12,
   graceMs: 120,
   t3GraceMs: 250,
   easeTauMs: 35,

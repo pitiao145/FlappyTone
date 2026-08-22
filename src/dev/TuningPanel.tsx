@@ -83,7 +83,13 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
     note: "the Lab visualiser's standalone tone recognizer — separate from gate judging, nothing here feeds scoreGate.",
     knobs: [
       { key: "toneClassifierMinConfidence", label: "min confidence", min: 0, max: 1, step: 0.05,
-        help: "Below this correlation, the recognizer reports \"none\" rather than picking a tone." },
+        help: "Below this score, the recognizer reports \"none\" rather than picking a tone." },
+      { key: "toneClassifierOnsetTrimFraction", label: "onset trim", min: 0, max: 0.4, step: 0.01,
+        help: "Fraction of the utterance's own span dropped from the front before anything else — the onset ramp from silence to target pitch is noise, not tone." },
+      { key: "toneClassifierFlatnessScaleChao", label: "T1 flatness scale", min: 0.3, max: 3, step: 0.05,
+        help: "Chao excursion at which a shape counts as \"definitely not flat\". T1's score is 1 at zero excursion, 0 at or past this." },
+      { key: "toneClassifierMarginThreshold", label: "margin threshold", min: 0, max: 0.4, step: 0.01,
+        help: "The winner must beat the runner-up by at least this much, or the attempt is \"none\" (ambiguous) rather than a confident pick." },
     ],
   },
   {

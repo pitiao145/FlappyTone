@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { classifyTone } from "./toneClassifier.ts";
 import type { Tone } from "./gates.ts";
 import { AVERAGED_TONE_SHAPE } from "./toneAverages.ts";
+import { resetTuning, setTuning } from "./tuning.ts";
 import type { Contour, ContourPoint } from "./contours.ts";
 
 const TONES: Tone[] = [1, 2, 3, 4];
@@ -24,6 +25,15 @@ function chaoAtT(shape: number[], t: number): number {
  * `amplitudeScale` compresses the shape around its own mean (1 = untouched,
  * 0.3 = a shallow/quiet attempt) — for proving correlation-based matching is
  * scale-invariant.
+ *
+ * Prepends a single dummy point at `tMs=0` before the real shape starts (at
+ * 30% of `durationMs` in) — `classifyTone`'s default onset trim (15% of the
+ * contour's own span) removes only that dummy point, leaving the real shape
+ * intact, the same way it's meant to discard a genuine onset artifact from a
+ * real recording without eating into the tone itself. Without this padding,
+ * these tests would be trimming into the real shape they're trying to
+ * verify, since a synthetic contour built by directly sampling the template
+ * has no actual onset noise to discard.
  */
 function contourFromTone(
   tone: Tone,
@@ -34,11 +44,15 @@ function contourFromTone(
   const shape = AVERAGED_TONE_SHAPE[tone];
   const raw = Array.from({ length: n }, (_, k) => chaoAtT(shape, k / (n - 1)));
   const mean = raw.reduce((s, v) => s + v, 0) / raw.length;
-  const points: ContourPoint[] = raw.map((chao, k) => ({
-    tMs: (k / (n - 1)) * durationMs,
-    chao: mean + (chao - mean) * amplitudeScale,
-  }));
-  return { points, startedAtMs: 0, endedAtMs: durationMs };
+  const onsetMs = durationMs * 0.3;
+  const points: ContourPoint[] = [
+    { tMs: 0, chao: 3 },
+    ...raw.map((chao, k) => ({
+      tMs: onsetMs + (k / (n - 1)) * durationMs,
+      chao: mean + (chao - mean) * amplitudeScale,
+    })),
+  ];
+  return { points, startedAtMs: 0, endedAtMs: onsetMs + durationMs };
 }
 
 function flatContour(chao: number, n = 10, durationMs = 500): Contour {
@@ -106,5 +120,92 @@ describe("classifyTone", () => {
     }));
     const result = classifyTone({ points, startedAtMs: 0, endedAtMs: 800 });
     expect(result?.tone).toBe("none");
+  });
+
+  describe("onset trim", () => {
+    it("discards a large spurious onset swing before classifying", () => {
+      // A wild ramp (chao 1 -> 5) across the first 20% of the utterance,
+      // then a clean T2 shape for the rest. Untrimmed, this swing would
+      // dominate the resampled vector; trimmed, only the real T2 shape
+      // should remain and classify correctly.
+      const shape = AVERAGED_TONE_SHAPE[2];
+      const onsetMs = 200;
+      const realMs = 800;
+      const onset: ContourPoint[] = Array.from({ length: 6 }, (_, k) => ({
+        tMs: (k / 5) * onsetMs,
+        chao: 1 + (k / 5) * 4,
+      }));
+      const real: ContourPoint[] = Array.from({ length: 20 }, (_, k) => ({
+        tMs: onsetMs + (k / 19) * realMs,
+        chao: chaoAtT(shape, k / 19),
+      }));
+      const result = classifyTone({
+        points: [...onset, ...real],
+        startedAtMs: 0,
+        endedAtMs: onsetMs + realMs,
+      });
+      expect(result?.tone).toBe(2);
+    });
+  });
+
+  describe("tone 1 continuous confidence", () => {
+    it("still recognizes T1 when an onset swing inflates the raw excursion", () => {
+      // Before the onset trim existed, this exact shape — a swing for the
+      // first fraction of the utterance, then a genuinely flat rest — would
+      // have measured a large raw excursion and never been offered to T1's
+      // flatness check at all under the old binary gate. The ramp finishes
+      // well inside the default 15% trim window (100ms of an eventual
+      // ~900ms span), so nothing but flat chao survives trimming.
+      const onsetMs = 100;
+      const flatMs = 800;
+      const onset: ContourPoint[] = Array.from({ length: 6 }, (_, k) => ({
+        tMs: (k / 5) * onsetMs,
+        chao: 1 + (k / 5) * 3.5, // swings well past the old binary threshold
+      }));
+      const flat: ContourPoint[] = Array.from({ length: 10 }, (_, k) => ({
+        tMs: onsetMs + (k / 9) * flatMs,
+        chao: 4.5,
+      }));
+      const result = classifyTone({
+        points: [...onset, ...flat],
+        startedAtMs: 0,
+        endedAtMs: onsetMs + flatMs,
+      });
+      expect(result?.tone).toBe(1);
+    });
+
+    it("scores flatness continuously rather than as a binary gate", () => {
+      // A gentle, genuinely non-flat wobble should score high but not the
+      // maximum confidence a perfectly flat line gets.
+      const wobble = flatContour(4.5);
+      wobble.points = wobble.points.map((p, i) => ({
+        ...p,
+        chao: p.chao + (i % 2 === 0 ? 0.15 : -0.15),
+      }));
+      const flat = classifyTone(flatContour(4.5));
+      const gentle = classifyTone(wobble);
+      expect(flat?.tone).toBe(1);
+      expect(gentle?.tone).toBe(1);
+      expect(gentle!.confidence).toBeLessThan(flat!.confidence);
+    });
+  });
+
+  describe("margin / ambiguity", () => {
+    it("reports none when the winner doesn't clear the runner-up by the margin threshold", () => {
+      try {
+        const attempt = contourFromTone(2, 800);
+        // A clear win at the shipped default margin.
+        expect(classifyTone(attempt)?.tone).toBe(2);
+
+        // Cranking the margin requirement far past what any real winner
+        // could clear turns the same clean attempt into "none" — proving
+        // the winner-minus-runner-up subtraction is actually wired in, not
+        // just the raw confidence floor.
+        setTuning({ toneClassifierMarginThreshold: 0.95 });
+        expect(classifyTone(attempt)?.tone).toBe("none");
+      } finally {
+        resetTuning();
+      }
+    });
   });
 });
