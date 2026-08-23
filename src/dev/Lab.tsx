@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { loadInventory } from "../audio/inventory.ts";
 import { ensureMic, setFrameSink, stopMic } from "../audio/session.ts";
 import { setActiveTracker } from "../game/activeTracker.ts";
+import type { Contour } from "../game/contours.ts";
 import { REST_CHAO } from "../game/dynamics.ts";
 import {
   applyCorridorWidth,
@@ -26,6 +27,7 @@ import {
   saveCorridorWidth,
   type CalibrationSettings,
 } from "../game/settings.ts";
+import { classifyTone } from "../game/toneClassifier.ts";
 import { tuning } from "../game/tuning.ts";
 import type { Word } from "../game/words.ts";
 import { DEFAULT_CONFIG } from "../pitch/PitchTracker.ts";
@@ -121,6 +123,29 @@ export function Lab({ onBack }: Props) {
   const [flyingGate, setFlyingGate] = useState(false);
   const [gateResult, setGateResult] = useState<RunSnapshot | null>(null);
   const [gateError, setGateError] = useState<string | null>(null);
+  /**
+   * The standalone tone recognizer's read of the just-flown test gate —
+   * deliberately independent of `selectedWord`'s own tone, the same way the
+   * Visualiser's `showRecognizedTone` readout is: it answers "what did this
+   * shape resemble", not "did you hit the target". Built from
+   * `gateResult.lastOutcome.path` (`src/game/run.ts`) — the voiced samples
+   * actually flown through the gate — reshaped into the `Contour` format
+   * `classifyTone` (`src/game/toneClassifier.ts`) expects. This is the
+   * fastest loop for tuning the classifier's own knobs (the "tone
+   * classifier" group below): fly a gate, see both the real outcome and
+   * what the recognizer independently thought it heard, side by side.
+   */
+  const recognized = useMemo(() => {
+    const path = gateResult?.lastOutcome?.path;
+    if (!path || path.length < 2) return null;
+    const startMs = path[0].t;
+    const contour: Contour = {
+      points: path.map((p) => ({ tMs: p.t - startMs, chao: p.chao })),
+      startedAtMs: startMs,
+      endedAtMs: path[path.length - 1].t,
+    };
+    return classifyTone(contour);
+  }, [gateResult]);
   /**
    * The player-facing width setting — same localStorage the pause menu
    * writes to, so a choice made here is also what "test" (which reads it
@@ -248,6 +273,16 @@ export function Lab({ onBack }: Props) {
                   <p className="param-help">
                     {gateResult.gateLog[0].outcome} · accuracy{" "}
                     {Math.round(gateResult.gateLog[0].accuracy * 100)}%
+                  </p>
+                )}
+                {/* The standalone recognizer's independent read — never
+                    told which tone was the target, so a mismatch against
+                    the line above is itself informative while tuning. */}
+                {recognized && (
+                  <p className="param-help">
+                    recognized:{" "}
+                    {recognized.tone === "none" ? "none" : `T${recognized.tone}`}{" "}
+                    ({Math.round(recognized.confidence * 100)}%)
                   </p>
                 )}
               </div>
