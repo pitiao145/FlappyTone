@@ -18,6 +18,7 @@
     "analyze-recording": "node --experimental-strip-types src/dev/analyze-recording.ts",
     "make-ref-clips": "node --experimental-strip-types src/dev/make-ref-clips.ts",
     "make-clips": "node --experimental-strip-types src/dev/make-clips.ts",
+    "make-tone-averages": "node --experimental-strip-types src/dev/make-tone-averages.ts",
     "import-words": "node --experimental-strip-types src/dev/import-words.ts",
     "pull-recordings": "node --experimental-strip-types src/dev/pull-recordings.ts",
     "make-icons": "node --experimental-strip-types src/dev/make-icons.ts"

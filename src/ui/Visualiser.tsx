@@ -7,6 +7,7 @@ import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { ContourRecorder } from "../game/contours.ts";
 import { shapeForWord, TONE_INFO, type Tone } from "../game/gates.ts";
 import type { CalibrationSettings } from "../game/settings.ts";
+import { classifyTone, type ToneClassification } from "../game/toneClassifier.ts";
 import { tuning } from "../game/tuning.ts";
 import { visualAccuracy } from "../game/visualAccuracy.ts";
 import type { Word } from "../game/words.ts";
@@ -36,6 +37,14 @@ interface Props {
   canvasWidth: number;
   canvasHeight: number;
   onBack: () => void;
+  /**
+   * Shows the standalone tone-recognizer readout ("recognized: T2 (87%)"),
+   * independent of whatever tone/word is selected as the "target" — see
+   * `src/game/toneClassifier.ts`. Defaults to false so the title screen's
+   * production Visualiser is untouched; the Lab's visualiser tab is the
+   * only caller that passes true, deliberately, while this stays Lab-only.
+   */
+  showRecognizedTone?: boolean;
 }
 
 /**
@@ -52,6 +61,7 @@ export function Visualiser({
   canvasWidth,
   canvasHeight,
   onBack,
+  showRecognizedTone = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [tone, setTone] = useState<Tone | null>(1);
@@ -82,6 +92,15 @@ export function Visualiser({
   const wordStatsRef = useRef<WordStats>({ attempts: 0, sumAccuracy: 0 });
   /** `startedAtMs` of the last finished attempt already folded into `wordStatsRef`. */
   const lastScoredAtRef = useRef<number | null>(null);
+  /**
+   * The standalone recognizer's read of the last finished attempt —
+   * deliberately independent of `word`/`tone`: it runs off the same
+   * `finished()` array the accuracy scoring does, but never looks at what
+   * the "target" was. See `classifyTone` in `src/game/toneClassifier.ts`.
+   */
+  const [recognized, setRecognized] = useState<ToneClassification | null>(null);
+  /** `startedAtMs` of the last finished attempt already classified. */
+  const lastRecognizedAtRef = useRef<number | null>(null);
 
   /**
    * Clears both the trail and the running accuracy. Used whenever the word
@@ -95,6 +114,8 @@ export function Visualiser({
     wordStatsRef.current = { attempts: 0, sumAccuracy: 0 };
     lastScoredAtRef.current = null;
     setAccuracyDisplay(null);
+    lastRecognizedAtRef.current = null;
+    setRecognized(null);
   };
 
   useEffect(() => {
@@ -184,6 +205,15 @@ export function Visualiser({
           // completed utterance, when `finished()` grows a new entry.
           setAccuracyDisplay({ value: next.sumAccuracy / next.attempts, attempts: next.attempts });
         }
+      }
+
+      // Standalone recognition — runs off the same `finished()` array as the
+      // accuracy scoring above, but deliberately never reads `word`/`tone`:
+      // it answers "what did this shape resemble", not "how well did it hit
+      // a target". See `classifyTone`.
+      if (latest && latest.startedAtMs !== lastRecognizedAtRef.current) {
+        lastRecognizedAtRef.current = latest.startedAtMs;
+        setRecognized(classifyTone(latest));
       }
 
       drawVisualiser(ctx, canvasWidth, canvasHeight, {
@@ -288,6 +318,31 @@ export function Visualiser({
     </div>
   );
 
+  /**
+   * The standalone recognizer's readout — Lab-only (`showRecognizedTone`).
+   * Deliberately says nothing about whichever tone/word is selected as the
+   * "target": it reports what the shape resembled, full stop.
+   */
+  const recognizedReadout = showRecognizedTone && (
+    <div className="vis-accuracy">
+      <span className="vis-accuracy-label">recognized</span>
+      {recognized ? (
+        <>
+          <strong
+            className={`vis-accuracy-value tier-${recognized.tone === "none" ? "bad" : accuracyTier(recognized.confidence)}`}
+          >
+            {recognized.tone === "none" ? "none" : `T${recognized.tone}`}
+          </strong>
+          <span className="vis-accuracy-tries">
+            {Math.round(recognized.confidence * 100)}%
+          </span>
+        </>
+      ) : (
+        <span className="vis-accuracy-value vis-accuracy-empty">–</span>
+      )}
+    </div>
+  );
+
   const wordChip = (w: Word) => (
     <button
       key={w.id}
@@ -339,6 +394,7 @@ export function Visualiser({
             narrower now (75/25 split, App.css), not just narrower-plotted. */}
         <div className="vis-side-panel">
           {accuracyReadout}
+          {recognizedReadout}
 
           <div className="vis-filter-group">
             <span className="vis-filter-caption">filter</span>
@@ -376,6 +432,7 @@ export function Visualiser({
         {/* --------------------------------------------------- desktop */}
         <div className={tone === null ? "visualiser-panel is-free" : "visualiser-panel"}>
           {accuracyReadout}
+          {recognizedReadout}
 
           <div className="tone-rail">
             <span className="vis-tone-label" aria-hidden="true">

@@ -48,6 +48,7 @@ describe("gateEvent", () => {
     seeded: 0,
     worstExcursionMs: 412.7,
     atMs: 18430.5,
+    classifiedTone: null,
   };
 
   it("flattens a log entry, rounding the floats", () => {

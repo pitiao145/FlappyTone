@@ -168,6 +168,78 @@ export interface Tuning {
   /** Voiced runs separated by less than this are one utterance. */
   mergeGapMs: number;
 
+  // ---- tone classifier
+  /**
+   * Below this score, `classifyTone` reports "none" rather than picking a
+   * winner — the shape didn't resemble any of the four tones closely enough
+   * to call. See `src/game/toneClassifier.ts`. Standalone from gate judging:
+   * nothing here feeds `scoreGate`.
+   */
+  toneClassifierMinConfidence: number;
+  /**
+   * Fraction of the contour's own span (by time) dropped from the front
+   * before any processing — small on purpose, just enough to clear a click
+   * or brief silence right at the very start. A bigger shared cut risked
+   * shaving into genuine early signal (T3's dip starts early); tones that
+   * need more onset protection get their own dedicated window instead (see
+   * `toneClassifierT1TailFraction`).
+   */
+  toneClassifierOnsetTrimFraction: number;
+  /**
+   * The chao-excursion at which a shape counts as "definitely not flat", for
+   * tone 1's continuous confidence score (1 at zero excursion, 0 at or past
+   * this value), judged only over the last `toneClassifierT1TailFraction` of
+   * the sample. T1 has no correlation to compute — its target is level — so
+   * this is what lets it compete against T2–T4's correlation scores on equal
+   * footing instead of a binary flat/not-flat gate.
+   */
+  toneClassifierFlatnessScaleChao: number;
+  /**
+   * How much of the sample's *end* tone 1's flatness score is judged over —
+   * the voice may still be settling early on even after the onset trim, so
+   * only the tail (where it's had time to settle) is checked. 0.45 = the
+   * last 45%.
+   */
+  toneClassifierT1TailFraction: number;
+  /**
+   * The winning score must beat the runner-up by at least this much, or the
+   * attempt is "none" (ambiguous) rather than a confident pick — a near-tie
+   * between two tones is not a confident read of the winner, even if the
+   * winner alone clears `toneClassifierMinConfidence`.
+   */
+  toneClassifierMarginThreshold: number;
+  /**
+   * How deep (below the sample's own mean) an interior low point must dip
+   * before `classifyTone` nudges tone 3's score up — a direct,
+   * correlation-independent signal for T2-vs-T3, since both are "dip then
+   * rise" and differ mainly in where/how deep the dip sits. Set well above
+   * both tones' own measured average dip depth (T2 ~0.94 chao, T3 ~0.99 —
+   * see `detectDip`'s doc comment) so this stays a rare nudge, not a
+   * default-on effect, until it's tuned against real attempts in the Lab.
+   */
+  toneClassifierDipThresholdChao: number;
+  /**
+   * How far into the sample (0–1, as a fraction of its own span) an interior
+   * low point must sit before it counts as T3-shaped rather than T2-shaped —
+   * T2's own dip sits at ~31% through, T3's at ~50%, in the shipped
+   * templates. This is the discriminator that actually separates the two;
+   * depth alone (`toneClassifierDipThresholdChao`) barely does, since their
+   * natural dip depths are nearly identical.
+   */
+  toneClassifierDipMinPositionFrac: number;
+  /** Added to tone 3's score when both the depth and position dip gates are cleared. */
+  toneClassifierDipBonus: number;
+  /**
+   * When true, `run.ts` runs `classifyTone` on every scored gate's flown
+   * path and, if it confidently reads a *different* tone than the gate's
+   * target, caps that gate's outcome via `applyClassifierMismatch` — the
+   * shape has to actually resemble the target tone, not just clear the
+   * corridor. Off by default: the classifier is proven standalone
+   * (visualiser tab, single-gate test) but not yet validated as a live
+   * grader. Flip it on in the Lab to fly a real run against it.
+   */
+  toneClassifierGatingEnabled: boolean;
+
   // ---- dot dynamics
   /** Hold the last position for this long after voicing stops. */
   graceMs: number;
@@ -229,6 +301,15 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   preGateBufferMs: 400,
   minUtteranceMs: 160,
   mergeGapMs: 150,
+  toneClassifierMinConfidence: 0.5,
+  toneClassifierOnsetTrimFraction: 0.05,
+  toneClassifierFlatnessScaleChao: 1.25,
+  toneClassifierT1TailFraction: 0.45,
+  toneClassifierMarginThreshold: 0.12,
+  toneClassifierDipThresholdChao: 1.1,
+  toneClassifierDipMinPositionFrac: 0.4,
+  toneClassifierDipBonus: 0.15,
+  toneClassifierGatingEnabled: false,
   graceMs: 120,
   t3GraceMs: 250,
   easeTauMs: 35,

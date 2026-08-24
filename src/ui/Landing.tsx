@@ -28,6 +28,8 @@ interface Props {
   onPlay: () => void;
   /** Straight to the visualiser. Mic already open. */
   onVisualiser: () => void;
+  /** Terms of Use page. */
+  onTerms: () => void;
 }
 
 /**
@@ -42,7 +44,7 @@ interface Props {
  * layout. Keep it that way — the whole point is that a re-brand touches two
  * files, not fifteen JSX strings.
  */
-export function Landing({ onPlay, onVisualiser }: Props) {
+export function Landing({ onPlay, onVisualiser, onTerms }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [words, setWords] = useState<Word[] | null>(null);
@@ -298,7 +300,7 @@ export function Landing({ onPlay, onVisualiser }: Props) {
         </div>
       </section>
 
-      <Footer />
+      <Footer onTerms={onTerms} />
     </div>
   );
 }

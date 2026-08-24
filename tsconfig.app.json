@@ -36,6 +36,7 @@
     "src/pitch/fixtures.test.ts",
     "src/record/takeDetector.test.ts",
     "src/dev/make-clips.ts",
+    "src/dev/make-tone-averages.ts",
     "src/dev/pull-recordings.ts",
     "src/dev/import-words.ts",
     "src/dev/clipCut.test.ts",

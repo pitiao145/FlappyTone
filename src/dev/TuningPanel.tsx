@@ -79,6 +79,28 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
     ],
   },
   {
+    title: "tone classifier",
+    note: "the Lab visualiser's standalone tone recognizer — separate from gate judging, nothing here feeds scoreGate.",
+    knobs: [
+      { key: "toneClassifierMinConfidence", label: "min confidence", min: 0, max: 1, step: 0.05,
+        help: "Below this score, the recognizer reports \"none\" rather than picking a tone." },
+      { key: "toneClassifierOnsetTrimFraction", label: "onset trim", min: 0, max: 0.2, step: 0.01,
+        help: "Fraction of the utterance's own span dropped from the front before anything else — small on purpose, just a click/silence guard, not a tone-shaving cut." },
+      { key: "toneClassifierFlatnessScaleChao", label: "T1 flatness scale", min: 0.3, max: 3, step: 0.05,
+        help: "Chao excursion at which a shape counts as \"definitely not flat\". T1's score is 1 at zero excursion, 0 at or past this." },
+      { key: "toneClassifierT1TailFraction", label: "T1 tail window", min: 0.2, max: 1, step: 0.05,
+        help: "How much of the sample's end T1's flatness is judged over — the voice may still be settling early on, so only the tail is checked." },
+      { key: "toneClassifierMarginThreshold", label: "margin threshold", min: 0, max: 0.4, step: 0.01,
+        help: "The winner must beat the runner-up by at least this much, or the attempt is \"none\" (ambiguous) rather than a confident pick." },
+      { key: "toneClassifierDipThresholdChao", label: "T3 dip threshold", min: 0.3, max: 2, step: 0.05,
+        help: "How deep an interior low point must dip below the sample's mean before T3's score gets a nudge. T2 and T3 both dip naturally (~0.94/~0.99 chao in the shipped templates), so depth alone barely discriminates — see the position knob below." },
+      { key: "toneClassifierDipMinPositionFrac", label: "T3 dip position", min: 0, max: 1, step: 0.05,
+        help: "How far into the sample (0-1) the low point must sit to count as T3-shaped. T2 dips at ~31% through, T3 at ~50% in the shipped templates — this is what actually separates them." },
+      { key: "toneClassifierDipBonus", label: "T3 dip bonus", min: 0, max: 0.5, step: 0.01,
+        help: "How much score T3 gets when the depth and position dip gates are both cleared." },
+    ],
+  },
+  {
     title: "dot",
     note: "visual only, except grace and drift, which move the scored position.",
     knobs: [
@@ -146,6 +168,27 @@ export function TuningPanel() {
         <section key={group.title}>
           <h4>{group.title}</h4>
           <p className="param-help">{group.note}</p>
+          {group.title === "tone classifier" && (
+            <label className="knob">
+              <span className="param-name">
+                grade real gates by shape
+              </span>
+              <input
+                type="checkbox"
+                checked={t.toneClassifierGatingEnabled}
+                onChange={(e) =>
+                  write({ toneClassifierGatingEnabled: e.target.checked })
+                }
+              />
+              <span className="param-help">
+                When on, a gate the classifier confidently reads as a
+                different tone than the target caps at "ok" — clearing the
+                corridor with the wrong shape can no longer score as
+                perfect/good. Off by default; flip on to fly a real run
+                against it.
+              </span>
+            </label>
+          )}
           {group.knobs.map((k) => {
             const value = t[k.key];
             const moved = value !== DEFAULT_TUNING[k.key];

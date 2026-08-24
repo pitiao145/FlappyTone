@@ -48,6 +48,8 @@
     "src/game/gates.ts",
     "src/dev/make-ref-clips.ts",
     "src/dev/make-clips.ts",
+    "src/dev/make-tone-averages.ts",
+    "src/game/toneAverage.ts",
     "src/dev/pull-recordings.ts",
     "src/record/wordlist.ts",
     "src/record/pinyin.ts",

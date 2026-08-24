@@ -84,7 +84,7 @@ export function formatGateLog(log: StoredGateLog): string {
     `seeded=${seeded}  missedEarly=${missedUtterances}`,
     `savedAt=${log.savedAt}`,
     "",
-    "#   tone  outcome      acc  voiced/total  voiced%  utteranceMs  seeded  worstExcursionMs",
+    "#   tone  outcome      acc  voiced/total  voiced%  utteranceMs  seeded  worstExcursionMs  recognized",
   ].join("\n");
 
   const rows = entries.map((g, i) => {
@@ -99,7 +99,14 @@ export function formatGateLog(log: StoredGateLog): string {
     const acc = (g.outcome === "unheard" ? "—" : g.accuracy.toFixed(2)).padStart(
       5,
     );
-    return `${n}   T${g.tone}    ${g.outcome.padEnd(9)}  ${acc}  ${voiced}  ${frac}  ${utt}  ${String(g.seeded).padStart(6)}  ${exc}`;
+    const recognized = (
+      g.classifiedTone === null
+        ? "—"
+        : g.classifiedTone === "none"
+          ? "none"
+          : `T${g.classifiedTone}`
+    ).padStart(10);
+    return `${n}   T${g.tone}    ${g.outcome.padEnd(9)}  ${acc}  ${voiced}  ${frac}  ${utt}  ${String(g.seeded).padStart(6)}  ${exc}  ${recognized}`;
   });
 
   return [header, ...rows].join("\n");

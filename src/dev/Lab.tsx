@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { loadInventory } from "../audio/inventory.ts";
 import { ensureMic, setFrameSink, stopMic } from "../audio/session.ts";
 import { setActiveTracker } from "../game/activeTracker.ts";
+import type { Contour } from "../game/contours.ts";
 import { REST_CHAO } from "../game/dynamics.ts";
 import {
   applyCorridorWidth,
@@ -26,6 +27,7 @@ import {
   saveCorridorWidth,
   type CalibrationSettings,
 } from "../game/settings.ts";
+import { classifyTone } from "../game/toneClassifier.ts";
 import { tuning } from "../game/tuning.ts";
 import type { Word } from "../game/words.ts";
 import { DEFAULT_CONFIG } from "../pitch/PitchTracker.ts";
@@ -33,6 +35,7 @@ import { BACKDROP, chaoToY, drawChaoGrid, drawDot } from "../render/scene.ts";
 import { drawGate } from "../render/world.ts";
 import { Choice } from "../ui/Choice.tsx";
 import { Game } from "../ui/Game.tsx";
+import { Visualiser } from "../ui/Visualiser.tsx";
 import { Capture } from "./Capture.tsx";
 import { DevPanel } from "./DevPanel.tsx";
 import { GateLogPanel } from "./GateLogPanel.tsx";
@@ -40,7 +43,14 @@ import { ToneAverages } from "./ToneAverages.tsx";
 import { TuningPanel } from "./TuningPanel.tsx";
 import { WordGates } from "./WordGates.tsx";
 
-type Tab = "play" | "words" | "averages" | "pitch" | "gates" | "capture";
+type Tab =
+  | "play"
+  | "words"
+  | "averages"
+  | "pitch"
+  | "gates"
+  | "capture"
+  | "visualiser";
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "play", label: "play" },
@@ -49,6 +59,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "pitch", label: "pitch" },
   { id: "gates", label: "gates" },
   { id: "capture", label: "capture" },
+  { id: "visualiser", label: "visualiser" },
 ];
 
 /**
@@ -112,6 +123,29 @@ export function Lab({ onBack }: Props) {
   const [flyingGate, setFlyingGate] = useState(false);
   const [gateResult, setGateResult] = useState<RunSnapshot | null>(null);
   const [gateError, setGateError] = useState<string | null>(null);
+  /**
+   * The standalone tone recognizer's read of the just-flown test gate —
+   * deliberately independent of `selectedWord`'s own tone, the same way the
+   * Visualiser's `showRecognizedTone` readout is: it answers "what did this
+   * shape resemble", not "did you hit the target". Built from
+   * `gateResult.lastOutcome.path` (`src/game/run.ts`) — the voiced samples
+   * actually flown through the gate — reshaped into the `Contour` format
+   * `classifyTone` (`src/game/toneClassifier.ts`) expects. This is the
+   * fastest loop for tuning the classifier's own knobs (the "tone
+   * classifier" group below): fly a gate, see both the real outcome and
+   * what the recognizer independently thought it heard, side by side.
+   */
+  const recognized = useMemo(() => {
+    const path = gateResult?.lastOutcome?.path;
+    if (!path || path.length < 2) return null;
+    const startMs = path[0].t;
+    const contour: Contour = {
+      points: path.map((p) => ({ tMs: p.t - startMs, chao: p.chao })),
+      startedAtMs: startMs,
+      endedAtMs: path[path.length - 1].t,
+    };
+    return classifyTone(contour);
+  }, [gateResult]);
   /**
    * The player-facing width setting — same localStorage the pause menu
    * writes to, so a choice made here is also what "test" (which reads it
@@ -241,6 +275,16 @@ export function Lab({ onBack }: Props) {
                     {Math.round(gateResult.gateLog[0].accuracy * 100)}%
                   </p>
                 )}
+                {/* The standalone recognizer's independent read — never
+                    told which tone was the target, so a mismatch against
+                    the line above is itself informative while tuning. */}
+                {recognized && (
+                  <p className="param-help">
+                    recognized:{" "}
+                    {recognized.tone === "none" ? "none" : `T${recognized.tone}`}{" "}
+                    ({Math.round(recognized.confidence * 100)}%)
+                  </p>
+                )}
               </div>
             )}
 
@@ -326,6 +370,24 @@ worst excursion ${Math.round(Math.max(0, ...last.gateLog.map((g) => g.worstExcur
       )}
 
       {tab === "capture" && <Capture onBack={() => setTab("play")} />}
+
+      {/* Same component the title screen's "visualiser" opens — a second,
+          disposable instance living in the Lab so a tone-recognition
+          algorithm can be tested against live attempts without a full run
+          around it. See docs/PRD.md §8 (screen 2c) for what this screen is
+          for; this tab adds no behavior of its own, only a place to reach it
+          from while tuning. */}
+      {tab === "visualiser" && (
+        <div className="lab-controls">
+          <Visualiser
+            settings={settings}
+            canvasWidth={360}
+            canvasHeight={640}
+            onBack={() => setTab("play")}
+            showRecognizedTone
+          />
+        </div>
+      )}
 
     </div>
   );

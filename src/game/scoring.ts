@@ -34,6 +34,15 @@ const PERFECT_ACCURACY = 0.85;
 const GOOD_ACCURACY = 0.6;
 
 /**
+ * Ceiling applied to accuracy when the standalone tone classifier
+ * (`src/game/toneClassifier.ts`) confidently read a different tone than the
+ * one the gate was scoring — just under `GOOD_ACCURACY`, so the outcome it
+ * produces can never grade above "ok" no matter how well the pitch trace
+ * itself tracked the corridor.
+ */
+const CLASSIFIER_MISMATCH_ACCURACY_CAP = GOOD_ACCURACY - 0.01;
+
+/**
  * Length of the longest voiced run in `samples`, merging unvoiced gaps shorter
  * than MERGE_GAP_MS. Mirrors the segmentation in src/dev/report.ts.
  *
@@ -122,6 +131,27 @@ export function scoreGate(
         : "ok";
 
   return { outcome, accuracy };
+}
+
+/**
+ * Caps a scored gate's outcome/accuracy when the shape the player actually
+ * produced was confidently recognized as a *different* tone than the one the
+ * gate targeted (`src/game/toneClassifier.ts` via `tuning().toneClassifierGatingEnabled`
+ * in `run.ts`). A collision or an unheard gate is untouched — this only
+ * softens an outcome that would otherwise be "ok" or better, so hitting the
+ * corridor with the wrong tone can no longer score as if it were correct.
+ */
+export function applyClassifierMismatch(
+  outcome: GateOutcome,
+  accuracy: number,
+): { outcome: GateOutcome; accuracy: number } {
+  if (outcome === "collision" || outcome === "unheard") {
+    return { outcome, accuracy };
+  }
+  return {
+    outcome: "ok",
+    accuracy: Math.min(accuracy, CLASSIFIER_MISMATCH_ACCURACY_CAP),
+  };
 }
 
 const BASE_POINTS: Record<GateOutcome, number> = {
