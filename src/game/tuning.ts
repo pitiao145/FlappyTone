@@ -229,6 +229,16 @@ export interface Tuning {
   toneClassifierDipMinPositionFrac: number;
   /** Added to tone 3's score when both the depth and position dip gates are cleared. */
   toneClassifierDipBonus: number;
+  /**
+   * When true, `run.ts` runs `classifyTone` on every scored gate's flown
+   * path and, if it confidently reads a *different* tone than the gate's
+   * target, caps that gate's outcome via `applyClassifierMismatch` — the
+   * shape has to actually resemble the target tone, not just clear the
+   * corridor. Off by default: the classifier is proven standalone
+   * (visualiser tab, single-gate test) but not yet validated as a live
+   * grader. Flip it on in the Lab to fly a real run against it.
+   */
+  toneClassifierGatingEnabled: boolean;
 
   // ---- dot dynamics
   /** Hold the last position for this long after voicing stops. */
@@ -299,6 +309,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   toneClassifierDipThresholdChao: 1.1,
   toneClassifierDipMinPositionFrac: 0.4,
   toneClassifierDipBonus: 0.15,
+  toneClassifierGatingEnabled: false,
   graceMs: 120,
   t3GraceMs: 250,
   easeTauMs: 35,

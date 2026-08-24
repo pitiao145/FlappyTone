@@ -25,6 +25,7 @@ import {
 } from "./gates.ts";
 import { pickWord, type Word } from "./words.ts";
 import {
+  applyClassifierMismatch,
   applyGate,
   heardUtterance,
   longestUtteranceMs,
@@ -41,6 +42,8 @@ import { REST_CHAO } from "./dynamics.ts";
 import { DEFAULT_TUNING, tuning } from "./tuning.ts";
 import type { PitchState } from "../pitch/types.ts";
 import { computeRangeHalves, type RangeHalves } from "../pitch/calibration.ts";
+import type { Contour } from "./contours.ts";
+import { classifyTone, type ClassifiedTone } from "./toneClassifier.ts";
 
 export type RunMode = "game" | "tutorial" | "single";
 
@@ -374,6 +377,13 @@ export interface GateLogEntry {
   /** Longest unbroken time outside the corridor. >= COLLISION_SUSTAIN_MS means a wall. */
   worstExcursionMs: number;
   atMs: number;
+  /**
+   * The standalone classifier's independent read of the flown path, or
+   * `null` when `toneClassifierGatingEnabled` is off or there wasn't enough
+   * signal to classify. Recorded even though it only *affects* scoring when
+   * gating is on, so a logged run shows what the recognizer thought either way.
+   */
+  classifiedTone: ClassifiedTone | null;
 }
 
 
@@ -908,6 +918,24 @@ export class Run {
     return gate.xStart + gate.widthPx;
   }
 
+  /**
+   * The flown path re-shaped into what `classifyTone` expects: voiced points
+   * only, time-zeroed to the first one. Mirrors the Lab's own
+   * `gateResult.lastOutcome.path` → `Contour` conversion (see commit 7bab7ab)
+   * so a live-game classification and a single-gate Lab test read the same
+   * shape the same way. Null when there's nothing to classify.
+   */
+  private contourFromPath(path: TrailPoint[]): Contour | null {
+    const voiced = path.filter((p) => p.voiced);
+    if (voiced.length < 2) return null;
+    const startMs = voiced[0].t;
+    return {
+      points: voiced.map((p) => ({ tMs: p.t - startMs, chao: p.chao })),
+      startedAtMs: startMs,
+      endedAtMs: voiced[voiced.length - 1].t,
+    };
+  }
+
   private finishGate(state: ActiveGateState): void {
     // "When the app isn't sure, it says so rather than scoring you wrong"
     // (PRD §6). A mostly-unvoiced gate reports "couldn't hear that" even if a
@@ -916,7 +944,33 @@ export class Run {
     const heard = heardUtterance(state.samples);
     const collided = heard ? state.collided : false;
 
-    const { outcome, accuracy } = scoreGate(state.samples, collided);
+    let { outcome, accuracy } = scoreGate(state.samples, collided);
+
+    // Only the stretch flown inside the gate — see `lastOutcome.path` below
+    // for why the whole trail isn't used.
+    const flownPath = this.trail.filter((s) => s.t >= state.enteredAtMs);
+
+    let classifiedTone: ClassifiedTone | null = null;
+    if (heard) {
+      const contour = this.contourFromPath(flownPath);
+      const classification = contour ? classifyTone(contour) : null;
+      classifiedTone = classification?.tone ?? null;
+
+      // The recognizer never sees the target — it's asking "what tone does
+      // this shape most resemble", independent of the gate. A confident read
+      // of a *different* tone than the one being scored means the corridor
+      // was hit with the wrong shape, and that has to cost something even
+      // when the pitch trace itself tracked the corridor closely.
+      if (
+        tuning().toneClassifierGatingEnabled &&
+        classifiedTone !== null &&
+        classifiedTone !== "none" &&
+        classifiedTone !== state.gate.tone
+      ) {
+        ({ outcome, accuracy } = applyClassifierMismatch(outcome, accuracy));
+      }
+    }
+
     this.gatesFinished += 1;
     this.lastGateEndedAtMs = this.nowMs;
     this.preGate = [];
@@ -934,6 +988,7 @@ export class Run {
       seeded: state.seeded,
       worstExcursionMs: state.worstExcursionMs,
       atMs: this.nowMs,
+      classifiedTone,
     });
 
     if (CLEARED_OUTCOMES.has(outcome)) {
@@ -955,7 +1010,7 @@ export class Run {
       // Only the stretch flown inside the gate — the trail also holds the
       // approach and whatever the player did between gates, and igniting that
       // would celebrate pitch aimed at no corridor.
-      path: this.trail.filter((s) => s.t >= state.enteredAtMs),
+      path: flownPath,
       hint: outcome === "unheard" ? unheardHint(state.samples) : null,
     };
     // PRD §6 ramps every 5 gates *cleared*. Counting collisions and unheard
