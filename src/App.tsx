@@ -27,6 +27,7 @@ import { Nav } from "./ui/Nav";
 import { GameOver } from "./ui/GameOver";
 import { HowTo } from "./ui/HowTo";
 import { Settings } from "./ui/Settings";
+import { Terms } from "./ui/Terms";
 import { Visualiser } from "./ui/Visualiser";
 import { micErrorCopy } from "./ui/micErrors";
 import { Title, type StartIntent } from "./ui/Title";
@@ -43,6 +44,7 @@ type Screen =
   | "gameover"
   | "settings"
   | "visualiser"
+  | "terms"
   | "lab";
 
 /**
@@ -285,8 +287,11 @@ export default function App() {
           <Landing
             onPlay={() => setScreen("title")}
             onVisualiser={() => startFromTitle("visualiser")}
+            onTerms={() => setScreen("terms")}
           />
         )}
+
+        {screen === "terms" && <Terms onBack={() => goLanding("top")} />}
 
         {screen === "title" && (
           <Title
