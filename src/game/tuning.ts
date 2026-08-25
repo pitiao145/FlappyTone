@@ -250,20 +250,9 @@ export interface Tuning {
    */
   toneClassifierPlateauBonus: number;
   /**
-   * When true, `run.ts` runs `classifyTone` on every scored gate's flown
-   * path and, if it confidently reads a *different* tone than the gate's
-   * target, caps that gate's outcome via `applyClassifierMismatch` — the
-   * shape has to actually resemble the target tone, not just clear the
-   * corridor. Off by default: the classifier is proven standalone
-   * (visualiser tab, single-gate test) but not yet validated as a live
-   * grader. Flip it on in the Lab to fly a real run against it.
-   */
-  toneClassifierGatingEnabled: boolean;
-  /**
    * When true, a confident classifier read that is *drastically* wrong —
    * T1/T4 confused with any other tone, or a confident T2↔T3 mixup — forces
-   * the gate to a wall-style collision (heart lost, gate scores 0) instead
-   * of only softening the outcome via `toneClassifierGatingEnabled`. See
+   * the gate to a wall-style collision (heart lost, gate scores 0). See
    * `isDrasticToneMismatch` in `src/game/scoring.ts`.
    *
    * On by default (25 Aug 2026), enabled directly off a played-back Lab
@@ -282,8 +271,11 @@ export interface Tuning {
    *   T2) — see the "isolated from the classifier's mismatch-collision
    *   feature" tests in `run.test.ts` for the specific shapes.
    *
-   * `toneClassifierGatingEnabled` (the softer, "cap at ok" sibling) stays
-   * off — it was never separately validated the way this was.
+   * A softer sibling — capping (not colliding) any mismatch, drastic or not
+   * — existed earlier and was removed (26 Aug 2026): it fired on far more
+   * borderline cases than this drastic-only check, was never separately
+   * validated in play, and this feature already covers the misses that
+   * actually matter.
    */
   toneMismatchCollisionEnabled: boolean;
   /**
@@ -383,7 +375,6 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   toneClassifierPlateauBandFrac: 0.1,
   toneClassifierPlateauMinFrac: 0.45,
   toneClassifierPlateauBonus: 0.22,
-  toneClassifierGatingEnabled: false,
   toneMismatchCollisionEnabled: true,
   toneClassifierBoostEnabled: true,
   toneClassifierBoostMinConfidence: 0.9,

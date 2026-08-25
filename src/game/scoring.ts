@@ -35,15 +35,6 @@ const PERFECT_ACCURACY = 0.85;
 const GOOD_ACCURACY = 0.6;
 
 /**
- * Ceiling applied to accuracy when the standalone tone classifier
- * (`src/game/toneClassifier.ts`) confidently read a different tone than the
- * one the gate was scoring — just under `GOOD_ACCURACY`, so the outcome it
- * produces can never grade above "ok" no matter how well the pitch trace
- * itself tracked the corridor.
- */
-const CLASSIFIER_MISMATCH_ACCURACY_CAP = GOOD_ACCURACY - 0.01;
-
-/**
  * Length of the longest voiced run in `samples`, merging unvoiced gaps shorter
  * than MERGE_GAP_MS. Mirrors the segmentation in src/dev/report.ts.
  *
@@ -135,30 +126,9 @@ export function scoreGate(
 }
 
 /**
- * Caps a scored gate's outcome/accuracy when the shape the player actually
- * produced was confidently recognized as a *different* tone than the one the
- * gate targeted (`src/game/toneClassifier.ts` via `tuning().toneClassifierGatingEnabled`
- * in `run.ts`). A collision or an unheard gate is untouched — this only
- * softens an outcome that would otherwise be "ok" or better, so hitting the
- * corridor with the wrong tone can no longer score as if it were correct.
- */
-export function applyClassifierMismatch(
-  outcome: GateOutcome,
-  accuracy: number,
-): { outcome: GateOutcome; accuracy: number } {
-  if (outcome === "collision" || outcome === "unheard") {
-    return { outcome, accuracy };
-  }
-  return {
-    outcome: "ok",
-    accuracy: Math.min(accuracy, CLASSIFIER_MISMATCH_ACCURACY_CAP),
-  };
-}
-
-/**
- * Mirrors `applyClassifierMismatch` in the other direction: when the
- * classifier confidently recognizes the *correct* tone, it can raise a
- * gate's accuracy/outcome, not just lower it. Corridor tracking punishes
+ * The mirror of `isDrasticToneMismatch`'s cost: when the classifier
+ * confidently recognizes the *correct* tone, it can raise a gate's
+ * accuracy/outcome, not just lower it. Corridor tracking punishes
  * timing/precision the classifier doesn't care about, so a shape that is
  * unmistakably the right tone can still score well even when the pitch
  * trace wandered outside a tight corridor tolerance along the way.
@@ -196,16 +166,14 @@ export function applyClassifierBoost(
 /**
  * Whether the classifier's confident read of the player's shape is
  * *drastically* different from the gate's target — different enough that
- * this should cost a heart the same way hitting a wall does, not just soften
- * the outcome (`applyClassifierMismatch`).
+ * this should cost a heart the same way hitting a wall does.
  *
  * With only four tones, "confidently a different tone than the target" and
  * "T1/T4 confused with anything, or a confident T2↔T3 mixup" are the same
  * set of pairs — every cross-tone confusion is either a {1,4}/{2,3}
  * within-group swap or crosses between the flat/falling tones and the
  * contour tones, and both are drastic by the request's own framing. So the
- * only real gate is confidence: the classifier must clear the same bar
- * `applyClassifierMismatch` already reads
+ * only real gate is confidence: the classifier must clear its own bar
  * (`toneClassifierMinConfidence`/`toneClassifierMarginThreshold`, enforced
  * inside `classifyTone` itself before it ever returns a non-`"none"` tone).
  *

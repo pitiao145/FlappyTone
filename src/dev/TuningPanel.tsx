@@ -181,27 +181,6 @@ export function TuningPanel() {
           {group.title === "tone classifier" && (
             <label className="knob">
               <span className="param-name">
-                grade real gates by shape
-              </span>
-              <input
-                type="checkbox"
-                checked={t.toneClassifierGatingEnabled}
-                onChange={(e) =>
-                  write({ toneClassifierGatingEnabled: e.target.checked })
-                }
-              />
-              <span className="param-help">
-                When on, a gate the classifier confidently reads as a
-                different tone than the target caps at "ok" — clearing the
-                corridor with the wrong shape can no longer score as
-                perfect/good. Off by default; flip on to fly a real run
-                against it.
-              </span>
-            </label>
-          )}
-          {group.title === "tone classifier" && (
-            <label className="knob">
-              <span className="param-name">
                 drastic mismatch is a collision
               </span>
               <input

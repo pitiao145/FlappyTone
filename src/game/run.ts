@@ -26,7 +26,6 @@ import {
 import { pickWord, type Word } from "./words.ts";
 import {
   applyClassifierBoost,
-  applyClassifierMismatch,
   applyGate,
   heardUtterance,
   isDrasticToneMismatch,
@@ -406,9 +405,9 @@ export interface GateLogEntry {
   atMs: number;
   /**
    * The standalone classifier's independent read of the flown path, or
-   * `null` when `toneClassifierGatingEnabled` is off or there wasn't enough
-   * signal to classify. Recorded even though it only *affects* scoring when
-   * gating is on, so a logged run shows what the recognizer thought either way.
+   * `null` when there wasn't enough signal to classify. Recorded
+   * unconditionally so a logged run shows what the recognizer thought even
+   * on a gate where it didn't end up affecting scoring.
    */
   classifiedTone: ClassifiedTone | null;
 }
@@ -1018,30 +1017,18 @@ export class Run {
       collided || forcedCollision,
     );
 
-    if (heard && !forcedCollision) {
-      // The recognizer never sees the target — it's asking "what tone does
-      // this shape most resemble", independent of the gate. A confident read
-      // of a *different* tone than the one being scored means the corridor
-      // was hit with the wrong shape, and that has to cost something even
-      // when the pitch trace itself tracked the corridor closely.
-      if (
-        tuning().toneClassifierGatingEnabled &&
-        classifiedTone !== null &&
-        classifiedTone !== "none" &&
-        classifiedTone !== state.gate.tone
-      ) {
-        ({ outcome, accuracy } = applyClassifierMismatch(outcome, accuracy));
-      } else if (
-        // The mirror case: a confident read of the *correct* tone can raise
-        // accuracy/outcome, not just lower it — corridor tracking punishes
-        // timing/precision the classifier doesn't care about, so an
-        // unmistakable shape can still score well despite a wandering trace.
-        tuning().toneClassifierBoostEnabled &&
-        classifiedTone === state.gate.tone &&
-        classifiedConfidence !== null
-      ) {
-        ({ outcome, accuracy } = applyClassifierBoost(outcome, accuracy, classifiedConfidence));
-      }
+    if (
+      heard &&
+      !forcedCollision &&
+      // A confident read of the *correct* tone can raise accuracy/outcome,
+      // not just lower it — corridor tracking punishes timing/precision the
+      // classifier doesn't care about, so an unmistakable shape can still
+      // score well despite a wandering trace.
+      tuning().toneClassifierBoostEnabled &&
+      classifiedTone === state.gate.tone &&
+      classifiedConfidence !== null
+    ) {
+      ({ outcome, accuracy } = applyClassifierBoost(outcome, accuracy, classifiedConfidence));
     }
 
     this.gatesFinished += 1;
