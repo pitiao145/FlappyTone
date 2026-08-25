@@ -241,6 +241,17 @@ export interface LastOutcome {
    * sounded more like a T3").
    */
   mismatchedConfidence: number | null;
+  /**
+   * The standalone classifier's read of the flown path, whether or not it
+   * matched the gate's target — unlike `mismatchedAs`, set on every heard
+   * gate the classifier could read at all. Lets the HUD praise a confident
+   * *correct* read ("nice T1!") the same way `mismatchedAs` lets it name a
+   * confident wrong one. Null when nothing could be classified (too little
+   * signal) or the gate went unheard/collided outright.
+   */
+  classifiedTone: ClassifiedTone | null;
+  /** The classifier's confidence in `classifiedTone`, 0–1. Null exactly when `classifiedTone` is. */
+  classifiedConfidence: number | null;
 }
 
 export interface RunSnapshot {
@@ -1082,6 +1093,8 @@ export class Run {
       hint: outcome === "unheard" ? unheardHint(state.samples) : null,
       mismatchedAs,
       mismatchedConfidence,
+      classifiedTone: outcome === "collision" ? null : classifiedTone,
+      classifiedConfidence: outcome === "collision" ? null : classifiedConfidence,
     };
     // PRD §6 ramps every 5 gates *cleared*. Counting collisions and unheard
     // gates here would speed the game up for exactly the player who is

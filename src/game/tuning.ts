@@ -266,15 +266,24 @@ export interface Tuning {
    * of only softening the outcome via `toneClassifierGatingEnabled`. See
    * `isDrasticToneMismatch` in `src/game/scoring.ts`.
    *
-   * Off by default, despite the feature's intent being to cost a heart like
-   * a wall does — flying it against `run.test.ts`'s "timing slack" fixture
-   * (a contour with the *exact* corridor shape, just shifted 80ms early or
-   * late) produced a false collision: `trimOnset`/`resample` normalize
-   * against the contour's *own* span, so a shifted-but-correct attempt can
-   * still read as a confident wrong-tone match. `toneClassifierGatingEnabled`
-   * had the same "proven standalone, not yet validated as a live grader"
-   * caveat; this one costs a heart on a false positive, which is worse, so
-   * it needs at least as much Lab validation before flipping on.
+   * On by default (25 Aug 2026), enabled directly off a played-back Lab
+   * session: correct-shape T2/T3 attempts into the wrong gate were caught
+   * reliably in practice. Known, accepted gaps remain — not fixed, just
+   * outweighed by that result for now:
+   *
+   * - A shape with the *exact* corridor timing, shifted ~80ms late, can
+   *   still read as a confident wrong tone (`trimOnset`/`resample`
+   *   normalize against the contour's own span, so a shift alters what the
+   *   classifier sees). See "clears a contour that is a beat late" in
+   *   `run.test.ts`.
+   * - A brief off-corridor wobble too short to be a real wall hit can read
+   *   as a confident tone mismatch on its own (a short blip inside T1's
+   *   tail-judging window, or T3's normal creaky/silent onset misread as
+   *   T2) — see the "isolated from the classifier's mismatch-collision
+   *   feature" tests in `run.test.ts` for the specific shapes.
+   *
+   * `toneClassifierGatingEnabled` (the softer, "cap at ok" sibling) stays
+   * off — it was never separately validated the way this was.
    */
   toneMismatchCollisionEnabled: boolean;
   /**
@@ -375,7 +384,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   toneClassifierPlateauMinFrac: 0.45,
   toneClassifierPlateauBonus: 0.22,
   toneClassifierGatingEnabled: false,
-  toneMismatchCollisionEnabled: false,
+  toneMismatchCollisionEnabled: true,
   toneClassifierBoostEnabled: true,
   toneClassifierBoostMinConfidence: 0.9,
   toneClassifierBoostFloorAccuracy: 0.6,

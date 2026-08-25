@@ -638,12 +638,21 @@
   animation: unheard-fade 1.2s ease-out forwards;
 }
 
+/* Encouragement for a confident, correct classifier read — positive, not
+   corrective, so it borrows the accent tint rather than the danger one. */
+.praise-toast {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--ink);
+  animation: unheard-fade 1.2s ease-out forwards;
+}
+
 /* The OS setting wins over every flourish above. */
 @media (prefers-reduced-motion: reduce) {
   .points-pop,
   .heart.breaking,
   .unheard-toast,
   .mismatch-toast,
+  .praise-toast,
   .phase-banner.your-turn {
     animation-duration: 0.01ms;
     animation-iteration-count: 1;

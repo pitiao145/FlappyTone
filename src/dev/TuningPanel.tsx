@@ -215,9 +215,10 @@ export function TuningPanel() {
                 When on, a confident T1/T4 mixup with any other tone, or a
                 confident T2↔T3 mixup, forces the gate to a wall-style
                 collision — heart lost, gate scores 0 — instead of only
-                capping at "ok". Off by default: a correct-shape,
-                shifted-in-time attempt can still misclassify. Flip on to fly
-                a real run against it.
+                capping at "ok". On by default: reliable in a played-back
+                session. Known accepted gaps remain — a shape shifted ~80ms
+                late, or a brief off-corridor wobble, can still misclassify.
+                Flip off if false-positive collisions show up while tuning.
               </span>
             </label>
           )}

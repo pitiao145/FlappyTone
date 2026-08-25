@@ -51,24 +51,30 @@ interface OutcomeFlash {
   tone: Tone;
   /** Set when this collision was forced by a drastic classifier mismatch, not a wall. */
   mismatchedAs: ClassifiedTone | null;
-  /** The classifier's confidence in `mismatchedAs` — picks the toast's wording. */
+  /** The classifier's confidence in `mismatchedAs` — picks the mismatch toast's wording. */
   mismatchedConfidence: number | null;
+  /** The classifier's read of this gate, correct or not — praises a confident correct one. */
+  classifiedTone: ClassifiedTone | null;
+  /** The classifier's confidence in `classifiedTone`. */
+  classifiedConfidence: number | null;
   /** Resolve time, used as a React key so repeats re-trigger the animation. */
   atMs: number;
 }
 
 /**
- * Below this, the mismatch toast hedges ("that sounded more like a T3");
- * at or above it, it states the read plainly ("that was a T3, not a T2") —
- * matching the confidence bar the player asked for when this shipped
+ * The confidence bar both classifier-driven toasts key off: below it, the
+ * mismatch toast hedges ("that sounded more like a T3") and a correct read
+ * says nothing; at or above it, the mismatch toast states the read plainly
+ * ("that was a T3, not a T2") and a correct read gets praised ("nice T1!").
+ * Matches the confidence bar the player asked for when this shipped
  * (25 Aug 2026): "if a player does a tone 100% accurately... let's say 90+%
  * confidence." Same cutoff `toneClassifierBoostMinConfidence` defaults to,
- * so "confident enough to state plainly" means the same thing in both
- * directions; kept as its own literal rather than importing the tuning
- * default so retuning the score boost in the Lab doesn't silently reword
- * this toast too.
+ * so "confident enough to say something" means the same thing everywhere;
+ * kept as its own literal rather than importing the tuning default so
+ * retuning the score boost in the Lab doesn't silently reword these toasts
+ * too.
  */
-const MISMATCH_ASSERTIVE_CONFIDENCE = 0.9;
+const HIGH_CLASSIFIER_CONFIDENCE = 0.9;
 
 /**
  * The hint shown when a gate goes unheard.
@@ -319,6 +325,8 @@ export function Game({
           tone: resolved.tone,
           mismatchedAs: resolved.mismatchedAs,
           mismatchedConfidence: resolved.mismatchedConfidence,
+          classifiedTone: resolved.classifiedTone,
+          classifiedConfidence: resolved.classifiedConfidence,
           atMs: resolved.atMs,
         });
       }
@@ -484,6 +492,15 @@ export function Game({
     flash?.outcome === "collision" &&
     flash.mismatchedAs !== null &&
     flash.mismatchedAs !== "none";
+  // A confident, correct read gets praised — but only on an outcome that
+  // isn't already unheard/collision (LastOutcome already nulls
+  // classifiedTone on collision) and isn't itself the mismatch case above.
+  const showPraise =
+    flash !== null &&
+    !showMismatch &&
+    flash.outcome !== "unheard" &&
+    flash.classifiedTone === flash.tone &&
+    (flash.classifiedConfidence ?? 0) >= HIGH_CLASSIFIER_CONFIDENCE;
   const breaking = flash?.outcome === "collision";
   const hearts = Math.max(0, hud?.hearts ?? 3);
   // Matches newRunStats()'s default in src/game/scoring.ts — a run starts
@@ -601,9 +618,14 @@ export function Game({
             )}
             {showMismatch && (
               <div key={flash!.atMs} className="toast mismatch-toast">
-                {(flash!.mismatchedConfidence ?? 0) >= MISMATCH_ASSERTIVE_CONFIDENCE
+                {(flash!.mismatchedConfidence ?? 0) >= HIGH_CLASSIFIER_CONFIDENCE
                   ? `that was a T${flash!.mismatchedAs}, not a T${flash!.tone}`
                   : `that sounded more like a T${flash!.mismatchedAs}`}
+              </div>
+            )}
+            {showPraise && (
+              <div key={flash!.atMs} className="toast praise-toast">
+                nice T{flash!.classifiedTone}!
               </div>
             )}
             {hud?.noisy && <div className="hint">it's noisy in here</div>}
