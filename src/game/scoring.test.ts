@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyClassifierBoost,
   applyGate,
   comboAfter,
+  isDrasticToneMismatch,
   longestUtteranceMs,
   multiplierFor,
   newRunStats,
@@ -14,6 +16,7 @@ import {
   type RunStats,
 } from "./scoring.ts";
 import type { Tone } from "./gates.ts";
+import { DEFAULT_TUNING } from "./tuning.ts";
 
 /** Analysis hop: 1024 samples at 44.1kHz. Frames really do arrive this far apart. */
 const HOP_MS = 23;
@@ -199,7 +202,7 @@ describe("newRunStats", () => {
     expect(stats.score).toBe(0);
     expect(stats.bestMultiplier).toBe(1);
     for (const tone of [1, 2, 3, 4] as Tone[]) {
-      expect(stats.perTone[tone]).toEqual({ gates: 0, accSum: 0, unheard: 0 });
+      expect(stats.perTone[tone]).toEqual({ gates: 0, accSum: 0, unheard: 0, mismatched: 0, mismatchedAs: {} });
     }
   });
 
@@ -222,7 +225,7 @@ describe("applyGate", () => {
     expect(next.score).toBe(300);
     expect(next.combo).toBe(1);
     expect(next.hearts).toBe(3);
-    expect(next.perTone[1]).toEqual({ gates: 1, accSum: 1, unheard: 0 });
+    expect(next.perTone[1]).toEqual({ gates: 1, accSum: 1, unheard: 0, mismatched: 0, mismatchedAs: {} });
   });
 
   it("collision decrements hearts and does not count toward per-tone accuracy", () => {
@@ -231,7 +234,7 @@ describe("applyGate", () => {
     expect(next.hearts).toBe(2);
     expect(next.combo).toBe(0);
     expect(next.score).toBe(0);
-    expect(next.perTone[2]).toEqual({ gates: 1, accSum: 0, unheard: 0 });
+    expect(next.perTone[2]).toEqual({ gates: 1, accSum: 0, unheard: 0, mismatched: 0, mismatchedAs: {} });
   });
 
   it("unheard does not decrement hearts, does not reset combo, and is tallied separately", () => {
@@ -240,7 +243,7 @@ describe("applyGate", () => {
     expect(next.hearts).toBe(3);
     expect(next.combo).toBe(2);
     expect(next.score).toBe(0);
-    expect(next.perTone[3]).toEqual({ gates: 0, accSum: 0, unheard: 1 });
+    expect(next.perTone[3]).toEqual({ gates: 0, accSum: 0, unheard: 1, mismatched: 0, mismatchedAs: {} });
   });
 
   it("tracks bestMultiplier across the run", () => {
@@ -256,6 +259,103 @@ describe("applyGate", () => {
     // combo is 1 going in -> multiplier x1.5 applies to this gate's points
     const next = applyGate(stats, 1, "perfect", 1);
     expect(next.score).toBe(450);
+  });
+
+  it("tallies a drastic mismatch alongside the collision it caused", () => {
+    const stats = newRunStats();
+    const next = applyGate(stats, 1, "collision", 0, 4);
+    expect(next.hearts).toBe(2);
+    expect(next.perTone[1]).toEqual({
+      gates: 1,
+      accSum: 0,
+      unheard: 0,
+      mismatched: 1,
+      mismatchedAs: { 4: 1 },
+    });
+  });
+
+  it("does not tally a mismatch when mismatchedAs is 'none' or omitted", () => {
+    const stats = newRunStats();
+    let next = applyGate(stats, 1, "collision", 0);
+    expect(next.perTone[1].mismatched).toBe(0);
+    next = applyGate(stats, 1, "collision", 0, "none");
+    expect(next.perTone[1].mismatched).toBe(0);
+  });
+});
+
+describe("applyClassifierBoost", () => {
+  const min = DEFAULT_TUNING.toneClassifierBoostMinConfidence;
+  const floor = DEFAULT_TUNING.toneClassifierBoostFloorAccuracy;
+
+  it("leaves collision and unheard outcomes untouched, even at confidence 1", () => {
+    expect(applyClassifierBoost("collision", 0, 1)).toEqual({ outcome: "collision", accuracy: 0 });
+    expect(applyClassifierBoost("unheard", 0, 1)).toEqual({ outcome: "unheard", accuracy: 0 });
+  });
+
+  it("does nothing below the confidence floor", () => {
+    const result = applyClassifierBoost("ok", 0.3, min - 0.05);
+    expect(result).toEqual({ outcome: "ok", accuracy: 0.3 });
+  });
+
+  it("floors accuracy at the boost floor right at the confidence threshold", () => {
+    const result = applyClassifierBoost("ok", 0.1, min);
+    expect(result.accuracy).toBeCloseTo(floor);
+    expect(result.outcome).toBe("good");
+  });
+
+  it("reaches perfect accuracy at confidence 1", () => {
+    const result = applyClassifierBoost("ok", 0.1, 1);
+    expect(result.accuracy).toBeCloseTo(1);
+    expect(result.outcome).toBe("perfect");
+  });
+
+  it("never lowers accuracy the corridor already earned", () => {
+    // Corridor tracking already scored perfect; a merely-confident-enough
+    // classifier read must not drag it back down toward the boost floor.
+    const result = applyClassifierBoost("perfect", 0.97, min);
+    expect(result.accuracy).toBeCloseTo(0.97);
+    expect(result.outcome).toBe("perfect");
+  });
+
+  it("takes whichever is higher between corridor accuracy and the boost", () => {
+    const result = applyClassifierBoost("ok", 0.5, 1);
+    expect(result.accuracy).toBeCloseTo(1);
+    expect(result.outcome).toBe("perfect");
+  });
+});
+
+describe("isDrasticToneMismatch", () => {
+  const confident = DEFAULT_TUNING.toneClassifierMinConfidence + 0.1;
+  const unconfident = DEFAULT_TUNING.toneClassifierMinConfidence - 0.1;
+
+  it("is false when the classification is null (nothing to classify)", () => {
+    expect(isDrasticToneMismatch(1, null)).toBe(false);
+  });
+
+  it("is false when the classifier read 'none'", () => {
+    expect(isDrasticToneMismatch(1, { tone: "none", confidence: 1 })).toBe(false);
+  });
+
+  it("is false when the classifier agrees with the target", () => {
+    expect(isDrasticToneMismatch(2, { tone: 2, confidence: confident })).toBe(false);
+  });
+
+  it("is false when confidence doesn't clear the threshold", () => {
+    expect(isDrasticToneMismatch(1, { tone: 4, confidence: unconfident })).toBe(false);
+  });
+
+  it("is true for a confident T1/T4 mixup", () => {
+    expect(isDrasticToneMismatch(1, { tone: 4, confidence: confident })).toBe(true);
+    expect(isDrasticToneMismatch(4, { tone: 1, confidence: confident })).toBe(true);
+  });
+
+  it("is true for a confident T2/T3 mixup", () => {
+    expect(isDrasticToneMismatch(2, { tone: 3, confidence: confident })).toBe(true);
+    expect(isDrasticToneMismatch(3, { tone: 2, confidence: confident })).toBe(true);
+  });
+
+  it("is true crossing between {1,4} and {2,3}", () => {
+    expect(isDrasticToneMismatch(1, { tone: 3, confidence: confident })).toBe(true);
   });
 });
 
@@ -277,6 +377,17 @@ describe("toneBreakdown", () => {
     const t1 = breakdown.find((b) => b.tone === 1)!;
     expect(t1.pct).toBeCloseTo(85); // mean(1, 0.7) * 100
     expect(t1.unheard).toBe(1);
+  });
+
+  it("reports the most common mismatched-as tone", () => {
+    let stats: RunStats = newRunStats();
+    stats = applyGate(stats, 3, "collision", 0, 2);
+    stats = applyGate(stats, 3, "collision", 0, 2);
+    stats = applyGate(stats, 3, "collision", 0, 1);
+    const breakdown = toneBreakdown(stats);
+    const t3 = breakdown.find((b) => b.tone === 3)!;
+    expect(t3.mismatched).toBe(3);
+    expect(t3.mismatchedAsMostly).toBe(2);
   });
 });
 
@@ -311,6 +422,17 @@ describe("takeaway", () => {
     const breakdown = toneBreakdown(stats);
     expect(takeaway(breakdown)).toBe(
       "Tone 2 is your weak spot — it rises, don't start too high.",
+    );
+  });
+
+  it("prefers a mismatch-based read when mismatches dominate the worst tone's misses", () => {
+    let stats: RunStats = newRunStats();
+    // T3: both scored gates were forced collisions mismatched as T2.
+    stats = applyGate(stats, 3, "collision", 0, 2);
+    stats = applyGate(stats, 3, "collision", 0, 2);
+    const breakdown = toneBreakdown(stats);
+    expect(takeaway(breakdown)).toBe(
+      "Tone 3 gates are landing like Tone 2 — it dips before it rises.",
     );
   });
 });

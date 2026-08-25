@@ -25,9 +25,11 @@ import {
 } from "./gates.ts";
 import { pickWord, type Word } from "./words.ts";
 import {
+  applyClassifierBoost,
   applyClassifierMismatch,
   applyGate,
   heardUtterance,
+  isDrasticToneMismatch,
   longestUtteranceMs,
   newRunStats,
   multiplierFor,
@@ -225,6 +227,20 @@ export interface LastOutcome {
   path: TrailSample[];
   /** Why the gate went unheard, when it did. Null for every other outcome. */
   hint: UnheardHint | null;
+  /**
+   * The standalone classifier's read of the flown path when it forced this
+   * gate's outcome to a collision (`isDrasticToneMismatch`), so the HUD can
+   * say what it sounded like instead. Null otherwise, including on a plain
+   * wall collision.
+   */
+  mismatchedAs: ClassifiedTone | null;
+  /**
+   * The classifier's confidence in `mismatchedAs`, 0–1. Null exactly when
+   * `mismatchedAs` is — lets the HUD phrase a near-certain misread ("that
+   * was a T3, not a T2") differently from a merely confident one ("that
+   * sounded more like a T3").
+   */
+  mismatchedConfidence: number | null;
 }
 
 export interface RunSnapshot {
@@ -944,18 +960,54 @@ export class Run {
     const heard = heardUtterance(state.samples);
     const collided = heard ? state.collided : false;
 
-    let { outcome, accuracy } = scoreGate(state.samples, collided);
-
     // Only the stretch flown inside the gate — see `lastOutcome.path` below
     // for why the whole trail isn't used.
     const flownPath = this.trail.filter((s) => s.t >= state.enteredAtMs);
 
     let classifiedTone: ClassifiedTone | null = null;
+    let classifiedConfidence: number | null = null;
+    let mismatchedAs: ClassifiedTone | null = null;
+    let mismatchedConfidence: number | null = null;
+    let forcedCollision = false;
     if (heard) {
-      const contour = this.contourFromPath(flownPath);
+      // The classifier judges shape alone, so it must see the *whole*
+      // utterance, not just whatever fell after the gate opened. A player
+      // who starts a hair early has the front of their tone seeded from
+      // `preGate` into `state.samples` (see `seedSamples`) — `flownPath`
+      // above still cuts at `enteredAtMs` regardless, so using it here would
+      // hand the classifier a truncated shape and misread a correct, early
+      // attempt as a different tone. `state.samples[0].atMs` is that
+      // utterance's real start (seeded samples are unshifted onto the front,
+      // so index 0 is always the earliest); trail retention (`TRAIL_SECONDS`)
+      // comfortably outlasts the pre-gate buffer window, so it's still there.
+      const classifyStartMs =
+        state.samples.length > 0 ? state.samples[0].atMs : state.enteredAtMs;
+      const classifyPath = this.trail.filter((s) => s.t >= classifyStartMs);
+      const contour = this.contourFromPath(classifyPath);
       const classification = contour ? classifyTone(contour) : null;
       classifiedTone = classification?.tone ?? null;
+      classifiedConfidence = classification?.confidence ?? null;
 
+      // A confident, drastically-wrong read (T1/T4 confused with anything,
+      // or a confident T2<->T3 mixup) costs a heart the same way hitting a
+      // wall does — checked before scoring so it flows through the normal
+      // collision path rather than a separate outcome type.
+      if (
+        tuning().toneMismatchCollisionEnabled &&
+        isDrasticToneMismatch(state.gate.tone, classification)
+      ) {
+        forcedCollision = true;
+        mismatchedAs = classifiedTone;
+        mismatchedConfidence = classifiedConfidence;
+      }
+    }
+
+    let { outcome, accuracy } = scoreGate(
+      state.samples,
+      collided || forcedCollision,
+    );
+
+    if (heard && !forcedCollision) {
       // The recognizer never sees the target — it's asking "what tone does
       // this shape most resemble", independent of the gate. A confident read
       // of a *different* tone than the one being scored means the corridor
@@ -968,6 +1020,16 @@ export class Run {
         classifiedTone !== state.gate.tone
       ) {
         ({ outcome, accuracy } = applyClassifierMismatch(outcome, accuracy));
+      } else if (
+        // The mirror case: a confident read of the *correct* tone can raise
+        // accuracy/outcome, not just lower it — corridor tracking punishes
+        // timing/precision the classifier doesn't care about, so an
+        // unmistakable shape can still score well despite a wandering trace.
+        tuning().toneClassifierBoostEnabled &&
+        classifiedTone === state.gate.tone &&
+        classifiedConfidence !== null
+      ) {
+        ({ outcome, accuracy } = applyClassifierBoost(outcome, accuracy, classifiedConfidence));
       }
     }
 
@@ -997,7 +1059,13 @@ export class Run {
     // The tutorial teaches: no score, no hearts, no stats to fail against.
     const scoreBefore = this.stats.score;
     if (this.mode === "game") {
-      this.stats = applyGate(this.stats, state.gate.tone, outcome, accuracy);
+      this.stats = applyGate(
+        this.stats,
+        state.gate.tone,
+        outcome,
+        accuracy,
+        mismatchedAs,
+      );
     }
 
     this.lastOutcome = {
@@ -1012,6 +1080,8 @@ export class Run {
       // would celebrate pitch aimed at no corridor.
       path: flownPath,
       hint: outcome === "unheard" ? unheardHint(state.samples) : null,
+      mismatchedAs,
+      mismatchedConfidence,
     };
     // PRD §6 ramps every 5 gates *cleared*. Counting collisions and unheard
     // gates here would speed the game up for exactly the player who is

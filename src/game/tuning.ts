@@ -230,6 +230,26 @@ export interface Tuning {
   /** Added to tone 3's score when both the depth and position dip gates are cleared. */
   toneClassifierDipBonus: number;
   /**
+   * How close to the sample's own minimum (as a fraction of the sample's
+   * chao range, max − min) still counts as "on the floor" when measuring the
+   * low plateau — see `detectDip`/`plateauRange` in `toneClassifier.ts`. A
+   * relative, not absolute, band so this stays scale-invariant.
+   */
+  toneClassifierPlateauBandFrac: number;
+  /**
+   * How much of the sample (0–1) must sit within that floor band before a
+   * dip counts as a genuine hold rather than a brief V — the direct signal
+   * for a real T3 that sits at the floor before a late, sharp rise, distinct
+   * from *where* the floor ends (`toneClassifierDipMinPositionFrac`).
+   */
+  toneClassifierPlateauMinFrac: number;
+  /**
+   * Added to tone 3's score when the plateau-fraction gate is cleared,
+   * independently of (and additive with) `toneClassifierDipBonus` — a long
+   * floor-hold and a late-ending floor are two separate tells, not one.
+   */
+  toneClassifierPlateauBonus: number;
+  /**
    * When true, `run.ts` runs `classifyTone` on every scored gate's flown
    * path and, if it confidently reads a *different* tone than the gate's
    * target, caps that gate's outcome via `applyClassifierMismatch` — the
@@ -239,6 +259,48 @@ export interface Tuning {
    * grader. Flip it on in the Lab to fly a real run against it.
    */
   toneClassifierGatingEnabled: boolean;
+  /**
+   * When true, a confident classifier read that is *drastically* wrong —
+   * T1/T4 confused with any other tone, or a confident T2↔T3 mixup — forces
+   * the gate to a wall-style collision (heart lost, gate scores 0) instead
+   * of only softening the outcome via `toneClassifierGatingEnabled`. See
+   * `isDrasticToneMismatch` in `src/game/scoring.ts`.
+   *
+   * Off by default, despite the feature's intent being to cost a heart like
+   * a wall does — flying it against `run.test.ts`'s "timing slack" fixture
+   * (a contour with the *exact* corridor shape, just shifted 80ms early or
+   * late) produced a false collision: `trimOnset`/`resample` normalize
+   * against the contour's *own* span, so a shifted-but-correct attempt can
+   * still read as a confident wrong-tone match. `toneClassifierGatingEnabled`
+   * had the same "proven standalone, not yet validated as a live grader"
+   * caveat; this one costs a heart on a false positive, which is worse, so
+   * it needs at least as much Lab validation before flipping on.
+   */
+  toneMismatchCollisionEnabled: boolean;
+  /**
+   * When true, `run.ts` runs `applyClassifierBoost` on every scored,
+   * non-collision gate: a confident classifier read of the *correct* tone
+   * can raise accuracy/outcome, not just lower it — see the function's doc
+   * comment in `scoring.ts`. Unlike `toneMismatchCollisionEnabled`, a false
+   * positive here only over-rewards rather than costing a heart, so this
+   * ships on by default.
+   */
+  toneClassifierBoostEnabled: boolean;
+  /**
+   * Confidence floor before `applyClassifierBoost` does anything — a reward
+   * for being *sure*, not a general softening. 0.9 per the player call this
+   * was tuned from: "if a player does a tone 100% accurately according to
+   * the classifier, we should definitely give more points."
+   */
+  toneClassifierBoostMinConfidence: number;
+  /**
+   * The accuracy `applyClassifierBoost` grants right at
+   * `toneClassifierBoostMinConfidence` — set to land exactly on the "good"
+   * tier floor (`GOOD_ACCURACY` in `scoring.ts`), so clearing the confidence
+   * bar guarantees at least "good", not an automatic "perfect"; confidence
+   * approaching 1 is what climbs the rest of the way there.
+   */
+  toneClassifierBoostFloorAccuracy: number;
 
   // ---- dot dynamics
   /** Hold the last position for this long after voicing stops. */
@@ -309,7 +371,14 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   toneClassifierDipThresholdChao: 1.1,
   toneClassifierDipMinPositionFrac: 0.4,
   toneClassifierDipBonus: 0.15,
+  toneClassifierPlateauBandFrac: 0.1,
+  toneClassifierPlateauMinFrac: 0.45,
+  toneClassifierPlateauBonus: 0.22,
   toneClassifierGatingEnabled: false,
+  toneMismatchCollisionEnabled: false,
+  toneClassifierBoostEnabled: true,
+  toneClassifierBoostMinConfidence: 0.9,
+  toneClassifierBoostFloorAccuracy: 0.6,
   graceMs: 120,
   t3GraceMs: 250,
   easeTauMs: 35,

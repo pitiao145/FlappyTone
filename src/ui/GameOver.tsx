@@ -76,6 +76,11 @@ export function GameOver({
             {b.unheard > 0 && (
               <span className="unheard">couldn't hear ×{b.unheard}</span>
             )}
+            {b.mismatched > 0 && (
+              <span className="mismatched">
+                sounded like T{b.mismatchedAsMostly} ×{b.mismatched}
+              </span>
+            )}
           </div>
         ))}
       </div>

@@ -4,6 +4,7 @@
  */
 
 import type { Tone } from "./gates.ts";
+import type { ClassifiedTone, ToneClassification } from "./toneClassifier.ts";
 import { tuning } from "./tuning.ts";
 
 export interface GateSample {
@@ -154,6 +155,73 @@ export function applyClassifierMismatch(
   };
 }
 
+/**
+ * Mirrors `applyClassifierMismatch` in the other direction: when the
+ * classifier confidently recognizes the *correct* tone, it can raise a
+ * gate's accuracy/outcome, not just lower it. Corridor tracking punishes
+ * timing/precision the classifier doesn't care about, so a shape that is
+ * unmistakably the right tone can still score well even when the pitch
+ * trace wandered outside a tight corridor tolerance along the way.
+ *
+ * `confidence` below `toneClassifierBoostMinConfidence` leaves the gate
+ * untouched — this is a reward for being *sure*, not a general softening.
+ * Above it, confidence maps linearly onto accuracy between
+ * `toneClassifierBoostFloorAccuracy` (at the threshold) and 1 (at
+ * confidence 1), and the gate's accuracy becomes whichever is higher: what
+ * corridor tracking already earned, or this boost. A collision or an
+ * unheard gate is untouched — this only ever raises an "ok" or "good"
+ * outcome, never resurrects a wall hit or invents an utterance.
+ */
+export function applyClassifierBoost(
+  outcome: GateOutcome,
+  accuracy: number,
+  confidence: number,
+): { outcome: GateOutcome; accuracy: number } {
+  if (outcome === "collision" || outcome === "unheard") {
+    return { outcome, accuracy };
+  }
+  const minConfidence = tuning().toneClassifierBoostMinConfidence;
+  if (confidence < minConfidence) {
+    return { outcome, accuracy };
+  }
+  const floor = tuning().toneClassifierBoostFloorAccuracy;
+  const frac = Math.min(1, Math.max(0, (confidence - minConfidence) / (1 - minConfidence)));
+  const boosted = floor + frac * (1 - floor);
+  const nextAccuracy = Math.max(accuracy, boosted);
+  const nextOutcome: GateOutcome =
+    nextAccuracy >= PERFECT_ACCURACY ? "perfect" : nextAccuracy >= GOOD_ACCURACY ? "good" : outcome;
+  return { outcome: nextOutcome, accuracy: nextAccuracy };
+}
+
+/**
+ * Whether the classifier's confident read of the player's shape is
+ * *drastically* different from the gate's target — different enough that
+ * this should cost a heart the same way hitting a wall does, not just soften
+ * the outcome (`applyClassifierMismatch`).
+ *
+ * With only four tones, "confidently a different tone than the target" and
+ * "T1/T4 confused with anything, or a confident T2↔T3 mixup" are the same
+ * set of pairs — every cross-tone confusion is either a {1,4}/{2,3}
+ * within-group swap or crosses between the flat/falling tones and the
+ * contour tones, and both are drastic by the request's own framing. So the
+ * only real gate is confidence: the classifier must clear the same bar
+ * `applyClassifierMismatch` already reads
+ * (`toneClassifierMinConfidence`/`toneClassifierMarginThreshold`, enforced
+ * inside `classifyTone` itself before it ever returns a non-`"none"` tone).
+ *
+ * A `"none"` read (low confidence / ambiguous) never counts — that stays the
+ * existing neutral "couldn't hear that" territory.
+ */
+export function isDrasticToneMismatch(
+  target: Tone,
+  classification: ToneClassification | null,
+): boolean {
+  if (classification === null) return false;
+  const winner = classification.tone;
+  if (winner === "none" || winner === target) return false;
+  return classification.confidence >= tuning().toneClassifierMinConfidence;
+}
+
 const BASE_POINTS: Record<GateOutcome, number> = {
   perfect: 300,
   good: 150,
@@ -188,14 +256,25 @@ export interface RunStats {
   /** Consecutive perfect/good gates. Carried in stats so applyGate can thread it explicitly. */
   combo: number;
   bestMultiplier: number;
-  perTone: Record<Tone, { gates: number; accSum: number; unheard: number }>;
+  perTone: Record<
+    Tone,
+    {
+      gates: number;
+      accSum: number;
+      unheard: number;
+      /** Gates forced to a collision by `isDrasticToneMismatch`. */
+      mismatched: number;
+      /** Which wrong tone the classifier heard instead, on those mismatched gates. */
+      mismatchedAs: Partial<Record<Tone, number>>;
+    }
+  >;
 }
 
 /** A fresh run: default 3 hearts, zeroed score and per-tone stats. */
 export function newRunStats(hearts = 3): RunStats {
   const perTone = {} as RunStats["perTone"];
   for (const tone of [1, 2, 3, 4] as Tone[]) {
-    perTone[tone] = { gates: 0, accSum: 0, unheard: 0 };
+    perTone[tone] = { gates: 0, accSum: 0, unheard: 0, mismatched: 0, mismatchedAs: {} };
   }
   return { score: 0, hearts, combo: 0, bestMultiplier: 1, perTone };
 }
@@ -211,6 +290,8 @@ export function applyGate(
   tone: Tone,
   outcome: GateOutcome,
   accuracy: number,
+  /** Set when this gate's outcome was forced to a collision by a drastic classifier mismatch. */
+  mismatchedAs?: ClassifiedTone | null,
 ): RunStats {
   const priorCombo = stats.combo;
   const multiplier = multiplierFor(priorCombo);
@@ -218,7 +299,7 @@ export function applyGate(
   const combo = comboAfter(outcome, priorCombo);
 
   const prevTone = stats.perTone[tone];
-  const nextTone =
+  const withOutcome =
     outcome === "unheard"
       ? { ...prevTone, unheard: prevTone.unheard + 1 }
       : {
@@ -226,6 +307,17 @@ export function applyGate(
           gates: prevTone.gates + 1,
           accSum: prevTone.accSum + accuracy,
         };
+  const nextTone =
+    mismatchedAs != null && mismatchedAs !== "none"
+      ? {
+          ...withOutcome,
+          mismatched: withOutcome.mismatched + 1,
+          mismatchedAs: {
+            ...withOutcome.mismatchedAs,
+            [mismatchedAs]: (withOutcome.mismatchedAs[mismatchedAs] ?? 0) + 1,
+          },
+        }
+      : withOutcome;
 
   return {
     score: stats.score + points,
@@ -251,22 +343,44 @@ export interface ToneBreakdownEntry {
   unheard: number;
   /** Scored (voiced, non-unheard) gates this tone was seen in. Used to gate the takeaway's eligibility. */
   gates: number;
+  /** Gates forced to a collision by a confident, drastically-wrong classifier read. */
+  mismatched: number;
+  /** The wrong tone heard most often on those mismatched gates, or null if none. */
+  mismatchedAsMostly: Tone | null;
 }
 
 /** Per-tone accuracy breakdown for the game-over screen. */
 export function toneBreakdown(stats: RunStats): ToneBreakdownEntry[] {
   return ([1, 2, 3, 4] as Tone[]).map((tone) => {
     const t = stats.perTone[tone];
+    const mismatchEntries = Object.entries(t.mismatchedAs) as [
+      string,
+      number,
+    ][];
+    const mismatchedAsMostly =
+      mismatchEntries.length === 0
+        ? null
+        : (Number(
+            mismatchEntries.reduce((best, cur) => (cur[1] > best[1] ? cur : best))[0],
+          ) as Tone);
     return {
       tone,
       pct: t.gates > 0 ? (t.accSum / t.gates) * 100 : null,
       unheard: t.unheard,
       gates: t.gates,
+      mismatched: t.mismatched,
+      mismatchedAsMostly,
     };
   });
 }
 
-/** A one-line takeaway naming the worst tone with >= 2 scored gates, or a generic prompt if none qualify. */
+/**
+ * A one-line takeaway. Prefers a mismatch-based read when a tone's misses
+ * are dominated by the classifier hearing a specific different tone —
+ * naming *what it sounded like instead* teaches more than the generic
+ * accuracy cue does. Falls back to the plain worst-accuracy phrasing
+ * otherwise, or a generic prompt if nothing qualifies.
+ */
 export function takeaway(breakdown: ToneBreakdownEntry[]): string {
   const eligible = breakdown.filter(
     (b): b is ToneBreakdownEntry & { pct: number } =>
@@ -276,5 +390,11 @@ export function takeaway(breakdown: ToneBreakdownEntry[]): string {
     return "Play a longer run for a per-tone read.";
   }
   const worst = eligible.reduce((min, b) => (b.pct < min.pct ? b : min));
+  if (
+    worst.mismatchedAsMostly !== null &&
+    worst.mismatched * 2 >= worst.gates
+  ) {
+    return `Tone ${worst.tone} gates are landing like Tone ${worst.mismatchedAsMostly} — ${TONE_TAKEAWAY_CUE[worst.tone]}.`;
+  }
   return `Tone ${worst.tone} is your weak spot — ${TONE_TAKEAWAY_CUE[worst.tone]}.`;
 }

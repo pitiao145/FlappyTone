@@ -12,7 +12,7 @@ import { getMicSession, setFrameSink, stopMic } from "../audio/session.ts";
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
-import { TONE_INFO } from "../game/gates.ts";
+import { TONE_INFO, type Tone } from "../game/gates.ts";
 import { Run, type RunMode, type RunSnapshot } from "../game/run.ts";
 import type { Word } from "../game/words.ts";
 import {
@@ -20,6 +20,7 @@ import {
   type GateOutcome,
   type UnheardHint,
 } from "../game/scoring.ts";
+import type { ClassifiedTone } from "../game/toneClassifier.ts";
 import {
   loadCorridorWidth,
   loadCueStyle,
@@ -46,9 +47,28 @@ interface OutcomeFlash {
   outcome: GateOutcome;
   points: number;
   hint: UnheardHint | null;
+  /** The gate's own target tone — needed to phrase "not a T{tone}" on a confident mismatch. */
+  tone: Tone;
+  /** Set when this collision was forced by a drastic classifier mismatch, not a wall. */
+  mismatchedAs: ClassifiedTone | null;
+  /** The classifier's confidence in `mismatchedAs` — picks the toast's wording. */
+  mismatchedConfidence: number | null;
   /** Resolve time, used as a React key so repeats re-trigger the animation. */
   atMs: number;
 }
+
+/**
+ * Below this, the mismatch toast hedges ("that sounded more like a T3");
+ * at or above it, it states the read plainly ("that was a T3, not a T2") —
+ * matching the confidence bar the player asked for when this shipped
+ * (25 Aug 2026): "if a player does a tone 100% accurately... let's say 90+%
+ * confidence." Same cutoff `toneClassifierBoostMinConfidence` defaults to,
+ * so "confident enough to state plainly" means the same thing in both
+ * directions; kept as its own literal rather than importing the tuning
+ * default so retuning the score boost in the Lab doesn't silently reword
+ * this toast too.
+ */
+const MISMATCH_ASSERTIVE_CONFIDENCE = 0.9;
 
 /**
  * The hint shown when a gate goes unheard.
@@ -296,6 +316,9 @@ export function Game({
           outcome: resolved.outcome,
           points: resolved.points,
           hint: resolved.hint,
+          tone: resolved.tone,
+          mismatchedAs: resolved.mismatchedAs,
+          mismatchedConfidence: resolved.mismatchedConfidence,
           atMs: resolved.atMs,
         });
       }
@@ -457,6 +480,10 @@ export function Game({
 
   const showPoints = flash !== null && flash.points > 0;
   const showHint = flash?.outcome === "unheard";
+  const showMismatch =
+    flash?.outcome === "collision" &&
+    flash.mismatchedAs !== null &&
+    flash.mismatchedAs !== "none";
   const breaking = flash?.outcome === "collision";
   const hearts = Math.max(0, hud?.hearts ?? 3);
   // Matches newRunStats()'s default in src/game/scoring.ts — a run starts
@@ -570,6 +597,13 @@ export function Game({
             {showHint && (
               <div key={flash!.atMs} className="toast unheard-toast">
                 {HINT_TEXT[flash!.hint ?? "generic"]}
+              </div>
+            )}
+            {showMismatch && (
+              <div key={flash!.atMs} className="toast mismatch-toast">
+                {(flash!.mismatchedConfidence ?? 0) >= MISMATCH_ASSERTIVE_CONFIDENCE
+                  ? `that was a T${flash!.mismatchedAs}, not a T${flash!.tone}`
+                  : `that sounded more like a T${flash!.mismatchedAs}`}
               </div>
             )}
             {hud?.noisy && <div className="hint">it's noisy in here</div>}

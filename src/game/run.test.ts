@@ -913,6 +913,112 @@ describe("Run — timing slack (a right shape, slightly off the beat)", () => {
   });
 });
 
+describe("Run — classifier sees the whole utterance, not just the gate window", () => {
+  afterEach(() => resetTuning());
+
+  // -> tone 2 first (candidate = floor(0.3*4)+1 = 2; only reroll-relevant
+  // after two consecutive equal tones, which never happens within these tests).
+  function newT2FirstRun(): Run {
+    return new Run({ mode: "game", width: W, rand: () => 0.3 });
+  }
+
+  it("does not truncate a seeded early start when building the classifier's contour", () => {
+    // Sing the exact T2 shape starting ~200ms before the gate opens (well
+    // within PRE_GATE_BUFFER_MS) and keep singing it through the gate. Before
+    // the fix, `classifyTone` was fed only the trail from `enteredAtMs`
+    // onward — chopping off the seeded head — which could misread a shape
+    // that was, in full, unambiguously correct.
+    const run = newT2FirstRun();
+    const { snapshots } = simulate(run, 400, (s) => {
+      const startingEarly =
+        s.activeGate === null &&
+        s.upcoming !== null &&
+        s.upcoming.tone === 2 &&
+        s.upcoming.msUntil < 200;
+      const inGate = s.activeGate !== null && s.activeGate.tone === 2;
+      if (!startingEarly && !inGate) return pitch(null, s.birdChao);
+      const tone = s.upcoming?.tone ?? s.activeGate!.tone;
+      const t = s.activeGate?.t ?? 0;
+      return pitch(corridorChaoAt(shapeForTone(tone), t));
+    });
+    const log = snapshots[snapshots.length - 1].gateLog.find((g) => g.tone === 2);
+    expect(log?.seeded).toBeGreaterThan(0);
+    expect(log?.classifiedTone).toBe(2);
+  });
+
+  it("a correct-but-early attempt is not forced to a collision by the mismatch check", () => {
+    setTuning({ toneMismatchCollisionEnabled: true });
+    const run = newT2FirstRun();
+    const { snapshots } = simulate(run, 400, (s) => {
+      const startingEarly =
+        s.activeGate === null &&
+        s.upcoming !== null &&
+        s.upcoming.tone === 2 &&
+        s.upcoming.msUntil < 200;
+      const inGate = s.activeGate !== null && s.activeGate.tone === 2;
+      if (!startingEarly && !inGate) return pitch(null, s.birdChao);
+      const tone = s.upcoming?.tone ?? s.activeGate!.tone;
+      const t = s.activeGate?.t ?? 0;
+      return pitch(corridorChaoAt(shapeForTone(tone), t));
+    });
+    const t2Outcome = outcomesOf(snapshots).find((o) => o.tone === 2);
+    expect(t2Outcome?.outcome).not.toBe("collision");
+  });
+});
+
+describe("Run — rewarding a confident correct shape (spec: classifier boost)", () => {
+  afterEach(() => resetTuning());
+
+  // -> tone 2 first, same rationale as the describe block above.
+  function newT2FirstRun(): Run {
+    return new Run({ mode: "game", width: W, rand: () => 0.3 });
+  }
+
+  /**
+   * The exact target shape, but level-shifted by `bias` chao throughout —
+   * hurts corridor-tracking accuracy directly (the trace sits `bias` away
+   * from the centreline the whole gate) while leaving the classifier's read
+   * essentially untouched: correlation, `detectDip`'s depth, and its
+   * plateau-band range are all differences of shifted quantities, so a
+   * constant additive offset cancels out of all of them.
+   */
+  function levelShifted(bias: number) {
+    return (s: RunSnapshot) => {
+      if (!s.activeGate) return pitch(3);
+      const { tone, t } = s.activeGate;
+      return pitch(corridorChaoAt(shapeForTone(tone), t) + bias);
+    };
+  }
+
+  it("boosts a mediocre-corridor, confidently-correct-shape gate to perfect", () => {
+    // At this bias, corridor tracking alone scores "good" (~0.61) — the
+    // classifier's read of the same trace is unaffected by the shift and
+    // stays confident (~0.99), well past the boost's default 90% floor.
+    const run = newT2FirstRun();
+    const { snapshots } = simulate(run, 1600, levelShifted(0.5));
+    const log = snapshots[snapshots.length - 1].gateLog.find((g) => g.tone === 2);
+    expect(log?.classifiedTone).toBe(2);
+    expect(log?.outcome).toBe("perfect");
+  });
+
+  it("does not boost when disabled", () => {
+    setTuning({ toneClassifierBoostEnabled: false });
+    const run = newT2FirstRun();
+    const { snapshots } = simulate(run, 1600, levelShifted(0.5));
+    const log = snapshots[snapshots.length - 1].gateLog.find((g) => g.tone === 2);
+    expect(log?.outcome).toBe("good");
+  });
+
+  it("never turns a real wall collision into a reward", () => {
+    // A large enough bias collides outright — the shape is still
+    // recognizable, but the boost must not resurrect a wall hit.
+    const run = newT2FirstRun();
+    const { snapshots } = simulate(run, 1600, levelShifted(3));
+    const log = snapshots[snapshots.length - 1].gateLog.find((g) => g.tone === 2);
+    expect(log?.outcome).toBe("collision");
+  });
+});
+
 describe("Run — flying an inventory", () => {
   /** A minimal manifest: one word per tone, each with its own length and shape. */
   const words: Word[] = loadWords({

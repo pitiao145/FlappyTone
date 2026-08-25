@@ -134,24 +134,66 @@ function correlation(a: number[], b: number[]): number | null {
   return cov / Math.sqrt(varA * varB);
 }
 
-/** How far into the sample a dip must sit to count as "interior" rather than an edge. */
-const DIP_INTERIOR_LOW = 0.15;
-const DIP_INTERIOR_HIGH = 0.85;
-
 interface DipInfo {
-  /** Whether the sample's lowest point sits away from either edge. */
+  /**
+   * Whether a rise is actually visible after the low plateau — false when
+   * the low region runs all the way to the sample's last point (still
+   * falling/flat, not a dip-then-rise). Deliberately does *not* also
+   * require the plateau to start away from the front edge — a real T3 can
+   * dip almost immediately after onset and hold from there.
+   */
   isInterior: boolean;
   /** How far the low point sits below the sample's own mean. */
   depth: number;
-  /** Where the low point sits, as a fraction of the sample's own span (0–1). */
+  /**
+   * Where the low *plateau* ends — i.e. where a sustained climb actually
+   * begins — as a fraction of the sample's own span (0–1). Not the position
+   * of the single lowest sample: a real T3 that holds the floor for a
+   * while before rising has its bare minimum sitting wherever the flat
+   * stretch happens to start (or a tie-break picks the earliest match),
+   * which reads as an *early* dip — T2's signature, not T3's. What actually
+   * distinguishes them is when the floor ends and the rise starts, so that
+   * is what this measures. See `plateauRange`.
+   */
   positionFrac: number;
+  /**
+   * How much of the sample sits within `toneClassifierPlateauBandFrac` of
+   * the minimum, as a fraction of the sample length (0–1). A narrow V-shaped
+   * dip (T2) scores near 0; a real hold-then-rise T3 scores well above it.
+   * A second, independent signal from `positionFrac` — a long hold pushes
+   * both the plateau-end position late *and* this fraction high, and
+   * `classifyTone` rewards them separately rather than folding one into
+   * the other, so a hold that is long but not yet late-ending (or vice
+   * versa) still gets partial credit.
+   */
+  plateauFrac: number;
 }
 
 /**
- * Finds the sample's lowest point and reports whether it sits in the
- * interior (not right at either edge), how deep it dips below the sample's
- * own mean, and *where* it sits — a direct, correlation-independent signal
- * for T2/T3 disambiguation.
+ * Walks outward from `minIdx` while the sample stays within `band` of the
+ * minimum value, returning the contiguous low-plateau's start/end indices.
+ * For a narrow dip (no real plateau) this collapses to `start === end ===
+ * minIdx`, so callers that used to read `minIdx` directly see no change.
+ */
+function plateauRange(
+  sample: number[],
+  minIdx: number,
+  band: number,
+): { start: number; end: number } {
+  const minVal = sample[minIdx];
+  let start = minIdx;
+  while (start > 0 && sample[start - 1] <= minVal + band) start -= 1;
+  let end = minIdx;
+  while (end < sample.length - 1 && sample[end + 1] <= minVal + band) end += 1;
+  return { start, end };
+}
+
+/**
+ * Finds the sample's lowest point and the low *plateau* around it, and
+ * reports whether a rise is actually visible after it, how deep it dips
+ * below the sample's own mean, where the plateau ends (see `positionFrac` on
+ * `DipInfo`), and how much of the sample it covers (`plateauFrac`) — direct,
+ * correlation-independent signals for T2/T3 disambiguation.
  *
  * Correlation alone rewards clean shape-matching, but T2 and T3 are both
  * "dip then rise" — they differ in *where* and *how deep* the dip sits, not
@@ -165,20 +207,37 @@ interface DipInfo {
  * conservative since depth alone is weak) *and* late enough
  * (`toneClassifierDipMinPositionFrac`) to look like T3's dip rather than
  * T2's.
+ *
+ * `toneClassifierPlateauBandFrac` sizes the band as a fraction of the
+ * sample's own chao range (max − min), not an absolute chao value, so this
+ * stays scale-invariant the same way the correlation scoring already is.
  */
 function detectDip(sample: number[]): DipInfo {
   let minIdx = 0;
+  let maxVal = sample[0];
   for (let i = 1; i < sample.length; i++) {
     if (sample[i] < sample[minIdx]) minIdx = i;
+    if (sample[i] > maxVal) maxVal = sample[i];
   }
   const n = sample.length;
-  const isInterior =
-    minIdx > DIP_INTERIOR_LOW * n && minIdx < DIP_INTERIOR_HIGH * n;
+  const range = maxVal - sample[minIdx];
+  const band = range * tuning().toneClassifierPlateauBandFrac;
+  const { start, end } = plateauRange(sample, minIdx, band);
+  // The rise must actually be visible after the plateau — a low region that
+  // runs all the way to the last sample is a still-falling (or still-flat)
+  // shape, not a dip-then-rise, however long its floor is. Unlike the old
+  // argmin-based check, this deliberately does *not* also require the
+  // plateau to start away from the front edge: a real T3 can dip almost
+  // immediately after onset and hold from there, which used to fail that
+  // check outright (see the 25 Aug 2026 session, where every held-floor
+  // attempt had its plateau start within the first couple of samples).
+  const isInterior = end < n - 1;
   const mean = sample.reduce((s, v) => s + v, 0) / n;
   return {
     isInterior,
     depth: mean - sample[minIdx],
-    positionFrac: minIdx / (n - 1),
+    positionFrac: end / (n - 1),
+    plateauFrac: (end - start + 1) / n,
   };
 }
 
@@ -238,13 +297,33 @@ export function classifyTone(contour: Contour): ToneClassification | null {
 
   const dip = detectDip(sample);
   const t3Score = scores.get(3);
-  if (
-    t3Score !== undefined &&
-    dip.isInterior &&
-    dip.depth > tuning().toneClassifierDipThresholdChao &&
-    dip.positionFrac >= tuning().toneClassifierDipMinPositionFrac
-  ) {
-    scores.set(3, Math.min(1, t3Score + tuning().toneClassifierDipBonus));
+  if (t3Score !== undefined && dip.isInterior) {
+    let bonus = 0;
+    // Depth-gated, as before: `dip.depth` is mean-relative, and only
+    // meaningful once there's a real point to be deep *relative to*.
+    if (
+      dip.depth > tuning().toneClassifierDipThresholdChao &&
+      dip.positionFrac >= tuning().toneClassifierDipMinPositionFrac
+    ) {
+      bonus += tuning().toneClassifierDipBonus;
+    }
+    // Deliberately its own gate, not also requiring `toneClassifierDipThresholdChao`:
+    // a long hold drags the sample's own mean down toward the floor, which
+    // shrinks the mean-relative `depth` measurement even though the actual
+    // drop from onset to floor is large — so the depth gate above quietly
+    // failed on every real held-floor attempt this was built to catch.
+    // `plateauFrac` already only fires on a real, sustained low stretch
+    // (band-limited to `toneClassifierPlateauBandFrac` of the sample's own
+    // range), so it doesn't need a second, redundant depth check. Reported
+    // directly against a played-back session (25 Aug 2026): several genuine
+    // T3 attempts held the floor for roughly half the sample before a late,
+    // steep rise, and read as T2 or "none" even after `positionFrac` moved
+    // to the plateau's end — the position fix alone wasn't enough ballast
+    // against T2's own correlation pull.
+    if (dip.plateauFrac >= tuning().toneClassifierPlateauMinFrac) {
+      bonus += tuning().toneClassifierPlateauBonus;
+    }
+    if (bonus > 0) scores.set(3, Math.min(1, t3Score + bonus));
   }
 
   let best: Tone | null = null;

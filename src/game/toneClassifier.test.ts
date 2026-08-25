@@ -282,6 +282,49 @@ describe("classifyTone", () => {
       }
     });
 
+    it("recognizes a real hold-then-rise T3 that a moderate dip bonus alone couldn't rescue", () => {
+      // Reported directly against a played-back Lab session (25 Aug 2026):
+      // a genuine T3 attempt that dips fast, holds the floor for most of the
+      // utterance, then rises late and steeply — read as T2 or "none" every
+      // time under the old argmin-based position measurement, since a long
+      // flat floor puts the *lowest single sample* near where the floor
+      // starts, not where it ends.
+      function holdThenRise(riseStartFrac: number): Contour {
+        const n = 40;
+        const durationMs = 900;
+        const floorFrac = 0.15;
+        const points: ContourPoint[] = Array.from({ length: n }, (_, k) => {
+          const t = k / (n - 1);
+          const chao =
+            t < floorFrac
+              ? 3 - 2 * Math.min(1, t / (floorFrac * 0.5))
+              : t < riseStartFrac
+                ? 1
+                : 1 + 4 * ((t - riseStartFrac) / (1 - riseStartFrac));
+          return { tMs: t * durationMs, chao };
+        });
+        return { points, startedAtMs: 0, endedAtMs: durationMs };
+      }
+
+      // A long hold (rise doesn't start until 80-85% through) is
+      // unambiguously T3.
+      expect(classifyTone(holdThenRise(0.8))?.tone).toBe(3);
+      expect(classifyTone(holdThenRise(0.85))?.tone).toBe(3);
+
+      // A short hold is a genuine T2 shape and must stay T2, not get pulled
+      // toward T3 by the new plateau signal.
+      expect(classifyTone(holdThenRise(0.4))?.tone).toBe(2);
+      expect(classifyTone(holdThenRise(0.5))?.tone).toBe(2);
+    });
+
+    it("does not let the relaxed plateau gate pull a real T2 attempt toward T3", () => {
+      // Regression guard for the exact failure the plateau fix introduced:
+      // T2's own averaged dip is wide enough, once resampled to 16 points,
+      // to look like a small "plateau" too — the gate has to sit above that
+      // natural width, not just above a bare single-point dip.
+      expect(classifyTone(contourFromTone(2, 800))?.tone).toBe(2);
+    });
+
     it("position gate blocks the bonus for a deep dip that sits early (T2-shaped), not late", () => {
       try {
         const n = 16;

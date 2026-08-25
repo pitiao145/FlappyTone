@@ -629,11 +629,21 @@
   }
 }
 
+/* Unlike the unheard toast, this one follows a real collision — it names
+   what went wrong rather than shrugging, so it borrows the wall-collision
+   tint instead of the neutral surface. */
+.mismatch-toast {
+  background: rgba(var(--danger-rgb), 0.16);
+  color: var(--ink);
+  animation: unheard-fade 1.2s ease-out forwards;
+}
+
 /* The OS setting wins over every flourish above. */
 @media (prefers-reduced-motion: reduce) {
   .points-pop,
   .heart.breaking,
   .unheard-toast,
+  .mismatch-toast,
   .phase-banner.your-turn {
     animation-duration: 0.01ms;
     animation-iteration-count: 1;
@@ -727,6 +737,11 @@
 .breakdown-row .unheard {
   font-size: 0.75rem;
   color: var(--ink-dim);
+}
+
+.breakdown-row .mismatched {
+  font-size: 0.75rem;
+  color: rgb(var(--danger-rgb));
 }
 
 .stage canvas {

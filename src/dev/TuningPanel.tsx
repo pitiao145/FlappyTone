@@ -80,7 +80,7 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
   },
   {
     title: "tone classifier",
-    note: "the Lab visualiser's standalone tone recognizer — separate from gate judging, nothing here feeds scoreGate.",
+    note: "the standalone tone recognizer, proven in the Lab visualiser — these knobs also feed live gate scoring when the toggles above are on.",
     knobs: [
       { key: "toneClassifierMinConfidence", label: "min confidence", min: 0, max: 1, step: 0.05,
         help: "Below this score, the recognizer reports \"none\" rather than picking a tone." },
@@ -98,6 +98,16 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
         help: "How far into the sample (0-1) the low point must sit to count as T3-shaped. T2 dips at ~31% through, T3 at ~50% in the shipped templates — this is what actually separates them." },
       { key: "toneClassifierDipBonus", label: "T3 dip bonus", min: 0, max: 0.5, step: 0.01,
         help: "How much score T3 gets when the depth and position dip gates are both cleared." },
+      { key: "toneClassifierPlateauBandFrac", label: "T3 plateau band", min: 0.02, max: 0.4, step: 0.01,
+        help: "How close to the sample's own minimum (as a fraction of its chao range) still counts as \"on the floor\" when measuring how long a dip is held." },
+      { key: "toneClassifierPlateauMinFrac", label: "T3 plateau min length", min: 0, max: 1, step: 0.05,
+        help: "How much of the sample (0-1) must sit within that floor band before a dip counts as a genuine hold rather than a brief V — set above a normal T2 dip's own natural width." },
+      { key: "toneClassifierPlateauBonus", label: "T3 plateau bonus", min: 0, max: 0.5, step: 0.01,
+        help: "How much score T3 gets when the plateau-length gate is cleared — independent of, and additive with, the dip bonus above." },
+      { key: "toneClassifierBoostMinConfidence", label: "boost min confidence", min: 0.5, max: 1, step: 0.01,
+        help: "Confidence the classifier must reach on the *correct* tone before a gate's accuracy gets raised to match — a reward for being sure, not a general softening." },
+      { key: "toneClassifierBoostFloorAccuracy", label: "boost floor accuracy", min: 0, max: 1, step: 0.05,
+        help: "Accuracy granted right at the boost's confidence threshold — set to land on the \"good\" tier, so clearing the bar guarantees at least that, not an automatic perfect." },
     ],
   },
   {
@@ -186,6 +196,52 @@ export function TuningPanel() {
                 corridor with the wrong shape can no longer score as
                 perfect/good. Off by default; flip on to fly a real run
                 against it.
+              </span>
+            </label>
+          )}
+          {group.title === "tone classifier" && (
+            <label className="knob">
+              <span className="param-name">
+                drastic mismatch is a collision
+              </span>
+              <input
+                type="checkbox"
+                checked={t.toneMismatchCollisionEnabled}
+                onChange={(e) =>
+                  write({ toneMismatchCollisionEnabled: e.target.checked })
+                }
+              />
+              <span className="param-help">
+                When on, a confident T1/T4 mixup with any other tone, or a
+                confident T2↔T3 mixup, forces the gate to a wall-style
+                collision — heart lost, gate scores 0 — instead of only
+                capping at "ok". Off by default: a correct-shape,
+                shifted-in-time attempt can still misclassify. Flip on to fly
+                a real run against it.
+              </span>
+            </label>
+          )}
+          {group.title === "tone classifier" && (
+            <label className="knob">
+              <span className="param-name">
+                reward a confident correct shape
+              </span>
+              <input
+                type="checkbox"
+                checked={t.toneClassifierBoostEnabled}
+                onChange={(e) =>
+                  write({ toneClassifierBoostEnabled: e.target.checked })
+                }
+              />
+              <span className="param-help">
+                When on, a gate the classifier reads as the *correct* tone
+                with confidence at or above{" "}
+                {Math.round(t.toneClassifierBoostMinConfidence * 100)}% has
+                its accuracy raised to match — an unmistakable shape can
+                score well even if the pitch trace wandered outside a tight
+                corridor tolerance. On by default: unlike the mismatch
+                features above, a false positive here only over-rewards, it
+                never costs a heart.
               </span>
             </label>
           )}
