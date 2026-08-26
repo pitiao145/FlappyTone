@@ -3,6 +3,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import basicSsl from '@vitejs/plugin-basic-ssl'
 import { prerenderLanding } from './src/dev/prerender.ts'
+import { prettyUrls } from './src/dev/prettyUrls.ts'
 
 // https://vite.dev/config/
 // basic-ssl serves the dev server over HTTPS (self-signed cert) so
@@ -11,7 +12,9 @@ import { prerenderLanding } from './src/dev/prerender.ts'
 export default defineConfig({
   // prerenderLanding writes the landing copy into index.html so a crawler (and
   // every link-preview bot, none of which run JS) sees more than an empty root.
-  plugins: [react(), basicSsl(), prerenderLanding()],
+  // prettyUrls gives dev and preview the /app and /record URLs vercel.json
+  // rewrites in production, so a link never has to spell the .html filename.
+  plugins: [react(), basicSsl(), prerenderLanding(), prettyUrls()],
   // Reachable from the phone on the LAN, for on-device testing.
   server: { host: true },
   build: {

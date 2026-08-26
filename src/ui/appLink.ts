@@ -3,10 +3,12 @@
  *
  * The marketing site (`/`) and the game (`/app`) are separate Vite entries, so
  * moving between them is a real page navigation rather than a screen change.
- * `vercel.json` rewrites `/app` to `/app.html`; in `vite dev` the file is
- * served at `/app.html` directly, hence the two spellings.
+ * `vercel.json` rewrites `/app` to `/app.html` in production and the
+ * `prettyUrls` plugin does the same for dev and preview, so this is one
+ * spelling everywhere — no `import.meta.env.DEV` branch, and no URL that only
+ * exists in one of the two builds.
  */
-export const APP_PATH = import.meta.env.DEV ? "/app.html" : "/app";
+export const APP_PATH = "/app";
 
 /** What the game should do on arrival, when the landing page sent you there. */
 export type AppIntent = "visualiser";

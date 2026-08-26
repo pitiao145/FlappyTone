@@ -23,6 +23,7 @@
   "include": [
     "vite.config.ts",
     "src/dev/prerender.ts",
+    "src/dev/prettyUrls.ts",
     "src/brand.ts",
     "src/dev/analyze.ts",
     "src/dev/analyze-recording.ts",
