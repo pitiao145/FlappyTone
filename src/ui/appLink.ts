@@ -25,3 +25,13 @@ export function appHref(intent?: AppIntent): string {
 export function goToApp(intent?: AppIntent): void {
   window.location.assign(appHref(intent));
 }
+
+/**
+ * The way back out to the marketing site.
+ *
+ * Not a bare "/": inside an installed app every load of "/" still looks like a
+ * launch, so the legacy-install redirect in `index.html` would bounce this
+ * straight back to the game and the link would read as broken. `?site` tells
+ * that redirect this one was deliberate.
+ */
+export const SITE_HREF = "/?site";

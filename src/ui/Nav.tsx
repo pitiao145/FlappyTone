@@ -8,7 +8,6 @@ interface Props {
    * always wants it, so this is really only for the prerender entry.
    */
   onPlay?: () => void;
-  disabled?: boolean;
 }
 
 function IconMenu() {
@@ -40,7 +39,7 @@ function IconClose() {
  *
  * Items come from `brand.sections`, so adding a section adds its link.
  */
-export function Nav({ onPlay, disabled }: Props) {
+export function Nav({ onPlay }: Props) {
   const items = brand.sections.filter((s) => s.inNav);
   const [navMenuOpen, setNavMenuOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
@@ -107,7 +106,6 @@ export function Nav({ onPlay, disabled }: Props) {
                 <button
                   type="button"
                   className="nav-cta-btn"
-                  disabled={disabled}
                   onClick={() => {
                     setNavMenuOpen(false);
                     onPlay();

@@ -1,3 +1,5 @@
+import { SITE_HREF } from "../ui/appLink.ts";
+
 interface Props {
   /**
    * Back to the game's own menu. Omitted on the Title screen itself, where it
@@ -23,7 +25,7 @@ export function GameNav({ onHome }: Props) {
   return (
     <nav className="landing-nav nav-app">
       <div className="nav-inner">
-        <a className="nav-brand" href="/">
+        <a className="nav-brand" href={SITE_HREF}>
           <img className="nav-logo" src="/icons/icon-32.png" alt="" width={28} height={28} />
           <span className="nav-name">FLAPPYTONE</span>
         </a>

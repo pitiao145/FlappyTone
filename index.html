@@ -81,14 +81,22 @@
          App.tsx) is gone, because "/" is now only ever the marketing page.
          Safe to delete once installs from before the split have aged out.
 
+         The standalone checks match on *every* load of "/" inside an installed
+         app, not only the launch — including a deliberate tap on the game's
+         own link out to the marketing site, which would otherwise bounce
+         straight back here and read as a dead link. "?site" is that link's way
+         of saying it meant it, and it wins over the redirect.
+
          Inline and blocking on purpose: it must beat the paint. A plain visit
-         to "/" matches none of these and is untouched. -->
+         to "/" in a browser tab matches none of these and is untouched. -->
     <script>
       try {
+        var q = new URLSearchParams(location.search);
         if (
-          new URLSearchParams(location.search).has("app") ||
-          matchMedia("(display-mode: standalone)").matches ||
-          navigator.standalone === true
+          !q.has("site") &&
+          (q.has("app") ||
+            matchMedia("(display-mode: standalone)").matches ||
+            navigator.standalone === true)
         ) {
           location.replace("/app");
         }
