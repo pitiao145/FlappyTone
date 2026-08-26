@@ -98,39 +98,56 @@ function initialIntent(): "visualiser" | null {
 }
 
 /**
- * Canvas resolution — mobile-width, 9:16, by default. Desktop is wider
- * (matching App.css's own `.frame,.stage` cap at the same 720px breakpoint)
- * but *not* proportionally taller: height instead fills the viewport minus
- * STAGE_MARGIN_DESKTOP, matching App.css's `.stage` `max-height` there — so
- * desktop's aspect ratio is whatever the viewport produces, not 9:16.
+ * Canvas resolution — computed live from the real viewport, not a fixed
+ * constant, on both mobile and desktop. `window.innerHeight` (not CSS
+ * `100svh`) is what makes this correct: it already excludes browser chrome
+ * and updates on `resize` as that chrome shows/hides, whereas the CSS-only
+ * formula this replaced used a static, worst-case reserve and came out
+ * narrower than the device on ordinary mobile browser tabs (Safari/Chrome's
+ * toolbars ate more of `100svh` than the reserve assumed), leaving side
+ * gutters that only disappeared once installed as a chromeless PWA.
+ *
+ * Mobile keeps the 9:16 shape, fit into the available box (full device
+ * width, unless that would make it taller than the space left after the
+ * bottom nav, in which case height binds and width is derived back from
+ * it). Desktop is wider without being taller — height instead fills the
+ * viewport minus STAGE_MARGIN_DESKTOP, so its aspect ratio is whatever the
+ * viewport produces, not 9:16 (see `.game-stage` in App.css, which mirrors
+ * this with an inline style rather than a CSS formula — see `<GameStage>`).
  *
  * Both rendering and Run's world math (`this.width` in run.ts) key off
- * these, so this is what actually makes the canvas crisper and bigger, not
- * just the CSS box it sits in — see `useCanvasSize` below and
- * `difficultyFor` in run.ts, which scales `scrollSpeed` by
- * `width / CANVAS_W_MOBILE` so a wider canvas doesn't change cue timing
- * (gates would otherwise reach the bird later relative to their reference
- * audio, since only the world scrolls faster in step with the canvas).
+ * these, so this is what actually makes the canvas fill the screen, not
+ * just the CSS box it sits in — see `difficultyFor` in run.ts, which scales
+ * `scrollSpeed` by `width / CANVAS_W_REF` so a differently-sized canvas
+ * doesn't change cue timing (gates would otherwise reach the bird later
+ * relative to their reference audio, since only the world scrolls faster in
+ * step with the canvas).
  */
-const CANVAS_W_MOBILE = 420;
+const CANVAS_W_REF = 420;
 const CANVAS_W_DESKTOP = 900;
+/** Keep in sync with --nav-mobile-h in tokens.css. */
+const MOBILE_NAV_RESERVE = 72;
 /** Keep in sync with --stage-margin-desktop in tokens.css. */
 const STAGE_MARGIN_DESKTOP = 28;
 
 function computeCanvasSize() {
   if (typeof window === "undefined") {
-    return { w: CANVAS_W_MOBILE, h: Math.round((CANVAS_W_MOBILE * 16) / 9) };
+    return { w: CANVAS_W_REF, h: Math.round((CANVAS_W_REF * 16) / 9) };
   }
-  if (!window.matchMedia("(min-width: 720px)").matches) {
-    return { w: CANVAS_W_MOBILE, h: Math.round((CANVAS_W_MOBILE * 16) / 9) };
+  if (window.matchMedia("(min-width: 720px)").matches) {
+    return {
+      w: CANVAS_W_DESKTOP,
+      h: Math.round(window.innerHeight - STAGE_MARGIN_DESKTOP),
+    };
   }
-  return {
-    w: CANVAS_W_DESKTOP,
-    h: Math.round(window.innerHeight - STAGE_MARGIN_DESKTOP),
-  };
+  const availW = window.innerWidth;
+  const availH = window.innerHeight - MOBILE_NAV_RESERVE;
+  const hFromW = Math.round((availW * 16) / 9);
+  if (hFromW <= availH) return { w: availW, h: hFromW };
+  return { w: Math.round((availH * 9) / 16), h: availH };
 }
 
-/** Tracks both the sidebar breakpoint and viewport height App.css sizes the desktop stage from. */
+/** Tracks the viewport (breakpoint, width, height) computeCanvasSize needs. */
 function useCanvasSize() {
   const [size, setSize] = useState(computeCanvasSize);
   useEffect(() => {
@@ -158,8 +175,8 @@ export default function GameApp() {
   // mobile size — its CSS cap (App.css) is unchanged, and its own render
   // loop has no scrollSpeed/timing to keep in sync with a wider frame.
   const { w: CANVAS_W, h: CANVAS_H } = useCanvasSize();
-  const VIS_CANVAS_W = CANVAS_W_MOBILE;
-  const VIS_CANVAS_H = Math.round((CANVAS_W_MOBILE * 16) / 9);
+  const VIS_CANVAS_W = CANVAS_W_REF;
+  const VIS_CANVAS_H = Math.round((CANVAS_W_REF * 16) / 9);
 
   const [settings, setSettings] = useState<CalibrationSettings | null>(() =>
     loadSettings(),
@@ -355,6 +372,8 @@ export default function GameApp() {
               tutorialDone={tutorialDone}
               error={error}
               onStart={startPlay}
+              canvasWidth={CANVAS_W}
+              canvasHeight={CANVAS_H}
             />
           )}
 

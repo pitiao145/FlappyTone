@@ -133,6 +133,29 @@
   }
 }
 
+/*
+ * Game-stage screens (Play, Calibration, an active run — not Visualiser,
+ * which keeps the formula above) size themselves from an inline `width`/
+ * `height` style set in GameApp/Game.tsx/Calibration.tsx/PlayHome.tsx,
+ * computed live from `window.innerWidth`/`innerHeight` (GameApp's
+ * `computeCanvasSize`) rather than the CSS formula above. That formula's
+ * static `100svh`-based reserve came out narrower than the device on an
+ * ordinary mobile browser tab — Safari/Chrome's own chrome ate more of
+ * `100svh` than the reserve assumed — leaving side gutters that only
+ * disappeared once installed as a chromeless PWA; `window.innerHeight`
+ * doesn't have that gap, and updates live on `resize` as chrome shows/hides.
+ *
+ * Both `.frame` and `.stage` drop the CSS cap here so it can't clamp the
+ * inline width back down to the old, too-conservative figure — `.stage`'s
+ * own `margin-inline: auto` (above) still centers it regardless of how wide
+ * `.frame` now measures, so this is a no-op wherever the inline size already
+ * agreed with the formula (i.e. everywhere the bug wasn't visible).
+ */
+.frame:has(.game-stage),
+.game-stage {
+  max-width: none;
+}
+
 .frame:has(.lab-screen) {
   max-width: 100%;
 }

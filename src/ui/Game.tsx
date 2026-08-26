@@ -509,7 +509,10 @@ export function Game({
 
   return (
     <div className="screen game-screen">
-      <div className="stage game-stage">
+      <div
+        className="stage game-stage"
+        style={{ width: canvasWidth, height: canvasHeight }}
+      >
         <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} />
 
         <div className="hud">

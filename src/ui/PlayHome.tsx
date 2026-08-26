@@ -13,6 +13,9 @@ interface Props {
   error: string | null;
   /** Called once the mic is open. The router decides whether to calibrate first. */
   onStart: (intent: PlayIntent) => void;
+  /** Matches the size Game/Calibration will actually open at — see GameApp's computeCanvasSize. */
+  canvasWidth: number;
+  canvasHeight: number;
 }
 
 /**
@@ -22,7 +25,14 @@ interface Props {
  * on it yet. Replaces the old Title screen: reaching this tab *is* the
  * decision to come play, so there is one screen here instead of two.
  */
-export function PlayHome({ calibrated, tutorialDone, error: externalError, onStart }: Props) {
+export function PlayHome({
+  calibrated,
+  tutorialDone,
+  error: externalError,
+  onStart,
+  canvasWidth,
+  canvasHeight,
+}: Props) {
   const [ownError, setOwnError] = useState<string | null>(null);
   const [pendingIntent, setPendingIntent] = useState<PlayIntent | null>(null);
   const busy = pendingIntent !== null;
@@ -48,7 +58,10 @@ export function PlayHome({ calibrated, tutorialDone, error: externalError, onSta
 
   return (
     <div className="stage game-stage playhome-stage">
-      <div className="playhome-canvas">
+      <div
+        className="playhome-canvas"
+        style={{ width: canvasWidth, height: canvasHeight }}
+      >
         <div className="screen playhome-overlay">
           <h1>{brand.name}</h1>
           {tutorialDone && <p className="prompt">Nice, ready to play?</p>}
