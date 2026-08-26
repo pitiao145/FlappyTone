@@ -46,8 +46,8 @@ import type { CorridorWidth, Tone } from "../game/gates.ts";
 import type { CueStyle, GateLogEntry, RunMode } from "../game/run.ts";
 import type { GateOutcome } from "../game/scoring.ts";
 
-/** Why a run stopped. `quit` covers the pause menu's exits, which otherwise leave no trace. */
-export type RunEndReason = "out_of_hearts" | "finished" | "quit";
+/** Why a run stopped. `quit` and `restart` both come from the pause menu, which otherwise leaves no trace. */
+export type RunEndReason = "out_of_hearts" | "finished" | "quit" | "restart";
 
 /** The calibration steps, mirrored from Calibration.tsx's `Step`. */
 export type CalibStep = "quiet" | "talk" | "low" | "high" | "done" | "preview";

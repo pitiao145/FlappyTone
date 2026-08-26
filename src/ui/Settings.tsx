@@ -52,7 +52,7 @@ export function Settings({
   const [confirmForget, setConfirmForget] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // Seeded from the store, saved on change — the PauseOptions convention.
+  // Seeded from the store, saved on change — the pause menu's own convention.
   const [sharing, setSharing] = useState<(typeof SHARING)[number]>(() =>
     loadShareData() ? "on" : "off",
   );

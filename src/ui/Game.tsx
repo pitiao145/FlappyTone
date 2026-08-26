@@ -15,11 +15,7 @@ import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { TONE_INFO, type Tone } from "../game/gates.ts";
 import { Run, type RunMode, type RunSnapshot } from "../game/run.ts";
 import type { Word } from "../game/words.ts";
-import {
-  toneBreakdown,
-  type GateOutcome,
-  type UnheardHint,
-} from "../game/scoring.ts";
+import type { GateOutcome, UnheardHint } from "../game/scoring.ts";
 import type { ClassifiedTone } from "../game/toneClassifier.ts";
 import {
   loadCorridorWidth,
@@ -32,8 +28,8 @@ import {
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawWorld, refreshMotionPreference } from "../render/world.ts";
-import { GearIcon, HeartIcon, PauseIcon, PlayIcon } from "./icons.tsx";
-import { PauseOptions } from "./PauseOptions.tsx";
+import { HeartIcon, PauseIcon } from "./icons.tsx";
+import { PauseMenu } from "./PauseMenu.tsx";
 
 /** HUD refresh rate. React never renders per frame — the rAF loop owns the canvas. */
 const HUD_HZ = 4;
@@ -101,6 +97,8 @@ interface Props {
   onQuit: () => void;
   /** The word `mode: "single"` flies. Ignored otherwise. */
   singleWord?: Word;
+  /** This session's run count, this one included. Shown in the pause menu; ignored in the tutorial. */
+  runNumber?: number;
 }
 
 export function Game({
@@ -111,6 +109,7 @@ export function Game({
   onOver,
   onQuit,
   singleWord,
+  runNumber,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hud, setHud] = useState<RunSnapshot | null>(null);
@@ -174,6 +173,16 @@ export function Game({
    * not a per-frame render.
    */
   const [flash, setFlash] = useState<OutcomeFlash | null>(null);
+  /**
+   * Bumped by the pause menu's Restart, and listed in the run effect's own
+   * dependency array below so a bump tears the current `Run` down and builds
+   * a fresh one in place — same canvas element, no navigation, no reopening
+   * the mic (which restart doesn't need: pausing only suspends the
+   * AudioContext, see `pause()`/`restart()`).
+   */
+  const [runGen, setRunGen] = useState(0);
+  /** This session's run count, shown in the pause menu. Bumped alongside `runGen`. */
+  const [runIndex, setRunIndex] = useState(runNumber ?? 1);
   const onOverRef = useRef(onOver);
   useEffect(() => {
     onOverRef.current = onOver;
@@ -236,6 +245,25 @@ export function Game({
     },
     [reportRunEnd],
   );
+
+  /**
+   * Restarts the run in place — no navigation, so no reopening the mic
+   * (pausing only suspends the `AudioContext`, and `runGen` in the effect's
+   * dependency list below tears the old `Run` down and builds a fresh one on
+   * the same canvas element).
+   */
+  const restart = useCallback(() => {
+    const snap = runRef.current?.snapshot();
+    if (snap) reportRunEnd(snap, "restart");
+    const audio = getMicSession()?.ctx;
+    if (audio && audio.state === "suspended") void audio.resume();
+    setPaused(false);
+    setOptionsOpen(false);
+    setHud(null);
+    setFlash(null);
+    setRunIndex((n) => n + 1);
+    setRunGen((g) => g + 1);
+  }, [reportRunEnd]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -451,13 +479,16 @@ export function Game({
       runRef.current = null;
     };
     // reportGates/reportRunEnd are stable (useCallback with no changing deps),
-    // so listing them cannot rebuild the run mid-play.
+    // so listing them cannot rebuild the run mid-play. runGen is the one
+    // dependency here that changes without anything else changing — see
+    // `restart()` above.
   }, [
     mode,
     settings,
     canvasWidth,
     canvasHeight,
     singleWord,
+    runGen,
     reportGates,
     reportRunEnd,
   ]);
@@ -549,14 +580,6 @@ export function Game({
                 right-aligned. */}
             {!waiting && !notice && !paused && (
               <div className="hud-controls">
-                <button
-                  className="hud-button"
-                  onClick={() => pauseRef.current(true)}
-                  title="Game options"
-                  aria-label="Game options"
-                >
-                  <GearIcon />
-                </button>
                 <button
                   className="hud-button"
                   onClick={() => pauseRef.current(false)}
@@ -708,81 +731,26 @@ export function Game({
           </div>
         )}
 
-        {/* The pause menu. Deliberately not dismissable by tapping the
-            backdrop: there are controls under here now, and a mis-tap that
-            drops you back into a moving corridor is worse than one more tap. */}
+        {/* The pause menu, merged with what used to be a second "Game
+            options" screen behind a reveal button — see PauseMenu.tsx.
+            Deliberately not dismissable by tapping the backdrop: there are
+            controls under here now, and a mis-tap that drops you back into a
+            moving corridor is worse than one more tap. */}
         {paused && (
           <div className="overlay pause-menu">
-            <p className="pause-title">Paused</p>
-            <button
-              className="primary resume-button"
-              onClick={() => resumeRef.current()}
-            >
-              <PlayIcon />
-              Resume
-            </button>
-
-            {/* A player who paused to check how they're doing shouldn't have
-                to quit to see it — score, hearts and per-tone progress so
-                far, read straight off the same live snapshot the HUD uses. */}
-            {mode === "game" && hud && (
-              <div className="pause-stats">
-                <div className="pause-stats-summary">
-                  <span className="pause-stats-score">{hud.score} pts</span>
-                  <span className="pause-stats-hearts">
-                    {Array.from({ length: MAX_HEARTS }, (_, i) => (
-                      <span key={i} className="heart">
-                        <HeartIcon filled={i < hearts} />
-                      </span>
-                    ))}
-                  </span>
-                  {hud.comboMult > 1 && (
-                    <span className="combo">×{hud.comboMult}</span>
-                  )}
-                </div>
-                <div className="pause-stats-breakdown">
-                  {toneBreakdown(hud.stats).map((b) => (
-                    <div className="pause-stats-row" key={b.tone}>
-                      <span className="syllable">Tone {b.tone}</span>
-                      <span className="pct">
-                        {b.pct === null ? "—" : `${Math.round(b.pct)}%`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {optionsOpen ? (
-              <PauseOptions
-                onCueStyle={(style) => runRef.current?.setCueStyle(style)}
-                onShowTranslation={setShowTranslation}
-              />
-            ) : (
-              /* The way in from a plain pause, and from the tab-hidden one.
-                 Named for what it changes rather than "Settings", which in
-                 this app is the mic-calibration screen. */
-              <button
-                className="options-reveal"
-                onClick={() => setOptionsOpen(true)}
-              >
-                <GearIcon />
-                Width, translation &amp; example
-              </button>
-            )}
-
-            {/* Same outline-pill treatment as Options above — quit is the
-                only other button on this screen, and the danger color alone
-                is enough to mark it as the destructive one. No "home page"
-                exit here: the navbar is the way back to the site everywhere
-                else, and duplicating it just added a second exit to scan. */}
-            <button
-              className="mic-stop"
-              onClick={exitRun(onQuit)}
-              title="End the run"
-            >
-              ■ quit
-            </button>
+            <PauseMenu
+              mode={mode}
+              score={hud?.score ?? 0}
+              runNumber={mode === "game" ? runIndex : null}
+              stats={mode === "game" ? (hud?.stats ?? null) : null}
+              settingsOpen={optionsOpen}
+              onToggleSettings={() => setOptionsOpen((open) => !open)}
+              onResume={() => resumeRef.current()}
+              onRestart={restart}
+              onQuit={exitRun(onQuit)}
+              onCueStyle={(style) => runRef.current?.setCueStyle(style)}
+              onShowTranslation={setShowTranslation}
+            />
           </div>
         )}
       </div>

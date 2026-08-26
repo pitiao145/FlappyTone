@@ -163,3 +163,15 @@ export function GearIcon() {
     </svg>
   );
 }
+
+/** Phosphor `ArrowClockwise`, Regular. */
+export function RestartIcon() {
+  return (
+    <svg {...BOX}>
+      <path
+        d="M232,72v64a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16h44.69L164.11,88.19a80,80,0,1,0-1.7,111.63A8,8,0,1,1,173.53,211,96,96,0,1,1,175.9,76.24L216,116.7V72a8,8,0,0,1,16,0Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}

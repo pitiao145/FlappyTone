@@ -215,6 +215,12 @@ export default function GameApp() {
   const pendingRef = useRef<"game" | "tutorial" | "visualiser" | null>(null);
   /** The mode of the run that just ended — drives Retry. */
   const lastModeRef = useRef<"game" | "tutorial">("game");
+  /**
+   * This session's "game" run count — shown in the pause menu ("run N").
+   * Bumped on every fresh visit to a game run (Play, Retry); an in-game
+   * Restart bumps its own local copy instead, since it never reaches here.
+   */
+  const gameRunNumberRef = useRef(0);
 
   /**
    * Bumped on every deliberate navigation. An in-flight `ensureMic` compares
@@ -241,6 +247,7 @@ export default function GameApp() {
         return;
       }
       if (intent !== "visualiser") lastModeRef.current = intent;
+      if (intent === "game") gameRunNumberRef.current += 1;
       // Playing without calibration would map the player's voice through a
       // stranger's f0 centre. Calibrate first, then continue to the run.
       if (!settings) {
@@ -303,6 +310,7 @@ export default function GameApp() {
       // Retry is a click, so this reopens the mic inside a user gesture.
       await ensureMic();
       if (gen !== navRef.current) return; // player left while we were waiting
+      if (lastModeRef.current === "game") gameRunNumberRef.current += 1;
       setScreen(lastModeRef.current);
     } catch (err) {
       if (gen !== navRef.current) return;
@@ -471,6 +479,7 @@ export default function GameApp() {
             canvasHeight={GAME_CANVAS_H}
             onOver={onRunOver}
             onQuit={goHome}
+            runNumber={gameRunNumberRef.current}
           />
         )}
 
