@@ -2,7 +2,7 @@
   "name": "FlappyTone — Mandarin tone trainer",
   "short_name": "FlappyTone",
   "description": "Steer a bird with your voice through corridors shaped like Mandarin tone marks.",
-  "start_url": "/?app=1",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

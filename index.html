@@ -71,8 +71,18 @@
   <body>
     <!-- Filled at build time by src/dev/prerender.ts; React remounts over it. -->
     <div id="root"></div>
-    <!-- Drops the prerendered landing before paint when installed standalone.
-         Mirrors initialScreen() in App.tsx. Inline and blocking on purpose. -->
+    <!-- Legacy home-screen installs only.
+         The manifest's start_url is /app now, but anyone who installed before
+         the split has "/" or "/?app=1" saved, and launching the installed app
+         onto marketing copy every time would be a bug. This forwards them.
+
+         It is the only place left that reads these flags — the pair that used
+         to be kept in sync by hand (this script and initialScreen() in
+         App.tsx) is gone, because "/" is now only ever the marketing page.
+         Safe to delete once installs from before the split have aged out.
+
+         Inline and blocking on purpose: it must beat the paint. A plain visit
+         to "/" matches none of these and is untouched. -->
     <script>
       try {
         if (
@@ -80,7 +90,7 @@
           matchMedia("(display-mode: standalone)").matches ||
           navigator.standalone === true
         ) {
-          document.getElementById("root").replaceChildren();
+          location.replace("/app");
         }
       } catch (e) {
         /* leave it: a painted landing page beats a blank screen */
