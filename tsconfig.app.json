@@ -26,6 +26,7 @@
   "include": ["src"],
   "exclude": [
     "src/dev/prerender.ts",
+    "src/dev/prettyUrls.ts",
     "src/dev/analyze.ts",
     "src/dev/analyze-recording.ts",
     "src/dev/analyze-recording.test.ts",

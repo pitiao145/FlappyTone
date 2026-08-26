@@ -95,10 +95,13 @@ export function prerenderLanding(): Plugin {
       order: "post",
       async handler(html, ctx) {
         if (!isBuild) return html;
-        // The game entry only. `record.html` is Jane's booth: noindex twice
-        // over, and it must stay that way.
+        // The marketing entry only. `app.html` is the game and `record.html` is
+        // Jane's booth: both are noindex, and they must stay that way. The
+        // `endsWith("index.html")` test already excludes them, but naming them
+        // means a future rename fails visibly here rather than silently
+        // prerendering a JS shell.
         const file = ctx.filename.replace(/\\/g, "/");
-        if (file.includes("record")) return html;
+        if (file.includes("record") || file.endsWith("app.html")) return html;
         if (!file.endsWith("index.html")) return html;
         if (!html.includes(ROOT_DIV)) {
           // Better a loud build than a silent regression to an empty page.

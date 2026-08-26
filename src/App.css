@@ -2348,13 +2348,11 @@
 }
 
 @media (min-width: 901px) {
-  .nav-landing .landing-nav-links,
-  .nav-app .landing-nav-links {
+  .nav-landing .landing-nav-links {
     display: flex;
   }
 
-  .nav-landing .nav-hamburger,
-  .nav-app .nav-hamburger {
+  .nav-landing .nav-hamburger {
     display: none;
   }
 }
@@ -2366,8 +2364,7 @@
 }
 
 @media (max-width: 900px) {
-  .nav-landing .nav-hamburger,
-  .nav-app .nav-hamburger {
+  .nav-landing .nav-hamburger {
     display: inline-flex;
   }
 
@@ -3556,33 +3553,12 @@ section.hero-cards {
   align-self: center;
 }
 
-/* ------------------------------------------------------- nav, app variant */
+/* ------------------------------------------------------------- nav, /app */
 
-/* Sizing (width, height, max-width) is unified in .landing-nav/.nav-inner —
-   both variants share those now. What's left here is behavioural: on app
-   screens the nav items are buttons calling onNavigate, not real anchors
-   (see Nav.tsx), so they need the anchor/button reset a real <a> doesn't. */
-.nav-app .nav-brand,
-.nav-link {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
-  font: inherit;
-}
-
-.nav-link {
-  color: var(--ink-muted);
-  font-size: var(--text-sm);
-  white-space: nowrap;
-}
-
-.nav-link:hover {
-  color: var(--ink);
-}
-
-.nav-link:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
+/* Sizing (width, height, max-width) comes from .landing-nav/.nav-inner, which
+   both bars share. The game's bar (src/app/GameNav.tsx) adds nothing of its
+   own yet — it is a placeholder for navigation still to be designed. What used
+   to live here was a button/anchor reset for the old "app variant" of Nav.tsx,
+   whose links were buttons faking cross-page jumps; with the game on its own
+   URL those are real anchors and need no reset. */
 

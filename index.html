@@ -71,16 +71,34 @@
   <body>
     <!-- Filled at build time by src/dev/prerender.ts; React remounts over it. -->
     <div id="root"></div>
-    <!-- Drops the prerendered landing before paint when installed standalone.
-         Mirrors initialScreen() in App.tsx. Inline and blocking on purpose. -->
+    <!-- Legacy home-screen installs only.
+         The manifest's start_url is /app now, but anyone who installed before
+         the split has "/" or "/?app=1" saved, and launching the installed app
+         onto marketing copy every time would be a bug. This forwards them.
+
+         It is the only place left that reads these flags — the pair that used
+         to be kept in sync by hand (this script and initialScreen() in
+         App.tsx) is gone, because "/" is now only ever the marketing page.
+         Safe to delete once installs from before the split have aged out.
+
+         The standalone checks match on *every* load of "/" inside an installed
+         app, not only the launch — including a deliberate tap on the game's
+         own link out to the marketing site, which would otherwise bounce
+         straight back here and read as a dead link. "?site" is that link's way
+         of saying it meant it, and it wins over the redirect.
+
+         Inline and blocking on purpose: it must beat the paint. A plain visit
+         to "/" in a browser tab matches none of these and is untouched. -->
     <script>
       try {
+        var q = new URLSearchParams(location.search);
         if (
-          new URLSearchParams(location.search).has("app") ||
-          matchMedia("(display-mode: standalone)").matches ||
-          navigator.standalone === true
+          !q.has("site") &&
+          (q.has("app") ||
+            matchMedia("(display-mode: standalone)").matches ||
+            navigator.standalone === true)
         ) {
-          document.getElementById("root").replaceChildren();
+          location.replace("/app");
         }
       } catch (e) {
         /* leave it: a painted landing page beats a blank screen */

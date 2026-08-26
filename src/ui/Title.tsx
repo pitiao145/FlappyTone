@@ -17,6 +17,15 @@ interface Props {
   tutorialDone: boolean;
   /** An error raised elsewhere (e.g. a failed Retry) — shown in Title's one error slot. */
   error: string | null;
+  /**
+   * What the landing page sent the player here for, if anything.
+   *
+   * Only ever a highlight, never an auto-start: the microphone opens inside a
+   * click and the landing page's click did not survive the navigation to /app.
+   * So the matching button becomes the primary one and says what it will do,
+   * and the player's tap is the gesture that opens the mic.
+   */
+  suggestedIntent?: StartIntent | null;
   /** Called once the mic is open. The router decides whether to calibrate first. */
   onStart: (intent: StartIntent) => void;
   onHowTo: () => void;
@@ -27,6 +36,7 @@ export function Title({
   calibrated,
   tutorialDone,
   error: externalError,
+  suggestedIntent = null,
   onStart,
   onHowTo,
   onSettings,
@@ -35,6 +45,9 @@ export function Title({
   const [pendingIntent, setPendingIntent] = useState<StartIntent | null>(null);
   const busy = pendingIntent !== null;
   const error = ownError ?? externalError;
+  // Exactly one button carries `.primary`; the suggestion moves it rather than
+  // adding a second, so the screen still has one obvious next step.
+  const primaryIntent: StartIntent = suggestedIntent ?? "game";
 
   // The mic is opened here, inside the click handler, because iOS Safari only
   // grants getUserMedia/resume during a user gesture — a mount effect on the
@@ -65,15 +78,26 @@ export function Title({
       <p className="tagline">{brand.tagline}</p>
 
       {tutorialDone && <p className="prompt">Nice, ready to play?</p>}
+      {!tutorialDone && suggestedIntent === "visualiser" && (
+        <p className="prompt">Tap the visualiser to open your microphone.</p>
+      )}
 
       <div className="menu">
-        <button className="primary" disabled={busy} onClick={go("game")}>
+        <button
+          className={primaryIntent === "game" ? "primary" : undefined}
+          disabled={busy}
+          onClick={go("game")}
+        >
           {pendingIntent === "game" ? "Opening mic…" : "Play"}
         </button>
         <button disabled={busy} onClick={go("tutorial")}>
           {pendingIntent === "tutorial" ? "Opening mic…" : "Tutorial"}
         </button>
-        <button disabled={busy} onClick={go("visualiser")}>
+        <button
+          className={primaryIntent === "visualiser" ? "primary" : undefined}
+          disabled={busy}
+          onClick={go("visualiser")}
+        >
           {pendingIntent === "visualiser" ? "Opening mic…" : "Tone visualiser"}
         </button>
         <button disabled={busy} onClick={onSettings}>
