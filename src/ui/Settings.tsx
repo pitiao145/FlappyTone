@@ -23,6 +23,9 @@ interface Props {
   onFineTune: () => void;
   /** Called after the calibration is deleted, so the router can re-check it. */
   onForget: () => void;
+  /** Opens the mic and starts a tutorial run — same gate as the Play tab's own button. */
+  onTutorial: () => void;
+  onHowTo: () => void;
 }
 
 /**
@@ -43,6 +46,8 @@ export function Settings({
   onRecalibrate,
   onFineTune,
   onForget,
+  onTutorial,
+  onHowTo,
 }: Props) {
   const [confirmForget, setConfirmForget] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -156,6 +161,18 @@ export function Settings({
           you can change them while you can feel what they do. Tap ‖ during a
           run.
         </p>
+      </section>
+
+      <section className="setting">
+        <h3>Learn</h3>
+        <div className="setting-actions">
+          <button disabled={busy} onClick={() => void goListening(onTutorial)()}>
+            Tutorial
+          </button>
+          <button disabled={busy} onClick={onHowTo}>
+            How to play
+          </button>
+        </div>
       </section>
 
       {error && <p className="error">{error}</p>}

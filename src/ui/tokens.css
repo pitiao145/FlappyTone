@@ -92,6 +92,10 @@
   --text-xl: 1.4rem;
   --text-2xl: 2.2rem;
 
+  /* ---- game nav (/app) */
+  --nav-mobile-h: 72px;
+  --nav-sidebar-w: 232px;
+
   /* ---- spacing */
   --space-1: 4px;
   --space-2: 8px;

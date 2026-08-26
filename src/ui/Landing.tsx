@@ -47,8 +47,9 @@ interface Props {
  *
  * Everything above `onPlay` is readable without a microphone, an account or a
  * click: the pitch, a working demo of the mechanic, and the honest limits. The
- * game shell (Title) sits behind the Play button and stays what it was — a
- * compact, mobile-first launcher.
+ * game shell (`/app`, its own nav plus the Play tab's standby screen) sits
+ * behind the Play button and stays what it was — a compact, mobile-first
+ * launcher.
  *
  * Copy lives in `src/brand.ts` and colour in `src/ui/tokens.css`; this file is
  * layout. Keep it that way — the whole point is that a re-brand touches two

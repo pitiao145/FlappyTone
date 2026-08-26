@@ -3,7 +3,7 @@ import { initAnalytics, track, trackCalibration } from "../analytics/client";
 import { initPostHog } from "../analytics/posthog.ts";
 import { loadInventory } from "../audio/inventory";
 import { MicError } from "../audio/mic";
-import { ensureMic, stopMic } from "../audio/session";
+import { ensureMic, MicCancelled, stopMic } from "../audio/session";
 import {
   averageRangeHalves,
   COOLDOWN_TRACKING_WINDOW,
@@ -24,15 +24,16 @@ import { Calibration } from "../ui/Calibration";
 import { Game } from "../ui/Game";
 import { GameOver } from "../ui/GameOver";
 import { HowTo } from "../ui/HowTo";
+import { PlaceholderScreen } from "../ui/PlaceholderScreen";
+import { PlayHome, type PlayIntent } from "../ui/PlayHome";
 import { Settings } from "../ui/Settings";
 import { Visualiser } from "../ui/Visualiser";
 import { micErrorCopy } from "../ui/micErrors";
-import { Title, type StartIntent } from "../ui/Title";
-import { GameNav } from "./GameNav.tsx";
+import { GameNav, type NavTab } from "./GameNav.tsx";
 import "../App.css";
 
 type Screen =
-  | "title"
+  | "play"
   | "howto"
   | "calibrate"
   | "finetune"
@@ -41,7 +42,29 @@ type Screen =
   | "gameover"
   | "settings"
   | "visualiser"
+  | "progress"
+  | "profile"
   | "lab";
+
+/** What Play/Tutorial (from the Play tab or Settings) route through. */
+type StartIntent = PlayIntent | "visualiser";
+
+/** Which nav item should read as active for a given screen. */
+function navTabFor(screen: Screen): NavTab {
+  switch (screen) {
+    case "visualiser":
+      return "visualiser";
+    case "progress":
+      return "progress";
+    case "profile":
+      return "profile";
+    case "howto":
+    case "settings":
+      return "settings";
+    default:
+      return "play";
+  }
+}
 
 /**
  * The dev Lab is a separate instance of the game for tuning, and it must not
@@ -56,14 +79,15 @@ const Lab = import.meta.env.DEV
 /**
  * What the landing page asked for on its way here, if anything.
  *
- * It is only ever a *hint*, never an instruction to start: `ensureMic()` needs
- * a user gesture (iOS Safari grants `getUserMedia` inside the click and
- * nowhere else), and a gesture on the previous page does not survive the
- * navigation. So the intent is handed to Title, which highlights the matching
- * action, and the player's first tap here is the gesture. Auto-starting from
- * this would fail silently on the one platform that matters most.
+ * Only ever a *hint* for the initial tab, never an instruction to start:
+ * `ensureMic()` needs a user gesture (iOS Safari grants `getUserMedia` inside
+ * the click and nowhere else), and a gesture on the previous page does not
+ * survive the navigation. `visualiser` is the only intent worth acting on
+ * here, since it's the only one that doesn't require the mic to already be
+ * open — it opens onto the Visualiser tab, and the player's first tap there
+ * is the gesture.
  */
-function initialIntent(): StartIntent | null {
+function initialIntent(): "visualiser" | null {
   try {
     const intent = new URLSearchParams(window.location.search).get("intent");
     if (intent === "visualiser") return "visualiser";
@@ -84,9 +108,13 @@ const CANVAS_H = Math.round((420 * 16) / 9);
  * between the two on load: reaching this URL at all *is* the decision.
  */
 export default function GameApp() {
-  const [screen, setScreen] = useState<Screen>("title");
   const [settings, setSettings] = useState<CalibrationSettings | null>(() =>
     loadSettings(),
+  );
+  // Only worth honouring if already calibrated — the Visualiser screen needs
+  // settings to render, and jumping to it uncalibrated would draw a blank.
+  const [screen, setScreen] = useState<Screen>(() =>
+    initialIntent() === "visualiser" && settings ? "visualiser" : "play",
   );
   const [stats, setStats] = useState<RunStats | null>(null);
   /**
@@ -101,8 +129,6 @@ export default function GameApp() {
   const [tutorialDone, setTutorialDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryBusy, setRetryBusy] = useState(false);
-  /** Read once, from the URL — see initialIntent. Consumed by Title. */
-  const [suggestedIntent] = useState<StartIntent | null>(initialIntent);
   /** Where to go once calibration finishes, when Play/Tutorial routed through it. */
   const pendingRef = useRef<"game" | "tutorial" | "visualiser" | null>(null);
   /** The mode of the run that just ended — drives Retry. */
@@ -119,22 +145,17 @@ export default function GameApp() {
     navRef.current += 1;
     stopMic();
     setRetryBusy(false);
-    setScreen("title");
+    setScreen("play");
   }, []);
 
-  /** Title has already opened the mic inside its click handler. */
-  const startFromTitle = useCallback(
+  /** The caller has already opened the mic inside its click handler. */
+  const startPlay = useCallback(
     (intent: StartIntent) => {
       setTutorialDone(false);
       setError(null);
       if (intent === "lab") {
         // Dev tooling — the Lab supplies its own fallback calibration.
         setScreen("lab");
-        return;
-      }
-      if (intent === "calibrate") {
-        pendingRef.current = null;
-        setScreen("calibrate");
         return;
       }
       if (intent !== "visualiser") lastModeRef.current = intent;
@@ -168,7 +189,7 @@ export default function GameApp() {
     // Game.tsx has already stopped the mic.
     if (lastModeRef.current === "tutorial") {
       setTutorialDone(true);
-      setScreen("title");
+      setScreen("play");
       return;
     }
     setStats(snap.stats);
@@ -204,7 +225,7 @@ export default function GameApp() {
     } catch (err) {
       if (gen !== navRef.current) return;
       setError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
-      setScreen("title");
+      setScreen("play");
     } finally {
       setRetryBusy(false);
     }
@@ -239,35 +260,79 @@ export default function GameApp() {
     void loadInventory();
   }, []);
 
+  /**
+   * Nav-tab clicks. Most tabs are a plain screen switch — no mic needed. The
+   * one exception is Visualiser before the player has ever calibrated: its
+   * screen requires `settings`, so an uncalibrated click routes through the
+   * calibration gate first, opening the mic here since this click is the
+   * gesture (Calibration itself does not open the mic on mount).
+   */
+  const onNavigate = useCallback(
+    (tab: NavTab) => {
+      if (tab === "visualiser" && !settings) {
+        setError(null);
+        pendingRef.current = "visualiser";
+        void ensureMic()
+          .then(() => setScreen("calibrate"))
+          .catch((err) => {
+            pendingRef.current = null;
+            if (!(err instanceof MicCancelled)) {
+              // The error banner only has a slot on the Play tab, so land
+              // there to show it rather than failing silently wherever the
+              // player clicked Visualiser from.
+              setScreen("play");
+              setError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
+            }
+          });
+        return;
+      }
+      setScreen(tab);
+    },
+    [settings],
+  );
+
   return (
-    <div className="app">
+    <div className="app app-game">
+      <GameNav active={navTabFor(screen)} onNavigate={onNavigate} />
       <div className="app-main">
-        <GameNav onHome={screen === "title" ? undefined : goHome} />
         <div className="frame">
-          {screen === "title" && (
-            <Title
+          {screen === "play" && (
+            <PlayHome
               calibrated={settings !== null}
               tutorialDone={tutorialDone}
               error={error}
-              suggestedIntent={suggestedIntent}
-              onStart={startFromTitle}
-              onHowTo={() => setScreen("howto")}
-              onSettings={() => setScreen("settings")}
+              onStart={startPlay}
             />
           )}
 
-        {screen === "howto" && <HowTo onBack={() => setScreen("title")} />}
+        {screen === "howto" && <HowTo onBack={() => setScreen("settings")} />}
+
+        {screen === "progress" && (
+          <PlaceholderScreen
+            title="Progress"
+            body="Your accuracy over time, per tone, is coming soon."
+          />
+        )}
+
+        {screen === "profile" && (
+          <PlaceholderScreen
+            title="Profile"
+            body="A place for your stats and preferences is coming soon."
+          />
+        )}
 
         {screen === "settings" && (
           <Settings
             settings={settings}
-            onBack={() => setScreen("title")}
+            onBack={() => setScreen("play")}
             onRecalibrate={() => {
               pendingRef.current = null;
               setScreen("calibrate");
             }}
             onFineTune={() => setScreen("finetune")}
             onForget={() => setSettings(null)}
+            onTutorial={() => startPlay("tutorial")}
+            onHowTo={() => setScreen("howto")}
           />
         )}
 
