@@ -127,20 +127,28 @@ const CANVAS_W_DESKTOP = 900;
 const MOBILE_NAV_RESERVE = 72;
 /** Keep in sync with --stage-margin-desktop in tokens.css. */
 const STAGE_MARGIN_DESKTOP = 28;
+/** Keep in sync with .game-screen's desktop padding-top in App.css. */
+const GAME_TOP_PADDING_DESKTOP = 24;
 
 function computeCanvasSize() {
   if (typeof window === "undefined") {
-    return { w: CANVAS_W_REF, h: Math.round((CANVAS_W_REF * 16) / 9) };
+    return {
+      w: CANVAS_W_REF,
+      h: Math.round((CANVAS_W_REF * 16) / 9),
+      desktop: false,
+    };
   }
   if (window.matchMedia("(min-width: 720px)").matches) {
     return {
       w: CANVAS_W_DESKTOP,
       h: Math.round(window.innerHeight - STAGE_MARGIN_DESKTOP),
+      desktop: true,
     };
   }
   return {
     w: window.innerWidth,
     h: Math.round(window.innerHeight - MOBILE_NAV_RESERVE),
+    desktop: false,
   };
 }
 
@@ -171,9 +179,16 @@ export default function GameApp() {
   // Play/Calibration get the desktop-sized canvas; Visualiser keeps the
   // mobile size — its CSS cap (App.css) is unchanged, and its own render
   // loop has no scrollSpeed/timing to keep in sync with a wider frame.
-  const { w: CANVAS_W, h: CANVAS_H } = useCanvasSize();
+  const { w: CANVAS_W, h: CANVAS_H, desktop } = useCanvasSize();
   const VIS_CANVAS_W = CANVAS_W_REF;
   const VIS_CANVAS_H = Math.round((CANVAS_W_REF * 16) / 9);
+  // A run's own top breathing room on desktop (App.css's .game-screen
+  // padding-top) — trimmed off the stage's own height budget rather than
+  // added on top of it, so the frame still ends at the same bottom margin.
+  // PlayHome uses this too, matched to Game's height rather than the raw
+  // CANVAS_H, even though it has no padding-top of its own to budget for.
+  // Calibration keeps the full CANVAS_H.
+  const GAME_CANVAS_H = desktop ? CANVAS_H - GAME_TOP_PADDING_DESKTOP : CANVAS_H;
 
   const [settings, setSettings] = useState<CalibrationSettings | null>(() =>
     loadSettings(),
@@ -370,7 +385,7 @@ export default function GameApp() {
               error={error}
               onStart={startPlay}
               canvasWidth={CANVAS_W}
-              canvasHeight={CANVAS_H}
+              canvasHeight={GAME_CANVAS_H}
             />
           )}
 
@@ -453,7 +468,7 @@ export default function GameApp() {
             mode={screen === "tutorial" ? "tutorial" : "game"}
             settings={settings}
             canvasWidth={CANVAS_W}
-            canvasHeight={CANVAS_H}
+            canvasHeight={GAME_CANVAS_H}
             onOver={onRunOver}
             onQuit={goHome}
           />

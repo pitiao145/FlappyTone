@@ -183,6 +183,16 @@
   margin-top: 0;
 }
 
+@media (min-width: 720px) {
+  /* A run's own breathing room from the sidebar/top edge. GameApp trims this
+     same 24px off GAME_CANVAS_H (not Calibration/PlayHome, which don't have
+     it) so the stage still ends at the usual bottom margin instead of
+     overflowing past it. */
+  .game-screen {
+    padding-top: 24px;
+  }
+}
+
 .screen h1 {
   font-family: var(--font-display);
   font-size: 2.2rem;
@@ -3770,6 +3780,12 @@ section.hero-cards {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+@media (min-width: 720px) {
+  .playhome-stage {
+    padding-top: 24px;
+  }
 }
 
 .playhome-canvas {
