@@ -107,13 +107,11 @@ function initialIntent(): "visualiser" | null {
  * toolbars ate more of `100svh` than the reserve assumed), leaving side
  * gutters that only disappeared once installed as a chromeless PWA.
  *
- * Mobile keeps the 9:16 shape, fit into the available box (full device
- * width, unless that would make it taller than the space left after the
- * bottom nav, in which case height binds and width is derived back from
- * it). Desktop is wider without being taller — height instead fills the
- * viewport minus STAGE_MARGIN_DESKTOP, so its aspect ratio is whatever the
- * viewport produces, not 9:16 (see `.game-stage` in App.css, which mirrors
- * this with an inline style rather than a CSS formula — see `<GameStage>`).
+ * Both mobile and desktop just take the whole viewport minus the nav —
+ * width and height are independent, no aspect ratio is preserved or
+ * enforced either way. Mobile's nav is a bottom bar (MOBILE_NAV_RESERVE
+ * comes off height); desktop's is a sidebar (STAGE_MARGIN_DESKTOP is a
+ * bottom breathing margin, width is capped at CANVAS_W_DESKTOP instead).
  *
  * Both rendering and Run's world math (`this.width` in run.ts) key off
  * these, so this is what actually makes the canvas fill the screen, not
@@ -140,11 +138,10 @@ function computeCanvasSize() {
       h: Math.round(window.innerHeight - STAGE_MARGIN_DESKTOP),
     };
   }
-  const availW = window.innerWidth;
-  const availH = window.innerHeight - MOBILE_NAV_RESERVE;
-  const hFromW = Math.round((availW * 16) / 9);
-  if (hFromW <= availH) return { w: availW, h: hFromW };
-  return { w: Math.round((availH * 9) / 16), h: availH };
+  return {
+    w: window.innerWidth,
+    h: Math.round(window.innerHeight - MOBILE_NAV_RESERVE),
+  };
 }
 
 /** Tracks the viewport (breakpoint, width, height) computeCanvasSize needs. */
