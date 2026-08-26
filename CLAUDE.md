@@ -32,14 +32,62 @@ src/
   game/       loop, entities, gate generation, collision, scoring. NO React.
   render/     canvas draw calls. Pure functions of game state.
   ui/         React components: menus, HUD overlay, calibration, game over.
+  app/        the /app entry: GameApp (the game's shell) + GameNav + main.tsx.
+  record/     the /record entry: Jane's recording booth.
   analytics/  what a play session sends home. session.ts is pure; client.ts is the only impure part.
   dev/        the Lab (dev-only tuning instance) + CLI analysis scripts.
+LandingApp.tsx  the / entry's shell: landing + terms, and nothing else.
 fixtures/     WAV files for offline tests — see docs/TESTING.md
 docs/         PRD.md, TESTING.md
 ```
 
 Unlike `src/dev/`, **`src/analytics/` ships**. It is in the bundle, not behind
 `import.meta.env.DEV`.
+
+### Three entries, not one app
+
+`index.html` → `src/main.tsx` → `LandingApp` is the marketing site at `/`.
+`app.html` → `src/app/main.tsx` → `GameApp` is the game at `/app`.
+`record.html` → `src/record/` is the booth at `/record`. All three are declared
+in `vite.config.ts`'s `rollupOptions.input` and reached through rewrites in
+`vercel.json`; only `/` is indexable.
+
+Four rules hold the split together:
+
+1. **The marketing page must not import `src/audio/` or `src/pitch/`.** That is
+   the whole reason the split exists — a visitor reading the pitch should not
+   download the game engine. It is checkable, so check it after touching
+   `Landing.tsx` or anything it imports:
+   ```bash
+   npm run build
+   grep -l PitchTracker dist/assets/*.js     # must list only the app + record chunks
+   ```
+   `ToneAverageCard` and `ContourSpark` legitimately pull `game/gates` and
+   `game/words` for the tone charts; that is data and geometry, not the engine.
+2. **Crossing between `/` and `/app` is a real navigation, and a click gesture
+   does not survive it.** `ensureMic()` needs the gesture (hard rule 4), so the
+   landing page cannot open the mic on the game's behalf. It passes
+   `?intent=visualiser` instead and `Title` promotes that button; the player's
+   first tap on `/app` is the gesture. Do not try to auto-start from the intent
+   — it fails silently on iOS Safari, which is the platform it matters on.
+   `src/ui/appLink.ts` is the only thing that knows the game's URL.
+3. **Only `index.html` is prerendered.** `src/dev/prerender.ts` bakes the
+   landing into it for crawlers, and `prerenderEntry.tsx`'s wrappers must stay
+   identical to `LandingApp`'s (`.app > .app-main > .frame`) or the markup a
+   crawler gets and the markup React paints diverge. There is no longer a script
+   that erases the prerendered page — that existed only because one URL served
+   both halves. What remains in `index.html` is a redirect for home-screen
+   installs predating the split, which have `/` or `/?app=1` saved.
+4. **`Nav.tsx` is the marketing site's bar; the game has its own
+   (`src/app/GameNav.tsx`).** Nav's links are real anchors into sections of the
+   page under them, which is why it had an "app variant" turning each into a
+   button faking a cross-page jump. With two real pages there is nothing to
+   fake — do not reintroduce a shared nav.
+
+One analytics consequence: **`landed` now means "opened `/app`", not "visited
+the site"** — a visit to the marketing page is a `$pageview` instead. Landing's
+CTAs capture with `send_instantly` because PostHog's queue does not survive the
+navigation they trigger.
 
 ## Commands
 
