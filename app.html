@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500;1,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- PNG fallback for anything that will not take an SVG favicon. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
+    <!-- viewport-fit=cover: safe-area insets in App.css depend on it.
+         user-scalable=no: double-tap zoom mid-run mis-scales the canvas. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
+    />
+
+    <!-- The game is a JS shell with no indexable content; the landing page at /
+         carries all the SEO. Mirrored by X-Robots-Tag in vercel.json and
+         Disallow in robots.txt. -->
+    <meta name="robots" content="noindex" />
+
+    <!-- Home-screen install runs without browser chrome (spec B6). The manifest
+         lives on this entry, not on /, because start_url is /app. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#100d0e" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="FlappyTone" />
+    <!-- black-translucent draws under the status bar; safe-area padding is required. -->
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <title>FlappyTone</title>
+  </head>
+  <body>
+    <!-- Never prerendered — src/dev/prerender.ts only touches index.html. -->
+    <div id="root"></div>
+    <script type="module" src="/src/app/main.tsx"></script>
+  </body>
+</html>

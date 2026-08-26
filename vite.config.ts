@@ -17,8 +17,12 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        // The game.
+        // The marketing site. The only prerendered entry.
         main: resolve(import.meta.dirname, 'index.html'),
+        // The game. A separate entry so the marketing page does not carry the
+        // audio/pitch/game engine. Reached at /app via the rewrite in
+        // vercel.json.
+        app: resolve(import.meta.dirname, 'app.html'),
         // Jane's recording booth — a separate entry so neither page carries
         // the other's code. Reached at /record via the rewrite in vercel.json.
         record: resolve(import.meta.dirname, 'record.html'),

@@ -4,6 +4,10 @@ Allow: /
 # meta tag in record.html.
 Disallow: /record
 
+# The game itself — a JS shell with no indexable content. The landing page at /
+# carries the SEO. Also noindex via X-Robots-Tag and a meta tag in app.html.
+Disallow: /app
+
 # /assets/ is deliberately NOT disallowed — Google needs the JS and CSS to
 # render the page.
 
