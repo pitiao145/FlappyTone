@@ -1,40 +1,37 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { initAnalytics, track, trackCalibration } from "./analytics/client";
-import { initPostHog } from "./analytics/posthog.ts";
-import { loadInventory } from "./audio/inventory";
-import { MicError } from "./audio/mic";
-import { ensureMic, stopMic } from "./audio/session";
+import { initAnalytics, track, trackCalibration } from "../analytics/client";
+import { initPostHog } from "../analytics/posthog.ts";
+import { loadInventory } from "../audio/inventory";
+import { MicError } from "../audio/mic";
+import { ensureMic, stopMic } from "../audio/session";
 import {
   averageRangeHalves,
   COOLDOWN_TRACKING_WINDOW,
   recalibrationSuggestion,
   recordTrackedRun,
-} from "./game/recalibration.ts";
-import type { RunSnapshot } from "./game/run";
+} from "../game/recalibration.ts";
+import type { RunSnapshot } from "../game/run";
 import {
   loadRecalTracking,
   loadSettings,
   loadShareData,
   saveRecalTracking,
   type CalibrationSettings,
-} from "./game/settings";
-import type { RangeHalves } from "./pitch/calibration.ts";
-import type { RunStats } from "./game/scoring";
-import { Calibration } from "./ui/Calibration";
-import { Game } from "./ui/Game";
-import { Landing } from "./ui/Landing";
-import { Nav } from "./ui/Nav";
-import { GameOver } from "./ui/GameOver";
-import { HowTo } from "./ui/HowTo";
-import { Settings } from "./ui/Settings";
-import { Terms } from "./ui/Terms";
-import { Visualiser } from "./ui/Visualiser";
-import { micErrorCopy } from "./ui/micErrors";
-import { Title, type StartIntent } from "./ui/Title";
-import "./App.css";
+} from "../game/settings";
+import type { RangeHalves } from "../pitch/calibration.ts";
+import type { RunStats } from "../game/scoring";
+import { Calibration } from "../ui/Calibration";
+import { Game } from "../ui/Game";
+import { GameOver } from "../ui/GameOver";
+import { HowTo } from "../ui/HowTo";
+import { Settings } from "../ui/Settings";
+import { Visualiser } from "../ui/Visualiser";
+import { micErrorCopy } from "../ui/micErrors";
+import { Title, type StartIntent } from "../ui/Title";
+import { GameNav } from "./GameNav.tsx";
+import "../App.css";
 
 type Screen =
-  | "landing"
   | "title"
   | "howto"
   | "calibrate"
@@ -44,7 +41,6 @@ type Screen =
   | "gameover"
   | "settings"
   | "visualiser"
-  | "terms"
   | "lab";
 
 /**
@@ -54,37 +50,41 @@ type Screen =
  * production build rather than merely hiding the button.
  */
 const Lab = import.meta.env.DEV
-  ? lazy(() => import("./dev/Lab.tsx").then((m) => ({ default: m.Lab })))
+  ? lazy(() => import("../dev/Lab.tsx").then((m) => ({ default: m.Lab })))
   : null;
 
 /**
- * Where a fresh load starts.
+ * What the landing page asked for on its way here, if anything.
  *
- * Installed to the home screen, this is the game and nothing else — landing on
- * marketing copy every launch would be a bug. The manifest asks for `?app=1`;
- * the display-mode check is the belt-and-braces half, because iOS has not
- * always honoured `start_url`, and anyone who installed before the landing page
- * existed still has the bare `/` saved.
+ * It is only ever a *hint*, never an instruction to start: `ensureMic()` needs
+ * a user gesture (iOS Safari grants `getUserMedia` inside the click and
+ * nowhere else), and a gesture on the previous page does not survive the
+ * navigation. So the intent is handed to Title, which highlights the matching
+ * action, and the player's first tap here is the gesture. Auto-starting from
+ * this would fail silently on the one platform that matters most.
  */
-function initialScreen(): Screen {
+function initialIntent(): StartIntent | null {
   try {
-    if (new URLSearchParams(window.location.search).has("app")) return "title";
-    if (window.matchMedia("(display-mode: standalone)").matches) return "title";
-    // iOS Safari's own flag, which predates display-mode and still differs.
-    if ((navigator as { standalone?: boolean }).standalone === true) {
-      return "title";
-    }
+    const intent = new URLSearchParams(window.location.search).get("intent");
+    if (intent === "visualiser") return "visualiser";
   } catch {
-    /* no window (tests): fall through to the landing */
+    /* no window (tests) */
   }
-  return "landing";
+  return null;
 }
 
 const CANVAS_W = 420;
 const CANVAS_H = Math.round((420 * 16) / 9);
 
-export default function App() {
-  const [screen, setScreen] = useState<Screen>(initialScreen);
+/**
+ * The game — the whole of what `/app` serves.
+ *
+ * There is no landing page in here. The marketing site is a separate entry
+ * (`/`, `src/LandingApp.tsx`), which is why this file no longer decides
+ * between the two on load: reaching this URL at all *is* the decision.
+ */
+export default function GameApp() {
+  const [screen, setScreen] = useState<Screen>("title");
   const [settings, setSettings] = useState<CalibrationSettings | null>(() =>
     loadSettings(),
   );
@@ -101,6 +101,8 @@ export default function App() {
   const [tutorialDone, setTutorialDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryBusy, setRetryBusy] = useState(false);
+  /** Read once, from the URL — see initialIntent. Consumed by Title. */
+  const [suggestedIntent] = useState<StartIntent | null>(initialIntent);
   /** Where to go once calibration finishes, when Play/Tutorial routed through it. */
   const pendingRef = useRef<"game" | "tutorial" | "visualiser" | null>(null);
   /** The mode of the run that just ended — drives Retry. */
@@ -112,24 +114,6 @@ export default function App() {
    * Home can never drop them into a run they left.
    */
   const navRef = useRef(0);
-
-  /**
-   * Section to scroll to once the landing page is on screen. The nav exists on
-   * the app's screens too, but a link there has to change screen *and* land on
-   * the right section — there is no page under it to anchor to.
-   */
-  const pendingSectionRef = useRef<string | null>(null);
-
-  const goLanding = useCallback((sectionId: string) => {
-    navRef.current += 1;
-    // Leaving for the marketing page means leaving the game: nothing on the
-    // landing page listens, and a mic left open there is a recording light
-    // nobody can explain.
-    stopMic();
-    setRetryBusy(false);
-    pendingSectionRef.current = sectionId;
-    setScreen("landing");
-  }, []);
 
   const goHome = useCallback(() => {
     navRef.current += 1;
@@ -233,7 +217,9 @@ export default function App() {
    *
    * `landed` is recorded here rather than on a click because the interesting
    * case is the tester who arrives and does nothing: without it, they are
-   * indistinguishable from someone who never opened the link.
+   * indistinguishable from someone who never opened the game. Note that since
+   * the split it means "opened /app", not "visited the site" — a visit to the
+   * marketing page is a `$pageview` on the other entry.
    */
   useEffect(() => {
     initAnalytics();
@@ -253,56 +239,22 @@ export default function App() {
     void loadInventory();
   }, []);
 
-  // Runs after the landing page has painted, so the target exists. "top" is
-  // the hero, which is where a plain jump-to-top belongs anyway.
-  useEffect(() => {
-    if (screen !== "landing") return;
-    const id = pendingSectionRef.current;
-    pendingSectionRef.current = null;
-    if (!id) return;
-    document.getElementById(id)?.scrollIntoView({ block: "start" });
-  }, [screen]);
-
-  /**
-   * One nav, everywhere except the landing page itself — which renders its
-   * own copy of the same bar (`variant="landing"`) because its links are
-   * real anchors into the page under them, not screen changes. It now shows
-   * during an actual run too; `.frame`'s height budget in App.css reserves
-   * space for it so the canvas doesn't grow underneath it.
-   */
-  const showNav = screen !== "landing";
-
   return (
     <div className="app">
       <div className="app-main">
-        {showNav && (
-          <Nav
-            variant="app"
-            onNavigate={goLanding}
-            onPlay={screen === "title" ? undefined : goHome}
-          />
-        )}
+        <GameNav onHome={screen === "title" ? undefined : goHome} />
         <div className="frame">
-          {screen === "landing" && (
-          <Landing
-            onPlay={() => setScreen("title")}
-            onVisualiser={() => startFromTitle("visualiser")}
-            onTerms={() => setScreen("terms")}
-          />
-        )}
-
-        {screen === "terms" && <Terms onBack={() => goLanding("top")} />}
-
-        {screen === "title" && (
-          <Title
-            calibrated={settings !== null}
-            tutorialDone={tutorialDone}
-            error={error}
-            onStart={startFromTitle}
-            onHowTo={() => setScreen("howto")}
-            onSettings={() => setScreen("settings")}
-          />
-        )}
+          {screen === "title" && (
+            <Title
+              calibrated={settings !== null}
+              tutorialDone={tutorialDone}
+              error={error}
+              suggestedIntent={suggestedIntent}
+              onStart={startFromTitle}
+              onHowTo={() => setScreen("howto")}
+              onSettings={() => setScreen("settings")}
+            />
+          )}
 
         {screen === "howto" && <HowTo onBack={() => setScreen("title")} />}
 

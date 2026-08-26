@@ -1,0 +1,27 @@
+/**
+ * The one place that knows where the game lives.
+ *
+ * The marketing site (`/`) and the game (`/app`) are separate Vite entries, so
+ * moving between them is a real page navigation rather than a screen change.
+ * `vercel.json` rewrites `/app` to `/app.html`; in `vite dev` the file is
+ * served at `/app.html` directly, hence the two spellings.
+ */
+export const APP_PATH = import.meta.env.DEV ? "/app.html" : "/app";
+
+/** What the game should do on arrival, when the landing page sent you there. */
+export type AppIntent = "visualiser";
+
+export function appHref(intent?: AppIntent): string {
+  return intent ? `${APP_PATH}?intent=${intent}` : APP_PATH;
+}
+
+/**
+ * Leave for the game.
+ *
+ * `assign` rather than `replace`: Back should return to the landing page, which
+ * is where the player came from and, for a first-time visitor, the only thing
+ * behind them.
+ */
+export function goToApp(intent?: AppIntent): void {
+  window.location.assign(appHref(intent));
+}

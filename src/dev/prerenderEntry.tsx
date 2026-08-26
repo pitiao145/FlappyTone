@@ -18,15 +18,19 @@ import { Landing } from "../ui/Landing.tsx";
 const noop = () => {};
 
 /**
- * The wrappers are copied from `App`'s own tree, not guessed: `.landing`'s
- * layout hangs off `.frame:has(.landing)`, so rendering `Landing` bare would
- * lay out at the game's 420px width.
+ * The wrappers are copied from `LandingApp`'s own tree, not guessed:
+ * `.landing`'s layout hangs off `.frame:has(.landing)`, so rendering `Landing`
+ * bare would lay out at the game's 420px width. `.app-main` between the two
+ * used to be missing here — a real mismatch between the prerendered markup and
+ * what React painted over it. Keep this identical to `LandingApp`'s wrappers.
  */
 export function renderLanding(): string {
   return renderToStaticMarkup(
     <div className="app">
-      <div className="frame">
-        <Landing onPlay={noop} onVisualiser={noop} onTerms={noop} />
+      <div className="app-main">
+        <div className="frame">
+          <Landing onPlay={noop} onVisualiser={noop} onTerms={noop} />
+        </div>
       </div>
     </div>,
   );

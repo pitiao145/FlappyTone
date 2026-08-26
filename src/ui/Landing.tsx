@@ -1,7 +1,5 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { brand } from "../brand.ts";
-import { MicError } from "../audio/mic.ts";
-import { ensureMic, MicCancelled } from "../audio/session.ts";
 import { loadInventory } from "../audio/inventory.ts";
 import type { Tone } from "../game/gates.ts";
 import type { Word } from "../game/words.ts";
@@ -10,12 +8,17 @@ import { ComingSoon } from "./ComingSoon.tsx";
 import { DemoLoop, VisualiserDemoLoop } from "./DemoLoop.tsx";
 import { Footer } from "./Footer.tsx";
 import { DotsThreeVerticalIcon, PlusSquareIcon, ShareIcon } from "./icons.tsx";
-import { micErrorCopy } from "./micErrors.ts";
 import { Nav } from "./Nav.tsx";
 import { ToneAverageCard } from "./ToneAverageCard.tsx";
 import { useNewsletterSubscribe } from "./useNewsletterSubscribe.ts";
 
 const TONES: Tone[] = [1, 2, 3, 4];
+
+/**
+ * Every CTA on this page leaves for /app, and PostHog's queue does not survive
+ * a page navigation — a batched click event would be dropped on the way out.
+ */
+const INSTANT = { instant: true } as const;
 
 const HOME_SCREEN_ICONS = {
   share: ShareIcon,
@@ -24,9 +27,16 @@ const HOME_SCREEN_ICONS = {
 } as const;
 
 interface Props {
-  /** Go to the main game menu (Title). No mic needed — Title opens it itself. */
+  /** Leave for the game at /app. */
   onPlay: () => void;
-  /** Straight to the visualiser. Mic already open. */
+  /**
+   * Leave for the game at /app, asking it for the visualiser.
+   *
+   * This used to open the microphone here, inside the click, and go straight
+   * to the visualiser screen. It cannot any more: the game is a separate page,
+   * and a gesture does not survive a navigation. The player taps once more on
+   * the other side, which is what buys this page its freedom from `src/audio/`.
+   */
   onVisualiser: () => void;
   /** Terms of Use page. */
   onTerms: () => void;
@@ -45,16 +55,15 @@ interface Props {
  * files, not fifteen JSX strings.
  */
 export function Landing({ onPlay, onVisualiser, onTerms }: Props) {
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [words, setWords] = useState<Word[] | null>(null);
   const mobileEmailId = useId();
   const [mobileEmail, setMobileEmail] = useState("");
   const mobileNewsletter = useNewsletterSubscribe("mobile");
 
   // The "how it works" cards want the same measured contours the corridors
-  // are built from — loadInventory is already warm by app start (App.tsx
-  // kicks it off), this just reads the result once it lands.
+  // are built from. This is the only thing on the page that needs the clip
+  // inventory, so it starts the fetch itself — the game's own warm-up runs on
+  // the other entry now.
   useEffect(() => {
     loadInventory().then(setWords, () => setWords([]));
   }, []);
@@ -67,26 +76,9 @@ export function Landing({ onPlay, onVisualiser, onTerms }: Props) {
     return map;
   }, [words]);
 
-  // iOS Safari grants getUserMedia only inside the gesture, so the mic opens
-  // here rather than on the destination screen's mount. Same rule as Title.
-  const go = (then: () => void) => async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      await ensureMic();
-      then();
-    } catch (err) {
-      if (!(err instanceof MicCancelled)) {
-        setError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <div className="landing">
-      <Nav variant="landing" onNavigate={() => {}} onPlay={onPlay} disabled={busy} />
+      <Nav onPlay={onPlay} />
 
       <div className="hero-row">
         <header id="top" className="landing-hero">
@@ -97,9 +89,8 @@ export function Landing({ onPlay, onVisualiser, onTerms }: Props) {
           <div className="hero-actions">
             <button
               className="primary"
-              disabled={busy}
               onClick={() => {
-                capturePostHogEvent("landing_cta_clicked", { cta: "play", location: "hero_actions" });
+                capturePostHogEvent("landing_cta_clicked", { cta: "play", location: "hero_actions" }, INSTANT);
                 onPlay();
               }}
             >
@@ -107,16 +98,14 @@ export function Landing({ onPlay, onVisualiser, onTerms }: Props) {
             </button>
             <button
               className="secondary"
-              disabled={busy}
               onClick={() => {
-                capturePostHogEvent("landing_cta_clicked", { cta: "visualiser", location: "hero_actions" });
-                void go(onVisualiser)();
+                capturePostHogEvent("landing_cta_clicked", { cta: "visualiser", location: "hero_actions" }, INSTANT);
+                onVisualiser();
               }}
             >
               {brand.heroCards.visualise.cta}
             </button>
           </div>
-          {error && <p className="error">{error}</p>}
         </header>
 
         <section id="demo" className="landing-section landing-demo">
@@ -134,9 +123,8 @@ export function Landing({ onPlay, onVisualiser, onTerms }: Props) {
           <p>{brand.heroCards.play.body}</p>
           <button
             className="primary"
-            disabled={busy}
             onClick={() => {
-              capturePostHogEvent("landing_cta_clicked", { cta: "play", location: "hero" });
+              capturePostHogEvent("landing_cta_clicked", { cta: "play", location: "hero" }, INSTANT);
               onPlay();
             }}
           >
@@ -149,10 +137,9 @@ export function Landing({ onPlay, onVisualiser, onTerms }: Props) {
           <p>{brand.heroCards.visualise.body}</p>
           <button
             className="secondary"
-            disabled={busy}
             onClick={() => {
-              capturePostHogEvent("landing_cta_clicked", { cta: "visualiser", location: "hero" });
-              void go(onVisualiser)();
+              capturePostHogEvent("landing_cta_clicked", { cta: "visualiser", location: "hero" }, INSTANT);
+              onVisualiser();
             }}
           >
             {brand.heroCards.visualise.cta}
@@ -185,10 +172,9 @@ export function Landing({ onPlay, onVisualiser, onTerms }: Props) {
             <p>{brand.visualiser.body}</p>
             <button
               className="primary visualiser-cta"
-              disabled={busy}
               onClick={() => {
-                capturePostHogEvent("landing_cta_clicked", { cta: "visualiser", location: "visualiser_section" });
-                void go(onVisualiser)();
+                capturePostHogEvent("landing_cta_clicked", { cta: "visualiser", location: "visualiser_section" }, INSTANT);
+                onVisualiser();
               }}
             >
               {brand.visualiser.cta}

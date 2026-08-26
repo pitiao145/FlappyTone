@@ -4,16 +4,8 @@ import { brand } from "../brand.ts";
 
 interface Props {
   /**
-   * "landing": the links are plain anchors to sections on the page under them.
-   * "app": the player is on a game screen, so a link has to go back to the
-   * landing page *and* scroll — the host handles that via `onNavigate`.
-   */
-  variant: "landing" | "app";
-  /** Section id, or "top" for the wordmark. */
-  onNavigate: (sectionId: string) => void;
-  /**
-   * Omitted inside the app: offering "Play" to someone who is already in the
-   * game is the one link on this bar that means nothing where they are.
+   * The Play button. Omit it and the button is not rendered — the landing page
+   * always wants it, so this is really only for the prerender entry.
    */
   onPlay?: () => void;
   disabled?: boolean;
@@ -36,13 +28,19 @@ function IconClose() {
 }
 
 /**
- * The site nav — the same bar on the landing page and on the app's own
- * screens, so the sections are reachable from inside the game rather than only
- * from the page someone may never scroll back to.
+ * The marketing site's nav. Landing-page only — the game at /app is a separate
+ * entry with its own bar (`src/app/GameNav.tsx`), because none of these links
+ * mean anything mid-run.
+ *
+ * Every link is a real anchor into the page under it: middle-click,
+ * open-in-new-tab and the browser's own scrolling all keep working, and there
+ * is nothing for JavaScript to add. This used to carry an "app" variant that
+ * turned each one into a button faking a cross-page jump; with the game on its
+ * own URL there is nothing left to fake.
  *
  * Items come from `brand.sections`, so adding a section adds its link.
  */
-export function Nav({ variant, onNavigate, onPlay, disabled }: Props) {
+export function Nav({ onPlay, disabled }: Props) {
   const items = brand.sections.filter((s) => s.inNav);
   const [navMenuOpen, setNavMenuOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
@@ -76,69 +74,31 @@ export function Nav({ variant, onNavigate, onPlay, disabled }: Props) {
   }, [navMenuOpen]);
 
   useEffect(() => {
-    if (variant !== "landing") return;
     const mq = window.matchMedia("(min-width: 901px)");
     const onChange = () => {
       if (mq.matches) setNavMenuOpen(false);
     };
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
-  }, [variant]);
-
-  const brandMark =
-    variant === "landing" ? (
-      <a className="nav-brand" href="#top">
-        <img className="nav-logo" src="/icons/icon-32.png" alt="" width={28} height={28} />
-        <span className="nav-name">FLAPPYTONE</span>
-      </a>
-    ) : (
-      <button className="nav-brand" onClick={() => onNavigate("top")}>
-        <img className="nav-logo" src="/icons/icon-32.png" alt="" width={28} height={28} />
-        <span className="nav-name">FLAPPYTONE</span>
-      </button>
-    );
+  }, []);
 
   const closeNavMenu = () => setNavMenuOpen(false);
 
-  // On the landing page these stay real anchors: middle-click, open-in-new-tab
-  // and the browser's own scrolling all keep working, and there is nothing for
-  // JavaScript to add. Inside the app there is no page under them to anchor to.
-  const desktopLink = (id: string, label: string) =>
-    variant === "landing" ? (
-      <a key={id} href={`#${id}`}>
-        {label}
-      </a>
-    ) : (
-      <button key={id} className="nav-link" onClick={() => onNavigate(id)}>
-        {label}
-      </button>
-    );
-
-  const mobileLink = (id: string, label: string) =>
-    variant === "landing" ? (
-      <a key={id} className="nav-shady-btn" href={`#${id}`} onClick={closeNavMenu}>
-        {label}
-      </a>
-    ) : (
-      <button
-        key={id}
-        type="button"
-        className="nav-shady-btn"
-        onClick={() => {
-          closeNavMenu();
-          onNavigate(id);
-        }}
-      >
-        {label}
-      </button>
-    );
-
   return (
-    <nav ref={navRef} className={`landing-nav nav-${variant}${navMenuOpen ? " nav-menu-open" : ""}`}>
+    <nav ref={navRef} className={`landing-nav nav-landing${navMenuOpen ? " nav-menu-open" : ""}`}>
       <div className="nav-inner">
-        {brandMark}
+        <a className="nav-brand" href="#top">
+          <img className="nav-logo" src="/icons/icon-32.png" alt="" width={28} height={28} />
+          <span className="nav-name">FLAPPYTONE</span>
+        </a>
 
-        <div className="landing-nav-links">{items.map((s) => desktopLink(s.id, s.navLabel ?? s.title))}</div>
+        <div className="landing-nav-links">
+          {items.map((s) => (
+            <a key={s.id} href={`#${s.id}`}>
+              {s.navLabel ?? s.title}
+            </a>
+          ))}
+        </div>
 
         <div className="nav-actions">
           {onPlay && (
@@ -177,7 +137,9 @@ export function Nav({ variant, onNavigate, onPlay, disabled }: Props) {
           <div className="nav-mobile-menu" id={navMenuId} ref={mobileMenuRef}>
             {items.map((s) => (
               <div key={s.id} className="nav-shady">
-                {mobileLink(s.id, s.navLabel ?? s.title)}
+                <a className="nav-shady-btn" href={`#${s.id}`} onClick={closeNavMenu}>
+                  {s.navLabel ?? s.title}
+                </a>
               </div>
             ))}
           </div>,
