@@ -97,8 +97,40 @@ function initialIntent(): "visualiser" | null {
   return null;
 }
 
-const CANVAS_W = 420;
-const CANVAS_H = Math.round((420 * 16) / 9);
+/**
+ * Canvas resolution — mobile-width by default, a wider one on desktop
+ * (matching App.css's own `.frame,.stage` cap at the same 720px breakpoint).
+ * Both rendering and Run's world math (`this.width` in run.ts) key off this,
+ * so bumping it is what actually makes the canvas crisper and bigger, not
+ * just the CSS box it sits in — see `useDesktopCanvas` below and
+ * `difficultyFor` in run.ts, which scales `scrollSpeed` by
+ * `width / CANVAS_W_MOBILE` so a wider canvas doesn't change cue timing
+ * (gates would otherwise reach the bird later relative to their reference
+ * audio, since only the world scrolls faster in step with the canvas).
+ */
+const CANVAS_W_MOBILE = 420;
+const CANVAS_W_DESKTOP = 640;
+
+function canvasSize(desktop: boolean) {
+  const w = desktop ? CANVAS_W_DESKTOP : CANVAS_W_MOBILE;
+  return { w, h: Math.round((w * 16) / 9) };
+}
+
+/** Tracks the same breakpoint App.css uses for the sidebar nav. */
+function useDesktopCanvas() {
+  const [desktop, setDesktop] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(min-width: 720px)").matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 720px)");
+    const onChange = () => setDesktop(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return desktop;
+}
 
 /**
  * The game — the whole of what `/app` serves.
@@ -108,6 +140,13 @@ const CANVAS_H = Math.round((420 * 16) / 9);
  * between the two on load: reaching this URL at all *is* the decision.
  */
 export default function GameApp() {
+  // Play/Calibration get the desktop-sized canvas; Visualiser keeps the
+  // mobile size — its CSS cap (App.css) is unchanged, and its own render
+  // loop has no scrollSpeed/timing to keep in sync with a wider frame.
+  const desktop = useDesktopCanvas();
+  const { w: CANVAS_W, h: CANVAS_H } = canvasSize(desktop);
+  const { w: VIS_CANVAS_W, h: VIS_CANVAS_H } = canvasSize(false);
+
   const [settings, setSettings] = useState<CalibrationSettings | null>(() =>
     loadSettings(),
   );
@@ -339,8 +378,8 @@ export default function GameApp() {
         {screen === "visualiser" && settings && (
           <Visualiser
             settings={settings}
-            canvasWidth={CANVAS_W}
-            canvasHeight={CANVAS_H}
+            canvasWidth={VIS_CANVAS_W}
+            canvasHeight={VIS_CANVAS_H}
             onBack={goHome}
           />
         )}

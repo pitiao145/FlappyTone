@@ -92,9 +92,13 @@
 }
 
 @media (min-width: 720px) {
+  /* 640px matches GameApp's CANVAS_W_DESKTOP — the canvas's actual backing
+     resolution grows with this cap (not just its CSS box), see the comment
+     there. .visualiser-screen .stage below keeps its own 420px cap: the
+     visualiser's canvas prop is intentionally left at mobile size. */
   .frame,
   .stage {
-    max-width: min(420px, calc(100svh * 9 / 16));
+    max-width: min(640px, calc(100svh * 9 / 16));
   }
 }
 

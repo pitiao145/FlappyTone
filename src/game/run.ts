@@ -301,6 +301,15 @@ const TUTORIAL_GATE_COUNT = TUTORIAL_TONES.length;
  */
 export const BIRD_X_FRAC = DEFAULT_TUNING.birdXFrac;
 
+/**
+ * Canvas width `tuning.ts`'s `baseScrollSpeed` (and every other px/s figure
+ * derived from it) is authored and measured against — GameApp's mobile
+ * `CANVAS_W`. `difficultyFor` scales scrollSpeed by `width / this` so a
+ * wider canvas (desktop) doesn't change how long a gate takes to reach the
+ * bird, which would desync it from its fixed-length reference audio clip.
+ */
+export const SCROLL_SPEED_REF_WIDTH = 420;
+
 /** Live bird position. See `Tuning.birdXFrac`. */
 export function birdXFrac(): number {
   return tuning().birdXFrac;
@@ -1093,10 +1102,21 @@ export class Run {
   private difficultyFor(gatesCleared: number): Difficulty {
     const base =
       this.mode === "tutorial" ? newDifficulty() : rampDifficulty(gatesCleared);
+    // `baseScrollSpeed` (tuning.ts) is authored against SCROLL_SPEED_REF_WIDTH.
+    // A wider canvas (desktop) scales scrollSpeed by the same factor as the
+    // spawn distance below (`this.width * (1 - birdXFrac())`, also
+    // width-proportional), so distance/speed — and with it every cue's
+    // timing against its reference audio clip — stays exactly what it was at
+    // the reference width, rather than gates reaching the bird later on a
+    // wider frame.
+    const scaled = {
+      ...base,
+      scrollSpeed: base.scrollSpeed * (this.width / SCROLL_SPEED_REF_WIDTH),
+    };
     const withTutorial =
       this.mode === "tutorial"
-        ? { ...base, toleranceH: base.toleranceH * TUTORIAL_TOLERANCE_FACTOR }
-        : base;
+        ? { ...scaled, toleranceH: scaled.toleranceH * TUTORIAL_TOLERANCE_FACTOR }
+        : scaled;
     return applyCorridorWidth(withTutorial, this.corridor);
   }
 
