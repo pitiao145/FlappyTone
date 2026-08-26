@@ -47,7 +47,7 @@ export function PlayHome({ calibrated, tutorialDone, error: externalError, onSta
   };
 
   return (
-    <div className="stage playhome-stage">
+    <div className="stage game-stage playhome-stage">
       <div className="playhome-canvas">
         <div className="screen playhome-overlay">
           <h1>{brand.name}</h1>

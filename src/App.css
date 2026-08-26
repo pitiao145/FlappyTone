@@ -92,13 +92,44 @@
 }
 
 @media (min-width: 720px) {
-  /* 640px matches GameApp's CANVAS_W_DESKTOP — the canvas's actual backing
+  /* 900px matches GameApp's CANVAS_W_DESKTOP — the canvas's actual backing
      resolution grows with this cap (not just its CSS box), see the comment
      there. .visualiser-screen .stage below keeps its own 420px cap: the
-     visualiser's canvas prop is intentionally left at mobile size. */
+     visualiser's canvas prop is intentionally left at mobile size.
+     Width no longer derives from height (no more 9:16 here) — .stage's own
+     max-height below caps the vertical side independently, so desktop is
+     wider without being taller. */
   .frame,
   .stage {
-    max-width: min(640px, calc(100svh * 9 / 16));
+    max-width: min(900px, 100%);
+  }
+
+  /* Only the game's own stages (Play, Calibration, an active run) — not
+     `.visualiser-screen .stage`, which keeps its 420px/9:16 mobile shape on
+     desktop too. Height fills the viewport minus a bottom margin, independent
+     of width, rather than being derived from the 9:16 ratio mobile uses —
+     `.game-stage canvas`/`.playhome-canvas` below drop the aspect-ratio that
+     would otherwise force height back from width.
+     The mobile margin-top on .stage, and on the .screen wrapping it
+     (.game-screen/.calibrate-screen — PlayHome's own .screen is nested
+     *inside* its stage, not a wrapper, so it isn't part of this budget),
+     both zero out here: --stage-margin-desktop is the whole reserve, spent
+     entirely below the stage, per "always fits, margin at the bottom." */
+  .game-screen,
+  .calibrate-screen {
+    margin-top: 0;
+  }
+
+  .game-stage {
+    margin-top: 0;
+    height: calc(100svh - var(--stage-margin-desktop));
+    max-height: calc(100svh - var(--stage-margin-desktop));
+  }
+
+  .game-stage canvas,
+  .playhome-canvas {
+    aspect-ratio: auto;
+    height: 100%;
   }
 }
 

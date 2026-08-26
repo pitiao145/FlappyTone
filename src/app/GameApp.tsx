@@ -98,38 +98,52 @@ function initialIntent(): "visualiser" | null {
 }
 
 /**
- * Canvas resolution — mobile-width by default, a wider one on desktop
- * (matching App.css's own `.frame,.stage` cap at the same 720px breakpoint).
- * Both rendering and Run's world math (`this.width` in run.ts) key off this,
- * so bumping it is what actually makes the canvas crisper and bigger, not
- * just the CSS box it sits in — see `useDesktopCanvas` below and
+ * Canvas resolution — mobile-width, 9:16, by default. Desktop is wider
+ * (matching App.css's own `.frame,.stage` cap at the same 720px breakpoint)
+ * but *not* proportionally taller: height instead fills the viewport minus
+ * STAGE_MARGIN_DESKTOP, matching App.css's `.stage` `max-height` there — so
+ * desktop's aspect ratio is whatever the viewport produces, not 9:16.
+ *
+ * Both rendering and Run's world math (`this.width` in run.ts) key off
+ * these, so this is what actually makes the canvas crisper and bigger, not
+ * just the CSS box it sits in — see `useCanvasSize` below and
  * `difficultyFor` in run.ts, which scales `scrollSpeed` by
  * `width / CANVAS_W_MOBILE` so a wider canvas doesn't change cue timing
  * (gates would otherwise reach the bird later relative to their reference
  * audio, since only the world scrolls faster in step with the canvas).
  */
 const CANVAS_W_MOBILE = 420;
-const CANVAS_W_DESKTOP = 640;
+const CANVAS_W_DESKTOP = 900;
+/** Keep in sync with --stage-margin-desktop in tokens.css. */
+const STAGE_MARGIN_DESKTOP = 28;
 
-function canvasSize(desktop: boolean) {
-  const w = desktop ? CANVAS_W_DESKTOP : CANVAS_W_MOBILE;
-  return { w, h: Math.round((w * 16) / 9) };
+function computeCanvasSize() {
+  if (typeof window === "undefined") {
+    return { w: CANVAS_W_MOBILE, h: Math.round((CANVAS_W_MOBILE * 16) / 9) };
+  }
+  if (!window.matchMedia("(min-width: 720px)").matches) {
+    return { w: CANVAS_W_MOBILE, h: Math.round((CANVAS_W_MOBILE * 16) / 9) };
+  }
+  return {
+    w: CANVAS_W_DESKTOP,
+    h: Math.round(window.innerHeight - STAGE_MARGIN_DESKTOP),
+  };
 }
 
-/** Tracks the same breakpoint App.css uses for the sidebar nav. */
-function useDesktopCanvas() {
-  const [desktop, setDesktop] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia("(min-width: 720px)").matches,
-  );
+/** Tracks both the sidebar breakpoint and viewport height App.css sizes the desktop stage from. */
+function useCanvasSize() {
+  const [size, setSize] = useState(computeCanvasSize);
   useEffect(() => {
+    const onChange = () => setSize(computeCanvasSize());
     const mq = window.matchMedia("(min-width: 720px)");
-    const onChange = () => setDesktop(mq.matches);
     mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
+    window.addEventListener("resize", onChange);
+    return () => {
+      mq.removeEventListener("change", onChange);
+      window.removeEventListener("resize", onChange);
+    };
   }, []);
-  return desktop;
+  return size;
 }
 
 /**
@@ -143,9 +157,9 @@ export default function GameApp() {
   // Play/Calibration get the desktop-sized canvas; Visualiser keeps the
   // mobile size — its CSS cap (App.css) is unchanged, and its own render
   // loop has no scrollSpeed/timing to keep in sync with a wider frame.
-  const desktop = useDesktopCanvas();
-  const { w: CANVAS_W, h: CANVAS_H } = canvasSize(desktop);
-  const { w: VIS_CANVAS_W, h: VIS_CANVAS_H } = canvasSize(false);
+  const { w: CANVAS_W, h: CANVAS_H } = useCanvasSize();
+  const VIS_CANVAS_W = CANVAS_W_MOBILE;
+  const VIS_CANVAS_H = Math.round((CANVAS_W_MOBILE * 16) / 9);
 
   const [settings, setSettings] = useState<CalibrationSettings | null>(() =>
     loadSettings(),

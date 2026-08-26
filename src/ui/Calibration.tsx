@@ -647,7 +647,7 @@ export function Calibration({
           check so the acknowledgement between the two sweeps does not unmount
           the canvas the live dot is drawing into. */}
       {sweeping && (
-        <div className="stage">
+        <div className="stage game-stage">
           <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} />
 
           {!confirm && (
@@ -715,7 +715,7 @@ export function Calibration({
             Does this feel right? Try a few sounds: high, low, and a slide
             between them.
           </p>
-          <div className="stage">
+          <div className="stage game-stage">
             <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} />
           </div>
           <label className="slider">
