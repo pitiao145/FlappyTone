@@ -20,10 +20,12 @@ import {
   BACKDROP,
   chaoToY,
   drawChaoGrid,
-  drawDot,
+  drawPip,
   drawTrail,
   traceSmoothPath,
+  type PipState,
 } from "./scene.ts";
+import type { TrailSample } from "./scene.ts";
 import { rgb, rgba, rgbTuple } from "./palette.ts";
 
 /** The token mixed `amount` toward white — a highlight of the same hue. */
@@ -118,6 +120,30 @@ const RECOIL_FRAC = 0.055;
 /** The unheard pulse — neutral, unhurried, never in the failure colour. */
 const UNHEARD_PULSE_MS = 900;
 
+/** The Pip's tilt: how far back to look for a pitch slope, and the gain/cap on angle. */
+const PIP_SLOPE_WINDOW_MS = 120;
+const PIP_TILT_GAIN = 0.12;
+const PIP_TILT_MAX = 0.45; // ~26 degrees
+/** How fast the drawn tilt eases toward its target, per frame. */
+const PIP_TILT_EASE = 0.25;
+
+let pipAngle = 0;
+
+/**
+ * Slope of the player's own pitch, in chao per ms, from the two most recent
+ * trail samples within `PIP_SLOPE_WINDOW_MS` of each other. Trail samples
+ * only exist for voiced frames, so a gap here correctly yields no slope
+ * (0) rather than inventing one across silence.
+ */
+function pipSlope(trail: readonly TrailSample[], nowMs: number): number {
+  if (trail.length < 2) return 0;
+  const newer = trail[trail.length - 1];
+  const older = trail[trail.length - 2];
+  if (nowMs - newer.t > PIP_SLOPE_WINDOW_MS) return 0;
+  if (newer.t - older.t > PIP_SLOPE_WINDOW_MS || newer.t === older.t) return 0;
+  return (newer.chao - older.chao) / (newer.t - older.t);
+}
+
 const CLEARED = new Set(["perfect", "good", "ok"]);
 
 /**
@@ -169,14 +195,41 @@ export function drawWorld(
 
   drawTrail(ctx, width, height, snap.trail, tuning().trailSeconds, dotX, now);
   drawIgnition(ctx, width, height, snap, now);
-  drawDot(
+
+  const outcomeMs = outcomeAge(snap, now);
+  const outcome = snap.lastOutcome?.outcome;
+  let pipState: PipState = "flying";
+  let pipStateAge = Infinity;
+  if (outcome === "unheard" && outcomeMs !== null && outcomeMs < UNHEARD_PULSE_MS) {
+    pipState = "unheard";
+    pipStateAge = outcomeMs;
+  } else if (outcome === "collision" && outcomeMs !== null) {
+    pipState = "hurt";
+    pipStateAge = outcomeMs;
+  } else if (outcome && CLEARED.has(outcome) && outcomeMs !== null) {
+    pipState = "success";
+    pipStateAge = outcomeMs;
+  }
+
+  const targetAngle =
+    pipState === "unheard"
+      ? 0
+      : Math.max(
+          -PIP_TILT_MAX,
+          Math.min(PIP_TILT_MAX, -pipSlope(snap.trail, now) * PIP_TILT_GAIN),
+        );
+  pipAngle += (targetAngle - pipAngle) * PIP_TILT_EASE;
+
+  drawPip(
     ctx,
     width,
     height,
     snap.birdChao,
     dotX + recoilOffset(snap, now, width),
-    snap.voiced,
+    pipAngle,
+    pipState,
     now,
+    pipStateAge,
   );
 
   ctx.restore();

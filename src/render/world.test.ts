@@ -164,8 +164,9 @@ describe("drawWorld", () => {
     const without = drawAndCheck({ ...snap!, lastOutcome: null });
 
     const strokes = (r: Recorded) => r.calls.filter((c) => c === "stroke").length;
-    // Three passes: bloom, ribbon, hot core.
-    expect(strokes(withEffect) - strokes(without)).toBe(3);
+    // Three passes from drawIgnition (bloom, ribbon, hot core), plus one more
+    // from the Pip's own success ring — a fresh "perfect" outcome is both.
+    expect(strokes(withEffect) - strokes(without)).toBe(4);
   });
 
   it("shakes the world and reddens the frame on collision", () => {
@@ -176,8 +177,10 @@ describe("drawWorld", () => {
     const withEffect = drawAndCheck(freshen(snap!));
     const without = drawAndCheck({ ...snap!, lastOutcome: null });
 
-    expect(withEffect.calls).toContain("translate");
-    expect(without.calls).not.toContain("translate");
+    // The Pip itself always translates to its anchor before rotating, so
+    // "translate" appears every frame now — the shake shows up as one more.
+    const translates = (r: Recorded) => r.calls.filter((c) => c === "translate").length;
+    expect(translates(withEffect)).toBeGreaterThan(translates(without));
 
     const grads = (r: Recorded) =>
       r.calls.filter((c) => c === "createRadialGradient").length;
@@ -191,10 +194,14 @@ describe("drawWorld", () => {
     const withEffect = drawAndCheck(freshen(snap!));
     const without = drawAndCheck({ ...snap!, lastOutcome: null });
 
-    const arcs = (r: Recorded) => r.calls.filter((c) => c === "arc").length;
-    expect(arcs(withEffect) - arcs(without)).toBe(1);
-    // PRD §6: this path must never feel like a punishment.
-    expect(withEffect.calls).not.toContain("translate");
+    // The Pip doesn't stroke in either flying or unheard state, so this
+    // stroke is drawUnheardPulse's own ring and nothing else.
+    const strokes = (r: Recorded) => r.calls.filter((c) => c === "stroke").length;
+    expect(strokes(withEffect) - strokes(without)).toBe(1);
+    // PRD §6: this path must never feel like a punishment — no *extra* shake
+    // translate beyond the Pip's own constant per-frame anchor translate.
+    const translates = (r: Recorded) => r.calls.filter((c) => c === "translate").length;
+    expect(translates(withEffect)).toBe(translates(without));
   });
 
   it("survives a snapshot whose outcome carries an empty path", () => {

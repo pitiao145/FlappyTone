@@ -96,7 +96,10 @@ describe("drawVisualiser", () => {
     const early = draw({ live: contour(0, 200) });
     const late = draw({ live: contour(0, 1400) });
     const lastX = (ops: Op[]) => {
-      const tos = ops.filter((o) => o.op === "lineTo");
+      // Excludes the Pip's own lineTo calls (its beak, traced in local
+      // space with the tip at x=0) — only the contour's lineTos have a
+      // positive, canvas-space x.
+      const tos = ops.filter((o) => o.op === "lineTo" && o.args[0] > 0);
       return tos[tos.length - 1].args[0];
     };
     expect(lastX(late)).toBeGreaterThan(lastX(early));

@@ -1,0 +1,67 @@
+<title>FlappyTone — The Pip</title>
+<style>
+  :root{--cream:#F7F1E3;--field:#F3ECDA;--ink:#1A1816;--soft:#6B665C;--dim:#948C7F;
+        --accent:#3EA88F;--accdk:#2C8570;--bright:#7FCBB7;--gold:#C98A3C;--line:#DAD5C4;--red:#A6462F;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#E7E1D2;font-family:'Hanken Grotesk',system-ui,sans-serif;color:var(--ink);
+       display:flex;flex-direction:column;align-items:center;gap:20px;padding:26px}
+  .cap{color:var(--soft);font-size:13px;text-align:center;max-width:540px}
+  h2{font-family:'Fraunces',Georgia,serif;font-size:18px;align-self:flex-start}
+  .wrap{width:560px;display:flex;flex-direction:column;gap:20px}
+  .card{background:var(--cream);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .field{border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--field)}
+  .row{display:flex;gap:12px}.row>div{flex:1}
+  .lbl{font-size:11px;color:var(--soft);text-align:center;margin-top:6px;font-weight:600}
+  .anno{font-size:11px;fill:var(--soft);font-family:inherit}
+</style>
+
+<div class="cap"><b>The Pip</b> — your round dot keeps its body but gains a beak &amp; eye. The <b>beak tip is the pitch point</b> (the only thing scoring reads); the body trails behind it. It tilts to lean into the tone.</div>
+
+<div class="wrap">
+  <!-- ANATOMY -->
+  <div class="card"><h2>Anatomy</h2>
+    <div class="field"><svg viewBox="0 0 560 220">
+      <line x1="0" y1="130" x2="560" y2="130" stroke="#DAD5C4"/>
+      <!-- big pip, tip at (360,130) -->
+      <g transform="translate(360 130) scale(3.4)">
+        <circle cx="-20" cy="0" r="13" fill="#3EA88F"/>
+        <path d="M-20 3 A13 13 0 0 0 -8 6 L-9 0 Z" fill="#7FCBB7" opacity=".55"/>
+        <path d="M-9 -3.5 L1 0 L-9 3.5 Z" fill="#C98A3C"/>
+        <circle cx="-15" cy="-4.5" r="3.4" fill="#F7F1E3"/><circle cx="-14" cy="-4.5" r="1.5" fill="#1A1816"/>
+      </g>
+      <!-- pitch point marker -->
+      <circle cx="360" cy="130" r="4" fill="none" stroke="#A6462F" stroke-width="2"/>
+      <line x1="360" y1="112" x2="360" y2="148" stroke="#A6462F" stroke-width="1" stroke-dasharray="3 3"/>
+      <text x="372" y="120" class="anno">beak tip = pitch point (scoring anchor)</text>
+      <text x="205" y="180" class="anno">round body trails behind</text>
+      <text x="300" y="95" class="anno">eye</text>
+    </svg></div>
+  </div>
+
+  <!-- TILT -->
+  <div class="card"><h2>Tilts with the tone</h2>
+    <div class="row">
+      <div><div class="field"><svg viewBox="0 0 170 120">
+        <path d="M20 88 C70 84 100 40 150 34" stroke="#3EA88F" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <g transform="translate(150 34) rotate(-26) scale(1.5)"><circle cx="-20" cy="0" r="13" fill="#3EA88F"/><path d="M-9 -3.5 L1 0 L-9 3.5 Z" fill="#C98A3C"/><circle cx="-15" cy="-4.5" r="3.2" fill="#F7F1E3"/><circle cx="-14" cy="-4.5" r="1.4" fill="#1A1816"/></g>
+      </svg></div><div class="lbl">Rising ˊ — beak up</div></div>
+      <div><div class="field"><svg viewBox="0 0 170 120">
+        <path d="M20 60 C70 58 100 60 150 59" stroke="#3EA88F" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <g transform="translate(150 59) scale(1.5)"><circle cx="-20" cy="0" r="13" fill="#3EA88F"/><path d="M-9 -3.5 L1 0 L-9 3.5 Z" fill="#C98A3C"/><circle cx="-15" cy="-4.5" r="3.2" fill="#F7F1E3"/><circle cx="-14" cy="-4.5" r="1.4" fill="#1A1816"/></g>
+      </svg></div><div class="lbl">Flat ˉ — level</div></div>
+      <div><div class="field"><svg viewBox="0 0 170 120">
+        <path d="M20 30 C70 34 100 78 150 86" stroke="#3EA88F" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <g transform="translate(150 86) rotate(26) scale(1.5)"><circle cx="-20" cy="0" r="13" fill="#3EA88F"/><path d="M-9 -3.5 L1 0 L-9 3.5 Z" fill="#C98A3C"/><circle cx="-15" cy="-4.5" r="3.2" fill="#F7F1E3"/><circle cx="-14" cy="-4.5" r="1.4" fill="#1A1816"/></g>
+      </svg></div><div class="lbl">Falling ˋ — beak down</div></div>
+    </div>
+  </div>
+
+  <!-- STATES -->
+  <div class="card"><h2>States</h2>
+    <div class="row">
+      <div><div class="field"><svg viewBox="0 0 170 96"><g transform="translate(95 48) scale(1.7)"><circle cx="-20" cy="0" r="13" fill="#3EA88F"/><path d="M-9 -3.5 L1 0 L-9 3.5 Z" fill="#C98A3C"/><circle cx="-15" cy="-4.5" r="3.2" fill="#F7F1E3"/><circle cx="-14" cy="-4.5" r="1.4" fill="#1A1816"/></g></svg></div><div class="lbl">Flying (default)</div></div>
+      <div><div class="field"><svg viewBox="0 0 170 96"><g transform="translate(95 48) scale(1.85)"><circle cx="-20" cy="0" r="14" fill="#7FCBB7"/><circle cx="-20" cy="0" r="20" fill="none" stroke="#7FCBB7" stroke-width="1.5" opacity=".5"/><path d="M-9 -3.5 L1 0 L-9 3.5 Z" fill="#C98A3C"/><circle cx="-15" cy="-4.5" r="3.2" fill="#F7F1E3"/><circle cx="-14" cy="-4.5" r="1.4" fill="#1A1816"/></g></svg></div><div class="lbl">Nailed it (pop + glow)</div></div>
+      <div><div class="field"><svg viewBox="0 0 170 96"><g transform="translate(95 48) scale(1.7)" opacity=".38"><circle cx="-20" cy="0" r="13" fill="#948C7F"/><path d="M-9 -3.5 L1 0 L-9 3.5 Z" fill="#948C7F"/><circle cx="-15" cy="-4.5" r="3.2" fill="#F7F1E3"/><circle cx="-14" cy="-4.5" r="1.4" fill="#1A1816"/></g></svg></div><div class="lbl">Couldn't hear (faded, neutral)</div></div>
+    </div>
+  </div>
+</div>

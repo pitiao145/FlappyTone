@@ -16,7 +16,7 @@ import { corridorChaoAt,
   shapeForTone, shapeForWord, type Tone } from "../game/gates.ts";
 import type { Contour } from "../game/contours.ts";
 import type { Word } from "../game/words.ts";
-import { BACKDROP, chaoToY, drawChaoGrid, drawDot } from "./scene.ts";
+import { BACKDROP, chaoToY, drawChaoGrid, drawPip } from "./scene.ts";
 import { rgba } from "./palette.ts";
 
 export interface VisualiserScene {
@@ -82,7 +82,7 @@ export function drawVisualiser(
   const dotX = head
     ? xFor(head.tMs, scene.spanMs, width)
     : xFor(0, scene.spanMs, width);
-  drawDot(ctx, width, height, scene.chao, dotX, scene.voiced, performance.now());
+  drawPip(ctx, width, height, scene.chao, dotX, 0, "flying", performance.now());
 }
 
 /**

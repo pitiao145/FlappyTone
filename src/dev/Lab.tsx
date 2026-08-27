@@ -31,7 +31,7 @@ import { classifyTone } from "../game/toneClassifier.ts";
 import { tuning } from "../game/tuning.ts";
 import type { Word } from "../game/words.ts";
 import { DEFAULT_CONFIG } from "../pitch/PitchTracker.ts";
-import { BACKDROP, chaoToY, drawChaoGrid, drawDot } from "../render/scene.ts";
+import { BACKDROP, chaoToY, drawChaoGrid, drawPip } from "../render/scene.ts";
 import { drawGate } from "../render/world.ts";
 import { Choice } from "../ui/Choice.tsx";
 import { Game } from "../ui/Game.tsx";
@@ -574,7 +574,7 @@ function GatePreview({
           }
         }
         drawChaoGrid(ctx, width, height);
-        drawDot(ctx, width, height, REST_CHAO, width * birdXFrac(), true, 0);
+        drawPip(ctx, width, height, REST_CHAO, width * birdXFrac(), 0, "flying", 0);
       }
       raf = requestAnimationFrame(draw);
     };

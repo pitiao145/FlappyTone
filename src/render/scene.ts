@@ -252,72 +252,169 @@ function drawRibbon(
 const PULSE_MS = 1600;
 
 /**
- * The player's dot — the brightest, largest, most alive thing on screen, in
- * every state.
+ * "the Pip" — the player's bird. Round body, gold beak, eye. The **beak tip
+ * is the scoring anchor**: it sits at exactly the `(dotX, chaoToY(chao,
+ * height))` point the old plain dot's centre used to occupy. Everything else
+ * (body, belly, eye) is decoration trailing behind that point and must never
+ * move it — see docs/bird-design/flappytone-pip-brief.md.
  *
- * It used to drop to a 45%-opacity hollow ring the moment the player stopped
- * phonating, which in real play is most of the time, while the *demo* dot was
- * drawn solid and glowing. For a game whose whole hook is "your voice is the
- * controller", the computer was the most prominent moving object on screen.
- *
- * The voiced/unvoiced distinction carries real information and is kept — but
- * expressed as intensity, not presence versus near-absence. Unvoiced, the dot
- * keeps its size and a solid core, loses its halo, and breathes: it reads as
- * waiting for you, not as gone.
+ * Geometry is authored in local space with the beak tip at `(0, 0)`, base
+ * body radius 11px, so `translate(x, y); rotate(angle); scale(s, s)` pivots
+ * the whole bird around the anchor at every tilt without shifting it.
  */
-export function drawDot(
+const PIP_BASE_R = 11;
+/**
+ * Brief's geometry is authored with the body at `(-R*0.75, 0)` and the beak
+ * tip at `x=6` (base at `x=-2`, an 8px beak) — then the whole bird is shifted
+ * by `-6` so the tip lands on `(0,0)`. Shifting only the beak and leaving the
+ * body at `-R*0.75` (the bug this constant fixes) put the body's right edge
+ * past the beak's tip, burying it inside the circle.
+ */
+const PIP_TIP_SHIFT = 6;
+const PIP_BODY_CX = -PIP_BASE_R * 0.75 - PIP_TIP_SHIFT;
+const PIP_EYE_CX = -PIP_BASE_R * 0.55 - PIP_TIP_SHIFT;
+const PIP_EYE_CY = -PIP_BASE_R * 0.4;
+/** Nudged toward the beak (positive x) from the eye's own centre. */
+const PIP_PUPIL_CX = PIP_EYE_CX + 1.2;
+
+/**
+ * Traces the beak triangle into `ctx`'s current path — tip at local `(0,0)`,
+ * the scoring anchor. `Path2D` would let these be built once at module scope
+ * (per the brief), but it doesn't exist in the Node/vitest environment the
+ * render tests run in, so the shapes are traced inline each frame instead:
+ * still no per-frame heap allocation, just direct path commands on `ctx`.
+ */
+function tracePipBeak(ctx: CanvasRenderingContext2D): void {
+  ctx.beginPath();
+  ctx.moveTo(-8, -3.5);
+  ctx.lineTo(0, 0);
+  ctx.lineTo(-8, 3.5);
+  ctx.closePath();
+}
+
+function tracePipBody(ctx: CanvasRenderingContext2D): void {
+  ctx.beginPath();
+  ctx.arc(PIP_BODY_CX, 0, PIP_BASE_R, 0, Math.PI * 2);
+}
+
+function tracePipBelly(ctx: CanvasRenderingContext2D): void {
+  ctx.beginPath();
+  ctx.arc(PIP_BODY_CX, PIP_BASE_R * 0.35, PIP_BASE_R * 0.62, 0, Math.PI);
+}
+
+function tracePipEye(ctx: CanvasRenderingContext2D): void {
+  ctx.beginPath();
+  ctx.arc(PIP_EYE_CX, PIP_EYE_CY, 2.6, 0, Math.PI * 2);
+}
+
+function tracePipPupil(ctx: CanvasRenderingContext2D): void {
+  ctx.beginPath();
+  ctx.arc(PIP_PUPIL_CX, PIP_EYE_CY, 1.2, 0, Math.PI * 2);
+}
+
+export type PipState = "flying" | "success" | "hurt" | "unheard";
+
+/** Success pop: a brief scale bump, eased back to 1 over its lifetime. */
+const POP_MS = 180;
+/** Success ring: expands and fades over this window. */
+const RING_MS = 380;
+/** Hurt flash: how long the red tint holds. */
+const FLASH_MS = 150;
+
+export function drawPip(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   chao: number,
-  dotX: number,
-  voiced: boolean,
+  x: number,
+  angle: number,
+  state: PipState,
   nowMs = 0,
+  stateAgeMs = Infinity,
 ): void {
-  const dotY = chaoToY(chao, height);
+  const y = chaoToY(chao, height);
   const r = width * 0.032;
-  // 0 when unvoiced at the bottom of the breath, 1 when singing.
-  const pulse = voiced
-    ? 1
-    : 0.55 + 0.45 * (0.5 - 0.5 * Math.cos((nowMs / PULSE_MS) * Math.PI * 2));
+  const s = r / PIP_BASE_R;
+
+  const unheard = state === "unheard";
+  const success = state === "success" && stateAgeMs < RING_MS;
+  const hurt = state === "hurt" && stateAgeMs < FLASH_MS;
+
+  // 0 when unvoiced at the bottom of the breath, 1 when singing — kept for
+  // continuity with the old dot's "waiting for you" breathing idle.
+  const pulse = unheard
+    ? 0.55 + 0.45 * (0.5 - 0.5 * Math.cos((nowMs / PULSE_MS) * Math.PI * 2))
+    : 1;
 
   ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
 
-  // Outer halo — the thing that makes it read as a light source rather than a
-  // sticker. Present even when silent, just quieter.
-  const haloR = r * (voiced ? 3.4 : 2.4);
-  const halo = ctx.createRadialGradient(dotX, dotY, r * 0.4, dotX, dotY, haloR);
-  halo.addColorStop(0, rgba("accent", 0.42 * pulse));
-  halo.addColorStop(0.55, rgba("accent", 0.14 * pulse));
-  halo.addColorStop(1, rgba("accent", 0));
+  // Outer halo — present in every non-unheard state, quieter when idle.
+  const haloR = r * (unheard ? 2.2 : 3.2);
+  const halo = ctx.createRadialGradient(0, 0, r * 0.4, 0, 0, haloR);
+  const haloToken = success ? "good" : "accent";
+  halo.addColorStop(0, rgba(haloToken, (unheard ? 0.14 : 0.4) * pulse));
+  halo.addColorStop(0.55, rgba(haloToken, (unheard ? 0.05 : 0.13) * pulse));
+  halo.addColorStop(1, rgba(haloToken, 0));
   ctx.fillStyle = halo;
-  ctx.fillRect(dotX - haloR, dotY - haloR, haloR * 2, haloR * 2);
+  ctx.fillRect(-haloR, -haloR, haloR * 2, haloR * 2);
 
-  // Body: a filled disc in both states. Never a hollow ring.
-  ctx.beginPath();
-  ctx.arc(dotX, dotY, r, 0, Math.PI * 2);
-  // Both states are the accent: lifted toward white while voiced, pulled down
-  // while silent. Derived rather than hard-coded so the dot follows a re-brand.
-  ctx.fillStyle = voiced
-    ? `rgba(${mixAccent(0.25, 255)}, 0.95)`
-    : `rgba(${mixAccent(0.12, 0)}, ${0.5 + 0.18 * pulse})`;
-  ctx.fill();
-
-  // A white-hot core only while actually producing pitch — this is the single
-  // cue that separates "singing" from "waiting", and it is enough.
-  if (voiced) {
+  // Success ring: an expanding, fading circle centred on the anchor.
+  if (success) {
+    const t = stateAgeMs / RING_MS;
     ctx.beginPath();
-    ctx.arc(dotX, dotY, r * 0.52, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(${mixAccent(0.92, 255)}, 0.98)`;
-    ctx.fill();
+    ctx.arc(0, 0, r * (1.2 + t * 1.8), 0, Math.PI * 2);
+    ctx.strokeStyle = rgba("good", 0.5 * (1 - t));
+    ctx.lineWidth = 2;
+    ctx.stroke();
   }
 
-  // Crisp rim keeps the dot legible against a lit corridor as well as a dark wall.
-  ctx.beginPath();
-  ctx.arc(dotX, dotY, r, 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(${mixAccent(0.55, 255)}, ${voiced ? 0.9 : 0.4 * pulse})`;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
+  // Scale pop on success: 1 -> 1.15 -> 1 over POP_MS.
+  const pop = success && stateAgeMs < POP_MS
+    ? 1 + 0.15 * Math.sin((stateAgeMs / POP_MS) * Math.PI)
+    : 1;
+  ctx.scale(s * pop, s * pop);
+
+  if (unheard) {
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = solid("gateUnheard");
+    tracePipBody(ctx);
+    ctx.fill();
+    tracePipBeak(ctx);
+    ctx.fill();
+    ctx.fillStyle = rgba("surface", 1);
+    tracePipEye(ctx);
+    ctx.fill();
+    ctx.fillStyle = solid("gateUnheard");
+    tracePipPupil(ctx);
+    ctx.fill();
+  } else {
+    ctx.fillStyle = success ? rgba("good", 0.95) : `rgba(${mixAccent(0.1, 255)}, 0.95)`;
+    tracePipBody(ctx);
+    ctx.fill();
+
+    ctx.fillStyle = `rgba(${mixAccent(0.5, 255)}, 0.5)`;
+    tracePipBelly(ctx);
+    ctx.fill();
+
+    if (hurt) {
+      ctx.fillStyle = rgba("danger", 0.55);
+      tracePipBody(ctx);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = solid("beak");
+    tracePipBeak(ctx);
+    ctx.fill();
+
+    ctx.fillStyle = rgba("surface", 0.98);
+    tracePipEye(ctx);
+    ctx.fill();
+    ctx.fillStyle = solid("ink");
+    tracePipPupil(ctx);
+    ctx.fill();
+  }
 
   ctx.restore();
 }
@@ -337,5 +434,5 @@ export function drawScene(
 
   const dotX = width * 0.5;
   drawTrail(ctx, width, height, trail, trailSeconds, dotX, now);
-  drawDot(ctx, width, height, snapshot.chao, dotX, snapshot.voiced, now);
+  drawPip(ctx, width, height, snapshot.chao, dotX, 0, "flying", now);
 }

@@ -30,6 +30,8 @@ export const FALLBACK = {
   gateUnheard: "130, 122, 108",
   /** Gate edge glow when pinned at the top/bottom of the range. */
   gateGlow: "196, 140, 30",
+  /** The Pip's beak. */
+  beak: "200, 138, 60",
 } as const;
 
 type Token = keyof typeof FALLBACK;
@@ -46,6 +48,7 @@ export const CSS_VAR: Record<Token, string> = {
   gateOk: "--gate-ok-rgb",
   gateUnheard: "--gate-unheard-rgb",
   gateGlow: "--gate-glow-rgb",
+  beak: "--beak-rgb",
 };
 
 let resolved: Record<Token, string> | null = null;

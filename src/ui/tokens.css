@@ -44,6 +44,9 @@
   /* Text drawn *on* the accent — the paper colour, not white. */
   --accent-ink: #f7f1e3;
   --accent-bright: #145c4a;
+  /* The Pip's beak. */
+  --beak: #c98a3c;
+  --beak-rgb: 200, 138, 60;
 
   /* ---- semantic */
   --good: #2c8f61;
