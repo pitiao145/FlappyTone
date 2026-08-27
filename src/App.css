@@ -22,12 +22,100 @@
   font-family: var(--font);
 }
 
-/* Game only (`/app`) — the landing page shares `.app` but has no GameNav, so
-   its own reserve stays plain safe-area, above. */
+/* Game only (`/app`). Desktop: GameNav is position:fixed as a sidebar, so
+   padding keeps content clear of it. Mobile: the bar is in the flex flow
+   (see the query below) — no bottom pad on the shell. */
 .app-game {
-  /* GameNav sits fixed at the bottom on mobile — reserve its height plus the
-     home-indicator inset so the frame never renders underneath it. */
   padding-bottom: calc(var(--nav-mobile-h) + env(safe-area-inset-bottom));
+}
+
+/* Mobile: one column. Nav is --nav-mobile-pct of the shell; app-main flexes
+   into whatever is left. No position:fixed — that fought safe-area and
+   overflow on iOS PWAs. */
+@media (max-width: 719px) {
+  html:has(.app-game),
+  body:has(.app-game),
+  #root:has(.app-game) {
+    height: 100%;
+    overscroll-behavior: none;
+  }
+
+  .app-game {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding-bottom: 0;
+  }
+
+  .app-game .app-main {
+    order: 1;
+    flex: 1 1 0;
+    min-height: 0;
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .app-game .game-nav {
+    order: 2;
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    flex: 0 0 var(--nav-mobile-pct);
+    width: 100%;
+    height: var(--nav-mobile-pct);
+    min-height: 52px;
+    max-height: 96px;
+    margin: 0;
+    padding-bottom: 0;
+  }
+
+  .app-game .game-nav-items {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+  }
+
+  .app-game .frame {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    width: 100%;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .app-game .frame:has(.game-stage) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-game .frame:has(.game-stage) > .game-screen,
+  .app-game .frame:has(.game-stage) > .game-stage,
+  .app-game .frame:has(.game-stage) > .visualiser-screen {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .app-game .frame:has(
+    .settings-screen,
+    .howto-screen,
+    .placeholder-screen,
+    .gameover-screen,
+    .calibrate-screen
+  ) {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 @media (min-width: 720px) {
@@ -1428,7 +1516,7 @@
 
 .visualiser-screen {
   gap: 12px;
-  padding-top: 24px;
+  overflow: hidden;
 
   /* No `.frame:has(.visualiser-screen)` sizing rule any more — this element
      carries `game-stage` and gets an explicit inline width/height matching
@@ -1437,6 +1525,14 @@
      shared `.game-screen, .calibrate-screen, .game-stage` rule, `max-width:
      none` from `.frame:has(.game-stage), .game-stage`. Nothing
      Visualiser-specific left to duplicate. */
+}
+
+@media (min-width: 720px) {
+  .visualiser-screen {
+    /* Match the run's desktop top breathing room — on mobile the shell is
+       already tight against the safe-area, so this stays desktop-only. */
+    padding-top: 24px;
+  }
 }
 
 /* Mobile stacks the chrome around a full-width canvas: accuracy + Clear
@@ -1507,36 +1603,82 @@
   color: currentColor;
 }
 
-/* Accuracy + Clear, above the canvas. Hidden again at the desktop
-   breakpoint, where the same readout lives in `.visualiser-panel` and
-   Clear sits under the canvas. */
+/* Accuracy + Tone cards + Clear, above the canvas. Hidden again at the
+   desktop breakpoint, where the same readouts live in `.visualiser-panel`
+   and Clear sits under the canvas. A 1fr / auto / 1fr grid keeps the
+   cards centered in the viewport while Clear sits in the trailing lane. */
 .vis-top-bar {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex: 0 0 auto;
-  padding-inline: 12px;
-}
-
-.vis-top-bar-readouts {
-  display: flex;
-  flex-direction: row;
-  align-items: baseline;
-  gap: 16px;
-  min-width: 0;
-}
-
-.vis-top-bar .vis-accuracy {
-  flex-direction: row;
-  align-items: baseline;
   gap: 8px;
+  flex: 0 0 auto;
+  padding: 12px 12px 0;
 }
 
-.vis-top-bar button {
+.vis-top-bar .vis-readouts {
+  grid-column: 2;
+}
+
+/* `>`, not a descendant selector: Clear is a direct child of `.vis-top-bar`,
+   but the mute button is nested one level deeper inside `.vis-mute-group` —
+   an icon button, not this text-pill padding. */
+.vis-top-bar > button {
+  grid-column: 3;
+  justify-self: end;
   flex: 0 0 auto;
-  padding: 10px 18px;
+  padding: 8px 14px;
+}
+
+/* Mirrors Clear's slot (column 3) on the opposite side — the empty 1fr
+   column 1 already existed to keep the centered readouts balanced, so the
+   mute toggle fills a slot that was previously just spacing. */
+.vis-top-bar .vis-mute-group {
+  grid-column: 1;
+  justify-self: start;
+}
+
+.vis-mute-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Icon-only, round — traced from `src/ui/icons/microphone{,-slash}.svg`
+   (see `MicrophoneIcon`/`MicrophoneSlashIcon` in toneIcons.tsx).
+   `.vis-mute-group .vis-mute` (two classes), not just `.vis-mute`: the base
+   `.screen button` rule is a class + an element, which otherwise beats a
+   single class on specificity and wins the padding fight, same issue as
+   `.vis-filter-btn` elsewhere in this file. */
+.vis-mute-group .vis-mute {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+}
+
+.vis-mute-icon {
+  width: 20px;
+  height: 20px;
+  color: currentColor;
+}
+
+/* A real mic cut (see `toggleMute` in Visualiser.tsx), so it gets the same
+   danger tint `.mic-stop` uses elsewhere for "this turns the mic off" —
+   neutral while live, tinted once muted so the state reads at a glance. */
+.vis-mute.muted {
+  border-color: rgba(var(--danger-rgb), 0.4);
+  color: var(--danger);
+}
+
+.vis-mute-error {
+  margin: 0;
+  max-width: 120px;
+  font-size: 11px;
+  text-align: left;
 }
 
 /* Under the canvas: filter on the left, words scrolling sideways. Sized
@@ -1550,13 +1692,35 @@
   align-items: center;
   gap: 10px;
   overflow: hidden;
-  padding: 0 12px 12px;
+  padding: 0 12px 8px;
+}
+
+/* Shared by mobile top bar and desktop panel — accuracy + recognized tone
+   sit as a pair of cards. Mobile keeps them compact and centered; desktop
+   (below) scales the value up so they read as the panel's headline. */
+.vis-readouts {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .vis-accuracy {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 2px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 112px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  border: 1px solid var(--line);
+  text-align: center;
 }
 
 .vis-accuracy-label {
@@ -1568,9 +1732,9 @@
 }
 
 .vis-accuracy-value {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
 .vis-accuracy-value.tier-good {
@@ -1590,7 +1754,7 @@
 }
 
 .vis-accuracy-tries {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--ink-dim);
 }
 
@@ -1955,6 +2119,8 @@
   .vis-canvas-clear {
     display: flex;
     justify-content: center;
+    align-items: flex-start;
+    gap: 10px;
     flex: 0 0 auto;
     width: 100%;
   }
@@ -1994,13 +2160,33 @@
     text-align: left;
   }
 
+  /* Accuracy + Tone are the panel's headline — one row, equal cards, big
+     values. Everything below (tone picker, word strip) is secondary. */
+  .visualiser-panel .vis-readouts {
+    gap: 12px;
+    justify-content: stretch;
+  }
+
   .visualiser-panel .vis-accuracy {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: baseline;
-    align-content: flex-start;
-    gap: 8px;
-    min-height: 48px;
+    flex: 1 1 0;
+    max-width: none;
+    gap: 4px;
+    padding: 16px 14px;
+    min-height: 96px;
+  }
+
+  .visualiser-panel .vis-accuracy-label {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+  }
+
+  .visualiser-panel .vis-accuracy-value {
+    font-size: 40px;
+    letter-spacing: -0.02em;
+  }
+
+  .visualiser-panel .vis-accuracy-tries {
+    font-size: 12px;
   }
 
   .visualiser-panel .vis-tone-picker {
@@ -3941,7 +4127,7 @@ section.hero-cards {
   right: 0;
   bottom: 0;
   flex-direction: column;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: 0;
   border-top: 1px solid var(--line);
 }
 

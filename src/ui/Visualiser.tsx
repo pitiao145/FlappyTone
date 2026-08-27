@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { inventoryNow, loadInventory } from "../audio/inventory.ts";
+import { MicError } from "../audio/mic.ts";
 import { isCueAudible, loadClip, playToneCue } from "../audio/reference.ts";
-import { getMicSession, setFrameSink } from "../audio/session.ts";
+import { ensureMic, getMicSession, MicCancelled, setFrameSink, stopMic } from "../audio/session.ts";
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { ContourRecorder } from "../game/contours.ts";
@@ -15,7 +16,15 @@ import { wordsOfTone } from "../game/words.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawVisualiser } from "../render/visualiser.ts";
-import { ChevronIcon, ToneMarkIcon, TonesGridIcon, TONE_SHORT_LABEL } from "./toneIcons.tsx";
+import { micErrorCopy } from "./micErrors.ts";
+import {
+  ChevronIcon,
+  MicrophoneIcon,
+  MicrophoneSlashIcon,
+  ToneMarkIcon,
+  TonesGridIcon,
+  TONE_SHORT_LABEL,
+} from "./toneIcons.tsx";
 
 /** How much time the panel spans. Long enough for a citation syllable and a breath. */
 const SPAN_MS = 1600;
@@ -36,14 +45,6 @@ interface Props {
   settings: CalibrationSettings;
   canvasWidth: number;
   canvasHeight: number;
-  /**
-   * Shows the standalone tone-recognizer readout ("recognized: T2 (87%)"),
-   * independent of whatever tone/word is selected as the "target" — see
-   * `src/game/toneClassifier.ts`. Defaults to false so the title screen's
-   * production Visualiser is untouched; the Lab's visualiser tab is the
-   * only caller that passes true, deliberately, while this stays Lab-only.
-   */
-  showRecognizedTone?: boolean;
 }
 
 /**
@@ -55,12 +56,7 @@ interface Props {
  * corridor at the same time, and when that fails there is no way to tell which
  * half went wrong. Here there is only one half.
  */
-export function Visualiser({
-  settings,
-  canvasWidth,
-  canvasHeight,
-  showRecognizedTone = false,
-}: Props) {
+export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   /**
@@ -109,6 +105,46 @@ export function Visualiser({
   const [recognized, setRecognized] = useState<ToneClassification | null>(null);
   /** `startedAtMs` of the last finished attempt already classified. */
   const lastRecognizedAtRef = useRef<number | null>(null);
+  /**
+   * A real cut, not a soft ignore-the-frames mute: muting calls `stopMic()`,
+   * which tears down the `MediaStream`/`AudioContext` and turns off the
+   * OS-level mic indicator — the point, for a noisy-room toggle. Unmuting
+   * calls `ensureMic()` again from this same click, which is its own gesture
+   * (iOS Safari's requirement), so no separate "enable mic" flow is needed.
+   */
+  const [muted, setMuted] = useState(false);
+  const [muteBusy, setMuteBusy] = useState(false);
+  const [muteError, setMuteError] = useState<string | null>(null);
+  /**
+   * The main effect's own frame-sink callback, so `toggleMute` can
+   * re-install it after `ensureMic()` reopens a session — `stopMic()` clears
+   * the sink at the session-module level (see `src/audio/session.ts`), and
+   * that must not restart the whole effect (it would drop the trail/recorder
+   * and reset the wake lock/rAF loop for no reason).
+   */
+  const frameSinkRef = useRef<((frame: Float32Array, sampleRate: number) => void) | null>(null);
+
+  const toggleMute = async () => {
+    if (muteBusy) return;
+    if (!muted) {
+      stopMic();
+      setMuted(true);
+      return;
+    }
+    setMuteBusy(true);
+    setMuteError(null);
+    try {
+      await ensureMic();
+      setFrameSink(frameSinkRef.current);
+      setMuted(false);
+    } catch (err) {
+      if (!(err instanceof MicCancelled)) {
+        setMuteError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
+      }
+    } finally {
+      setMuteBusy(false);
+    }
+  };
 
   /**
    * Clears both the trail and the running accuracy. Used whenever the word
@@ -178,7 +214,10 @@ export function Visualiser({
     let lastT = performance.now();
 
     // The mic is already open — the caller opened it inside a click gesture.
-    setFrameSink((frame, sampleRate) => {
+    // Stored in a ref (not just handed to setFrameSink) so `toggleMute` can
+    // re-install this exact callback after unmuting reopens the session,
+    // without re-running this whole effect.
+    const onFrame = (frame: Float32Array, sampleRate: number) => {
       // Deaf while the example plays — otherwise the game's own voice is drawn
       // as the player's contour.
       if (isCueAudible()) return;
@@ -198,7 +237,9 @@ export function Visualiser({
       recorder.push(p.smoothedChao, p.voiced, now);
       voiced = p.voiced;
       if (p.voiced) lastVoicedAt = now;
-    });
+    };
+    frameSinkRef.current = onFrame;
+    setFrameSink(onFrame);
 
     const tick = (now: number) => {
       const dt = Math.min(100, now - lastT);
@@ -289,6 +330,7 @@ export function Visualiser({
       releaseWakeLock();
       setFrameSink(null);
       setActiveTracker(null);
+      frameSinkRef.current = null;
     };
   }, [settings, canvasW, canvasH]);
 
@@ -319,6 +361,30 @@ export function Visualiser({
     }
   };
 
+  /**
+   * Shared by the mobile top bar and the desktop panel — a real cut/reopen
+   * (see `toggleMute` above), so a permission failure on unmute gets its own
+   * small inline error rather than failing silently.
+   */
+  const muteButton = (
+    <div className="vis-mute-group">
+      <button
+        className={muted ? "vis-mute muted" : "vis-mute"}
+        onClick={() => void toggleMute()}
+        disabled={muteBusy}
+        aria-pressed={muted}
+        aria-label={muted ? "Unmute microphone" : "Mute microphone"}
+      >
+        {muted ? (
+          <MicrophoneSlashIcon className="vis-mute-icon" />
+        ) : (
+          <MicrophoneIcon className="vis-mute-icon" />
+        )}
+      </button>
+      {muteError && <p className="error vis-mute-error">{muteError}</p>}
+    </div>
+  );
+
   /** Shared by the mobile top bar and the desktop panel — same readout, two layouts. */
   const accuracyReadout = (
     <div className="vis-accuracy">
@@ -339,13 +405,14 @@ export function Visualiser({
   );
 
   /**
-   * The standalone recognizer's readout — Lab-only (`showRecognizedTone`).
-   * Deliberately says nothing about whichever tone/word is selected as the
-   * "target": it reports what the shape resembled, full stop.
+   * The standalone recognizer's readout, always shown next to accuracy now
+   * (was Lab-only behind `showRecognizedTone`). Deliberately says nothing
+   * about whichever tone/word is selected as the "target": it reports what
+   * the shape resembled, full stop.
    */
-  const recognizedReadout = showRecognizedTone && (
+  const recognizedReadout = (
     <div className="vis-accuracy">
-      <span className="vis-accuracy-label">recognized</span>
+      <span className="vis-accuracy-label">Tone</span>
       {recognized ? (
         <>
           <strong
@@ -489,14 +556,15 @@ export function Visualiser({
       style={{ width: canvasWidth, height: canvasHeight }}
     >
       {/* Mobile and desktop are genuinely different layouts here, not just a
-          CSS reflow of the same controls — mobile stacks accuracy + Clear
-          above a full-width canvas, with a horizontal word rail under it;
-          desktop has room for everything laid out in a side column. Both
-          markups always render; App.css's `min-width: 720px` query is what
-          picks one. */}
+          CSS reflow of the same controls — mobile centers the accuracy/tone
+          cards above a full-width canvas, with a horizontal word rail under
+          it; desktop has room for everything laid out in a side column.
+          Both markups always render; App.css's `min-width: 720px` query is
+          what picks one. */}
       <div className="visualiser-body">
         <div className="vis-top-bar">
-          <div className="vis-top-bar-readouts">
+          {muteButton}
+          <div className="vis-readouts">
             {accuracyReadout}
             {recognizedReadout}
           </div>
@@ -515,6 +583,7 @@ export function Visualiser({
           </div>
 
           <div className="vis-canvas-clear">
+            {muteButton}
             <button onClick={resetAttempts}>Clear</button>
           </div>
         </div>
@@ -550,8 +619,10 @@ export function Visualiser({
 
         {/* --------------------------------------------------- desktop */}
         <div className="visualiser-panel">
-          {accuracyReadout}
-          {recognizedReadout}
+          <div className="vis-readouts">
+            {accuracyReadout}
+            {recognizedReadout}
+          </div>
 
           <div className="vis-tone-picker">{desktopTonePickerPanel}</div>
 

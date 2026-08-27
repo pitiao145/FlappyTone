@@ -7,11 +7,11 @@
  * resemble, independent of any target". A recognizer, not a grader — it
  * never sees or cares which tone the player was aiming for.
  *
- * Currently wired up in the Lab's visualiser tab only (`src/dev/Lab.tsx`),
- * deliberately: see the `shape-analysis-roadmap` memory for why richer
- * shape work gets proven here first. `classifyTone` has no dependency on
- * anything Lab- or Visualiser-specific, so plugging it into the game later
- * is a matter of calling it from `run.ts`, not a rewrite.
+ * Wired into the Visualiser (`src/ui/Visualiser.tsx`, both the production
+ * `/app` tab and the Lab's copy) as an always-shown "Tone" readout next to
+ * accuracy. Still not wired into the game itself — `classifyTone` has no
+ * dependency on anything Visualiser-specific, so plugging it into scoring
+ * later is a matter of calling it from `run.ts`, not a rewrite.
  *
  * Templates come from `AVERAGED_TONE_SHAPE` (`src/game/toneAverages.ts`,
  * generated — see `src/dev/make-tone-averages.ts`): each tone's chao value

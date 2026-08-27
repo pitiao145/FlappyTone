@@ -130,7 +130,7 @@ const STAGE_MARGIN_DESKTOP = 28;
 /** Keep in sync with .game-screen's desktop padding-top in App.css. */
 const GAME_TOP_PADDING_DESKTOP = 24;
 
-function computeCanvasSize() {
+function computeCanvasSize(mainEl?: HTMLElement | null) {
   if (typeof window === "undefined") {
     return {
       w: CANVAS_W_REF,
@@ -145,6 +145,16 @@ function computeCanvasSize() {
       desktop: true,
     };
   }
+  // Prefer the laid-out `.app-main` — on mobile it's the flex region above
+  // the in-flow nav (--nav-mobile-pct), so measuring it matches the stage.
+  // Fallback still subtracts MOBILE_NAV_RESERVE before first layout.
+  if (mainEl && mainEl.clientWidth > 0 && mainEl.clientHeight > 0) {
+    return {
+      w: mainEl.clientWidth,
+      h: mainEl.clientHeight,
+      desktop: false,
+    };
+  }
   return {
     w: window.innerWidth,
     h: Math.round(window.innerHeight - MOBILE_NAV_RESERVE),
@@ -152,19 +162,30 @@ function computeCanvasSize() {
   };
 }
 
-/** Tracks the viewport (breakpoint, width, height) computeCanvasSize needs. */
-function useCanvasSize() {
+/**
+ * Tracks the viewport (breakpoint, width, height) computeCanvasSize needs.
+ * On mobile, observes `.app-main` so the stage matches the fixed shell
+ * rather than overshooting into a page scroll.
+ */
+function useCanvasSize(mainRef: React.RefObject<HTMLElement | null>) {
   const [size, setSize] = useState(computeCanvasSize);
   useEffect(() => {
-    const onChange = () => setSize(computeCanvasSize());
+    const onChange = () => setSize(computeCanvasSize(mainRef.current));
+    onChange();
+    const el = mainRef.current;
+    const ro = el ? new ResizeObserver(onChange) : null;
+    if (el && ro) ro.observe(el);
     const mq = window.matchMedia("(min-width: 720px)");
     mq.addEventListener("change", onChange);
     window.addEventListener("resize", onChange);
+    window.visualViewport?.addEventListener("resize", onChange);
     return () => {
+      ro?.disconnect();
       mq.removeEventListener("change", onChange);
       window.removeEventListener("resize", onChange);
+      window.visualViewport?.removeEventListener("resize", onChange);
     };
-  }, []);
+  }, [mainRef]);
   return size;
 }
 
@@ -176,7 +197,8 @@ function useCanvasSize() {
  * between the two on load: reaching this URL at all *is* the decision.
  */
 export default function GameApp() {
-  const { w: CANVAS_W, h: CANVAS_H, desktop } = useCanvasSize();
+  const mainRef = useRef<HTMLDivElement>(null);
+  const { w: CANVAS_W, h: CANVAS_H, desktop } = useCanvasSize(mainRef);
   // A run's own top breathing room on desktop (App.css's .game-screen
   // padding-top) — trimmed off the stage's own height budget rather than
   // added on top of it, so the frame still ends at the same bottom margin.
@@ -346,19 +368,27 @@ export default function GameApp() {
   }, []);
 
   /**
-   * Nav-tab clicks. Most tabs are a plain screen switch — no mic needed. The
-   * one exception is Visualiser before the player has ever calibrated: its
-   * screen requires `settings`, so an uncalibrated click routes through the
-   * calibration gate first, opening the mic here since this click is the
-   * gesture (Calibration itself does not open the mic on mount).
+   * Nav-tab clicks. Visualiser is the one tab that needs a live mic feed —
+   * this click is its gesture (iOS Safari grants `getUserMedia` only inside
+   * one), whether or not the player has calibrated yet: uncalibrated routes
+   * through the calibration gate first, calibrated goes straight there.
+   * `ensureMic()` is a no-op if a session is already open, so this is safe
+   * to call every time, not just the first.
+   *
+   * Every other tab's screen has no business holding the mic open — it
+   * releases one if a session exists, rather than leaving it (and its
+   * OS-level indicator) running in the background while browsing
+   * Settings/Profile/Progress. Screens that need it later for their own
+   * reasons (Play's buttons, Settings' recalibrate/tutorial links) open a
+   * fresh one themselves, inside their own click handler.
    */
   const onNavigate = useCallback(
     (tab: NavTab) => {
-      if (tab === "visualiser" && !settings) {
+      if (tab === "visualiser") {
         setError(null);
-        pendingRef.current = "visualiser";
+        if (!settings) pendingRef.current = "visualiser";
         void ensureMic()
-          .then(() => setScreen("calibrate"))
+          .then(() => setScreen(settings ? "visualiser" : "calibrate"))
           .catch((err) => {
             pendingRef.current = null;
             if (!(err instanceof MicCancelled)) {
@@ -371,6 +401,7 @@ export default function GameApp() {
           });
         return;
       }
+      stopMic();
       setScreen(tab);
     },
     [settings],
@@ -379,7 +410,7 @@ export default function GameApp() {
   return (
     <div className="app app-game">
       <GameNav active={navTabFor(screen)} onNavigate={onNavigate} />
-      <div className="app-main">
+      <div className="app-main" ref={mainRef}>
         <div className="frame">
           {screen === "play" && (
             <PlayHome

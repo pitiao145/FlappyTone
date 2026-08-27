@@ -379,12 +379,7 @@ worst excursion ${Math.round(Math.max(0, ...last.gateLog.map((g) => g.worstExcur
           from while tuning. */}
       {tab === "visualiser" && (
         <div className="lab-controls">
-          <Visualiser
-            settings={settings}
-            canvasWidth={360}
-            canvasHeight={640}
-            showRecognizedTone
-          />
+          <Visualiser settings={settings} canvasWidth={360} canvasHeight={640} />
         </div>
       )}
 

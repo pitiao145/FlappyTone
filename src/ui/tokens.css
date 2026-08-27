@@ -94,6 +94,8 @@
 
   /* ---- game nav (/app) */
   --nav-mobile-h: 72px;
+  /* Mobile in-flow bar: share of .app-game's content box. */
+  --nav-mobile-pct: 9%;
   --nav-sidebar-w: 232px;
   /* Keep in sync with STAGE_MARGIN_DESKTOP in GameApp.tsx. */
   --stage-margin-desktop: 28px;
