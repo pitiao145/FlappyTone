@@ -4,11 +4,12 @@ import { capturePostHogEvent } from "../analytics/posthog.ts";
 type Status = "idle" | "loading" | "success";
 
 /**
- * Shared submit logic for the two Kit signup forms (ComingSoon, Landing's
- * #mobile). `source` tags which form fired, for the funnel — never the email
- * itself, which stays out of PostHog per posthog.ts's own rule.
+ * Shared submit logic for the Kit signup forms (ComingSoon, Landing's
+ * #mobile, the app's EarlyBird modal). `source` tags which form fired, for
+ * the funnel — never the email itself, which stays out of PostHog per
+ * posthog.ts's own rule.
  */
-export function useNewsletterSubscribe(source: "coming_soon" | "mobile") {
+export function useNewsletterSubscribe(source: "coming_soon" | "mobile" | "earlybird") {
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
 

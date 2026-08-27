@@ -18,14 +18,16 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SITE_URL = process.env.SITE_URL || "https://flappytone.pierrebuilds.dev";
 
 /**
- * Which landing-page form a signup came from, tagged in Kit so the two forms
- * (ComingSoon's roadmap section, Landing's #mobile) show up as separate
- * segments rather than one undifferentiated list. Optional per source: a
- * source with no matching env var just isn't tagged, it still subscribes.
+ * Which form a signup came from, tagged in Kit so each source (ComingSoon's
+ * roadmap section, Landing's #mobile, the app's EarlyBird modal) shows up as
+ * a separate segment rather than one undifferentiated list. Optional per
+ * source: a source with no matching env var just isn't tagged, it still
+ * subscribes.
  */
 const KIT_TAG_NAME_BY_SOURCE: Record<string, string | undefined> = {
   coming_soon: process.env.KIT_TAG_ID_COMING_SOON,
   mobile: process.env.KIT_TAG_ID_MOBILE,
+  earlybird: process.env.KIT_TAG_ID_EARLYBIRD,
 };
 
 interface KitErrorBody {

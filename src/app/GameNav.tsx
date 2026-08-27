@@ -83,7 +83,7 @@ const ITEMS: {
 }[] = [
   { tab: "play", label: "Play", icon: IconPlay },
   { tab: "visualiser", label: "Visualiser", icon: IconVisualiser },
-  { tab: "progress", label: "Progress", icon: IconProgress, soon: true },
+  { tab: "progress", label: "Progress", icon: IconProgress },
   { tab: "profile", label: "Profile", icon: IconProfile },
   { tab: "settings", label: "Settings", icon: IconSettings },
 ];

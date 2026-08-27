@@ -94,7 +94,11 @@ interface Props {
   canvasWidth: number;
   canvasHeight: number;
   onOver: (snapshot: RunSnapshot) => void;
-  onQuit: () => void;
+  /** Called on a manual quit (pause menu) or the tab going away mid-run.
+   * `snap` is the run's state at the moment of quitting, or null if no run
+   * had started yet — the caller decides whether/how to record a partial
+   * attempt; `onOver` is never called for this path. */
+  onQuit: (snap: RunSnapshot | null) => void;
   /** The word `mode: "single"` flies. Ignored otherwise. */
   singleWord?: Word;
   /** This session's run count, this one included. Shown in the pause menu; ignored in the tutorial. */
@@ -238,10 +242,10 @@ export function Game({
    * says the game got too hard or too boring.
    */
   const exitRun = useCallback(
-    (go: () => void) => () => {
-      const snap = runRef.current?.snapshot();
+    (go: (snap: RunSnapshot | null) => void) => () => {
+      const snap = runRef.current?.snapshot() ?? null;
       if (snap) reportRunEnd(snap, "quit");
-      go();
+      go(snap);
     },
     [reportRunEnd],
   );

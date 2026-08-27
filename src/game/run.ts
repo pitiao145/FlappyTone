@@ -287,6 +287,8 @@ export interface RunSnapshot {
    * until the run is over, or if too few voiced frames were captured.
    */
   measuredRange: RangeHalves | null;
+  /** Ids of every word spawned this run, oldest first — for lifetime "unique words" stats. */
+  wordIds: string[];
 }
 
 const TUTORIAL_TONES: Tone[] = [1, 1, 4, 4, 2, 2, 3, 3];
@@ -805,6 +807,7 @@ export class Run {
       gateLog: this.gateLog,
       missedUtterances: this.missedUtterances,
       measuredRange: this.suggestedRange ?? null,
+      wordIds: this.spawnedWords.map((w) => w.id),
     };
   }
 

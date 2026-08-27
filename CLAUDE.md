@@ -8,6 +8,18 @@ Full spec: @docs/PRD.md — read it before implementing a slice, not before ever
 
 React 18 + TypeScript + Vite + Tailwind. Canvas 2D. Web Audio API. No backend, no accounts, no persistence except calibration in `localStorage`.
 
+**Second, scoped exception (27 Aug 2026): `src/game/runHistory.ts` and
+`src/game/dailyLimit.ts`.** The Progress/Profile tabs need real, device-local
+stats — lifetime run/gate/word counts, the last 5 runs' per-tone accuracy,
+and a "N of 5 free runs today" counter — to avoid faking numbers the UI
+claims are real. Both follow `settings.ts`'s own key/version/validate
+convention and store nothing that leaves the device. `dailyLimit.ts` is
+explicitly **not tamper-proof**: there are no accounts, so its checksum only
+deters a casual devtools edit, not a determined reset via clearing site
+data. Don't build product logic that assumes it can't be bypassed, and
+don't reach for this pattern for anything beyond what the free-tier teaser
+needs — it's a carve-out, not a green light to persist arbitrary game state.
+
 ## Hard rules — these are not defaults, do not drift back to them
 
 1. **The game loop is `requestAnimationFrame` outside React.** React renders the shell, menus and end screen only. Never call `useState` per frame. Game state lives in a mutable object held in a `useRef` or a module singleton.

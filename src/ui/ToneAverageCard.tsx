@@ -12,7 +12,18 @@ const CARD_H = 120;
  * mark, and here's proof": the same averaged-clip chart the Lab uses to
  * sanity-check the corridors, not a redrawn or simplified stand-in.
  */
-export function ToneAverageCard({ words, tone }: { words: Word[]; tone: Tone }) {
+export function ToneAverageCard({
+  words,
+  tone,
+  showCaption = true,
+}: {
+  words: Word[];
+  tone: Tone;
+  /** Set false to show only the chart — the Progress tab's "how each tone
+   * moves" grid wants the visuals alone, without the pinyin/hanzi/cue text
+   * the landing page's explainer still needs. */
+  showCaption?: boolean;
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     if (ref.current) drawToneAverageChart(ref.current, words, tone, CARD_W, CARD_H);
@@ -28,13 +39,15 @@ export function ToneAverageCard({ words, tone }: { words: Word[]; tone: Tone }) 
         role="img"
         aria-label={`Measured pitch contour for tone ${tone}: ${info.cue}.`}
       />
-      <figcaption>
-        <span className="syllable">{info.pinyin}</span>
-        <span className="hanzi">{info.hanzi}</span>
-        <span className="cue">
-          ({tone}) {info.cue}
-        </span>
-      </figcaption>
+      {showCaption && (
+        <figcaption>
+          <span className="syllable">{info.pinyin}</span>
+          <span className="hanzi">{info.hanzi}</span>
+          <span className="cue">
+            ({tone}) {info.cue}
+          </span>
+        </figcaption>
+      )}
     </figure>
   );
 }

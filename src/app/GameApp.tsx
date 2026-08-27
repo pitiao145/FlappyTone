@@ -1,9 +1,10 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { initAnalytics, track, trackCalibration } from "../analytics/client";
-import { initPostHog } from "../analytics/posthog.ts";
+import { capturePostHogEvent, initPostHog } from "../analytics/posthog.ts";
 import { loadInventory } from "../audio/inventory";
 import { MicError } from "../audio/mic";
 import { ensureMic, MicCancelled, stopMic } from "../audio/session";
+import { incrementDailyRuns } from "../game/dailyLimit.ts";
 import {
   averageRangeHalves,
   COOLDOWN_TRACKING_WINDOW,
@@ -11,6 +12,7 @@ import {
   recordTrackedRun,
 } from "../game/recalibration.ts";
 import type { RunSnapshot } from "../game/run";
+import { recordRun } from "../game/runHistory.ts";
 import {
   loadRecalTracking,
   loadSettings,
@@ -23,9 +25,11 @@ import type { RunStats } from "../game/scoring";
 import { Calibration } from "../ui/Calibration";
 import { Game } from "../ui/Game";
 import { GameOver } from "../ui/GameOver";
+import { EarlyBirdModal, type EarlyBirdSurface } from "../ui/EarlyBirdModal.tsx";
 import { HowTo } from "../ui/HowTo";
-import { PlaceholderScreen } from "../ui/PlaceholderScreen";
 import { PlayHome, type PlayIntent } from "../ui/PlayHome";
+import { Profile } from "../ui/Profile.tsx";
+import { Progress } from "../ui/Progress.tsx";
 import { Settings } from "../ui/Settings";
 import { Visualiser } from "../ui/Visualiser";
 import { micErrorCopy } from "../ui/micErrors";
@@ -228,6 +232,14 @@ export default function GameApp() {
   const [tutorialDone, setTutorialDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryBusy, setRetryBusy] = useState(false);
+  const [earlyBird, setEarlyBird] = useState<{
+    surface: EarlyBirdSurface;
+    feature: string;
+  } | null>(null);
+  const openEarlyBird = useCallback((surface: EarlyBirdSurface, feature: string) => {
+    capturePostHogEvent("earlybird_cta_click", { surface, feature });
+    setEarlyBird({ surface, feature });
+  }, []);
   /** Where to go once calibration finishes, when Play/Tutorial routed through it. */
   const pendingRef = useRef<"game" | "tutorial" | "visualiser" | null>(null);
   /** The mode of the run that just ended — drives Retry. */
@@ -252,6 +264,21 @@ export default function GameApp() {
     setRetryBusy(false);
     setScreen("play");
   }, []);
+
+  /**
+   * The pause menu's "quit" exit from a "game" run. Recorded (with a
+   * "quit" outcome) so it shows up in run history — unlike a
+   * finished/out_of_hearts run, it deliberately does NOT call
+   * `incrementDailyRuns()`: quitting shouldn't cost the player one of
+   * their 5 daily free runs. Tutorial quits are neither recorded nor
+   * counted, same as `onRunOver`.
+   */
+  const onRunQuit = useCallback((snap: RunSnapshot | null) => {
+    if (snap && lastModeRef.current === "game") {
+      recordRun(snap, "quit");
+    }
+    goHome();
+  }, [goHome]);
 
   /** The caller has already opened the mic inside its click handler. */
   const startPlay = useCallback(
@@ -299,6 +326,13 @@ export default function GameApp() {
       return;
     }
     setStats(snap.stats);
+    if (lastModeRef.current === "game") {
+      recordRun(snap, snap.stats.hearts <= 0 ? "out_of_hearts" : "finished");
+      // Only a completed run (finished or out of hearts) counts against the
+      // free tier — a quit shouldn't cost the player one of their 5 daily
+      // runs. See `onRunQuit` below, which deliberately does not call this.
+      incrementDailyRuns();
+    }
 
     // Windowed recalibration check — see recalibration.ts. Only a completed,
     // non-tutorial run reaches here, so tutorial runs never pollute the
@@ -426,17 +460,11 @@ export default function GameApp() {
         {screen === "howto" && <HowTo onBack={() => setScreen("settings")} />}
 
         {screen === "progress" && (
-          <PlaceholderScreen
-            title="Progress"
-            body="Your accuracy over time, per tone, is coming soon."
-          />
+          <Progress onEarlyBird={(feature) => openEarlyBird("progress", feature)} />
         )}
 
         {screen === "profile" && (
-          <PlaceholderScreen
-            title="Profile"
-            body="A place for your stats and preferences is coming soon."
-          />
+          <Profile onEarlyBird={(feature) => openEarlyBird("profile", feature)} />
         )}
 
         {screen === "settings" && (
@@ -503,7 +531,7 @@ export default function GameApp() {
             canvasWidth={CANVAS_W}
             canvasHeight={GAME_CANVAS_H}
             onOver={onRunOver}
-            onQuit={goHome}
+            onQuit={onRunQuit}
             runNumber={gameRunNumberRef.current}
           />
         )}
@@ -521,6 +549,13 @@ export default function GameApp() {
         )}
         </div>
       </div>
+      {earlyBird && (
+        <EarlyBirdModal
+          surface={earlyBird.surface}
+          feature={earlyBird.feature}
+          onClose={() => setEarlyBird(null)}
+        />
+      )}
     </div>
   );
 }
