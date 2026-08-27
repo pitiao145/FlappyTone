@@ -127,7 +127,13 @@ const PIP_TILT_MAX = 0.45; // ~26 degrees
 /** How fast the drawn tilt eases toward its target, per frame. */
 const PIP_TILT_EASE = 0.25;
 
-let pipAngle = 0;
+/**
+ * Keyed by the canvas context so tilt state belongs to the canvas it's drawn
+ * on, not the process — a bare module `let` here would leak angle between
+ * the game, the tutorial, and a Lab preview if more than one calls
+ * `drawWorld` in the same session (each mounts its own `<canvas>`).
+ */
+const pipAngles = new WeakMap<CanvasRenderingContext2D, number>();
 
 /**
  * Slope of the player's own pitch, in chao per ms, from the two most recent
@@ -218,7 +224,9 @@ export function drawWorld(
           -PIP_TILT_MAX,
           Math.min(PIP_TILT_MAX, -pipSlope(snap.trail, now) * PIP_TILT_GAIN),
         );
-  pipAngle += (targetAngle - pipAngle) * PIP_TILT_EASE;
+  const prevAngle = pipAngles.get(ctx) ?? 0;
+  const pipAngle = prevAngle + (targetAngle - prevAngle) * PIP_TILT_EASE;
+  pipAngles.set(ctx, pipAngle);
 
   drawPip(
     ctx,
@@ -228,6 +236,7 @@ export function drawWorld(
     dotX + recoilOffset(snap, now, width),
     pipAngle,
     pipState,
+    snap.voiced,
     now,
     pipStateAge,
   );

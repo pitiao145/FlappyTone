@@ -574,7 +574,7 @@ function GatePreview({
           }
         }
         drawChaoGrid(ctx, width, height);
-        drawPip(ctx, width, height, REST_CHAO, width * birdXFrac(), 0, "flying", 0);
+        drawPip(ctx, width, height, REST_CHAO, width * birdXFrac(), 0, "flying", true, 0);
       }
       raf = requestAnimationFrame(draw);
     };

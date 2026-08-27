@@ -329,6 +329,7 @@ export function drawPip(
   x: number,
   angle: number,
   state: PipState,
+  voiced: boolean,
   nowMs = 0,
   stateAgeMs = Infinity,
 ): void {
@@ -341,17 +342,20 @@ export function drawPip(
   const hurt = state === "hurt" && stateAgeMs < FLASH_MS;
 
   // 0 when unvoiced at the bottom of the breath, 1 when singing — kept for
-  // continuity with the old dot's "waiting for you" breathing idle.
-  const pulse = unheard
-    ? 0.55 + 0.45 * (0.5 - 0.5 * Math.cos((nowMs / PULSE_MS) * Math.PI * 2))
-    : 1;
+  // continuity with the old dot's "waiting for you" breathing idle. The
+  // "couldn't hear that" state has its own fixed dimming (globalAlpha below)
+  // and doesn't also breathe.
+  const pulse = voiced
+    ? 1
+    : 0.55 + 0.45 * (0.5 - 0.5 * Math.cos((nowMs / PULSE_MS) * Math.PI * 2));
 
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(angle);
 
-  // Outer halo — present in every non-unheard state, quieter when idle.
-  const haloR = r * (unheard ? 2.2 : 3.2);
+  // Outer halo — present in every state, quieter when idle or unheard.
+  const haloBig = voiced && !unheard;
+  const haloR = r * (haloBig ? 3.4 : unheard ? 2.2 : 2.4);
   const halo = ctx.createRadialGradient(0, 0, r * 0.4, 0, 0, haloR);
   const haloToken = success ? "good" : "accent";
   halo.addColorStop(0, rgba(haloToken, (unheard ? 0.14 : 0.4) * pulse));
@@ -434,5 +438,5 @@ export function drawScene(
 
   const dotX = width * 0.5;
   drawTrail(ctx, width, height, trail, trailSeconds, dotX, now);
-  drawPip(ctx, width, height, snapshot.chao, dotX, 0, "flying", now);
+  drawPip(ctx, width, height, snapshot.chao, dotX, 0, "flying", snapshot.voiced, now);
 }
