@@ -176,12 +176,7 @@ function useCanvasSize() {
  * between the two on load: reaching this URL at all *is* the decision.
  */
 export default function GameApp() {
-  // Play/Calibration get the desktop-sized canvas; Visualiser keeps the
-  // mobile size — its CSS cap (App.css) is unchanged, and its own render
-  // loop has no scrollSpeed/timing to keep in sync with a wider frame.
   const { w: CANVAS_W, h: CANVAS_H, desktop } = useCanvasSize();
-  const VIS_CANVAS_W = CANVAS_W_REF;
-  const VIS_CANVAS_H = Math.round((CANVAS_W_REF * 16) / 9);
   // A run's own top breathing room on desktop (App.css's .game-screen
   // padding-top) — trimmed off the stage's own height budget rather than
   // added on top of it, so the frame still ends at the same bottom margin.
@@ -429,12 +424,11 @@ export default function GameApp() {
         )}
 
         {screen === "visualiser" && settings && (
-          <Visualiser
-            settings={settings}
-            canvasWidth={VIS_CANVAS_W}
-            canvasHeight={VIS_CANVAS_H}
-            onBack={goHome}
-          />
+          // Same dimensions PlayHome gets (CANVAS_W x GAME_CANVAS_H) so the
+          // .frame this renders into is pixel-identical to Play's — no
+          // separate constants, no separate CSS formula. See the
+          // `.visualiser-screen.game-stage` rule in App.css.
+          <Visualiser settings={settings} canvasWidth={CANVAS_W} canvasHeight={GAME_CANVAS_H} />
         )}
 
         {screen === "lab" && Lab && (

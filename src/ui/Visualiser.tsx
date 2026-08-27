@@ -5,7 +5,7 @@ import { getMicSession, setFrameSink } from "../audio/session.ts";
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { ContourRecorder } from "../game/contours.ts";
-import { shapeForWord, TONE_INFO, type Tone } from "../game/gates.ts";
+import { shapeForWord, type Tone } from "../game/gates.ts";
 import type { CalibrationSettings } from "../game/settings.ts";
 import { classifyTone, type ToneClassification } from "../game/toneClassifier.ts";
 import { tuning } from "../game/tuning.ts";
@@ -36,7 +36,6 @@ interface Props {
   settings: CalibrationSettings;
   canvasWidth: number;
   canvasHeight: number;
-  onBack: () => void;
   /**
    * Shows the standalone tone-recognizer readout ("recognized: T2 (87%)"),
    * independent of whatever tone/word is selected as the "target" — see
@@ -60,10 +59,20 @@ export function Visualiser({
   settings,
   canvasWidth,
   canvasHeight,
-  onBack,
   showRecognizedTone = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  /**
+   * Measured size of the `.stage` box, which CSS now stretches to fill
+   * whatever room the frame actually has (mobile: full height between the
+   * nav and the bottom bar; desktop: capped at 420px wide, same as before).
+   * Falls back to the `canvasWidth`/`canvasHeight` props until the first
+   * observation lands, so first paint isn't 0x0.
+   */
+  const [measured, setMeasured] = useState<{ w: number; h: number } | null>(null);
+  const canvasW = measured?.w ?? canvasWidth;
+  const canvasH = measured?.h ?? canvasHeight;
   const [tone, setTone] = useState<Tone | null>(1);
   const [words, setWords] = useState<Word[]>(() => inventoryNow() ?? []);
   const [selectedWord, setSelectedWord] = useState<Word | null>(null);
@@ -73,9 +82,8 @@ export function Visualiser({
   const [popoverTab, setPopoverTab] = useState<"tone" | "wordlists">("tone");
   /**
    * Mirrors `wordStatsRef` into React state so the accuracy readout — now a
-   * real DOM element in the side column, not canvas-drawn — can render it.
-   * Only set once per finished attempt (inside the tick loop below), never
-   * per frame.
+   * real DOM element, not canvas-drawn — can render it. Only set once per
+   * finished attempt (inside the tick loop below), never per frame.
    */
   const [accuracyDisplay, setAccuracyDisplay] = useState<{
     value: number;
@@ -134,9 +142,28 @@ export function Visualiser({
 
   const wordsForTone = tone === null ? [] : wordsOfTone(words, tone);
 
+  // CSS (App.css) now stretches `.stage` to fill the real space it has —
+  // full height on mobile, the 420px-capped column on desktop — instead of
+  // the canvas being fixed at a 9:16 constant. Measure that box directly so
+  // the drawing space always matches what's actually on screen.
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const w = Math.round(entry.contentRect.width);
+      const h = Math.round(entry.contentRect.height);
+      if (w <= 0 || h <= 0) return;
+      setMeasured((prev) => (prev && prev.w === w && prev.h === h ? prev : { w, h }));
+    });
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     const canvas = canvasRef.current;
-    const ctx = canvas ? scaleForDpr(canvas, canvasWidth, canvasHeight) : null;
+    const ctx = canvas ? scaleForDpr(canvas, canvasW, canvasH) : null;
     if (!canvas || !ctx) return;
 
     const recorder = new ContourRecorder();
@@ -216,7 +243,7 @@ export function Visualiser({
         setRecognized(classifyTone(latest));
       }
 
-      drawVisualiser(ctx, canvasWidth, canvasHeight, {
+      drawVisualiser(ctx, canvasW, canvasH, {
         tone: toneRef.current,
         word,
         live,
@@ -263,7 +290,7 @@ export function Visualiser({
       setFrameSink(null);
       setActiveTracker(null);
     };
-  }, [settings, canvasWidth, canvasHeight]);
+  }, [settings, canvasW, canvasH]);
 
   const chooseTone = (t: Tone | null) => {
     setTone(t);
@@ -292,14 +319,7 @@ export function Visualiser({
     }
   };
 
-  const noteText =
-    tone === null
-      ? "Say anything. The line is your pitch, left to right."
-      : selectedWord
-        ? `${selectedWord.pinyin} ${selectedWord.hanzi} — tap again to replay.`
-        : `${TONE_INFO[tone].pinyin} ${TONE_INFO[tone].hanzi}, ${TONE_INFO[tone].cue}. Tap a word to hear it.`;
-
-  /** Shared by the mobile side panel and the desktop panel — same readout, two layouts. */
+  /** Shared by the mobile top bar and the desktop panel — same readout, two layouts. */
   const accuracyReadout = (
     <div className="vis-accuracy">
       <span className="vis-accuracy-label">accuracy</span>
@@ -356,48 +376,154 @@ export function Visualiser({
     </button>
   );
 
+  /** Tab strip — shared by mobile popover and desktop panel. */
+  const tonePickerTabs = (
+    <div className="tone-popover-tabs">
+      <button
+        className={popoverTab === "tone" ? "tone-popover-tab active" : "tone-popover-tab"}
+        onClick={() => setPopoverTab("tone")}
+      >
+        By tone
+      </button>
+      <button
+        className={popoverTab === "wordlists" ? "tone-popover-tab active" : "tone-popover-tab"}
+        onClick={() => setPopoverTab("wordlists")}
+      >
+        Word lists
+      </button>
+    </div>
+  );
+
+  const tonePickerWordlists = (
+    <div className="tone-popover-wordlists">
+      <p className="tone-popover-desc">
+        Practice by curated word lists — HSK levels, your saved words, and more.
+      </p>
+      <div className="word-list-row">
+        <span>HSK 1</span>
+        <span className="word-list-soon">soon</span>
+      </div>
+      <div className="word-list-row">
+        <span>My words</span>
+        <span className="word-list-soon">soon</span>
+      </div>
+    </div>
+  );
+
+  /** Mobile popover — stacked rows with labels. */
+  const tonePickerToneList = (
+    <div className="tone-popover-list">
+      <button
+        className={tone === null ? "tone-popover-row active" : "tone-popover-row"}
+        onClick={() => chooseTone(null)}
+      >
+        <span className="tone-popover-row-icon tone-popover-row-icon-free">—</span>
+        Free (no filter)
+      </button>
+      {TONES.map((t) => (
+        <button
+          key={t}
+          className={tone === t ? "tone-popover-row active" : "tone-popover-row"}
+          onClick={() => chooseTone(t)}
+        >
+          <span className="tone-popover-row-icon">
+            <ToneMarkIcon tone={t} className="tone-mark-icon" />
+          </span>
+          Tone {t} · {TONE_SHORT_LABEL[t]}
+        </button>
+      ))}
+    </div>
+  );
+
+  /** Desktop panel — one horizontal row of round pills. */
+  const tonePickerTonePills = (
+    <div className="tone-rail-pills">
+      <button
+        className={
+          tone === null
+            ? "choice-option tone-pill tone-pill-free active"
+            : "choice-option tone-pill tone-pill-free"
+        }
+        onClick={() => chooseTone(null)}
+      >
+        free
+      </button>
+      {TONES.map((t) => (
+        <button
+          key={t}
+          className={tone === t ? "choice-option tone-pill active" : "choice-option tone-pill"}
+          onClick={() => chooseTone(t)}
+          aria-label={`Tone ${t}, ${TONE_SHORT_LABEL[t]}`}
+        >
+          <ToneMarkIcon tone={t} className="tone-mark-icon" />
+        </button>
+      ))}
+    </div>
+  );
+
+  const mobileTonePickerPanel = (
+    <>
+      {tonePickerTabs}
+      {popoverTab === "tone" ? tonePickerToneList : tonePickerWordlists}
+    </>
+  );
+
+  const desktopTonePickerPanel = (
+    <>
+      {tonePickerTabs}
+      {popoverTab === "tone" ? tonePickerTonePills : tonePickerWordlists}
+    </>
+  );
+
   return (
-    <div className="screen visualiser-screen">
+    // `stage game-stage` are the same two classes Game/PlayHome's own sized
+    // element carries (see Game.tsx/PlayHome.tsx) — `stage` is what the base
+    // `.frame, .stage { margin-inline: auto }` rule centers, and `game-stage`
+    // is what makes `.frame:has(.game-stage) { max-width: none }` apply here
+    // too. With the inline width/height below matching exactly what
+    // PlayHome gets (see GameApp.tsx), the `.frame` this renders into ends
+    // up centered and sized exactly like Play's, with no
+    // Visualiser-specific margin/padding rules of its own.
+    <div
+      className="screen visualiser-screen stage game-stage"
+      style={{ width: canvasWidth, height: canvasHeight }}
+    >
       {/* Mobile and desktop are genuinely different layouts here, not just a
-          CSS reflow of the same controls — mobile gets a collapsed
-          tone-picker popover and a vertical word rail so the grid stays
-          uncluttered; desktop has room for everything laid out flat. Both
+          CSS reflow of the same controls — mobile stacks accuracy + Clear
+          above a full-width canvas, with a horizontal word rail under it;
+          desktop has room for everything laid out in a side column. Both
           markups always render; App.css's `min-width: 720px` query is what
           picks one. */}
-      {/* Above the grid, not overlaid on it — same control on mobile and desktop. */}
-      <button className="link vis-back-link" onClick={onBack}>
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path
-            d="M15 5 8 12l7 7"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        back
-      </button>
-
       <div className="visualiser-body">
-        <div className="stage">
-          <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} />
+        <div className="vis-top-bar">
+          <div className="vis-top-bar-readouts">
+            {accuracyReadout}
+            {recognizedReadout}
+          </div>
+          <button onClick={resetAttempts}>Clear</button>
+        </div>
 
-          {paused && (
-            <div className="overlay" onClick={() => resumeRef.current()}>
-              <p>paused, tap to continue</p>
-            </div>
-          )}
+        <div className="vis-canvas-column">
+          <div className="stage" ref={stageRef}>
+            <canvas ref={canvasRef} width={canvasW} height={canvasH} />
+
+            {paused && (
+              <div className="overlay" onClick={() => resumeRef.current()}>
+                <p>paused, tap to continue</p>
+              </div>
+            )}
+          </div>
+
+          <div className="vis-canvas-clear">
+            <button onClick={resetAttempts}>Clear</button>
+          </div>
         </div>
 
         {/* ---------------------------------------------------- mobile */}
-        {/* A real column, not an overlay on the canvas — the canvas is
-            narrower now (75/25 split, App.css), not just narrower-plotted. */}
-        <div className="vis-side-panel">
-          {accuracyReadout}
-          {recognizedReadout}
-
+        {/* Under the canvas, not beside it: filter on the left, words
+            scrolling sideways so the grid can use the full width. */}
+        <div className={tone === null ? "vis-side-panel is-free" : "vis-side-panel"}>
           <div className="vis-filter-group">
-            <span className="vis-filter-caption">filter</span>
             <button
               className="vis-filter-btn"
               onClick={() => setTonePopoverOpen((v) => !v)}
@@ -413,128 +539,32 @@ export function Visualiser({
             </button>
           </div>
 
-          {/* The wrapper, not .word-rail itself, is the flex:1 1 auto item.
-              A flex item's hypothetical size (used to size the row before
-              stretch is applied) is based on its own content — so if the
-              scrollable list were the flex item directly, a long list would
-              size the row by its own full height, defeating the cap this is
-              here for. Wrapping it and taking the list out of flow with
-              `position: absolute` gives the wrapper no intrinsic content of
-              its own, so it can't inflate anything; see the `.word-rail-wrap`
-              comment in App.css. */}
-          {tone !== null && (
-            <div className="word-rail-wrap">
+          <div className="word-rail-wrap">
+            {tone !== null ? (
               <div className="word-rail">{wordsForTone.map(wordChip)}</div>
-            </div>
-          )}
+            ) : (
+              <p className="vis-free-hint">Select the tones you want to practice</p>
+            )}
+          </div>
         </div>
 
         {/* --------------------------------------------------- desktop */}
-        <div className={tone === null ? "visualiser-panel is-free" : "visualiser-panel"}>
+        <div className="visualiser-panel">
           {accuracyReadout}
           {recognizedReadout}
 
-          <div className="tone-rail">
-            <span className="vis-tone-label" aria-hidden="true">
-              filter
-            </span>
-            <div className="tone-rail-pills">
-              <button
-                className={
-                  tone === null
-                    ? "choice-option tone-pill tone-pill-free active"
-                    : "choice-option tone-pill tone-pill-free"
-                }
-                onClick={() => chooseTone(null)}
-              >
-                free
-              </button>
-              {TONES.map((t) => (
-                <button
-                  key={t}
-                  className={tone === t ? "choice-option tone-pill active" : "choice-option tone-pill"}
-                  onClick={() => chooseTone(t)}
-                  aria-label={`${TONE_INFO[t].pinyin}, tone ${t}`}
-                >
-                  <ToneMarkIcon tone={t} className="tone-mark-icon" />
-                </button>
-              ))}
-            </div>
-          </div>
+          <div className="vis-tone-picker">{desktopTonePickerPanel}</div>
 
           {tone !== null && <div className="word-strip">{wordsForTone.map(wordChip)}</div>}
-
-          <p className="note">{noteText}</p>
         </div>
 
         {tonePopoverOpen && (
           <div className="tone-popover-backdrop" onClick={() => setTonePopoverOpen(false)}>
             <div className="tone-popover" onClick={(e) => e.stopPropagation()}>
-              <div className="tone-popover-tabs">
-                <button
-                  className={popoverTab === "tone" ? "tone-popover-tab active" : "tone-popover-tab"}
-                  onClick={() => setPopoverTab("tone")}
-                >
-                  By tone
-                </button>
-                <button
-                  className={
-                    popoverTab === "wordlists" ? "tone-popover-tab active" : "tone-popover-tab"
-                  }
-                  onClick={() => setPopoverTab("wordlists")}
-                >
-                  Word lists
-                </button>
-              </div>
-
-              {popoverTab === "tone" ? (
-                <div className="tone-popover-list">
-                  <button
-                    className={tone === null ? "tone-popover-row active" : "tone-popover-row"}
-                    onClick={() => chooseTone(null)}
-                  >
-                    <span className="tone-popover-row-icon tone-popover-row-icon-free">—</span>
-                    Free (no filter)
-                  </button>
-                  {TONES.map((t) => (
-                    <button
-                      key={t}
-                      className={tone === t ? "tone-popover-row active" : "tone-popover-row"}
-                      onClick={() => chooseTone(t)}
-                    >
-                      <span className="tone-popover-row-icon">
-                        <ToneMarkIcon tone={t} className="tone-mark-icon" />
-                      </span>
-                      Tone {t} · {TONE_SHORT_LABEL[t]}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="tone-popover-wordlists">
-                  <p className="tone-popover-desc">
-                    Practice by curated word lists — HSK levels, your saved words, and more.
-                  </p>
-                  <div className="word-list-row">
-                    <span>HSK 1</span>
-                    <span className="word-list-soon">soon</span>
-                  </div>
-                  <div className="word-list-row">
-                    <span>My words</span>
-                    <span className="word-list-soon">soon</span>
-                  </div>
-                </div>
-              )}
+              {mobileTonePickerPanel}
             </div>
           </div>
         )}
-      </div>
-
-      {/* Below both columns, in normal flow, on both breakpoints — this is
-          the only Clear button either layout has. Its `.note` is hidden on
-          desktop (App.css), where the panel already shows the same text. */}
-      <div className="vis-bottom-bar">
-        <button onClick={resetAttempts}>Clear</button>
-        <p className="note">{noteText}</p>
       </div>
     </div>
   );

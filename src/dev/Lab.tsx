@@ -383,7 +383,6 @@ worst excursion ${Math.round(Math.max(0, ...last.gateLog.map((g) => g.worstExcur
             settings={settings}
             canvasWidth={360}
             canvasHeight={640}
-            onBack={() => setTab("play")}
             showRecognizedTone
           />
         </div>

@@ -1428,94 +1428,129 @@
 
 .visualiser-screen {
   gap: 12px;
+  padding-top: 24px;
+
+  /* No `.frame:has(.visualiser-screen)` sizing rule any more — this element
+     carries `game-stage` and gets an explicit inline width/height matching
+     PlayHome's own (GameApp.tsx), so it's sized and positioned by exactly
+     the same rules as Play's `.stage.game-stage`: `margin-top: 0` from the
+     shared `.game-screen, .calibrate-screen, .game-stage` rule, `max-width:
+     none` from `.frame:has(.game-stage), .game-stage`. Nothing
+     Visualiser-specific left to duplicate. */
 }
 
-/* Mobile only (desktop's own `max-width: 900px` below is untouched) — the
-   shared `.frame,.stage` rule caps width from *available height*
-   (`calc((100svh - var(--nav-mobile-h)) * 9 / 16)`), which exists so a full-width canvas
-   never grows taller than the screen. The visualiser's canvas isn't
-   full-width any more (75% of the row, see `.visualiser-screen .stage`
-   below), so it's already well short of that height budget — meaning this
-   screen doesn't need a height-derived cap at all, and inheriting one was
-   the bug: `100svh` shrinks with a browser's own address-bar chrome but not
-   in a home-screen-installed PWA (no chrome to shrink it), so the *same*
-   formula produced a narrow frame with visible side margins in a browser
-   tab and a flush-edge one standalone. A flat width + fixed padding removes
-   that swing entirely rather than trying to tune it per display mode. */
-.frame:has(.visualiser-screen) {
-  max-width: 480px;
-  padding-inline: max(env(safe-area-inset-left), 14px) max(env(safe-area-inset-right), 14px);
-}
-
-/* Two real columns now, not a canvas with an overlay — the canvas itself is
-   narrower (75/25 split, flex-grow ratios so it holds at any viewport
-   width). This applies on both breakpoints; the desktop media query below
-   re-balances it and hides the mobile-only pieces. */
+/* Mobile stacks the chrome around a full-width canvas: accuracy + Clear
+   above, word rail below. `flex: 1 1 auto` + `min-height: 0` lets the body
+   claim the remaining height inside `.visualiser-screen`; `align-items:
+   stretch` gives `.stage` a definite height to resolve `height: 100%`
+   against on its canvas. The desktop media query below restores the
+   side-by-side columns and hides the mobile-only pieces. */
 .visualiser-body {
   position: relative;
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
   gap: 10px;
 }
 
 .visualiser-screen .stage {
-  flex: 4 1 0;
+  flex: 1 1 auto;
   min-width: 0;
-  width: auto;
+  min-height: 0;
+  width: 100%;
   max-width: none;
   margin-top: 0;
 }
 
+/* Canvas + desktop Clear — mobile hides the button (Clear lives in
+   `.vis-top-bar` instead). */
+.vis-canvas-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  gap: 10px;
+}
+
+.vis-canvas-clear {
+  display: none;
+}
+
+/* Overrides the generic `.stage canvas` rule (which forces a 9:16
+   aspect-ratio, built for the game's full-bleed canvas) the same way
+   `.game-stage canvas` already does — the visualiser's canvas is measured
+   live by a ResizeObserver in Visualiser.tsx and drawn at whatever size
+   `.stage` actually is, so it should just fill that box rather than being
+   forced back into 9:16. `drawVisualiser` has no aspect-ratio assumption of
+   its own (see src/render/visualiser.ts), so this is safe at any ratio. */
+.visualiser-screen .stage canvas {
+  aspect-ratio: auto;
+  width: 100%;
+  height: 100%;
+}
+
 /* ---------------------------------------------------------------- mobile */
 /* Mobile and desktop render genuinely different markups (see the comment in
-   Visualiser.tsx), not one CSS-reflowed set of controls — mobile needed a
-   collapsed tone picker and a vertical word rail to keep the grid from being
-   crowded by everything sitting in one bottom scrim. Everything under this
-   header is hidden again at the desktop breakpoint below. */
-
-/* Outside the grid, not overlaid on it — a plain "< back" link sitting above
-   .stage, the same way every other screen's back control reads. */
-.vis-back-link {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  align-self: flex-start;
-  padding: 4px 6px;
-}
-
-.vis-back-link svg {
-  width: 15px;
-  height: 15px;
-}
+   Visualiser.tsx), not one CSS-reflowed set of controls — mobile stacks
+   accuracy + Clear above a full-width canvas, with a horizontal word rail
+   under it. Everything under this header is hidden again at the desktop
+   breakpoint below. */
 
 /* The tone-mark contour icon, wherever it's used (filter pill, popover rows,
-   desktop tone-rail pills) — sized and coloured by its container. */
+   tabbed picker rows) — sized and coloured by its container. */
 .tone-mark-icon {
   width: 18px;
   height: 13.5px;
   color: currentColor;
 }
 
-/* Right-hand column: a real sibling of .stage now (25% of the row via
-   flex-grow), not an overlay — accuracy on top, then the filter, then the
-   word list filling what's left, never taller than the canvas.
-   `min-height: 0` alone does not get this right: a flex item's *hypothetical*
-   size (what the flex line's own height is computed from, before stretch is
-   even applied) still comes from its content, so a 30-word list would size
-   the row — and the page — by its own full height, then "stretch" to that
-   same size, i.e. no cap at all. The fix is `.word-rail-wrap` below, not
-   this rule: taking the list out of flow there is what keeps it from ever
-   contributing to this column's size in the first place. */
-.vis-side-panel {
-  flex: 1 1 0;
+/* Accuracy + Clear, above the canvas. Hidden again at the desktop
+   breakpoint, where the same readout lives in `.visualiser-panel` and
+   Clear sits under the canvas. */
+.vis-top-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding-inline: 12px;
+}
+
+.vis-top-bar-readouts {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 16px;
   min-width: 0;
-  min-height: 0;
+}
+
+.vis-top-bar .vis-accuracy {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.vis-top-bar button {
+  flex: 0 0 auto;
+  padding: 10px 18px;
+}
+
+/* Under the canvas: filter on the left, words scrolling sideways. Sized
+   to its own content so it doesn't steal height from the grid. */
+.vis-side-panel {
+  flex: 0 0 auto;
+  min-width: 0;
   align-self: stretch;
   display: flex;
-  flex-direction: column;
-  gap: 32px;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
   overflow: hidden;
+  padding: 0 12px 12px;
 }
 
 .vis-accuracy {
@@ -1563,14 +1598,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-
-.vis-filter-caption {
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-dim);
+  flex: 0 0 auto;
 }
 
 /* The collapsed filter — one small pill: an icon (the 2x2 tone-mark grid
@@ -1585,8 +1613,9 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  width: 100%;
-  padding: 8px;
+  width: auto;
+  min-width: 56px;
+  padding: 8px 10px;
   border-radius: var(--radius-md);
   border: 1px solid var(--accent);
   background: rgba(var(--accent-rgb), 0.08);
@@ -1613,35 +1642,54 @@
   transition: transform 0.15s ease;
 }
 
-/* The flex item is this wrapper, not .word-rail — an empty box (its child is
-   taken out of flow below) has no intrinsic content of its own, so it can't
-   inflate `.vis-side-panel`'s hypothetical size the way the scrollable list
-   itself would. That's what actually makes the list respect the canvas's
-   height instead of just being told to (see the long comment on
-   `.vis-side-panel`). `position: relative` here, `position: absolute; inset:
-   0` on `.word-rail`, is what turns "flex-grow: 1 of whatever's left" into a
-   real, bounded box for the list to scroll inside. */
+/* Grows to fill the strip beside the filter; `min-width: 0` is what lets
+   the chips overflow into a horizontal scroll instead of inflating the
+   row (or the page) to fit all 30. */
 .word-rail-wrap {
   flex: 1 1 auto;
-  min-height: 0;
-  position: relative;
+  min-width: 0;
+  min-height: 59px;
+  display: flex;
+  align-items: center;
+}
+
+/* Free: button matches the chip row; the 2×2 grid fills nearly the full
+   height (viewBox 288×228). Width follows aspect so the marks stay sharp. */
+.vis-side-panel.is-free .vis-filter-group .vis-filter-btn {
+  height: 59px;
+  padding: 4px 6px;
+  gap: 4px;
+}
+
+.vis-side-panel.is-free .vis-filter-icon {
+  height: 50px;
+  width: calc(50px * 288 / 228);
+}
+
+.vis-free-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--ink-muted);
+  text-align: left;
 }
 
 .word-rail {
-  position: absolute;
-  inset: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex: 1 1 auto;
+  min-width: 0;
   gap: 8px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   padding: 2px;
   scrollbar-width: thin;
   scrollbar-color: var(--ink-dim) transparent;
+  -webkit-overflow-scrolling: touch;
 }
 
 .word-rail::-webkit-scrollbar {
-  width: 4px;
+  height: 4px;
 }
 
 .word-rail::-webkit-scrollbar-thumb {
@@ -1654,8 +1702,9 @@
 }
 
 .word-rail .word-chip {
-  width: 100%;
-  padding: 10px 6px;
+  flex: 0 0 auto;
+  width: auto;
+  padding: 10px 8px;
 }
 
 /* Anchored to .visualiser-body (position: relative, spans both columns),
@@ -1786,21 +1835,6 @@
   color: var(--ink-dim);
 }
 
-/* Normal flow now, below both columns — nothing to overlay any more now
-   that the canvas has its own real width instead of running full-bleed. */
-.vis-bottom-bar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding-top: 4px;
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-.vis-bottom-bar .note {
-  margin: 0;
-}
-
 /* Same idea as .visualiser-overlay, pinned to the top instead: calibration's
    sweep instructions (§5.4 low/high) used to sit above .stage as ordinary
    flow, pushing the grid below the viewport on the low sweep — exactly where
@@ -1830,7 +1864,7 @@
 
 /* Tone picker pill — round, holding the tone-mark icon, not the syllable
    "mā"/"má"/"mǎ"/"mà" (reusing one syllable for all four read as four
-   variants of one word rather than four tones). Desktop's tone-rail only. */
+   variants of one word rather than four tones). Desktop tone picker only. */
 .tone-pill {
   flex: 0 0 auto;
   width: 42px;
@@ -1890,42 +1924,59 @@
 }
 
 /* Desktop: room to spare, so stop pretending it's a phone. The canvas keeps
-   its own 9:16 cap (.frame,.stage above) and moves to the left; the panel
-   becomes a real column on the right — tone filter on top, then every word
-   of that tone in a 2-column grid (30 words -> 15 rows, no scrolling needed),
-   with the cue note below. Back sits above the row; Clear sits below both
-   columns, in the shared `.vis-bottom-bar` (its `.note` is hidden here, since
-   the panel already shows the same text). */
+   its own 9:16 cap and moves to the left with Clear centered beneath it;
+   the panel on the right carries accuracy, the tabbed tone picker, and the
+   word grid for the selected tone. */
 @media (min-width: 720px) {
-  .frame:has(.visualiser-screen) {
-    max-width: 900px;
-  }
-
+  /* No `.frame:has(.visualiser-screen)` override here either — `game-stage`
+     (on `.visualiser-screen`, see the JSX) plus its inline width/height
+     (900 x GAME_CANVAS_H at this breakpoint, from `computeCanvasSize` —
+     GameApp.tsx) already put the frame at exactly Play's own size, via the
+     shared `.frame:has(.game-stage), .game-stage { max-width: none }` rule. */
   .visualiser-body {
     display: flex;
     flex-direction: row;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 28px;
   }
 
-  /* Restores the width/max-width the mobile-first override above zeroes out
-     (needed there so flex-basis, not the shared cap, drives the canvas's
-     75% share of the row) — desktop goes back to `.frame,.stage`'s own 9:16
-     cap, since here .stage sizes itself rather than sharing a flex-basis. */
-  .visualiser-screen .stage {
-    flex: 0 0 auto;
-    width: 100%;
-    max-width: min(420px, calc(100svh * 9 / 16));
-    margin-top: 0;
-  }
-
-  .vis-side-panel,
-  .word-rail,
-  .tone-popover-backdrop {
+  .vis-top-bar {
     display: none;
   }
 
-  .vis-bottom-bar .note {
+  /* Half the row each — never let the panel outgrow the canvas column. */
+  .vis-canvas-column {
+    flex: 1 1 0;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .vis-canvas-clear {
+    display: flex;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .visualiser-screen .stage {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: none;
+    min-height: 0;
+    margin-top: 0;
+  }
+
+  .visualiser-screen .stage canvas {
+    aspect-ratio: auto;
+    width: 100%;
+    height: 100%;
+  }
+
+  .vis-top-bar,
+  .vis-side-panel,
+  .word-rail,
+  .tone-popover-backdrop {
     display: none;
   }
 
@@ -1934,8 +1985,8 @@
     flex-direction: column;
     gap: 16px;
     position: static;
-    flex: 1 1 320px;
-    min-width: 280px;
+    flex: 1 1 0;
+    min-width: 0;
     align-self: stretch;
     background: none;
     padding: 0;
@@ -1945,26 +1996,29 @@
 
   .visualiser-panel .vis-accuracy {
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: baseline;
+    align-content: flex-start;
     gap: 8px;
+    min-height: 48px;
   }
 
-  .visualiser-panel .tone-rail {
+  .visualiser-panel .vis-tone-picker {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 8px;
     width: 100%;
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    overflow: hidden;
   }
 
   .visualiser-panel .tone-rail-pills {
     display: flex;
     justify-content: center;
+    flex-wrap: wrap;
     gap: 10px;
-  }
-
-  .visualiser-panel .vis-tone-label {
-    font-size: 10px;
+    padding: 12px;
   }
 
   .visualiser-panel .tone-pill {
@@ -1997,18 +2051,6 @@
     min-width: 0;
     width: 100%;
     padding: 8px 10px;
-  }
-
-  .visualiser-panel .note {
-    margin: 0;
-    text-align: left;
-  }
-
-  /* Free play has no word list — park the cue in the empty column. */
-  .visualiser-panel.is-free .note {
-    margin-top: auto;
-    margin-bottom: auto;
-    text-align: center;
   }
 }
 
