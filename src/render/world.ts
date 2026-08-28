@@ -121,8 +121,15 @@ const RECOIL_FRAC = 0.055;
 const UNHEARD_PULSE_MS = 900;
 
 /** The Pip's tilt: how far back to look for a pitch slope, and the gain/cap on angle. */
-const PIP_SLOPE_WINDOW_MS = 120;
-const PIP_TILT_GAIN = 0.12;
+const PIP_SLOPE_WINDOW_MS = 100;
+/**
+ * `pipSlope` returns chao per millisecond — a typical tone transition (2-4
+ * chao over 100-200ms) is only ~0.01-0.03 in those units, so the gain has to
+ * be large to turn that into a visible tilt. 15 puts a brisk rise/fall
+ * (~0.02 chao/ms) at roughly 17 degrees, and a steep one (T4's fall, ~0.023)
+ * close to the 26-degree cap.
+ */
+const PIP_TILT_GAIN = 15;
 const PIP_TILT_MAX = 0.45; // ~26 degrees
 /** How fast the drawn tilt eases toward its target, per frame. */
 const PIP_TILT_EASE = 0.25;
@@ -136,17 +143,23 @@ const PIP_TILT_EASE = 0.25;
 const pipAngles = new WeakMap<CanvasRenderingContext2D, number>();
 
 /**
- * Slope of the player's own pitch, in chao per ms, from the two most recent
- * trail samples within `PIP_SLOPE_WINDOW_MS` of each other. Trail samples
- * only exist for voiced frames, so a gap here correctly yields no slope
- * (0) rather than inventing one across silence.
+ * Slope of the player's own pitch, in chao per ms, over roughly the last
+ * `PIP_SLOPE_WINDOW_MS` of voiced trail. Comparing only the two most recent
+ * samples (often just one analysis hop, ~23ms, apart) made this jump around
+ * on frame-to-frame noise; walking back to the oldest sample still within
+ * the window averages over enough of the utterance to read as the tone's
+ * actual direction. Trail samples only exist for voiced frames, so a gap
+ * here correctly yields no slope (0) rather than inventing one across
+ * silence.
  */
 function pipSlope(trail: readonly TrailSample[], nowMs: number): number {
   if (trail.length < 2) return 0;
   const newer = trail[trail.length - 1];
-  const older = trail[trail.length - 2];
   if (nowMs - newer.t > PIP_SLOPE_WINDOW_MS) return 0;
-  if (newer.t - older.t > PIP_SLOPE_WINDOW_MS || newer.t === older.t) return 0;
+  let i = trail.length - 2;
+  while (i > 0 && newer.t - trail[i - 1].t <= PIP_SLOPE_WINDOW_MS) i--;
+  const older = trail[i];
+  if (newer.t === older.t) return 0;
   return (newer.chao - older.chao) / (newer.t - older.t);
 }
 

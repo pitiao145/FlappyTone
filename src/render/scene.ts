@@ -353,22 +353,30 @@ export function drawPip(
   ctx.translate(x, y);
   ctx.rotate(angle);
 
+  // The halo and ring are drawn before ctx.scale below, in real screen
+  // pixels — but the anchor (0,0) is the beak tip, not the body's centre,
+  // which sits PIP_BODY_CX local units to the side. Left at (0,0), the glow
+  // was centred on the beak and visibly offset from the bird it's meant to
+  // surround. `bodyPxX` re-projects that offset into this same pre-scale
+  // pixel space (local units * s = pixels) so the glow centres on the body.
+  const bodyPxX = PIP_BODY_CX * s;
+
   // Outer halo — present in every state, quieter when idle or unheard.
   const haloBig = voiced && !unheard;
   const haloR = r * (haloBig ? 3.4 : unheard ? 2.2 : 2.4);
-  const halo = ctx.createRadialGradient(0, 0, r * 0.4, 0, 0, haloR);
+  const halo = ctx.createRadialGradient(bodyPxX, 0, r * 0.4, bodyPxX, 0, haloR);
   const haloToken = success ? "good" : "accent";
   halo.addColorStop(0, rgba(haloToken, (unheard ? 0.14 : 0.4) * pulse));
   halo.addColorStop(0.55, rgba(haloToken, (unheard ? 0.05 : 0.13) * pulse));
   halo.addColorStop(1, rgba(haloToken, 0));
   ctx.fillStyle = halo;
-  ctx.fillRect(-haloR, -haloR, haloR * 2, haloR * 2);
+  ctx.fillRect(bodyPxX - haloR, -haloR, haloR * 2, haloR * 2);
 
-  // Success ring: an expanding, fading circle centred on the anchor.
+  // Success ring: an expanding, fading circle centred on the body.
   if (success) {
     const t = stateAgeMs / RING_MS;
     ctx.beginPath();
-    ctx.arc(0, 0, r * (1.2 + t * 1.8), 0, Math.PI * 2);
+    ctx.arc(bodyPxX, 0, r * (1.2 + t * 1.8), 0, Math.PI * 2);
     ctx.strokeStyle = rgba("good", 0.5 * (1 - t));
     ctx.lineWidth = 2;
     ctx.stroke();
