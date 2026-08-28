@@ -1711,6 +1711,7 @@
 }
 
 .vis-accuracy {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1726,17 +1727,22 @@
   text-align: center;
 }
 
-/* "wrong tone" toast — an extra row inside the card's own flex column
-   (not absolutely positioned: that overflowed the card and got clipped
-   by ancestors on desktop, and collided with neighbouring cards on
-   mobile). Fades on the same timing as the game's .mismatch-toast. */
+/* "wrong tone" toast — mobile: floats off the card's right edge, so it
+   never grows the card (there's no headroom for that in the cramped
+   top bar). Desktop reverts this to a normal row inside the card, with
+   the card's min-height padded out to fit it — see the min-width: 720px
+   override below. Fades on the same timing as the game's .mismatch-toast. */
 .vis-wrong-toast {
-  margin-top: 2px;
-  padding: 1px 8px;
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%);
+  margin-left: 6px;
+  padding: 2px 8px;
   border-radius: var(--radius-pill);
   background: rgba(var(--danger-rgb), 0.16);
   color: var(--danger);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
   white-space: nowrap;
   pointer-events: none;
@@ -2225,7 +2231,21 @@
     max-width: none;
     gap: 4px;
     padding: 16px 14px;
-    min-height: 96px;
+    /* Padded out from 96px so the wrong-tone toast (shown inline here, not
+       floated off the edge like mobile — see .vis-wrong-toast below) has
+       room without the card visibly resizing when it appears/fades. */
+    min-height: 116px;
+  }
+
+  /* Desktop has room beside the card, but .visualiser-panel clips anything
+     that overflows it — the floated mobile version got cut off here rather
+     than reading as "on the right". A normal row inside the (now taller)
+     card instead. */
+  .visualiser-panel .vis-wrong-toast {
+    position: static;
+    transform: none;
+    margin-left: 0;
+    margin-top: 4px;
   }
 
   .visualiser-panel .vis-accuracy-label {
