@@ -484,11 +484,19 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
       ) : (
         <span className="vis-accuracy-value vis-accuracy-empty">–</span>
       )}
-      {wrongToast !== null && (
-        <span key={wrongToast} className="vis-wrong-toast">
-          wrong tone
-        </span>
-      )}
+      {/* Always in the tree (not conditionally rendered) so this row's space
+          is permanently reserved on desktop, where it renders inline inside
+          the card — a min-height guess at "how tall with the toast" kept
+          being wrong and the card visibly resized anyway. `visibility`
+          rather than `display` so an invisible copy still occupies layout;
+          `key` still forces a remount so the fade replays on every wrong
+          attempt, including two in a row. */}
+      <span
+        key={wrongToast ?? "idle"}
+        className={wrongToast !== null ? "vis-wrong-toast is-shown" : "vis-wrong-toast"}
+      >
+        wrong tone
+      </span>
     </div>
   );
 

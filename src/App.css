@@ -798,7 +798,7 @@
   .praise-toast,
   .phase-banner.your-turn,
   .vis-accuracy.tier-bad,
-  .vis-wrong-toast {
+  .vis-wrong-toast.is-shown {
     animation-duration: 0.01ms;
     animation-iteration-count: 1;
   }
@@ -1728,10 +1728,15 @@
 }
 
 /* "wrong tone" toast — mobile: floats off the card's right edge, so it
-   never grows the card (there's no headroom for that in the cramped
-   top bar). Desktop reverts this to a normal row inside the card, with
-   the card's min-height padded out to fit it — see the min-width: 720px
-   override below. Fades on the same timing as the game's .mismatch-toast. */
+   never grows the card (there's no headroom for that in the cramped top
+   bar). Desktop reverts this to a normal row inside the card (see the
+   min-width: 720px override below).
+   Always in the DOM (Visualiser.tsx never conditionally unmounts it) with
+   `visibility: hidden` when idle, rather than `display: none` — a hidden
+   copy still occupies its box, so the desktop card's height never depends
+   on whether the toast is currently showing. A min-height guess at "how
+   tall with the toast" kept coming out wrong and the card visibly resized
+   anyway; this reserves the exact real space instead of estimating it. */
 .vis-wrong-toast {
   position: absolute;
   top: 50%;
@@ -1746,6 +1751,11 @@
   font-weight: 600;
   white-space: nowrap;
   pointer-events: none;
+  visibility: hidden;
+}
+
+.vis-wrong-toast.is-shown {
+  visibility: visible;
   animation: unheard-fade 1.2s ease-out forwards;
 }
 
@@ -2231,21 +2241,19 @@
     max-width: none;
     gap: 4px;
     padding: 16px 14px;
-    /* Padded out from 96px so the wrong-tone toast (shown inline here, not
-       floated off the edge like mobile — see .vis-wrong-toast below) has
-       room without the card visibly resizing when it appears/fades. */
-    min-height: 116px;
+    min-height: 96px;
   }
 
   /* Desktop has room beside the card, but .visualiser-panel clips anything
      that overflows it — the floated mobile version got cut off here rather
-     than reading as "on the right". A normal row inside the (now taller)
-     card instead. */
+     than reading as "on the right". A normal row inside the card instead;
+     always-rendered + visibility (see .vis-wrong-toast) means this row's
+     space is permanently part of the card's content height, so no
+     min-height tuning is needed to stop it resizing. */
   .visualiser-panel .vis-wrong-toast {
     position: static;
     transform: none;
     margin-left: 0;
-    margin-top: 4px;
   }
 
   .visualiser-panel .vis-accuracy-label {
