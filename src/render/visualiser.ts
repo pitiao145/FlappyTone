@@ -15,6 +15,7 @@
 import { corridorChaoAt,
   shapeForTone, shapeForWord, type Tone } from "../game/gates.ts";
 import type { Contour } from "../game/contours.ts";
+import { birdXFrac } from "../game/run.ts";
 import type { Word } from "../game/words.ts";
 import { BACKDROP, chaoToY, drawChaoGrid, drawPip } from "./scene.ts";
 import { rgba } from "./palette.ts";
@@ -48,12 +49,21 @@ const TARGET_STEPS = 48;
  */
 const BREAK_MS = 70;
 
-/** Left margin, so t=0 is not flush against the edge. */
-const PAD_FRAC = 0.04;
+/** Right margin, so the trace doesn't run flush to the edge. */
+const END_PAD_FRAC = 0.04;
 
+/**
+ * t=0's x position — the same `birdXFrac` fraction of the width the game's
+ * own bird rests at (`src/game/tuning.ts`'s `birdXFrac`, read live via
+ * `birdXFrac()` so a Lab tweak is reflected here too). Before this matched,
+ * an idle dot (no live utterance, `xFor(0, ...)`) sat at a hardcoded 4% from
+ * the left — visibly further left than where the game's bird actually
+ * lives, reported as "stuck on the left side".
+ */
 function xFor(tMs: number, spanMs: number, width: number): number {
-  const usable = width * (1 - 2 * PAD_FRAC);
-  return width * PAD_FRAC + (Math.min(tMs, spanMs) / spanMs) * usable;
+  const startFrac = birdXFrac();
+  const usable = width * (1 - END_PAD_FRAC - startFrac);
+  return width * startFrac + (Math.min(tMs, spanMs) / spanMs) * usable;
 }
 
 export function drawVisualiser(
