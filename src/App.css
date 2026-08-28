@@ -1724,6 +1724,14 @@
   text-align: center;
 }
 
+/* Wrong-tone (or low-accuracy) card, bordered rather than just tinting the
+   number — a glance at the card should be enough, without reading the
+   value inside it. */
+.vis-accuracy.tier-bad {
+  border: 2px solid var(--danger);
+  padding: 7px 9px;
+}
+
 .vis-accuracy-label {
   font-size: 9px;
   font-weight: 600;

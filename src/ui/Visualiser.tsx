@@ -433,7 +433,9 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
    * but its colour is not: see `recognizedTier`.
    */
   const recognizedReadout = (
-    <div className="vis-accuracy">
+    <div
+      className={recognized ? `vis-accuracy tier-${recognizedTier(tone, recognized)}` : "vis-accuracy"}
+    >
       <span className="vis-accuracy-label">Tone</span>
       {recognized ? (
         <>
