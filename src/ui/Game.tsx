@@ -116,6 +116,17 @@ export function Game({
   runNumber,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  /**
+   * Latest `canvasHeight`, read by the run-owning effect's tick loop without
+   * being one of its dependencies — see the effect's own comment below for
+   * why. Mobile browsers routinely fire a resize (their chrome bar showing
+   * or hiding) purely from switching tabs and back, with no real layout
+   * change the player asked for; height is otherwise harmless to rebuild on
+   * since `Run` itself never reads it (see game/run.ts: positions are chao/
+   * width-based, never height-based). Kept current on every render.
+   */
+  const canvasHeightRef = useRef(canvasHeight);
+  canvasHeightRef.current = canvasHeight;
   const [hud, setHud] = useState<RunSnapshot | null>(null);
   const [paused, setPaused] = useState(false);
   /**
@@ -271,10 +282,7 @@ export function Game({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    // Logical drawing space stays canvasWidth x canvasHeight; only the backing
-    // store is density-scaled, so gameplay geometry is unchanged.
-    const ctx2d = canvas ? scaleForDpr(canvas, canvasWidth, canvasHeight) : null;
-    if (!canvas || !ctx2d) return;
+    if (!canvas) return;
 
     // Game remounts per run, so this picks up the latest saved corridor
     // width — and the latest motion preference, which the renderer caches.
@@ -339,7 +347,13 @@ export function Game({
       lastT = now;
       run.tickFrame(dt, now);
       const snap = run.snapshot();
-      drawWorld(ctx2d, canvasWidth, canvasHeight, snap);
+      // Re-applies the backing-store scale every frame — cheap (scaleForDpr
+      // only resizes when the density-scaled dimensions actually changed)
+      // and picks up canvasHeightRef's latest value without this effect
+      // needing canvasHeight as a dependency.
+      const ctx2d = scaleForDpr(canvas, canvasWidth, canvasHeightRef.current);
+      if (!ctx2d) return;
+      drawWorld(ctx2d, canvasWidth, canvasHeightRef.current, snap);
 
       // One setState per resolved gate, not per frame — the rAF loop stays
       // the owner of the canvas, React just hears about outcomes.
@@ -485,12 +499,13 @@ export function Game({
     // reportGates/reportRunEnd are stable (useCallback with no changing deps),
     // so listing them cannot rebuild the run mid-play. runGen is the one
     // dependency here that changes without anything else changing — see
-    // `restart()` above.
+    // `restart()` above. canvasHeight is deliberately absent — see
+    // canvasHeightRef above; canvasWidth stays, since gate/corridor
+    // positions genuinely are computed from it (game/run.ts).
   }, [
     mode,
     settings,
     canvasWidth,
-    canvasHeight,
     singleWord,
     runGen,
     reportGates,
