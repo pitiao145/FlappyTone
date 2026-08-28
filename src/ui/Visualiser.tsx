@@ -128,6 +128,13 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
   /** `startedAtMs` of the last finished attempt already classified. */
   const lastRecognizedAtRef = useRef<number | null>(null);
   /**
+   * Bumped on every wrong-tone attempt — used as the recognized-tone card's
+   * `key`, so React remounts it and its CSS shake animation restarts, the
+   * same brief jolt the game gives the bird on a wall collision (see
+   * `SHAKE_MS`/`SHAKE_PX` in `render/world.ts`).
+   */
+  const [shakeSeq, setShakeSeq] = useState(0);
+  /**
    * A real cut, not a soft ignore-the-frames mute: muting calls `stopMic()`,
    * which tears down the `MediaStream`/`AudioContext` and turns off the
    * OS-level mic indicator — the point, for a noisy-room toggle. Unmuting
@@ -303,7 +310,15 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
       // a target". See `classifyTone`.
       if (latest && latest.startedAtMs !== lastRecognizedAtRef.current) {
         lastRecognizedAtRef.current = latest.startedAtMs;
-        setRecognized(classifyTone(latest));
+        const result = classifyTone(latest);
+        setRecognized(result);
+        // Bumps a remount key (see recognizedReadout) rather than a plain
+        // boolean — the card has to shake again for a second wrong attempt
+        // in a row, and a boolean that's already true wouldn't re-trigger
+        // the CSS animation on an unchanged value.
+        if (result && recognizedTier(toneRef.current, result) === "bad") {
+          setShakeSeq((n) => n + 1);
+        }
       }
 
       drawVisualiser(ctx, canvasW, canvasH, {
@@ -434,6 +449,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
    */
   const recognizedReadout = (
     <div
+      key={shakeSeq}
       className={recognized ? `vis-accuracy tier-${recognizedTier(tone, recognized)}` : "vis-accuracy"}
     >
       <span className="vis-accuracy-label">Tone</span>

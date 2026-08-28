@@ -796,7 +796,8 @@
   .unheard-toast,
   .mismatch-toast,
   .praise-toast,
-  .phase-banner.your-turn {
+  .phase-banner.your-turn,
+  .vis-accuracy.tier-bad {
     animation-duration: 0.01ms;
     animation-iteration-count: 1;
   }
@@ -1726,10 +1727,35 @@
 
 /* Wrong-tone (or low-accuracy) card, bordered rather than just tinting the
    number — a glance at the card should be enough, without reading the
-   value inside it. */
+   value inside it. The shake is a DOM echo of the game's own wall-collision
+   jolt (SHAKE_MS/SHAKE_PX in render/world.ts) — re-keyed on each new wrong
+   attempt (see Visualiser.tsx's shakeSeq) so this plays fresh every time,
+   including two wrong attempts in a row. */
 .vis-accuracy.tier-bad {
   border: 2px solid var(--danger);
   padding: 7px 9px;
+  animation: vis-tone-shake 200ms ease-out;
+}
+
+@keyframes vis-tone-shake {
+  0% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(-6px);
+  }
+  35% {
+    transform: translateX(5px);
+  }
+  55% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 
 .vis-accuracy-label {
