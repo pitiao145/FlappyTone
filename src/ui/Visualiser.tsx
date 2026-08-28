@@ -29,6 +29,9 @@ import {
 /** How much time the panel spans. Long enough for a citation syllable and a breath. */
 const SPAN_MS = 1600;
 
+/** How long the "wrong tone" toast stays up — matches .mismatch-toast's own fade (App.css). */
+const WRONG_TOAST_MS = 1200;
+
 const TONES: Tone[] = [1, 2, 3, 4];
 
 interface WordStats {
@@ -134,6 +137,19 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
    * `SHAKE_MS`/`SHAKE_PX` in `render/world.ts`).
    */
   const [shakeSeq, setShakeSeq] = useState(0);
+  /**
+   * Set (to a fresh value, not just `true`) on every wrong attempt and
+   * cleared after `WRONG_TOAST_MS` — the "wrong tone" toast's own mount
+   * key, so two wrong attempts in a row each get their own fade-in rather
+   * than the second being a no-op update to an already-true boolean.
+   * Mirrors Game.tsx's `flash`/`TOAST_MS` pattern.
+   */
+  const [wrongToast, setWrongToast] = useState<number | null>(null);
+  useEffect(() => {
+    if (wrongToast === null) return;
+    const id = setTimeout(() => setWrongToast(null), WRONG_TOAST_MS);
+    return () => clearTimeout(id);
+  }, [wrongToast]);
   /**
    * A real cut, not a soft ignore-the-frames mute: muting calls `stopMic()`,
    * which tears down the `MediaStream`/`AudioContext` and turns off the
@@ -318,6 +334,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
         // the CSS animation on an unchanged value.
         if (result && recognizedTier(toneRef.current, result) === "bad") {
           setShakeSeq((n) => n + 1);
+          setWrongToast(now);
         }
       }
 
@@ -466,6 +483,11 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
         </>
       ) : (
         <span className="vis-accuracy-value vis-accuracy-empty">–</span>
+      )}
+      {wrongToast !== null && (
+        <span key={wrongToast} className="vis-wrong-toast">
+          wrong tone
+        </span>
       )}
     </div>
   );

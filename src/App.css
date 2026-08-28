@@ -797,7 +797,8 @@
   .mismatch-toast,
   .praise-toast,
   .phase-banner.your-turn,
-  .vis-accuracy.tier-bad {
+  .vis-accuracy.tier-bad,
+  .vis-wrong-toast {
     animation-duration: 0.01ms;
     animation-iteration-count: 1;
   }
@@ -1710,6 +1711,7 @@
 }
 
 .vis-accuracy {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1723,6 +1725,25 @@
   background: var(--surface-panel);
   border: 1px solid var(--line);
   text-align: center;
+}
+
+/* "wrong tone" toast — floats below the card so it never nudges the card's
+   own size, and fades on the same timing as the game's .mismatch-toast. */
+.vis-wrong-toast {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(var(--danger-rgb), 0.16);
+  color: var(--danger);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: unheard-fade 1.2s ease-out forwards;
 }
 
 /* Wrong-tone (or low-accuracy) card, bordered rather than just tinting the
