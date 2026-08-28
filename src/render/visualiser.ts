@@ -82,7 +82,7 @@ export function drawVisualiser(
   const dotX = head
     ? xFor(head.tMs, scene.spanMs, width)
     : xFor(0, scene.spanMs, width);
-  drawPip(ctx, width, height, scene.chao, dotX, 0, "flying", scene.voiced, performance.now());
+  drawPip(ctx, height, scene.chao, dotX, 0, "flying", scene.voiced, performance.now());
 }
 
 /**

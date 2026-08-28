@@ -323,7 +323,6 @@ const FLASH_MS = 150;
 
 export function drawPip(
   ctx: CanvasRenderingContext2D,
-  width: number,
   height: number,
   chao: number,
   x: number,
@@ -334,7 +333,14 @@ export function drawPip(
   stateAgeMs = Infinity,
 ): void {
   const y = chaoToY(chao, height);
-  const r = width * 0.032;
+  // Corridor tolerance and chaoToY are both height-relative (see gates.ts's
+  // toleranceChao and chaoToY above), so the bird's own size has to scale
+  // off height too — scaling off width instead made it grow independently
+  // of the corridor gap on desktop, where the canvas is a fixed, wide-short
+  // shape rather than mobile's roughly-proportional portrait one. 0.018 is
+  // width*0.032's old value at the 420x747 reference canvas, so mobile is
+  // visually unchanged.
+  const r = height * 0.018;
   const s = r / PIP_BASE_R;
 
   const unheard = state === "unheard";
@@ -446,5 +452,5 @@ export function drawScene(
 
   const dotX = width * 0.5;
   drawTrail(ctx, width, height, trail, trailSeconds, dotX, now);
-  drawPip(ctx, width, height, snapshot.chao, dotX, 0, "flying", snapshot.voiced, now);
+  drawPip(ctx, height, snapshot.chao, dotX, 0, "flying", snapshot.voiced, now);
 }

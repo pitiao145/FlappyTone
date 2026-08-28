@@ -125,11 +125,12 @@ const PIP_SLOPE_WINDOW_MS = 100;
 /**
  * `pipSlope` returns chao per millisecond — a typical tone transition (2-4
  * chao over 100-200ms) is only ~0.01-0.03 in those units, so the gain has to
- * be large to turn that into a visible tilt. 15 puts a brisk rise/fall
- * (~0.02 chao/ms) at roughly 17 degrees, and a steep one (T4's fall, ~0.023)
- * close to the 26-degree cap.
+ * be large to turn that into a visible tilt. 15 read as too subtle on a real
+ * device (17 degrees for a brisk rise); 28 puts that same rise close to the
+ * 26-degree cap, so most real tone transitions read as a clear, near-maximum
+ * lean rather than a faint one.
  */
-const PIP_TILT_GAIN = 15;
+const PIP_TILT_GAIN = 28;
 const PIP_TILT_MAX = 0.45; // ~26 degrees
 /** How fast the drawn tilt eases toward its target, per frame. */
 const PIP_TILT_EASE = 0.25;
@@ -243,7 +244,6 @@ export function drawWorld(
 
   drawPip(
     ctx,
-    width,
     height,
     snap.birdChao,
     dotX + recoilOffset(snap, now, width),
