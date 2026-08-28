@@ -1727,14 +1727,15 @@
   text-align: center;
 }
 
-/* "wrong tone" toast — floats below the card so it never nudges the card's
-   own size, and fades on the same timing as the game's .mismatch-toast. */
+/* "wrong tone" toast — floats off the card's right edge so it never nudges
+   the card's own size, and fades on the same timing as the game's
+   .mismatch-toast. */
 .vis-wrong-toast {
   position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-top: 4px;
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%);
+  margin-left: 6px;
   padding: 2px 8px;
   border-radius: var(--radius-pill);
   background: rgba(var(--danger-rgb), 0.16);
