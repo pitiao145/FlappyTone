@@ -4,7 +4,7 @@ import { capturePostHogEvent, initPostHog } from "../analytics/posthog.ts";
 import { loadInventory } from "../audio/inventory";
 import { MicError } from "../audio/mic";
 import { ensureMic, MicCancelled, stopMic } from "../audio/session";
-import { incrementDailyRuns } from "../game/dailyLimit.ts";
+import { incrementDailyRuns, loadDailyRuns } from "../game/dailyLimit.ts";
 import {
   averageRangeHalves,
   COOLDOWN_TRACKING_WINDOW,
@@ -240,6 +240,16 @@ export default function GameApp() {
     capturePostHogEvent("earlybird_cta_click", { surface, feature });
     setEarlyBird({ surface, feature });
   }, []);
+  /**
+   * True once the day's 5 free "game" runs (see `incrementDailyRuns` in
+   * `onRunOver` below) are used up. Tutorial and the visualiser are never
+   * gated — only a fresh or retried "game" run checks this, right before it
+   * would otherwise start.
+   */
+  const dailyLimitReached = useCallback(() => {
+    const daily = loadDailyRuns();
+    return daily.count >= daily.limit;
+  }, []);
   /** Where to go once calibration finishes, when Play/Tutorial routed through it. */
   const pendingRef = useRef<"game" | "tutorial" | "visualiser" | null>(null);
   /** The mode of the run that just ended — drives Retry. */
@@ -283,6 +293,14 @@ export default function GameApp() {
   /** The caller has already opened the mic inside its click handler. */
   const startPlay = useCallback(
     (intent: StartIntent) => {
+      // The caller (PlayHome) already opened the mic for this gesture before
+      // calling us — bail out and release it rather than starting a run the
+      // player isn't allowed to have.
+      if (intent === "game" && dailyLimitReached()) {
+        stopMic();
+        openEarlyBird("daily-limit", "daily-limit");
+        return;
+      }
       setTutorialDone(false);
       setError(null);
       if (intent === "lab") {
@@ -301,7 +319,7 @@ export default function GameApp() {
       }
       setScreen(intent);
     },
-    [settings],
+    [settings, dailyLimitReached, openEarlyBird],
   );
 
   const onCalibrated = useCallback((s: CalibrationSettings) => {
@@ -310,13 +328,20 @@ export default function GameApp() {
     track({ type: "calib_done" });
     const pending = pendingRef.current;
     pendingRef.current = null;
+    if (pending === "game" && dailyLimitReached()) {
+      // Rare: a first calibration (or a re-calibration) finishing after the
+      // player already used up today's runs elsewhere in the same session.
+      openEarlyBird("daily-limit", "daily-limit");
+      goHome();
+      return;
+    }
     if (pending) {
       if (pending !== "visualiser") lastModeRef.current = pending;
       setScreen(pending);
     } else {
       goHome();
     }
-  }, [goHome]);
+  }, [goHome, dailyLimitReached, openEarlyBird]);
 
   const onRunOver = useCallback((snap: RunSnapshot) => {
     // Game.tsx has already stopped the mic.
@@ -354,6 +379,10 @@ export default function GameApp() {
   }, [settings]);
 
   const retry = useCallback(async () => {
+    if (lastModeRef.current === "game" && dailyLimitReached()) {
+      openEarlyBird("daily-limit", "daily-limit");
+      return;
+    }
     setError(null);
     setRetryBusy(true);
     const gen = ++navRef.current;
@@ -370,7 +399,7 @@ export default function GameApp() {
     } finally {
       setRetryBusy(false);
     }
-  }, []);
+  }, [dailyLimitReached, openEarlyBird]);
 
   /**
    * Starts the analytics client and drains anything an earlier visit failed to

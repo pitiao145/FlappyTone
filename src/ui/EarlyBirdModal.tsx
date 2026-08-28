@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import { useNewsletterSubscribe } from "./useNewsletterSubscribe.ts";
 
-export type EarlyBirdSurface = "progress" | "profile";
+export type EarlyBirdSurface = "progress" | "profile" | "daily-limit";
 
 interface Props {
   surface: EarlyBirdSurface;
@@ -11,16 +11,42 @@ interface Props {
 }
 
 /**
- * The EarlyBird signup modal — every locked "Soon" section across Progress
- * and Profile opens this same component. No payment processor is wired up
- * yet, so "Pay" is disabled; only the email capture is live, sharing the
- * Kit integration `ComingSoon`/Landing already use (`useNewsletterSubscribe`,
- * `api/newsletter.ts`), tagged with the dedicated "earlybird" source.
+ * Copy that actually differs by surface. Price, payment button and the
+ * email-capture fallback below are identical for all of them — only the
+ * reason the modal opened changes.
  */
-export function EarlyBirdModal({ onClose }: Props) {
+const COPY: Record<EarlyBirdSurface, { eyebrow: string; title: string; body: string }> = {
+  progress: {
+    eyebrow: "★ EarlyBird access",
+    title: "Lock in the lowest price, forever",
+    body: "FlappyTone is still early — saved progress is live now, unlimited play and deeper features ship over the coming weeks. EarlyBirds get everything as it lands, and never pay again. Full refund anytime.",
+  },
+  profile: {
+    eyebrow: "★ EarlyBird access",
+    title: "Lock in the lowest price, forever",
+    body: "FlappyTone is still early — saved progress is live now, unlimited play and deeper features ship over the coming weeks. EarlyBirds get everything as it lands, and never pay again. Full refund anytime.",
+  },
+  "daily-limit": {
+    eyebrow: "★ Daily limit reached",
+    title: "You've flown all 5 free runs today",
+    body: "Come back tomorrow for 5 more, or go EarlyBird now for unlimited play today and every day after — plus everything else as it lands. Full refund anytime.",
+  },
+};
+
+/**
+ * The EarlyBird signup modal — every locked "Soon" section across Progress
+ * and Profile opens this same component, and so does hitting the free
+ * tier's 5-runs-a-day cap (`dailyLimitReached` in GameApp.tsx). No payment
+ * processor is wired up yet, so "Pay" is disabled; only the email capture is
+ * live, sharing the Kit integration `ComingSoon`/Landing already use
+ * (`useNewsletterSubscribe`, `api/newsletter.ts`), tagged with the dedicated
+ * "earlybird" source.
+ */
+export function EarlyBirdModal({ surface, onClose }: Props) {
   const inputId = useId();
   const [email, setEmail] = useState("");
   const { status, error, submit } = useNewsletterSubscribe("earlybird");
+  const copy = COPY[surface];
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -43,16 +69,12 @@ export function EarlyBirdModal({ onClose }: Props) {
           ×
         </button>
 
-        <p className="modal-eyebrow">★ EarlyBird access</p>
-        <h2 id={`${inputId}-title`}>Lock in the lowest price, forever</h2>
+        <p className="modal-eyebrow">{copy.eyebrow}</p>
+        <h2 id={`${inputId}-title`}>{copy.title}</h2>
         <p className="modal-price">
           €19 <span className="modal-price-note">once · lifetime</span>
         </p>
-        <p className="modal-body">
-          FlappyTone is still early — unlimited play and saved progress are live
-          now, deeper features ship over the coming weeks. EarlyBirds get
-          everything as it lands, and never pay again. Full refund anytime.
-        </p>
+        <p className="modal-body">{copy.body}</p>
 
         <button type="button" className="primary modal-pay" disabled title="Checkout is coming soon">
           🔒 Pay €19 — get EarlyBird access
