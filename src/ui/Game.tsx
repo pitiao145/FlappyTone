@@ -798,8 +798,14 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
             options" screen behind a reveal button — see PauseMenu.tsx.
             Deliberately not dismissable by tapping the backdrop: there are
             controls under here now, and a mis-tap that drops you back into a
-            moving corridor is worse than one more tap. */}
-        {paused && (
+            moving corridor is worse than one more tap.
+
+            `!hidden` matters: GameApp's onNavigate calls pause() (setting
+            `paused` true) and switches `screen` away in the same handler,
+            but nothing guarantees those two updates paint in the same
+            frame — without this the overlay could flash visible for a
+            frame while the tab switch is still landing. */}
+        {paused && !hidden && (
           <div className="overlay pause-menu">
             <PauseMenu
               mode={mode}
