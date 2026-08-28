@@ -4315,6 +4315,11 @@ section.hero-cards {
   padding: var(--space-6);
 }
 
+.playhome-mascot {
+  width: min(340px, 85%);
+  height: auto;
+}
+
 .playhome-menu {
   width: 100%;
   max-width: 220px;

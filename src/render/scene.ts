@@ -271,8 +271,11 @@ const PIP_BASE_R = 11;
  * past the beak's tip, burying it inside the circle.
  */
 const PIP_TIP_SHIFT = 6;
-const PIP_BODY_CX = -PIP_BASE_R * 0.75 - PIP_TIP_SHIFT;
-const PIP_EYE_CX = -PIP_BASE_R * 0.55 - PIP_TIP_SHIFT;
+/** Extra separation pulling the body away from the beak, so the beak reads
+ * as attached to the face rather than buried inside it. */
+const PIP_BEAK_CLEARANCE = 3;
+const PIP_BODY_CX = -PIP_BASE_R * 0.75 - PIP_TIP_SHIFT - PIP_BEAK_CLEARANCE;
+const PIP_EYE_CX = -PIP_BASE_R * 0.55 - PIP_TIP_SHIFT - PIP_BEAK_CLEARANCE;
 const PIP_EYE_CY = -PIP_BASE_R * 0.4;
 /** Nudged toward the beak (positive x) from the eye's own centre. */
 const PIP_PUPIL_CX = PIP_EYE_CX + 1.2;
@@ -331,6 +334,7 @@ export function drawPip(
   voiced: boolean,
   nowMs = 0,
   stateAgeMs = Infinity,
+  showHalo = true,
 ): void {
   const y = chaoToY(chao, height);
   // Corridor tolerance and chaoToY are both height-relative (see gates.ts's
@@ -368,15 +372,17 @@ export function drawPip(
   const bodyPxX = PIP_BODY_CX * s;
 
   // Outer halo — present in every state, quieter when idle or unheard.
-  const haloBig = voiced && !unheard;
-  const haloR = r * (haloBig ? 3.4 : unheard ? 2.2 : 2.4);
-  const halo = ctx.createRadialGradient(bodyPxX, 0, r * 0.4, bodyPxX, 0, haloR);
-  const haloToken = success ? "good" : "accent";
-  halo.addColorStop(0, rgba(haloToken, (unheard ? 0.14 : 0.4) * pulse));
-  halo.addColorStop(0.55, rgba(haloToken, (unheard ? 0.05 : 0.13) * pulse));
-  halo.addColorStop(1, rgba(haloToken, 0));
-  ctx.fillStyle = halo;
-  ctx.fillRect(bodyPxX - haloR, -haloR, haloR * 2, haloR * 2);
+  if (showHalo) {
+    const haloBig = voiced && !unheard;
+    const haloR = r * (haloBig ? 3.4 : unheard ? 2.2 : 2.4);
+    const halo = ctx.createRadialGradient(bodyPxX, 0, r * 0.4, bodyPxX, 0, haloR);
+    const haloToken = success ? "good" : "accent";
+    halo.addColorStop(0, rgba(haloToken, (unheard ? 0.14 : 0.4) * pulse));
+    halo.addColorStop(0.55, rgba(haloToken, (unheard ? 0.05 : 0.13) * pulse));
+    halo.addColorStop(1, rgba(haloToken, 0));
+    ctx.fillStyle = halo;
+    ctx.fillRect(bodyPxX - haloR, -haloR, haloR * 2, haloR * 2);
+  }
 
   // Success ring: an expanding, fading circle centred on the body.
   if (success) {

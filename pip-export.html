@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Pip export (dev only)</title>
+    <!-- Dev-only tool, same convention as src/dev/Lab.tsx (see CLAUDE.md #7):
+         this entry is deliberately absent from vite.config.ts's build.rollupOptions.input,
+         so `npm run build` never emits it into dist/. Only reachable via `npm run dev`. -->
+    <meta name="robots" content="noindex" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/dev/pipExportMain.tsx"></script>
+  </body>
+</html>

@@ -63,6 +63,11 @@ export function PlayHome({
         style={{ width: canvasWidth, height: canvasHeight }}
       >
         <div className="screen playhome-overlay">
+          <img
+            src="/Bird-hor-halo.png"
+            alt=""
+            className="playhome-mascot"
+          />
           <h1>{brand.name}</h1>
           {tutorialDone && <p className="prompt">Nice, ready to play?</p>}
           {!calibrated && (
