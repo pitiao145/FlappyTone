@@ -41,6 +41,28 @@ function accuracyTier(value: number): "good" | "ok" | "bad" {
   return value >= 0.85 ? "good" : value >= 0.6 ? "ok" : "bad";
 }
 
+/**
+ * Colour tier for the standalone recognizer's readout.
+ *
+ * `recognized` never looks at the practice target (see `recognizedReadout`'s
+ * own comment) — it answers "what did this shape resemble", full stop. But
+ * when the player *has* picked a tone to practice, the readout is the
+ * fastest way to see whether what they just said actually was that tone, so
+ * it has to read as right/wrong against that target rather than as a
+ * confidence gauge: practicing Tone 2 and producing a confident Tone 1
+ * should show red, not green, no matter how clearly it read as a T1.
+ * Confidence-based tiering only applies in free play, where there is no
+ * target to be right or wrong against.
+ */
+function recognizedTier(
+  target: Tone | null,
+  recognized: ToneClassification,
+): "good" | "ok" | "bad" {
+  if (recognized.tone === "none") return "bad";
+  if (target !== null) return recognized.tone === target ? "good" : "bad";
+  return accuracyTier(recognized.confidence);
+}
+
 interface Props {
   settings: CalibrationSettings;
   canvasWidth: number;
@@ -406,9 +428,9 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
 
   /**
    * The standalone recognizer's readout, always shown next to accuracy now
-   * (was Lab-only behind `showRecognizedTone`). Deliberately says nothing
-   * about whichever tone/word is selected as the "target": it reports what
-   * the shape resembled, full stop.
+   * (was Lab-only behind `showRecognizedTone`). What tone it reports is
+   * deliberately independent of the practice target — see `classifyTone` —
+   * but its colour is not: see `recognizedTier`.
    */
   const recognizedReadout = (
     <div className="vis-accuracy">
@@ -416,7 +438,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
       {recognized ? (
         <>
           <strong
-            className={`vis-accuracy-value tier-${recognized.tone === "none" ? "bad" : accuracyTier(recognized.confidence)}`}
+            className={`vis-accuracy-value tier-${recognizedTier(tone, recognized)}`}
           >
             {recognized.tone === "none" ? "none" : `T${recognized.tone}`}
           </strong>
