@@ -3,7 +3,7 @@ import { initAnalytics, track, trackCalibration } from "../analytics/client";
 import { capturePostHogEvent, initPostHog } from "../analytics/posthog.ts";
 import { loadInventory } from "../audio/inventory";
 import { MicError } from "../audio/mic";
-import { ensureMic, MicCancelled, stopMic } from "../audio/session";
+import { ensureMic, getMicSession, MicCancelled, stopMic } from "../audio/session";
 import { incrementDailyRuns, loadDailyRuns } from "../game/dailyLimit.ts";
 import {
   averageRangeHalves,
@@ -23,7 +23,7 @@ import {
 import type { RangeHalves } from "../pitch/calibration.ts";
 import type { RunStats } from "../game/scoring";
 import { Calibration } from "../ui/Calibration";
-import { Game } from "../ui/Game";
+import { Game, type GameHandle } from "../ui/Game";
 import { GameOver } from "../ui/GameOver";
 import { EarlyBirdModal, type EarlyBirdSurface } from "../ui/EarlyBirdModal.tsx";
 import { HowTo } from "../ui/HowTo";
@@ -254,6 +254,20 @@ export default function GameApp() {
   const pendingRef = useRef<"game" | "tutorial" | "visualiser" | null>(null);
   /** The mode of the run that just ended — drives Retry. */
   const lastModeRef = useRef<"game" | "tutorial">("game");
+  const gameRef = useRef<GameHandle>(null);
+  /**
+   * True from the moment a "game"/"tutorial" run actually starts until it
+   * genuinely ends (finished, out of hearts, or quit from the pause menu) —
+   * not the same thing as `screen === "game"`. `<Game>` now renders (hidden
+   * via CSS, not unmounted) for as long as this is true, so switching to
+   * another nav tab mid-run keeps its `Run` instance alive instead of
+   * destroying it: the run-owning effect in Game.tsx only tears down on
+   * unmount, and a nav tab used to force exactly that by making `screen`
+   * stop matching "game"/"tutorial". `onNavigate` pauses (never stops) the
+   * mic and calls `gameRef.current?.pause()` before navigating away while
+   * this is true, so the hidden run freezes rather than playing on unseen.
+   */
+  const [gameAlive, setGameAlive] = useState(false);
   /**
    * This session's "game" run count — shown in the pause menu ("run N").
    * Bumped on every fresh visit to a game run (Play, Retry); an in-game
@@ -272,6 +286,7 @@ export default function GameApp() {
     navRef.current += 1;
     stopMic();
     setRetryBusy(false);
+    setGameAlive(false);
     setScreen("play");
   }, []);
 
@@ -317,6 +332,7 @@ export default function GameApp() {
         setScreen("calibrate");
         return;
       }
+      if (intent === "game" || intent === "tutorial") setGameAlive(true);
       setScreen(intent);
     },
     [settings, dailyLimitReached, openEarlyBird],
@@ -337,6 +353,7 @@ export default function GameApp() {
     }
     if (pending) {
       if (pending !== "visualiser") lastModeRef.current = pending;
+      if (pending === "game" || pending === "tutorial") setGameAlive(true);
       setScreen(pending);
     } else {
       goHome();
@@ -345,6 +362,7 @@ export default function GameApp() {
 
   const onRunOver = useCallback((snap: RunSnapshot) => {
     // Game.tsx has already stopped the mic.
+    setGameAlive(false);
     if (lastModeRef.current === "tutorial") {
       setTutorialDone(true);
       setScreen("play");
@@ -391,6 +409,7 @@ export default function GameApp() {
       await ensureMic();
       if (gen !== navRef.current) return; // player left while we were waiting
       if (lastModeRef.current === "game") gameRunNumberRef.current += 1;
+      setGameAlive(true);
       setScreen(lastModeRef.current);
     } catch (err) {
       if (gen !== navRef.current) return;
@@ -431,27 +450,45 @@ export default function GameApp() {
   }, []);
 
   /**
-   * Nav-tab clicks. Visualiser is the one tab that needs a live mic feed —
-   * this click is its gesture (iOS Safari grants `getUserMedia` only inside
-   * one), whether or not the player has calibrated yet: uncalibrated routes
-   * through the calibration gate first, calibrated goes straight there.
-   * `ensureMic()` is a no-op if a session is already open, so this is safe
-   * to call every time, not just the first.
+   * Nav-tab clicks.
    *
-   * Every other tab's screen has no business holding the mic open — it
-   * releases one if a session exists, rather than leaving it (and its
-   * OS-level indicator) running in the background while browsing
-   * Settings/Profile/Progress. Screens that need it later for their own
-   * reasons (Play's buttons, Settings' recalibrate/tutorial links) open a
-   * fresh one themselves, inside their own click handler.
+   * Mid-run (`gameAlive`), every tab — including Play itself — has to leave
+   * the hidden `<Game>` in a state it can come back to: `gameRef.current
+   * .pause()` freezes its loop and suspends (never stops) the mic, so the
+   * `Run` and its score/hearts/gates survive underneath whatever screen the
+   * player looks at next. Tapping Play again goes straight back to the
+   * paused run (`lastModeRef.current`, "game" or "tutorial") instead of
+   * `PlayHome` — there's a run to resume, not a new one to start.
+   *
+   * Visualiser is the one tab that needs a live mic feed of its own — this
+   * click is its gesture (iOS Safari grants `getUserMedia`/`resume()` only
+   * inside one), whether or not the player has calibrated yet: uncalibrated
+   * routes through the calibration gate first, calibrated goes straight
+   * there. `ensureMic()` is a no-op if a session is already open (including
+   * one just suspended by pausing a live game), so this is safe to call
+   * every time; the explicit `resume()` after it is what actually wakes a
+   * suspended context back up; Visualiser has no such call of its own since
+   * it never expected to inherit an already-suspended session.
+   *
+   * Every other tab has no business holding the mic open when there is no
+   * run to protect — it releases one if a session exists, rather than
+   * leaving it (and its OS-level indicator) running in the background while
+   * browsing Settings/Profile/Progress. Screens that need it later for their
+   * own reasons (Play's buttons, Settings' recalibrate/tutorial links) open
+   * a fresh one themselves, inside their own click handler.
    */
   const onNavigate = useCallback(
     (tab: NavTab) => {
       if (tab === "visualiser") {
         setError(null);
+        if (gameAlive) gameRef.current?.pause();
         if (!settings) pendingRef.current = "visualiser";
         void ensureMic()
-          .then(() => setScreen(settings ? "visualiser" : "calibrate"))
+          .then(async () => {
+            const audio = getMicSession()?.ctx;
+            if (audio && audio.state === "suspended") await audio.resume();
+            setScreen(settings ? "visualiser" : "calibrate");
+          })
           .catch((err) => {
             pendingRef.current = null;
             if (!(err instanceof MicCancelled)) {
@@ -464,10 +501,15 @@ export default function GameApp() {
           });
         return;
       }
+      if (gameAlive) {
+        gameRef.current?.pause();
+        setScreen(tab === "play" ? lastModeRef.current : tab);
+        return;
+      }
       stopMic();
       setScreen(tab);
     },
-    [settings],
+    [settings, gameAlive],
   );
 
   return (
@@ -552,10 +594,21 @@ export default function GameApp() {
           />
         )}
 
-        {(screen === "game" || screen === "tutorial") && settings && (
+        {/* Deliberately not inside the screen === "x" chain above: this has
+            to stay mounted, just hidden, whenever a run is alive so that
+            switching to another nav tab (or the mobile-resize dance a tab
+            switch also triggers) never tears the Run down — see gameAlive's
+            own comment and onNavigate. `hidden` (a plain `display: none` on
+            Game's own root, not a wrapper — see its prop comment) rather
+            than removing it, and it owns no key: the only way `gameAlive`
+            goes false-then-true again is a genuinely new run (see
+            startPlay/retry/onCalibrated), which already unmounts and
+            remounts this by leaving and re-entering the tree. */}
+        {gameAlive && settings && (
           <Game
-            key={screen}
-            mode={screen === "tutorial" ? "tutorial" : "game"}
+            ref={gameRef}
+            hidden={!(screen === "game" || screen === "tutorial")}
+            mode={lastModeRef.current}
             settings={settings}
             canvasWidth={CANVAS_W}
             canvasHeight={GAME_CANVAS_H}

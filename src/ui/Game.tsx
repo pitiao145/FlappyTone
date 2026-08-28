@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { track } from "../analytics/client.ts";
 import { gateEvent, type RunEndReason } from "../analytics/session.ts";
 import {
@@ -103,9 +110,30 @@ interface Props {
   singleWord?: Word;
   /** This session's run count, this one included. Shown in the pause menu; ignored in the tutorial. */
   runNumber?: number;
+  /**
+   * True while GameApp is showing another nav tab over a still-alive run —
+   * see `GameHandle`. A plain `display: none` on the existing root element
+   * rather than an extra wrapper div, since App.css's desktop layout targets
+   * `.frame > .game-screen` directly (`:has(.game-stage) > .game-screen`);
+   * wrapping it would silently break that flex sizing.
+   */
+  hidden?: boolean;
 }
 
-export function Game({
+/**
+ * Imperative escape hatch for GameApp: when the player switches to another
+ * nav tab (Visualiser, Progress, Profile, Settings) mid-run, GameApp keeps
+ * this component mounted — just hidden — instead of unmounting it, so the
+ * `Run` instance survives. `pause()` lets it do the same freeze a tab going
+ * to the background already does (stop the rAF loop, suspend the
+ * AudioContext) before it hides the canvas, rather than leaving a hidden run
+ * ticking away and eating gates/hearts nobody can see.
+ */
+export interface GameHandle {
+  pause: () => void;
+}
+
+export const Game = forwardRef<GameHandle, Props>(function Game({
   mode,
   settings,
   canvasWidth,
@@ -114,7 +142,8 @@ export function Game({
   onQuit,
   singleWord,
   runNumber,
-}: Props) {
+  hidden,
+}: Props, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   /**
    * Latest `canvasHeight`, read by the run-owning effect's tick loop without
@@ -179,6 +208,10 @@ export function Game({
   const runRef = useRef<Run | null>(null);
   /** Set by the effect so the tutorial card's button can begin the run. */
   const startRef = useRef<() => void>(() => {});
+
+  useImperativeHandle(ref, () => ({
+    pause: () => pauseRef.current(false),
+  }), []);
   /**
    * The last resolved gate, pushed once when it resolves rather than polled.
    *
@@ -322,7 +355,13 @@ export function Game({
     let lastFlashedAtMs = -Infinity;
 
     // The mic is already open — Title opened it inside the click gesture.
-    setFrameSink((frame, sampleRate) => {
+    // Named (not passed inline) so `resumeRef` can re-install this exact
+    // callback: GameApp keeps this component mounted-but-hidden while the
+    // player visits another nav tab, and the Visualiser claims the shared
+    // frame sink for itself while it's up front (see `src/audio/session.ts`
+    // — there is only one sink slot for the whole app). Resuming here has to
+    // reclaim it, the same way Visualiser's own `toggleMute` does.
+    const onFrame = (frame: Float32Array, sampleRate: number) => {
       // Deaf while the game itself is talking — the cue would drive the dot.
       if (isCueAudible()) return;
       if (!tracker) {
@@ -340,7 +379,8 @@ export function Game({
       const pitch = tracker.push(frame);
       publishState(pitch);
       run.tickAudio(pitch, performance.now());
-    });
+    };
+    setFrameSink(onFrame);
 
     const tick = (now: number) => {
       const dt = now - lastT;
@@ -466,6 +506,10 @@ export function Game({
       const audio = getMicSession()?.ctx;
       // resume() is called from the overlay's click handler — iOS needs that.
       if (audio && audio.state === "suspended") void audio.resume();
+      // Reclaims the frame sink in case another screen (Visualiser) took it
+      // over while this run sat paused-and-hidden in the background — see
+      // `onFrame`'s comment above. A no-op if nothing else claimed it.
+      setFrameSink(onFrame);
       setPaused(false);
       if (!finished) start();
     };
@@ -558,7 +602,7 @@ export function Game({
   const MAX_HEARTS = 3;
 
   return (
-    <div className="screen game-screen">
+    <div className="screen game-screen" style={hidden ? { display: "none" } : undefined}>
       <div
         className="stage game-stage"
         style={{ width: canvasWidth, height: canvasHeight }}
@@ -775,4 +819,4 @@ export function Game({
       </div>
     </div>
   );
-}
+});
