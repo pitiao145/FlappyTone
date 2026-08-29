@@ -680,13 +680,13 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
             </div>
           )}
 
-          {/* Tutorial-only cue text ("say mā, say it flat and high") — the
+          {/* Tutorial-only cue text ("say it flat and high") — the
               lesson copy that teaches each tone shape. Outside the tutorial
               the player is meant to answer the demo clip, not read a script,
               so this stays out of game/practice mode. */}
           {mode === "tutorial" && info && displayTone !== null && (
             <div className="hud-status">
-              say {info.pinyin}, {info.cue}
+              {info.cue}
             </div>
           )}
 

@@ -126,6 +126,30 @@
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: calc(var(--nav-sidebar-w) + env(safe-area-inset-left));
   }
+
+  /* Calibration wants a definite full-viewport height so its
+     `height: 100%` + vertical centering resolve. `.app` defaults to
+     `align-items: flex-start`, which leaves `.app-main` content-sized —
+     scoped to `:has(.calibrate-screen)` so scrolling tabs (settings,
+     progress, …) keep growing with their content. */
+  .app-game:has(.calibrate-screen) {
+    align-items: stretch;
+  }
+
+  .app-game:has(.calibrate-screen) .app-main {
+    flex: 1 1 auto;
+    min-height: calc(
+      100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+    );
+  }
+
+  .app-game:has(.calibrate-screen) .frame {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+  }
 }
 
 .app-main {
@@ -267,7 +291,6 @@
 /* Game-stage screens fill the viewport exactly (GameApp's computeCanvasSize)
    with no margin budgeted in — see the .game-stage block above. */
 .game-screen,
-.calibrate-screen,
 .game-stage {
   margin-top: 0;
 }
@@ -447,6 +470,17 @@
 }
 
 /* ----------------------------------------------------------- calibration */
+
+.calibrate-screen {
+  /* Fills the frame (mobile flex chain; desktop via the
+     `:has(.calibrate-screen)` rules above) so quiet/talk/done centre in
+     the viewport instead of hugging the top. */
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+  margin-top: 0;
+  justify-content: center;
+}
 
 .meter {
   height: 8px;
@@ -4820,4 +4854,20 @@ section.hero-cards {
 
 .loading-label {
   max-width: 24ch;
+}
+
+/* Tutorial success screen — the excited Pip over a "you're all set" line and
+   the button onward. Rendered inside the same game-stage frame as PlayHome
+   (see TutorialDone.tsx) so the frame doesn't resize on the hand-off to Play;
+   this just centres its own content and sizes the hopping Pip. */
+.tutorial-done-overlay {
+  justify-content: center;
+}
+
+.tutorial-done-pip {
+  display: block;
+}
+
+.tutorial-done-overlay .note {
+  max-width: 26ch;
 }

@@ -34,6 +34,7 @@ import { PlayHome, type PlayIntent } from "../ui/PlayHome";
 import { Profile } from "../ui/Profile.tsx";
 import { Progress } from "../ui/Progress.tsx";
 import { Settings } from "../ui/Settings";
+import { TutorialDone } from "../ui/TutorialDone.tsx";
 import { Visualiser } from "../ui/Visualiser";
 import { micErrorCopy } from "../ui/micErrors";
 import { GameNav, type NavTab } from "./GameNav.tsx";
@@ -46,6 +47,7 @@ type Screen =
   | "finetune"
   | "tutorial"
   | "seeding"
+  | "tutorialdone"
   | "game"
   | "gameover"
   | "settings"
@@ -236,6 +238,9 @@ export default function GameApp() {
   /** True when the shown offer is the first one (post-calibration, after 1 game). */
   const [recalFirst, setRecalFirst] = useState(false);
   const [tutorialDone, setTutorialDone] = useState(false);
+  // Which success copy the tutorialdone screen shows: the standalone tutorial
+  // ends on "Good job", the calibration-flow tutorial on "Your grid is ready".
+  const [doneVariant, setDoneVariant] = useState<"tutorial" | "calibration">("tutorial");
   const [error, setError] = useState<string | null>(null);
   const [retryBusy, setRetryBusy] = useState(false);
   const [earlyBird, setEarlyBird] = useState<{
@@ -406,11 +411,13 @@ export default function GameApp() {
         }
         // A brief loading beat so the last gate doesn't snap straight to the
         // Play screen (which read as broken). The seeding is instant; the pause
-        // is for legibility. An effect advances "seeding" → "play".
+        // is for legibility. An effect advances "seeding" → "tutorialdone".
+        setDoneVariant("calibration");
         setScreen("seeding");
         return;
       }
-      setScreen("play");
+      setDoneVariant("tutorial");
+      setScreen("tutorialdone");
       return;
     }
     setStats(snap.stats);
@@ -481,10 +488,11 @@ export default function GameApp() {
    * marketing page is a `$pageview` on the other entry.
    */
   // The post-calibration loading beat: hold the "personalising your grid"
-  // screen briefly, then land on Play. Cleared if the screen changes first.
+  // screen briefly, then land on the tutorial success screen. Cleared if the
+  // screen changes first.
   useEffect(() => {
     if (screen !== "seeding") return;
-    const t = setTimeout(() => setScreen("play"), 2800);
+    const t = setTimeout(() => setScreen("tutorialdone"), 2800);
     return () => clearTimeout(t);
   }, [screen]);
 
@@ -587,6 +595,15 @@ export default function GameApp() {
 
         {screen === "seeding" && (
           <Loading label="We're personalising your grid for you…" />
+        )}
+
+        {screen === "tutorialdone" && (
+          <TutorialDone
+            variant={doneVariant}
+            onDone={goHome}
+            canvasWidth={CANVAS_W}
+            canvasHeight={GAME_CANVAS_H}
+          />
         )}
 
         {screen === "howto" && <HowTo onBack={() => setScreen("settings")} />}

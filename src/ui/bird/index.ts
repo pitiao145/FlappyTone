@@ -5,3 +5,4 @@
  */
 export { PipCanvas } from "./PipCanvas.tsx";
 export { SpinningPip } from "./SpinningPip.tsx";
+export { JumpingPip } from "./JumpingPip.tsx";
