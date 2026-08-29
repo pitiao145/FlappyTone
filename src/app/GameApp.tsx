@@ -484,7 +484,7 @@ export default function GameApp() {
   // screen briefly, then land on Play. Cleared if the screen changes first.
   useEffect(() => {
     if (screen !== "seeding") return;
-    const t = setTimeout(() => setScreen("play"), 1900);
+    const t = setTimeout(() => setScreen("play"), 2800);
     return () => clearTimeout(t);
   }, [screen]);
 
