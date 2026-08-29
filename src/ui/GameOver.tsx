@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { takeaway, toneBreakdown, type RunStats } from "../game/scoring.ts";
+import { loadRunHistory } from "../game/runHistory.ts";
 import { GateLogPanel } from "../dev/GateLogPanel.tsx";
 import { track } from "../analytics/client.ts";
 import { saveSettings, type CalibrationSettings } from "../game/settings.ts";
 import type { RangeHalves } from "../pitch/calibration.ts";
+import { ToneMarkIcon } from "./toneIcons.tsx";
 
 interface Props {
   stats: RunStats;
@@ -11,6 +13,8 @@ interface Props {
   busy: boolean;
   onRetry: () => void;
   onHome: () => void;
+  /** Into the fine-tune flow — for the "some tones felt out of reach?" shortcut. */
+  onFineTune: () => void;
   settings: CalibrationSettings | null;
   /**
    * What to offer, already decided by `App.tsx` from the windowed,
@@ -29,6 +33,7 @@ export function GameOver({
   busy,
   onRetry,
   onHome,
+  onFineTune,
   settings,
   suggestion,
   suggestionIsFirst = false,
@@ -37,6 +42,11 @@ export function GameOver({
   const breakdown = toneBreakdown(stats);
   const [dismissed, setDismissed] = useState(false);
   const [applied, setApplied] = useState(false);
+  // Read once on mount. GameApp's onRunOver has already called recordRun()
+  // synchronously before routing here, so bestScore includes this run — a new
+  // record shows as score === bestScore.
+  const history = useMemo(() => loadRunHistory(), []);
+  const isNewBest = stats.score > 0 && stats.score >= history.bestScore;
 
   const applySuggestion = () => {
     if (!settings || !suggestion) return;
@@ -62,33 +72,62 @@ export function GameOver({
       <p className="score-big">{stats.score}</p>
       <p className="note">best multiplier ×{stats.bestMultiplier}</p>
 
-      <div className="breakdown">
-        {breakdown.map((b) => (
-          <div className="breakdown-row" key={b.tone}>
-            <span className="syllable">Tone {b.tone}</span>
-            <span className="bar">
-              <span
-                className="bar-fill"
-                style={{ width: `${b.pct ?? 0}%` }}
-                aria-hidden
-              />
-            </span>
-            <span className="pct">
-              {b.pct === null ? "—" : `${Math.round(b.pct)}%`}
-            </span>
-            {b.unheard > 0 && (
-              <span className="unheard">couldn't hear ×{b.unheard}</span>
-            )}
-            {b.mismatched > 0 && (
-              <span className="mismatched">
-                sounded like T{b.mismatchedAsMostly} ×{b.mismatched}
+      {/* The personal best, treated as an earned record — a gold plaque in the
+          Pip's own beak-gold. A fresh record fills it solid and sweeps a
+          one-shot shine (reduced-motion safe, see App.css). */}
+      <div className={`highscore${isNewBest ? " highscore-new" : ""}`}>
+        <span className="highscore-seal" aria-hidden>
+          ★
+        </span>
+        <span className="highscore-body">
+          <span className="highscore-label">
+            {isNewBest ? "New best" : "Personal best"}
+          </span>
+          <span className="highscore-value">{history.bestScore}</span>
+        </span>
+      </div>
+
+      <div className="pause-accuracy gameover-accuracy">
+        <p className="pause-accuracy-label">This run — tone accuracy</p>
+        <div className="pause-accuracy-grid">
+          {breakdown.map((b) => (
+            <div className="pause-tone-card" key={b.tone}>
+              <ToneMarkIcon tone={b.tone} className="pause-tone-icon" />
+              <div className="pause-tone-bar">
+                <div
+                  className="pause-tone-bar-fill"
+                  style={{ width: `${Math.round(b.pct ?? 0)}%` }}
+                />
+              </div>
+              <span className="pause-tone-pct">
+                {b.pct === null ? "—" : `${Math.round(b.pct)}%`}
               </span>
-            )}
-          </div>
-        ))}
+              {b.unheard > 0 && (
+                <span className="pause-tone-note">couldn't hear ×{b.unheard}</span>
+              )}
+              {b.mismatched > 0 && (
+                <span className="pause-tone-note">
+                  sounded like T{b.mismatchedAsMostly}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       <p className="prompt">{takeaway(breakdown)}</p>
+
+      {/* A manual way into fine-tuning, distinct from the data-driven
+          `suggestion` card below — hidden while that card is offering, so the
+          player isn't shown two calibration prompts at once. */}
+      {settings && !(suggestion && !dismissed && !applied) && (
+        <div className="gameover-finetune">
+          <p className="note">Did some tones feel too hard to reach?</p>
+          <button type="button" className="finetune-button" onClick={onFineTune}>
+            Fine-tune your calibration
+          </button>
+        </div>
+      )}
 
       {applied && (
         <div className="recal-card recal-applied">

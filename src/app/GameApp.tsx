@@ -703,6 +703,7 @@ export default function GameApp() {
             busy={retryBusy}
             onRetry={() => void retry()}
             onHome={goHome}
+            onFineTune={() => setScreen("finetune")}
             settings={settings}
             suggestion={recalSuggestion}
             suggestionIsFirst={recalFirst}

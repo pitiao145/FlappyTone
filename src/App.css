@@ -889,6 +889,165 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- Personal best: an earned record, not a footnote.
+   A gold plaque in the Pip's beak-gold (--beak) — the one warm metallic the
+   brand already owns, so "high score" reads as achievement without arcade
+   neon. A fresh record fills the plate solid gold and sweeps a one-shot shine.
+   `--gold*` are local to this block; the values are the beak-gold family. */
+.highscore {
+  --gold: #c98a3c;
+  --gold-deep: #a86c20;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+  padding: 10px var(--space-5) 10px var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--gold) 18%, var(--surface)),
+      color-mix(in srgb, var(--gold) 7%, var(--surface))
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 2px 12px color-mix(in srgb, var(--gold) 22%, transparent);
+}
+
+.highscore-seal {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--gold);
+  filter: drop-shadow(0 1px 1px rgba(36, 29, 21, 0.2));
+}
+
+.highscore-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  line-height: 1;
+}
+
+.highscore-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+
+.highscore-value {
+  font-family: var(--font-display);
+  font-size: 2.1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* New record: solid gold plate, light ink, a gentle pop and a shine sweep. */
+.highscore-new {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--gold-deep);
+  background: linear-gradient(180deg, #dca24b, var(--gold));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 3px 16px color-mix(in srgb, var(--gold) 45%, transparent);
+  animation: highscore-pop 0.5s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+
+.highscore-new .highscore-label {
+  color: rgba(255, 252, 244, 0.9);
+}
+
+.highscore-new .highscore-value {
+  color: #fffdf7;
+}
+
+.highscore-new .highscore-seal {
+  color: #fff5dc;
+  filter: drop-shadow(0 1px 2px rgba(120, 74, 18, 0.45));
+}
+
+.highscore-new::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 65%
+  );
+  transform: translateX(-130%);
+  animation: highscore-shine 2s ease-in-out 0.35s 1 both;
+}
+
+@keyframes highscore-pop {
+  from {
+    transform: scale(0.88);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes highscore-shine {
+  to {
+    transform: translateX(130%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .highscore-new {
+    animation: none;
+  }
+  .highscore-new::after {
+    display: none;
+  }
+}
+
+/* Tone-accuracy grid, borrowed from the pause menu for a consistent look —
+   here it also carries the per-tone "couldn't hear"/"sounded like" notes. */
+.gameover-accuracy {
+  width: 100%;
+}
+
+.pause-tone-note {
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+/* The manual fine-tune shortcut — a helper line over a real outline button. */
+.gameover-finetune {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 40ch;
+  margin-inline: auto;
+}
+
+.screen button.finetune-button {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  color: var(--accent-bright);
+  font-size: 0.9rem;
+  padding: 10px 18px;
+}
+
+.screen button.finetune-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent-bright);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
 .breakdown {
   display: flex;
   flex-direction: column;
