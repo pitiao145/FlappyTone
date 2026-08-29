@@ -64,7 +64,7 @@ export function PlayHome({
       >
         <div className="screen playhome-overlay">
           <img
-            src="/Bird-hor-halo.png"
+            src="/Bird-hor-no-halo.png"
             alt=""
             className="playhome-mascot"
           />
