@@ -112,10 +112,11 @@ describe("Settings persistence", () => {
     expect(loadSettings()).toBeNull();
   });
 
-  it("loadSettings returns null when rangeSemitones is out of range (< 1)", () => {
-    // RANGE_UP_SEMITONES_MIN dropped 2 -> 1 (3a230a2, 17 Aug 2026) so a
-    // near-baseline Tone 1 isn't floor-clamped above what a player actually
-    // measures; 0.5 is below the current floor, 1.5 no longer is.
+  it("loadSettings returns null when rangeSemitones is below the floor (< 2)", () => {
+    // RANGE_UP_SEMITONES_MIN is 2 again (29 Aug 2026): the up half is now
+    // anchored off an actual Tone 1 from the calibration tutorial, not a
+    // near-flat "ahh" sweep, so 2 keeps the upper half stable. 0.5 and 1.5 are
+    // both below the floor now.
     const settings: CalibrationSettings = {
       f0Center: 120,
       noiseFloor: 0.001,
@@ -137,11 +138,11 @@ describe("Settings persistence", () => {
     expect(loadSettings()).toBeNull();
   });
 
-  it("loadSettings accepts rangeSemitones at the boundaries (1 and 10)", () => {
+  it("loadSettings accepts rangeSemitones at the boundaries (2 and 10)", () => {
     const settings3: CalibrationSettings = {
       f0Center: 120,
       noiseFloor: 0.001,
-      rangeSemitones: 1,
+      rangeSemitones: 2,
       rangeDownSemitones: 3,
     };
     storageMap["toneflap.settings.v2"] = JSON.stringify(settings3);

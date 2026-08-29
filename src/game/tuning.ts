@@ -317,16 +317,21 @@ export interface Tuning {
 
   // ---- calibration
   /**
-   * Fraction of the high-sweep reach that becomes the board's upward half —
-   * see `REACH_TO_TONE_SPACE_UP` in `pitch/calibration.ts` for the reasoning.
-   * Flown, not derived; the value most likely to need retuning from real
-   * calibrations once the new "flat, high ahh" prompt is in front of players.
+   * Fraction of the measured Tone-1 level that becomes the board's upward half
+   * — see `REACH_TO_TONE_SPACE_UP` in `pitch/calibration.ts`. Since 29 Aug 2026
+   * the input is an actual T1 from the calibration run, not a high "ahh" sweep;
+   * at 1 the board's chao 5 sits at the speaker's own T1. Flown, not derived —
+   * retune in the Lab from real calibrations.
    */
   reachToToneSpaceUp: number;
   /**
-   * Fraction of the low-sweep reach that becomes the board's downward half —
-   * see `REACH_TO_TONE_SPACE_DOWN`. Left at its original value on purpose;
-   * the low sweep's prompt and behavior are untouched by the Tone 1 fix.
+   * Fraction of the T3-floor measurement that becomes the board's downward
+   * half — see `REACH_TO_TONE_SPACE_DOWN`. Raised 0.6 → 1 (29 Aug 2026): the
+   * down input is no longer a "reach as low as comfortable" sweep but an actual
+   * Tone 3 floor from the calibration run, so the 40% claw-back (which existed
+   * to shrink a maximal reach into a tone space) would under-build the down
+   * half and turn the T3 corridor floor into a wall. Mirrors
+   * `reachToToneSpaceUp`. Flown, not derived — retune in the Lab.
    */
   reachToToneSpaceDown: number;
 
@@ -385,7 +390,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   driftChaoPerSec: 5.33,
   trailSeconds: 1.0,
   reachToToneSpaceUp: 1,
-  reachToToneSpaceDown: 0.6,
+  reachToToneSpaceDown: 1,
   gateDurationS: Object.freeze({ 1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6 }),
   polylines: DEFAULT_POLYLINES,
 }) as Readonly<Tuning>;

@@ -69,13 +69,14 @@ export function averageRangeHalves(samples: RangeHalves[]): RangeHalves | null {
  * collected before the average is judged against calibration.
  *
  * Two different sizes on purpose: right after a deliberate visit to the
- * calibration tool, a quick 2-run check catches an actually-bad calibration
- * fast. Every cycle after that — whether or not the previous one ended up
- * offering anything — widens to 5, so the check can't re-fire almost every
- * run purely off run-to-run noise.
+ * calibration tool, the very first real game is checked (window 1) — an early
+ * "we personalised your grid even further" nudge, since the tutorial-seeded
+ * grid is already close and one game is enough to refine it. Every cycle after
+ * that — whether or not the previous one ended up offering anything — widens to
+ * 3, so the check can't re-fire almost every run purely off run-to-run noise.
  */
-export const INITIAL_TRACKING_WINDOW = 2;
-export const COOLDOWN_TRACKING_WINDOW = 5;
+export const INITIAL_TRACKING_WINDOW = 1;
+export const COOLDOWN_TRACKING_WINDOW = 3;
 
 /** Persisted across runs by `settings.ts` (`loadRecalTracking`/`saveRecalTracking`). */
 export interface RecalTrackingState {

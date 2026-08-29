@@ -8,6 +8,7 @@ import { incrementDailyRuns, loadDailyRuns } from "../game/dailyLimit.ts";
 import {
   averageRangeHalves,
   COOLDOWN_TRACKING_WINDOW,
+  INITIAL_TRACKING_WINDOW,
   recalibrationSuggestion,
   recordTrackedRun,
 } from "../game/recalibration.ts";
@@ -18,6 +19,7 @@ import {
   loadSettings,
   loadShareData,
   saveRecalTracking,
+  saveSettings,
   type CalibrationSettings,
 } from "../game/settings";
 import type { RangeHalves } from "../pitch/calibration.ts";
@@ -229,6 +231,8 @@ export default function GameApp() {
   const [recalSuggestion, setRecalSuggestion] = useState<RangeHalves | null>(
     null,
   );
+  /** True when the shown offer is the first one (post-calibration, after 1 game). */
+  const [recalFirst, setRecalFirst] = useState(false);
   const [tutorialDone, setTutorialDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryBusy, setRetryBusy] = useState(false);
@@ -252,6 +256,13 @@ export default function GameApp() {
   }, []);
   /** Where to go once calibration finishes, when Play/Tutorial routed through it. */
   const pendingRef = useRef<"game" | "tutorial" | "visualiser" | null>(null);
+  /**
+   * True while the tutorial that immediately follows a calibration is running:
+   * its measured range seeds the grid (calibration itself only sites the centre
+   * and leaves a provisional ±5 board — the sweeps are gone). A tutorial replayed
+   * from Settings has this false and never touches the saved range.
+   */
+  const calibratingRef = useRef(false);
   /** The mode of the run that just ended — drives Retry. */
   const lastModeRef = useRef<"game" | "tutorial">("game");
   const gameRef = useRef<GameHandle>(null);
@@ -318,6 +329,9 @@ export default function GameApp() {
       }
       setTutorialDone(false);
       setError(null);
+      // A user-initiated start (incl. a Settings tutorial replay) never seeds
+      // the grid; only the tutorial routed to from onCalibrated does.
+      calibratingRef.current = false;
       if (intent === "lab") {
         // Dev tooling — the Lab supplies its own fallback calibration.
         setScreen("lab");
@@ -340,31 +354,46 @@ export default function GameApp() {
 
   const onCalibrated = useCallback((s: CalibrationSettings) => {
     setSettings(s);
-    trackCalibration(s);
     track({ type: "calib_done" });
-    const pending = pendingRef.current;
+    // Calibration now only sites the centre and leaves a provisional ±5 board;
+    // the grid's real range is measured by the tutorial that follows (up ← the
+    // T1 gates, down ← the T3 gates). Route into it. `onRunOver`'s tutorial
+    // branch seeds the grid from those tones, then lands on the Play screen —
+    // where the player's next tap is a fresh gesture to open the mic for a real
+    // run (hard rule 4: never reopen the mic without one). The pending intent
+    // is dropped for that reason; the player re-taps Play.
     pendingRef.current = null;
-    if (pending === "game" && dailyLimitReached()) {
-      // Rare: a first calibration (or a re-calibration) finishing after the
-      // player already used up today's runs elsewhere in the same session.
-      openEarlyBird("daily-limit", "daily-limit");
-      goHome();
-      return;
-    }
-    if (pending) {
-      if (pending !== "visualiser") lastModeRef.current = pending;
-      if (pending === "game" || pending === "tutorial") setGameAlive(true);
-      setScreen(pending);
-    } else {
-      goHome();
-    }
-  }, [goHome, dailyLimitReached, openEarlyBird]);
+    calibratingRef.current = true;
+    lastModeRef.current = "tutorial";
+    setGameAlive(true);
+    setScreen("tutorial");
+  }, []);
 
   const onRunOver = useCallback((snap: RunSnapshot) => {
     // Game.tsx has already stopped the mic.
     setGameAlive(false);
     if (lastModeRef.current === "tutorial") {
       setTutorialDone(true);
+      if (calibratingRef.current) {
+        calibratingRef.current = false;
+        // Seed the grid from the tones just flown: up from the T1 gates, down
+        // from the T3 gates (run.ts `measuredRange`). A null range (the player
+        // stayed silent through the run) keeps the provisional ±5 board — the
+        // in-game backstop corrects it over real runs.
+        const seeded =
+          snap.measuredRange && settings
+            ? {
+                ...settings,
+                rangeSemitones: snap.measuredRange.up,
+                rangeDownSemitones: snap.measuredRange.down,
+              }
+            : settings;
+        if (seeded) {
+          saveSettings(seeded);
+          setSettings(seeded);
+          trackCalibration(seeded);
+        }
+      }
       setScreen("play");
       return;
     }
@@ -382,10 +411,14 @@ export default function GameApp() {
     // window (the early return above already routed those away).
     const tracking = recordTrackedRun(loadRecalTracking(), snap.measuredRange);
     if (tracking.samples.length >= tracking.windowSize) {
+      // The first offer is the one closed off the initial window (1 game after
+      // calibration); every later window is a cooldown. Drives friendlier copy.
+      const isFirst = tracking.windowSize === INITIAL_TRACKING_WINDOW;
       const avg = averageRangeHalves(tracking.samples);
       const suggestion =
         avg && settings ? recalibrationSuggestion(settings, avg) : null;
       setRecalSuggestion(suggestion);
+      setRecalFirst(isFirst);
       if (suggestion) track({ type: "recal_offered" });
       saveRecalTracking({ windowSize: COOLDOWN_TRACKING_WINDOW, samples: [] });
     } else {
@@ -626,6 +659,7 @@ export default function GameApp() {
             onHome={goHome}
             settings={settings}
             suggestion={recalSuggestion}
+            suggestionIsFirst={recalFirst}
             onRecalibrate={setSettings}
           />
         )}

@@ -42,7 +42,10 @@ import {
 import { REST_CHAO } from "./dynamics.ts";
 import { DEFAULT_TUNING, tuning } from "./tuning.ts";
 import type { PitchState } from "../pitch/types.ts";
-import { computeRangeHalves, type RangeHalves } from "../pitch/calibration.ts";
+import {
+  computeRangeHalvesFromExtremes,
+  type RangeHalves,
+} from "../pitch/calibration.ts";
 import type { Contour } from "./contours.ts";
 import { classifyTone, type ClassifiedTone } from "./toneClassifier.ts";
 
@@ -282,9 +285,12 @@ export interface RunSnapshot {
   /** Voiced runs of >=150ms that occurred while no gate was active. */
   missedUtterances: number;
   /**
-   * The range the player actually produced this run, measured the same way
-   * calibration measures a preview capture (`computeRangeHalves`). Null
-   * until the run is over, or if too few voiced frames were captured.
+   * The range the player actually produced this run, anchored off the tones
+   * they were asked for: `up` from the T1 gates, `down` from the T3 gates
+   * (`computeRangeHalvesFromExtremes` over `voicedByTone`). Seeds the initial
+   * grid when this is the calibration tutorial, and drives the in-game
+   * recalibration backstop. Null until the run is over, or if the run never
+   * presented a T1/T3 gate with enough voiced frames.
    */
   measuredRange: RangeHalves | null;
   /** Ids of every word spawned this run, oldest first — for lifetime "unique words" stats. */
@@ -465,8 +471,19 @@ export class Run {
   /** Every voiced frame's raw semitones this run, whole-run and gate-agnostic. */
   private voicedSemitones: number[] = [];
   /**
-   * `computeRangeHalves` on `voicedSemitones`, computed once at run-end.
-   * `undefined` means not computed yet; `null` means computed but sparse.
+   * Raw voiced semitones bucketed by the tone of the gate that was active when
+   * each frame was heard. The grid is anchored from these: T1 frames set the
+   * board's top (`up`), T3 frames its bottom (`down`). T2/T4 buckets are kept
+   * for insight (how high does a T4 spike?) but never size the grid — the
+   * voice's ceiling is T4, not T1, so anchoring `up` off the overall maximum
+   * would put a natural Tone 1 mid-board. Frames heard between gates are not
+   * bucketed.
+   */
+  private voicedByTone: Record<Tone, number[]> = { 1: [], 2: [], 3: [], 4: [] };
+  /**
+   * `computeRangeHalvesFromExtremes` on the T1 and T3 buckets, computed once at
+   * run-end. `undefined` means not computed yet; `null` means computed but
+   * sparse (a run that never presented a T1 or T3 gate, or too few frames).
    */
   private suggestedRange: RangeHalves | null | undefined = undefined;
 
@@ -535,7 +552,12 @@ export class Run {
     if (p.voiced) {
       this.targetChao = p.smoothedChao;
       this.lastVoicedAt = nowMs;
-      if (p.semitones !== null) this.voicedSemitones.push(p.semitones);
+      if (p.semitones !== null) {
+        this.voicedSemitones.push(p.semitones);
+        // Bucket by the active gate's tone so the grid anchors off the tone the
+        // player was actually asked to produce (T1 → up, T3 → down).
+        if (this.active) this.voicedByTone[this.active.gate.tone].push(p.semitones);
+      }
       this.pinned =
         p.chao !== null && p.chao >= 5 - PIN_EPSILON
           ? "high"
@@ -749,7 +771,12 @@ export class Run {
     const active = this.active;
     const upcoming = this.gates.find((g) => g.xStart > this.worldX) ?? null;
     if (this.isOver() && this.suggestedRange === undefined) {
-      this.suggestedRange = computeRangeHalves(this.voicedSemitones);
+      this.suggestedRange = computeRangeHalvesFromExtremes(
+        this.voicedByTone[1],
+        this.voicedByTone[3],
+        tuning().reachToToneSpaceUp,
+        tuning().reachToToneSpaceDown,
+      );
     }
     return {
       birdChao: this.displayChao,

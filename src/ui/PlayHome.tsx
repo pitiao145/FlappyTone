@@ -72,8 +72,8 @@ export function PlayHome({
           {tutorialDone && <p className="prompt">Nice, ready to play?</p>}
           {!calibrated && (
             <p className="note">
-              First run starts with a short calibration: talk normally, then
-              reach high and low.
+              First run starts with a short calibration: talk normally, then a
+              few practice gates to find your range.
             </p>
           )}
           <div className="menu playhome-menu">

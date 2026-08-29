@@ -89,8 +89,15 @@ export const RANGE_DOWN_SEMITONES_MIN = 2;
  * bad reading — see the analysis in the 17 Aug session. 1 is a smaller safety
  * net than 2, not zero: it still stops a near-flat sweep from collapsing the
  * board to a hair-trigger sliver.
+ *
+ * Raised 1 → 2 (29 Aug 2026): the high input is no longer a near-flat "ahh"
+ * sweep. Calibration now measures an actual Tone 1 (see `run.ts` tone-bucketed
+ * `measuredRange`), and `up` is anchored off that T1 rather than a reach — so
+ * the reason the floor was dropped to 1 (a sweep landing under 2 st) no longer
+ * applies. 2 keeps the upper half from becoming a hair-trigger when a speaker's
+ * T1 sits very close to baseline.
  */
-export const RANGE_UP_SEMITONES_MIN = 1;
+export const RANGE_UP_SEMITONES_MIN = 2;
 
 /** Nearest-rank percentile of an already-sorted array. */
 function percentile(sorted: number[], p: number): number {
@@ -143,38 +150,27 @@ function clampHalf(half: number, min = RANGE_SEMITONES_MIN): number {
 }
 
 /**
- * The fraction of a demonstrated reach that the tone space occupies. Split in
- * two (17 Aug 2026) because the two sweeps ask for different things and
- * needed different fixes.
+ * The fraction of a measured tone level that the board's half occupies. Both
+ * are 1 (no claw-back) since 29 Aug 2026, and the reason is the same for each:
+ * the inputs are no longer *reaches* but *actual tones* from the calibration
+ * tutorial. `up` is anchored off the T1 gates, `down` off the T3 gates (see
+ * `run.ts` `voicedByTone`), so there is no reach to shrink into a tone space —
+ * the measurement already is one.
  *
- * `_DOWN`: the low sweep still asks for a maximum reach ("as low as you
- * comfortably can"), which is much wider than the space Mandarin tones live
- * in — so it still needs real claw-back. Unchanged at the original measured
- * value; nothing here was implicated by the Tone 1 undershoot this split was
- * made for, and this side is left alone on purpose.
+ * History. These were split in two on 17 Aug 2026, when the down input was
+ * still a "reach as low as you comfortably can" sweep that genuinely needed a
+ * 0.6 claw-back, while the up input had already moved to a natural "ahh".
+ * Removing the sweeps removed the last reach: an actual T3 floor must map to
+ * chao 1, so clawing it back to 0.6 would leave the T3 corridor trough below
+ * anything the speaker produced — a wall. `_DOWN` therefore joined `_UP` at 1.
  *
- * `_UP`: the high sweep's *prompt* changed instead of just its multiplier —
- * it now asks for a natural, sustained "ahh" (the register Tone 1 itself
- * uses) rather than a maximum reach. Jane's own Tone 1 measures at chao 3.3
- * against her own voice — about +0.75 st above her conversational median —
- * which is a moderate lift, not a shout; asking players to reach as high as
- * comfortable and then clawing back 40% of it (the old shared 0.6) was
- * measuring the wrong thing and then correcting for having measured it.
- *
- * `_UP` is 1 (no claw-back) as a starting point: a real measurement (17 Aug
- * 2026, against the new prompt) showed high-sweep p90 at 2.8 st — already
- * inside the space real tones use, not an overshooting reach — so shrinking
- * it further was working against the fix, not for it. `_DOWN` stays a real
- * shrink because the low sweep's prompt is still "as low as you comfortably
- * can", a genuine reach.
- *
- * Both values are still flown, not derived — retune them in the Lab, not
- * here. `_UP` in particular has very little data behind it yet — one real
- * calibration — so treat 1 as a starting point to gather more data from, not
- * a settled number.
+ * Both are still flown, not derived — the shipped values live in
+ * `DEFAULT_TUNING` (`reachToToneSpaceUp`/`Down`) and are what production passes;
+ * retune them in the Lab, not here. These module constants are the pure
+ * function's defaults and are kept equal to the shipped tuning values.
  */
 export const REACH_TO_TONE_SPACE_UP = 1;
-export const REACH_TO_TONE_SPACE_DOWN = 0.6;
+export const REACH_TO_TONE_SPACE_DOWN = 1;
 
 /**
  * Tone space from a deliberate high sweep and a deliberate low sweep, in

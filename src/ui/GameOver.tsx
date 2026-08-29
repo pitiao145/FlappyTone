@@ -19,6 +19,8 @@ interface Props {
    * average was within threshold.
    */
   suggestion: RangeHalves | null;
+  /** True for the first offer (after the first game) — friendlier "personalised" copy. */
+  suggestionIsFirst?: boolean;
   onRecalibrate: (s: CalibrationSettings) => void;
 }
 
@@ -29,6 +31,7 @@ export function GameOver({
   onHome,
   settings,
   suggestion,
+  suggestionIsFirst = false,
   onRecalibrate,
 }: Props) {
   const breakdown = toneBreakdown(stats);
@@ -94,7 +97,11 @@ export function GameOver({
       )}
       {suggestion && !dismissed && !applied && (
         <div className="recal-card">
-          <p>Your range in this run looked different from your calibration — update it?</p>
+          <p>
+            {suggestionIsFirst
+              ? "We personalised your grid even further — want to update your calibration?"
+              : "Your range in this run looked different from your calibration — update it?"}
+          </p>
           <div className="recal-actions">
             <button className="primary" onClick={applySuggestion}>
               Update

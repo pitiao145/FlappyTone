@@ -1182,3 +1182,41 @@ describe("Run — demo dot waits out the consonant", () => {
     expect(cued.cue!.sweepDelayMs).toBe(0);
   });
 });
+
+describe("measuredRange (tone-anchored)", () => {
+  // The grid's halves are anchored off the tones the player was asked for, not
+  // the voice's raw extremes: `up` from the T1 gates, `down` from the T3 gates
+  // (run.ts `voicedByTone`). A T4 running-start peak is far higher than any
+  // Tone 1, so if it fed `up` a natural T1 would land mid-board — the exact bug
+  // this fixes. Fly the full tutorial ([1,1,4,4,2,2,3,3]) holding a per-tone
+  // semitone level inside each gate and check the anchors.
+  const semisFor: Record<number, number> = { 1: 3, 2: 2, 3: -4, 4: 9 };
+
+  function flyTutorial(): Run {
+    const run = new Run({ mode: "tutorial", width: W });
+    for (let i = 0; i < 6000 && !run.snapshot().over; i++) {
+      const g = run.snapshot().activeGate;
+      const p = g
+        ? { ...pitch(g.corridorChao), semitones: semisFor[g.tone] }
+        : pitch(null);
+      run.tickAudio(p, i * DT);
+      run.tickFrame(DT, i * DT);
+    }
+    return run;
+  }
+
+  it("anchors up on the T1 gates and down on the T3 gates", () => {
+    const measured = flyTutorial().snapshot().measuredRange;
+    expect(measured).not.toBeNull();
+    // up from T1 (+3 st), down from the T3 floor (-4 st) — both scale 1.
+    expect(measured!.up).toBe(3);
+    expect(measured!.down).toBe(4);
+  });
+
+  it("does not let a T4 peak inflate the upward half", () => {
+    // T4 sat at +9 st, three times the T1 level. up must still be 3, not 9.
+    const measured = flyTutorial().snapshot().measuredRange;
+    expect(measured!.up).toBeLessThan(semisFor[4]);
+    expect(measured!.up).toBe(3);
+  });
+});

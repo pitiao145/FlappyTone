@@ -122,19 +122,20 @@ describe("computeRangeSemitones", () => {
 describe("computeRangeHalvesFromExtremes", () => {
   const many = (v: number, n = 40) => Array.from({ length: n }, () => v);
 
-  it("takes each half from its own sweep", () => {
+  it("takes each half from its own extreme", () => {
     expect(computeRangeHalvesFromExtremes(many(5), many(-5))).toEqual({
       up: 5,
-      down: 3,
+      down: 5,
     });
   });
 
-  it("puts the tone space inside the reach, not at its edge", () => {
-    // The reported defect: chao 5 sat at the top of a comfortable "ahh", so
-    // Tone 1 asked for a shout. A reach bounds the board; it is not the board.
-    expect(computeRangeHalvesFromExtremes(many(10), many(-10))).toEqual({
-      up: 10 * REACH_TO_TONE_SPACE_UP,
-      down: 10 * REACH_TO_TONE_SPACE_DOWN,
+  it("at scale 1 each half equals its measured tone level (no claw-back)", () => {
+    // Since the sweeps became actual tones (29 Aug 2026), both scales are 1:
+    // the input is already a tone space, not a reach to shrink. A T1 at +8 st
+    // puts chao 5 at +8; a T3 floor at -8 puts chao 1 at -8.
+    expect(computeRangeHalvesFromExtremes(many(8), many(-8))).toEqual({
+      up: 8 * REACH_TO_TONE_SPACE_UP,
+      down: 8 * REACH_TO_TONE_SPACE_DOWN,
     });
   });
 
@@ -174,17 +175,16 @@ describe("computeRangeHalvesFromExtremes", () => {
     });
   });
 
-  it("never puts chao 1 past the deepest note the speaker demonstrated", () => {
-    // A real measurement, 9 Aug 2026: +10.9 / -2.7 st. Unscaled, this board
-    // made Tone 1 unreachable (chao 5 at +10 st) and drew an ordinary Tone 2
-    // onset on the floor (chao 1 at -2.7). The floor still applies to the
-    // scaled down half, and that is fine -- what must never happen is chao 1
-    // landing below the 2.7 he actually reached, which is where the T3
-    // corridor trough would become a wall.
+  it("anchors chao 1 at the measured T3 floor, not short of it", () => {
+    // With the down input now an actual T3 floor (not a comfort-reach), scale 1
+    // maps that floor straight to chao 1 — which is the point: the T3 corridor
+    // trough sits exactly where the speaker's own T3 bottoms out. A floor at
+    // -2.7 st gives down = 2.75 (nearest 0.25), so chao 1 lands at ~-2.75,
+    // reaching the trough rather than leaving it a wall above the voice.
     const many27 = Array.from({ length: 40 }, () => -2.7);
     const halves = computeRangeHalvesFromExtremes(many(10.9), many27)!;
-    expect(halves).toEqual({ up: RANGE_SEMITONES_MAX, down: RANGE_DOWN_SEMITONES_MIN });
-    expect(halves.down).toBeLessThanOrEqual(2.7);
+    expect(halves).toEqual({ up: RANGE_SEMITONES_MAX, down: 2.75 });
+    expect(halves.down).toBeGreaterThanOrEqual(2.7);
   });
 
   it("ignores a single wild frame at either extreme", () => {
@@ -192,7 +192,7 @@ describe("computeRangeHalvesFromExtremes", () => {
     const low = [...many(-5, 39), -30];
     expect(computeRangeHalvesFromExtremes(high, low)).toEqual({
       up: 5,
-      down: 3,
+      down: 5,
     });
   });
 
