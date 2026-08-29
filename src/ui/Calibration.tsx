@@ -396,9 +396,26 @@ export function Calibration({
         observedRef.current.push(latest.semitones);
       }
     });
-    const stopLoop = canvasRef.current
-      ? startLoop(canvasRef.current, canvasWidth, canvasHeight)
-      : null;
+    // The fine-tune canvas is NOT the full-bleed game canvas: it flexes to
+    // whatever height the note + slider + buttons leave (see App.css's
+    // `.calibrate-preview-stage`). So the loop must draw at the box's real,
+    // laid-out size — measured live like the Visualiser does — not at the
+    // fixed CANVAS_W/H props, or the dot's grid would be drawn for a size the
+    // canvas isn't. A one-time measure would miss chrome show/hide and
+    // rotation; a ResizeObserver tracks both.
+    const canvas = canvasRef.current;
+    let stopLoop: (() => void) | null = null;
+    const relayout = () => {
+      if (!canvas) return;
+      const w = Math.round(canvas.clientWidth);
+      const h = Math.round(canvas.clientHeight);
+      if (w === 0 || h === 0) return;
+      stopLoop?.();
+      stopLoop = startLoop(canvas, w, h);
+    };
+    const ro = canvas ? new ResizeObserver(relayout) : null;
+    if (ro && canvas) ro.observe(canvas);
+    else relayout();
     // 4Hz, not per frame — the suggestion is UI, and the loop stays outside React.
     const suggesting = setInterval(
       () => setFit(computeRangeHalves(observedRef.current)),
@@ -406,6 +423,7 @@ export function Calibration({
     );
     return () => {
       clearInterval(suggesting);
+      ro?.disconnect();
       stopLoop?.();
       setFrameSink(null);
     };
@@ -480,7 +498,9 @@ export function Calibration({
   };
 
   return (
-    <div className="screen calibrate-screen">
+    <div
+      className={`screen calibrate-screen${step === "preview" ? " is-preview" : ""}`}
+    >
       <h2>Calibration</h2>
 
       {confirm && <p className="big confirm">{confirm.word}</p>}
@@ -535,10 +555,7 @@ export function Calibration({
             Does this feel right? Try a few sounds: high, low, and a slide
             between them.
           </p>
-          <div
-          className="stage game-stage"
-          style={{ width: canvasWidth, height: canvasHeight }}
-        >
+          <div className="stage calibrate-preview-stage">
             <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} />
           </div>
           <label className="slider">

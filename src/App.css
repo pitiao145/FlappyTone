@@ -474,12 +474,56 @@
 .calibrate-screen {
   /* Fills the frame (mobile flex chain; desktop via the
      `:has(.calibrate-screen)` rules above) so quiet/talk/done centre in
-     the viewport instead of hugging the top. */
+     the viewport instead of hugging the top. Capped and centred so desktop
+     shows a tidy column rather than a full-frame-wide spread. */
   flex: 1 1 auto;
   height: 100%;
   min-height: 0;
   margin-top: 0;
+  width: 100%;
+  max-width: 460px;
+  margin-inline: auto;
   justify-content: center;
+}
+
+/* Fine-tune (Settings → Fine-tune, `startAt="preview"`): a padded column that
+   fits the viewport without scrolling — header, note, a canvas that FLEXES to
+   the leftover space, then the slider and buttons. The old markup reused the
+   full-bleed game canvas (fixed to the whole viewport height), which pushed
+   the slider and buttons off the bottom and left everything touching the
+   edges. The canvas is measured live (ResizeObserver in Calibration.tsx) so it
+   draws at whatever height this flex leaves it. */
+.calibrate-screen.is-preview {
+  justify-content: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4)
+    max(var(--space-4), env(safe-area-inset-bottom));
+}
+
+.calibrate-preview-stage {
+  flex: 1 1 auto;
+  min-height: 120px;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Overrides the generic `.stage canvas` 9:16 rule: the box is whatever height
+   the flex leaves, and the loop draws to match it, so no forced ratio. */
+.calibrate-preview-stage canvas {
+  aspect-ratio: auto;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-md);
+}
+
+/* Tighter helper text in the fine-tune slider so the column fits on short
+   phones without stealing the canvas's height. */
+.calibrate-screen.is-preview .param-help {
+  line-height: 1.35;
 }
 
 .meter {
