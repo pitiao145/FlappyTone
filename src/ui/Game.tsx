@@ -108,6 +108,13 @@ interface Props {
   onQuit: (snap: RunSnapshot | null) => void;
   /** The word `mode: "single"` flies. Ignored otherwise. */
   singleWord?: Word;
+  /**
+   * Skip the tutorial's intro card and begin immediately. Set when this
+   * tutorial run is the calibration flight (GameApp routes to it straight from
+   * the calibration screen, whose "Let's go" tap is the iOS-safe gesture that
+   * already resumed the AudioContext). Ignored outside tutorial mode.
+   */
+  autoStart?: boolean;
   /** This session's run count, this one included. Shown in the pause menu; ignored in the tutorial. */
   runNumber?: number;
   /**
@@ -142,6 +149,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   onQuit,
   singleWord,
   runNumber,
+  autoStart = false,
   hidden,
 }: Props, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -178,7 +186,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
    * out what they are looking at, and the card's button is a user gesture —
    * the iOS-safe place to resume the AudioContext.
    */
-  const [waiting, setWaiting] = useState(mode === "tutorial");
+  const [waiting, setWaiting] = useState(mode === "tutorial" && !autoStart);
   /**
    * The one-time "still in testing" notice, which holds a real run the same way
    * the tutorial card does. Decided once at mount and kept in a ref as well as
@@ -527,8 +535,10 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       start();
     };
     // The tutorial holds behind its card; a first real run holds behind the
-    // testing notice. Everything else starts now.
-    if (mode !== "tutorial" && !noticeRef.current) start();
+    // testing notice. Everything else starts now — including the tutorial when
+    // it is the calibration flight (autoStart), whose gesture already happened
+    // on the calibration screen's "Let's go".
+    if ((mode !== "tutorial" || autoStart) && !noticeRef.current) start();
 
     return () => {
       running = false;
@@ -548,6 +558,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // positions genuinely are computed from it (game/run.ts).
   }, [
     mode,
+    autoStart,
     settings,
     canvasWidth,
     singleWord,

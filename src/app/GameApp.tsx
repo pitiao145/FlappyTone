@@ -29,6 +29,7 @@ import { Game, type GameHandle } from "../ui/Game";
 import { GameOver } from "../ui/GameOver";
 import { EarlyBirdModal, type EarlyBirdSurface } from "../ui/EarlyBirdModal.tsx";
 import { HowTo } from "../ui/HowTo";
+import { Loading } from "../ui/Loading";
 import { PlayHome, type PlayIntent } from "../ui/PlayHome";
 import { Profile } from "../ui/Profile.tsx";
 import { Progress } from "../ui/Progress.tsx";
@@ -44,6 +45,7 @@ type Screen =
   | "calibrate"
   | "finetune"
   | "tutorial"
+  | "seeding"
   | "game"
   | "gameover"
   | "settings"
@@ -263,6 +265,12 @@ export default function GameApp() {
    * from Settings has this false and never touches the saved range.
    */
   const calibratingRef = useRef(false);
+  /**
+   * Render-readable twin of `calibratingRef`, so the calibration tutorial can be
+   * told to auto-start (skip its intro card) without reading a ref during render.
+   * Kept in lockstep with the ref at every set site.
+   */
+  const [autoStartTutorial, setAutoStartTutorial] = useState(false);
   /** The mode of the run that just ended — drives Retry. */
   const lastModeRef = useRef<"game" | "tutorial">("game");
   const gameRef = useRef<GameHandle>(null);
@@ -332,6 +340,7 @@ export default function GameApp() {
       // A user-initiated start (incl. a Settings tutorial replay) never seeds
       // the grid; only the tutorial routed to from onCalibrated does.
       calibratingRef.current = false;
+      setAutoStartTutorial(false);
       if (intent === "lab") {
         // Dev tooling — the Lab supplies its own fallback calibration.
         setScreen("lab");
@@ -364,6 +373,7 @@ export default function GameApp() {
     // is dropped for that reason; the player re-taps Play.
     pendingRef.current = null;
     calibratingRef.current = true;
+    setAutoStartTutorial(true);
     lastModeRef.current = "tutorial";
     setGameAlive(true);
     setScreen("tutorial");
@@ -376,6 +386,7 @@ export default function GameApp() {
       setTutorialDone(true);
       if (calibratingRef.current) {
         calibratingRef.current = false;
+        setAutoStartTutorial(false);
         // Seed the grid from the tones just flown: up from the T1 gates, down
         // from the T3 gates (run.ts `measuredRange`). A null range (the player
         // stayed silent through the run) keeps the provisional ±5 board — the
@@ -393,6 +404,11 @@ export default function GameApp() {
           setSettings(seeded);
           trackCalibration(seeded);
         }
+        // A brief loading beat so the last gate doesn't snap straight to the
+        // Play screen (which read as broken). The seeding is instant; the pause
+        // is for legibility. An effect advances "seeding" → "play".
+        setScreen("seeding");
+        return;
       }
       setScreen("play");
       return;
@@ -464,6 +480,14 @@ export default function GameApp() {
    * the split it means "opened /app", not "visited the site" — a visit to the
    * marketing page is a `$pageview` on the other entry.
    */
+  // The post-calibration loading beat: hold the "personalising your grid"
+  // screen briefly, then land on Play. Cleared if the screen changes first.
+  useEffect(() => {
+    if (screen !== "seeding") return;
+    const t = setTimeout(() => setScreen("play"), 1900);
+    return () => clearTimeout(t);
+  }, [screen]);
+
   useEffect(() => {
     initAnalytics();
     // Traffic analytics, deliberately separate from the gameplay pipeline
@@ -561,6 +585,10 @@ export default function GameApp() {
             />
           )}
 
+        {screen === "seeding" && (
+          <Loading label="We're personalising your grid for you…" />
+        )}
+
         {screen === "howto" && <HowTo onBack={() => setScreen("settings")} />}
 
         {screen === "progress" && (
@@ -642,6 +670,7 @@ export default function GameApp() {
             ref={gameRef}
             hidden={!(screen === "game" || screen === "tutorial")}
             mode={lastModeRef.current}
+            autoStart={autoStartTutorial}
             settings={settings}
             canvasWidth={CANVAS_W}
             canvasHeight={GAME_CANVAS_H}

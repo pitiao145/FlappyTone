@@ -436,6 +436,11 @@ export function Calibration({
   const save = () => {
     const s = settingsNow();
     if (!s) return;
+    // The first-run flow hands straight to the calibration tutorial, which
+    // auto-starts (no card). This click is the iOS-safe gesture, so resume the
+    // AudioContext here rather than relying on a later, gesture-less start.
+    const audio = getMicSession()?.ctx;
+    if (audio && audio.state === "suspended") void audio.resume();
     saveSettings(s);
     // A real visit here — first-run flow or Settings -> Fine-tune — is what
     // starts a fresh, short tracking window; see recalibration.ts.

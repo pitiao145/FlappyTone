@@ -423,7 +423,7 @@ describe("Run — tutorial mode", () => {
     // Sing badly the whole way: tutorial must not punish.
     const { snapshots } = simulate(run, 4000, () => pitch(1));
     const outcomes = outcomesOf(snapshots);
-    expect(outcomes.map((o) => o.tone)).toEqual([1, 1, 4, 4, 2, 2, 3, 3]);
+    expect(outcomes.map((o) => o.tone)).toEqual([1, 1, 2, 2, 3, 3, 4, 4]);
     const last = snapshots[snapshots.length - 1];
     expect(last.hearts).toBe(3);
     expect(last.score).toBe(0);
@@ -1188,7 +1188,7 @@ describe("measuredRange (tone-anchored)", () => {
   // the voice's raw extremes: `up` from the T1 gates, `down` from the T3 gates
   // (run.ts `voicedByTone`). A T4 running-start peak is far higher than any
   // Tone 1, so if it fed `up` a natural T1 would land mid-board — the exact bug
-  // this fixes. Fly the full tutorial ([1,1,4,4,2,2,3,3]) holding a per-tone
+  // this fixes. Fly the full tutorial ([1,1,2,2,3,3,4,4]) holding a per-tone
   // semitone level inside each gate and check the anchors.
   const semisFor: Record<number, number> = { 1: 3, 2: 2, 3: -4, 4: 9 };
 

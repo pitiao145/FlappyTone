@@ -297,7 +297,11 @@ export interface RunSnapshot {
   wordIds: string[];
 }
 
-const TUTORIAL_TONES: Tone[] = [1, 1, 4, 4, 2, 2, 3, 3];
+// Two gates per tone, in tone-number order — this run doubles as the
+// calibration flight (see GameApp's calibration → tutorial handoff), and
+// 1→2→3→4 reads as "learning each tone in turn" rather than the old
+// easiest-contrast-first teaching order.
+const TUTORIAL_TONES: Tone[] = [1, 1, 2, 2, 3, 3, 4, 4];
 const TUTORIAL_TOLERANCE_FACTOR = 2;
 const TUTORIAL_GATE_COUNT = TUTORIAL_TONES.length;
 
