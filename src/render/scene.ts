@@ -315,6 +315,23 @@ function tracePipPupil(ctx: CanvasRenderingContext2D): void {
   ctx.arc(PIP_PUPIL_CX, PIP_EYE_CY, 1.2, 0, Math.PI * 2);
 }
 
+/** The scale `drawPip` applies at a given canvas height (body radius `r`/base). */
+function pipScale(height: number): number {
+  // Mirrors drawPip's own `r = height * 0.018; s = r / PIP_BASE_R`.
+  return (height * 0.018) / PIP_BASE_R;
+}
+
+/**
+ * Horizontal offset, in screen pixels at canvas `height`, from the Pip's
+ * beak-tip anchor (what `drawPip` positions and rotates about) to its body
+ * centre. A caller that wants the bird to spin about its own body — a loading
+ * state — pivots there instead: translate to the pivot, rotate, then shift the
+ * beak tip by `-pipBodyCenterOffset(height)` so the body centre stays put.
+ */
+export function pipBodyCenterOffset(height: number): number {
+  return PIP_BODY_CX * pipScale(height);
+}
+
 export type PipState = "flying" | "success" | "hurt" | "unheard";
 
 /** Success pop: a brief scale bump, eased back to 1 over its lifetime. */

@@ -4812,41 +4812,10 @@ section.hero-cards {
   text-align: center;
 }
 
+/* The pip spins via canvas/rAF in Loading.tsx (and holds still under
+   prefers-reduced-motion), so no CSS animation here. */
 .loading-pip {
-  width: min(160px, 45%);
-  height: auto;
-  transform-origin: 50% 50%;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .loading-pip {
-    animation: loading-spin 1.2s linear infinite;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .loading-pip {
-    animation: loading-pulse 1.4s ease-in-out infinite;
-  }
-}
-
-@keyframes loading-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes loading-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
+  display: block;
 }
 
 .loading-label {
