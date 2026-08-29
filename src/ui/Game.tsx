@@ -20,7 +20,7 @@ import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { TONE_INFO, type Tone } from "../game/gates.ts";
-import { Run, type RunMode, type RunSnapshot } from "../game/run.ts";
+import { CALIBRATION_TONES, Run, type RunMode, type RunSnapshot } from "../game/run.ts";
 import type { Word } from "../game/words.ts";
 import type { GateOutcome, UnheardHint } from "../game/scoring.ts";
 import type { ClassifiedTone } from "../game/toneClassifier.ts";
@@ -342,6 +342,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // it flies the tuning defaults with synthetic cues.
       words: inventoryNow() ?? [],
       singleWord,
+      // The calibration flight (autoStart) flies only the grid-anchoring tones;
+      // a normal tutorial teaches all four.
+      tutorialTones: autoStart ? CALIBRATION_TONES : undefined,
     });
     runRef.current = run;
     reportedGatesRef.current = 0;

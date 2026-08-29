@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { BIRD_X_FRAC, Run, type RunSnapshot } from "./run.ts";
+import { BIRD_X_FRAC, CALIBRATION_TONES, Run, type RunSnapshot } from "./run.ts";
 import { DEFAULT_TUNING, resetTuning, setTuning, tuning } from "./tuning.ts";
 import {
   corridorChaoAt,
@@ -1218,5 +1218,40 @@ describe("measuredRange (tone-anchored)", () => {
     const measured = flyTutorial().snapshot().measuredRange;
     expect(measured!.up).toBeLessThan(semisFor[4]);
     expect(measured!.up).toBe(3);
+  });
+});
+
+describe("Run — calibration flight", () => {
+  it("flies only the grid-anchoring tones (two T1, two T3) and stops", () => {
+    const run = new Run({
+      mode: "tutorial",
+      width: W,
+      tutorialTones: CALIBRATION_TONES,
+    });
+    const { snapshots } = simulate(run, 3000, () => pitch(1));
+    const outcomes = outcomesOf(snapshots);
+    expect(outcomes.map((o) => o.tone)).toEqual([1, 1, 3, 3]);
+    expect(snapshots[snapshots.length - 1].over).toBe(true);
+  });
+
+  it("still anchors measuredRange: up from T1, down from T3", () => {
+    const run = new Run({
+      mode: "tutorial",
+      width: W,
+      tutorialTones: CALIBRATION_TONES,
+    });
+    const semisFor: Record<number, number> = { 1: 3, 3: -4 };
+    for (let i = 0; i < 3000 && !run.snapshot().over; i++) {
+      const g = run.snapshot().activeGate;
+      const p = g
+        ? { ...pitch(g.corridorChao), semitones: semisFor[g.tone] }
+        : pitch(null);
+      run.tickAudio(p, i * DT);
+      run.tickFrame(DT, i * DT);
+    }
+    const measured = run.snapshot().measuredRange;
+    expect(measured).not.toBeNull();
+    expect(measured!.up).toBe(3);
+    expect(measured!.down).toBe(4);
   });
 });

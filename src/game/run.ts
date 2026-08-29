@@ -99,6 +99,13 @@ export interface RunConfig {
    * then ends. Required when `mode === "single"`, ignored otherwise.
    */
   singleWord?: Word;
+  /**
+   * The fixed tone sequence for `mode === "tutorial"`. Defaults to the full
+   * teaching order (`TUTORIAL_TONES`); the calibration flight overrides it with
+   * `CALIBRATION_TONES` (just the T1 and T3 gates that anchor the grid — up and
+   * down — to keep it short). Ignored outside tutorial mode.
+   */
+  tutorialTones?: Tone[];
 }
 
 export type CueStyle = "pause" | "off";
@@ -302,8 +309,11 @@ export interface RunSnapshot {
 // 1→2→3→4 reads as "learning each tone in turn" rather than the old
 // easiest-contrast-first teaching order.
 const TUTORIAL_TONES: Tone[] = [1, 1, 2, 2, 3, 3, 4, 4];
+// The calibration flight: only the tones that anchor the grid — two T1 (up)
+// and two T3 (down) — so it stays short. See GameApp's calibration handoff and
+// run.ts `measuredRange`.
+export const CALIBRATION_TONES: Tone[] = [1, 1, 3, 3];
 const TUTORIAL_TOLERANCE_FACTOR = 2;
-const TUTORIAL_GATE_COUNT = TUTORIAL_TONES.length;
 
 /**
  * Bird's fixed horizontal position, as a fraction of canvas width.
@@ -463,6 +473,9 @@ export class Run {
   private words: Word[];
   /** The one word a "single" mode run flies. Unused otherwise. */
   private readonly singleWord: Word | null;
+  /** The tutorial's fixed tone order and length. Full teach set, or the short
+   * calibration set — see `CALIBRATION_TONES`. */
+  private readonly tutorialTones: Tone[];
   private active: ActiveGateState | null = null;
 
   /** Gates resolved, whatever the outcome. Ends the tutorial. */
@@ -533,6 +546,7 @@ export class Run {
     this.cueDurationMsFor = cfg.cueDurationMsFor ?? (() => CUE_DURATION_MS);
     this.words = cfg.words ?? [];
     this.singleWord = cfg.singleWord ?? null;
+    this.tutorialTones = cfg.tutorialTones ?? TUTORIAL_TONES;
     this.difficulty = this.difficultyFor(0);
     this.stats = newRunStats(3);
     this.fillQueue();
@@ -845,7 +859,7 @@ export class Run {
   // ------------------------------------------------------------- internals
 
   private isOver(): boolean {
-    if (this.mode === "tutorial") return this.gatesFinished >= TUTORIAL_GATE_COUNT;
+    if (this.mode === "tutorial") return this.gatesFinished >= this.tutorialTones.length;
     if (this.mode === "single") return this.gatesFinished >= 1;
     return this.stats.hearts <= 0;
   }
@@ -1194,7 +1208,7 @@ export class Run {
   private pickTone(): Tone | null {
     if (this.mode === "tutorial") {
       const i = this.spawnedTones.length;
-      return i < TUTORIAL_GATE_COUNT ? TUTORIAL_TONES[i] : null;
+      return i < this.tutorialTones.length ? this.tutorialTones[i] : null;
     }
     if (this.mode === "single") {
       return this.spawnedTones.length < 1 ? (this.singleWord?.tone ?? null) : null;
