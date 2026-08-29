@@ -111,6 +111,26 @@ describe("drawVisualiser", () => {
     expect(Math.max(...xs)).toBeLessThanOrEqual(W);
   });
 
+  it("draws a larger Pip on a narrow (mobile) canvas than on desktop", () => {
+    const pipScale = (w: number) => {
+      const { ctx, ops } = recorder();
+      drawVisualiser(ctx, w, H, {
+        tone: null,
+        word: null,
+        live: null,
+        finished: [],
+        spanMs: 1500,
+        chao: 3,
+        voiced: true,
+      });
+      // drawPip applies ctx.scale(s, s) after sizing s from pipHeightFrac(width).
+      const scales = ops.filter((o) => o.op === "scale");
+      expect(scales.length).toBeGreaterThan(0);
+      return scales[scales.length - 1].args[0];
+    };
+    expect(pipScale(390)).toBeGreaterThan(pipScale(900));
+  });
+
   it("a single-point contour draws nothing — one frame is not a shape", () => {
     const none = draw({});
     const one = draw({

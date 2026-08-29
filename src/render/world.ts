@@ -252,6 +252,8 @@ export function drawWorld(
     snap.voiced,
     now,
     pipStateAge,
+    true,
+    width,
   );
 
   ctx.restore();

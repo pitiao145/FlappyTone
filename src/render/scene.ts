@@ -315,10 +315,22 @@ function tracePipPupil(ctx: CanvasRenderingContext2D): void {
   ctx.arc(PIP_PUPIL_CX, PIP_EYE_CY, 1.2, 0, Math.PI * 2);
 }
 
+/** Body radius as a fraction of canvas height — matches corridor scaling. */
+const PIP_HEIGHT_FRAC = 0.018;
+/** Slightly larger on mobile; a narrow canvas makes the bird feel small. */
+const PIP_HEIGHT_FRAC_MOBILE = 0.025;
+/** Matches GameApp's `(min-width: 720px)` breakpoint. */
+const PIP_DESKTOP_MIN_WIDTH = 720;
+
+/** Height fraction for the Pip at a given canvas width. */
+export function pipHeightFrac(width?: number): number {
+  if (width != null && width < PIP_DESKTOP_MIN_WIDTH) return PIP_HEIGHT_FRAC_MOBILE;
+  return PIP_HEIGHT_FRAC;
+}
+
 /** The scale `drawPip` applies at a given canvas height (body radius `r`/base). */
-function pipScale(height: number): number {
-  // Mirrors drawPip's own `r = height * 0.018; s = r / PIP_BASE_R`.
-  return (height * 0.018) / PIP_BASE_R;
+function pipScale(height: number, width?: number): number {
+  return (height * pipHeightFrac(width)) / PIP_BASE_R;
 }
 
 /**
@@ -328,8 +340,8 @@ function pipScale(height: number): number {
  * state — pivots there instead: translate to the pivot, rotate, then shift the
  * beak tip by `-pipBodyCenterOffset(height)` so the body centre stays put.
  */
-export function pipBodyCenterOffset(height: number): number {
-  return PIP_BODY_CX * pipScale(height);
+export function pipBodyCenterOffset(height: number, width?: number): number {
+  return PIP_BODY_CX * pipScale(height, width);
 }
 
 export type PipState = "flying" | "success" | "hurt" | "unheard";
@@ -352,16 +364,15 @@ export function drawPip(
   nowMs = 0,
   stateAgeMs = Infinity,
   showHalo = true,
+  width?: number,
 ): void {
   const y = chaoToY(chao, height);
   // Corridor tolerance and chaoToY are both height-relative (see gates.ts's
   // toleranceChao and chaoToY above), so the bird's own size has to scale
   // off height too — scaling off width instead made it grow independently
   // of the corridor gap on desktop, where the canvas is a fixed, wide-short
-  // shape rather than mobile's roughly-proportional portrait one. 0.018 is
-  // width*0.032's old value at the 420x747 reference canvas, so mobile is
-  // visually unchanged.
-  const r = height * 0.018;
+  // shape rather than mobile's roughly-proportional portrait one.
+  const r = height * pipHeightFrac(width);
   const s = r / PIP_BASE_R;
 
   const unheard = state === "unheard";
@@ -475,5 +486,5 @@ export function drawScene(
 
   const dotX = width * 0.5;
   drawTrail(ctx, width, height, trail, trailSeconds, dotX, now);
-  drawPip(ctx, height, snapshot.chao, dotX, 0, "flying", snapshot.voiced, now);
+  drawPip(ctx, height, snapshot.chao, dotX, 0, "flying", snapshot.voiced, now, Infinity, true, width);
 }

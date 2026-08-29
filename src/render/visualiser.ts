@@ -92,7 +92,8 @@ export function drawVisualiser(
   const dotX = head
     ? xFor(head.tMs, scene.spanMs, width)
     : xFor(0, scene.spanMs, width);
-  drawPip(ctx, height, scene.chao, dotX, 0, "flying", scene.voiced, performance.now());
+  // Pass canvas width so drawPip picks the mobile height fraction below 720px.
+  drawPip(ctx, height, scene.chao, dotX, 0, "flying", scene.voiced, performance.now(), Infinity, true, width);
 }
 
 /**

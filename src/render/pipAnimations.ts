@@ -9,7 +9,7 @@
  * one the game flies — add a new animation by adding a function here and a thin
  * wrapper component beside `SpinningPip`.
  */
-import { chaoToY, drawPip, pipBodyCenterOffset } from "./scene.ts";
+import { chaoToY, drawPip, pipBodyCenterOffset, pipHeightFrac } from "./scene.ts";
 
 /** Body radius as a fraction of the canvas edge; leaves room for the spin arc. */
 export const PIP_R_FRAC = 0.2;
@@ -18,7 +18,7 @@ export const PIP_SPIN_MS = 850;
 
 /** The drawPip `height` that sizes the body to `frac` of a `size`-px canvas. */
 function pipHeightFor(size: number, frac = PIP_R_FRAC): number {
-  return (size * frac) / 0.018;
+  return (size * frac) / pipHeightFrac(size);
 }
 
 /**
@@ -35,7 +35,7 @@ export function drawSpinningPip(
   t: number,
 ): void {
   const height = pipHeightFor(size);
-  const bodyOffset = pipBodyCenterOffset(height);
+  const bodyOffset = pipBodyCenterOffset(height, size);
   const centre = size / 2;
   const angle = ((t % PIP_SPIN_MS) / PIP_SPIN_MS) * Math.PI * 2;
 
@@ -43,6 +43,6 @@ export function drawSpinningPip(
   ctx.translate(centre, centre);
   ctx.rotate(angle);
   ctx.translate(-bodyOffset, -chaoToY(3, height));
-  drawPip(ctx, height, 3, 0, 0, "flying", true, t, Infinity, false);
+  drawPip(ctx, height, 3, 0, 0, "flying", true, t, Infinity, false, size);
   ctx.restore();
 }
