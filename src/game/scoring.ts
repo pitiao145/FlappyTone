@@ -300,7 +300,7 @@ const TONE_TAKEAWAY_CUE: Record<Tone, string> = {
   1: "keep it level",
   2: "it rises, don't start too high",
   3: "it dips before it rises",
-  4: "it falls fast — commit to the drop",
+  4: "it falls fast, commit to the drop",
 };
 
 const MIN_SCORED_GATES_FOR_TAKEAWAY = 2;
@@ -362,7 +362,7 @@ export function takeaway(breakdown: ToneBreakdownEntry[]): string {
     worst.mismatchedAsMostly !== null &&
     worst.mismatched * 2 >= worst.gates
   ) {
-    return `Tone ${worst.tone} gates are landing like Tone ${worst.mismatchedAsMostly} — ${TONE_TAKEAWAY_CUE[worst.tone]}.`;
+    return `Tone ${worst.tone} gates are landing like Tone ${worst.mismatchedAsMostly}: ${TONE_TAKEAWAY_CUE[worst.tone]}.`;
   }
-  return `Tone ${worst.tone} is your weak spot — ${TONE_TAKEAWAY_CUE[worst.tone]}.`;
+  return `Tone ${worst.tone} is your weak spot: ${TONE_TAKEAWAY_CUE[worst.tone]}.`;
 }

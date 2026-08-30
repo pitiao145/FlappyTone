@@ -704,6 +704,7 @@ export default function GameApp() {
             onRetry={() => void retry()}
             onHome={goHome}
             onFineTune={() => setScreen("finetune")}
+            onVisualiser={() => onNavigate("visualiser")}
             settings={settings}
             suggestion={recalSuggestion}
             suggestionIsFirst={recalFirst}

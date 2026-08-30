@@ -15,6 +15,8 @@ interface Props {
   onHome: () => void;
   /** Into the fine-tune flow — for the "some tones felt out of reach?" shortcut. */
   onFineTune: () => void;
+  /** Into the visualiser — the "practise a tone with no timing pressure" shortcut. */
+  onVisualiser: () => void;
   settings: CalibrationSettings | null;
   /**
    * What to offer, already decided by `App.tsx` from the windowed,
@@ -34,6 +36,7 @@ export function GameOver({
   onRetry,
   onHome,
   onFineTune,
+  onVisualiser,
   settings,
   suggestion,
   suggestionIsFirst = false,
@@ -69,26 +72,27 @@ export function GameOver({
   return (
     <div className="screen gameover-screen">
       <h2>Run over</h2>
-      <p className="score-big">{stats.score}</p>
-      <p className="note">best multiplier ×{stats.bestMultiplier}</p>
 
-      {/* The personal best, treated as an earned record — a gold plaque in the
-          Pip's own beak-gold. A fresh record fills it solid and sweeps a
-          one-shot shine (reduced-motion safe, see App.css). */}
-      <div className={`highscore${isNewBest ? " highscore-new" : ""}`}>
-        <span className="highscore-seal" aria-hidden>
-          ★
-        </span>
-        <span className="highscore-body">
-          <span className="highscore-label">
-            {isNewBest ? "New best" : "Personal best"}
+      {/* This run's score beside the personal best, as a matched pair of
+          cards. The best is the Pip's beak-gold plaque; a fresh record fills
+          it solid and sweeps a one-shot shine (reduced-motion safe — App.css). */}
+      <div className="gameover-scores">
+        <div className="scorecard scorecard-you">
+          <span className="scorecard-label">Your score</span>
+          <span className="scorecard-value">{stats.score}</span>
+        </div>
+        <div className={`scorecard scorecard-best${isNewBest ? " is-new" : ""}`}>
+          <span className="scorecard-label">
+            {isNewBest ? "★ New best" : "Personal best"}
           </span>
-          <span className="highscore-value">{history.bestScore}</span>
-        </span>
+          <span className="scorecard-value">{history.bestScore}</span>
+        </div>
       </div>
 
+      <p className="note">best multiplier ×{stats.bestMultiplier}</p>
+
       <div className="pause-accuracy gameover-accuracy">
-        <p className="pause-accuracy-label">This run — tone accuracy</p>
+        <p className="pause-accuracy-label">This run · tone accuracy</p>
         <div className="pause-accuracy-grid">
           {breakdown.map((b) => (
             <div className="pause-tone-card" key={b.tone}>
@@ -102,44 +106,56 @@ export function GameOver({
               <span className="pause-tone-pct">
                 {b.pct === null ? "—" : `${Math.round(b.pct)}%`}
               </span>
-              {b.unheard > 0 && (
-                <span className="pause-tone-note">couldn't hear ×{b.unheard}</span>
-              )}
-              {b.mismatched > 0 && (
-                <span className="pause-tone-note">
-                  sounded like T{b.mismatchedAsMostly}
-                </span>
-              )}
             </div>
           ))}
         </div>
       </div>
 
+      {/* The one-line recap. Its own copy already names the weak tone and what
+          to fix, so the per-tone cards above stay purely numeric. */}
       <p className="prompt">{takeaway(breakdown)}</p>
 
-      {/* A manual way into fine-tuning, distinct from the data-driven
-          `suggestion` card below — hidden while that card is offering, so the
-          player isn't shown two calibration prompts at once. */}
-      {settings && !(suggestion && !dismissed && !applied) && (
-        <div className="gameover-finetune">
-          <p className="note">Did some tones feel too hard to reach?</p>
-          <button type="button" className="finetune-button" onClick={onFineTune}>
-            Fine-tune your calibration
+      {/* Two shortcuts out of a bad run: practise the shape with no timing
+          pressure (visualiser), or widen the board if a tone felt out of
+          reach (fine-tune). Fine-tune is hidden while the data-driven
+          suggestion card below is offering, so calibration isn't prompted
+          twice at once. */}
+      <div className="gameover-ctas">
+        <div className="gameover-cta-block">
+          <p className="note">Not getting the hang of a tone?</p>
+          <button
+            type="button"
+            className="primary gameover-cta"
+            onClick={onVisualiser}
+          >
+            Practise it in the visualiser
           </button>
         </div>
-      )}
+        {settings && !(suggestion && !dismissed && !applied) && (
+          <div className="gameover-cta-block">
+            <p className="note">Did some tones feel too hard to reach?</p>
+            <button
+              type="button"
+              className="primary gameover-cta"
+              onClick={onFineTune}
+            >
+              Fine-tune your calibration
+            </button>
+          </div>
+        )}
+      </div>
 
       {applied && (
         <div className="recal-card recal-applied">
-          <p>Calibration updated — the new range applies from your next run.</p>
+          <p>Calibration updated. The new range applies from your next run.</p>
         </div>
       )}
       {suggestion && !dismissed && !applied && (
         <div className="recal-card">
           <p>
             {suggestionIsFirst
-              ? "We personalised your grid even further — want to update your calibration?"
-              : "Your range in this run looked different from your calibration — update it?"}
+              ? "We personalised your grid even further. Want to update your calibration?"
+              : "Your range in this run looked different from your calibration. Update it?"}
           </p>
           <div className="recal-actions">
             <button className="primary" onClick={applySuggestion}>

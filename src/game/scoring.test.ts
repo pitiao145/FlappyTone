@@ -408,7 +408,7 @@ describe("takeaway", () => {
     stats = applyGate(stats, 3, "ok", 0.3);
     const breakdown = toneBreakdown(stats);
     expect(takeaway(breakdown)).toBe(
-      "Tone 3 is your weak spot — it dips before it rises.",
+      "Tone 3 is your weak spot: it dips before it rises.",
     );
   });
 
@@ -421,7 +421,7 @@ describe("takeaway", () => {
     stats = applyGate(stats, 2, "good", 0.7);
     const breakdown = toneBreakdown(stats);
     expect(takeaway(breakdown)).toBe(
-      "Tone 2 is your weak spot — it rises, don't start too high.",
+      "Tone 2 is your weak spot: it rises, don't start too high.",
     );
   });
 
@@ -432,7 +432,7 @@ describe("takeaway", () => {
     stats = applyGate(stats, 3, "collision", 0, 2);
     const breakdown = toneBreakdown(stats);
     expect(takeaway(breakdown)).toBe(
-      "Tone 3 gates are landing like Tone 2 — it dips before it rises.",
+      "Tone 3 gates are landing like Tone 2: it dips before it rises.",
     );
   });
 });
