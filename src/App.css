@@ -4836,6 +4836,499 @@ section.hero-cards {
   color: var(--ink-muted);
 }
 
+/* ============================================================
+   Progress screen redesign — "sticker" card language (2px ink
+   borders, hard offset no-blur shadows, solid-fill pill badges).
+   Everything is scoped to .progress-screen so the shared
+   .progress-card / .badge / .stat-* / .teaser-* rules keep
+   serving the Profile screen unchanged.
+   See docs/design_handoff_progress_pricing/.
+   ============================================================ */
+
+.progress-screen .sticker-card {
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-lg);
+  background: var(--surface-panel);
+  box-shadow: var(--shadow-sticker);
+}
+
+.progress-screen .sticker-card-pro {
+  box-shadow: var(--shadow-sticker-pro);
+}
+
+/* Solid-fill "🔒 Pro" pill, replacing the tinted .badge-soon door. */
+.progress-screen .pro-badge {
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--surface);
+  background: var(--warn);
+  border: 2px solid var(--ink);
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+}
+
+/* ---- Overview: streak + level + stat strip */
+.progress-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.overview-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.streak-card,
+.level-card {
+  flex: 1 1 320px;
+  padding: 28px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.level-card {
+  gap: 10px;
+  box-shadow: var(--shadow-sticker-pro);
+}
+
+.streak-flame {
+  font-size: 1.8rem;
+}
+
+.streak-big,
+.level-big {
+  font-size: 2.8rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.streak-label,
+.level-sub {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.streak-warning {
+  font-size: 0.78rem;
+  color: var(--warn-strong);
+  margin-top: 6px;
+}
+
+.level-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.level-label {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.level-bar {
+  display: block;
+  width: 100%;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(36, 29, 21, 0.1);
+  overflow: hidden;
+  border: 2px solid var(--ink);
+}
+
+.level-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--warn);
+}
+
+.progress-screen .stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  grid-template-columns: none;
+  margin: 0;
+}
+
+.progress-screen .stat-tile {
+  flex: 1 1 160px;
+  text-align: center;
+  padding: 22px 12px;
+  border-radius: 16px;
+  border: 2px solid var(--ink);
+  background: var(--surface-panel);
+  gap: 2px;
+}
+
+.progress-screen .stat-num {
+  font-family: var(--font);
+  font-size: 2.2rem;
+  font-weight: 900;
+}
+
+.progress-screen .stat-label {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ---- Sticker cards share the padding/heading treatment */
+.progress-screen .progress-card {
+  margin-bottom: 40px;
+  padding: 32px clamp(24px, 3vw, 40px);
+}
+
+.progress-screen .progress-card-header {
+  margin-bottom: 20px;
+}
+
+.progress-screen .progress-card-header h3 {
+  font-family: var(--font);
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.progress-screen .progress-card .progress-card-cta {
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 2px dashed var(--line-strong);
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.progress-screen .progress-card .progress-card-cta:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+/* ---- Accuracy (tabbed) */
+.acc-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 26px;
+}
+
+.acc-tabs {
+  display: flex;
+  gap: 10px;
+}
+
+.acc-tab {
+  padding: 10px 22px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.acc-tab-active {
+  background: var(--ink);
+  color: var(--surface);
+}
+
+.progress-screen .breakdown {
+  gap: 16px;
+}
+
+.progress-screen .breakdown-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 56px;
+  align-items: center;
+  gap: 18px;
+  font-size: 0.95rem;
+}
+
+.progress-screen .breakdown-row .syllable {
+  font-weight: 700;
+}
+
+.progress-screen .breakdown-row .bar {
+  height: 12px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: rgba(36, 29, 21, 0.08);
+}
+
+.progress-screen .breakdown-row .pct {
+  width: auto;
+  font-weight: 700;
+}
+
+.tone-pills {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.tone-pill {
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.tone-pill-active {
+  color: var(--surface); /* background set inline to the tone's colour */
+}
+
+.acc-chart {
+  position: relative;
+  height: 300px;
+  width: 100%;
+  padding: 12px;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+}
+
+.acc-chart canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ---- Run history + leaderboard row/badge restyle */
+.badge-solid {
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--surface);
+  border: 2px solid var(--ink);
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+}
+
+.badge-solid-jade {
+  background: var(--accent);
+}
+
+.run-badge {
+  justify-self: end;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--surface);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+}
+
+.run-badge-out_of_hearts {
+  background: var(--danger);
+}
+
+.run-badge-finished {
+  background: var(--good);
+}
+
+.run-badge-quit {
+  background: var(--ink-muted);
+}
+
+.progress-screen .run-history-row {
+  display: grid;
+  grid-template-columns: 90px 90px 1fr 120px;
+  gap: 16px;
+  padding: 12px 0;
+  align-items: center;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.progress-screen .run-history-date {
+  font-weight: 700;
+}
+
+.progress-screen .run-history-score {
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-screen .run-history-detail {
+  color: var(--ink-muted);
+}
+
+.progress-screen .leaderboard-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 100px;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.progress-screen .leaderboard-name {
+  font-weight: 600;
+}
+
+.progress-screen .leaderboard-score {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.progress-screen .leaderboard-you {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+/* ---- Pricing section */
+.pricing-section {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 8px;
+  scroll-margin-top: 20px;
+}
+
+.pricing-head {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.pricing-head h2 {
+  font-family: var(--font);
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+
+.pricing-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.price-card {
+  flex: 1 1 340px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.price-card-head h3 {
+  font-family: var(--font);
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0 0 4px;
+}
+
+.price-card-pro {
+  background: var(--ink);
+  color: var(--surface);
+  box-shadow: var(--shadow-sticker-jade);
+}
+
+.price-card-head-pro {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.price-card-head-pro h3 {
+  margin: 0;
+}
+
+.price-tag {
+  font-size: 1.4rem;
+  font-weight: 900;
+}
+
+.price-tag-note {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--ink-dim);
+}
+
+.price-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 0.95rem;
+}
+
+.price-list li {
+  padding-left: 26px;
+  position: relative;
+}
+
+.price-list li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.price-list-pro li::before {
+  color: var(--beak);
+}
+
+.price-list-soon {
+  color: var(--ink-soft);
+}
+
+.price-list-soon::before {
+  color: var(--ink-soft) !important;
+}
+
+.price-cta {
+  margin-top: 8px;
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 15px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--surface);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 800;
+  border: 2px solid var(--surface);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+.price-cta:hover {
+  background: var(--accent-bright);
+}
+
+.price-foot {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+  text-align: center;
+}
+
 /* Profile: identity block + plan + EarlyBird pitch. */
 .profile-identity {
   display: flex;

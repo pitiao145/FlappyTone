@@ -612,7 +612,12 @@ export default function GameApp() {
         {screen === "howto" && <HowTo onBack={() => setScreen("settings")} />}
 
         {screen === "progress" && (
-          <Progress onEarlyBird={(feature) => openEarlyBird("progress", feature)} />
+          <Progress
+            onEarlyBird={(feature) => openEarlyBird("progress", feature)}
+            onPricingView={(feature) =>
+              capturePostHogEvent("earlybird_cta_click", { surface: "progress", feature })
+            }
+          />
         )}
 
         {screen === "profile" && (

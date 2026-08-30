@@ -81,8 +81,17 @@
 
   /* ---- shape */
   --radius-pill: 999px;
+  --radius-lg: 20px;
   --radius-md: 14px;
   --radius-sm: 8px;
+
+  /* ---- sticker shadows (hard offset, no blur) — the Progress redesign's
+     "indie-hacker" card language. Default ink shadow, a beak-tinted one for
+     Pro-flavoured cards (Level, Leaderboard), and a jade one for the Pro
+     pricing card. */
+  --shadow-sticker: 6px 6px 0 rgba(36, 29, 21, 0.12);
+  --shadow-sticker-pro: 6px 6px 0 rgba(200, 138, 60, 0.35);
+  --shadow-sticker-jade: 8px 8px 0 var(--accent);
 
   /* ---- type */
   --font: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;

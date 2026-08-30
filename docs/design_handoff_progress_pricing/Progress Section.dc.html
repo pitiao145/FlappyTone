@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700&family=Hanken+Grotesk:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; }
+    a { color: #1c7a63; }
+    a:hover { color: #145c4a; }
+  </style>
+</helmet>
+
+<div style="background:#f7f1e3;min-height:100vh;color:#241d15;font-family:'Hanken Grotesk',system-ui,sans-serif;padding:clamp(28px,5vw,72px) clamp(20px,6vw,80px) clamp(60px,8vw,120px)">
+
+  <div style="max-width:1280px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:22px;border-bottom:2px solid #241d15">
+    <h1 style="font-family:'Fraunces',serif;font-weight:600;font-size:clamp(2.4rem,4vw,3.6rem);margin:0;letter-spacing:-0.01em">Your progress</h1>
+    <p style="margin:0;font-size:0.95rem;font-style:italic;color:#6b6151">Saved on this device · <a href="#">sign up to keep it forever</a></p>
+  </div>
+
+  <div style="max-width:1280px;margin:44px auto 0;display:flex;flex-direction:column;gap:48px">
+
+    <!-- Overview: streak + level, then stat strip -->
+    <div style="display:flex;flex-direction:column;gap:24px">
+      <div style="display:flex;flex-wrap:wrap;gap:20px">
+
+        <div style="flex:1 1 320px;padding:28px 26px;border-radius:20px;background:#efe6d1;border:2px solid #241d15;box-shadow:6px 6px 0 rgba(36,29,21,0.12);display:flex;flex-direction:column;gap:8px">
+          <span style="font-size:1.8rem">🔥</span>
+          <span style="font-size:2.8rem;font-weight:900;line-height:1">3 days</span>
+          <span style="font-size:0.85rem;color:#6b6151">streak</span>
+          <span style="font-size:0.78rem;color:#8a5320;margin-top:6px">⚠️ Saved only on this device — clearing your browser data resets it.</span>
+        </div>
+
+        <div style="flex:1 1 320px;padding:28px 26px;border-radius:20px;background:#efe6d1;border:2px solid #241d15;box-shadow:6px 6px 0 rgba(200,138,60,0.35);display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <span style="font-size:0.8rem;color:#6b6151;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">Level</span>
+            <sc-if value="{{ locked }}" hint-placeholder-val="{{ true }}">
+              <span style="white-space:nowrap;font-size:0.72rem;font-weight:800;color:#f7f1e3;background:#a8672a;border:2px solid #241d15;padding:4px 12px;border-radius:999px;box-shadow:2px 2px 0 rgba(36,29,21,0.25)">🔒 Pro</span>
+            </sc-if>
+            <sc-if value="{{ unlocked }}" hint-placeholder-val="{{ false }}">
+              <span style="white-space:nowrap;font-size:0.72rem;font-weight:800;color:#f7f1e3;background:#1c7a63;border:2px solid #241d15;padding:4px 12px;border-radius:999px">Pro ✓</span>
+            </sc-if>
+          </div>
+          <span style="font-size:2.8rem;font-weight:900;line-height:1">Level 4</span>
+          <span style="display:block;width:100%;height:10px;border-radius:999px;background:rgba(36,29,21,0.1);overflow:hidden;border:2px solid #241d15">
+            <span style="display:block;height:100%;width:45%;background:#a8672a"></span>
+          </span>
+          <span style="font-size:0.85rem;color:#6b6151">Earn XP & rank up</span>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:16px">
+        <div style="flex:1 1 160px;text-align:center;padding:22px 12px;border-radius:16px;background:#efe6d1;border:2px solid #241d15">
+          <div style="font-size:2.2rem;font-weight:900">25</div>
+          <div style="font-size:0.8rem;color:#6b6151;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">runs</div>
+        </div>
+        <div style="flex:1 1 160px;text-align:center;padding:22px 12px;border-radius:16px;background:#efe6d1;border:2px solid #241d15">
+          <div style="font-size:2.2rem;font-weight:900">3450</div>
+          <div style="font-size:0.8rem;color:#6b6151;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">best</div>
+        </div>
+        <div style="flex:1 1 160px;text-align:center;padding:22px 12px;border-radius:16px;background:#efe6d1;border:2px solid #241d15">
+          <div style="font-size:2.2rem;font-weight:900">133</div>
+          <div style="font-size:0.8rem;color:#6b6151;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">gates</div>
+        </div>
+        <div style="flex:1 1 160px;text-align:center;padding:22px 12px;border-radius:16px;background:#efe6d1;border:2px solid #241d15">
+          <div style="font-size:2.2rem;font-weight:900">96</div>
+          <div style="font-size:0.8rem;color:#6b6151;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">words</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accuracy per tone / progress — tabbed -->
+    <section style="padding:32px clamp(24px,3vw,40px);border-radius:20px;background:#efe6d1;border:2px solid #241d15;box-shadow:6px 6px 0 rgba(36,29,21,0.12)">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:26px">
+        <div style="display:flex;gap:10px">
+          <button type="button" onClick="{{ setTabAccuracy }}" style="{{ tabAccuracyStyle }}">Accuracy per tone</button>
+          <button type="button" onClick="{{ setTabProgress }}" style="{{ tabProgressStyle }}">Accuracy progress</button>
+        </div>
+        <sc-if value="{{ isProgressTab }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ locked }}" hint-placeholder-val="{{ true }}">
+            <span style="white-space:nowrap;font-size:0.72rem;font-weight:800;color:#f7f1e3;background:#a8672a;border:2px solid #241d15;padding:4px 12px;border-radius:999px">🔒 Pro</span>
+          </sc-if>
+          <sc-if value="{{ unlocked }}" hint-placeholder-val="{{ false }}">
+            <span style="white-space:nowrap;font-size:0.72rem;font-weight:800;color:#f7f1e3;background:#1c7a63;border:2px solid #241d15;padding:4px 12px;border-radius:999px">Pro ✓</span>
+          </sc-if>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ isAccuracyTab }}" hint-placeholder-val="{{ true }}">
+        <p style="margin:0 0 18px;font-size:0.85rem;font-style:italic;color:#6b6151">Averaged over your last 5 runs</p>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="display:grid;grid-template-columns:90px 1fr 56px;align-items:center;gap:18px">
+            <span style="font-weight:700">Tone 1</span>
+            <span style="display:block;height:12px;border-radius:999px;background:rgba(36,29,21,0.08);overflow:hidden;border:2px solid #241d15"><span style="display:block;height:100%;width:3%;background:#3b6fa0"></span></span>
+            <span style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700">3%</span>
+          </div>
+          <div style="display:grid;grid-template-columns:90px 1fr 56px;align-items:center;gap:18px">
+            <span style="font-weight:700">Tone 2</span>
+            <span style="display:block;height:12px;border-radius:999px;background:rgba(36,29,21,0.08);overflow:hidden;border:2px solid #241d15"><span style="display:block;height:100%;width:23%;background:#1c7a63"></span></span>
+            <span style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700">23%</span>
+          </div>
+          <div style="display:grid;grid-template-columns:90px 1fr 56px;align-items:center;gap:18px">
+            <span style="font-weight:700">Tone 3</span>
+            <span style="display:block;height:12px;border-radius:999px;background:rgba(36,29,21,0.08);overflow:hidden;border:2px solid #241d15"><span style="display:block;height:100%;width:40%;background:#c98a3c"></span></span>
+            <span style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700">40%</span>
+          </div>
+          <div style="display:grid;grid-template-columns:90px 1fr 56px;align-items:center;gap:18px">
+            <span style="font-weight:700">Tone 4</span>
+            <span style="display:block;height:12px;border-radius:999px;background:rgba(36,29,21,0.08);overflow:hidden;border:2px solid #241d15"><span style="display:block;height:100%;width:36%;background:#a3341f"></span></span>
+            <span style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700">36%</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isProgressTab }}" hint-placeholder-val="{{ false }}">
+        <p style="margin:0 0 16px;font-size:0.85rem;font-style:italic;color:#6b6151">Accuracy over time for the selected tone (mock data)</p>
+        <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+          <button type="button" onClick="{{ tone1Click }}" style="{{ tone1Style }}">{{ tone1Label }}</button>
+          <button type="button" onClick="{{ tone2Click }}" style="{{ tone2Style }}">{{ tone2Label }}</button>
+          <button type="button" onClick="{{ tone3Click }}" style="{{ tone3Style }}">{{ tone3Label }}</button>
+          <button type="button" onClick="{{ tone4Click }}" style="{{ tone4Style }}">{{ tone4Label }}</button>
+        </div>
+        <svg viewBox="0 0 640 320" style="width:100%;height:auto;background:#f7f1e3;border-radius:12px;border:2px solid #241d15">
+          <sc-for list="{{ yGridlines }}" as="g" hint-placeholder-count="5">
+            <line x1="46" y1="{{ g.y }}" x2="624" y2="{{ g.y }}" stroke="rgba(36,29,21,0.12)" stroke-width="1"></line>
+            <text x="38" y="{{ g.y }}" text-anchor="end" dominant-baseline="middle" font-size="12" fill="#6b6151">{{ g.label }}</text>
+          </sc-for>
+          <sc-for list="{{ xLabelPositions }}" as="lbl" hint-placeholder-count="8">
+            <text x="{{ lbl.x }}" y="308" text-anchor="middle" font-size="11" fill="#6b6151">{{ lbl.label }}</text>
+          </sc-for>
+          <polygon points="{{ areaPoints }}" fill="{{ toneColor }}" fill-opacity="0.12" stroke="none"></polygon>
+          <polyline points="{{ linePoints }}" fill="none" stroke="{{ toneColor }}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+          <sc-for list="{{ dots }}" as="d" hint-placeholder-count="8">
+            <circle cx="{{ d.x }}" cy="{{ d.y }}" r="5" fill="#f7f1e3" stroke="{{ toneColor }}" stroke-width="3"></circle>
+          </sc-for>
+        </svg>
+        <a href="#pricing" style="display:block;text-align:center;margin-top:22px;padding-top:20px;border-top:2px dashed rgba(36,29,21,0.2);font-weight:700">🔒 Compare against your own attempts — unlock with Pro</a>
+      </sc-if>
+    </section>
+
+    <!-- Run history -->
+    <section style="padding:32px clamp(24px,3vw,40px);border-radius:20px;background:#efe6d1;border:2px solid #241d15;box-shadow:6px 6px 0 rgba(36,29,21,0.12)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:20px">
+        <h3 style="font-size:1.4rem;font-weight:800;margin:0">Run history</h3>
+        <span style="font-size:0.72rem;font-weight:800;color:#f7f1e3;background:#1c7a63;border:2px solid #241d15;padding:4px 12px;border-radius:999px">Last 5 runs</span>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <div style="display:grid;grid-template-columns:90px 90px 1fr 120px;gap:16px;padding:12px 0;border-bottom:1px solid rgba(36,29,21,0.15);align-items:center">
+          <span style="font-weight:700">29 Aug</span><span style="font-variant-numeric:tabular-nums">0</span><span style="color:#6b6151">0% · 3 gates</span>
+          <span style="justify-self:end;font-size:0.72rem;font-weight:700;color:#f7f1e3;background:#a3341f;padding:4px 10px;border-radius:999px">out of hearts</span>
+        </div>
+        <div style="display:grid;grid-template-columns:90px 90px 1fr 120px;gap:16px;padding:12px 0;border-bottom:1px solid rgba(36,29,21,0.15);align-items:center">
+          <span style="font-weight:700">29 Aug</span><span style="font-variant-numeric:tabular-nums">575</span><span style="color:#6b6151">31% · 6 gates</span>
+          <span style="justify-self:end;font-size:0.72rem;font-weight:700;color:#f7f1e3;background:#a3341f;padding:4px 10px;border-radius:999px">out of hearts</span>
+        </div>
+        <div style="display:grid;grid-template-columns:90px 90px 1fr 120px;gap:16px;padding:12px 0;border-bottom:1px solid rgba(36,29,21,0.15);align-items:center">
+          <span style="font-weight:700">29 Aug</span><span style="font-variant-numeric:tabular-nums">100</span><span style="color:#6b6151">9% · 5 gates</span>
+          <span style="justify-self:end;font-size:0.72rem;font-weight:700;color:#f7f1e3;background:#a3341f;padding:4px 10px;border-radius:999px">out of hearts</span>
+        </div>
+        <div style="display:grid;grid-template-columns:90px 90px 1fr 120px;gap:16px;padding:12px 0;border-bottom:1px solid rgba(36,29,21,0.15);align-items:center">
+          <span style="font-weight:700">29 Aug</span><span style="font-variant-numeric:tabular-nums">0</span><span style="color:#6b6151">0% · 3 gates</span>
+          <span style="justify-self:end;font-size:0.72rem;font-weight:700;color:#f7f1e3;background:#a3341f;padding:4px 10px;border-radius:999px">out of hearts</span>
+        </div>
+        <div style="display:grid;grid-template-columns:90px 90px 1fr 120px;gap:16px;padding:12px 0;align-items:center">
+          <span style="font-weight:700">29 Aug</span><span style="font-variant-numeric:tabular-nums">1275</span><span style="color:#6b6151">52% · 7 gates</span>
+          <span style="justify-self:end;font-size:0.72rem;font-weight:700;color:#f7f1e3;background:#a3341f;padding:4px 10px;border-radius:999px">out of hearts</span>
+        </div>
+      </div>
+      <a href="#pricing" style="display:block;text-align:center;margin-top:22px;padding-top:20px;border-top:2px dashed rgba(36,29,21,0.2);font-weight:700">🔒 See all 25 runs & trends — unlock with Pro</a>
+    </section>
+
+    <!-- Leaderboard -->
+    <section style="padding:32px clamp(24px,3vw,40px);border-radius:20px;background:#efe6d1;border:2px solid #241d15;box-shadow:6px 6px 0 rgba(200,138,60,0.35)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:20px">
+        <h3 style="font-size:1.4rem;font-weight:800;margin:0">Leaderboard</h3>
+        <sc-if value="{{ locked }}" hint-placeholder-val="{{ true }}">
+          <span style="white-space:nowrap;font-size:0.72rem;font-weight:800;color:#f7f1e3;background:#a8672a;border:2px solid #241d15;padding:4px 12px;border-radius:999px">🔒 Pro</span>
+        </sc-if>
+        <sc-if value="{{ unlocked }}" hint-placeholder-val="{{ false }}">
+          <span style="white-space:nowrap;font-size:0.72rem;font-weight:800;color:#f7f1e3;background:#1c7a63;border:2px solid #241d15;padding:4px 12px;border-radius:999px">Pro ✓</span>
+        </sc-if>
+      </div>
+      <div>
+        <div style="display:grid;grid-template-columns:36px 1fr 100px;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid rgba(36,29,21,0.15)">
+          <span>🥇</span><span style="font-weight:600">chloe_tw</span><span style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700">2,140</span>
+        </div>
+        <div style="display:grid;grid-template-columns:36px 1fr 100px;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid rgba(36,29,21,0.15)">
+          <span>🥈</span><span style="font-weight:600">marco</span><span style="text-align:right;font-variant-numeric:tabular-nums;font-weight:700">1,980</span>
+        </div>
+        <div style="display:grid;grid-template-columns:36px 1fr 100px;align-items:center;gap:14px;padding:10px 0;color:#1c7a63;font-weight:800">
+          <span>7</span><span>you</span><span style="text-align:right;font-variant-numeric:tabular-nums">3450</span>
+        </div>
+      </div>
+      <a href="#pricing" style="display:block;text-align:center;margin-top:22px;padding-top:20px;border-top:2px dashed rgba(36,29,21,0.2);font-weight:700">🔒 Compete weekly — unlock with Pro</a>
+    </section>
+
+    <!-- Pricing overview -->
+    <section id="pricing" style="display:flex;flex-direction:column;gap:18px">
+      <div style="text-align:center;max-width:640px;margin:0 auto">
+        <h2 style="font-size:clamp(1.8rem,3vw,2.4rem);font-weight:800;margin:0 0 10px">Free today, more with Pro</h2>
+        <p style="color:#6b6151;margin:0">EarlyBird gets you every Pro feature as it ships, at a one-time price — before it moves to ongoing credits.</p>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:24px;margin-top:8px">
+        <div style="flex:1 1 340px;padding:32px;border-radius:20px;background:#efe6d1;border:2px solid #241d15;box-shadow:6px 6px 0 rgba(36,29,21,0.12);display:flex;flex-direction:column;gap:18px">
+          <div>
+            <h3 style="font-size:1.5rem;font-weight:800;margin:0 0 4px">Free</h3>
+            <p style="margin:0;color:#6b6151;font-size:0.9rem">Everything you're using today</p>
+          </div>
+          <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;font-size:0.95rem">
+            <li style="padding-left:26px;position:relative"><span style="position:absolute;left:0;color:#1c7a63;font-weight:800">✓</span>5 runs a day</li>
+            <li style="padding-left:26px;position:relative"><span style="position:absolute;left:0;color:#1c7a63;font-weight:800">✓</span>Access to all current words</li>
+            <li style="padding-left:26px;position:relative"><span style="position:absolute;left:0;color:#1c7a63;font-weight:800">✓</span>Tone accuracy for your last 5 runs</li>
+            <li style="padding-left:26px;position:relative"><span style="position:absolute;left:0;color:#1c7a63;font-weight:800">✓</span>Last 5 runs of history</li>
+            <li style="padding-left:26px;position:relative"><span style="position:absolute;left:0;color:#1c7a63;font-weight:800">✓</span>Game modes: shuffle, tone drill, learn</li>
+            <li style="padding-left:26px;position:relative"><span style="position:absolute;left:0;color:#1c7a63;font-weight:800">✓</span>Sharing your results</li>
+            <li style="padding-left:26px;position:relative;color:#857a65"><span style="position:absolute;left:0">✓</span>HSK / TOCFL word lists <em>(coming soon)</em></li>
+          </ul>
+        </div>
+
+        <div style="flex:1 1 340px;padding:32px;border-radius:20px;background:#241d15;color:#f7f1e3;border:2px solid #241d15;box-shadow:8px 8px 0 #1c7a63;display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <h3 style="font-size:1.5rem;font-weight:800;margin:0">Pro</h3>
+            <span style="font-size:1.4rem;font-weight:900">{{ price }} <span style="font-size:0.8rem;font-weight:500;color:#a89a80">one-time, EarlyBird</span></span>
+          </div>
+          <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;font-size:0.95rem">
+            <li style="padding-left:26px;position:relative"><span style="position:absolute;left:0;color:#c98a3c;font-weight:800">✓</span>Unlimited runs</li>
+            <li style="padding-left:26px;position:relative"><span style="position:absolute;left:0;color:#c98a3c;font-weight:800">✓</span>Accuracy per tone across every run, plus its evolution over time</li>
+            <li style="padding-left:26px;position:relative"><span style="position:absolute;left:0;color:#c98a3c;font-weight:800">✓</span>Your average tone shape, and how it evolves over time</li>
+            <li style="padding-left:26px;position:relative"><span style="position:absolute;left:0;color:#c98a3c;font-weight:800">✓</span>Weekly leaderboards</li>
+            <li style="padding-left:26px;position:relative"><span style="position:absolute;left:0;color:#c98a3c;font-weight:800">✓</span>Full run history & trends</li>
+            <li style="padding-left:26px;position:relative"><span style="position:absolute;left:0;color:#c98a3c;font-weight:800">✓</span>Custom word lists</li>
+            <li style="padding-left:26px;position:relative"><span style="position:absolute;left:0;color:#c98a3c;font-weight:800">✓</span>Vocab mode</li>
+          </ul>
+          <sc-if value="{{ locked }}" hint-placeholder-val="{{ true }}">
+            <a href="#" style="margin-top:8px;display:block;text-align:center;padding:15px;border-radius:999px;background:#1c7a63;color:#f7f1e3;font-weight:800;border:2px solid #f7f1e3;box-shadow:4px 4px 0 rgba(0,0,0,0.3)">{{ ctaLabel }}</a>
+          </sc-if>
+          <sc-if value="{{ unlocked }}" hint-placeholder-val="{{ false }}">
+            <span style="margin-top:8px;display:block;text-align:center;padding:14px;border-radius:999px;background:rgba(44,143,97,0.2);color:#7fd3ac;font-weight:800">You're on Pro ✓</span>
+          </sc-if>
+          <p style="margin:0;font-size:0.78rem;color:#a89a80;text-align:center">Later, Pro moves to credits — enough to fly for a week or a month. EarlyBirds keep full access.</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: {&quot;width&quot;: 1400, &quot;height&quot;: 1700},
+  &quot;locked&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Plan state&quot;},
+  &quot;price&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;$19&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Plan state&quot;},
+  &quot;ctaLabel&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;Join EarlyBird&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Plan state&quot;}
+}">
+const TONE_DATA = {
+  1: { color: "#3b6fa0", values: [8, 10, 9, 12, 11, 14, 16, 18] },
+  2: { color: "#1c7a63", values: [30, 18, 15, 22, 35, 48, 55, 62] },
+  3: { color: "#c98a3c", values: [45, 25, 15, 20, 32, 38, 40, 42] },
+  4: { color: "#a3341f", values: [70, 65, 60, 50, 42, 38, 34, 30] },
+};
+const X_LABELS = ["Aug 10", "Aug 13", "Aug 16", "Aug 19", "Aug 22", "Aug 25", "Aug 28", "Aug 30"];
+const W = 640, H = 320, PAD_L = 46, PAD_R = 16, PAD_T = 16, PAD_B = 36;
+const PLOT_W = W - PAD_L - PAD_R, PLOT_H = H - PAD_T - PAD_B;
+
+function xAt(i, n) { return PAD_L + (i * PLOT_W) / (n - 1); }
+function yAt(v) { return PAD_T + ((100 - v) / 100) * PLOT_H; }
+
+class Component extends DCLogic {
+  state = { tab: "accuracy", tone: 1 };
+  renderVals() {
+    const locked = this.props.locked ?? true;
+    const tab = this.state.tab;
+    const activeStyle = { padding: "10px 22px", borderRadius: "999px", border: "2px solid #241d15", background: "#241d15", color: "#f7f1e3", fontWeight: 700, cursor: "pointer", fontSize: "0.95rem" };
+    const inactiveStyle = { padding: "10px 22px", borderRadius: "999px", border: "2px solid #241d15", background: "transparent", color: "#241d15", fontWeight: 700, cursor: "pointer", fontSize: "0.95rem" };
+
+    const tone = this.state.tone;
+    const data = TONE_DATA[tone];
+    const n = data.values.length;
+    const linePoints = data.values.map((v, i) => `${xAt(i, n)},${yAt(v)}`).join(" ");
+    const areaPoints = `${xAt(0, n)},${yAt(0)} ${linePoints} ${xAt(n - 1, n)},${yAt(0)}`;
+    const dots = data.values.map((v, i) => ({ x: xAt(i, n), y: yAt(v), val: v }));
+    const xLabelPositions = X_LABELS.map((label, i) => ({ x: xAt(i, n), label }));
+    const yGridlines = [0, 25, 50, 75, 100].map((v) => ({ y: yAt(v), label: v }));
+
+    const toneBtn = (t, label) => ({
+      label,
+      onClick: () => this.setState({ tone: t }),
+      style: tone === t
+        ? { padding: "8px 18px", borderRadius: "999px", border: "2px solid #241d15", background: TONE_DATA[t].color, color: "#f7f1e3", fontWeight: 700, cursor: "pointer", fontSize: "0.88rem" }
+        : { padding: "8px 18px", borderRadius: "999px", border: "2px solid #241d15", background: "transparent", color: "#241d15", fontWeight: 700, cursor: "pointer", fontSize: "0.88rem" },
+    });
+    const tone1 = toneBtn(1, "Tone 1"), tone2 = toneBtn(2, "Tone 2"), tone3 = toneBtn(3, "Tone 3"), tone4 = toneBtn(4, "Tone 4");
+
+    return {
+      locked,
+      unlocked: !locked,
+      ctaLabel: this.props.ctaLabel ?? "Join EarlyBird",
+      price: this.props.price ?? "$19",
+      isAccuracyTab: tab === "accuracy",
+      isProgressTab: tab === "progress",
+      tabAccuracyStyle: tab === "accuracy" ? activeStyle : inactiveStyle,
+      tabProgressStyle: tab === "progress" ? activeStyle : inactiveStyle,
+      setTabAccuracy: () => this.setState({ tab: "accuracy" }),
+      setTabProgress: () => this.setState({ tab: "progress" }),
+      chartW: W, chartH: H,
+      toneColor: data.color,
+      linePoints, areaPoints, dots, xLabelPositions, yGridlines,
+      tone1Label: tone1.label, tone1Click: tone1.onClick, tone1Style: tone1.style,
+      tone2Label: tone2.label, tone2Click: tone2.onClick, tone2Style: tone2.style,
+      tone3Label: tone3.label, tone3Click: tone3.onClick, tone3Style: tone3.style,
+      tone4Label: tone4.label, tone4Click: tone4.onClick, tone4Style: tone4.style,
+    };
+  }
+}
+</script>
+</body>
+</html>
