@@ -5301,25 +5301,58 @@ section.hero-cards {
   color: var(--ink-soft) !important;
 }
 
+/* The one loud element on the page. On the near-black Pro card a jade fill sat
+   low-contrast and leaned on a paper border to show its edge (which read as a
+   weird outline). Inverted instead: paper fill + ink text — ~13:1, pops off the
+   dark card with no border — and a jade hard-shadow carries the brand accent. */
 .price-cta {
   margin-top: 8px;
   display: block;
   width: 100%;
   text-align: center;
-  padding: 15px;
+  padding: 16px;
   border-radius: var(--radius-pill);
-  background: var(--accent);
-  color: var(--surface);
+  background: var(--surface);
+  color: var(--ink);
   font-family: var(--font);
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 800;
-  border: 2px solid var(--surface);
-  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+  border: none;
+  box-shadow: 4px 4px 0 var(--accent);
   cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
 .price-cta:hover {
-  background: var(--accent-bright);
+  transform: translate(-1px, -1px);
+  box-shadow: 6px 6px 0 var(--accent);
+}
+
+.price-cta:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .price-cta {
+    transition: none;
+  }
+  .price-cta:hover,
+  .price-cta:active {
+    transform: none;
+  }
+}
+
+/* Visible keyboard focus on every interactive control on this screen. */
+.progress-screen button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Chart lazy-load placeholder — same footprint as the chart so the tab doesn't
+   jump when Chart.js arrives. */
+.acc-chart-loading {
+  background: var(--surface);
 }
 
 .price-foot {
@@ -5327,6 +5360,47 @@ section.hero-cards {
   font-size: 0.78rem;
   color: var(--ink-dim);
   text-align: center;
+}
+
+/* ---- Mobile: the run-history row's four fixed columns overflow a phone, so
+   the "out of hearts" badge spilled its column. Reflow into two lines. */
+@media (max-width: 520px) {
+  .progress-screen .progress-card {
+    padding: 24px 18px;
+  }
+
+  .progress-screen .stat-tile {
+    flex-basis: 40%; /* two tiles per row instead of four stacked */
+  }
+
+  .progress-screen .run-history-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "date  badge"
+      "score detail";
+    row-gap: 2px;
+    column-gap: 12px;
+  }
+
+  .progress-screen .run-history-date {
+    grid-area: date;
+  }
+
+  .progress-screen .run-history-score {
+    grid-area: score;
+    font-size: 1.05rem;
+    font-weight: 800;
+  }
+
+  .progress-screen .run-history-detail {
+    grid-area: detail;
+    justify-self: end;
+    align-self: center;
+  }
+
+  .progress-screen .run-badge {
+    grid-area: badge;
+  }
 }
 
 /* Profile: identity block + plan + EarlyBird pitch. */

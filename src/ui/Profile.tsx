@@ -49,7 +49,7 @@ export function Profile({ onEarlyBird }: Props) {
       <section className="earlybird-card">
         <p className="modal-eyebrow">★ EarlyBird access</p>
         <p className="earlybird-price">
-          €19 <span className="modal-price-note">once · yours for life</span>
+          $19 <span className="modal-price-note">once · yours for life</span>
         </p>
         <ul className="earlybird-features">
           <li className="earlybird-feature-live">✓ Unlimited runs & every word</li>
@@ -66,7 +66,7 @@ export function Profile({ onEarlyBird }: Props) {
           className="primary earlybird-cta"
           onClick={() => onEarlyBird("plan_card")}
         >
-          🔒 Get EarlyBird access · €19
+          🔒 Get EarlyBird access · $19
         </button>
         <p className="note earlybird-note">
           Still early — core is live, more ships weekly. Full refund anytime.

@@ -10,6 +10,7 @@ import {
   Tooltip,
 } from "chart.js";
 import type { Tone } from "../game/gates.ts";
+import { TONE_LINE_COLOR } from "./toneColors.ts";
 
 // Register only the pieces this one line chart needs, so Chart.js stays
 // tree-shaken in the app bundle.
@@ -30,14 +31,6 @@ Chart.register(
  * persisted yet. Chart.js line chart with gridlines, a faint area fill, and
  * dot markers, styled to the redesign's paper/ink palette.
  */
-
-/** Stroke colours per tone (handoff values; also `dev` WordGates `TONE_COLOR`). */
-export const TONE_LINE_COLOR: Record<Tone, string> = {
-  1: "#3b6fa0",
-  2: "#1c7a63", // --accent
-  3: "#c98a3c", // --beak
-  4: "#a3341f", // --danger
-};
 
 const INK_FAINT = "rgba(36, 29, 21, 0.12)";
 const INK_MUTED = "#6b6151";

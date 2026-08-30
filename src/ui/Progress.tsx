@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { loadInventory } from "../audio/inventory.ts";
 import type { Tone } from "../game/gates.ts";
 import {
@@ -8,8 +8,14 @@ import {
 } from "../game/runHistory.ts";
 import { loadStreak } from "../game/streak.ts";
 import type { Word } from "../game/words.ts";
-import { AccuracyProgressChart, TONE_LINE_COLOR } from "./AccuracyProgressChart.tsx";
 import { ToneAverageCard } from "./ToneAverageCard.tsx";
+import { TONE_LINE_COLOR } from "./toneColors.ts";
+
+// Lazy so Chart.js (~165KB) loads only when the "Accuracy progress" tab is
+// opened, not on every game-app boot.
+const AccuracyProgressChart = lazy(() =>
+  import("./AccuracyProgressChart.tsx").then((m) => ({ default: m.AccuracyProgressChart })),
+);
 
 const TONES: Tone[] = [1, 2, 3, 4];
 
@@ -212,11 +218,13 @@ export function Progress({ onEarlyBird, onPricingView }: Props) {
                 </button>
               ))}
             </div>
-            <AccuracyProgressChart
-              tone={selectedTone}
-              labels={mock.labels}
-              data={mock.series[selectedTone]}
-            />
+            <Suspense fallback={<div className="acc-chart acc-chart-loading" aria-hidden />}>
+              <AccuracyProgressChart
+                tone={selectedTone}
+                labels={mock.labels}
+                data={mock.series[selectedTone]}
+              />
+            </Suspense>
             <button
               type="button"
               className="link progress-card-cta"

@@ -72,12 +72,12 @@ export function EarlyBirdModal({ surface, onClose }: Props) {
         <p className="modal-eyebrow">{copy.eyebrow}</p>
         <h2 id={`${inputId}-title`}>{copy.title}</h2>
         <p className="modal-price">
-          €19 <span className="modal-price-note">once · lifetime</span>
+          $19 <span className="modal-price-note">once · lifetime</span>
         </p>
         <p className="modal-body">{copy.body}</p>
 
         <button type="button" className="primary modal-pay" disabled title="Checkout is coming soon">
-          🔒 Pay €19 — get EarlyBird access
+          🔒 Pay $19 — get EarlyBird access
         </button>
         <p className="modal-pay-note">Checkout is coming soon.</p>
 
