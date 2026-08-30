@@ -440,6 +440,18 @@ describe("Run — tutorial mode", () => {
   });
 });
 
+describe("Run — drill mode", () => {
+  it("flies only the configured tone, endlessly, same as game mode otherwise", () => {
+    const run = new Run({ mode: "drill", width: W, drillTone: 3 });
+    // Sing badly the whole way, same as the difficulty-ramp tests: enough
+    // gates resolve either way, and drill must not punish differently.
+    const { snapshots } = simulate(run, 2000, () => pitch(1));
+    const outcomes = outcomesOf(snapshots);
+    expect(outcomes.length).toBeGreaterThanOrEqual(5);
+    expect(outcomes.every((o) => o.tone === 3)).toBe(true);
+  });
+});
+
 describe("Run — snapshot extras", () => {
   it("flags pinned when the voice is clamped at the top of the range", () => {
     const run = newGameRun();

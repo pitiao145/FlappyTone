@@ -49,7 +49,7 @@ import {
 import type { Contour } from "./contours.ts";
 import { classifyTone, type ClassifiedTone } from "./toneClassifier.ts";
 
-export type RunMode = "game" | "tutorial" | "single";
+export type RunMode = "game" | "tutorial" | "single" | "drill" | "learn";
 
 export interface RunConfig {
   mode: RunMode;
@@ -106,6 +106,11 @@ export interface RunConfig {
    * down — to keep it short). Ignored outside tutorial mode.
    */
   tutorialTones?: Tone[];
+  /**
+   * The single tone every gate is drawn from for `mode === "drill"`. Required
+   * when `mode === "drill"`, ignored otherwise.
+   */
+  drillTone?: Tone;
 }
 
 export type CueStyle = "pause" | "off";
@@ -476,6 +481,8 @@ export class Run {
   /** The tutorial's fixed tone order and length. Full teach set, or the short
    * calibration set — see `CALIBRATION_TONES`. */
   private readonly tutorialTones: Tone[];
+  /** The fixed tone for `mode === "drill"`. Unused otherwise. */
+  private readonly drillTone: Tone | null;
   private active: ActiveGateState | null = null;
 
   /** Gates resolved, whatever the outcome. Ends the tutorial. */
@@ -547,6 +554,7 @@ export class Run {
     this.words = cfg.words ?? [];
     this.singleWord = cfg.singleWord ?? null;
     this.tutorialTones = cfg.tutorialTones ?? TUTORIAL_TONES;
+    this.drillTone = cfg.drillTone ?? null;
     this.difficulty = this.difficultyFor(0);
     this.stats = newRunStats(3);
     this.fillQueue();
@@ -1203,7 +1211,10 @@ export class Run {
 
   /**
    * Tutorial follows a fixed order and stops; "single" flies its one word's
-   * tone once and stops; game mode is endless.
+   * tone once and stops; "drill" is endless but pinned to one tone; "game"
+   * and "learn" are both endless and free — "learn" cues synthetically
+   * (see Game.tsx's forceSynth wiring) but draws tones the same way "game"
+   * does.
    */
   private pickTone(): Tone | null {
     if (this.mode === "tutorial") {
@@ -1212,6 +1223,9 @@ export class Run {
     }
     if (this.mode === "single") {
       return this.spawnedTones.length < 1 ? (this.singleWord?.tone ?? null) : null;
+    }
+    if (this.mode === "drill") {
+      return this.drillTone;
     }
     return nextTone(this.spawnedTones, this.rand);
   }

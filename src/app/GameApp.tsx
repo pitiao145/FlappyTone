@@ -31,7 +31,9 @@ import { GameOver } from "../ui/GameOver";
 import { EarlyBirdModal, type EarlyBirdSurface } from "../ui/EarlyBirdModal.tsx";
 import { HowTo } from "../ui/HowTo";
 import { Loading } from "../ui/Loading";
+import { ModeSelect } from "../ui/ModeSelect.tsx";
 import { PlayHome, type PlayIntent } from "../ui/PlayHome";
+import type { Tone } from "../game/gates.ts";
 import { Profile } from "../ui/Profile.tsx";
 import { Progress } from "../ui/Progress.tsx";
 import { Settings } from "../ui/Settings";
@@ -43,6 +45,7 @@ import "../App.css";
 
 type Screen =
   | "play"
+  | "modes"
   | "howto"
   | "calibrate"
   | "finetune"
@@ -50,6 +53,8 @@ type Screen =
   | "seeding"
   | "tutorialdone"
   | "game"
+  | "drill"
+  | "learn"
   | "gameover"
   | "settings"
   | "visualiser"
@@ -263,7 +268,7 @@ export default function GameApp() {
     return daily.count >= daily.limit;
   }, []);
   /** Where to go once calibration finishes, when Play/Tutorial routed through it. */
-  const pendingRef = useRef<"game" | "tutorial" | "visualiser" | null>(null);
+  const pendingRef = useRef<StartIntent | null>(null);
   /**
    * True while the tutorial that immediately follows a calibration is running:
    * its measured range seeds the grid (calibration itself only sites the centre
@@ -278,7 +283,9 @@ export default function GameApp() {
    */
   const [autoStartTutorial, setAutoStartTutorial] = useState(false);
   /** The mode of the run that just ended — drives Retry. */
-  const lastModeRef = useRef<"game" | "tutorial">("game");
+  const lastModeRef = useRef<"game" | "tutorial" | "drill" | "learn">("game");
+  /** The tone a "drill" run is pinned to. Set by ModeSelect, read by <Game>. */
+  const drillToneRef = useRef<Tone | null>(null);
   const gameRef = useRef<GameHandle>(null);
   /**
    * True from the moment a "game"/"tutorial" run actually starts until it
@@ -321,22 +328,30 @@ export default function GameApp() {
    * finished/out_of_hearts run, it deliberately does NOT call
    * `incrementDailyRuns()`: quitting shouldn't cost the player one of
    * their 5 daily free runs. Tutorial quits are neither recorded nor
-   * counted, same as `onRunOver`.
+   * counted, same as `onRunOver`. Drill runs are recorded the same way
+   * ("game" or "drill" — real, scored practice); Learn quits are neither
+   * recorded nor counted, same as tutorial.
    */
   const onRunQuit = useCallback((snap: RunSnapshot | null) => {
-    if (snap && lastModeRef.current === "game") {
+    if (snap && (lastModeRef.current === "game" || lastModeRef.current === "drill")) {
       recordRun(snap, "quit");
     }
     goHome();
   }, [goHome]);
 
-  /** The caller has already opened the mic inside its click handler. */
+  /**
+   * The caller has already opened the mic inside its click handler.
+   * `opts.drillTone` is only meaningful (and required) for `intent ===
+   * "drill"` — set by ModeSelect before this fires.
+   */
   const startPlay = useCallback(
-    (intent: StartIntent) => {
-      // The caller (PlayHome) already opened the mic for this gesture before
-      // calling us — bail out and release it rather than starting a run the
-      // player isn't allowed to have.
-      if (intent === "game" && dailyLimitReached()) {
+    (intent: StartIntent, opts?: { drillTone?: Tone }) => {
+      // The caller (PlayHome/ModeSelect) already opened the mic for this
+      // gesture before calling us — bail out and release it rather than
+      // starting a run the player isn't allowed to have. Drill is real,
+      // scored practice like Classic, so it's gated the same way; Learn
+      // isn't (see the plan: it doesn't cost a daily run).
+      if ((intent === "game" || intent === "drill") && dailyLimitReached()) {
         stopMic();
         openEarlyBird("daily-limit", "daily-limit");
         return;
@@ -353,7 +368,10 @@ export default function GameApp() {
         return;
       }
       if (intent !== "visualiser") lastModeRef.current = intent;
-      if (intent === "game") gameRunNumberRef.current += 1;
+      drillToneRef.current = opts?.drillTone ?? null;
+      if (intent === "game" || intent === "drill" || intent === "learn") {
+        gameRunNumberRef.current += 1;
+      }
       // Playing without calibration would map the player's voice through a
       // stranger's f0 centre. Calibrate first, then continue to the run.
       if (!settings) {
@@ -361,7 +379,9 @@ export default function GameApp() {
         setScreen("calibrate");
         return;
       }
-      if (intent === "game" || intent === "tutorial") setGameAlive(true);
+      if (intent === "game" || intent === "tutorial" || intent === "drill" || intent === "learn") {
+        setGameAlive(true);
+      }
       setScreen(intent);
     },
     [settings, dailyLimitReached, openEarlyBird],
@@ -422,7 +442,12 @@ export default function GameApp() {
       return;
     }
     setStats(snap.stats);
-    if (lastModeRef.current === "game") {
+    // Drill is real, scored practice — counts the same as Classic. Learn is
+    // deliberately excluded from all three (history, daily limit, streak):
+    // it's unscored-pressure recognition practice, not a run the Progress
+    // tab's per-tone accuracy or the free-tier counter should read as real
+    // pronunciation performance.
+    if (lastModeRef.current === "game" || lastModeRef.current === "drill") {
       recordRun(snap, snap.stats.hearts <= 0 ? "out_of_hearts" : "finished");
       // Only a completed run (finished or out of hearts) counts against the
       // free tier — a quit shouldn't cost the player one of their 5 daily
@@ -456,7 +481,10 @@ export default function GameApp() {
   }, [settings]);
 
   const retry = useCallback(async () => {
-    if (lastModeRef.current === "game" && dailyLimitReached()) {
+    if (
+      (lastModeRef.current === "game" || lastModeRef.current === "drill") &&
+      dailyLimitReached()
+    ) {
       openEarlyBird("daily-limit", "daily-limit");
       return;
     }
@@ -467,7 +495,14 @@ export default function GameApp() {
       // Retry is a click, so this reopens the mic inside a user gesture.
       await ensureMic();
       if (gen !== navRef.current) return; // player left while we were waiting
-      if (lastModeRef.current === "game") gameRunNumberRef.current += 1;
+      if (
+        lastModeRef.current === "game" ||
+        lastModeRef.current === "drill" ||
+        lastModeRef.current === "learn"
+      ) {
+        gameRunNumberRef.current += 1;
+      }
+      // drillToneRef is untouched — a Drill retry flies the same tone.
       setGameAlive(true);
       setScreen(lastModeRef.current);
     } catch (err) {
@@ -591,6 +626,17 @@ export default function GameApp() {
               tutorialDone={tutorialDone}
               error={error}
               onStart={startPlay}
+              onModes={() => setScreen("modes")}
+              canvasWidth={CANVAS_W}
+              canvasHeight={GAME_CANVAS_H}
+            />
+          )}
+
+          {screen === "modes" && (
+            <ModeSelect
+              error={error}
+              onStart={startPlay}
+              onBack={() => setScreen("play")}
               canvasWidth={CANVAS_W}
               canvasHeight={GAME_CANVAS_H}
             />
@@ -693,8 +739,16 @@ export default function GameApp() {
         {gameAlive && settings && (
           <Game
             ref={gameRef}
-            hidden={!(screen === "game" || screen === "tutorial")}
+            hidden={
+              !(
+                screen === "game" ||
+                screen === "tutorial" ||
+                screen === "drill" ||
+                screen === "learn"
+              )
+            }
             mode={lastModeRef.current}
+            drillTone={drillToneRef.current ?? undefined}
             autoStart={autoStartTutorial}
             settings={settings}
             canvasWidth={CANVAS_W}

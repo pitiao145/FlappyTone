@@ -4,7 +4,10 @@ import { ensureMic, MicCancelled } from "../audio/session.ts";
 import { micErrorCopy } from "./micErrors.ts";
 import { brand } from "../brand.ts";
 
-export type PlayIntent = "game" | "tutorial" | "lab";
+/** "drill" and "learn" are only ever started from ModeSelect, never from a
+ * button here — kept in this union anyway since GameApp's startPlay/lastModeRef
+ * treat all five uniformly. */
+export type PlayIntent = "game" | "tutorial" | "lab" | "drill" | "learn";
 
 interface Props {
   calibrated: boolean;
@@ -13,6 +16,8 @@ interface Props {
   error: string | null;
   /** Called once the mic is open. The router decides whether to calibrate first. */
   onStart: (intent: PlayIntent) => void;
+  /** Opens the Modes picker. No mic needed — only starting a run there does. */
+  onModes: () => void;
   /** Matches the size Game/Calibration will actually open at — see GameApp's computeCanvasSize. */
   canvasWidth: number;
   canvasHeight: number;
@@ -30,6 +35,7 @@ export function PlayHome({
   tutorialDone,
   error: externalError,
   onStart,
+  onModes,
   canvasWidth,
   canvasHeight,
 }: Props) {
@@ -82,6 +88,9 @@ export function PlayHome({
             </button>
             <button disabled={busy} onClick={go("tutorial")}>
               {pendingIntent === "tutorial" ? "Opening mic…" : "Tutorial"}
+            </button>
+            <button disabled={busy} onClick={onModes}>
+              Modes
             </button>
           </div>
           {error && <p className="error">{error}</p>}

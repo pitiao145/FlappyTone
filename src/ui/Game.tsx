@@ -108,6 +108,8 @@ interface Props {
   onQuit: (snap: RunSnapshot | null) => void;
   /** The word `mode: "single"` flies. Ignored otherwise. */
   singleWord?: Word;
+  /** The fixed tone `mode: "drill"` flies every gate from. Ignored otherwise. */
+  drillTone?: Tone;
   /**
    * Skip the tutorial's intro card and begin immediately. Set when this
    * tutorial run is the calibration flight (GameApp routes to it straight from
@@ -148,10 +150,15 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   onOver,
   onQuit,
   singleWord,
+  drillTone,
   runNumber,
   autoStart = false,
   hidden,
 }: Props, ref) {
+  // "game", "drill" and "learn" all fly full hearts/score/combo, unlike
+  // "tutorial" and "single" — the HUD elements gated on this once read
+  // `mode === "game"` alone, back when "game" was the only scored mode.
+  const scored = mode === "game" || mode === "drill" || mode === "learn";
   const canvasRef = useRef<HTMLCanvasElement>(null);
   /**
    * Latest `canvasHeight`, read by the run-owning effect's tick loop without
@@ -199,7 +206,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
    * run, and the card would just be in the way of a tight tune loop.
    */
   const [notice, setNotice] = useState(
-    () => mode === "game" && !loadNoticeSeen(),
+    () => scored && !loadNoticeSeen(),
   );
   const noticeRef = useRef(notice);
   /** Gate log entries already reported, so each gate is sent exactly once. */
@@ -342,6 +349,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // it flies the tuning defaults with synthetic cues.
       words: inventoryNow() ?? [],
       singleWord,
+      drillTone,
       // The calibration flight (autoStart) flies only the grid-anchoring tones;
       // a normal tutorial teaches all four.
       tutorialTones: autoStart ? CALIBRATION_TONES : undefined,
@@ -440,8 +448,12 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
             settings.rangeSemitones,
             snap.cue.word,
             settings.rangeDownSemitones,
+            mode === "learn",
           );
-          if (!playedClip) {
+          // Learn mode always takes the synth branch on purpose — only
+          // Classic/Drill falling back to it is a real clip-load failure
+          // worth tracking.
+          if (!playedClip && mode !== "learn") {
             track({ type: "cue_fallback", tone: snap.cue.tone });
           }
         }
@@ -633,7 +645,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
                 </span>
               )}
             </span>
-            {mode === "game" && (
+            {scored && (
               <span className="hearts">
                 {Array.from({ length: MAX_HEARTS }, (_, i) => (
                   <span key={i} className="heart">
@@ -649,7 +661,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
                 )}
               </span>
             )}
-            {mode === "game" && (hud?.comboMult ?? 1) > 1 && (
+            {scored && (hud?.comboMult ?? 1) > 1 && (
               <span className="combo">×{hud?.comboMult}</span>
             )}
             {/* In the row rather than absolutely positioned over it: floated
@@ -824,8 +836,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
             <PauseMenu
               mode={mode}
               score={hud?.score ?? 0}
-              runNumber={mode === "game" ? runIndex : null}
-              stats={mode === "game" ? (hud?.stats ?? null) : null}
+              runNumber={scored ? runIndex : null}
+              stats={scored ? (hud?.stats ?? null) : null}
               settingsOpen={optionsOpen}
               onToggleSettings={() => setOptionsOpen((open) => !open)}
               onResume={() => resumeRef.current()}

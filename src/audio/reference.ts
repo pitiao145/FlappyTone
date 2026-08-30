@@ -156,8 +156,14 @@ export function playToneCue(
   rangeSemitones: number = RANGE_SEMITONES,
   word: Word | null = null,
   rangeDownSemitones: number = rangeSemitones,
+  /**
+   * Learn mode: always take the oscillator branch below, even when the
+   * word's clip is loaded — the player is meant to hum the shape, not hear
+   * the recorded speech.
+   */
+  forceSynth: boolean = false,
 ): boolean {
-  const clip = word ? clips.get(word.id) : undefined;
+  const clip = forceSynth ? undefined : word ? clips.get(word.id) : undefined;
   if (clip) {
     const src = ctx.createBufferSource();
     src.buffer = clip.buffer;
