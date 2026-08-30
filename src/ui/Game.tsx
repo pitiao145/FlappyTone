@@ -681,7 +681,11 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
             )}
           </div>
 
-          {info && displayTone !== null && (
+          {/* Learn mode is tone-shape recognition only — the word behind a
+              gate is incidental (it only supplies the corridor's contour),
+              so showing its hanzi/pinyin would cue pronunciation the mode is
+              explicitly not asking for. Only the gate itself is shown. */}
+          {mode !== "learn" && info && displayTone !== null && (
             <div className="hud-syllable">
               {showTranslation && displayWord?.english && (
                 <span className="english">{displayWord.english}</span>
