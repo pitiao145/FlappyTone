@@ -1119,9 +1119,11 @@ export class Run {
     if (CLEARED_OUTCOMES.has(outcome)) {
       this.gatesCleared += 1;
     }
-    // The tutorial teaches: no score, no hearts, no stats to fail against.
+    // The tutorial (and "single", the Lab's one-gate flight) teaches: no
+    // score, no hearts, no stats to fail against. "game", "drill" and
+    // "learn" all fly full stats.
     const scoreBefore = this.stats.score;
-    if (this.mode === "game") {
+    if (this.mode === "game" || this.mode === "drill" || this.mode === "learn") {
       this.stats = applyGate(
         this.stats,
         state.gate.tone,

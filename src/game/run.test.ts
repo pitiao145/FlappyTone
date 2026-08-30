@@ -443,12 +443,20 @@ describe("Run — tutorial mode", () => {
 describe("Run — drill mode", () => {
   it("flies only the configured tone, endlessly, same as game mode otherwise", () => {
     const run = new Run({ mode: "drill", width: W, drillTone: 3 });
-    // Sing badly the whole way, same as the difficulty-ramp tests: enough
-    // gates resolve either way, and drill must not punish differently.
-    const { snapshots } = simulate(run, 2000, () => pitch(1));
+    // Silence throughout: neutral "couldn't hear that" outcomes, so hearts
+    // never run out and enough gates resolve to check the tone stays pinned.
+    const { snapshots } = simulate(run, 2000, (s) => pitch(null, s.birdChao));
     const outcomes = outcomesOf(snapshots);
     expect(outcomes.length).toBeGreaterThanOrEqual(5);
     expect(outcomes.every((o) => o.tone === 3)).toBe(true);
+  });
+
+  it("loses hearts on a wall collision, same as game mode", () => {
+    const run = new Run({ mode: "drill", width: W, drillTone: 3 });
+    // Singing flat at the top collides with tone 3's corridor from gate one.
+    const { snapshots } = simulate(run, 400, () => pitch(5));
+    const last = snapshots[snapshots.length - 1];
+    expect(last.hearts).toBeLessThan(3);
   });
 });
 
