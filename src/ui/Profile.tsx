@@ -60,7 +60,7 @@ export function Profile({ onEarlyBird }: Props) {
           🔒 Get EarlyBird access · {PRO_PRICE}
         </button>
         <p className="note earlybird-note">
-          Still early — core is live, more ships weekly. Full refund anytime.
+          Still early. Core is live, more features ship weekly.
         </p>
         <button
           type="button"

@@ -342,7 +342,7 @@ export function Progress({ onEarlyBird, onPricingView }: Props) {
         <div className="pricing-head">
           <h2>Free today, more with Pro</h2>
           <p className="note">
-            EarlyBird gets you every Pro feature as it ships, at a one-time price — before it
+            EarlyBird gets you every Pro feature as it ships, at a one-time price, before it
             moves to ongoing credits.
           </p>
         </div>
@@ -366,7 +366,7 @@ export function Progress({ onEarlyBird, onPricingView }: Props) {
             <div className="price-card-head price-card-head-pro">
               <h3>Pro</h3>
               <span className="price-tag">
-                {PRO_PRICE} <span className="price-tag-note">one-time, EarlyBird</span>
+                {PRO_PRICE} <span className="price-tag-note">one-time, EarlyBird price</span>
               </span>
             </div>
             <ul className="price-list price-list-pro">
@@ -382,8 +382,8 @@ export function Progress({ onEarlyBird, onPricingView }: Props) {
               Join EarlyBird
             </button>
             <p className="price-foot">
-              Later, Pro moves to credits — enough to fly for a week or a month. EarlyBirds keep
-              full access.
+              Later, Pro moves to credit-based system. You'll need to buy food for your bird to keep flying. EarlyBirds keep
+              full access and will have access toall the future features.
             </p>
           </div>
         </div>

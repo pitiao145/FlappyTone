@@ -20,12 +20,12 @@ const COPY: Record<EarlyBirdSurface, { eyebrow: string; title: string; body: str
   progress: {
     eyebrow: "★ EarlyBird access",
     title: "Lock in the lowest price, forever",
-    body: "FlappyTone is still early — saved progress is live now, unlimited play and deeper features ship over the coming weeks. EarlyBirds get everything as it lands, and never pay again. Full refund anytime.",
+    body: "FlappyTone is still early. Sign up now for unlimited play and access to all the future features. EarlyBirds get everything as it lands, and never pay again.",
   },
   profile: {
     eyebrow: "★ EarlyBird access",
     title: "Lock in the lowest price, forever",
-    body: "FlappyTone is still early — saved progress is live now, unlimited play and deeper features ship over the coming weeks. EarlyBirds get everything as it lands, and never pay again. Full refund anytime.",
+    body: "FlappyTone is still early. Sign up now for unlimited play and access to all the future features. EarlyBirds get everything as it lands, and never pay again.",
   },
   "daily-limit": {
     eyebrow: "★ Daily limit reached",
