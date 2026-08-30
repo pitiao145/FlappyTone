@@ -2,10 +2,11 @@ import { useState } from "react";
 import { inventoryNow } from "../audio/inventory.ts";
 import { MicError } from "../audio/mic.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
-import { TONE_INFO, type Tone } from "../game/gates.ts";
+import type { Tone } from "../game/gates.ts";
 import { availableTones } from "../game/words.ts";
 import type { PlayIntent } from "./PlayHome.tsx";
 import { micErrorCopy } from "./micErrors.ts";
+import { ToneMarkIcon } from "./toneIcons.tsx";
 
 const ALL_TONES: Tone[] = [1, 2, 3, 4];
 
@@ -100,7 +101,14 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
                       disabled={disabled}
                       onClick={go("drill", tone)}
                     >
-                      {pending === "drill" ? "…" : `${tone} · ${TONE_INFO[tone].pinyin}`}
+                      {pending === "drill" ? (
+                        "…"
+                      ) : (
+                        <>
+                          <ToneMarkIcon tone={tone} className="tone-mark-icon" />
+                          {tone}
+                        </>
+                      )}
                     </button>
                   );
                 })}
