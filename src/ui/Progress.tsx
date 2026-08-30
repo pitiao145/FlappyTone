@@ -8,6 +8,7 @@ import {
 } from "../game/runHistory.ts";
 import { loadStreak } from "../game/streak.ts";
 import type { Word } from "../game/words.ts";
+import { FREE_FEATURES, PRO_FEATURES, PRO_PRICE } from "./plan.ts";
 import { ToneAverageCard } from "./ToneAverageCard.tsx";
 import { TONE_LINE_COLOR } from "./toneColors.ts";
 
@@ -353,13 +354,11 @@ export function Progress({ onEarlyBird, onPricingView }: Props) {
               <p className="note">Everything you&rsquo;re using today</p>
             </div>
             <ul className="price-list">
-              <li>5 runs a day</li>
-              <li>Access to all current words</li>
-              <li>Tone accuracy for your last 5 runs</li>
-              <li>Last 5 runs of history</li>
-              <li>Game modes: shuffle, tone drill, learn</li>
-              <li>Sharing your results</li>
-              <li className="price-list-soon">HSK / TOCFL word lists (coming soon)</li>
+              {FREE_FEATURES.map((f) => (
+                <li key={f.label} className={f.soon ? "price-list-soon" : undefined}>
+                  {f.label}
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -367,17 +366,13 @@ export function Progress({ onEarlyBird, onPricingView }: Props) {
             <div className="price-card-head price-card-head-pro">
               <h3>Pro</h3>
               <span className="price-tag">
-                $19 <span className="price-tag-note">one-time, EarlyBird</span>
+                {PRO_PRICE} <span className="price-tag-note">one-time, EarlyBird</span>
               </span>
             </div>
             <ul className="price-list price-list-pro">
-              <li>Unlimited runs</li>
-              <li>Accuracy per tone across every run, plus its evolution over time</li>
-              <li>Your average tone shape, and how it evolves over time</li>
-              <li>Weekly leaderboards</li>
-              <li>Full run history &amp; trends</li>
-              <li>Custom word lists</li>
-              <li>Vocab mode</li>
+              {PRO_FEATURES.map((label) => (
+                <li key={label}>{label}</li>
+              ))}
             </ul>
             <button
               type="button"

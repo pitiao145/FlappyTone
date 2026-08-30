@@ -1,16 +1,10 @@
 import { useMemo } from "react";
 import { DAILY_RUN_LIMIT, loadDailyRuns } from "../game/dailyLimit.ts";
+import { FREE_SUMMARY, PRO_FEATURES, PRO_PRICE } from "./plan.ts";
 
 interface Props {
   onEarlyBird: (feature: string) => void;
 }
-
-const EARLYBIRD_FEATURES: { label: string; feature: string }[] = [
-  { label: "Full run history & trends", feature: "run_history" },
-  { label: "Tone shape vs. native target", feature: "tone_shape" },
-  { label: "More words & tone pairs", feature: "more_words" },
-  { label: "Levels, XP, streaks & leaderboard", feature: "level" },
-];
 
 /** The Profile tab: guest identity, the real daily free-run count, and the EarlyBird pitch. */
 export function Profile({ onEarlyBird }: Props) {
@@ -43,21 +37,18 @@ export function Profile({ onEarlyBird }: Props) {
         <span className="teaser-bar plan-usage-bar">
           <span className="teaser-bar-fill" style={{ width: `${usedPct}%` }} />
         </span>
-        <p className="note">Free includes: {DAILY_RUN_LIMIT} runs/day · visualiser basics · accuracy per tone</p>
+        <p className="note">Free includes: {FREE_SUMMARY}</p>
       </section>
 
       <section className="earlybird-card">
         <p className="modal-eyebrow">★ EarlyBird access</p>
         <p className="earlybird-price">
-          $19 <span className="modal-price-note">once · yours for life</span>
+          {PRO_PRICE} <span className="modal-price-note">once · yours for life</span>
         </p>
         <ul className="earlybird-features">
-          <li className="earlybird-feature-live">✓ Unlimited runs & every word</li>
-          <li className="earlybird-feature-live">✓ Progress saved & synced across devices</li>
-          {EARLYBIRD_FEATURES.map((f) => (
-            <li key={f.feature}>
-              🔒 {f.label}
-              <span className="badge badge-soon">Soon</span>
+          {PRO_FEATURES.map((label) => (
+            <li key={label} className="earlybird-feature-live">
+              ✓ {label}
             </li>
           ))}
         </ul>
@@ -66,7 +57,7 @@ export function Profile({ onEarlyBird }: Props) {
           className="primary earlybird-cta"
           onClick={() => onEarlyBird("plan_card")}
         >
-          🔒 Get EarlyBird access · $19
+          🔒 Get EarlyBird access · {PRO_PRICE}
         </button>
         <p className="note earlybird-note">
           Still early — core is live, more ships weekly. Full refund anytime.

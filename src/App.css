@@ -5675,6 +5675,30 @@ section.hero-cards {
   margin-bottom: var(--space-4);
 }
 
+/* Pro "what you get" checklist — shared feature list from plan.ts. */
+.modal-features {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: var(--text-sm);
+  text-align: left;
+}
+
+.modal-features li {
+  display: flex;
+  gap: 8px;
+}
+
+.modal-features li::before {
+  content: "✓";
+  color: var(--accent);
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
 .modal-pay {
   width: 100%;
   padding: 12px 20px;
