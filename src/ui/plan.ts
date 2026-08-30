@@ -25,6 +25,7 @@ export const FREE_FEATURES: PlanFeature[] = [
 
 /** What Pro (EarlyBird) unlocks — mirrors the Progress pricing card's Pro column. */
 export const PRO_FEATURES: string[] = [
+  "Help shape future features",
   "Unlimited runs",
   "Accuracy per tone across every run, plus its evolution over time",
   "Your average tone shape, and how it evolves over time",
@@ -36,4 +37,4 @@ export const PRO_FEATURES: string[] = [
 
 /** One-line Free summary for compact spots (the Profile plan card). */
 export const FREE_SUMMARY =
-  "5 runs/day · all current words · accuracy for your last 5 runs · sharing";
+  "5 runs/day · all current and future words · accuracy for your last 5 runs";

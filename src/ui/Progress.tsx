@@ -364,7 +364,7 @@ export function Progress({ onEarlyBird, onPricingView }: Props) {
 
           <div className="sticker-card price-card price-card-pro">
             <div className="price-card-head price-card-head-pro">
-              <h3>Pro</h3>
+              <h3>Pro - Support the app</h3>
               <span className="price-tag">
                 {PRO_PRICE} <span className="price-tag-note">one-time, EarlyBird price</span>
               </span>

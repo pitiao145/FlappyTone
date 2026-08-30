@@ -5736,6 +5736,7 @@ section.hero-cards {
   border-radius: var(--radius-md);
   background: var(--surface-panel);
   border: 2px solid var(--accent);
+  text-align: left;
 }
 
 .earlybird-price {
