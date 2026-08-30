@@ -14,6 +14,7 @@ import {
 } from "../game/recalibration.ts";
 import type { RunSnapshot } from "../game/run";
 import { recordRun } from "../game/runHistory.ts";
+import { recordPlay } from "../game/streak.ts";
 import {
   loadRecalTracking,
   loadSettings,
@@ -427,6 +428,8 @@ export default function GameApp() {
       // free tier — a quit shouldn't cost the player one of their 5 daily
       // runs. See `onRunQuit` below, which deliberately does not call this.
       incrementDailyRuns();
+      // Same trigger advances the local daily streak (quits don't count).
+      recordPlay();
     }
 
     // Windowed recalibration check — see recalibration.ts. Only a completed,

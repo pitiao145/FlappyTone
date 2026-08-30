@@ -4658,6 +4658,22 @@ section.hero-cards {
   border: 1px dashed var(--warn);
 }
 
+/* The streak card is a real, live free feature, not a "Soon" door — its own
+   content is not clickable; only the pro-sync CTA inside it is. */
+.teaser-card-live {
+  cursor: default;
+  justify-content: center;
+}
+
+.teaser-sub {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+.teaser-card .teaser-cta {
+  margin-top: 4px;
+}
+
 .teaser-icon {
   font-size: 1.4rem;
 }

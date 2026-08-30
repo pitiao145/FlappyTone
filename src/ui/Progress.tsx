@@ -6,6 +6,7 @@ import {
   toneAccuracyFromHistory,
   type RunOutcome,
 } from "../game/runHistory.ts";
+import { loadStreak } from "../game/streak.ts";
 import type { Word } from "../game/words.ts";
 import { ToneAverageCard } from "./ToneAverageCard.tsx";
 
@@ -42,6 +43,7 @@ export function Progress({ onEarlyBird }: Props) {
 
   const history = useMemo(() => loadRunHistory(), []);
   const toneAccuracy = useMemo(() => toneAccuracyFromHistory(history), [history]);
+  const streak = useMemo(() => loadStreak(), []);
 
   return (
     <div className="screen progress-screen">
@@ -49,18 +51,25 @@ export function Progress({ onEarlyBird }: Props) {
       <p className="note">Saved on this device · sign up to keep it forever</p>
 
       <div className="teaser-row">
-        <button
-          type="button"
-          className="teaser-card teaser-card-soon"
-          onClick={() => onEarlyBird("streak")}
-        >
+        <div className="teaser-card teaser-card-live">
           <span className="teaser-icon" aria-hidden>
             🔥
           </span>
-          <span className="teaser-big">3 days</span>
+          <span className="teaser-big">
+            {streak.current} {streak.current === 1 ? "day" : "days"}
+          </span>
           <span className="teaser-label">streak</span>
-          <span className="badge badge-soon">🔒 Soon</span>
-        </button>
+          {streak.best > streak.current && (
+            <span className="teaser-sub">best {streak.best}</span>
+          )}
+          <button
+            type="button"
+            className="link teaser-cta"
+            onClick={() => onEarlyBird("streak")}
+          >
+            🔒 Keep across devices
+          </button>
+        </div>
         <button
           type="button"
           className="teaser-card teaser-card-soon"
