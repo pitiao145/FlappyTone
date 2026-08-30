@@ -267,8 +267,19 @@
    a wide viewport, so they get a wider cap than the game frame while staying
    well short of the landing page's full-bleed width. PlayHome keeps the
    420px game-frame cap instead — it's the game's own canvas at rest. */
-.frame:has(.howto-screen, .settings-screen, .gameover-screen, .progress-screen, .profile-screen) {
+.frame:has(.howto-screen, .settings-screen, .gameover-screen, .profile-screen) {
   max-width: 640px;
+}
+
+/* Progress is a dashboard, not a menu shell — give it room on desktop. */
+.frame:has(.progress-screen) {
+  max-width: 640px;
+}
+
+@media (min-width: 720px) {
+  .frame:has(.progress-screen) {
+    max-width: min(1080px, calc(100vw - var(--nav-sidebar-w) - 64px));
+  }
 }
 
 .stage {
@@ -4893,7 +4904,33 @@ section.hero-cards {
 
 .level-card {
   gap: 10px;
-  box-shadow: var(--shadow-sticker-pro);
+}
+
+/* Locked Pro teaser — muted next to the live streak card. */
+.progress-screen .level-card {
+  background: color-mix(in srgb, var(--surface-panel) 50%, var(--surface));
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--ink) 28%, transparent);
+  box-shadow: none;
+  cursor: default;
+}
+
+.progress-screen .level-card .level-big {
+  color: var(--ink-soft);
+}
+
+.progress-screen .level-card .level-sub,
+.progress-screen .level-card .level-label {
+  color: var(--ink-dim);
+}
+
+.progress-screen .level-card .level-bar {
+  border-color: color-mix(in srgb, var(--ink) 22%, transparent);
+  background: rgba(36, 29, 21, 0.05);
+}
+
+.progress-screen .level-card .level-bar-fill {
+  background: var(--ink-dim);
 }
 
 .streak-flame {
@@ -4981,6 +5018,31 @@ section.hero-cards {
   letter-spacing: 0.06em;
 }
 
+@media (min-width: 720px) {
+  .overview-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .streak-card,
+  .level-card {
+    flex: unset;
+    min-width: 0;
+  }
+
+  .progress-screen .stat-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .progress-screen .stat-tile {
+    flex: unset;
+    min-width: 0;
+  }
+}
+
 /* ---- Sticker cards share the padding/heading treatment */
 .progress-screen .progress-card {
   margin-bottom: 40px;
@@ -4998,23 +5060,30 @@ section.hero-cards {
 }
 
 .progress-screen .progress-card .progress-card-cta {
-  display: block;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
   width: 100%;
   text-align: center;
   margin-top: 22px;
-  padding-top: 20px;
+  margin-inline: 0;
+  margin-bottom: 0;
+  padding: 20px 0 0;
   border-top: 2px dashed var(--line-strong);
   color: var(--ink);
   font-size: 0.95rem;
   font-weight: 700;
+  text-decoration: none;
 }
 
 .progress-screen .progress-card .progress-card-cta:hover:not(:disabled) {
   color: var(--accent);
+  text-decoration: none;
 }
 
 /* ---- Accuracy (tabbed) */
-.acc-header {
+.progress-screen .acc-header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -5023,26 +5092,53 @@ section.hero-cards {
   margin-bottom: 26px;
 }
 
-.acc-tabs {
+.progress-screen .acc-tabs {
   display: flex;
-  gap: 10px;
+  flex: 1 1 280px;
+  min-width: 0;
+  gap: 4px;
+  padding: 4px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: rgba(36, 29, 21, 0.06);
 }
 
-.acc-tab {
-  padding: 10px 22px;
+.progress-screen .acc-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 10px 14px;
   border-radius: var(--radius-pill);
-  border: 2px solid var(--ink);
+  border: 2px solid transparent;
   background: transparent;
-  color: var(--ink);
+  color: var(--ink-muted);
   font: inherit;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
+  line-height: 1.25;
   cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
 }
 
-.acc-tab-active {
+.progress-screen .acc-tab:hover:not(:disabled):not(.acc-tab-active) {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  border-color: transparent;
+}
+
+.progress-screen .acc-tab-active {
   background: var(--ink);
+  border-color: var(--ink);
   color: var(--surface);
+  box-shadow: 2px 2px 0 rgba(36, 29, 21, 0.14);
+}
+
+.progress-screen .acc-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .progress-screen .breakdown {
@@ -5073,15 +5169,19 @@ section.hero-cards {
   font-weight: 700;
 }
 
-.tone-pills {
+.progress-screen .tone-pills {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
-  flex-wrap: wrap;
+  width: 100%;
 }
 
-.tone-pill {
-  padding: 8px 18px;
+.progress-screen .tone-pill {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  height: auto;
+  padding: 10px 12px;
   border-radius: var(--radius-pill);
   border: 2px solid var(--ink);
   background: transparent;
@@ -5092,7 +5192,7 @@ section.hero-cards {
   cursor: pointer;
 }
 
-.tone-pill-active {
+.progress-screen .tone-pill-active {
   color: var(--surface); /* background set inline to the tone's colour */
 }
 
@@ -5237,10 +5337,35 @@ section.hero-cards {
   margin: 0 0 4px;
 }
 
-.price-card-pro {
-  background: var(--ink);
-  color: var(--surface);
-  box-shadow: var(--shadow-sticker-jade);
+/* .sticker-card's panel fill wins at equal-ish specificity — qualify so the
+   Pro card ships jade with cream type, not the default panel beige. */
+.progress-screen .sticker-card.price-card-pro {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.progress-screen .price-card-pro .price-tag-note,
+.progress-screen .price-card-pro .price-foot {
+  color: color-mix(in srgb, var(--accent-ink) 72%, transparent);
+}
+
+.progress-screen .price-card-pro .price-card-head-pro h3 {
+  color: var(--ink);
+}
+
+.progress-screen .price-card-pro .price-cta {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.progress-screen .price-card-pro .price-cta:hover {
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.progress-screen .price-card-pro .price-cta:active {
+  box-shadow: 1px 1px 0 var(--ink);
 }
 
 .price-card-head-pro {
@@ -5301,10 +5426,7 @@ section.hero-cards {
   color: var(--ink-soft) !important;
 }
 
-/* The one loud element on the page. On the near-black Pro card a jade fill sat
-   low-contrast and leaned on a paper border to show its edge (which read as a
-   weird outline). Inverted instead: paper fill + ink text — ~13:1, pops off the
-   dark card with no border — and a jade hard-shadow carries the brand accent. */
+/* Paper pill on the jade Pro card — ink hard-shadow so it pops off the green. */
 .price-cta {
   margin-top: 8px;
   display: block;
