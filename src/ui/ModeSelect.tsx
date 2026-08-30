@@ -24,13 +24,15 @@ interface Props {
  * The Modes picker: Classic (today's random-tone run, offered here for
  * symmetry with Play), Tone Drill (every gate is one chosen tone), and Learn
  * (hum along with the sine demo — see Game.tsx's forceSynth wiring — no
- * pronunciation required). Two steps at most: pick a mode, then — only for
- * Drill — pick a tone. Mirrors PlayHome's own "open the mic inside the click
- * handler, then hand off" pattern, since this tap is the iOS gesture that has
- * to carry `ensureMic()`.
+ * pronunciation required). Two steps at most: pick a mode, then — Drill gets
+ * a tone picker, Learn gets a one-screen explainer before the mic opens, so
+ * a first-timer doesn't wonder why the demo stopped playing real speech.
+ * Mirrors PlayHome's own "open the mic inside the click handler, then hand
+ * off" pattern, since this tap is the iOS gesture that has to carry
+ * `ensureMic()`.
  */
 export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth, canvasHeight }: Props) {
-  const [step, setStep] = useState<"mode" | "tone">("mode");
+  const [step, setStep] = useState<"mode" | "tone" | "learn">("mode");
   const [ownError, setOwnError] = useState<string | null>(null);
   const [pending, setPending] = useState<PlayIntent | null>(null);
   const busy = pending !== null;
@@ -76,8 +78,8 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
                 <button disabled={busy} onClick={() => setStep("tone")}>
                   Tone Drill
                 </button>
-                <button disabled={busy} onClick={go("learn")}>
-                  {pending === "learn" ? "Opening mic…" : "Learn"}
+                <button disabled={busy} onClick={() => setStep("learn")}>
+                  Learn
                 </button>
               </div>
               <p className="note">
@@ -112,6 +114,25 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
                     </button>
                   );
                 })}
+              </div>
+              <button disabled={busy} onClick={() => setStep("mode")}>
+                Back
+              </button>
+            </>
+          )}
+
+          {step === "learn" && (
+            <>
+              <p className="note">
+                No need to say the word — just hum along with the tone as it
+                plays, and try to match its shape at the right time. It's a
+                fast way to build the muscle memory for each tone and get a
+                feel for how to control your voice.
+              </p>
+              <div className="menu playhome-menu">
+                <button className="primary" disabled={busy} onClick={go("learn")}>
+                  {pending === "learn" ? "Opening mic…" : "Start"}
+                </button>
               </div>
               <button disabled={busy} onClick={() => setStep("mode")}>
                 Back
