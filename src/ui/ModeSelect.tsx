@@ -71,22 +71,43 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
           {step === "mode" && (
             <>
               <p className="note">Pick how you want to play.</p>
-              <div className="menu playhome-menu">
-                <button className="primary" disabled={busy} onClick={go("game")}>
-                  {pending === "game" ? "Opening mic…" : "Classic"}
+              <div className="mode-select-cards">
+                <button
+                  type="button"
+                  className="mode-card mode-card-classic"
+                  disabled={busy}
+                  onClick={go("game")}
+                >
+                  <span className="mode-card-title">
+                    {pending === "game" ? "Opening mic…" : "Classic"}
+                  </span>
+                  <span className="mode-card-desc">
+                    Classic game mode: random words.
+                  </span>
                 </button>
-                <button disabled={busy} onClick={() => setStep("tone")}>
-                  Tone Drill
+                <button
+                  type="button"
+                  className="mode-card mode-card-drill"
+                  disabled={busy}
+                  onClick={() => setStep("tone")}
+                >
+                  <span className="mode-card-title">Tone Drill</span>
+                  <span className="mode-card-desc">
+                    Choose one tone you want to drill, for focused practice.
+                  </span>
                 </button>
-                <button disabled={busy} onClick={() => setStep("learn")}>
-                  Learn
+                <button
+                  type="button"
+                  className="mode-card mode-card-learn"
+                  disabled={busy}
+                  onClick={() => setStep("learn")}
+                >
+                  <span className="mode-card-title">Learn</span>
+                  <span className="mode-card-desc">
+                    Hum along with the demo's shape, great for learning the tones.
+                  </span>
                 </button>
               </div>
-              <p className="note">
-                Tone Drill: every gate is one tone you pick, for focused
-                practice. Learn: hum along with the demo's shape — no
-                pronunciation, no daily-run cost.
-              </p>
             </>
           )}
 
@@ -115,8 +136,8 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
                   );
                 })}
               </div>
-              <button disabled={busy} onClick={() => setStep("mode")}>
-                Back
+              <button type="button" className="link" disabled={busy} onClick={() => setStep("mode")}>
+                ← Back
               </button>
             </>
           )}
@@ -124,18 +145,15 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
           {step === "learn" && (
             <>
               <p className="note">
-                No need to say the word — just hum along with the tone as it
-                plays, and try to match its shape at the right time. It's a
-                fast way to build the muscle memory for each tone and get a
-                feel for how to control your voice.
+              No words yet. Just hum each tone and match its shape as it appears. It is the fastest way to feel the pitch changes and build the muscle memory before you add real syllables.
               </p>
               <div className="menu playhome-menu">
                 <button className="primary" disabled={busy} onClick={go("learn")}>
                   {pending === "learn" ? "Opening mic…" : "Start"}
                 </button>
               </div>
-              <button disabled={busy} onClick={() => setStep("mode")}>
-                Back
+              <button type="button" className="link" disabled={busy} onClick={() => setStep("mode")}>
+                ← Back
               </button>
             </>
           )}
@@ -143,8 +161,8 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
           {error && <p className="error">{error}</p>}
 
           {step === "mode" && (
-            <button disabled={busy} onClick={onBack}>
-              Back
+            <button type="button" className="link" disabled={busy} onClick={onBack}>
+              ← Back
             </button>
           )}
         </div>

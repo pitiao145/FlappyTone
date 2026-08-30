@@ -70,8 +70,8 @@ export function PlayHome({
       >
         <div className="screen playhome-overlay">
           <img
-            src="/Bird-hor-no-halo.png"
-            alt=""
+            src="public/Bird-hor-no-halo.png"
+            alt="Flappytone mascot"
             className="playhome-mascot"
           />
           <h1>{brand.name}</h1>
@@ -86,11 +86,12 @@ export function PlayHome({
             <button className="primary" disabled={busy} onClick={go("game")}>
               {pendingIntent === "game" ? "Opening mic…" : "Play"}
             </button>
-            <button disabled={busy} onClick={go("tutorial")}>
-              {pendingIntent === "tutorial" ? "Opening mic…" : "Tutorial"}
-            </button>
             <button disabled={busy} onClick={onModes}>
               Modes
+              <span className="badge badge-new">New</span>
+            </button>
+            <button disabled={busy} onClick={go("tutorial")}>
+              {pendingIntent === "tutorial" ? "Opening mic…" : "Tutorial"}
             </button>
           </div>
           {error && <p className="error">{error}</p>}

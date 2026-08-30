@@ -806,11 +806,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           <div className="overlay tutorial-card">
             <h3>Tutorial</h3>
             <p>
-              Eight gates, one tone at a time. No score, no hearts, and twice
-              the room.
-            </p>
+            First listen to the example, then it's your turn. The dot follows your pitch, so you fly by matching the shape. Eight gates, one tone at a time, and we run the room twice.            </p>
             <p className="note">
-              Listen to the example, then say it. The dot follows your pitch.
+              Don't worry, you're not getting scored for this one.
             </p>
             <button
               className="primary"
