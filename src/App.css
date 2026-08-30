@@ -267,8 +267,18 @@
    a wide viewport, so they get a wider cap than the game frame while staying
    well short of the landing page's full-bleed width. PlayHome keeps the
    420px game-frame cap instead — it's the game's own canvas at rest. */
-.frame:has(.howto-screen, .settings-screen, .gameover-screen, .profile-screen) {
+.frame:has(.howto-screen, .gameover-screen, .profile-screen) {
   max-width: 640px;
+}
+
+.frame:has(.settings-screen) {
+  max-width: 640px;
+}
+
+@media (min-width: 720px) {
+  .frame:has(.settings-screen) {
+    max-width: min(720px, calc(100vw - var(--nav-sidebar-w) - 64px));
+  }
 }
 
 /* Progress is a dashboard, not a menu shell — give it room on desktop. */
@@ -1690,13 +1700,49 @@
   align-items: stretch;
   text-align: left;
   max-width: 420px;
-  gap: 18px;
+  gap: 14px;
+}
+
+@media (min-width: 720px) {
+  .settings-screen {
+    max-width: none;
+  }
 }
 
 .setting {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.settings-screen .setting-card {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--ink);
+  background: var(--surface-panel);
+  box-shadow: var(--shadow-sticker);
+  gap: var(--space-3);
+}
+
+.settings-screen .setting-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-screen .setting-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.settings-screen .setting-icon svg {
+  width: 22px;
+  height: 22px;
 }
 
 .setting h3 {
@@ -1707,10 +1753,46 @@
   color: var(--ink-soft);
 }
 
+.settings-screen .setting-card h3 {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--ink);
+}
+
+.settings-screen .setting-callout {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 2px solid color-mix(in srgb, var(--accent) 32%, transparent);
+  background: color-mix(in srgb, var(--accent) 11%, var(--surface));
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.settings-screen .setting-callout-empty {
+  border-color: color-mix(in srgb, var(--ink) 18%, transparent);
+  background: var(--surface);
+  color: var(--ink-muted);
+}
+
 .setting-actions {
   display: flex;
   gap: var(--space-2);
   flex-wrap: wrap;
+}
+
+.settings-screen .setting-actions-row {
+  flex-wrap: nowrap;
+}
+
+.settings-screen .setting-actions-row button {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 10px 10px;
+  font-size: 0.82rem;
 }
 
 .setting .param-help {
@@ -1758,6 +1840,13 @@
   border-color: var(--accent);
   background: rgba(var(--accent-rgb), 0.12);
   color: var(--accent-bright);
+}
+
+.settings-screen .choice-option.active {
+  border-color: var(--accent-bright);
+  background: var(--accent-bright);
+  color: var(--accent-ink);
+  font-weight: 700;
 }
 
 .settings-screen .danger {

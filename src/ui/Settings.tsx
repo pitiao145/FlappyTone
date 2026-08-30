@@ -11,8 +11,61 @@ import {
   type CalibrationSettings,
 } from "../game/settings.ts";
 import { Choice } from "./Choice.tsx";
+import { MicrophoneIcon } from "./toneIcons.tsx";
 
 const SHARING = ["on", "off"] as const;
+
+function SettingIcon({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="setting-icon" aria-hidden>
+      {children}
+    </span>
+  );
+}
+
+function ChartIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M4 19V5M4 19h16M8 17V11M12 17V7M16 17v-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function SlidersIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M4 7h16M4 17h16M9 4v6M15 14v6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function BookIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M5 5.5A2.5 2.5 0 0 1 7.5 3H18v18H7.5A2.5 2.5 0 0 0 5 18.5V5.5ZM5 18.5A2.5 2.5 0 0 1 7.5 21H18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 interface Props {
   /** The saved calibration, or null if the player has never calibrated. */
@@ -79,24 +132,29 @@ export function Settings({
     <div className="screen settings-screen">
       <h2>Settings</h2>
 
-      <section className="setting">
-        <h3>Your voice</h3>
+      <section className="setting setting-card">
+        <div className="setting-card-head">
+          <SettingIcon>
+            <MicrophoneIcon />
+          </SettingIcon>
+          <h3>Your voice</h3>
+        </div>
         {settings ? (
-          <p className="note">
-            Centred on <strong>{Math.round(settings.f0Center)} Hz</strong>,
-            your speaking pitch, which sits on line 3. Reaching{" "}
+          <div className="setting-callout">
+            Centred on <strong>{Math.round(settings.f0Center)} Hz</strong>, your
+            speaking pitch, which sits on line 3. Reaching{" "}
             <strong>{settings.rangeSemitones} semitones</strong> above it gets
             you to line 5, and{" "}
             <strong>{settings.rangeDownSemitones} semitones</strong> below it to
             line 1.
-          </p>
+          </div>
         ) : (
-          <p className="note">
-            Not calibrated yet. The game maps your voice through someone else's
-            range until you do.
-          </p>
+          <div className="setting-callout setting-callout-empty">
+            Not calibrated yet. The game maps your voice through someone
+            else&rsquo;s range until you do.
+          </div>
         )}
-        <div className="setting-actions">
+        <div className="setting-actions setting-actions-row">
           <button
             disabled={busy}
             onClick={() => void goListening(onRecalibrate)()}
@@ -133,8 +191,13 @@ export function Settings({
         </p>
       </section>
 
-      <section className="setting">
-        <h3>Anonymous game data</h3>
+      <section className="setting setting-card">
+        <div className="setting-card-head">
+          <SettingIcon>
+            <ChartIcon />
+          </SettingIcon>
+          <h3>Anonymous game data</h3>
+        </div>
         <Choice
           options={SHARING}
           value={sharing}
@@ -154,8 +217,13 @@ export function Settings({
         </p>
       </section>
 
-      <section className="setting">
-        <h3>Playing</h3>
+      <section className="setting setting-card">
+        <div className="setting-card-head">
+          <SettingIcon>
+            <SlidersIcon />
+          </SettingIcon>
+          <h3>Playing</h3>
+        </div>
         <p className="param-help">
           Tunnel width and the spoken example are in the pause menu, so
           you can change them while you can feel what they do. Tap ‖ during a
@@ -163,8 +231,13 @@ export function Settings({
         </p>
       </section>
 
-      <section className="setting">
-        <h3>Learn</h3>
+      <section className="setting setting-card">
+        <div className="setting-card-head">
+          <SettingIcon>
+            <BookIcon />
+          </SettingIcon>
+          <h3>Learn</h3>
+        </div>
         <div className="setting-actions">
           <button disabled={busy} onClick={() => void goListening(onTutorial)()}>
             Tutorial
