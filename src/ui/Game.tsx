@@ -108,7 +108,7 @@ const GATE_LOG_ON_SCREEN = 4;
  * tutorial, or the player has stepped through it. See the run-owning
  * effect's `tick()` for how each step is detected.
  */
-type WalkthroughStep = "intro" | "listen" | "your-turn" | "menu" | null;
+type WalkthroughStep = "intro" | "listen" | "menu" | null;
 
 interface Props {
   mode: RunMode;
@@ -216,9 +216,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     mode === "tutorial" ? "intro" : null,
   );
   /**
-   * True while a mid-run walkthrough card ("listen", "your-turn", "menu" —
-   * not "intro", the only pre-start step, which simply hasn't started the
-   * loop yet) holds the world still. Checked at the top of every
+   * True while a mid-run walkthrough card ("listen", "menu" — not "intro",
+   * the only pre-start step, which simply hasn't started the loop yet)
+   * holds the world still. Checked at the top of every
    * `tickAudio`/`tickFrame` call site in the run-owning effect; never set
    * outside `mode === "tutorial"`.
    */
@@ -434,7 +434,6 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // freshly-computed snapshot, so a transition is caught before the world
     // visibly moves past it (the polled `hud` state is too coarse for this).
     let prevHadCue = false;
-    let prevCuePaused = false;
     let prevGateLogLen = 0;
 
     // The mic is already open — Title opened it inside the click gesture.
@@ -488,11 +487,25 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       if (!ctx2d) return;
       drawWorld(ctx2d, canvasWidth, canvasHeightRef.current, snap);
 
-      // Walkthrough step triggers — gate 1 only (gateLog.length gates B/C,
-      // and D fires exactly once when it flips 0→1). Must run before the
+      // Walkthrough step triggers — gate 1 only (gateLog.length gates B, and
+      // D fires exactly once when it flips 0→1). Must run before the
       // cue-play block below: freezing here on the same frame `snap.cue`
       // first appears is what stops the demo from playing before "listen"
       // is dismissed.
+      //
+      // There used to be a third trigger here ("your-turn", firing when
+      // cuePaused ended) that froze the world again right as the corridor
+      // began its approach. It made the reaction window feel too short: the
+      // approach distance (cueApproachMs, unchanged the whole time worldX is
+      // frozen — by this freeze or Run's own inCuePause hold) is the same
+      // runway every gate in the game gives a player to react, but a normal
+      // player is already reacting to the demo throughout the hold and the
+      // approach, not reading a card and tapping Continue first. Freezing a
+      // second time here spent part of that fixed runway on the card instead
+      // of on flying. Removing it lets the demo→hold→approach sequence run
+      // uninterrupted once "listen" is dismissed — the existing, unrelated
+      // `phase-banner your-turn` (below, driven by `banner`) still cues the
+      // player non-blockingly, exactly as it does for every other gate.
       if (mode === "tutorial") {
         if (
           !frozenRef.current &&
@@ -505,15 +518,6 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           setWalkthroughStep("listen");
         } else if (
           !frozenRef.current &&
-          snap.gateLog.length === 0 &&
-          prevCuePaused &&
-          !snap.cuePaused
-        ) {
-          frozenRef.current = true;
-          freezeStartedAtRef.current = now;
-          setWalkthroughStep("your-turn");
-        } else if (
-          !frozenRef.current &&
           prevGateLogLen === 0 &&
           snap.gateLog.length === 1
         ) {
@@ -522,7 +526,6 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           setWalkthroughStep("menu");
         }
         prevHadCue = snap.cue !== null;
-        prevCuePaused = snap.cuePaused;
         prevGateLogLen = snap.gateLog.length;
       }
 
@@ -942,11 +945,20 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           </div>
         )}
 
+        {/* Covers both "listen" and "your turn" in one card, dismissed once
+            — see the trigger comment above for why there's no second freeze
+            partway through the demo/approach anymore: it was spending part
+            of the gate's fixed reaction runway on reading a card instead of
+            flying. The existing (unmodified) `phase-banner your-turn` cues
+            the player once the approach actually starts, same as any gate. */}
         {walkthroughStep === "listen" && (
           <div className="overlay tutorial-card">
             <JumpingPip size={96} className="walkthrough-pip" />
             <h3>First, listen</h3>
-            <p>Listen to the demo before you try it yourself.</p>
+            <p>
+              Listen to the demo, then copy the tone — fly through the
+              corridor without touching the walls.
+            </p>
             <button
               className="primary"
               onClick={() => {
@@ -962,27 +974,6 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
                   frozenAccumMsRef.current += performance.now() - freezeStartedAtRef.current;
                   frozenRef.current = false;
                 }, WALKTHROUGH_DEMO_DELAY_MS);
-              }}
-            >
-              Continue
-            </button>
-          </div>
-        )}
-
-        {walkthroughStep === "your-turn" && (
-          <div className="overlay tutorial-card">
-            <JumpingPip size={96} className="walkthrough-pip" />
-            <h3>Your turn</h3>
-            <p>
-              Copy the tone you just heard — fly through the corridor
-              without touching the walls.
-            </p>
-            <button
-              className="primary"
-              onClick={() => {
-                frozenAccumMsRef.current += performance.now() - freezeStartedAtRef.current;
-                frozenRef.current = false;
-                setWalkthroughStep(null);
               }}
             >
               Continue
