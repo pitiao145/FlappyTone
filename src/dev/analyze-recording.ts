@@ -29,7 +29,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { basename, dirname, extname, join } from "node:path";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
-import { MERGE_GAP_MS, MIN_UTTERANCE_MS } from "../game/scoring.ts";
+import { tuning } from "../game/tuning.ts";
 import { decodeWav } from "./wav.ts";
 
 const FRAME_SIZE = 2048;
@@ -37,8 +37,9 @@ const HOP_SIZE = 1024;
 const SPEAKERS_PATH = "fixtures/captures/speakers.json";
 
 /**
- * Segmentation floor for *reporting*. Deliberately below the game's
- * MIN_UTTERANCE_MS: a run the game threw away is exactly what we want to see.
+ * Segmentation floor for *reporting*. Deliberately below the game's live
+ * `tuning().minUtteranceMs` — a run the game threw away is exactly what we
+ * want to see.
  */
 const REPORT_MIN_MS = 90;
 
@@ -320,13 +321,13 @@ interface Utterance {
   frames: Frame[];
 }
 
-/** Voiced runs, merging gaps under MERGE_GAP_MS — the game's own segmentation. */
+/** Voiced runs, merging gaps under tuning().mergeGapMs — the game's own segmentation. */
 function segment(frames: Frame[]): { startIdx: number; endIdx: number }[] {
   const runs: { startIdx: number; endIdx: number }[] = [];
   let open: { startIdx: number; endIdx: number } | null = null;
   for (let i = 0; i < frames.length; i++) {
     if (!frames[i].voiced) continue;
-    if (open && frames[i].tMs - frames[open.endIdx].tMs <= MERGE_GAP_MS) {
+    if (open && frames[i].tMs - frames[open.endIdx].tMs <= tuning().mergeGapMs) {
       open.endIdx = i;
     } else {
       if (open) runs.push(open);
@@ -378,7 +379,7 @@ function buildUtterances(
       medianF0: med,
       speaker: isCue ? "cue" : "player",
       cueTone: ref?.tone ?? null,
-      heardByGame: durMs >= MIN_UTTERANCE_MS,
+      heardByGame: durMs >= tuning().minUtteranceMs,
       frames: slice,
     });
   }
@@ -481,7 +482,7 @@ function main(): void {
         `${utterances.length - byPlayer.length} cue)`,
     );
     console.log(
-      `  player utterances under the game's ${MIN_UTTERANCE_MS}ms floor: ` +
+      `  player utterances under the game's ${tuning().minUtteranceMs}ms floor: ` +
         `${missed.length}/${byPlayer.length}`,
     );
 
