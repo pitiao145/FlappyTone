@@ -231,6 +231,21 @@ export default function GameApp() {
   const [screen, setScreen] = useState<Screen>(() =>
     initialIntent() === "visualiser" && settings ? "visualiser" : "play",
   );
+  /**
+   * Whether the mic session backing the Visualiser screen is actually open.
+   * Landing here via `onNavigate("visualiser")` (a real click) only ever
+   * flips `screen` to "visualiser" *after* `ensureMic()` resolves, so this
+   * starts true for that path. Landing here via `?intent=visualiser` from
+   * the landing page (see `initialIntent`) sets `screen` straight to
+   * "visualiser" with no click behind it at all — `ensureMic()` was never
+   * called, so without this flag `<Visualiser>` mounted believing the mic
+   * was already open (its own comment says so) and just sat deaf until the
+   * player happened to hit the mute button twice. This starts false in that
+   * case so a tap gate renders instead, and that tap is the real gesture.
+   */
+  const [visualiserMicReady, setVisualiserMicReady] = useState(
+    () => !(initialIntent() === "visualiser" && settings) || getMicSession() !== null,
+  );
   const [stats, setStats] = useState<RunStats | null>(null);
   /**
    * What GameOver should offer, if anything — decided here, once the
@@ -602,28 +617,38 @@ export default function GameApp() {
    * own reasons (Play's buttons, Settings' recalibrate/tutorial links) open
    * a fresh one themselves, inside their own click handler.
    */
+  /**
+   * Opens (or reuses) the mic session and lands on the Visualiser screen —
+   * shared by the nav bar's own click and the intent-arrival tap gate below,
+   * so there is exactly one place that knows how to get there.
+   */
+  const openVisualiser = useCallback(() => {
+    setError(null);
+    if (gameAlive) gameRef.current?.pause();
+    if (!settings) pendingRef.current = "visualiser";
+    void ensureMic()
+      .then(async () => {
+        const audio = getMicSession()?.ctx;
+        if (audio && audio.state === "suspended") await audio.resume();
+        setVisualiserMicReady(true);
+        setScreen(settings ? "visualiser" : "calibrate");
+      })
+      .catch((err) => {
+        pendingRef.current = null;
+        if (!(err instanceof MicCancelled)) {
+          // The error banner only has a slot on the Play tab, so land
+          // there to show it rather than failing silently wherever the
+          // player asked for Visualiser from.
+          setScreen("play");
+          setError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
+        }
+      });
+  }, [settings, gameAlive]);
+
   const onNavigate = useCallback(
     (tab: NavTab) => {
       if (tab === "visualiser") {
-        setError(null);
-        if (gameAlive) gameRef.current?.pause();
-        if (!settings) pendingRef.current = "visualiser";
-        void ensureMic()
-          .then(async () => {
-            const audio = getMicSession()?.ctx;
-            if (audio && audio.state === "suspended") await audio.resume();
-            setScreen(settings ? "visualiser" : "calibrate");
-          })
-          .catch((err) => {
-            pendingRef.current = null;
-            if (!(err instanceof MicCancelled)) {
-              // The error banner only has a slot on the Play tab, so land
-              // there to show it rather than failing silently wherever the
-              // player clicked Visualiser from.
-              setScreen("play");
-              setError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
-            }
-          });
+        openVisualiser();
         return;
       }
       if (gameAlive) {
@@ -634,7 +659,7 @@ export default function GameApp() {
       stopMic();
       setScreen(tab);
     },
-    [settings, gameAlive],
+    [gameAlive, openVisualiser],
   );
 
   return (
@@ -711,12 +736,28 @@ export default function GameApp() {
           />
         )}
 
-        {screen === "visualiser" && settings && (
+        {screen === "visualiser" && settings && visualiserMicReady && (
           // Same dimensions PlayHome gets (CANVAS_W x GAME_CANVAS_H) so the
           // .frame this renders into is pixel-identical to Play's — no
           // separate constants, no separate CSS formula. See the
           // `.visualiser-screen.game-stage` rule in App.css.
           <Visualiser settings={settings} canvasWidth={CANVAS_W} canvasHeight={GAME_CANVAS_H} />
+        )}
+
+        {screen === "visualiser" && settings && !visualiserMicReady && (
+          // Only reached via `?intent=visualiser` from the landing page,
+          // which arrives here with no click behind it (hard rule 4) —
+          // `<Visualiser>` itself assumes the mic is already open, so it
+          // can't be mounted yet. This tap is the real gesture; it hands off
+          // to the same `openVisualiser()` the nav bar uses.
+          <div
+            className="screen stage game-stage"
+            style={{ width: CANVAS_W, height: GAME_CANVAS_H }}
+          >
+            <div className="overlay" onClick={openVisualiser}>
+              <p>Tap to start</p>
+            </div>
+          </div>
         )}
 
         {screen === "lab" && Lab && (
