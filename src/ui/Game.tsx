@@ -45,6 +45,12 @@ const HUD_HZ = 4;
 const YOUR_TURN_MAX_T = 0.5;
 /** How long the "couldn't hear that" toast stays up. */
 const TOAST_MS = 1200;
+/**
+ * The walkthrough's "listen" card holds the world this much longer after
+ * "Continue" is tapped, before the demo actually plays — a beat so the demo
+ * doesn't fire in the exact instant of the tap.
+ */
+const WALKTHROUGH_DEMO_DELAY_MS = 500;
 
 /** What the HUD reacts to when a gate resolves. */
 interface OutcomeFlash {
@@ -210,10 +216,11 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     mode === "tutorial" ? "intro" : null,
   );
   /**
-   * True while a walkthrough card (B/C/D — not the pre-start "intro"/"listen"
-   * steps, which simply haven't started the loop yet) holds the world still.
-   * Checked at the top of every `tickAudio`/`tickFrame` call site in the
-   * run-owning effect; never set outside `mode === "tutorial"`.
+   * True while a mid-run walkthrough card ("listen", "your-turn", "menu" —
+   * not "intro", the only pre-start step, which simply hasn't started the
+   * loop yet) holds the world still. Checked at the top of every
+   * `tickAudio`/`tickFrame` call site in the run-owning effect; never set
+   * outside `mode === "tutorial"`.
    */
   const frozenRef = useRef(false);
   /**
@@ -891,7 +898,16 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
             </p>
             <button
               className="primary"
-              onClick={() => setWalkthroughStep("listen")}
+              onClick={() => {
+                // Starts the run loop directly — this is the only pre-start
+                // card. "listen" is not chained after it: it's shown later,
+                // mid-run, the moment gate 1's demo cue actually fires (see
+                // tick()'s Trigger B). Chaining it here duplicated the card
+                // (once here, once for real) and left the real one's Continue
+                // with nothing to do.
+                setWalkthroughStep(null);
+                startRef.current();
+              }}
             >
               Continue
             </button>
@@ -906,8 +922,14 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
             <button
               className="primary"
               onClick={() => {
+                // The run is already ticking (that's how this card got
+                // triggered) — unfreeze, on a short delay so the demo
+                // doesn't fire in the same instant as the tap, which read as
+                // instant/jarring rather than a deliberate beat.
                 setWalkthroughStep(null);
-                startRef.current();
+                window.setTimeout(() => {
+                  frozenRef.current = false;
+                }, WALKTHROUGH_DEMO_DELAY_MS);
               }}
             >
               Continue
