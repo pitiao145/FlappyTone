@@ -224,6 +224,24 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
    */
   const frozenRef = useRef(false);
   /**
+   * `Run.tickFrame`/`tickAudio` take an absolute timestamp, and `Run` stamps
+   * things like a cue's fire time (`cue.atMs`) with whatever it's handed —
+   * so simply not calling them while frozen isn't enough on its own. The
+   * very next call after unfreezing would still pass real wall-clock time,
+   * and `nowMs - cue.atMs` would then include the entire real-time gap the
+   * walkthrough card was up for, not just simulated ticks — which is what
+   * made the "listen" card's own demo-hold window (`inCuePause`) read as
+   * already elapsed the moment the world resumed, so the demo and the
+   * corridor's arrival both happened at once instead of the demo holding
+   * the world first. `frozenAccumMsRef` is the running total of real ms
+   * spent frozen so far; every timestamp handed to `Run` is `real -
+   * frozenAccumMsRef.current`, so `Run`'s own clock skips the frozen gap
+   * entirely and stays continuous from its perspective.
+   */
+  const frozenAccumMsRef = useRef(0);
+  /** Real timestamp (`performance.now()`-based) the current freeze began at. */
+  const freezeStartedAtRef = useRef(0);
+  /**
    * The one-time "still in testing" notice, which holds a real run the same way
    * the tutorial card does. Decided once at mount and kept in a ref as well as
    * state, because the run effect reads it without wanting it as a dependency —
@@ -374,6 +392,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // Every fresh Run (mount, or a pause-menu Restart bumping runGen)
     // replays the walkthrough from the top.
     frozenRef.current = false;
+    frozenAccumMsRef.current = 0;
+    freezeStartedAtRef.current = 0;
     if (mode === "tutorial") setWalkthroughStep("intro");
     const run = new Run({
       mode,
@@ -442,8 +462,11 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       const pitch = tracker.push(frame);
       publishState(pitch);
       // A walkthrough card (steps B/C/D) holds the world still — no pitch
-      // frame should reach Run while one is up.
-      if (!frozenRef.current) run.tickAudio(pitch, performance.now());
+      // frame should reach Run while one is up. The frozen-time offset (see
+      // frozenAccumMsRef's comment) keeps Run's own clock continuous.
+      if (!frozenRef.current) {
+        run.tickAudio(pitch, performance.now() - frozenAccumMsRef.current);
+      }
     };
     setFrameSink(onFrame);
 
@@ -452,8 +475,10 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       lastT = now;
       // A walkthrough card (steps B/C/D) holds the world still — worldX,
       // gate sync, collision and the cue timer all stand genuinely still,
-      // since Run's own `nowMs` only ever advances inside this call.
-      if (!frozenRef.current) run.tickFrame(dt, now);
+      // since Run's own `nowMs` only ever advances inside this call. The
+      // frozen-time offset (see frozenAccumMsRef's comment) keeps that
+      // clock continuous once ticking resumes.
+      if (!frozenRef.current) run.tickFrame(dt, now - frozenAccumMsRef.current);
       const snap = run.snapshot();
       // Re-applies the backing-store scale every frame — cheap (scaleForDpr
       // only resizes when the density-scaled dimensions actually changed)
@@ -476,6 +501,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           snap.cue !== null
         ) {
           frozenRef.current = true;
+          freezeStartedAtRef.current = now;
           setWalkthroughStep("listen");
         } else if (
           !frozenRef.current &&
@@ -484,6 +510,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           !snap.cuePaused
         ) {
           frozenRef.current = true;
+          freezeStartedAtRef.current = now;
           setWalkthroughStep("your-turn");
         } else if (
           !frozenRef.current &&
@@ -491,6 +518,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           snap.gateLog.length === 1
         ) {
           frozenRef.current = true;
+          freezeStartedAtRef.current = now;
           setWalkthroughStep("menu");
         }
         prevHadCue = snap.cue !== null;
@@ -925,9 +953,13 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
                 // The run is already ticking (that's how this card got
                 // triggered) — unfreeze, on a short delay so the demo
                 // doesn't fire in the same instant as the tap, which read as
-                // instant/jarring rather than a deliberate beat.
+                // instant/jarring rather than a deliberate beat. The elapsed
+                // real time (card display + this delay) is accumulated right
+                // when ticking actually resumes, not at click time — see
+                // frozenAccumMsRef's comment.
                 setWalkthroughStep(null);
                 window.setTimeout(() => {
+                  frozenAccumMsRef.current += performance.now() - freezeStartedAtRef.current;
                   frozenRef.current = false;
                 }, WALKTHROUGH_DEMO_DELAY_MS);
               }}
@@ -948,6 +980,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
             <button
               className="primary"
               onClick={() => {
+                frozenAccumMsRef.current += performance.now() - freezeStartedAtRef.current;
                 frozenRef.current = false;
                 setWalkthroughStep(null);
               }}
@@ -968,6 +1001,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
             <button
               className="primary"
               onClick={() => {
+                frozenAccumMsRef.current += performance.now() - freezeStartedAtRef.current;
                 frozenRef.current = false;
                 setWalkthroughStep(null);
                 pauseRef.current(false);
