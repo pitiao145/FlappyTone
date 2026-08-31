@@ -226,7 +226,7 @@ export function Settings({
         </div>
         <p className="param-help">
           Tunnel width and the spoken example are in the pause menu, so
-          you can change them while you can feel what they do. Tap ‖ during a
+          you can change them while you can feel what they do. Tap Pause during a
           run.
         </p>
       </section>

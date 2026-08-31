@@ -41,7 +41,7 @@ export function Profile({ onEarlyBird }: Props) {
       </section>
 
       <section className="earlybird-card">
-        <p className="modal-eyebrow">★ EarlyBird access</p>
+        <p className="modal-eyebrow">★ Support the app with EarlyBird access</p>
         <p className="earlybird-price">
           {PRO_PRICE} <span className="modal-price-note">once · yours for life</span>
         </p>
