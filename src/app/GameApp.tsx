@@ -387,6 +387,28 @@ export default function GameApp() {
     [settings, dailyLimitReached, openEarlyBird],
   );
 
+  /**
+   * The calibration-flight TutorialDone screen's "Let's try it out" button.
+   * That flight (`autoStart`) is only a range-measuring flight — a few gates
+   * flown immediately, no walkthrough — not the guided teaching tutorial, so
+   * this is the direct path into a real one afterward, instead of landing on
+   * Play and making the player tap Tutorial themselves. `startPlay` expects
+   * the mic already open (see its own comment); Game.tsx's tick() already
+   * called `stopMic()` when the calibration flight ended, so this reopens it
+   * itself, inside this tap's gesture — same pattern as PlayHome's `go()`.
+   */
+  const startTutorialFromCalibration = useCallback(async () => {
+    try {
+      await ensureMic();
+      startPlay("tutorial");
+    } catch (err) {
+      if (!(err instanceof MicCancelled)) {
+        setError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
+      }
+      goHome();
+    }
+  }, [startPlay, goHome]);
+
   const onCalibrated = useCallback((s: CalibrationSettings) => {
     setSettings(s);
     track({ type: "calib_done" });
@@ -649,7 +671,11 @@ export default function GameApp() {
         {screen === "tutorialdone" && (
           <TutorialDone
             variant={doneVariant}
-            onDone={goHome}
+            onDone={
+              doneVariant === "calibration"
+                ? () => void startTutorialFromCalibration()
+                : goHome
+            }
             canvasWidth={CANVAS_W}
             canvasHeight={GAME_CANVAS_H}
           />

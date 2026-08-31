@@ -129,9 +129,12 @@ interface Props {
    * Set when this tutorial run is the calibration flight (GameApp routes to
    * it straight from the calibration screen). Flies only the grid-anchoring
    * tones (`CALIBRATION_TONES`) instead of the full teaching set — see the
-   * run-owning effect's `tutorialTones`. No longer skips the walkthrough:
-   * every tutorial run shows it, calibration flight included. Ignored
-   * outside tutorial mode.
+   * run-owning effect's `tutorialTones`. Also skips the guided walkthrough
+   * (see `WalkthroughStep`) and begins immediately: it's a range-measuring
+   * flight, not a teaching moment the player chose, and its gesture already
+   * happened on the calibration screen's "Let's go". GameApp offers a
+   * separate way into a real, walkthrough-guided tutorial afterward.
+   * Ignored outside tutorial mode.
    */
   autoStart?: boolean;
   /** This session's run count, this one included. Shown in the pause menu; ignored in the tutorial. */
@@ -205,15 +208,22 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   const [showTranslation, setShowTranslation] = useState(loadShowTranslation);
   /**
    * The tutorial's guided walkthrough — see `WalkthroughStep`. Starts at
-   * "intro" for every tutorial run (also reset to "intro" inside the
-   * run-owning effect on every fresh `Run`, so a pause-menu Restart replays
-   * it too) and steps forward as the player dismisses each card. The first
-   * card's button doubles as the user gesture that starts the run — the
-   * iOS-safe place to resume the AudioContext, same reason the old
-   * single intro card worked.
+   * "intro" for every *deliberately started* tutorial run (also reset to
+   * "intro" inside the run-owning effect on every fresh `Run`, so a
+   * pause-menu Restart replays it too) and steps forward as the player
+   * dismisses each card. The first card's button doubles as the user
+   * gesture that starts the run — the iOS-safe place to resume the
+   * AudioContext, same reason the old single intro card worked.
+   *
+   * Not shown when `autoStart` is set — that's the short range-measuring
+   * flight GameApp routes straight into right after calibration, not a
+   * teaching moment the player chose. It stays exactly what it was before
+   * the walkthrough existed: a handful of gates flown immediately, no
+   * cards. GameApp now offers a separate button, after that flight, into a
+   * real (walkthrough-guided) tutorial for players who want one.
    */
   const [walkthroughStep, setWalkthroughStep] = useState<WalkthroughStep>(
-    mode === "tutorial" ? "intro" : null,
+    mode === "tutorial" && !autoStart ? "intro" : null,
   );
   /**
    * True while a mid-run walkthrough card ("listen", "menu" — not "intro",
@@ -394,7 +404,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     frozenRef.current = false;
     frozenAccumMsRef.current = 0;
     freezeStartedAtRef.current = 0;
-    if (mode === "tutorial") setWalkthroughStep("intro");
+    if (mode === "tutorial" && !autoStart) setWalkthroughStep("intro");
     const run = new Run({
       mode,
       width: canvasWidth,
@@ -506,7 +516,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // uninterrupted once "listen" is dismissed — the existing, unrelated
       // `phase-banner your-turn` (below, driven by `banner`) still cues the
       // player non-blockingly, exactly as it does for every other gate.
-      if (mode === "tutorial") {
+      if (mode === "tutorial" && !autoStart) {
         if (
           !frozenRef.current &&
           snap.gateLog.length === 0 &&
@@ -664,10 +674,13 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       if (audio && audio.state === "suspended") void audio.resume();
       start();
     };
-    // The tutorial holds behind its walkthrough's "listen" card, calibration
-    // flight included — see WalkthroughStep. A first real run holds behind
-    // the testing notice. Everything else starts now.
-    if (mode !== "tutorial" && !noticeRef.current) start();
+    // A deliberately started tutorial holds behind its walkthrough's "intro"
+    // card — see WalkthroughStep. A first real run holds behind the testing
+    // notice. The calibration flight (autoStart) starts immediately, same
+    // as before the walkthrough existed: it's a range-measuring flight, not
+    // a teaching moment, and its gesture already happened on the
+    // calibration screen's "Let's go".
+    if ((mode !== "tutorial" || autoStart) && !noticeRef.current) start();
 
     return () => {
       running = false;
