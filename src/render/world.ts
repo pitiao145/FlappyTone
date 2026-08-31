@@ -190,8 +190,21 @@ export function drawWorld(
   width: number,
   height: number,
   snap: RunSnapshot,
+  /**
+   * The same clock basis the host fed into `Run.tickFrame`/`tickAudio` for
+   * this snapshot — every age/sweep computation below (trail fade, the demo
+   * dot's sweep, recoil, impact/unheard pulses) compares this against
+   * timestamps `Run` stamped using that same clock (`trail[].t`,
+   * `cue.atMs`, `lastOutcome.atMs`, ...). A host that never holds the world
+   * still can simply pass `performance.now()`, since nothing then diverges
+   * from raw wall-clock time — but one that does (the tutorial's guided
+   * walkthrough, see Game.tsx's `frozenAccumMsRef`) must pass the same
+   * adjusted value it fed `Run`, or every one of those comparisons reads
+   * the frozen gap as elapsed time and the drawing looks broken (a trail
+   * that never appears, a demo dot pinned at its own endpoint).
+   */
+  now: number,
 ): void {
-  const now = performance.now();
   ctx.fillStyle = BACKDROP;
   ctx.fillRect(0, 0, width, height);
 
@@ -211,7 +224,7 @@ export function drawWorld(
     drawGate(ctx, width, height, gate, gate.x0 <= dotX);
   }
 
-  if (!snap.cuePaused) drawCueDemo(ctx, height, snap);
+  if (!snap.cuePaused) drawCueDemo(ctx, height, snap, now);
 
   drawTrail(ctx, width, height, snap.trail, tuning().trailSeconds, dotX, now);
   drawIgnition(ctx, width, height, snap, now);
@@ -261,7 +274,7 @@ export function drawWorld(
   drawPinFlash(ctx, width, height, snap.pinned);
   drawImpact(ctx, width, height, snap, now);
   drawUnheardPulse(ctx, width, height, snap, now);
-  drawCueVeil(ctx, width, height, snap);
+  drawCueVeil(ctx, width, height, snap, now);
 }
 
 /**
@@ -274,15 +287,16 @@ function drawCueVeil(
   width: number,
   height: number,
   snap: RunSnapshot,
+  now: number,
 ): void {
   if (!snap.cuePaused || !snap.cue) return;
-  const fadeIn = Math.min(1, (performance.now() - snap.cue.atMs) / 150);
+  const fadeIn = Math.min(1, (now - snap.cue.atMs) / 150);
   ctx.fillStyle = `rgba(${rgb("backdrop")}, ${0.6 * fadeIn})`;
   ctx.fillRect(0, 0, width, height);
 
   const gate = snap.gates.find((g) => g.xStart === snap.cue!.xStart);
   if (gate) drawGate(ctx, width, height, gate, true);
-  drawCueDemo(ctx, height, snap);
+  drawCueDemo(ctx, height, snap, now);
 }
 
 /**
@@ -502,10 +516,11 @@ function drawCueDemo(
   ctx: CanvasRenderingContext2D,
   height: number,
   snap: RunSnapshot,
+  now: number,
 ): void {
   const cue = snap.cue;
   if (!cue) return;
-  const raw = (performance.now() - cue.atMs - cue.sweepDelayMs) / cue.sweepMs;
+  const raw = (now - cue.atMs - cue.sweepDelayMs) / cue.sweepMs;
   // Negative through the consonant: the dot appears when the tone starts, not
   // when the sound does.
   if (raw < 0) return;

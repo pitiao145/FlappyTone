@@ -138,7 +138,7 @@ function freshen(snap: RunSnapshot): RunSnapshot {
 
 function drawAndCheck(snap: RunSnapshot): Recorded {
   const { ctx, rec } = fakeCtx();
-  expect(() => drawWorld(ctx, W, H, snap)).not.toThrow();
+  expect(() => drawWorld(ctx, W, H, snap, performance.now())).not.toThrow();
   const bad = rec.numbers.filter((n) => !Number.isFinite(n));
   expect(bad).toEqual([]);
   return rec;

@@ -482,12 +482,17 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     const tick = (now: number) => {
       const dt = now - lastT;
       lastT = now;
+      // The same virtual clock for Run and for drawing it: Run's reported
+      // timestamps (trail points, cue.atMs, lastOutcome.atMs, ...) are all
+      // stamped from whatever we pass tickFrame/tickAudio, so the renderer
+      // has to age them against that same clock — not raw performance.now()
+      // — or every age/sweep computation misreads the frozen gap as elapsed
+      // time (see drawWorld's `now` param and frozenAccumMsRef's comment).
+      const vnow = now - frozenAccumMsRef.current;
       // A walkthrough card (steps B/C/D) holds the world still — worldX,
       // gate sync, collision and the cue timer all stand genuinely still,
-      // since Run's own `nowMs` only ever advances inside this call. The
-      // frozen-time offset (see frozenAccumMsRef's comment) keeps that
-      // clock continuous once ticking resumes.
-      if (!frozenRef.current) run.tickFrame(dt, now - frozenAccumMsRef.current);
+      // since Run's own `nowMs` only ever advances inside this call.
+      if (!frozenRef.current) run.tickFrame(dt, vnow);
       const snap = run.snapshot();
       // Re-applies the backing-store scale every frame — cheap (scaleForDpr
       // only resizes when the density-scaled dimensions actually changed)
@@ -495,7 +500,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // needing canvasHeight as a dependency.
       const ctx2d = scaleForDpr(canvas, canvasWidth, canvasHeightRef.current);
       if (!ctx2d) return;
-      drawWorld(ctx2d, canvasWidth, canvasHeightRef.current, snap);
+      drawWorld(ctx2d, canvasWidth, canvasHeightRef.current, snap, vnow);
 
       // Walkthrough step triggers — gate 1 only (gateLog.length gates B, and
       // D fires exactly once when it flips 0→1). Must run before the
@@ -936,9 +941,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           <div className="overlay tutorial-card">
             <JumpingPip size={96} className="walkthrough-pip" />
             <h3>Meet Pip</h3>
-            <p>Hey, I'm Pip! I'll help you get the hang of tone gates.</p>
+            <p>Hey, I'm Flappy! I'll help you get the hang of the Mandarin tones.</p>
             <p className="note">
-              This run isn't scored — just get a feel for it.
+              This run isn't scored, it's just for you to get a feel for it.
             </p>
             <button
               className="primary"
@@ -969,8 +974,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
             <JumpingPip size={96} className="walkthrough-pip" />
             <h3>First, listen</h3>
             <p>
-              Listen to the demo, then copy the tone — fly through the
-              corridor without touching the walls.
+              Listen to the demo, then copy the tone. Your voice controls the bird's flight. Try not to touch the walls!
             </p>
             <button
               className="primary"
@@ -1000,7 +1004,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
             <h3>Nice!</h3>
             <p>
               You can always pause to check the menu or adjust settings.
-              Take a look — then, good luck!
+              Take a look here. Good luck!
             </p>
             <button
               className="primary"
