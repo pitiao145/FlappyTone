@@ -3329,7 +3329,7 @@ section.hero-cards {
   }
 
   .visualiser-row .visualiser-demo {
-    flex: 1 1 40%;
+    flex: 1 1 50%;
   }
 
   .visualiser-cta {
@@ -3346,7 +3346,7 @@ section.hero-cards {
 }
 
 .visualiser-demo .demo-canvas {
-  max-width: 440px;
+  max-width: 550px;
 }
 
 .visualiser-figure {

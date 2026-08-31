@@ -165,7 +165,7 @@ export function Landing({ onPlay, onVisualiser, onTerms }: Props) {
       <section id="visualiser" className="landing-section landing-section-panel">
         <div className="visualiser-row">
           <div className="visualiser-demo">
-            <VisualiserDemoLoop width={440} />
+            <VisualiserDemoLoop width={500} />
           </div>
           <div className="visualiser-text">
             <p className="section-eyebrow">{brand.visualiser.eyebrow}</p>
