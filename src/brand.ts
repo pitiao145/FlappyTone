@@ -169,7 +169,7 @@ export const brand = {
   /**
    * Footer content beyond the attribution line above: a brand blurb, a
    * built-by line, and the Connect column of external links. See
-   * `docs/redesign/footer-template.tsx` for the layout this was adapted from
+   * `docs/_archive/redesign/footer-template.tsx` for the layout this was adapted from
    * — that file explains what was deliberately dropped (no legal/newsletter
    * columns; FlappyTone has neither yet).
    */

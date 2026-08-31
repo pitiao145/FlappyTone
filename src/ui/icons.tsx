@@ -67,7 +67,7 @@ export function HeartIcon({ filled }: { filled: boolean }) {
 
 /**
  * Footer "Connect" icons, Phosphor Regular, redrawn from the 24-unit paths in
- * `docs/redesign/footer-template.tsx` into this file's 256-unit convention
+ * `docs/_archive/redesign/footer-template.tsx` into this file's 256-unit convention
  * (same BOX/STROKE spread as every icon above) rather than pasted verbatim —
  * a 24-unit path in a 256 viewBox draws as a speck in the corner.
  */
