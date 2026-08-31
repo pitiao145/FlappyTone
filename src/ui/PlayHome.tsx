@@ -70,7 +70,7 @@ export function PlayHome({
       >
         <div className="screen playhome-overlay">
           <img
-            src="public/Bird-hor-no-halo.png"
+            src="/Bird-hor-no-halo.png"
             alt="Flappytone mascot"
             className="playhome-mascot"
           />
