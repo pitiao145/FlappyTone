@@ -21,7 +21,8 @@
     "make-tone-averages": "node --experimental-strip-types src/dev/make-tone-averages.ts",
     "import-words": "node --experimental-strip-types src/dev/import-words.ts",
     "pull-recordings": "node --experimental-strip-types src/dev/pull-recordings.ts",
-    "make-icons": "node --experimental-strip-types src/dev/make-icons.ts"
+    "make-icons": "node --experimental-strip-types src/dev/make-icons.ts",
+    "update-demo": "node --experimental-strip-types src/dev/update-demo.ts"
   },
   "dependencies": {
     "@vercel/blob": "^2.6.1",

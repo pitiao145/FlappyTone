@@ -31,6 +31,7 @@
     "src/dev/analyze-recording.ts",
     "src/dev/analyze-recording.test.ts",
     "src/dev/make-icons.ts",
+    "src/dev/update-demo.ts",
     "src/dev/make-tones.ts",
     "src/dev/report.ts",
     "src/dev/make-ref-clips.ts",

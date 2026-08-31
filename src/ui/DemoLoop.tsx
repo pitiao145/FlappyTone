@@ -7,12 +7,12 @@ import { ContourSpark } from "./ContourSpark.tsx";
 const TONES: Tone[] = [1, 2, 3, 4];
 
 /** Native pixel size of the recorded hero clip — sets the box's aspect ratio. */
-const HERO_CLIP_WIDTH = 878;
-const HERO_CLIP_HEIGHT = 1584;
+const HERO_CLIP_WIDTH = 708;
+const HERO_CLIP_HEIGHT = 1404;
 
 /** Native pixel size of the recorded visualiser clip. */
-const VISUALISER_CLIP_WIDTH = 878;
-const VISUALISER_CLIP_HEIGHT = 1394;
+const VISUALISER_CLIP_WIDTH = 1696;
+const VISUALISER_CLIP_HEIGHT = 1694;
 
 /**
  * A muted, looping recorded clip — shared shape for every "see it before you

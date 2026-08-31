@@ -110,6 +110,30 @@ npm run analyze <wav>  # print ASCII contour for a fixture — use this to "see"
 npm run typecheck
 ```
 
+## Landing page demo clips
+
+`src/ui/DemoLoop.tsx` plays two recorded, muted loops on the landing page —
+the hero clip and the visualiser clip — each shipped as a `.webm`/`.mp4` pair
+in `public/hero/` and `public/visualiser/`. Swapping in a new take means
+keeping four things in sync: both video files, `DemoLoop.tsx`'s native-size
+constants (set the live `<video>`'s aspect ratio), and
+`src/dev/demoStub.tsx`'s matching constants (the prerendered placeholder that
+reserves the same box, so the live video swapping in doesn't shift the page —
+see that file's own comment). `npm run update-demo` does all four:
+
+```bash
+# drop the new .mp4 at its usual path, then:
+npm run update-demo hero
+npm run update-demo visualiser
+# or point it at a file elsewhere and it copies it into place first:
+npm run update-demo hero ~/Downloads/new-hero-take.mp4
+```
+
+It strips any audio track (these are always mute), regenerates the matching
+`.webm`, and rewrites the size constants in both files to the new clip's real
+dimensions. Doesn't run the build — check the result with `npm run build` (or
+`npm run dev`) after, same as any other change.
+
 ## The clip inventory
 
 Reference clips are recorded by Jane at `/record` (a separate Vite entry,

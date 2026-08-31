@@ -10,8 +10,8 @@
  * live demo in shifts nothing below it.
  */
 export function DemoLoop({
-  width = 300,
-  height = Math.round((300 * 1584) / 878),
+  width = 380,
+  height = Math.round((width * 1404) / 708),
 }: {
   width?: number;
   height?: number;
@@ -26,10 +26,10 @@ export function DemoLoop({
   );
 }
 
-/** Stand-in for `VisualiserDemoLoop` — 878:1394, the visualiser clip's native size. */
+/** Stand-in for `VisualiserDemoLoop` — 1696:1694, the visualiser clip's native size. */
 export function VisualiserDemoLoop({
-  width = 300,
-  height = Math.round((300 * 1394) / 878),
+  width = 440,
+  height = Math.round((width * 1694) / 1696),
 }: {
   width?: number;
   height?: number;
