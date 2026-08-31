@@ -35,6 +35,7 @@ import {
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawWorld, refreshMotionPreference } from "../render/world.ts";
+import { JumpingPip } from "./bird/index.ts";
 import { HeartIcon, PauseIcon } from "./icons.tsx";
 import { PauseMenu } from "./PauseMenu.tsx";
 
@@ -95,6 +96,14 @@ const HINT_TEXT: Record<UnheardHint, string> = {
 /** Only the last few gates fit on screen; the full log lives on the end screen. */
 const GATE_LOG_ON_SCREEN = 4;
 
+/**
+ * The tutorial's guided walkthrough, shown around gate 1 of every tutorial
+ * run. `null` means no walkthrough card is showing — either it's not the
+ * tutorial, or the player has stepped through it. See the run-owning
+ * effect's `tick()` for how each step is detected.
+ */
+type WalkthroughStep = "intro" | "listen" | "your-turn" | "menu" | null;
+
 interface Props {
   mode: RunMode;
   settings: CalibrationSettings;
@@ -111,10 +120,12 @@ interface Props {
   /** The fixed tone `mode: "drill"` flies every gate from. Ignored otherwise. */
   drillTone?: Tone;
   /**
-   * Skip the tutorial's intro card and begin immediately. Set when this
-   * tutorial run is the calibration flight (GameApp routes to it straight from
-   * the calibration screen, whose "Let's go" tap is the iOS-safe gesture that
-   * already resumed the AudioContext). Ignored outside tutorial mode.
+   * Set when this tutorial run is the calibration flight (GameApp routes to
+   * it straight from the calibration screen). Flies only the grid-anchoring
+   * tones (`CALIBRATION_TONES`) instead of the full teaching set — see the
+   * run-owning effect's `tutorialTones`. No longer skips the walkthrough:
+   * every tutorial run shows it, calibration flight included. Ignored
+   * outside tutorial mode.
    */
   autoStart?: boolean;
   /** This session's run count, this one included. Shown in the pause menu; ignored in the tutorial. */
@@ -187,13 +198,24 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   // geometry, so applying it mid-gate is safe.
   const [showTranslation, setShowTranslation] = useState(loadShowTranslation);
   /**
-   * The tutorial waits behind a card rather than starting on mount.
-   *
-   * Two reasons: the first gate arrives before a first-time player has worked
-   * out what they are looking at, and the card's button is a user gesture —
-   * the iOS-safe place to resume the AudioContext.
+   * The tutorial's guided walkthrough — see `WalkthroughStep`. Starts at
+   * "intro" for every tutorial run (also reset to "intro" inside the
+   * run-owning effect on every fresh `Run`, so a pause-menu Restart replays
+   * it too) and steps forward as the player dismisses each card. The first
+   * card's button doubles as the user gesture that starts the run — the
+   * iOS-safe place to resume the AudioContext, same reason the old
+   * single intro card worked.
    */
-  const [waiting, setWaiting] = useState(mode === "tutorial" && !autoStart);
+  const [walkthroughStep, setWalkthroughStep] = useState<WalkthroughStep>(
+    mode === "tutorial" ? "intro" : null,
+  );
+  /**
+   * True while a walkthrough card (B/C/D — not the pre-start "intro"/"listen"
+   * steps, which simply haven't started the loop yet) holds the world still.
+   * Checked at the top of every `tickAudio`/`tickFrame` call site in the
+   * run-owning effect; never set outside `mode === "tutorial"`.
+   */
+  const frozenRef = useRef(false);
   /**
    * The one-time "still in testing" notice, which holds a real run the same way
    * the tutorial card does. Decided once at mount and kept in a ref as well as
@@ -337,7 +359,15 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     refreshMotionPreference();
 
     const corridor = loadCorridorWidth();
-    const cueStyle = loadCueStyle();
+    // The tutorial is call-and-response by design — a player's general
+    // preference for skipping demos in real runs shouldn't silently break
+    // the one mode whose entire point is demonstrating the mechanic (it
+    // would also skip the walkthrough's demo-timed steps below).
+    const cueStyle = mode === "tutorial" ? "pause" : loadCueStyle();
+    // Every fresh Run (mount, or a pause-menu Restart bumping runGen)
+    // replays the walkthrough from the top.
+    frozenRef.current = false;
+    if (mode === "tutorial") setWalkthroughStep("intro");
     const run = new Run({
       mode,
       width: canvasWidth,
@@ -372,6 +402,13 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     let lastPlayedXStart = -Infinity;
     /** Resolve time of the gate the HUD has already reacted to. */
     let lastFlashedAtMs = -Infinity;
+    // Walkthrough edge-detection (tutorial only) — mirrors lastPlayedXStart's
+    // pattern: plain per-effect locals, read/updated once per frame from the
+    // freshly-computed snapshot, so a transition is caught before the world
+    // visibly moves past it (the polled `hud` state is too coarse for this).
+    let prevHadCue = false;
+    let prevCuePaused = false;
+    let prevGateLogLen = 0;
 
     // The mic is already open — Title opened it inside the click gesture.
     // Named (not passed inline) so `resumeRef` can re-install this exact
@@ -397,14 +434,19 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       }
       const pitch = tracker.push(frame);
       publishState(pitch);
-      run.tickAudio(pitch, performance.now());
+      // A walkthrough card (steps B/C/D) holds the world still — no pitch
+      // frame should reach Run while one is up.
+      if (!frozenRef.current) run.tickAudio(pitch, performance.now());
     };
     setFrameSink(onFrame);
 
     const tick = (now: number) => {
       const dt = now - lastT;
       lastT = now;
-      run.tickFrame(dt, now);
+      // A walkthrough card (steps B/C/D) holds the world still — worldX,
+      // gate sync, collision and the cue timer all stand genuinely still,
+      // since Run's own `nowMs` only ever advances inside this call.
+      if (!frozenRef.current) run.tickFrame(dt, now);
       const snap = run.snapshot();
       // Re-applies the backing-store scale every frame — cheap (scaleForDpr
       // only resizes when the density-scaled dimensions actually changed)
@@ -413,6 +455,41 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       const ctx2d = scaleForDpr(canvas, canvasWidth, canvasHeightRef.current);
       if (!ctx2d) return;
       drawWorld(ctx2d, canvasWidth, canvasHeightRef.current, snap);
+
+      // Walkthrough step triggers — gate 1 only (gateLog.length gates B/C,
+      // and D fires exactly once when it flips 0→1). Must run before the
+      // cue-play block below: freezing here on the same frame `snap.cue`
+      // first appears is what stops the demo from playing before "listen"
+      // is dismissed.
+      if (mode === "tutorial") {
+        if (
+          !frozenRef.current &&
+          snap.gateLog.length === 0 &&
+          !prevHadCue &&
+          snap.cue !== null
+        ) {
+          frozenRef.current = true;
+          setWalkthroughStep("listen");
+        } else if (
+          !frozenRef.current &&
+          snap.gateLog.length === 0 &&
+          prevCuePaused &&
+          !snap.cuePaused
+        ) {
+          frozenRef.current = true;
+          setWalkthroughStep("your-turn");
+        } else if (
+          !frozenRef.current &&
+          prevGateLogLen === 0 &&
+          snap.gateLog.length === 1
+        ) {
+          frozenRef.current = true;
+          setWalkthroughStep("menu");
+        }
+        prevHadCue = snap.cue !== null;
+        prevCuePaused = snap.cuePaused;
+        prevGateLogLen = snap.gateLog.length;
+      }
 
       // One setState per resolved gate, not per frame — the rAF loop stays
       // the owner of the canvas, React just hears about outcomes.
@@ -436,7 +513,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         });
       }
 
-      if (snap.cue && snap.cue.xStart > lastPlayedXStart) {
+      if (snap.cue && snap.cue.xStart > lastPlayedXStart && !frozenRef.current) {
         lastPlayedXStart = snap.cue.xStart;
         const audio = getMicSession()?.ctx;
         // Same context the mic runs on, so it is already gesture-resumed.
@@ -549,11 +626,10 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       if (audio && audio.state === "suspended") void audio.resume();
       start();
     };
-    // The tutorial holds behind its card; a first real run holds behind the
-    // testing notice. Everything else starts now — including the tutorial when
-    // it is the calibration flight (autoStart), whose gesture already happened
-    // on the calibration screen's "Let's go".
-    if ((mode !== "tutorial" || autoStart) && !noticeRef.current) start();
+    // The tutorial holds behind its walkthrough's "listen" card, calibration
+    // flight included — see WalkthroughStep. A first real run holds behind
+    // the testing notice. Everything else starts now.
+    if (mode !== "tutorial" && !noticeRef.current) start();
 
     return () => {
       running = false;
@@ -667,7 +743,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
             {/* In the row rather than absolutely positioned over it: floated
                 top-right it sat on top of the hearts, which are also
                 right-aligned. */}
-            {!waiting && !notice && !paused && (
+            {walkthroughStep === null && !notice && !paused && (
               <div className="hud-controls">
                 <button
                   className="hud-button"
@@ -802,22 +878,80 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           </div>
         )}
 
-        {waiting && (
+        {/* The tutorial's guided walkthrough — four cards around gate 1,
+            each pausing the world (not the pause menu) until dismissed.
+            See WalkthroughStep and the run-owning effect's tick(). */}
+        {walkthroughStep === "intro" && (
           <div className="overlay tutorial-card">
-            <h3>Tutorial</h3>
-            <p>
-            First listen to the example, then it's your turn. The dot follows your pitch, so you fly by matching the shape. Eight gates, one tone at a time, and we run the room twice.            </p>
+            <JumpingPip size={96} className="walkthrough-pip" />
+            <h3>Meet Pip</h3>
+            <p>Hey, I'm Pip! I'll help you get the hang of tone gates.</p>
             <p className="note">
-              Don't worry, you're not getting scored for this one.
+              This run isn't scored — just get a feel for it.
+            </p>
+            <button
+              className="primary"
+              onClick={() => setWalkthroughStep("listen")}
+            >
+              Continue
+            </button>
+          </div>
+        )}
+
+        {walkthroughStep === "listen" && (
+          <div className="overlay tutorial-card">
+            <JumpingPip size={96} className="walkthrough-pip" />
+            <h3>First, listen</h3>
+            <p>Listen to the demo before you try it yourself.</p>
+            <button
+              className="primary"
+              onClick={() => {
+                setWalkthroughStep(null);
+                startRef.current();
+              }}
+            >
+              Continue
+            </button>
+          </div>
+        )}
+
+        {walkthroughStep === "your-turn" && (
+          <div className="overlay tutorial-card">
+            <JumpingPip size={96} className="walkthrough-pip" />
+            <h3>Your turn</h3>
+            <p>
+              Copy the tone you just heard — fly through the corridor
+              without touching the walls.
             </p>
             <button
               className="primary"
               onClick={() => {
-                setWaiting(false);
-                startRef.current();
+                frozenRef.current = false;
+                setWalkthroughStep(null);
               }}
             >
-              Start
+              Continue
+            </button>
+          </div>
+        )}
+
+        {walkthroughStep === "menu" && (
+          <div className="overlay tutorial-card">
+            <JumpingPip size={96} className="walkthrough-pip" />
+            <h3>Nice!</h3>
+            <p>
+              You can always pause to check the menu or adjust settings.
+              Take a look — then, good luck!
+            </p>
+            <button
+              className="primary"
+              onClick={() => {
+                frozenRef.current = false;
+                setWalkthroughStep(null);
+                pauseRef.current(false);
+              }}
+            >
+              Show me
             </button>
           </div>
         )}

@@ -2700,6 +2700,11 @@
   font-size: 18px;
 }
 
+.walkthrough-pip {
+  display: block;
+  margin: 0 auto;
+}
+
 /* ------------------------------------------------------------- landing */
 /* The front door. Wider than the game frame, and the one screen in the app
    that scrolls — everything else is a fixed 9:16 board. Copy comes from
