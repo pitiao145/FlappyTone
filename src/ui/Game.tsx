@@ -940,7 +940,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         {walkthroughStep === "intro" && (
           <div className="overlay tutorial-card">
             <JumpingPip size={96} className="walkthrough-pip" />
-            <h3>Meet Pip</h3>
+            <h3>Meet Flappy</h3>
             <p>Hey, I'm Flappy! I'll help you get the hang of the Mandarin tones.</p>
             <p className="note">
               This run isn't scored, it's just for you to get a feel for it.
