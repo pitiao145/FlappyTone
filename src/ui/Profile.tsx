@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { capturePostHogEvent } from "../analytics/posthog.ts";
 import { DAILY_RUN_LIMIT, loadDailyRuns } from "../game/dailyLimit.ts";
 import { FREE_SUMMARY, PRO_FEATURES, PRO_PRICE } from "./plan.ts";
 
@@ -55,7 +56,10 @@ export function Profile({ onEarlyBird }: Props) {
         <button
           type="button"
           className="primary earlybird-cta"
-          onClick={() => onEarlyBird("plan_card")}
+          onClick={() => {
+            capturePostHogEvent("profile_earlybird_cta_click", {});
+            onEarlyBird("plan_card");
+          }}
         >
           🔒 Get EarlyBird access · {PRO_PRICE}
         </button>
@@ -65,7 +69,10 @@ export function Profile({ onEarlyBird }: Props) {
         <button
           type="button"
           className="link earlybird-notify"
-          onClick={() => onEarlyBird("plan_card")}
+          onClick={() => {
+            capturePostHogEvent("profile_earlybird_notify_click", {});
+            onEarlyBird("plan_card");
+          }}
         >
           Not ready? Get notified at the EarlyBird price →
         </button>

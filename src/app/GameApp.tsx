@@ -268,8 +268,15 @@ export default function GameApp() {
     surface: EarlyBirdSurface;
     feature: string;
   } | null>(null);
+  /**
+   * Opens the EarlyBird modal. Purely a state-setter — every call site tracks
+   * its own specifically-named PostHog event before calling this, so each CTA
+   * across Progress/Profile/the daily-limit gate is distinguishable in
+   * PostHog by event name alone, not just by the `surface`/`feature` this
+   * still carries (that pair only survives to tag the modal's own
+   * `earlybird_pay_click`, once the player gets that far).
+   */
   const openEarlyBird = useCallback((surface: EarlyBirdSurface, feature: string) => {
-    capturePostHogEvent("earlybird_cta_click", { surface, feature });
     setEarlyBird({ surface, feature });
   }, []);
   /**
@@ -368,6 +375,7 @@ export default function GameApp() {
       // isn't (see the plan: it doesn't cost a daily run).
       if ((intent === "game" || intent === "drill") && dailyLimitReached()) {
         stopMic();
+        capturePostHogEvent("daily_limit_earlybird_shown", { trigger: "start" });
         openEarlyBird("daily-limit", "daily-limit");
         return;
       }
@@ -522,6 +530,7 @@ export default function GameApp() {
       (lastModeRef.current === "game" || lastModeRef.current === "drill") &&
       dailyLimitReached()
     ) {
+      capturePostHogEvent("daily_limit_earlybird_shown", { trigger: "retry" });
       openEarlyBird("daily-limit", "daily-limit");
       return;
     }
@@ -709,12 +718,7 @@ export default function GameApp() {
         {screen === "howto" && <HowTo onBack={() => setScreen("settings")} />}
 
         {screen === "progress" && (
-          <Progress
-            onEarlyBird={(feature) => openEarlyBird("progress", feature)}
-            onPricingView={(feature) =>
-              capturePostHogEvent("earlybird_cta_click", { surface: "progress", feature })
-            }
-          />
+          <Progress onEarlyBird={(feature) => openEarlyBird("progress", feature)} />
         )}
 
         {screen === "profile" && (

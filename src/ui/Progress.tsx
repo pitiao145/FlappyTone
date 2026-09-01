@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { capturePostHogEvent } from "../analytics/posthog.ts";
 import { loadInventory } from "../audio/inventory.ts";
 import type { Tone } from "../game/gates.ts";
 import {
@@ -53,8 +54,6 @@ type AccuracyTab = "accuracy" | "progress";
 interface Props {
   /** Opens the EarlyBird modal — used only by the pricing card's "Join EarlyBird" CTA now. */
   onEarlyBird: (feature: string) => void;
-  /** Fires the pricing-intent analytics event when a teaser CTA scrolls to the pricing section. */
-  onPricingView: (feature: string) => void;
 }
 
 /**
@@ -64,7 +63,7 @@ interface Props {
  * section at the bottom instead of opening the upsell modal directly. See the
  * design handoff in docs/design_handoff_progress_pricing/.
  */
-export function Progress({ onEarlyBird, onPricingView }: Props) {
+export function Progress({ onEarlyBird }: Props) {
   const [words, setWords] = useState<Word[] | null>(null);
   useEffect(() => {
     loadInventory().then(setWords, () => setWords([]));
@@ -96,8 +95,8 @@ export function Progress({ onEarlyBird, onPricingView }: Props) {
   const [activeTab, setActiveTab] = useState<AccuracyTab>("accuracy");
   const [selectedTone, setSelectedTone] = useState<Tone>(1);
 
-  const scrollToPricing = (feature: string) => {
-    onPricingView(feature);
+  /** Each teaser CTA fires its own named event (see call sites below) before scrolling. */
+  const scrollToPricing = () => {
     document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -229,7 +228,10 @@ export function Progress({ onEarlyBird, onPricingView }: Props) {
             <button
               type="button"
               className="link progress-card-cta"
-              onClick={() => scrollToPricing("tone_shape")}
+              onClick={() => {
+                capturePostHogEvent("progress_accuracy_chart_upsell_click", {});
+                scrollToPricing();
+              }}
             >
               🔒 Compare against your own attempts — unlock with Pro
             </button>
@@ -274,7 +276,10 @@ export function Progress({ onEarlyBird, onPricingView }: Props) {
         <button
           type="button"
           className="link progress-card-cta"
-          onClick={() => scrollToPricing("run_history")}
+          onClick={() => {
+            capturePostHogEvent("progress_run_history_upsell_click", {});
+            scrollToPricing();
+          }}
         >
           🔒 See all {history.totalRuns} runs &amp; trends — unlock with Pro
         </button>
@@ -299,7 +304,10 @@ export function Progress({ onEarlyBird, onPricingView }: Props) {
         <button
           type="button"
           className="link progress-card-cta"
-          onClick={() => scrollToPricing("tone_shape")}
+          onClick={() => {
+            capturePostHogEvent("progress_tone_evolution_upsell_click", {});
+            scrollToPricing();
+          }}
         >
           🔒 Compare against your own attempts — unlock with Pro
         </button>
@@ -331,7 +339,10 @@ export function Progress({ onEarlyBird, onPricingView }: Props) {
         <button
           type="button"
           className="link progress-card-cta"
-          onClick={() => scrollToPricing("leaderboard")}
+          onClick={() => {
+            capturePostHogEvent("progress_leaderboard_upsell_click", {});
+            scrollToPricing();
+          }}
         >
           🔒 Compete weekly — unlock with Pro
         </button>
@@ -377,7 +388,10 @@ export function Progress({ onEarlyBird, onPricingView }: Props) {
             <button
               type="button"
               className="price-cta"
-              onClick={() => onEarlyBird("pricing")}
+              onClick={() => {
+                capturePostHogEvent("progress_earlybird_pricing_click", {});
+                onEarlyBird("pricing");
+              }}
             >
               Join EarlyBird
             </button>
