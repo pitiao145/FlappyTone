@@ -1,11 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { takeaway, toneBreakdown, type RunStats } from "../game/scoring.ts";
 import { loadRunHistory } from "../game/runHistory.ts";
+import { loadDailyRuns } from "../game/dailyLimit.ts";
+import { hasShownFeedbackToday, markFeedbackShown } from "../game/runFeedback.ts";
+import type { RunMode } from "../game/run.ts";
 import { GateLogPanel } from "../dev/GateLogPanel.tsx";
 import { track } from "../analytics/client.ts";
+import type { AnalyticsEvent } from "../analytics/session.ts";
 import { saveSettings, type CalibrationSettings } from "../game/settings.ts";
 import type { RangeHalves } from "../pitch/calibration.ts";
 import { ToneMarkIcon } from "./toneIcons.tsx";
+
+type RunFeedbackSentiment = Extract<AnalyticsEvent, { type: "run_feedback" }>["sentiment"];
 
 interface Props {
   stats: RunStats;
@@ -28,6 +34,8 @@ interface Props {
   /** True for the first offer (after the first game) — friendlier "personalised" copy. */
   suggestionIsFirst?: boolean;
   onRecalibrate: (s: CalibrationSettings) => void;
+  /** The RunMode of the run that just ended — carried on the `run_feedback` event. */
+  mode: RunMode;
 }
 
 export function GameOver({
@@ -41,6 +49,7 @@ export function GameOver({
   suggestion,
   suggestionIsFirst = false,
   onRecalibrate,
+  mode,
 }: Props) {
   const breakdown = toneBreakdown(stats);
   const [dismissed, setDismissed] = useState(false);
@@ -50,6 +59,39 @@ export function GameOver({
   // record shows as score === bestScore.
   const history = useMemo(() => loadRunHistory(), []);
   const isNewBest = stats.score > 0 && stats.score >= history.bestScore;
+
+  /**
+   * Read once on mount, same rationale as `history` above: GameApp's
+   * onRunOver has already run before routing here, so `loadDailyRuns().count`
+   * reflects this run — `dailyLimit.ts` increments at run *start*, not end.
+   * No mutual suppression with the recal-suggestion card below: both can
+   * show at once, deliberately (see docs/flappytone-SPEC-run-feedback.md).
+   */
+  const feedbackEligible = useMemo(
+    () => loadDailyRuns().count >= 3 && !hasShownFeedbackToday(),
+    [],
+  );
+  const [feedbackDismissed, setFeedbackDismissed] = useState(false);
+  const [feedbackSentiment, setFeedbackSentiment] = useState<RunFeedbackSentiment | null>(null);
+
+  const FEEDBACK_THANKS_MS = 1500;
+  useEffect(() => {
+    if (feedbackSentiment === null) return;
+    const id = setTimeout(() => setFeedbackDismissed(true), FEEDBACK_THANKS_MS);
+    return () => clearTimeout(id);
+  }, [feedbackSentiment]);
+
+  const chooseFeedback = (sentiment: RunFeedbackSentiment) => {
+    track({ type: "run_feedback", sentiment, mode });
+    markFeedbackShown();
+    setFeedbackSentiment(sentiment);
+  };
+
+  const dismissFeedback = () => {
+    // No track() — dismissing without answering fires nothing, per spec.
+    markFeedbackShown();
+    setFeedbackDismissed(true);
+  };
 
   const applySuggestion = () => {
     if (!settings || !suggestion) return;
@@ -163,6 +205,59 @@ export function GameOver({
             </button>
             <button onClick={dismissSuggestion}>Not now</button>
           </div>
+        </div>
+      )}
+
+      {feedbackEligible && !feedbackDismissed && (
+        <div className="feedback-card">
+          <button
+            type="button"
+            className="feedback-close"
+            aria-label="Dismiss"
+            onClick={dismissFeedback}
+          >
+            ✕
+          </button>
+          {feedbackSentiment === null ? (
+            <>
+              <p>How&rsquo;s it feeling?</p>
+              <div className="feedback-chips">
+                <button
+                  type="button"
+                  className="feedback-chip"
+                  onClick={() => chooseFeedback("great")}
+                >
+                  🎯 Felt great
+                </button>
+                <button
+                  type="button"
+                  className="feedback-chip"
+                  onClick={() => chooseFeedback("calib_off")}
+                >
+                  🎙️ Calibration felt off
+                </button>
+                <button
+                  type="button"
+                  className="feedback-chip"
+                  onClick={() => chooseFeedback("too_easy")}
+                >
+                  😴 Too easy
+                </button>
+                <button
+                  type="button"
+                  className="feedback-chip"
+                  onClick={() => chooseFeedback("too_hard")}
+                >
+                  💥 Too hard
+                </button>
+              </div>
+              <p className="feedback-mailto">
+                <a href="mailto:pierre@pierrebuilds.dev">Anything else you'd like to add or any suggestions? Feel free to email me →</a>
+              </p>
+            </>
+          ) : (
+            <p>thanks!</p>
+          )}
         </div>
       )}
 

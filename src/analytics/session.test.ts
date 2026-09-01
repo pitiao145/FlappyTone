@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { deviceBucket, gateEvent, roundCalibration } from "./session.ts";
 import type { GateLogEntry } from "../game/run.ts";
-import type { MicFailureReason } from "./session.ts";
+import type { AnalyticsEvent, MicFailureReason } from "./session.ts";
 import type { MicErrorKind } from "../audio/mic.ts";
 
 /**
@@ -84,6 +84,17 @@ describe("gateEvent", () => {
     ]);
     for (const value of Object.values(ev)) {
       expect(Array.isArray(value)).toBe(false);
+    }
+  });
+});
+
+describe("run_feedback", () => {
+  it("carries only sentiment and mode — no free text, no PII", () => {
+    const ev: AnalyticsEvent = { type: "run_feedback", sentiment: "calib_off", mode: "game" };
+    const keys = Object.keys(ev).sort();
+    expect(keys).toEqual(["mode", "sentiment", "type"]);
+    for (const value of Object.values(ev)) {
+      expect(typeof value).toBe("string");
     }
   });
 });

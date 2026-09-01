@@ -78,6 +78,12 @@ export type AnalyticsEvent =
   | { type: "calib_abandoned"; step: CalibStep }
   | { type: "recal_offered" }
   | { type: "recal_resolved"; outcome: "accepted" | "dismissed" }
+  /** Tap-only post-run sentiment prompt on GameOver — see docs/flappytone-SPEC-run-feedback.md. */
+  | {
+      type: "run_feedback";
+      sentiment: "great" | "calib_off" | "too_easy" | "too_hard";
+      mode: RunMode;
+    }
   | {
       type: "run_start";
       mode: RunMode;

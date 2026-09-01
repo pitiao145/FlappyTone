@@ -842,6 +842,7 @@ export default function GameApp() {
             suggestion={recalSuggestion}
             suggestionIsFirst={recalFirst}
             onRecalibrate={setSettings}
+            mode={lastModeRef.current}
           />
         )}
         </div>
