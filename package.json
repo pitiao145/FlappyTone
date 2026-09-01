@@ -1,5 +1,5 @@
 {
-  "name": "toneflap",
+  "name": "flappytone",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -27,7 +27,6 @@
   "dependencies": {
     "@vercel/blob": "^2.6.1",
     "chart.js": "^4.5.1",
-    "pitchy": "^4.1.0",
     "posthog-js": "^1.413.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
