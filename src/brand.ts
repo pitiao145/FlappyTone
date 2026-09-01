@@ -52,7 +52,7 @@ export const brand = {
   requirement: "Needs a microphone and a quiet room.",
 
   privacyNote:
-    "Your voice is processed on your device, never uploaded or stored.",
+    "Your voice is processed on your device, never uploaded or stored. No AI, just maths.",
 
   /** Caption under the demo loop. */
   demoCaption: "Flappytone in action.",
@@ -77,7 +77,8 @@ export const brand = {
   whyThisWorks: {
     eyebrow: "How this works",
     title: "You know how tones look like on paper.\nThis makes you understand them.",
-    body: "mā, má, mǎ, mà trace four different pitch shapes every time a native speaker says them, that's literally what the tone marks are. Say a tone enough times while watching its shape and you will start recognizing it before you can explain why. You're effectively creating a visual memory of pitch, pretty cool!",
+    body: "mā, má, mǎ, mà trace four different pitch shapes every time a native speaker says them, that's literally what the tone marks are. Say a tone enough times while watching its shape and you will start recognizing it before you can explain why. You're effectively creating a visual memory of pitch, pretty cool!\n" +
+      "This runs on nothing but pitch-detection math in your browser. No model, no upload, no AI.",
   },
 
   /** Subhead + lead-in above the four tone cards. */
@@ -108,7 +109,7 @@ export const brand = {
     "Not pronunciation scoring",
     "Not a fluency app",
     "One syllable at a time",
-    "Humming beats it (for now)",
+    "No AI, just maths",
   ],
 
   visualiser: {
