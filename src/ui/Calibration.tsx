@@ -539,7 +539,7 @@ export function Calibration({
         <>
           <p className="big">Got your voice.</p>
           <p className="note">
-            Next, a few practice gates — say each tone in your natural voice.
+            Next, a few practice gates!Say each tone in your natural voice.
             That's how the game learns your range, so don't force it; it's fine
             to miss a few.
           </p>
