@@ -31,6 +31,14 @@ export interface CalibrationSettings {
 }
 
 /**
+ * v3 because v2 records predate the 29 Aug 2026 calibration rewrite (see
+ * DECISIONS.md) and cannot be told apart from a fresh one — same shape
+ * (`f0Center`/`noiseFloor`/`rangeSemitones`/`rangeDownSemitones`), computed by
+ * a since-replaced flow. Bumping the key, not migrating the data, is the same
+ * call made for v1→v2: a good v2 record and a stale one look identical from
+ * here, so every returning player gets routed through calibration again once
+ * on this release rather than silently keeping numbers from the old flow.
+ *
  * v2 because v1 records cannot be trusted, and cannot be told apart.
  *
  * Between the asymmetric-board commits and `REACH_TO_TONE_SPACE`, calibrations
@@ -39,7 +47,7 @@ export interface CalibrationSettings {
  * A good v1 record and a bad one look identical from here, so the whole key is
  * retired rather than migrated. The cost is one 15-second flow, once.
  */
-const KEY = "toneflap.settings.v2";
+const KEY = "toneflap.settings.v3";
 
 /**
  * Load calibration settings from localStorage.
