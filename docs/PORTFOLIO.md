@@ -15,7 +15,7 @@ game does something, the game does it today.
 | | |
 |---|---|
 | Name | FlappyTone |
-| Live | https://flappytone.pierrebuilds.dev/ |
+| Live | https://flappytone.com/ |
 | Source | https://github.com/pitiao145/FlappyTone (private) |
 | Status | Live, v1. Built 2–7 Aug 2026. |
 | Type | Browser game / language-learning tool |

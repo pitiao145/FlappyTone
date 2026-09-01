@@ -15,7 +15,7 @@ import { json } from "./_passcode.js";
 
 const KIT_API_BASE = "https://api.kit.com";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const SITE_URL = process.env.SITE_URL || "https://flappytone.pierrebuilds.dev";
+const SITE_URL = process.env.SITE_URL || "https://flappytone.com";
 
 /**
  * Which form a signup came from, tagged in Kit so each source (ComingSoon's

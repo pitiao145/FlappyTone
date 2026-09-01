@@ -27,7 +27,7 @@ Bucket → Settings → CORS Policy → add:
 [
   {
     "AllowedOrigins": [
-      "https://flappytone.pierrebuilds.dev",
+      "https://flappytone.com",
       "https://*.vercel.app",
       "http://localhost:5173"
     ],

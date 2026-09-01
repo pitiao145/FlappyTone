@@ -11,4 +11,4 @@ Disallow: /app
 # /assets/ is deliberately NOT disallowed — Google needs the JS and CSS to
 # render the page.
 
-Sitemap: https://flappytone.pierrebuilds.dev/sitemap.xml
+Sitemap: https://flappytone.com/sitemap.xml
