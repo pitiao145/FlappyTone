@@ -27,6 +27,7 @@ React 19 + TypeScript + Vite. Canvas 2D. Web Audio API. Plain CSS with a design-
    for s in TuningPanel "copy gate log" soundboard flappytone.gatelog; do grep -l "$s" dist/assets/*.js; done   # must print nothing
    ```
 8. **When the signal is unclear, the game says "couldn't hear that" — it never scores the player wrong.** A gate whose longest voiced run is under `minUtteranceMs` (default 160ms, merging gaps under `mergeGapMs`) is neutral: no points, no heart lost. The test is utterance *duration*, not voiced fraction. Confidently failing a correct speaker is the single fastest way to lose a user.
+9. **All hanzi is Traditional Mandarin, never Simplified.** Jane records Taiwan Mandarin (§PRD "trained on the voice of a native Mandarin speaker from Taiwan"), so every character shown anywhere — word list, manifest, HUD, landing page — must be Traditional. `src/record/wordlist.ts` and `public/ref/manifest.json` are already correct; the one place this drifted was `src/brand.ts`'s `tones` map (the mā/má/mǎ/mà anchors used by `TONE_INFO` in `src/game/gates.ts`, which feeds the landing page's tone cards and the in-game "How to play" screen) — it briefly shipped 妈/马/骂 instead of 媽/馬/罵. Check any new hanzi against a Traditional reference, not by eye.
 
 ## Layout
 

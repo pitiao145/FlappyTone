@@ -95,10 +95,10 @@ export const brand = {
    * engine), and one copy is better than two that can drift apart.
    */
   tones: {
-    1: { pinyin: "mā", hanzi: "妈", cue: "say it flat and high" },
+    1: { pinyin: "mā", hanzi: "媽", cue: "say it flat and high" },
     2: { pinyin: "má", hanzi: "麻", cue: "start mid, slide up" },
-    3: { pinyin: "mǎ", hanzi: "马", cue: "dip low, then rise" },
-    4: { pinyin: "mà", hanzi: "骂", cue: "drop sharply top to bottom" },
+    3: { pinyin: "mǎ", hanzi: "馬", cue: "dip low, then rise" },
+    4: { pinyin: "mà", hanzi: "罵", cue: "drop sharply top to bottom" },
   },
 
   /**
