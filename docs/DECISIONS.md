@@ -124,6 +124,56 @@ who are just reading the pitch. `index.html` still carries a redirect for
 home-screen installs saved before the split (`/` or `/?app=1`) — its own
 comment says it's safe to delete once those installs have aged out; not yet.
 
+## `?intent=visualiser` ignored first-time arrivals (fixed 2 Sep 2026)
+
+A share link to the visualiser (`?intent=visualiser`, see CLAUDE.md's landing
+split rule 2) silently dropped an uncalibrated visitor onto the Play home
+screen instead: `GameApp.tsx`'s initial `screen` state only honoured the
+intent when `settings` already existed (`initialIntent() === "visualiser" &&
+settings`), reasoning that `<Visualiser>` can't render without a calibrated
+grid. True, but the fix should have been "route to calibration first," not
+"ignore the intent" — a share link's whole premise is a session that has
+never opened the app before.
+
+Compounding it: `pendingRef`, the ref meant to remember "go back to X once
+calibration finishes," was write-only. `openVisualiser()` set it to
+`"visualiser"` before sending an uncalibrated player into `calibrate`, but
+nothing ever read it back — `onCalibrated` unconditionally routed into the
+range-measuring tutorial flight, which unconditionally routed into the
+guided teaching tutorial, which unconditionally landed on Play. So even the
+*manual* path (tap Visualiser in the nav while uncalibrated → mic prompt →
+calibrate → tutorial) never actually reached the Visualiser; the player had
+to finish the whole onboarding funnel and tap Visualiser again themselves.
+
+Fixed by: honouring the intent in `screen`'s initial state regardless of
+`settings` (the tap-gate render branch already knew how to route an
+uncalibrated arrival through `openVisualiser` → `calibrate`, it just never
+got the chance); preserving `pendingRef` across `onCalibrated` specifically
+for `"visualiser"` (every other intent still drops it, unchanged); and
+reading it once the range-measuring flight ends (`onRunOver`'s calibratingRef
+branch). `goHome()` now clears `pendingRef` on every path back to Play
+(cancel, quit, mic error) so a stale `"visualiser"` can never leak into an
+unrelated later onboarding and misroute it.
+
+**Skips the guided teaching tutorial for this path (2 Sep 2026, same day,
+follow-up).** The first fix above still routed a visualiser-bound player
+through the full onboarding funnel — measuring flight *and* the guided
+teaching tutorial ("fixed short sequence... text cue per gate", PRD §8) —
+before landing them on the Visualiser, on the reasoning that "finish
+calibration" meant finishing that whole funnel. It doesn't: the teaching
+tutorial exists to teach the scored game, which a Visualiser-bound player
+never asked for. `TutorialDone` gained a third variant,
+`"calibrationVisualiser"` — same "Your grid is ready" moment as the ordinary
+`"calibration"` variant, different body/button copy, and its `onDone`
+(`finishCalibrationForVisualiser`) goes straight to `openVisualiser()`
+instead of `startTutorialFromCalibration()`. `onRunOver` picks the variant by
+checking `pendingRef.current === "visualiser"` right when the measuring
+flight ends, before the guided tutorial would otherwise start. The
+pre-calibration tap gate also grew a conditional line — "Before you can use
+the visualiser, we need to personalize the grid to your voice." — shown only
+when `!settings`, so a returning calibrated player still sees the plain "Tap
+to start" and isn't told they need to do something they already did.
+
 ## Gate width / difficulty ramp simplification (16 Aug 2026)
 
 `scrollSpeed` used to climb with the difficulty ramp. Fixed it instead,

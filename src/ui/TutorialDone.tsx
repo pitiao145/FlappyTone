@@ -5,16 +5,20 @@ import { JumpingPip } from "./bird";
  * the player straight back to the Play home. Pip hops with excitement (see
  * `JumpingPip`) under a short "you're all set" line and a button onward.
  *
- * Two variants, same layout: the standalone tutorial ends on "Good job", the
- * tutorial that follows first-run calibration ends on "Your grid is ready" —
- * the grid was just measured from the tones flown, so the copy points at that.
+ * Three variants, same layout: the standalone tutorial ends on "Good job";
+ * the tutorial that follows first-run calibration ends on "Your grid is
+ * ready" and leads into the guided teaching tutorial; `calibrationVisualiser`
+ * is the same "grid is ready" moment but reached via `?intent=visualiser` (or
+ * a manual Visualiser tap) with no prior calibration — the teaching tutorial
+ * is specific to the scored game, not the visualiser, so this variant skips
+ * it and leads straight back to what the player actually asked for.
  *
  * Rendered inside the same `.game-stage` frame as PlayHome (not a plain
  * centered `.screen`) so the frame keeps its full-viewport width across the
  * hand-off to Play — a narrower menu-style screen here made `.frame` snap wide
  * on the button tap, which read as a flash.
  */
-type Variant = "tutorial" | "calibration";
+type Variant = "tutorial" | "calibration" | "calibrationVisualiser";
 
 const COPY: Record<Variant, { title: string; body: string; button: string }> = {
   tutorial: {
@@ -26,6 +30,11 @@ const COPY: Record<Variant, { title: string; body: string; button: string }> = {
     title: "Your grid is ready",
     body: "We've tuned the board to your voice. Let's try it out.",
     button: "Let's try it out",
+  },
+  calibrationVisualiser: {
+    title: "Your grid is ready",
+    body: "We've tuned the board to your voice. On to the visualiser.",
+    button: "Go to the visualiser",
   },
 };
 

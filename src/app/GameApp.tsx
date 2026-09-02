@@ -226,10 +226,13 @@ export default function GameApp() {
   const [settings, setSettings] = useState<CalibrationSettings | null>(() =>
     loadSettings(),
   );
-  // Only worth honouring if already calibrated — the Visualiser screen needs
-  // settings to render, and jumping to it uncalibrated would draw a blank.
+  // Honoured even when uncalibrated: `<Visualiser>` itself still needs
+  // settings to mount (see its required prop), but the tap-gate/calibrate
+  // path below (`visualiserMicReady`, `openVisualiser`) gets an uncalibrated
+  // first-time arrival there anyway instead of stranding it on Play — a
+  // share link has to work on a session that has never opened the mic yet.
   const [screen, setScreen] = useState<Screen>(() =>
-    initialIntent() === "visualiser" && settings ? "visualiser" : "play",
+    initialIntent() === "visualiser" ? "visualiser" : "play",
   );
   /**
    * Whether the mic session backing the Visualiser screen is actually open.
@@ -241,10 +244,12 @@ export default function GameApp() {
    * called, so without this flag `<Visualiser>` mounted believing the mic
    * was already open (its own comment says so) and just sat deaf until the
    * player happened to hit the mute button twice. This starts false in that
-   * case so a tap gate renders instead, and that tap is the real gesture.
+   * case so a tap gate renders instead, and that tap is the real gesture —
+   * whether or not `settings` exists yet: the tap gate below covers both
+   * "mic not open" and "not calibrated" with the same `openVisualiser` call.
    */
   const [visualiserMicReady, setVisualiserMicReady] = useState(
-    () => !(initialIntent() === "visualiser" && settings) || getMicSession() !== null,
+    () => initialIntent() !== "visualiser" || getMicSession() !== null,
   );
   const [stats, setStats] = useState<RunStats | null>(null);
   /**
@@ -260,8 +265,13 @@ export default function GameApp() {
   const [recalFirst, setRecalFirst] = useState(false);
   const [tutorialDone, setTutorialDone] = useState(false);
   // Which success copy the tutorialdone screen shows: the standalone tutorial
-  // ends on "Good job", the calibration-flow tutorial on "Your grid is ready".
-  const [doneVariant, setDoneVariant] = useState<"tutorial" | "calibration">("tutorial");
+  // ends on "Good job", the calibration-flow tutorial on "Your grid is ready"
+  // and leads into the guided tutorial, "calibrationVisualiser" is the same
+  // moment reached via `?intent=visualiser`/a manual Visualiser tap and skips
+  // straight there instead (see `onRunOver`'s calibratingRef branch).
+  const [doneVariant, setDoneVariant] = useState<
+    "tutorial" | "calibration" | "calibrationVisualiser"
+  >("tutorial");
   const [error, setError] = useState<string | null>(null);
   const [retryBusy, setRetryBusy] = useState(false);
   const [earlyBird, setEarlyBird] = useState<{
@@ -341,6 +351,11 @@ export default function GameApp() {
     stopMic();
     setRetryBusy(false);
     setGameAlive(false);
+    // Whatever `openVisualiser`/`startPlay` was routing toward calibration
+    // for is abandoned the moment we land on Play — otherwise a cancelled
+    // calibration or a quit mid-tutorial leaves a stale intent for some
+    // later, unrelated onboarding to pick up and misroute on.
+    pendingRef.current = null;
     setScreen("play");
   }, []);
 
@@ -441,8 +456,13 @@ export default function GameApp() {
     // branch seeds the grid from those tones, then lands on the Play screen —
     // where the player's next tap is a fresh gesture to open the mic for a real
     // run (hard rule 4: never reopen the mic without one). The pending intent
-    // is dropped for that reason; the player re-taps Play.
-    pendingRef.current = null;
+    // is dropped for that reason for "game"/"drill"/"learn"; the player
+    // re-taps Play. "visualiser" is the one exception — the measuring flight
+    // below still needs to run (it's what actually produces the grid), but
+    // `onRunOver`'s calibratingRef branch reads this pending value once that
+    // flight ends and skips the guided teaching tutorial in favour of
+    // `finishCalibrationForVisualiser`, landing on the Visualiser instead.
+    if (pendingRef.current !== "visualiser") pendingRef.current = null;
     calibratingRef.current = true;
     setAutoStartTutorial(true);
     lastModeRef.current = "tutorial";
@@ -478,7 +498,11 @@ export default function GameApp() {
         // A brief loading beat so the last gate doesn't snap straight to the
         // Play screen (which read as broken). The seeding is instant; the pause
         // is for legibility. An effect advances "seeding" → "tutorialdone".
-        setDoneVariant("calibration");
+        // `pendingRef` still says "visualiser" here if that's what routed an
+        // uncalibrated player through this whole flow (see `openVisualiser`/
+        // `onCalibrated`) — skip the guided teaching tutorial in that case,
+        // it's specific to the scored game, not the visualiser.
+        setDoneVariant(pendingRef.current === "visualiser" ? "calibrationVisualiser" : "calibration");
         setScreen("seeding");
         return;
       }
@@ -654,6 +678,21 @@ export default function GameApp() {
       });
   }, [settings, gameAlive]);
 
+  /**
+   * `TutorialDone`'s "calibrationVisualiser" variant — a `?intent=visualiser`
+   * arrival or a manual Visualiser tap that needed calibration first (see
+   * `openVisualiser`/`onCalibrated`/`onRunOver`'s calibratingRef branch)
+   * lands here once the grid is measured, skipping the guided teaching
+   * tutorial entirely: that tutorial is specific to the scored game, not the
+   * visualiser. This tap is the fresh gesture `openVisualiser` needs to
+   * reopen the mic; settings are already set by now, so it lands straight on
+   * the Visualiser screen rather than looping back through `calibrate`.
+   */
+  const finishCalibrationForVisualiser = useCallback(() => {
+    pendingRef.current = null;
+    openVisualiser();
+  }, [openVisualiser]);
+
   const onNavigate = useCallback(
     (tab: NavTab) => {
       if (tab === "visualiser") {
@@ -708,7 +747,9 @@ export default function GameApp() {
             onDone={
               doneVariant === "calibration"
                 ? () => void startTutorialFromCalibration()
-                : goHome
+                : doneVariant === "calibrationVisualiser"
+                  ? finishCalibrationForVisualiser
+                  : goHome
             }
             canvasWidth={CANVAS_W}
             canvasHeight={GAME_CANVAS_H}
@@ -748,17 +789,24 @@ export default function GameApp() {
           <Visualiser settings={settings} canvasWidth={CANVAS_W} canvasHeight={GAME_CANVAS_H} />
         )}
 
-        {screen === "visualiser" && settings && !visualiserMicReady && (
-          // Only reached via `?intent=visualiser` from the landing page,
-          // which arrives here with no click behind it (hard rule 4) —
-          // `<Visualiser>` itself assumes the mic is already open, so it
-          // can't be mounted yet. This tap is the real gesture; it hands off
-          // to the same `openVisualiser()` the nav bar uses.
+        {screen === "visualiser" && !(settings && visualiserMicReady) && (
+          // Reached via `?intent=visualiser` from the landing page, which
+          // arrives here with no click behind it (hard rule 4) — `<Visualiser>`
+          // itself assumes the mic is already open, so it can't be mounted
+          // yet, and it requires `settings` regardless. This tap is the real
+          // gesture; it hands off to the same `openVisualiser()` the nav bar
+          // uses, which routes an uncalibrated player through `calibrate`
+          // first rather than requiring settings to already exist here — the
+          // extra line below only shows for that uncalibrated case, since a
+          // returning calibrated player just needs the mic re-opened.
           <div
             className="screen stage game-stage"
             style={{ width: CANVAS_W, height: GAME_CANVAS_H }}
           >
             <div className="overlay" onClick={openVisualiser}>
+              {!settings && (
+                <p>Before you can use the visualiser, we need to personalize the grid to your voice.</p>
+              )}
               <p>Tap to start</p>
             </div>
           </div>
