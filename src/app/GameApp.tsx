@@ -668,12 +668,22 @@ export default function GameApp() {
     // Traffic analytics, deliberately separate from the gameplay pipeline
     // above — see src/analytics/posthog.ts. Pageviews only, same consent flag.
     initPostHog(loadShareData());
-    track({ type: "landed" });
+    // Read `ref` before it's stripped below — `landed` is the only place
+    // share-driven traffic is visible at all (see AnalyticsEvent's own
+    // comment: PostHog's own URL/referrer fields are stripped from every
+    // gameplay event by before_send's allowlist).
+    let isShareRef = false;
+    try {
+      isShareRef = new URLSearchParams(window.location.search).get("ref") === "share";
+    } catch {
+      /* no window (tests) */
+    }
+    track(isShareRef ? { type: "landed", ref: "share" } : { type: "landed" });
     if (challengeScoreState != null) {
       track({ type: "challenge_landed", target: challengeScoreState });
     }
-    // Strip `c`/`ref` (already captured into challengeScoreState above) so a
-    // refresh mid-session doesn't re-trigger the "beat X" banner.
+    // Strip `c`/`ref` (already captured above) so a refresh mid-session
+    // doesn't re-trigger the "beat X" banner or double-count `landed`'s ref.
     try {
       const params = new URLSearchParams(window.location.search);
       if (params.has("c") || params.has("ref")) {

@@ -70,7 +70,14 @@ export type MicFailureReason =
   | "unknown";
 
 export type AnalyticsEvent =
-  | { type: "landed" }
+  /**
+   * `ref` is the closed set of `?ref=` values this app itself ever generates
+   * — currently only the share card's link (`src/share/share.ts`). Absent on
+   * an ordinary visit. This is the only way to see share-driven traffic:
+   * PostHog's own `$current_url`/`$referrer` are stripped from every
+   * gameplay event, `landed` included, by `before_send`'s allowlist.
+   */
+  | { type: "landed"; ref?: "share" }
   | { type: "mic"; ok: true }
   | { type: "mic"; ok: false; reason: MicFailureReason }
   | { type: "calib_step"; step: CalibStep }

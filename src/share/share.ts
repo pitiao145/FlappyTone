@@ -5,6 +5,7 @@
  */
 
 import { toneBreakdown, type RunStats } from "../game/scoring.ts";
+import { APP_PATH } from "../ui/appLink.ts";
 
 const SITE_URL = "https://flappytone.com";
 const SHARE_TEXT = "I'm improving my tones with FlappyTone, can you beat me?";
@@ -17,8 +18,16 @@ const TONE_EMOJI: Record<number, string> = {
   4: "↙️",
 };
 
+/**
+ * `?c=<score>` is only ever read by GameApp.tsx, which mounts at `/app` —
+ * the marketing landing page at `/` has no idea what `c` means (see
+ * CLAUDE.md's "Three entries" split). A link to `/` would silently drop the
+ * challenge the moment someone opens it, so the clickable `url` has to point
+ * at `/app` even though the card's own printed pill stays the clean
+ * `flappytone.com` (see renderCard.ts — that text is not a link).
+ */
 function challengeUrl(score: number): string {
-  return `${SITE_URL}/?ref=share&c=${score}`;
+  return `${SITE_URL}${APP_PATH}?ref=share&c=${score}`;
 }
 
 /** Wordle-style block for the copy-to-clipboard fallback — the paste has to look like something on its own. */
@@ -42,21 +51,33 @@ export async function shareRunResult(
   pngBlob: Blob,
 ): Promise<ShareOutcome> {
   const url = challengeUrl(stats.score);
-  // The link goes in `url` only, not repeated inside `text` — most share
-  // targets (Messages, Mail, Notes) append `url` to the shared text
-  // themselves, so folding it into `text` too showed it twice in practice.
-  const text = SHARE_TEXT;
 
   try {
     const file = new File([pngBlob], "flappytone-result.png", { type: "image/png" });
 
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ title: "FlappyTone", text, url, files: [file] });
+      // The link is folded into `text` here rather than passed as a
+      // separate `url` field: with an image already attached, a standalone
+      // `url` field lets some share targets' rich-paste path (notably
+      // Notes.app via the OS share sheet's own "Copy" action) additionally
+      // unfurl the link into its own preview card — which fetches the
+      // site's OG image and pastes as a second, different-looking image
+      // alongside the card. Embedding the link as plain characters inside
+      // `text` avoids that second fetch while still reading fine as a link
+      // in every target that matters here.
+      await navigator.share({
+        title: "FlappyTone",
+        text: `${SHARE_TEXT} ${url}`,
+        files: [file],
+      });
       return "shared";
     }
 
     if (navigator.share) {
-      await navigator.share({ title: "FlappyTone", text, url });
+      // No image attached — `url` stays a separate field here, since some
+      // targets only read `url` and others only read `text`; that
+      // duplication risk only exists once a file is also on the clipboard.
+      await navigator.share({ title: "FlappyTone", text: SHARE_TEXT, url });
       return "shared_no_image";
     }
   } catch (err) {

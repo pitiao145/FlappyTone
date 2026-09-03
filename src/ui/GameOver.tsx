@@ -167,6 +167,19 @@ export function GameOver({
         </div>
       </div>
 
+      <div className="gameover-share-block">
+        <button
+          type="button"
+          className="gameover-share"
+          disabled={shareBusy}
+          onClick={() => void onShare()}
+        >
+          <ShareIcon />
+          {shareBusy ? "Sharing…" : "Share and challenge your friends!"}
+        </button>
+        {shareCopied && <p className="note">Copied to clipboard!</p>}
+      </div>
+
       <p className="note">best multiplier ×{stats.bestMultiplier}</p>
 
       <div className="pause-accuracy gameover-accuracy">
@@ -301,19 +314,6 @@ export function GameOver({
           this one lets Rollup drop the component from the production bundle
           entirely (CLAUDE.md rule 7). */}
       {import.meta.env.DEV && <GateLogPanel />}
-
-      <div className="gameover-cta-block gameover-share-block">
-        <button
-          type="button"
-          className="primary gameover-cta gameover-share"
-          disabled={shareBusy}
-          onClick={() => void onShare()}
-        >
-          <ShareIcon />
-          {shareBusy ? "Sharing…" : "Share result"}
-        </button>
-        {shareCopied && <p className="note">Copied to clipboard!</p>}
-      </div>
 
       <div className="menu">
         <button className="primary" disabled={busy} onClick={onRetry}>
