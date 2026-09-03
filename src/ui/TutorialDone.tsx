@@ -5,13 +5,17 @@ import { JumpingPip } from "./bird";
  * the player straight back to the Play home. Pip hops with excitement (see
  * `JumpingPip`) under a short "you're all set" line and a button onward.
  *
- * Three variants, same layout: the standalone tutorial ends on "Good job";
- * the tutorial that follows first-run calibration ends on "Your grid is
- * ready" and leads into the guided teaching tutorial; `calibrationVisualiser`
- * is the same "grid is ready" moment but reached via `?intent=visualiser` (or
- * a manual Visualiser tap) with no prior calibration — the teaching tutorial
- * is specific to the scored game, not the visualiser, so this variant skips
- * it and leads straight back to what the player actually asked for.
+ * Three variants, same layout: the standalone tutorial (and the guided
+ * teaching tutorial reached from calibration) ends on "Good job" and its
+ * "Let's play" goes straight into a real classic-mode run; the tutorial that
+ * follows first-run calibration ends on "Your grid is ready" and offers two
+ * ways on — straight into that same real run (`onDone`), or the guided
+ * teaching tutorial first (`onSecondary`); `calibrationVisualiser` is the
+ * same "grid is ready" moment but reached via `?intent=visualiser` (or a
+ * manual Visualiser tap) with no prior calibration — the teaching tutorial is
+ * specific to the scored game, not the visualiser, so this variant has no
+ * secondary button and leads straight back to what the player actually asked
+ * for.
  *
  * Rendered inside the same `.game-stage` frame as PlayHome (not a plain
  * centered `.screen`) so the frame keeps its full-viewport width across the
@@ -20,7 +24,10 @@ import { JumpingPip } from "./bird";
  */
 type Variant = "tutorial" | "calibration" | "calibrationVisualiser";
 
-const COPY: Record<Variant, { title: string; body: string; button: string }> = {
+const COPY: Record<
+  Variant,
+  { title: string; body: string; button: string; secondaryButton?: string }
+> = {
   tutorial: {
     title: "Good job!",
     body: "You've got the hang of it. You're all set to start playing for real.",
@@ -30,6 +37,7 @@ const COPY: Record<Variant, { title: string; body: string; button: string }> = {
     title: "Your grid is ready",
     body: "We've tuned the board to your voice. Let's try it out.",
     button: "Let's try it out",
+    secondaryButton: "Tutorial first",
   },
   calibrationVisualiser: {
     title: "Your grid is ready",
@@ -40,14 +48,16 @@ const COPY: Record<Variant, { title: string; body: string; button: string }> = {
 
 interface Props {
   variant: Variant;
-  /** Advance to the Play home — the player's first real run starts from there. */
+  /** Advance onward — a real classic-mode run for "tutorial"/"calibration", the visualiser for "calibrationVisualiser". */
   onDone: () => void;
+  /** "calibration" only: take the guided teaching tutorial first instead. */
+  onSecondary?: () => void;
   /** Matches the size Play/Game open at, so the frame doesn't resize on hand-off. */
   canvasWidth: number;
   canvasHeight: number;
 }
 
-export function TutorialDone({ variant, onDone, canvasWidth, canvasHeight }: Props) {
+export function TutorialDone({ variant, onDone, onSecondary, canvasWidth, canvasHeight }: Props) {
   const copy = COPY[variant];
   return (
     <div className="stage game-stage playhome-stage">
@@ -63,6 +73,11 @@ export function TutorialDone({ variant, onDone, canvasWidth, canvasHeight }: Pro
             <button className="primary" onClick={onDone}>
               {copy.button}
             </button>
+            {copy.secondaryButton && onSecondary && (
+              <button className="secondary" onClick={onSecondary}>
+                {copy.secondaryButton}
+              </button>
+            )}
           </div>
         </div>
       </div>

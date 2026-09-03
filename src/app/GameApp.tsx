@@ -426,26 +426,32 @@ export default function GameApp() {
   );
 
   /**
-   * The calibration-flight TutorialDone screen's "Let's try it out" button.
-   * That flight (`autoStart`) is only a range-measuring flight — a few gates
-   * flown immediately, no walkthrough — not the guided teaching tutorial, so
-   * this is the direct path into a real one afterward, instead of landing on
-   * Play and making the player tap Tutorial themselves. `startPlay` expects
-   * the mic already open (see its own comment); Game.tsx's tick() already
-   * called `stopMic()` when the calibration flight ended, so this reopens it
-   * itself, inside this tap's gesture — same pattern as PlayHome's `go()`.
+   * TutorialDone's buttons, across all variants that lead into another run
+   * rather than back to Play. The calibration-flight screen's "Let's try it
+   * out" (`intent: "game"`) goes straight into a real classic-mode run;
+   * its "Tutorial first" (`intent: "tutorial"`) takes the guided teaching
+   * tutorial first. The plain "tutorial" variant's "Let's play" — reached
+   * both from that guided tutorial and from a standalone tutorial run
+   * (Settings replay, ModeSelect) — also goes straight into a game rather
+   * than landing on the Play home screen. Either way `startPlay` expects the
+   * mic already open (see its own comment); Game.tsx's tick() already called
+   * `stopMic()` when the previous run ended, so this reopens it itself,
+   * inside this tap's gesture — same pattern as PlayHome's `go()`.
    */
-  const startTutorialFromCalibration = useCallback(async () => {
-    try {
-      await ensureMic();
-      startPlay("tutorial");
-    } catch (err) {
-      if (!(err instanceof MicCancelled)) {
-        setError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
+  const startFromTutorialDone = useCallback(
+    async (intent: "game" | "tutorial") => {
+      try {
+        await ensureMic();
+        startPlay(intent);
+      } catch (err) {
+        if (!(err instanceof MicCancelled)) {
+          setError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
+        }
+        goHome();
       }
-      goHome();
-    }
-  }, [startPlay, goHome]);
+    },
+    [startPlay, goHome],
+  );
 
   const onCalibrated = useCallback((s: CalibrationSettings) => {
     setSettings(s);
@@ -745,11 +751,14 @@ export default function GameApp() {
           <TutorialDone
             variant={doneVariant}
             onDone={
+              doneVariant === "calibrationVisualiser"
+                ? finishCalibrationForVisualiser
+                : () => void startFromTutorialDone("game")
+            }
+            onSecondary={
               doneVariant === "calibration"
-                ? () => void startTutorialFromCalibration()
-                : doneVariant === "calibrationVisualiser"
-                  ? finishCalibrationForVisualiser
-                  : goHome
+                ? () => void startFromTutorialDone("tutorial")
+                : undefined
             }
             canvasWidth={CANVAS_W}
             canvasHeight={GAME_CANVAS_H}
