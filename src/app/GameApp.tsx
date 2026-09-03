@@ -682,13 +682,16 @@ export default function GameApp() {
     if (challengeScoreState != null) {
       track({ type: "challenge_landed", target: challengeScoreState });
     }
-    // Strip `c`/`ref` (already captured above) so a refresh mid-session
-    // doesn't re-trigger the "beat X" banner or double-count `landed`'s ref.
+    // Strip `c`/`ref`/`openExternalBrowser` (already captured above — the
+    // last is only ever read by LINE's own WebView, see share.ts's
+    // challengeUrl) so a refresh mid-session doesn't re-trigger the "beat X"
+    // banner or double-count `landed`'s ref.
     try {
       const params = new URLSearchParams(window.location.search);
-      if (params.has("c") || params.has("ref")) {
+      if (params.has("c") || params.has("ref") || params.has("openExternalBrowser")) {
         params.delete("c");
         params.delete("ref");
+        params.delete("openExternalBrowser");
         const next = params.toString();
         history.replaceState(null, "", next ? `?${next}` : window.location.pathname);
       }

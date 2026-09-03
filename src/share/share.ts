@@ -9,7 +9,7 @@ import { APP_PATH } from "../ui/appLink.ts";
 
 const SITE_URL = "https://flappytone.com";
 const SHARE_TEXT = "I'm improving my tones with FlappyTone, can you beat me?";
-
+const EXT_BROWSER_TEXT = "(Open in external browser for better experience)";
 /** Per-tone shape, for the copied-text fallback's Wordle-style block. */
 const TONE_EMOJI: Record<number, string> = {
   1: "➡️",
@@ -25,9 +25,18 @@ const TONE_EMOJI: Record<number, string> = {
  * challenge the moment someone opens it, so the clickable `url` has to point
  * at `/app` even though the card's own printed pill stays the clean
  * `flappytone.com` (see renderCard.ts — that text is not a link).
+ *
+ * `openExternalBrowser=1` is LINE-specific: LINE's in-app WebView can deny
+ * or silently break `getUserMedia` (hard rule 4 — every audio API call needs
+ * a real browser, not a chat app's embedded webview), and this documented
+ * LINE param forces a tapped link to open in the device's default browser
+ * instead. It's a no-op query param everywhere else — harmless for every
+ * other share target, which is why it's always included rather than
+ * detecting LINE specifically (impossible outbound, see the "does LINE
+ * count as a share target" conversation this followed).
  */
 function challengeUrl(score: number): string {
-  return `${SITE_URL}${APP_PATH}?ref=share&c=${score}`;
+  return `${SITE_URL}${APP_PATH}?ref=share&c=${score}&openExternalBrowser=1`;
 }
 
 /** Wordle-style block for the copy-to-clipboard fallback — the paste has to look like something on its own. */
@@ -66,8 +75,8 @@ export async function shareRunResult(
       // `text` avoids that second fetch while still reading fine as a link
       // in every target that matters here.
       await navigator.share({
-        title: "FlappyTone",
-        text: `${SHARE_TEXT} ${url}`,
+        title: "FlappyTone\n",
+        text: `${SHARE_TEXT}\n${url} ${EXT_BROWSER_TEXT}\n`,
         files: [file],
       });
       return "shared";
