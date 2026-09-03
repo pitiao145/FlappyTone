@@ -114,6 +114,33 @@ function initialIntent(): "visualiser" | null {
 }
 
 /**
+ * The score a `?c=<score>` share link is challenging the player to beat —
+ * see docs/flappytone-SPEC-share.md "Part 3". Read once on mount, then
+ * stripped from the URL (see the `landed` effect below) so a refresh mid-
+ * session doesn't re-trigger the banner.
+ */
+export const CHALLENGE_SCORE_MAX = 1_000_000;
+
+/** Pure parsing/clamping, split out from `challengeScore()` so it's testable without a `window`. */
+export function parseChallengeScore(search: string): number | null {
+  const raw = new URLSearchParams(search).get("c");
+  if (raw === null) return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || !Number.isInteger(n)) return null;
+  if (n <= 0 || n > CHALLENGE_SCORE_MAX) return null;
+  return n;
+}
+
+function challengeScore(): number | null {
+  try {
+    return parseChallengeScore(window.location.search);
+  } catch {
+    /* no window (tests) */
+  }
+  return null;
+}
+
+/**
  * Canvas resolution — computed live from the real viewport, not a fixed
  * constant, on both mobile and desktop. `window.innerHeight` (not CSS
  * `100svh`) is what makes this correct: it already excludes browser chrome
@@ -253,6 +280,15 @@ export default function GameApp() {
   );
   const [stats, setStats] = useState<RunStats | null>(null);
   /**
+   * The target score a `?c=<score>` share link asked this session to beat.
+   * Captured once on mount (read before the URL is stripped, see the
+   * `landed` effect) and left as plain state — unlike `pendingRef`'s
+   * visualiser intent, nothing here has to be "consumed" on the way through
+   * calibration/tutorial, it just needs to survive, which state already
+   * does since none of those screens unmount GameApp.
+   */
+  const [challengeScoreState] = useState<number | null>(() => challengeScore());
+  /**
    * What GameOver should offer, if anything — decided here, once the
    * tracking window for this run fills. Not the raw measurement: see
    * `recalibration.ts` for why judging a single run's measured range was
@@ -270,7 +306,7 @@ export default function GameApp() {
   // moment reached via `?intent=visualiser`/a manual Visualiser tap and skips
   // straight there instead (see `onRunOver`'s calibratingRef branch).
   const [doneVariant, setDoneVariant] = useState<
-    "tutorial" | "calibration" | "calibrationVisualiser"
+    "tutorial" | "calibration" | "calibrationVisualiser" | "calibrationChallenge"
   >("tutorial");
   const [error, setError] = useState<string | null>(null);
   const [retryBusy, setRetryBusy] = useState(false);
@@ -507,8 +543,17 @@ export default function GameApp() {
         // `pendingRef` still says "visualiser" here if that's what routed an
         // uncalibrated player through this whole flow (see `openVisualiser`/
         // `onCalibrated`) — skip the guided teaching tutorial in that case,
-        // it's specific to the scored game, not the visualiser.
-        setDoneVariant(pendingRef.current === "visualiser" ? "calibrationVisualiser" : "calibration");
+        // it's specific to the scored game, not the visualiser. A cold
+        // challenge-link arrival (`challengeScoreState`) gets its own
+        // variant for the same reason "visualiser" does — it's still headed
+        // into a real run, just with challenge-aware copy (TutorialDone).
+        setDoneVariant(
+          pendingRef.current === "visualiser"
+            ? "calibrationVisualiser"
+            : challengeScoreState != null
+              ? "calibrationChallenge"
+              : "calibration",
+        );
         setScreen("seeding");
         return;
       }
@@ -517,6 +562,14 @@ export default function GameApp() {
       return;
     }
     setStats(snap.stats);
+    if (challengeScoreState != null) {
+      track({
+        type: "challenge_resolved",
+        target: challengeScoreState,
+        score: snap.stats.score,
+        beaten: snap.stats.score >= challengeScoreState,
+      });
+    }
     // Drill is real, scored practice — counts the same as Classic. Learn is
     // deliberately excluded from all three (history, daily limit, streak):
     // it's unscored-pressure recognition practice, not a run the Progress
@@ -553,7 +606,7 @@ export default function GameApp() {
     }
 
     setScreen("gameover");
-  }, [settings]);
+  }, [settings, challengeScoreState]);
 
   const retry = useCallback(async () => {
     if (
@@ -616,6 +669,22 @@ export default function GameApp() {
     // above — see src/analytics/posthog.ts. Pageviews only, same consent flag.
     initPostHog(loadShareData());
     track({ type: "landed" });
+    if (challengeScoreState != null) {
+      track({ type: "challenge_landed", target: challengeScoreState });
+    }
+    // Strip `c`/`ref` (already captured into challengeScoreState above) so a
+    // refresh mid-session doesn't re-trigger the "beat X" banner.
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("c") || params.has("ref")) {
+        params.delete("c");
+        params.delete("ref");
+        const next = params.toString();
+        history.replaceState(null, "", next ? `?${next}` : window.location.pathname);
+      }
+    } catch {
+      /* no window (tests) */
+    }
     // Re-report the saved calibration each visit, so a session that skips
     // calibration (because it already ran) still carries the voice numbers its
     // gate results have to be read against.
@@ -730,6 +799,7 @@ export default function GameApp() {
               onModes={() => setScreen("modes")}
               canvasWidth={CANVAS_W}
               canvasHeight={GAME_CANVAS_H}
+              challengeScore={challengeScoreState}
             />
           )}
 
@@ -762,6 +832,7 @@ export default function GameApp() {
             }
             canvasWidth={CANVAS_W}
             canvasHeight={GAME_CANVAS_H}
+            challengeScore={challengeScoreState}
           />
         )}
 
@@ -900,6 +971,7 @@ export default function GameApp() {
             suggestionIsFirst={recalFirst}
             onRecalibrate={setSettings}
             mode={lastModeRef.current}
+            challengeScore={challengeScoreState}
           />
         )}
         </div>

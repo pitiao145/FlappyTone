@@ -1174,6 +1174,36 @@
   padding: 10px 16px;
 }
 
+/* The share CTA — full-width, above Retry/Home, primary weight since it's
+   the action this sprint promotes. Its own block (not part of .gameover-ctas'
+   two-shortcut row) so it reads as one full-width action, not a third
+   shortcut. */
+.gameover-share-block {
+  width: 100%;
+  max-width: 460px;
+  margin-inline: auto;
+}
+
+.screen button.gameover-share {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  font-size: 1rem;
+}
+
+.screen button.gameover-share svg {
+  width: 1.1em;
+  height: 1.1em;
+}
+
+.challenge-score {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
 .breakdown {
   display: flex;
   flex-direction: column;

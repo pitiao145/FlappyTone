@@ -21,8 +21,16 @@ import { JumpingPip } from "./bird";
  * centered `.screen`) so the frame keeps its full-viewport width across the
  * hand-off to Play — a narrower menu-style screen here made `.frame` snap wide
  * on the button tap, which read as a flash.
+ *
+ * `calibrationChallenge` is a fourth, same-shaped variant: a cold `?c=<score>`
+ * arrival (see docs/flappytone-SPEC-share.md) routed through calibration the
+ * same way "visualiser" does, but still headed into a real run rather than
+ * the visualiser — so it reuses "calibration"'s copy/routing untouched
+ * (`COPY[variant]` has no entry for it; `challengeCopy` below covers it) and
+ * gets challenge-aware copy the same way an ordinary `?c=` return-from-
+ * calibration run does (see the `challengeScore` override below).
  */
-type Variant = "tutorial" | "calibration" | "calibrationVisualiser";
+type Variant = "tutorial" | "calibration" | "calibrationVisualiser" | "calibrationChallenge";
 
 const COPY: Record<
   Variant,
@@ -44,6 +52,15 @@ const COPY: Record<
     body: "We've tuned the board to your voice. On to the visualiser.",
     button: "Go to the visualiser",
   },
+  // Only reached with a challenge score set (GameApp only picks this variant
+  // when one is active), so `challengeCopy` below always overrides this —
+  // this entry exists purely to satisfy Record<Variant, ...>.
+  calibrationChallenge: {
+    title: "Your grid is ready",
+    body: "We've tuned the board to your voice. Let's try it out.",
+    button: "Let's try it out",
+    secondaryButton: "Tutorial first",
+  },
 };
 
 interface Props {
@@ -55,10 +72,41 @@ interface Props {
   /** Matches the size Play/Game open at, so the frame doesn't resize on hand-off. */
   canvasWidth: number;
   canvasHeight: number;
+  /**
+   * Non-null when this session is chasing a `?c=<score>` share-link target
+   * — see docs/flappytone-SPEC-share.md "Part 3". Overrides copy on the
+   * two variants that lead into a real run ("tutorial" and
+   * "calibration"/"calibrationChallenge"); "calibrationVisualiser" is
+   * untouched, since that path never carries a challenge score.
+   */
+  challengeScore?: number | null;
 }
 
-export function TutorialDone({ variant, onDone, onSecondary, canvasWidth, canvasHeight }: Props) {
-  const copy = COPY[variant];
+export function TutorialDone({
+  variant,
+  onDone,
+  onSecondary,
+  canvasWidth,
+  canvasHeight,
+  challengeScore,
+}: Props) {
+  const base = COPY[variant];
+  const copy =
+    challengeScore == null
+      ? base
+      : variant === "tutorial"
+        ? {
+            ...base,
+            body: `You've got the hang of it — time to beat ${challengeScore.toLocaleString()}.`,
+            button: "Beat the score",
+          }
+        : variant === "calibration" || variant === "calibrationChallenge"
+          ? {
+              ...base,
+              body: `You're tuned up. Now go beat that ${challengeScore.toLocaleString()}.`,
+              button: "Beat the score",
+            }
+          : base;
   return (
     <div className="stage game-stage playhome-stage">
       <div

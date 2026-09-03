@@ -112,6 +112,9 @@ const GAME_EVENTS = new Set<string>([
   "gate",
   "run_end",
   "cue_fallback",
+  "share_clicked",
+  "challenge_landed",
+  "challenge_resolved",
 ]);
 
 /** The only `$`-prefixed properties allowed through on a gameplay event. */

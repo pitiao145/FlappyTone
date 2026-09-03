@@ -115,7 +115,13 @@ export type AnalyticsEvent =
    * sweep played instead (see src/audio/reference.ts's `playToneCue`). Should
    * be rare to nonexistent in production; this exists to confirm that.
    */
-  | { type: "cue_fallback"; tone: Tone };
+  | { type: "cue_fallback"; tone: Tone }
+  /** Share button tapped on GameOver, before the share sheet opens — see docs/flappytone-SPEC-share.md. */
+  | { type: "share_clicked"; mode: RunMode; score: number; is_best: boolean }
+  /** A `?c=<score>` challenge link landed on a cold or returning session. */
+  | { type: "challenge_landed"; target: number }
+  /** The challenge-linked run just ended — closes the share -> click -> play -> beat funnel. */
+  | { type: "challenge_resolved"; target: number; score: number; beaten: boolean };
 
 export interface SessionCalibration {
   f0Center: number;

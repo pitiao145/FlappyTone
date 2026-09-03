@@ -10,6 +10,9 @@ import type { AnalyticsEvent } from "../analytics/session.ts";
 import { saveSettings, type CalibrationSettings } from "../game/settings.ts";
 import type { RangeHalves } from "../pitch/calibration.ts";
 import { ToneMarkIcon } from "./toneIcons.tsx";
+import { ShareIcon } from "./icons.tsx";
+import { renderShareCard } from "../share/renderCard.ts";
+import { downloadShareCard, shareRunResult } from "../share/share.ts";
 
 type RunFeedbackSentiment = Extract<AnalyticsEvent, { type: "run_feedback" }>["sentiment"];
 
@@ -36,6 +39,8 @@ interface Props {
   onRecalibrate: (s: CalibrationSettings) => void;
   /** The RunMode of the run that just ended — carried on the `run_feedback` event. */
   mode: RunMode;
+  /** The target this run was chasing, if it arrived via a `?c=<score>` challenge link. */
+  challengeScore: number | null;
 }
 
 export function GameOver({
@@ -50,6 +55,7 @@ export function GameOver({
   suggestionIsFirst = false,
   onRecalibrate,
   mode,
+  challengeScore,
 }: Props) {
   const breakdown = toneBreakdown(stats);
   const [dismissed, setDismissed] = useState(false);
@@ -111,9 +117,39 @@ export function GameOver({
     track({ type: "recal_resolved", outcome: "dismissed" });
   };
 
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+
+  const onShare = async () => {
+    if (shareBusy) return;
+    // Fired before the share sheet opens (or the card even renders) — a
+    // cancelled share still counts as intent, per the spec.
+    track({ type: "share_clicked", mode, score: stats.score, is_best: isNewBest });
+    setShareBusy(true);
+    setShareCopied(false);
+    try {
+      const blob = await renderShareCard(stats, history);
+      const outcome = await shareRunResult(stats, blob);
+      if (outcome === "copied") {
+        setShareCopied(true);
+        if (!navigator.share) downloadShareCard(blob, stats.score);
+      }
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
   return (
     <div className="screen gameover-screen">
       <h2>Run over</h2>
+
+      {challengeScore != null && (
+        <p className="prompt">
+          {stats.score >= challengeScore
+            ? `You beat it! 🎉 (target ${challengeScore.toLocaleString()})`
+            : `So close — ${challengeScore.toLocaleString()} to beat. Retry?`}
+        </p>
+      )}
 
       {/* This run's score beside the personal best, as a matched pair of
           cards. The best is the Pip's beak-gold plaque; a fresh record fills
@@ -265,6 +301,19 @@ export function GameOver({
           this one lets Rollup drop the component from the production bundle
           entirely (CLAUDE.md rule 7). */}
       {import.meta.env.DEV && <GateLogPanel />}
+
+      <div className="gameover-cta-block gameover-share-block">
+        <button
+          type="button"
+          className="primary gameover-cta gameover-share"
+          disabled={shareBusy}
+          onClick={() => void onShare()}
+        >
+          <ShareIcon />
+          {shareBusy ? "Sharing…" : "Share result"}
+        </button>
+        {shareCopied && <p className="note">Copied to clipboard!</p>}
+      </div>
 
       <div className="menu">
         <button className="primary" disabled={busy} onClick={onRetry}>

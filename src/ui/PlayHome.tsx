@@ -21,6 +21,8 @@ interface Props {
   /** Matches the size Game/Calibration will actually open at — see GameApp's computeCanvasSize. */
   canvasWidth: number;
   canvasHeight: number;
+  /** Non-null when this session arrived via a `?c=<score>` share link — see docs/flappytone-SPEC-share.md. */
+  challengeScore: number | null;
 }
 
 /**
@@ -38,6 +40,7 @@ export function PlayHome({
   onModes,
   canvasWidth,
   canvasHeight,
+  challengeScore,
 }: Props) {
   const [ownError, setOwnError] = useState<string | null>(null);
   const [pendingIntent, setPendingIntent] = useState<PlayIntent | null>(null);
@@ -74,6 +77,13 @@ export function PlayHome({
             alt="Flappytone mascot"
             className="playhome-mascot"
           />
+          {challengeScore != null && (
+            <p className="prompt challenge-score">
+              <strong>Someone scored {challengeScore.toLocaleString()}.</strong>
+              <br />
+              Practice your Mandarin tones and try to beat them!
+            </p>
+          )}
           <h1>{brand.name}</h1>
           {tutorialDone && <p className="prompt">Nice, ready to play?</p>}
           {!calibrated && (
