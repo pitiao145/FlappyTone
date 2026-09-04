@@ -350,7 +350,7 @@
 .tagline,
 .note {
   color: var(--ink-muted);
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   font-style: italic;
   text-align: center;
 }
@@ -507,6 +507,8 @@
   justify-content: center;
 }
 
+
+
 /* Fine-tune (Settings → Fine-tune, `startAt="preview"`): a padded column that
    fits the viewport without scrolling — header, note, a canvas that FLEXES to
    the leftover space, then the slider and buttons. The old markup reused the
@@ -547,6 +549,9 @@
   line-height: 1.35;
 }
 
+.calibrate-screen h2 {
+  font-size: var(--text-2xl);
+}
 .meter {
   height: 8px;
   border-radius: var(--radius-pill);
