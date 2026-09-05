@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:api": "FT_NO_SSL=1 vercel dev",
+    "dev:api": "if [ -f .env.local ]; then set -a; . ./.env.local; set +a; fi; FT_NO_SSL=1 vercel dev",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
