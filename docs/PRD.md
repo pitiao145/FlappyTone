@@ -21,18 +21,22 @@ The four Mandarin tone marks (ˉ ˊ ˇ ˋ) are literally pitch-contour diagrams.
 ## 3. Non-goals
 
 - Speech recognition / syllable verification (ASR)
-- Accounts, real backend/auth, payments
 - Tone sandhi, connected speech, multi-syllable words, sentences
 - Native/mobile app build
 - Tone perception (listening) drills
 
-**One scoped exception, not a reversal of the above:** the Progress tab's
-local run history (`src/game/runHistory.ts`) and a "N of 5 free runs today"
-limiter (`src/game/dailyLimit.ts`) are real, device-local, non-tamper-proof
-state — no accounts, nothing leaves the device, no payment flow behind it.
-See CLAUDE.md's scoped-exceptions note. Don't read this as license to build
-more persistence or a monetisation flow on top of it without a deliberate
-decision to do so.
+**Accounts, a backend and monetisation are roadmapped, no longer non-goals**
+(that deliberate decision is logged in `docs/DECISIONS.md`): accounts + auth +
+a database backend are being added via Supabase (auth + Postgres) with
+Cloudflare R2 for object storage, starting with the leaderboard — see
+`docs/flappytone-ARCH-supabase.md` and `docs/flappytone-SPEC-supabase-phase1.md`.
+Payment is planned via Lemon Squeezy as merchant of record (EarlyBird), so
+building our own payment/billing backend stays out of scope. **None of this is
+shipped yet** — until each piece lands the app is still client-only. Today's
+persistence is device-local only: the Progress tab's run history
+(`src/game/runHistory.ts`) and the "N of 5 free runs today" limiter
+(`src/game/dailyLimit.ts`) — non-tamper-proof, nothing leaves the device — plus
+the sync-on-signup design that carries these local aggregates up once accounts land.
 
 ## 4. Platform & stack
 
