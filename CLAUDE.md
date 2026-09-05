@@ -87,12 +87,15 @@ One analytics consequence: **`landed` means "opened `/app`", not "visited the si
 ## Commands
 
 ```bash
-npm run dev            # vite dev server
+npm run dev            # vite dev server, over HTTPS — use for anything not touching api/
+npm run dev:api        # vercel dev: the only way to exercise api/ (score submission)
 npm run test           # vitest
 npm run analyze <wav>  # print ASCII contour for a fixture — use this to "see" pitch output
 npm run typecheck
 npm run build           # also gates dev-tooling exclusion, see hard rule 7
 ```
+
+**The two dev servers are mutually exclusive on TLS, and that is not a bug to fix.** `npm run dev` serves HTTPS via `basicSsl()` because `getUserMedia` needs a secure context, which is what makes on-phone mic testing over the LAN possible. `vercel dev` runs Vite as a child and proxies it over plain HTTP, so an HTTPS upstream fails with `ERR_SSL_PROTOCOL_ERROR` before anything renders — `dev:api` therefore sets `FT_NO_SSL=1`, which drops the plugin. Desktop is unaffected (`localhost` is a secure context without TLS); the one thing neither command does is exercise `api/` *from a phone*. If you need that, use a Vercel preview deploy.
 
 Clip-pipeline and demo-clip scripts (`make-clips`, `pull-recordings`, `import-words`, `update-demo`, etc.) are covered where they're used below, not repeated here — `npm run` with no args lists everything in `package.json`.
 
