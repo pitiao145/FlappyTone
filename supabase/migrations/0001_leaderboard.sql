@@ -32,21 +32,29 @@ create policy prof_read on public.profiles
   for select to authenticated, anon
   using (true);
 
+-- Insert only. There is deliberately no UPDATE policy: display names are
+-- generated and cannot be edited in Phase 1 (choosing your own name is a Pro
+-- feature), so an update path would be unused surface — and Supabase's security
+-- advisor flags one that anonymous users can reach. Phase 2 adds it back for
+-- permanent accounts, gated on `auth.jwt() ->> 'is_anonymous'`.
 create policy prof_insert on public.profiles
   for insert to authenticated
-  with check ((select auth.uid()) = id);
-
-create policy prof_update on public.profiles
-  for update to authenticated
-  using ((select auth.uid()) = id)
   with check ((select auth.uid()) = id);
 
 -- ------------------------------------------------------ leaderboard_scores
 
 -- Current best single run per player per ISO week. Warm data: written rarely
 -- (only when a player beats their own week), read on every board view.
+--
+-- `user_id` references `profiles`, not `auth.users` directly, for two reasons.
+-- It gives PostgREST a relationship to resolve, so the board's one real query —
+-- top scores with each player's name — is a single request rather than two. And
+-- it states an invariant the product relies on: joining the board is what
+-- creates the profile, so a score without one is a bug, and now fails here
+-- instead of rendering as a nameless row. `auth.users` remains the ultimate
+-- owner; deleting a user cascades to their profile, which cascades to these.
 create table public.leaderboard_scores (
-  user_id     uuid not null references auth.users (id) on delete cascade,
+  user_id     uuid not null references public.profiles (id) on delete cascade,
   week_id     text not null check (week_id ~ '^\d{4}-W\d{2}$'),
   best_score  int not null check (best_score between 0 and 1000000),
   updated_at  timestamptz not null default now(),
@@ -76,7 +84,7 @@ create policy lb_read on public.leaderboard_scores
 -- place.
 
 grant select on public.profiles to anon, authenticated;
-grant insert, update on public.profiles to authenticated;
+grant insert on public.profiles to authenticated;
 grant select on public.leaderboard_scores to anon, authenticated;
 
 grant all on public.profiles to service_role;

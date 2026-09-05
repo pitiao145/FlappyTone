@@ -47,25 +47,32 @@ keeping:
   every existing player's history and best score to save writing a small
   function in Phase 2. Not worth it.
 
-Two things the build discovered rather than decided:
+Three things the build discovered rather than decided, all now folded into
+`0001` rather than left as a trail of corrections:
 
 - **A raw-SQL migration must `GRANT` explicitly.** The dashboard's table editor
   does it invisibly; a migration does not. RLS policies narrow access, they do
   not grant it, so correct-looking policies still yield "permission denied for
   table" without the grants.
-- **`leaderboard_scores.user_id` points at `profiles`, not `auth.users`**
-  (migration 0003). With both tables referencing only `auth.users`, PostgREST
-  saw no relationship between them and could not resolve "top scores with each
-  player's name" in one query. The constraint also states the invariant the
-  product relies on: joining the board is what creates the profile, so a score
-  without one is a bug, and now fails in the database rather than rendering as a
-  nameless row.
+- **`leaderboard_scores.user_id` points at `profiles`, not `auth.users`.** With
+  both tables referencing only `auth.users`, PostgREST saw no relationship
+  between them and could not resolve "top scores with each player's name" in
+  one query. The constraint also states the invariant the product relies on:
+  joining the board is what creates the profile, so a score without one is a
+  bug, and now fails in the database rather than rendering as a nameless row.
+- **There is no `prof_update` policy.** One was written, and the security
+  advisor immediately flagged it for letting an anonymous user edit their
+  profile. It wasn't exploitable — it checked `auth.uid() = id` — but it was
+  unused, since names can't be edited in Phase 1, and an unused write path is
+  only surface. Phase 2 adds it back for permanent accounts, gated on
+  `is_anonymous`.
 
-And one policy was dropped a minute after being created (migration 0002): the
-security advisor flagged `prof_update` for letting an anonymous user edit their
-profile. It wasn't wrong so much as unused — names can't be edited in Phase 1 —
-and an unused write path is only an attack surface. Phase 2 restores it for
-permanent accounts, gated on `is_anonymous`.
+**On squashing:** the three fixes above first landed as migrations 0002 and
+0003, then were squashed back into a single `0001` and the remote schema
+rebuilt from it. That is only defensible because nothing had shipped, no other
+environment had the schema, and both tables held zero rows. Once this is
+deployed the ledger is append-only: you fix a migration with another migration,
+because someone else's database has already run the old one.
 
 ## Clip pipeline
 
