@@ -44,8 +44,24 @@ export function warn(scope: string, message: string, detail?: unknown): void {
 const URL = import.meta.env.VITE_SUPABASE_URL;
 const PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-let client: FlappyToneClient | null = null;
-let attempted = false;
+/**
+ * The client is cached on `globalThis`, not just in a module variable.
+ *
+ * Vite's HMR re-evaluates this module on every edit, and a plain module-level
+ * variable is re-initialised each time — so each edit built a second client
+ * over the same storage key, which is what GoTrue's "Multiple GoTrueClient
+ * instances detected" warning is about. Production never hot-reloads, so this
+ * only matters in dev; it costs one property to be right in both.
+ */
+const CACHE = Symbol.for("flappytone.supabase");
+interface ClientCache {
+  client: FlappyToneClient | null;
+  attempted: boolean;
+}
+const cache = ((globalThis as Record<symbol, unknown>)[CACHE] ??= {
+  client: null,
+  attempted: false,
+}) as ClientCache;
 
 /**
  * The client, or `null` when the project isn't configured — which is the
@@ -53,8 +69,8 @@ let attempted = false;
  * rather than assume a client exists.
  */
 export function getSupabase(): FlappyToneClient | null {
-  if (attempted) return client;
-  attempted = true;
+  if (cache.attempted) return cache.client;
+  cache.attempted = true;
   if (!URL || !PUBLISHABLE_KEY) {
     warn(
       "supabase",
@@ -63,14 +79,14 @@ export function getSupabase(): FlappyToneClient | null {
     return null;
   }
   try {
-    client = createClient<Database>(URL, PUBLISHABLE_KEY, {
+    cache.client = createClient<Database>(URL, PUBLISHABLE_KEY, {
       auth: { persistSession: true, autoRefreshToken: true },
     });
   } catch (err) {
     warn("supabase", "createClient failed", err);
-    client = null;
+    cache.client = null;
   }
-  return client;
+  return cache.client;
 }
 
 /** The current session without creating one. Used to answer "am I signed in

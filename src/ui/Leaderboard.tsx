@@ -25,12 +25,19 @@ export function Leaderboard({ limit = 50 }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    getBoard(limit).then((b) => {
-      if (!cancelled) setBoard(b);
-    });
-    myUserId().then((id) => {
-      if (!cancelled) setUserId(id);
-    });
+    // `getBoard` is contracted never to reject, but a rejection here would
+    // leave the card stuck on "Loading the board…" forever rather than
+    // falling through to the empty state. Cheap to be certain.
+    getBoard(limit)
+      .catch(() => ({ weekId: "", rows: [], myRank: null, total: 0 }) satisfies Board)
+      .then((b) => {
+        if (!cancelled) setBoard(b);
+      });
+    myUserId()
+      .catch(() => null)
+      .then((id) => {
+        if (!cancelled) setUserId(id);
+      });
     return () => {
       cancelled = true;
     };

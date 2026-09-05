@@ -107,16 +107,26 @@ export function GameOver({
     if (!boardEligible) return;
     let live = true;
     void (async () => {
-      const joined = await hasJoined();
-      if (!live) return;
-      if (joined) {
-        const result = await submitScore(stats.score);
+      // `src/data/` promises never to throw, and this catch is the belt to
+      // that module's braces. The promise is only as good as every line
+      // inside it — a broken import or a logger that fails takes the whole
+      // function down with it, and an unhandled rejection here would be an
+      // error on the end screen of a run the player just finished. The
+      // leaderboard is never worth that.
+      try {
+        const joined = await hasJoined();
         if (!live) return;
-        track({ type: "score_submitted", score: stats.score, is_best: isNewBest, ok: result.ok });
-        if (!result.ok) setBoardError(result.reason);
-      } else if (isNewBest) {
-        setJoinOffer(true);
-        track({ type: "join_board_shown", score: stats.score });
+        if (joined) {
+          const result = await submitScore(stats.score);
+          if (!live) return;
+          track({ type: "score_submitted", score: stats.score, is_best: isNewBest, ok: result.ok });
+          if (!result.ok) setBoardError(result.reason);
+        } else if (isNewBest) {
+          setJoinOffer(true);
+          track({ type: "join_board_shown", score: stats.score });
+        }
+      } catch (err) {
+        if (live) setBoardError(String(err));
       }
     })();
     return () => {
@@ -126,15 +136,21 @@ export function GameOver({
 
   const acceptJoin = async () => {
     setJoining(true);
-    const joined = await joinBoard();
-    const result = joined
-      ? await submitScore(stats.score)
-      : ({ ok: false, reason: "could not create the profile row" } as const);
-    track({ type: "join_board_submitted", joined, ok: result.ok });
-    if (joined) {
-      track({ type: "score_submitted", score: stats.score, is_best: isNewBest, ok: result.ok });
+    // Same belt as the effect above: whatever happens, the modal closes and
+    // the end screen stays intact.
+    try {
+      const joined = await joinBoard();
+      const result = joined
+        ? await submitScore(stats.score)
+        : ({ ok: false, reason: "could not create the profile row" } as const);
+      track({ type: "join_board_submitted", joined, ok: result.ok });
+      if (joined) {
+        track({ type: "score_submitted", score: stats.score, is_best: isNewBest, ok: result.ok });
+      }
+      if (!result.ok) setBoardError(result.reason);
+    } catch (err) {
+      setBoardError(String(err));
     }
-    if (!result.ok) setBoardError(result.reason);
     setJoining(false);
     setJoinOffer(false);
   };
