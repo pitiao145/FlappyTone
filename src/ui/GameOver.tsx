@@ -6,6 +6,8 @@ import { hasShownFeedbackToday, markFeedbackShown } from "../game/runFeedback.ts
 import type { RunMode } from "../game/run.ts";
 import { GateLogPanel } from "../dev/GateLogPanel.tsx";
 import { track } from "../analytics/client.ts";
+import { displayName, hasJoined, joinBoard, submitScore } from "../data/leaderboard.ts";
+import { JoinBoardModal } from "./JoinBoardModal.tsx";
 import type { AnalyticsEvent } from "../analytics/session.ts";
 import { saveSettings, type CalibrationSettings } from "../game/settings.ts";
 import type { RangeHalves } from "../pitch/calibration.ts";
@@ -77,6 +79,59 @@ export function GameOver({
     () => loadDailyRuns().count >= 3 && !hasShownFeedbackToday(),
     [],
   );
+  /**
+   * The weekly board.
+   *
+   * A player already on the board gets every scored run sent up silently —
+   * `api/score.ts` keeps only their best, so a worse run costs nothing. A
+   * player who hasn't joined is *offered* the board, and only on a personal
+   * best: it is the moment the offer means something, and it keeps the modal
+   * from reappearing after every run the way an unconditional prompt would.
+   * Because a first scored run is always a personal best, nobody misses the
+   * offer entirely, and a later best brings it back for anyone who declined.
+   *
+   * None of this can break the end screen — every call below resolves rather
+   * than throwing, and the screen renders identically if they all fail.
+   */
+  const [joinOffer, setJoinOffer] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const boardName = useMemo(() => displayName(), []);
+  const boardEligible = mode === "game" && stats.score > 0;
+
+  useEffect(() => {
+    if (!boardEligible) return;
+    let live = true;
+    void (async () => {
+      const joined = await hasJoined();
+      if (!live) return;
+      if (joined) {
+        const ok = await submitScore(stats.score);
+        if (live) track({ type: "score_submitted", score: stats.score, is_best: isNewBest, ok });
+      } else if (isNewBest) {
+        setJoinOffer(true);
+        track({ type: "join_board_shown", score: stats.score });
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [boardEligible, stats.score, isNewBest]);
+
+  const acceptJoin = async () => {
+    setJoining(true);
+    const joined = await joinBoard();
+    const ok = joined ? await submitScore(stats.score) : false;
+    track({ type: "join_board_submitted", joined, ok });
+    if (joined) track({ type: "score_submitted", score: stats.score, is_best: isNewBest, ok });
+    setJoining(false);
+    setJoinOffer(false);
+  };
+
+  const declineJoin = () => {
+    track({ type: "join_board_submitted", joined: false, ok: false });
+    setJoinOffer(false);
+  };
+
   const [feedbackDismissed, setFeedbackDismissed] = useState(false);
   const [feedbackSentiment, setFeedbackSentiment] = useState<RunFeedbackSentiment | null>(null);
 
@@ -321,6 +376,15 @@ export function GameOver({
         </button>
         <button onClick={onHome}>Home</button>
       </div>
+
+      {joinOffer && (
+        <JoinBoardModal
+          name={boardName}
+          busy={joining}
+          onJoin={acceptJoin}
+          onDismiss={declineJoin}
+        />
+      )}
     </div>
   );
 }

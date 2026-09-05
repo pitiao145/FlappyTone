@@ -6,12 +6,24 @@ Full spec: @docs/PRD.md — read it before implementing a slice, not before ever
 
 ## Stack
 
-React 19 + TypeScript + Vite. Canvas 2D. Web Audio API. Plain CSS with a design-token system (`src/ui/tokens.css`, documented in `docs/BRAND.md`) — no Tailwind. Accounts, a database backend and cross-device persistence are now a **decided direction**, not a non-goal — Supabase (auth + Postgres) with Cloudflare R2 for object storage, being built **starting with the leaderboard** (see `docs/flappytone-ARCH-supabase.md` and `docs/flappytone-SPEC-supabase-phase1.md`). This is the deliberate lifting of v1's client-only boundary, taken on real traction. **Until a given piece actually lands it is not in the code** — so today the game is still client-only with no gameplay backend, persisting only calibration and the local stats/limit state below. Add backend state through a migration + the two-lane write model in the arch doc, not ad hoc.
+React 19 + TypeScript + Vite. Canvas 2D. Web Audio API. Plain CSS with a design-token system (`src/ui/tokens.css`, documented in `docs/BRAND.md`) — no Tailwind. Accounts, a database backend and cross-device persistence are now a **decided direction**, not a non-goal — Supabase (auth + Postgres) with Cloudflare R2 for object storage, being built **starting with the leaderboard** (see `docs/flappytone-ARCH-supabase.md` and `docs/flappytone-SPEC-supabase-phase1.md`). This is the deliberate lifting of v1's client-only boundary, taken on real traction. **Until a given piece actually lands it is not in the code.** Add backend state through a migration + the two-lane write model in the arch doc, not ad hoc.
 
-**Current local/booth persistence** (what exists in the code *now*, ahead of the Supabase backend — device-local or booth-only, none of it assumes tamper-proofing). The leaderboard/accounts backend, when built, is the planned successor to the local layer, not a competitor to it (personal stats stay local-first, sync on signup — see the arch doc):
+**What has landed (Ring 1 / Phase 1):** anonymous auth and the weekly leaderboard.
+
+- **`src/data/`** is the only place that talks to Supabase. `supabase.ts` holds the single client and `ensureAnonSession()`; `leaderboard.ts` holds every read and write of the board. Both obey one contract: **nothing in `src/data/` may throw into a caller.** A failure returns an empty board or `false`, so a dead network degrades to "no board today", never to a broken end screen — the same rule `src/share/share.ts` and `src/analytics/client.ts` already keep.
+- **Sign-in is lazy, deliberately.** `signInAnonymously()` runs when a player joins the board, *not* at app load, so a visitor who never submits a score never becomes a row in `auth.users`.
+- **Two write lanes, split by whether the client may decide the value.** The player's `profiles` row is written by the browser and guarded by RLS (`auth.uid() = id`). Their score is written *only* by `api/score.ts`, which holds the service-role key, verifies the JWT, and computes the ISO week from server time. `leaderboard_scores` has **no client write policy at all** — that is the enforcement, not a convention. If the client could lie about a value and it matters, it goes through a function.
+- **Display names are generated, never typed.** The player gets something like `BraveSparrow42`, cached at `toneflap.identity.v1` and copied into their profile on join. Choosing a name is a planned Pro feature. This also keeps the "nothing the player typed" promise in `src/analytics/session.ts` intact — no board name is ever sent to PostHog.
+- **Joining is opt-in and offered only on a personal best**, so the modal can't nag after every run; an already-joined player's runs submit silently.
+- **Migrations live in `supabase/migrations/` and are applied via the Supabase MCP `apply_migration`**, never by hand in the dashboard. Regenerate and commit `src/data/database.types.ts` after each one, and run `get_advisors` (security *and* performance) before calling a schema change done. Raw-SQL migrations must include explicit `GRANT`s — the dashboard's table editor adds them for you and a migration does not, and RLS policies alone will not save you: RLS narrows access, it does not grant it.
+- **Personal stats are still local-first and unchanged.** `runHistory.ts`, `streak.ts` and `dailyLimit.ts` stay device-local; nothing syncs them yet. That happens at email signup in Phase 2.
+
+Everything below this line is still device-local, and none of it moved:
+
+**Local/booth persistence** — device-local or booth-only, none of it assuming tamper-proofing. The leaderboard backend is the successor to this layer, not a competitor to it (personal stats stay local-first, sync on signup — see the arch doc):
 
 - **`src/game/runHistory.ts` and `src/game/dailyLimit.ts`** (27 Aug 2026): the Progress/Profile tabs need real, device-local stats — lifetime run/gate/word counts, the last 5 runs' per-tone accuracy, a "N of 5 free runs today" counter — to avoid faking numbers the UI claims are real. Both follow `settings.ts`'s key/version/validate convention and store nothing that leaves the device. `dailyLimit.ts` is explicitly **not tamper-proof** — there are no accounts, so its checksum only deters a casual devtools edit. Don't build product logic that assumes it can't be bypassed, and don't reach for this pattern beyond what the free-tier teaser needs.
-- **`api/*.ts`**: four small Vercel functions, none of them gameplay. `api/upload.ts` + `api/auth.ts` + `api/_passcode.ts` gate the passcode-protected `/record` booth's upload to Blob storage (one user, not an account — see file headers for the threat model). `api/newsletter.ts` proxies a landing-page email signup to ConvertKit so the client never sees the API key. The player-facing game itself talks to nothing but PostHog.
+- **`api/*.ts`**: five small Vercel functions. `api/upload.ts` + `api/auth.ts` + `api/_passcode.ts` gate the passcode-protected `/record` booth's upload to Blob storage (one user, not an account — see file headers for the threat model). `api/newsletter.ts` proxies a landing-page email signup to ConvertKit so the client never sees the API key. `api/score.ts` is the one gameplay function: the sole writer of the leaderboard. Apart from it, the player-facing game talks to nothing but Supabase reads and PostHog. **A test file in `api/` must be named `_*.test.ts`** — without the underscore Vercel deploys it as a public endpoint, which `api/_imports.test.ts` checks.
 
 ## Hard rules — these are not defaults, do not drift back to them
 
@@ -37,12 +49,14 @@ src/
   audio/      AudioWorklet setup, mic permission, calibration capture, reference-clip playback. Feeds src/pitch/.
   game/       loop, entities, gate generation, tuning, scoring, tone classifier, run history, daily limit. NO React.
   render/     canvas draw calls. Pure functions of game state.
+  data/       the only Supabase-facing code: client + anonymous session, leaderboard reads/writes. Never throws.
   ui/         React components: menus, HUD overlay, calibration, settings, progress/profile, game over.
   app/        the /app entry: GameApp (the game's shell) + GameNav + main.tsx.
   record/     the /record entry: Jane's recording booth.
   analytics/  what a play session sends home. session.ts is pure; client.ts/posthog.ts are the impure part.
   dev/        the Lab (dev-only tuning instance) + CLI analysis/build scripts.
-api/          Vercel functions for the record booth and newsletter signup — not gameplay. See exceptions above.
+api/          Vercel functions: the record booth, newsletter signup, and score.ts (the only writer of the leaderboard).
+supabase/     numbered SQL migrations, applied through the Supabase MCP. The schema's source of truth.
 LandingApp.tsx  the / entry's shell: landing + terms, and nothing else.
 fixtures/     WAV files for offline tests — see docs/TESTING.md
 docs/         PRD.md, TESTING.md, DECISIONS.md, and reference/design docs
@@ -152,7 +166,9 @@ Ground truth is `fixtures/captures/jane_*.wav` (native Taiwanese speaker, direct
 
 ## Out of scope for v1 — do not build these
 
-Speech recognition or syllable verification · accounts, real backend/auth · tone sandhi, multi-syllable words, sentences · native app builds · listening/perception drills. (The Progress tab's local run history and free-run daily limit are the one deliberate, scoped exception — see above; don't extend that pattern into anything that needs real payments or accounts.)
+Speech recognition or syllable verification · tone sandhi, multi-syllable words, sentences · native app builds · listening/perception drills.
+
+Accounts and a backend are no longer on this list — anonymous auth and the leaderboard have shipped (see above). Still not built, and not to be built ahead of their phase: **public email accounts and cross-device sync** (Phase 2), **player-chosen display names** (Pro), **voice-clip storage** (Phase 3), **payments or billing of our own** (Lemon Squeezy is the merchant of record), and **server-enforced daily limits** — the limit stays local, because clearing storage mints a new anonymous identity anyway.
 
 ## Known limitations — do not try to "fix" these silently
 

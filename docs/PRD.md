@@ -31,12 +31,18 @@ a database backend are being added via Supabase (auth + Postgres) with
 Cloudflare R2 for object storage, starting with the leaderboard — see
 `docs/flappytone-ARCH-supabase.md` and `docs/flappytone-SPEC-supabase-phase1.md`.
 Payment is planned via Lemon Squeezy as merchant of record (EarlyBird), so
-building our own payment/billing backend stays out of scope. **None of this is
-shipped yet** — until each piece lands the app is still client-only. Today's
-persistence is device-local only: the Progress tab's run history
-(`src/game/runHistory.ts`) and the "N of 5 free runs today" limiter
-(`src/game/dailyLimit.ts`) — non-tamper-proof, nothing leaves the device — plus
-the sync-on-signup design that carries these local aggregates up once accounts land.
+building our own payment/billing backend stays out of scope.
+
+**Phase 1 has shipped**: anonymous sign-in and a weekly leaderboard (§7.1).
+Everything else in that plan is still ahead — public email accounts and
+cross-device sync (Phase 2), voice-clip storage (Phase 3).
+
+Personal gameplay state remains device-local and unsynced: the Progress tab's
+run history (`src/game/runHistory.ts`), the streak (`src/game/streak.ts`) and
+the "N of 5 free runs today" limiter (`src/game/dailyLimit.ts`) — none of it
+tamper-proof, none of it leaving the device. The sync-on-signup design carries
+these aggregates up once accounts land; today the leaderboard score is the only
+thing the game sends to a server.
 
 ## 4. Platform & stack
 
@@ -48,7 +54,8 @@ the sync-on-signup design that carries these local aggregates up once accounts l
 | Audio | Web Audio API via `AudioWorkletNode` only |
 | Pitch detection | Custom band-limited McLeod Pitch Method implementation (`src/pitch/mpm.ts`) — no longer the `pitchy` package; `pitchy` remains a listed dependency but is unused in source |
 | Styling | Plain CSS with a design-token system (`src/ui/tokens.css`, `docs/BRAND.md`) |
-| Deploy | Vercel, static + a handful of small serverless functions under `api/` for the recording booth and newsletter signup (not gameplay — see CLAUDE.md) |
+| Deploy | Vercel, static + small serverless functions under `api/` for the recording booth, newsletter signup, and the leaderboard write (`api/score.ts`) |
+| Backend | Supabase (Postgres + Auth) in Tokyo (ap-northeast-1). Anonymous sign-in; leaderboard only. Schema in `supabase/migrations/`. |
 | Target | Portrait mobile-first layout, playable on desktop |
 
 **Layout:** 9:16 portrait canvas, max-width 420px, centred, dark neutral backdrop filling the rest of the viewport.
@@ -172,9 +179,36 @@ Known gaps in both are documented in `docs/DECISIONS.md`.
 
 **Game-over takeaway:** picks the worst-accuracy tone with enough scored gates, and prefers a mismatch-based phrasing ("Tone 3 gates are landing like Tone 2") when the classifier's misses on that tone are dominated by one specific wrong read.
 
+### 7.1 Weekly leaderboard
+
+The one piece of shared, server-side state. A board is per ISO week
+(`"2026-W36"`); the reset is implicit, since a read only ever asks for the
+current week. `best_score` is a player's **single best run** that week, not a
+cumulative total.
+
+- **Identity is a Supabase anonymous user**, created the first time a player
+  joins the board — not at app load. It lives in `localStorage` like any
+  session, so clearing storage or switching browsers means a new identity.
+  That fragility is the honest basis of the future "sign up to save across
+  devices" pitch. In Phase 2 the same user upgrades in place to a permanent
+  account, keeping their scores.
+- **Names are generated, not chosen** (`BraveSparrow42`). Picking your own is a
+  planned Pro feature. Names are not unique; rows are distinguished by user id.
+- **Joining is opt-in**, offered in a modal on game over and only after a
+  personal best, so it cannot nag. A player who declines is offered again at
+  their next best. Once joined, every scored run submits silently.
+- **The board is open to everyone** in this phase — no Pro gate on reading it.
+  Free players see the real top 50 and their own rank.
+- **Writes are server-authoritative.** The browser cannot write a score at all;
+  `api/score.ts` verifies the session, bounds the value, computes the week from
+  server time, and raises the standing best only. This stops casual spoofing;
+  it is not full anti-cheat, which remains out of scope.
+- **It can never break a run.** Every call resolves; a failure shows an empty
+  board, not an error.
+
 ## 8. Screens
 
-Actual screen set (`src/app/GameApp.tsx`'s `Screen` type): `play` (title/home), `modes`, `howto`, `calibrate`, `finetune`, `tutorial`, `seeding`, `tutorialdone`, `game`, `drill`, `learn`, `gameover`, `settings`, `visualiser`, `progress`, `profile`, `lab` (dev only).
+Actual screen set (`src/app/GameApp.tsx`'s `Screen` type): `play` (title/home), `modes`, `howto`, `calibrate`, `finetune`, `tutorial`, `seeding`, `tutorialdone`, `game`, `drill`, `learn`, `gameover`, `settings`, `visualiser`, `progress`, `profile`, `lab` (dev only), `devlogin` (dev only).
 
 **Run modes** (`RunMode` in `src/game/run.ts`): `game` (the real run), `tutorial`, `single`, `drill` (practice one tone repeatedly), `learn`. Chosen from the `modes` screen.
 
@@ -186,8 +220,8 @@ Actual screen set (`src/app/GameApp.tsx`'s `Screen` type): `play` (title/home), 
 - **Drill** — repeated single-tone practice, picked from `modes`.
 - **Game** — the scored run: hearts, combo, difficulty ramp.
 - **Game over** — total score, best combo, per-tone accuracy breakdown, one-line takeaway (§7).
-- **Progress** — lifetime run/gate/word counts and the last 5 runs' per-tone accuracy, from `runHistory.ts`. Device-local only.
-- **Profile** — account-free profile surface backed by the same local stats; also where the daily free-run count (`dailyLimit.ts`) is visible.
+- **Progress** — lifetime run/gate/word counts and the last 5 runs' per-tone accuracy, from `runHistory.ts` (device-local), plus the live weekly leaderboard (§7.1), which is the one section here reading from a server.
+- **Profile** — account-free profile surface backed by the same local stats; shows the daily free-run count (`dailyLimit.ts`) and the player's generated board name, so they can find their own row. Still labelled "Guest player" — there are no real accounts yet.
 
 ### HUD (in-game)
 

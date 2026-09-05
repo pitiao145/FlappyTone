@@ -25,6 +25,7 @@
     "update-demo": "node --experimental-strip-types src/dev/update-demo.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.115.0",
     "@vercel/blob": "^2.6.1",
     "chart.js": "^4.5.1",
     "posthog-js": "^1.413.3",

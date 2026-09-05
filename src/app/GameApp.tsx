@@ -60,7 +60,8 @@ type Screen =
   | "visualiser"
   | "progress"
   | "profile"
-  | "lab";
+  | "lab"
+  | "devlogin";
 
 /** What Play/Tutorial (from the Play tab or Settings) route through. */
 type StartIntent = PlayIntent | "visualiser";
@@ -90,6 +91,15 @@ function navTabFor(screen: Screen): NavTab {
  */
 const Lab = import.meta.env.DEV
   ? lazy(() => import("../dev/Lab.tsx").then((m) => ({ default: m.Lab })))
+  : null;
+
+/**
+ * The magic-link login is Phase 2 groundwork, not a shipped feature — players
+ * are anonymous today. Gated the same way as the Lab, and for the same reason:
+ * a login that is merely hidden is still a login that shipped.
+ */
+const DevLogin = import.meta.env.DEV
+  ? lazy(() => import("../dev/DevLogin.tsx").then((m) => ({ default: m.DevLogin })))
   : null;
 
 /**
@@ -813,6 +823,7 @@ export default function GameApp() {
               canvasWidth={CANVAS_W}
               canvasHeight={GAME_CANVAS_H}
               challengeScore={challengeScoreState}
+              onDevLogin={() => setScreen("devlogin")}
             />
           )}
 
@@ -908,6 +919,12 @@ export default function GameApp() {
         {screen === "lab" && Lab && (
           <Suspense fallback={<p className="note">loading lab…</p>}>
             <Lab onBack={goHome} />
+          </Suspense>
+        )}
+
+        {screen === "devlogin" && DevLogin && (
+          <Suspense fallback={<p className="note">loading login…</p>}>
+            <DevLogin onBack={goHome} />
           </Suspense>
         )}
 

@@ -15,6 +15,58 @@ approach, or where the obvious-looking alternative was tried and failed.
 
 **How it's introduced, so it doesn't become slop:** identity via Supabase anonymous sign-in (an anonymous user upgrades in place to a permanent account on email signup — no guest-row migration); personal gameplay stats stay **local-first** and sync up only on signup; the only server write for anonymous users is the leaderboard score, through a server-authoritative Vercel function holding the service-role key (clients never write it). RLS on every table, written performance-correct from line one. Every schema change is a numbered migration. Region Tokyo (permanent). **Not yet shipped — the code is still client-only until each piece lands.** When a piece lands, update CLAUDE.md and PRD.md to match what is actually in the code, not what is planned.
 
+### Phase 1 shipped, and where it departs from its own spec (5 Sep 2026)
+
+Ring 1 landed: `profiles` + `leaderboard_scores`, `api/score.ts`, anonymous
+auth, a dev-only magic-link login. Four decisions overruled
+`flappytone-SPEC-supabase-phase1.md` while building it, each for a reason worth
+keeping:
+
+- **Anonymous sign-in is lazy, not at app load.** The spec called for
+  `signInAnonymously()` on boot. But nothing in Phase 1 needs an identity until
+  a player joins the board, and signing in at load mints an `auth.users` row for
+  every drive-by visitor — most of whom, at a ~6% return rate, never play twice.
+  Sign-in now happens inside `joinBoard()`. Concurrent callers share one
+  in-flight promise, or two components mounting at once would race and create
+  two users.
+- **The board is open to everyone, not a free/Pro split.** The spec gave free
+  players the top 3 and locked the top 50 behind Pro. A board nobody can see
+  cannot make anyone competitive, and this is the first week it has any data at
+  all. Gating can come back once there is something worth gating.
+- **Display names are generated, never typed.** The spec captured a name in the
+  join modal. Choosing a name is now a Pro feature, so the modal shows a
+  generated `BraveSparrow42` read-only. This also preserved an existing
+  guarantee for free: `src/analytics/session.ts` promises it never sends
+  anything the player typed, and there is now still no text input in the game.
+- **`runHistory.ts` was left alone.** The spec asked to rename its per-tone
+  fields to match the DB columns now, so the Phase 2 sync becomes a plain copy.
+  The local shape is `{gates, accSum, unheard}` and the DB's is
+  `{attempts, hits, sum_accuracy, best_accuracy}` — not a rename but a real
+  mapping, since `hits` and `best_accuracy` aren't tracked locally at all.
+  Renaming the persisted shape means bumping `toneflap.history.v1`, which wipes
+  every existing player's history and best score to save writing a small
+  function in Phase 2. Not worth it.
+
+Two things the build discovered rather than decided:
+
+- **A raw-SQL migration must `GRANT` explicitly.** The dashboard's table editor
+  does it invisibly; a migration does not. RLS policies narrow access, they do
+  not grant it, so correct-looking policies still yield "permission denied for
+  table" without the grants.
+- **`leaderboard_scores.user_id` points at `profiles`, not `auth.users`**
+  (migration 0003). With both tables referencing only `auth.users`, PostgREST
+  saw no relationship between them and could not resolve "top scores with each
+  player's name" in one query. The constraint also states the invariant the
+  product relies on: joining the board is what creates the profile, so a score
+  without one is a bug, and now fails in the database rather than rendering as a
+  nameless row.
+
+And one policy was dropped a minute after being created (migration 0002): the
+security advisor flagged `prof_update` for letting an anonymous user edit their
+profile. It wasn't wrong so much as unused — names can't be edited in Phase 1 —
+and an unused write path is only an attack surface. Phase 2 restores it for
+permanent accounts, gated on `is_anonymous`.
+
 ## Clip pipeline
 
 **Clips are the whole take, not the voiced window (9 Aug 2026).** Cutting on

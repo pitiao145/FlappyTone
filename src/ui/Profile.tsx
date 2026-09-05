@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { capturePostHogEvent } from "../analytics/posthog.ts";
+import { displayName } from "../data/leaderboard.ts";
 import { DAILY_RUN_LIMIT, loadDailyRuns } from "../game/dailyLimit.ts";
 import { FREE_SUMMARY, PRO_FEATURES, PRO_PRICE } from "./plan.ts";
 
@@ -10,6 +11,7 @@ interface Props {
 /** The Profile tab: guest identity, the real daily free-run count, and the EarlyBird pitch. */
 export function Profile({ onEarlyBird }: Props) {
   const daily = useMemo(() => loadDailyRuns(), []);
+  const boardName = useMemo(() => displayName(), []);
   const usedPct = Math.min(100, (daily.count / DAILY_RUN_LIMIT) * 100);
 
   return (
@@ -23,6 +25,9 @@ export function Profile({ onEarlyBird }: Props) {
         </span>
         <div>
           <p className="profile-name">Guest player</p>
+          {/* The board name is generated, not chosen — showing it here is how
+              a player recognises their own row on the leaderboard. */}
+          <p className="note">On the board as {boardName}</p>
           <p className="note">Progress saved on this device only</p>
         </div>
       </section>

@@ -18,6 +18,9 @@ interface Props {
   onStart: (intent: PlayIntent) => void;
   /** Opens the Modes picker. No mic needed — only starting a run there does. */
   onModes: () => void;
+  /** Dev builds only: opens the magic-link login. Needs no mic, so it does not
+   * go through `onStart`'s gesture path. */
+  onDevLogin: () => void;
   /** Matches the size Game/Calibration will actually open at — see GameApp's computeCanvasSize. */
   canvasWidth: number;
   canvasHeight: number;
@@ -38,6 +41,7 @@ export function PlayHome({
   error: externalError,
   onStart,
   onModes,
+  onDevLogin,
   canvasWidth,
   canvasHeight,
   challengeScore,
@@ -109,9 +113,14 @@ export function PlayHome({
           {/* Dev builds only. The Lab is a separate instance of the game for
               tuning, and it is not part of the product. */}
           {import.meta.env.DEV && (
-            <button className="dev-toggle" disabled={busy} onClick={go("lab")}>
-              lab
-            </button>
+            <>
+              <button className="dev-toggle" disabled={busy} onClick={go("lab")}>
+                lab
+              </button>
+              <button className="dev-toggle" disabled={busy} onClick={onDevLogin}>
+                login
+              </button>
+            </>
           )}
         </div>
       </div>

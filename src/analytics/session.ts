@@ -128,7 +128,23 @@ export type AnalyticsEvent =
   /** A `?c=<score>` challenge link landed on a cold or returning session. */
   | { type: "challenge_landed"; target: number }
   /** The challenge-linked run just ended — closes the share -> click -> play -> beat funnel. */
-  | { type: "challenge_resolved"; target: number; score: number; beaten: boolean };
+  | { type: "challenge_resolved"; target: number; score: number; beaten: boolean }
+  /**
+   * The weekly leaderboard was rendered. `rows` is how many entries were
+   * shown, `ranked` whether this player has a position on it — together they
+   * answer "is the board empty enough to feel dead?".
+   */
+  | { type: "leaderboard_viewed"; rows: number; ranked: boolean }
+  /** The join-the-board modal was offered on game over. */
+  | { type: "join_board_shown"; score: number }
+  /**
+   * The player accepted or declined the join offer. Deliberately carries no
+   * display name — the "nothing the player is identified by" rule at the top
+   * of this file covers generated handles too.
+   */
+  | { type: "join_board_submitted"; joined: boolean; ok: boolean }
+  /** A score reached (or failed to reach) `api/score.ts`. */
+  | { type: "score_submitted"; score: number; is_best: boolean; ok: boolean };
 
 export interface SessionCalibration {
   f0Center: number;

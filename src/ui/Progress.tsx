@@ -9,6 +9,7 @@ import {
 } from "../game/runHistory.ts";
 import { loadStreak } from "../game/streak.ts";
 import type { Word } from "../game/words.ts";
+import { Leaderboard } from "./Leaderboard.tsx";
 import { FREE_FEATURES, PRO_FEATURES, PRO_PRICE } from "./plan.ts";
 import { ToneAverageCard } from "./ToneAverageCard.tsx";
 import { TONE_LINE_COLOR } from "./toneColors.ts";
@@ -313,39 +314,13 @@ export function Progress({ onEarlyBird }: Props) {
         </button>
       </section>
 
-      {/* ---- Leaderboard */}
-      <section className="progress-card sticker-card sticker-card-pro">
+      {/* ---- Leaderboard. Real data and open to everyone, unlike the Pro
+           sections above it — a board only works if people can see it. */}
+      <section className="progress-card sticker-card">
         <div className="progress-card-header">
           <h3>Leaderboard</h3>
-          <span className="pro-badge">🔒 Pro</span>
         </div>
-        <div className="leaderboard-preview">
-          <div className="leaderboard-row">
-            <span className="leaderboard-rank">🥇</span>
-            <span className="leaderboard-name">chloe_tw</span>
-            <span className="leaderboard-score">2,140</span>
-          </div>
-          <div className="leaderboard-row">
-            <span className="leaderboard-rank">🥈</span>
-            <span className="leaderboard-name">marco</span>
-            <span className="leaderboard-score">1,980</span>
-          </div>
-          <div className="leaderboard-row leaderboard-you">
-            <span className="leaderboard-rank">7</span>
-            <span className="leaderboard-name">you</span>
-            <span className="leaderboard-score">{history.bestScore}</span>
-          </div>
-        </div>
-        <button
-          type="button"
-          className="link progress-card-cta"
-          onClick={() => {
-            capturePostHogEvent("progress_leaderboard_upsell_click", {});
-            scrollToPricing();
-          }}
-        >
-          🔒 Compete weekly — unlock with Pro
-        </button>
+        <Leaderboard />
       </section>
 
       {/* ---- Pricing */}
