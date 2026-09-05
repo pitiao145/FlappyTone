@@ -95,6 +95,11 @@ export function GameOver({
    */
   const [joinOffer, setJoinOffer] = useState(false);
   const [joining, setJoining] = useState(false);
+  // Dev builds only: why the last submission didn't land. A player is never
+  // shown this — a failed score costs them nothing and there is nothing they
+  // could do about it — but without it on screen, a misconfigured local server
+  // looks exactly like a working one.
+  const [boardError, setBoardError] = useState<string | null>(null);
   const boardName = useMemo(() => displayName(), []);
   const boardEligible = mode === "game" && stats.score > 0;
 
@@ -105,8 +110,10 @@ export function GameOver({
       const joined = await hasJoined();
       if (!live) return;
       if (joined) {
-        const ok = await submitScore(stats.score);
-        if (live) track({ type: "score_submitted", score: stats.score, is_best: isNewBest, ok });
+        const result = await submitScore(stats.score);
+        if (!live) return;
+        track({ type: "score_submitted", score: stats.score, is_best: isNewBest, ok: result.ok });
+        if (!result.ok) setBoardError(result.reason);
       } else if (isNewBest) {
         setJoinOffer(true);
         track({ type: "join_board_shown", score: stats.score });
@@ -120,9 +127,14 @@ export function GameOver({
   const acceptJoin = async () => {
     setJoining(true);
     const joined = await joinBoard();
-    const ok = joined ? await submitScore(stats.score) : false;
-    track({ type: "join_board_submitted", joined, ok });
-    if (joined) track({ type: "score_submitted", score: stats.score, is_best: isNewBest, ok });
+    const result = joined
+      ? await submitScore(stats.score)
+      : ({ ok: false, reason: "could not create the profile row" } as const);
+    track({ type: "join_board_submitted", joined, ok: result.ok });
+    if (joined) {
+      track({ type: "score_submitted", score: stats.score, is_best: isNewBest, ok: result.ok });
+    }
+    if (!result.ok) setBoardError(result.reason);
     setJoining(false);
     setJoinOffer(false);
   };
@@ -369,6 +381,12 @@ export function GameOver({
           this one lets Rollup drop the component from the production bundle
           entirely (CLAUDE.md rule 7). */}
       {import.meta.env.DEV && <GateLogPanel />}
+
+      {/* Gated here rather than inside a component so Rollup drops it, same as
+          the panel above. Players never see a failed submission. */}
+      {import.meta.env.DEV && boardError && (
+        <p className="error">Leaderboard (dev only): {boardError}</p>
+      )}
 
       <div className="menu">
         <button className="primary" disabled={busy} onClick={onRetry}>

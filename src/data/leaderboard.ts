@@ -19,7 +19,7 @@
  * recomputes it from server time when it writes, because a device clock is
  * something a player can set.
  */
-import { currentSession, ensureAnonSession, getSupabase } from "./supabase.ts";
+import { currentSession, ensureAnonSession, getSupabase, warn } from "./supabase.ts";
 
 const IDENTITY_KEY = "toneflap.identity.v1";
 
@@ -113,8 +113,13 @@ export async function hasJoined(): Promise<boolean> {
       .select("id")
       .eq("id", session.user.id)
       .maybeSingle();
-    return !error && data != null;
-  } catch {
+    if (error) {
+      warn("leaderboard", `could not check for a profile: ${error.message}`);
+      return false;
+    }
+    return data != null;
+  } catch (err) {
+    warn("leaderboard", "could not check for a profile", err);
     return false;
   }
 }
@@ -133,25 +138,37 @@ export async function joinBoard(): Promise<boolean> {
       .from("profiles")
       .upsert({ id: userId, display_name: displayName() }, { onConflict: "id", ignoreDuplicates: true });
     if (error) {
-      console.error("[leaderboard] could not create profile", error.message);
+      warn("leaderboard", `could not create the profile row: ${error.message}`);
       return false;
     }
     return true;
-  } catch {
+  } catch (err) {
+    warn("leaderboard", "could not create the profile row", err);
     return false;
   }
 }
+
+/**
+ * Why a submission didn't land. Carried back rather than logged and dropped so
+ * a dev build can show it on screen — see GameOver's dev-only note.
+ */
+export type SubmitResult = { ok: true } | { ok: false; reason: string };
 
 /**
  * Sends a finished run's score to `api/score.ts`, which decides whether it
  * beats the player's standing best for the week.
  *
  * Fire-and-forget by contract: the game-over screen calls this and moves on.
- * It resolves `false` on any failure and never rejects.
+ * It resolves on any failure and never rejects — but it is loud about it in
+ * the console, because a silently unconfigured server is indistinguishable
+ * from a working one otherwise.
  */
-export async function submitScore(score: number): Promise<boolean> {
+export async function submitScore(score: number): Promise<SubmitResult> {
   const session = await currentSession();
-  if (!session) return false;
+  if (!session) {
+    warn("leaderboard", "not submitting: no session (the player hasn't joined the board)");
+    return { ok: false, reason: "no session" };
+  }
   try {
     const res = await fetch("/api/score", {
       method: "POST",
@@ -161,9 +178,28 @@ export async function submitScore(score: number): Promise<boolean> {
       },
       body: JSON.stringify({ score }),
     });
-    return res.ok;
-  } catch {
-    return false;
+    if (res.ok) return { ok: true };
+
+    // The endpoint answers with `{ error }`, but a 404 from a plain `vite`
+    // dev server (which serves no functions at all) returns HTML instead, so
+    // this cannot assume the body parses.
+    const detail = await res
+      .json()
+      .then((b: unknown) => (b as { error?: string })?.error)
+      .catch(() => undefined);
+
+    const reason =
+      res.status === 503
+        ? "the server is missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY"
+        : res.status === 404
+          ? "/api/score was not found — is this `npm run dev` instead of `npm run dev:api`?"
+          : (detail ?? `HTTP ${res.status}`);
+
+    warn("leaderboard", `score not saved: ${reason}`);
+    return { ok: false, reason };
+  } catch (err) {
+    warn("leaderboard", "score not saved: the request failed", err);
+    return { ok: false, reason: "network error" };
   }
 }
 
@@ -186,7 +222,7 @@ export async function getBoard(limit = 50): Promise<Board> {
       .order("best_score", { ascending: false })
       .limit(limit);
     if (error) {
-      console.error("[leaderboard] could not read board", error.message);
+      warn("leaderboard", `could not read the board: ${error.message}`);
       return { ...EMPTY, weekId };
     }
     const rows: BoardRow[] = (data ?? []).map((r) => ({
@@ -201,7 +237,8 @@ export async function getBoard(limit = 50): Promise<Board> {
       .eq("week_id", weekId);
 
     return { weekId, rows, myRank: await myRank(weekId), total: count ?? rows.length };
-  } catch {
+  } catch (err) {
+    warn("leaderboard", "could not read the board", err);
     return { ...EMPTY, weekId };
   }
 }
@@ -225,9 +262,13 @@ async function myRank(weekId: string): Promise<number | null> {
       .select("user_id", { count: "exact", head: true })
       .eq("week_id", weekId)
       .gt("best_score", best);
-    if (error) return null;
+    if (error) {
+      warn("leaderboard", `could not count the field for a rank: ${error.message}`);
+      return null;
+    }
     return (count ?? 0) + 1;
-  } catch {
+  } catch (err) {
+    warn("leaderboard", "could not work out a rank", err);
     return null;
   }
 }

@@ -24,6 +24,23 @@ import type { Database } from "./database.types.ts";
 
 export type FlappyToneClient = SupabaseClient<Database>;
 
+/**
+ * Says out loud what the never-throw contract just swallowed.
+ *
+ * Silence is the right behaviour for a *player* — a dead board should cost
+ * them nothing — but it is the wrong behaviour for whoever is building this.
+ * Without a log, a missing env var and a working leaderboard look identical
+ * from the outside, which is exactly how a misconfigured local server can be
+ * played against for a whole run before anyone notices.
+ *
+ * So: every swallowed failure gets one line here. This is diagnostic output,
+ * not error handling — nothing downstream branches on it.
+ */
+export function warn(scope: string, message: string, detail?: unknown): void {
+  if (detail === undefined) console.warn(`[flappytone/${scope}] ${message}`);
+  else console.warn(`[flappytone/${scope}] ${message}`, detail);
+}
+
 const URL = import.meta.env.VITE_SUPABASE_URL;
 const PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -38,12 +55,19 @@ let attempted = false;
 export function getSupabase(): FlappyToneClient | null {
   if (attempted) return client;
   attempted = true;
-  if (!URL || !PUBLISHABLE_KEY) return null;
+  if (!URL || !PUBLISHABLE_KEY) {
+    warn(
+      "supabase",
+      "no client: VITE_SUPABASE_URL and/or VITE_SUPABASE_ANON_KEY are unset. The leaderboard will be silently absent.",
+    );
+    return null;
+  }
   try {
     client = createClient<Database>(URL, PUBLISHABLE_KEY, {
       auth: { persistSession: true, autoRefreshToken: true },
     });
-  } catch {
+  } catch (err) {
+    warn("supabase", "createClient failed", err);
     client = null;
   }
   return client;
@@ -87,11 +111,17 @@ async function signIn(): Promise<string | null> {
     if (existing.data.session) return existing.data.session.user.id;
     const { data, error } = await supabase.auth.signInAnonymously();
     if (error) {
-      console.error("[supabase] anonymous sign-in failed", error.message);
+      // Overwhelmingly the cause is anonymous sign-ins not being enabled in
+      // the project's Auth settings, which no amount of client code can fix.
+      warn(
+        "supabase",
+        `anonymous sign-in failed: ${error.message}. Is "Anonymous sign-ins" enabled in Supabase Auth settings?`,
+      );
       return null;
     }
     return data.user?.id ?? null;
-  } catch {
+  } catch (err) {
+    warn("supabase", "anonymous sign-in threw", err);
     return null;
   }
 }
