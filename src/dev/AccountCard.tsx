@@ -40,6 +40,13 @@ export function AccountCard() {
     });
     const supabase = getSupabase();
     if (!supabase) return;
+    // A session issued before the email was confirmed still carries
+    // `is_anonymous: true` — the claim is baked into the JWT, so upgrading the
+    // user server-side does not change the token already in this browser. It
+    // would correct itself on the next refresh, up to an hour later, which
+    // looks exactly like the upgrade having failed. Asking for a fresh token on
+    // mount collapses that wait to nothing.
+    void supabase.auth.refreshSession();
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
       void getAccount().then((a) => {
         if (live) setAccount(a);

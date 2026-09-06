@@ -18,6 +18,7 @@
  * direction — localStorage is where an anonymous player's progress lives, and
  * a failed upload must never be able to erase it.
  */
+import { APP_PATH } from "../ui/appLink.ts";
 import { lifetimeToneStats, loadRunHistory, mergeIntoRunHistory } from "../game/runHistory.ts";
 import { loadStreak, mergeStreak } from "../game/streak.ts";
 import type { Tone } from "../game/gates.ts";
@@ -69,13 +70,20 @@ export async function startEmailSignIn(email: string): Promise<AuthResult> {
   if (!trimmed) return { ok: false, reason: "no email given" };
 
   try {
+    // Both paths must say where to come back to. Without an explicit redirect
+    // Supabase falls back to the project's Site URL, which is `/` — the
+    // marketing entry, which deliberately ships no Supabase code at all (see
+    // CLAUDE.md's landing/game split). The confirmation would still succeed on
+    // the server, but the tokens would land on a page with nothing to read
+    // them, and the player would return to the game still signed out.
+    const redirect = new URL(APP_PATH, window.location.origin).toString();
     const account = await getAccount();
     const { error } =
       account.status === "anonymous"
-        ? await supabase.auth.updateUser({ email: trimmed })
+        ? await supabase.auth.updateUser({ email: trimmed }, { emailRedirectTo: redirect })
         : await supabase.auth.signInWithOtp({
             email: trimmed,
-            options: { emailRedirectTo: window.location.href },
+            options: { emailRedirectTo: redirect },
           });
     if (error) {
       warn("account", `email sign-in failed: ${error.message}`);
