@@ -224,6 +224,11 @@ convenience, so the plumbing exists ahead of the features it will unlock.
 - **An anonymous player's stats never reach the server.** Row-level security
   on `tone_stats` enforces that, rather than trusting the client not to ask.
 
+**Not shippable until the Supabase project is configured for it** — custom
+SMTP (the built-in sender allows ~2 emails/hour and is documented as unfit for
+production) and an allowlisted redirect URL per origin. See CLAUDE.md's
+"Before accounts go live". These are settings, not code.
+
 ## 8. Screens
 
 Actual screen set (`src/app/GameApp.tsx`'s `Screen` type): `play` (title/home), `modes`, `howto`, `calibrate`, `finetune`, `tutorial`, `seeding`, `tutorialdone`, `game`, `drill`, `learn`, `gameover`, `settings`, `visualiser`, `progress`, `profile`, `lab` (dev only), `devlogin` (dev only).

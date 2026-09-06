@@ -182,6 +182,33 @@ Speech recognition or syllable verification · tone sandhi, multi-syllable words
 
 Accounts and a backend are no longer on this list — anonymous auth and the leaderboard have shipped (see above). Still not built, and not to be built ahead of their phase: **public email accounts and cross-device sync** (Phase 2), **player-chosen display names** (Pro), **voice-clip storage** (Phase 3), **payments or billing of our own** (Lemon Squeezy is the merchant of record), and **server-enforced daily limits** — the limit stays local, because clearing storage mints a new anonymous identity anyway.
 
+## Before accounts go live — Supabase settings, not code
+
+These are dashboard settings that no amount of application code can substitute
+for. None of them affects a player today (accounts are dev-gated, and nothing
+a real player does sends an email), but shipping accounts without them means
+signups that silently fail.
+
+- **Custom SMTP is mandatory.** Supabase's built-in sender is a testing
+  convenience: roughly two emails per hour, project-wide, on shared
+  infrastructure Supabase explicitly documents as unfit for production. Hitting
+  it looks like `email rate limit exceeded`. Connect a real provider under Auth
+  → SMTP Settings (Resend/Postmark/Brevo/SES all have ample free tiers) and
+  verify `flappytone.com` as the sending domain — DNS is on Cloudflare, so this
+  is a few records, and it is most of what keeps the mail out of spam.
+- **Redirect URLs must be allowlisted** under Auth → URL Configuration, for
+  every origin that signs in — production, previews, and `http://localhost:3000/**`
+  for local work. A redirect that isn't listed is silently replaced by the
+  project's Site URL, which is `/` — the marketing entry, which ships no
+  Supabase code, so the auth tokens land where nothing can read them. The
+  confirmation still succeeds server-side, so this fails in the most confusing
+  way available: the account is upgraded and the browser never notices.
+- **Enable leaked-password protection** (Auth → Passwords) if password sign-in
+  is ever used. Flagged by the security advisor; harmless while auth is
+  magic-link only.
+- **Re-check `get_advisors` after the first real signups**, since some lints
+  only appear once tables hold data.
+
 ## Known limitations — do not try to "fix" these silently
 
 - Humming beats the game. There is no syllable verification, though the tone classifier's mismatch-collision check (`toneMismatchCollisionEnabled`) catches some of the worst cases — see DECISIONS.md for its known gaps.
