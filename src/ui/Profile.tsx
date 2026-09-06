@@ -43,7 +43,7 @@ export function Profile({ onEarlyBird }: Props) {
       </section>
 
       {AccountCard && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<p className="note">loading account…</p>}>
           <AccountCard />
         </Suspense>
       )}

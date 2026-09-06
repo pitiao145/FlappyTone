@@ -84,16 +84,20 @@ export function AccountCard() {
     setMessage(result.ok ? "Synced." : result.reason);
   }
 
-  if (!account) return null;
-
+  // Renders the shell even before the account resolves. Returning null here
+  // meant that a slow read — or a lazy chunk that failed to load — left no
+  // trace on the page at all, which reads as "the sign-in was never built"
+  // rather than "it hasn't loaded yet".
   return (
     <section className="progress-card">
       <div className="progress-card-header">
         <h3>Account (dev)</h3>
-        <span className="badge badge-free">{account.status}</span>
+        <span className="badge badge-free">{account?.status ?? "checking…"}</span>
       </div>
 
-      {account.status === "anonymous" && (
+      {!account && <p className="note">Checking your account…</p>}
+
+      {account?.status === "anonymous" && (
         <>
           <p className="note">On the board as {displayName()}</p>
           <p className="note">Adding an email keeps this account's scores — nothing is lost.</p>
@@ -113,7 +117,7 @@ export function AccountCard() {
         </>
       )}
 
-      {account.status === "permanent" && (
+      {account?.status === "permanent" && (
         <>
           <p className="note">Signed in as {account.email}</p>
           <form className="coming-soon-form" onSubmit={handleRename}>
@@ -143,20 +147,23 @@ export function AccountCard() {
         </>
       )}
 
-      {account.status === "signed-out" && (
-        <form className="coming-soon-form" onSubmit={handleEmailSubmit}>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            aria-label="Email"
-            required
-          />
-          <button type="submit" className="primary" disabled={busy === "sending"}>
-            {busy === "sending" ? "Sending…" : "Sign in"}
-          </button>
-        </form>
+      {account?.status === "signed-out" && (
+        <>
+          <p className="note">Signed out. Sign in with the email on your account.</p>
+          <form className="coming-soon-form" onSubmit={handleEmailSubmit}>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              aria-label="Email"
+              required
+            />
+            <button type="submit" className="primary" disabled={busy === "sending"}>
+              {busy === "sending" ? "Sending…" : "Sign in"}
+            </button>
+          </form>
+        </>
       )}
 
       {message && <p className="note">{message}</p>}
