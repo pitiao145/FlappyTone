@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import { capturePostHogEvent } from "../analytics/posthog.ts";
 import { displayName } from "../data/leaderboard.ts";
 import { DAILY_RUN_LIMIT, loadDailyRuns } from "../game/dailyLimit.ts";
@@ -7,6 +7,16 @@ import { FREE_SUMMARY, PRO_FEATURES, PRO_PRICE } from "./plan.ts";
 interface Props {
   onEarlyBird: (feature: string) => void;
 }
+
+/**
+ * Accounts are a Pro feature that hasn't launched. Gated the same way as
+ * `Lab`/`DevLogin` in `GameApp.tsx` — lazy import behind `import.meta.env.DEV`
+ * plus a JSX gate at the usage site, so Rollup drops this from `dist/`.
+ * See CLAUDE.md hard rule 7.
+ */
+const AccountCard = import.meta.env.DEV
+  ? lazy(() => import("../dev/AccountCard.tsx").then((m) => ({ default: m.AccountCard })))
+  : null;
 
 /** The Profile tab: guest identity, the real daily free-run count, and the EarlyBird pitch. */
 export function Profile({ onEarlyBird }: Props) {
@@ -31,6 +41,12 @@ export function Profile({ onEarlyBird }: Props) {
           <p className="note">Progress saved on this device only</p>
         </div>
       </section>
+
+      {AccountCard && (
+        <Suspense fallback={null}>
+          <AccountCard />
+        </Suspense>
+      )}
 
       <section className="progress-card">
         <div className="progress-card-header">

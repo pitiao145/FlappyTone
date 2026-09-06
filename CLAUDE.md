@@ -16,7 +16,14 @@ React 19 + TypeScript + Vite. Canvas 2D. Web Audio API. Plain CSS with a design-
 - **Display names are generated, never typed.** The player gets something like `BraveSparrow42`, cached at `toneflap.identity.v1` and copied into their profile on join. Choosing a name is a planned Pro feature. This also keeps the "nothing the player typed" promise in `src/analytics/session.ts` intact — no board name is ever sent to PostHog.
 - **Joining is opt-in and offered only on a personal best**, so the modal can't nag after every run; an already-joined player's runs submit silently.
 - **Migrations live in `supabase/migrations/` and are applied via the Supabase MCP `apply_migration`**, never by hand in the dashboard. Regenerate and commit `src/data/database.types.ts` after each one, and run `get_advisors` (security *and* performance) before calling a schema change done. Raw-SQL migrations must include explicit `GRANT`s — the dashboard's table editor adds them for you and a migration does not, and RLS policies alone will not save you: RLS narrows access, it does not grant it.
-- **Personal stats are still local-first and unchanged.** `runHistory.ts`, `streak.ts` and `dailyLimit.ts` stay device-local; nothing syncs them yet. That happens at email signup in Phase 2.
+- **Personal stats are local-first, and sync only for an account.** `runHistory.ts`, `streak.ts` and `dailyLimit.ts` remain the source of truth on the device. An anonymous player's stats never leave it — `tone_stats`'s RLS enforces that, not just the client.
+
+**What has landed (Ring 2 / Phase 2): accounts, dev-gated.** Accounts *are* the Pro tier, so none of this is reachable by a player — `src/dev/AccountCard.tsx` is gated at its mount site in `Profile.tsx` like the Lab.
+
+- **Adding an email upgrades the anonymous user in place.** `src/data/account.ts` calls `updateUser({ email })` for an anonymous player, never `signInWithOtp` — the latter signs them into a *different* user and silently abandons their scores. That distinction is the single most damaging mistake available in that file; the comment there says so.
+- **Sync is merge-by-max, both directions, and identical on signup and on a second device.** That is why there is no "claim your guest data" path. The server is written before local, so a failed sync leaves the device still holding everything.
+- **Lifetime per-tone stats accumulate locally** in `runHistory.ts`'s `lifetimePerTone`, shaped 1:1 to the `tone_stats` columns. It was added additively — the `toneflap.history.v1` key is deliberately *not* bumped, since that would wipe every player's history to gain a field that can be seeded from `lastRuns`.
+- **`lastRuns` and `lastPlayedDate` never sync.** One is a display cache of this device's own runs, the other decides whether today continues the streak. Neither has an honest cross-device answer, so neither is an account's business.
 
 Everything below this line is still device-local, and none of it moved:
 

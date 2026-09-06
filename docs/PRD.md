@@ -34,8 +34,10 @@ Payment is planned via Lemon Squeezy as merchant of record (EarlyBird), so
 building our own payment/billing backend stays out of scope.
 
 **Phase 1 has shipped**: anonymous sign-in and a weekly leaderboard (§7.1).
-Everything else in that plan is still ahead — public email accounts and
-cross-device sync (Phase 2), voice-clip storage (Phase 3).
+**Phase 2's plumbing has landed but is dev-gated**: email accounts, the
+anonymous→permanent upgrade, per-tone stats on the server, and merge-by-max
+sync. Accounts are the Pro tier, so no player can reach any of it yet.
+Voice-clip storage (Phase 3) is still ahead.
 
 Personal gameplay state remains device-local and unsynced: the Progress tab's
 run history (`src/game/runHistory.ts`), the streak (`src/game/streak.ts`) and
@@ -205,6 +207,22 @@ cumulative total.
   it is not full anti-cheat, which remains out of scope.
 - **It can never break a run.** Every call resolves; a failure shows an empty
   board, not an error.
+
+### 7.2 Accounts (built, dev-gated — not reachable by a player)
+
+An account **is** the Pro tier: signing up is the paid product, not a free
+convenience, so the plumbing exists ahead of the features it will unlock.
+
+- **Adding an email upgrades the player's existing anonymous user**, keeping
+  their id and therefore their scores. There is no guest-data migration.
+- **Renaming needs an account.** Anonymous players keep their generated name;
+  the `prof_update` policy enforces this on the `is_anonymous` claim.
+- **Stats sync by merge-by-max**, in both directions, using the same operation
+  on signup as on a second device. Lifetime counts, streak and per-tone
+  aggregates are account-owned; the last-5 run list and the streak's
+  last-played date stay local, having no honest cross-device answer.
+- **An anonymous player's stats never reach the server.** Row-level security
+  on `tone_stats` enforces that, rather than trusting the client not to ask.
 
 ## 8. Screens
 

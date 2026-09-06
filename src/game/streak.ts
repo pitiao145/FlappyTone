@@ -142,6 +142,24 @@ export function recordPlay(): Streak {
   return { current: next.current, best: next.best };
 }
 
+/**
+ * Folds an account's streak back into the local one, keeping the larger of
+ * each — the merge the PRO SEAM comment above sketched, now that accounts
+ * exist. `lastPlayedDate` stays local: it is what decides whether today
+ * continues or breaks the streak, and the local device's own record of when it
+ * was last played is the only honest answer to that.
+ */
+export function mergeStreak(incoming: { current: number; best: number }): Streak {
+  const state = load();
+  const next: StreakState = {
+    lastPlayedDate: state.lastPlayedDate,
+    current: Math.max(state.current, incoming.current),
+    best: Math.max(state.best, incoming.best),
+  };
+  save(next);
+  return { current: next.current, best: next.best };
+}
+
 /** Parity with clearRunHistory/clearSettings, for a future "forget my data" flow. */
 export function clearStreak(): void {
   try {

@@ -234,6 +234,13 @@ export interface RunStats {
       mismatched: number;
       /** Which wrong tone the classifier heard instead, on those mismatched gates. */
       mismatchedAs: Partial<Record<Tone, number>>;
+      /**
+       * Highest single-gate accuracy scored for this tone this run, 0..1.
+       * Follows the same "unheard doesn't count" rule as `accSum`/`gates`
+       * below — an unheard gate is not a low-accuracy attempt, it is no
+       * attempt at all (PRD §6).
+       */
+      best: number;
     }
   >;
 }
@@ -242,7 +249,7 @@ export interface RunStats {
 export function newRunStats(hearts = 3): RunStats {
   const perTone = {} as RunStats["perTone"];
   for (const tone of [1, 2, 3, 4] as Tone[]) {
-    perTone[tone] = { gates: 0, accSum: 0, unheard: 0, mismatched: 0, mismatchedAs: {} };
+    perTone[tone] = { gates: 0, accSum: 0, unheard: 0, mismatched: 0, mismatchedAs: {}, best: 0 };
   }
   return { score: 0, hearts, combo: 0, bestMultiplier: 1, perTone };
 }
@@ -274,6 +281,7 @@ export function applyGate(
           ...prevTone,
           gates: prevTone.gates + 1,
           accSum: prevTone.accSum + accuracy,
+          best: Math.max(prevTone.best, accuracy),
         };
   const nextTone =
     mismatchedAs != null && mismatchedAs !== "none"

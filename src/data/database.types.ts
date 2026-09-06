@@ -52,24 +52,80 @@ export type Database = {
       }
       profiles: {
         Row: {
+          best_score: number
           created_at: string
           display_name: string
           id: string
           is_public: boolean
+          streak_best: number
+          streak_current: number
+          synced_at: string | null
+          total_gates: number
+          total_runs: number
         }
         Insert: {
+          best_score?: number
           created_at?: string
           display_name: string
           id: string
           is_public?: boolean
+          streak_best?: number
+          streak_current?: number
+          synced_at?: string | null
+          total_gates?: number
+          total_runs?: number
         }
         Update: {
+          best_score?: number
           created_at?: string
           display_name?: string
           id?: string
           is_public?: boolean
+          streak_best?: number
+          streak_current?: number
+          synced_at?: string | null
+          total_gates?: number
+          total_runs?: number
         }
         Relationships: []
+      }
+      tone_stats: {
+        Row: {
+          attempts: number
+          best_accuracy: number
+          sum_accuracy: number
+          tone: number
+          unheard: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          best_accuracy?: number
+          sum_accuracy?: number
+          tone: number
+          unheard?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          best_accuracy?: number
+          sum_accuracy?: number
+          tone?: number
+          unheard?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tone_stats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

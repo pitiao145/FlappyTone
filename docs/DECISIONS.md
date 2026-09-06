@@ -74,6 +74,48 @@ environment had the schema, and both tables held zero rows. Once this is
 deployed the ledger is append-only: you fix a migration with another migration,
 because someone else's database has already run the old one.
 
+### Phase 2: accounts as the Pro tier, built ahead of the product (6 Sep 2026)
+
+Accounts are **not a free-tier feature**. Signing up is what Pro *is*, so the
+plumbing landed first and the features it unlocks come with the paid tier. All
+of it — `tone_stats`, the profile aggregates, the sync, the account card — is
+dev-gated and unreachable by a player.
+
+That framing resolved a contradiction that had been sitting in the plan:
+renaming was marked Pro while accounts were going to be free, which would have
+shipped an account that could not do the one thing an account is for. With
+accounts *being* Pro, `prof_update` returns, gated on the `is_anonymous` claim
+— set by Supabase Auth, unwritable by a client, so it is safe to authorise on.
+
+**Lifetime per-tone stats did not exist, and the docs assumed they did.** The
+sync plan said "upload the player's per-tone aggregates at signup", but
+`runHistory.ts` only ever kept per-tone data inside `lastRuns`, capped at five.
+Uploading that would have made every new account's tone history five runs deep
+forever. So `lifetimePerTone` now accumulates locally, added *additively* — the
+`toneflap.history.v1` key is unchanged, a store saved before the field seeds it
+from `lastRuns`, and nobody's `bestScore` is wiped to gain a field that can be
+approximated. `scoring.ts` gained a per-tone `best` alongside it, following the
+same unheard-exclusion rule `accSum` already used.
+
+**`tone_stats` has no `hits` column**, though ARCH sketched one. Nothing in the
+scoring code defines what a "hit" is, and inventing a metric to fill a column
+is how a number nobody trusts gets onto a chart. It stores `unheard` instead —
+a real measurement, and a meaningful one given the rule that an unclear signal
+is never scored as wrong.
+
+**Sync is merge-by-max, in both directions, and it is the same operation on
+signup as on a second device.** These aggregates are monotonic records of
+things the player did — a count of runs, a best score, a longest streak — so
+taking the larger of each cannot lose an achievement, needs no clocks to agree
+and needs no conflict UI. It over-counts only if one run is recorded on both
+sides, which is far cheaper than deleting a week of practice. Because signup
+and second-device sign-in are the same merge, there is no separate "claim your
+guest data" path to get wrong. The server is written first and local updated
+only on success, so a half-done sync leaves the device still holding
+everything. `lastRuns` and `lastPlayedDate` stay local: one is a display cache
+of *this* device, the other decides whether today continues the streak, and
+neither has an honest cross-device answer.
+
 ## Clip pipeline
 
 **Clips are the whole take, not the voiced window (9 Aug 2026).** Cutting on

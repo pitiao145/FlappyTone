@@ -202,7 +202,7 @@ describe("newRunStats", () => {
     expect(stats.score).toBe(0);
     expect(stats.bestMultiplier).toBe(1);
     for (const tone of [1, 2, 3, 4] as Tone[]) {
-      expect(stats.perTone[tone]).toEqual({ gates: 0, accSum: 0, unheard: 0, mismatched: 0, mismatchedAs: {} });
+      expect(stats.perTone[tone]).toEqual({ gates: 0, accSum: 0, unheard: 0, mismatched: 0, mismatchedAs: {}, best: 0 });
     }
   });
 
@@ -225,7 +225,7 @@ describe("applyGate", () => {
     expect(next.score).toBe(300);
     expect(next.combo).toBe(1);
     expect(next.hearts).toBe(3);
-    expect(next.perTone[1]).toEqual({ gates: 1, accSum: 1, unheard: 0, mismatched: 0, mismatchedAs: {} });
+    expect(next.perTone[1]).toEqual({ gates: 1, accSum: 1, unheard: 0, mismatched: 0, mismatchedAs: {}, best: 1 });
   });
 
   it("collision decrements hearts and does not count toward per-tone accuracy", () => {
@@ -234,7 +234,7 @@ describe("applyGate", () => {
     expect(next.hearts).toBe(2);
     expect(next.combo).toBe(0);
     expect(next.score).toBe(0);
-    expect(next.perTone[2]).toEqual({ gates: 1, accSum: 0, unheard: 0, mismatched: 0, mismatchedAs: {} });
+    expect(next.perTone[2]).toEqual({ gates: 1, accSum: 0, unheard: 0, mismatched: 0, mismatchedAs: {}, best: 0 });
   });
 
   it("unheard does not decrement hearts, does not reset combo, and is tallied separately", () => {
@@ -243,7 +243,17 @@ describe("applyGate", () => {
     expect(next.hearts).toBe(3);
     expect(next.combo).toBe(2);
     expect(next.score).toBe(0);
-    expect(next.perTone[3]).toEqual({ gates: 0, accSum: 0, unheard: 1, mismatched: 0, mismatchedAs: {} });
+    expect(next.perTone[3]).toEqual({ gates: 0, accSum: 0, unheard: 1, mismatched: 0, mismatchedAs: {}, best: 0 });
+  });
+
+  it("tracks the highest single-gate accuracy per tone, ignoring unheard gates", () => {
+    let stats = newRunStats();
+    stats = applyGate(stats, 1, "good", 0.7);
+    stats = applyGate(stats, 1, "ok", 0.4);
+    stats = applyGate(stats, 1, "perfect", 0.9);
+    expect(stats.perTone[1].best).toBe(0.9);
+    stats = applyGate(stats, 1, "unheard", 0);
+    expect(stats.perTone[1].best).toBe(0.9);
   });
 
   it("tracks bestMultiplier across the run", () => {
@@ -271,6 +281,7 @@ describe("applyGate", () => {
       unheard: 0,
       mismatched: 1,
       mismatchedAs: { 4: 1 },
+      best: 0,
     });
   });
 

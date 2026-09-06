@@ -26,6 +26,8 @@ export interface RunHistoryEntry {
   perTone: Record<Tone, { gates: number; accSum: number; unheard: number }>;
 }
 
+export type LifetimeToneStats = { attempts: number; unheard: number; accSum: number; best: number };
+
 export interface RunHistoryStore {
   totalRuns: number;
   bestScore: number;
@@ -34,13 +36,42 @@ export interface RunHistoryStore {
   wordIds: string[];
   /** Most recent first, capped at MAX_RUNS. */
   lastRuns: RunHistoryEntry[];
+  /**
+   * Lifetime per-tone stats, shaped to mirror the DB columns this will sync
+   * into (`public.tone_stats`, see docs/flappytone-SPEC-supabase-phase1.md).
+   * Added 6 Sep 2026 without bumping `KEY`: unlike the v2->v3 settings bump
+   * (see settings.ts), an old record here isn't wrong data that needs
+   * discarding — `lastRuns` already carries the same per-tone shape for up
+   * to 5 runs, so a record from before this field existed can be *seeded*
+   * from it rather than reset to zero. Bumping the key would need every
+   * existing player to lose `bestScore`/`totalRuns` just to backfill a field
+   * that's recoverable from data already on disk. `isValid` below tolerates
+   * its absence, and `loadRunHistory` seeds it in that case.
+   */
+  lifetimePerTone: Record<Tone, LifetimeToneStats>;
+}
+
+function emptyPerTone(): Record<Tone, LifetimeToneStats> {
+  const perTone = {} as Record<Tone, LifetimeToneStats>;
+  for (const tone of [1, 2, 3, 4] as Tone[]) {
+    perTone[tone] = { attempts: 0, unheard: 0, accSum: 0, best: 0 };
+  }
+  return perTone;
 }
 
 function emptyStore(): RunHistoryStore {
-  return { totalRuns: 0, bestScore: 0, totalGates: 0, wordIds: [], lastRuns: [] };
+  return {
+    totalRuns: 0,
+    bestScore: 0,
+    totalGates: 0,
+    wordIds: [],
+    lastRuns: [],
+    lifetimePerTone: emptyPerTone(),
+  };
 }
 
-function isValid(s: unknown): s is RunHistoryStore {
+/** Shape-only check; `lifetimePerTone` is allowed to be missing (see field doc comment). */
+function isValid(s: unknown): s is Omit<RunHistoryStore, "lifetimePerTone"> {
   if (typeof s !== "object" || s === null) return false;
   const r = s as Partial<RunHistoryStore>;
   return (
@@ -52,12 +83,36 @@ function isValid(s: unknown): s is RunHistoryStore {
   );
 }
 
+/**
+ * Seeds lifetime per-tone stats from whatever's in `lastRuns`, for a store
+ * saved before `lifetimePerTone` existed. `best` is left at 0 — per-gate
+ * best accuracy was never measured before this change, so there's nothing
+ * to recover it from; it starts accumulating from here on.
+ */
+function seedLifetimePerTone(lastRuns: RunHistoryEntry[]): Record<Tone, LifetimeToneStats> {
+  const perTone = emptyPerTone();
+  for (const run of lastRuns) {
+    for (const tone of [1, 2, 3, 4] as Tone[]) {
+      const t = run.perTone[tone];
+      perTone[tone].attempts += t.gates;
+      perTone[tone].unheard += t.unheard;
+      perTone[tone].accSum += t.accSum;
+    }
+  }
+  return perTone;
+}
+
 export function loadRunHistory(): RunHistoryStore {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return emptyStore();
     const parsed = JSON.parse(raw);
-    return isValid(parsed) ? parsed : emptyStore();
+    if (!isValid(parsed)) return emptyStore();
+    const withLifetime = parsed as Partial<RunHistoryStore> & Omit<RunHistoryStore, "lifetimePerTone">;
+    return {
+      ...withLifetime,
+      lifetimePerTone: withLifetime.lifetimePerTone ?? seedLifetimePerTone(withLifetime.lastRuns),
+    };
   } catch {
     return emptyStore();
   }
@@ -105,15 +160,74 @@ export function recordRun(snap: RunSnapshot, outcome: RunOutcome): RunHistorySto
   const wordIds = new Set(prev.wordIds);
   for (const id of snap.wordIds) wordIds.add(id);
 
+  const lifetimePerTone = { ...prev.lifetimePerTone };
+  for (const tone of [1, 2, 3, 4] as Tone[]) {
+    const t = snap.stats.perTone[tone];
+    const prevT = prev.lifetimePerTone[tone];
+    lifetimePerTone[tone] = {
+      attempts: prevT.attempts + t.gates,
+      unheard: prevT.unheard + t.unheard,
+      accSum: prevT.accSum + t.accSum,
+      best: Math.max(prevT.best, t.best),
+    };
+  }
+
   const next: RunHistoryStore = {
     totalRuns: prev.totalRuns + 1,
     bestScore: Math.max(prev.bestScore, snap.stats.score),
     totalGates: prev.totalGates + entry.gates,
     wordIds: Array.from(wordIds),
     lastRuns: [entry, ...prev.lastRuns].slice(0, MAX_RUNS),
+    lifetimePerTone,
   };
   saveRunHistory(next);
   return next;
+}
+
+/**
+ * Folds account-held totals back into the local store, keeping the larger of
+ * each. Used after a sync, so a device that was behind catches up without
+ * losing anything it alone knew about.
+ *
+ * `lastRuns` is deliberately untouched: it is a display cache of *this*
+ * device's recent runs, not an aggregate, and there is no meaningful way to
+ * interleave two devices' run lists by anything other than a clock we don't
+ * trust. Lifetime counts are the thing an account owns.
+ */
+export function mergeIntoRunHistory(incoming: {
+  bestScore: number;
+  totalRuns: number;
+  totalGates: number;
+  perTone: { tone: Tone; attempts: number; unheard: number; accSum: number; best: number }[];
+}): RunHistoryStore {
+  const prev = loadRunHistory();
+  const lifetimePerTone = { ...prev.lifetimePerTone };
+  for (const t of incoming.perTone) {
+    const prevT = prev.lifetimePerTone[t.tone];
+    if (!prevT) continue;
+    lifetimePerTone[t.tone] = {
+      attempts: Math.max(prevT.attempts, t.attempts),
+      unheard: Math.max(prevT.unheard, t.unheard),
+      accSum: Math.max(prevT.accSum, t.accSum),
+      best: Math.max(prevT.best, t.best),
+    };
+  }
+  const next: RunHistoryStore = {
+    ...prev,
+    bestScore: Math.max(prev.bestScore, incoming.bestScore),
+    totalRuns: Math.max(prev.totalRuns, incoming.totalRuns),
+    totalGates: Math.max(prev.totalGates, incoming.totalGates),
+    lifetimePerTone,
+  };
+  saveRunHistory(next);
+  return next;
+}
+
+/** Lifetime per-tone stats as a flat list, shaped for the leaderboard sync layer. */
+export function lifetimeToneStats(
+  store: RunHistoryStore,
+): { tone: Tone; attempts: number; unheard: number; accSum: number; best: number }[] {
+  return ([1, 2, 3, 4] as Tone[]).map((tone) => ({ tone, ...store.lifetimePerTone[tone] }));
 }
 
 export interface ToneAccuracy {
