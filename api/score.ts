@@ -39,11 +39,19 @@ function pruneRateLimit(now: number): void {
  * ISO week id, e.g. "2026-W36". Uses the ISO 8601 week-year, which can
  * differ from the calendar year at the turn of the year (e.g. 2027-01-01
  * falls in week 53 of ISO year 2026).
+ *
+ * Everything here is UTC, and the client's `currentWeekId()` must match it
+ * exactly. Reading the *local* date instead would make the boundary fall at a
+ * different instant on each machine: a player at UTC+8 between Sunday 16:00
+ * and Monday 00:00 UTC would ask the board for next week while this function
+ * filed their score under this one, and their own score would be missing from
+ * the board they were looking at. One clock, and it may as well be UTC —
+ * production runs there anyway, and this keeps local dev honest.
  */
 export function isoWeekId(d: Date): string {
   // Copy, then shift to the Thursday of this ISO week: ISO weeks are
   // defined by the year containing that week's Thursday.
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
   const isoDayOfWeek = date.getUTCDay() || 7; // Mon=1..Sun=7
   date.setUTCDate(date.getUTCDate() + 4 - isoDayOfWeek);
   const isoYear = date.getUTCFullYear();
@@ -60,19 +68,21 @@ export async function POST(request: Request): Promise<Response> {
     return json(503, { error: "Leaderboard is temporarily unavailable." });
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return json(400, { error: "Invalid request body." });
-  }
-
+  // Authorization first: an unauthenticated caller should be turned away
+  // before this endpoint spends anything parsing a body it will not use.
   const authHeader = request.headers.get("authorization") ?? "";
   const match = /^Bearer (.+)$/.exec(authHeader);
   if (!match) {
     return json(401, { error: "Missing or malformed Authorization header." });
   }
   const token = match[1];
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json(400, { error: "Invalid request body." });
+  }
 
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 

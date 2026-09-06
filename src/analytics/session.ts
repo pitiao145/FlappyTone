@@ -138,11 +138,15 @@ export type AnalyticsEvent =
   /** The join-the-board modal was offered on game over. */
   | { type: "join_board_shown"; score: number }
   /**
-   * The player accepted or declined the join offer. Deliberately carries no
-   * display name — the "nothing the player is identified by" rule at the top
-   * of this file covers generated handles too.
+   * The player accepted or declined the join offer. `accepted` is what they
+   * chose; `joined`/`ok` are what came of it. Without `accepted`, a decline
+   * and a tapped-Join-that-failed are the same event, and the funnel cannot
+   * tell a copy problem from an outage.
+   *
+   * Deliberately carries no display name — the "nothing the player is
+   * identified by" rule at the top of this file covers generated handles too.
    */
-  | { type: "join_board_submitted"; joined: boolean; ok: boolean }
+  | { type: "join_board_submitted"; accepted: boolean; joined: boolean; ok: boolean }
   /** A score reached (or failed to reach) `api/score.ts`. */
   | { type: "score_submitted"; score: number; is_best: boolean; ok: boolean };
 

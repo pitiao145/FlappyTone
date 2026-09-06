@@ -143,7 +143,7 @@ export function GameOver({
       const result = joined
         ? await submitScore(stats.score)
         : ({ ok: false, reason: "could not create the profile row" } as const);
-      track({ type: "join_board_submitted", joined, ok: result.ok });
+      track({ type: "join_board_submitted", accepted: true, joined, ok: result.ok });
       if (joined) {
         track({ type: "score_submitted", score: stats.score, is_best: isNewBest, ok: result.ok });
       }
@@ -156,7 +156,7 @@ export function GameOver({
   };
 
   const declineJoin = () => {
-    track({ type: "join_board_submitted", joined: false, ok: false });
+    track({ type: "join_board_submitted", accepted: false, joined: false, ok: false });
     setJoinOffer(false);
   };
 

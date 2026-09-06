@@ -39,15 +39,22 @@ export interface Board {
 }
 
 /**
- * ISO-8601 week, e.g. "2026-W36". Display only — see the module comment.
+ * ISO-8601 week, e.g. "2026-W36".
  *
  * ISO weeks start on Monday and belong to the year containing their Thursday,
  * so the week-year can differ from the calendar year around New Year: 1 Jan
  * 2027 falls in week 53 of ISO year 2026. Shifting to that Thursday first is
  * what makes both numbers come out right.
+ *
+ * **Must stay identical to `isoWeekId` in `api/score.ts`**, UTC included. The
+ * server files a score under its own computation of the week and this decides
+ * which week the board asks for; if they disagree, a player whose local date
+ * has rolled over but whose UTC date has not asks for a week their own score
+ * was never written to, and watches it fail to appear. Reading UTC on both
+ * sides is what keeps the boundary a single instant worldwide.
  */
 export function currentWeekId(now: Date = new Date()): string {
-  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const dayFromMonday = (d.getUTCDay() + 6) % 7;
   d.setUTCDate(d.getUTCDate() - dayFromMonday + 3);
   const isoYear = d.getUTCFullYear();
