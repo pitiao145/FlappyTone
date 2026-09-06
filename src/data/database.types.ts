@@ -76,7 +76,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      board: { Args: { p_limit?: number; p_week: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

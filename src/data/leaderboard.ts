@@ -205,71 +205,50 @@ export async function submitScore(score: number): Promise<SubmitResult> {
 
 const EMPTY: Board = { weekId: "", rows: [], myRank: null, total: 0 };
 
+/** The shape `public.board()` returns. Mirrors the json_build_object in 0002. */
+interface BoardPayload {
+  rows: { user_id: string; display_name: string; best_score: number }[];
+  total: number;
+  my_rank: number | null;
+}
+
 /**
  * The week's board: the top `limit` players, plus where this player sits in
- * the full field. Rank is counted server-side rather than looked up in `rows`,
- * so a player below the cut still learns their position.
+ * the full field, in one request.
+ *
+ * The rank comes back from the server rather than being read off `rows`, so a
+ * player below the cut still learns their position. The function derives it
+ * from `auth.uid()` internally, which is why there is no user id to pass here
+ * — a caller can ask where *they* are, never where someone else is.
  */
 export async function getBoard(limit = 50): Promise<Board> {
   const supabase = getSupabase();
   if (!supabase) return EMPTY;
   const weekId = currentWeekId();
   try {
-    const { data, error } = await supabase
-      .from("leaderboard_scores")
-      .select("user_id, best_score, profiles(display_name)")
-      .eq("week_id", weekId)
-      .order("best_score", { ascending: false })
-      .limit(limit);
+    const { data, error } = await supabase.rpc("board", {
+      p_week: weekId,
+      p_limit: limit,
+    });
     if (error) {
       warn("leaderboard", `could not read the board: ${error.message}`);
       return { ...EMPTY, weekId };
     }
-    const rows: BoardRow[] = (data ?? []).map((r) => ({
+    const payload = data as unknown as BoardPayload | null;
+    const rows: BoardRow[] = (payload?.rows ?? []).map((r) => ({
       userId: r.user_id,
-      name: r.profiles?.display_name ?? "player",
+      name: r.display_name,
       score: r.best_score,
     }));
-
-    const { count } = await supabase
-      .from("leaderboard_scores")
-      .select("user_id", { count: "exact", head: true })
-      .eq("week_id", weekId);
-
-    return { weekId, rows, myRank: await myRank(weekId), total: count ?? rows.length };
+    return {
+      weekId,
+      rows,
+      myRank: payload?.my_rank ?? null,
+      total: payload?.total ?? rows.length,
+    };
   } catch (err) {
     warn("leaderboard", "could not read the board", err);
     return { ...EMPTY, weekId };
-  }
-}
-
-/** 1-based rank as "how many players beat me, plus one". Null if unranked. */
-async function myRank(weekId: string): Promise<number | null> {
-  const supabase = getSupabase();
-  const session = await currentSession();
-  if (!supabase || !session) return null;
-  try {
-    const mine = await supabase
-      .from("leaderboard_scores")
-      .select("best_score")
-      .eq("week_id", weekId)
-      .eq("user_id", session.user.id)
-      .maybeSingle();
-    const best = mine.data?.best_score;
-    if (best == null) return null;
-    const { count, error } = await supabase
-      .from("leaderboard_scores")
-      .select("user_id", { count: "exact", head: true })
-      .eq("week_id", weekId)
-      .gt("best_score", best);
-    if (error) {
-      warn("leaderboard", `could not count the field for a rank: ${error.message}`);
-      return null;
-    }
-    return (count ?? 0) + 1;
-  } catch (err) {
-    warn("leaderboard", "could not work out a rank", err);
-    return null;
   }
 }
 
