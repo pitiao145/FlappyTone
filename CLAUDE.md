@@ -209,6 +209,15 @@ signups that silently fail.
 - **Re-check `get_advisors` after the first real signups**, since some lints
   only appear once tables hold data.
 
+**Decide before launch, not settled:** magic link is the only sign-in method
+built, and it always costs an email round-trip — on a phone that means leaving
+the game for the mail app and finding the way back, which is where sign-up
+funnels usually lose people. **Google sign-in** avoids the round-trip entirely
+and suits a phone-first audience better; it is a provider toggle plus a button,
+and it disturbs none of the identity work, since the anonymous→permanent
+upgrade path is identical. Worth weighing against keeping one method to
+maintain. Not urgent while accounts are dev-gated.
+
 ## Known limitations — do not try to "fix" these silently
 
 - Humming beats the game. There is no syllable verification, though the tone classifier's mismatch-collision check (`toneMismatchCollisionEnabled`) catches some of the worst cases — see DECISIONS.md for its known gaps.
