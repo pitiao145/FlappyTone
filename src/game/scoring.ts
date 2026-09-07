@@ -311,7 +311,13 @@ const TONE_TAKEAWAY_CUE: Record<Tone, string> = {
   4: "it falls fast, commit to the drop",
 };
 
-const MIN_SCORED_GATES_FOR_TAKEAWAY = 2;
+/**
+ * Exported so the game-over coach card can decide *whether* a weak tone
+ * exists using the same rule `takeaway()` uses to name one — a card headed
+ * "Weak spot: Tone 2" above the sentence "Play a longer run for a per-tone
+ * read." would be two different answers to the same question.
+ */
+export const MIN_SCORED_GATES_FOR_TAKEAWAY = 2;
 
 export interface ToneBreakdownEntry {
   tone: Tone;

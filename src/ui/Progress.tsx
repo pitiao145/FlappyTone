@@ -157,6 +157,15 @@ export function Progress({ onEarlyBird }: Props) {
         </div>
       </div>
 
+      {/* ---- Leaderboard. Real data and open to everyone, unlike the Pro
+           sections below — a board only works if people can see it. */}
+      <section className="progress-card sticker-card">
+        <div className="progress-card-header">
+          <h3>Leaderboard</h3>
+        </div>
+        <Leaderboard />
+      </section>
+
       {/* ---- Accuracy (tabbed) */}
       <section className="progress-card sticker-card">
         <div className="acc-header">
@@ -312,15 +321,6 @@ export function Progress({ onEarlyBird }: Props) {
         >
           🔒 Compare against your own attempts — unlock with Pro
         </button>
-      </section>
-
-      {/* ---- Leaderboard. Real data and open to everyone, unlike the Pro
-           sections above it — a board only works if people can see it. */}
-      <section className="progress-card sticker-card">
-        <div className="progress-card-header">
-          <h3>Leaderboard</h3>
-        </div>
-        <Leaderboard />
       </section>
 
       {/* ---- Pricing */}
