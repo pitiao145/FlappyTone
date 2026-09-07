@@ -37,7 +37,6 @@ interface Props {
   /** True while the mic is reopening — stops a second Retry racing the first. */
   busy: boolean;
   onRetry: () => void;
-  onHome: () => void;
   /** Into the fine-tune flow — for the "some tones felt out of reach?" shortcut. */
   onFineTune: () => void;
   /** Into the visualiser — the "practise a tone with no timing pressure" shortcut. */

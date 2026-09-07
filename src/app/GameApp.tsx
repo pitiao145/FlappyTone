@@ -993,7 +993,6 @@ export default function GameApp() {
             stats={stats}
             busy={retryBusy}
             onRetry={() => void retry()}
-            onHome={goHome}
             onFineTune={() => setScreen("finetune")}
             onVisualiser={() => onNavigate("visualiser")}
             settings={settings}

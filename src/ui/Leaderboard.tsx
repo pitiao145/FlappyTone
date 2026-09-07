@@ -71,7 +71,7 @@ export function Leaderboard({ limit = 50, onClose }: Props) {
   } else {
     const visibleIds = new Set(board.rows.map((r) => r.userId));
     const belowCut = board.myRank != null && userId != null && !visibleIds.has(userId);
-    const myRow = belowCut ? board.rows.find((r) => r.userId === userId) : undefined;
+    const myRow = userId != null ? board.rows.find((r) => r.userId === userId) : undefined;
 
     body = (
       <>
