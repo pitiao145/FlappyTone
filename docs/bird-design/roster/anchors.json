@@ -1,23 +1,6 @@
 {
-  "lu_rou_fan": {
-    "beakTip": {
-      "x": 0.999,
-      "y": 0.4565
-    },
-    "nativePx": 999
-  },
-  "ji_pai": {
-    "beakTip": {
-      "x": 0.999,
-      "y": 0.4127
-    },
-    "nativePx": 991
-  },
-  "boba": {
-    "beakTip": {
-      "x": 0.999,
-      "y": 0.5563
-    },
-    "nativePx": 1030
-  }
+  "lu_rou_fan":      { "beakTip": { "x": 0.999, "y": 0.4565 }, "nativePx": 999 },
+  "ji_pai":          { "beakTip": { "x": 0.999, "y": 0.4127 }, "nativePx": 991 },
+  "boba":            { "beakTip": { "x": 0.999, "y": 0.5563 }, "nativePx": 1030 },
+  "xiao_long_bao":   { "beakTip": { "x": 0.9991, "y": 0.5098 }, "nativePx": 1075 }
 }
