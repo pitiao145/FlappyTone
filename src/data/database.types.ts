@@ -21,6 +21,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      entitlements: {
+        Row: {
+          has_access: boolean
+          source: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          has_access?: boolean
+          source?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          has_access?: boolean
+          source?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entitlements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leaderboard_scores: {
         Row: {
           best_score: number

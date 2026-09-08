@@ -21,6 +21,9 @@ import {
 } from "../data/account.ts";
 import { displayName } from "../data/leaderboard.ts";
 import { getSupabase } from "../data/supabase.ts";
+import { getTierOverride, setTierOverride } from "./tierOverride.ts";
+import { useTier } from "../data/tier.ts";
+import type { Tier } from "../game/tiers.ts";
 
 type Busy = "idle" | "sending" | "renaming" | "syncing";
 
@@ -32,6 +35,10 @@ export function AccountCard() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState<Busy>("idle");
   const [message, setMessage] = useState("");
+  const [tierOverride, setTierOverrideLocal] = useState<Tier | null>(() =>
+    getTierOverride()
+  );
+  const currentTier = useTier();
 
   useEffect(() => {
     let live = true;
@@ -88,12 +95,46 @@ export function AccountCard() {
   // meant that a slow read — or a lazy chunk that failed to load — left no
   // trace on the page at all, which reads as "the sign-in was never built"
   // rather than "it hasn't loaded yet".
+  function handleTierChange(t: Tier | null) {
+    setTierOverride(t);
+    setTierOverrideLocal(t);
+  }
+
   return (
     <section className="progress-card">
       <div className="progress-card-header">
         <h3>Account (dev)</h3>
         <span className="badge badge-free">{account?.status ?? "checking…"}</span>
       </div>
+
+      <div className="pace-row">
+        <span className="pace-label">Dev tier</span>
+        <button
+          className={`pace ${tierOverride === null ? "active" : ""}`}
+          onClick={() => handleTierChange(null)}
+        >
+          Auto
+        </button>
+        <button
+          className={`pace ${tierOverride === "guest" ? "active" : ""}`}
+          onClick={() => handleTierChange("guest")}
+        >
+          Guest
+        </button>
+        <button
+          className={`pace ${tierOverride === "free" ? "active" : ""}`}
+          onClick={() => handleTierChange("free")}
+        >
+          Free
+        </button>
+        <button
+          className={`pace ${tierOverride === "pro" ? "active" : ""}`}
+          onClick={() => handleTierChange("pro")}
+        >
+          Pro
+        </button>
+      </div>
+      <p className="note">Resolved: {currentTier}</p>
 
       {!account && <p className="note">Checking your account…</p>}
 
