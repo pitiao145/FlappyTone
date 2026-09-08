@@ -115,18 +115,29 @@ export async function hasJoined(): Promise<boolean> {
   const session = await currentSession();
   if (!supabase || !session) return false;
   try {
+    // Having a `profiles` row is NOT the same as having joined the board.
+    // It used to be — `joinBoard()` was the only thing that created one — but
+    // signing up now creates it too (the stats sync and the marketing-consent
+    // write both need it), so reading the profile here silently auto-posted
+    // every new account's first score without them ever opting in.
+    //
+    // A posted score is the honest signal, and it is one the client cannot
+    // fake: `leaderboard_scores` is written only by `api/score.ts`. Any week
+    // counts, since joining is a one-time decision and the board resets
+    // weekly.
     const { data, error } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", session.user.id)
+      .from("leaderboard_scores")
+      .select("user_id")
+      .eq("user_id", session.user.id)
+      .limit(1)
       .maybeSingle();
     if (error) {
-      warn("leaderboard", `could not check for a profile: ${error.message}`);
+      warn("leaderboard", `could not check for a posted score: ${error.message}`);
       return false;
     }
     return data != null;
   } catch (err) {
-    warn("leaderboard", "could not check for a profile", err);
+    warn("leaderboard", "could not check for a posted score", err);
     return false;
   }
 }

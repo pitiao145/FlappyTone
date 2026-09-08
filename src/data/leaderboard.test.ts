@@ -9,9 +9,24 @@
  * change to one implementation fails the other's suite. Same trick
  * `session.test.ts` uses to pin `MicFailureReason` to `MicErrorKind`.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { currentWeekId } from "./leaderboard.ts";
+import { currentWeekId, hasJoined } from "./leaderboard.ts";
+import * as supabaseModule from "./supabase.ts";
+
+vi.mock("./supabase.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./supabase.ts")>();
+  return {
+    ...actual,
+    getSupabase: vi.fn(),
+    currentSession: vi.fn(),
+    warn: vi.fn(),
+  };
+});
+
+function session() {
+  return { user: { id: "u1" } } as unknown as Awaited<ReturnType<typeof supabaseModule.currentSession>>;
+}
 
 describe("currentWeekId", () => {
   it("matches api/score.ts's isoWeekId on the shared cases", () => {
@@ -31,5 +46,68 @@ describe("currentWeekId", () => {
     const mondayEarlyUtc = new Date(Date.UTC(2026, 8, 7, 0, 0, 0));
     expect(currentWeekId(sundayLateUtc)).toBe("2026-W36");
     expect(currentWeekId(mondayEarlyUtc)).toBe("2026-W37");
+  });
+});
+
+describe("hasJoined", () => {
+  beforeEach(() => {
+    vi.mocked(supabaseModule.warn).mockReset();
+  });
+
+  function clientWithScoreRow(row: { user_id: string } | null, error: { message: string } | null = null) {
+    const eq = vi.fn(() => ({
+      limit: vi.fn(() => ({
+        maybeSingle: vi.fn().mockResolvedValue({ data: row, error }),
+      })),
+    }));
+    const select = vi.fn(() => ({ eq }));
+    const from = vi.fn((table: string) => {
+      expect(table).toBe("leaderboard_scores");
+      return { select };
+    });
+    return { client: { from } as never, from, select };
+  }
+
+  it("regression: a profiles row with no leaderboard_scores row is NOT joined", async () => {
+    // This is the exact bug: hasJoined() used to check for a `profiles` row,
+    // which signup now also creates, so a brand-new account read as already
+    // joined and auto-posted its first score with no opt-in.
+    const { client } = clientWithScoreRow(null);
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client);
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session());
+
+    expect(await hasJoined()).toBe(false);
+  });
+
+  it("a user with a leaderboard_scores row reads as joined", async () => {
+    const { client } = clientWithScoreRow({ user_id: "u1" });
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client);
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session());
+
+    expect(await hasJoined()).toBe(true);
+  });
+
+  it("no session -> false", async () => {
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue({} as never);
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(null);
+
+    expect(await hasJoined()).toBe(false);
+  });
+
+  it("a query error -> false, never throws", async () => {
+    const { client } = clientWithScoreRow(null, { message: "boom" });
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client);
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session());
+
+    await expect(hasJoined()).resolves.toBe(false);
+  });
+
+  it("queries leaderboard_scores, not profiles", async () => {
+    const { client, from } = clientWithScoreRow({ user_id: "u1" });
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client);
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session());
+
+    await hasJoined();
+    expect(from).toHaveBeenCalledWith("leaderboard_scores");
   });
 });
