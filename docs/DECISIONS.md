@@ -15,6 +15,25 @@ approach, or where the obvious-looking alternative was tried and failed.
 
 **How it's introduced, so it doesn't become slop:** identity via Supabase anonymous sign-in (an anonymous user upgrades in place to a permanent account on email signup — no guest-row migration); personal gameplay stats stay **local-first** and sync up only on signup; the only server write for anonymous users is the leaderboard score, through a server-authoritative Vercel function holding the service-role key (clients never write it). RLS on every table, written performance-correct from line one. Every schema change is a numbered migration. Region Tokyo (permanent). **Not yet shipped — the code is still client-only until each piece lands.** When a piece lands, update CLAUDE.md and PRD.md to match what is actually in the code, not what is planned.
 
+### A refunded player keeps their chosen name (8 Sep 2026)
+
+Renaming is Pro, enforced by a `BEFORE UPDATE` trigger on `profiles` that
+refuses a `display_name` change without an `entitlements` row. The trigger
+gates the *change*, not the stored value, so a player who buys Pro, renames,
+and then refunds keeps the name they chose. Their `has_access` goes back to
+false and they cannot rename again.
+
+Found while testing the first real Lemon Squeezy purchase end to end: the
+board row still read "Pitiao" after the refund had revoked access.
+
+Left as it is. Reverting a name on revoke means either storing the generated
+one to restore or minting a new one, and then taking something visible away
+from someone who paid, over a single $19 refund. This is a one-time purchase,
+not a subscription with routine churn, so the case is rare and the graceful
+failure is the right one. Documented rather than fixed, because the trigger
+reads like it enforces "only Pro has a custom name" and it does not — it
+enforces "only Pro can *set* one".
+
 ### Tiers and payment: accounts stop being the Pro tier (8 Sep 2026)
 
 **Accounts stopped being the Pro tier.** `docs/flappytone-SPEC-monetization-launch.md`
