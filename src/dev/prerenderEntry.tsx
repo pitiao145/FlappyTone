@@ -14,6 +14,8 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { Landing } from "../ui/Landing.tsx";
+import { LegalPage } from "../ui/LegalPage.tsx";
+import { termsOfServiceMd, privacyPolicyMd } from "../ui/legalContent.ts";
 
 const noop = () => {};
 
@@ -29,7 +31,35 @@ export function renderLanding(): string {
     <div className="app">
       <div className="app-main">
         <div className="frame">
-          <Landing onPlay={noop} onVisualiser={noop} onTerms={noop} />
+          <Landing onPlay={noop} onVisualiser={noop} />
+        </div>
+      </div>
+    </div>,
+  );
+}
+
+/**
+ * Same wrapper identity rule as `renderLanding`, kept in sync with
+ * `TermsApp.tsx`/`PrivacyApp.tsx`'s own `.app > .app-main > .frame` tree.
+ */
+export function renderTerms(): string {
+  return renderToStaticMarkup(
+    <div className="app">
+      <div className="app-main">
+        <div className="frame">
+          <LegalPage markdown={termsOfServiceMd} />
+        </div>
+      </div>
+    </div>,
+  );
+}
+
+export function renderPrivacy(): string {
+  return renderToStaticMarkup(
+    <div className="app">
+      <div className="app-main">
+        <div className="frame">
+          <LegalPage markdown={privacyPolicyMd} />
         </div>
       </div>
     </div>,

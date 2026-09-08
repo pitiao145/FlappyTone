@@ -3,6 +3,8 @@
   "rewrites": [
     { "source": "/app", "destination": "/app.html" },
     { "source": "/record", "destination": "/record.html" },
+    { "source": "/terms-of-service", "destination": "/terms-of-service.html" },
+    { "source": "/privacy-policy", "destination": "/privacy-policy.html" },
     {
       "source": "/relay/static/:path(.*)",
       "destination": "https://us-assets.i.posthog.com/static/:path"

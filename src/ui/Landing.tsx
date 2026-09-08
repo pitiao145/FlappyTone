@@ -38,8 +38,6 @@ interface Props {
    * the other side, which is what buys this page its freedom from `src/audio/`.
    */
   onVisualiser: () => void;
-  /** Terms of Use page. */
-  onTerms: () => void;
 }
 
 /**
@@ -55,7 +53,7 @@ interface Props {
  * layout. Keep it that way — the whole point is that a re-brand touches two
  * files, not fifteen JSX strings.
  */
-export function Landing({ onPlay, onVisualiser, onTerms }: Props) {
+export function Landing({ onPlay, onVisualiser }: Props) {
   const [words, setWords] = useState<Word[] | null>(null);
   const mobileEmailId = useId();
   const [mobileEmail, setMobileEmail] = useState("");
@@ -287,7 +285,7 @@ export function Landing({ onPlay, onVisualiser, onTerms }: Props) {
         </div>
       </section>
 
-      <Footer onTerms={onTerms} />
+      <Footer />
     </div>
   );
 }

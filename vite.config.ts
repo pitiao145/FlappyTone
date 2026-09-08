@@ -43,6 +43,11 @@ export default defineConfig({
         // Jane's recording booth — a separate entry so neither page carries
         // the other's code. Reached at /record via the rewrite in vercel.json.
         record: resolve(import.meta.dirname, 'record.html'),
+        // Legal pages: prerendered, indexable, content from docs/legal/*.md.
+        // Separate entries (not routes on `main`) so they carry no game code
+        // either, same reasoning as `app`/`record`.
+        'terms-of-service': resolve(import.meta.dirname, 'terms-of-service.html'),
+        'privacy-policy': resolve(import.meta.dirname, 'privacy-policy.html'),
       },
     },
   },

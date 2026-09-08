@@ -6968,3 +6968,86 @@ section.hero-cards {
 .tutorial-done-overlay .note {
   max-width: 26ch;
 }
+
+/* ------------------------------------------------------------- legal pages */
+
+/* Terms/Privacy get their own entries (terms-of-service.html,
+   privacy-policy.html), not the 420px game frame or the 640px menu-shell
+   cap — a document reads better with a comfortable prose measure. */
+.frame:has(.legal-screen) {
+  max-width: 720px;
+}
+
+.legal-screen {
+  text-align: left;
+  align-items: stretch;
+}
+
+.legal-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  border: none;
+  background: none;
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  padding: 6px;
+  text-decoration: none;
+}
+
+.legal-back-link:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.legal-back-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Body measure caps below the 720px frame so long lines stay readable even
+   on a wide viewport. */
+.legal-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 68ch;
+}
+
+.legal-body h1 {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  letter-spacing: 0.02em;
+}
+
+.legal-body h2 {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  margin-top: var(--space-2);
+}
+
+.legal-body h3 {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--ink-muted);
+}
+
+.legal-body p {
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+
+.legal-body strong {
+  color: var(--ink);
+}
+
+.legal-body a {
+  color: var(--accent);
+}
+
+.legal-body hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: var(--space-2) 0;
+}

@@ -19,7 +19,7 @@ const CONNECT_ICONS = {
  * newsletter signup box, the "independent tool" disclaimer, and the
  * card-number handling notice.
  */
-export function Footer({ onTerms }: { onTerms: () => void }) {
+export function Footer() {
   return (
     <footer className="landing-footer">
       <div className="footer-grid">
@@ -60,8 +60,12 @@ export function Footer({ onTerms }: { onTerms: () => void }) {
       <div className="footer-bottom">
         <p className="footer-copyright">© {new Date().getFullYear()} pierrebuilds.dev</p>
         <p className="footer-legal">
-          <a className="footer-legal-link" onClick={onTerms}>
-            Terms of Use
+          <a className="footer-legal-link" href="/terms-of-service">
+            Terms of Service
+          </a>
+          {" · "}
+          <a className="footer-legal-link" href="/privacy-policy">
+            Privacy Policy
           </a>
         </p>
         <p className="footer-attribution">{brand.attribution}</p>

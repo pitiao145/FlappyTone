@@ -7,6 +7,8 @@ import type { Plugin, Connect } from "vite";
 const ENTRIES: Record<string, string> = {
   "/app": "/app.html",
   "/record": "/record.html",
+  "/terms-of-service": "/terms-of-service.html",
+  "/privacy-policy": "/privacy-policy.html",
 };
 
 /**

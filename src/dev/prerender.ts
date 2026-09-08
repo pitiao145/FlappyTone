@@ -1,5 +1,8 @@
 /**
- * Build-time render of the landing page into `index.html`.
+ * Build-time render of static, indexable pages: the landing page into
+ * `index.html`, and the legal pages into `terms-of-service.html` /
+ * `privacy-policy.html`. See `PRERENDER_ENTRIES` below for the full set —
+ * `app.html`/`record.html` are deliberately not in it.
  *
  * The app ships an empty `<div id="root">`, so a crawler that fetches `/` sees
  * the head and nothing else. Google renders JavaScript, but on a discretionary
@@ -33,8 +36,30 @@ import type { Plugin } from "vite";
 
 const ROOT_DIV = '<div id="root"></div>';
 
+/**
+ * Entries this plugin knows how to prerender, keyed by the built HTML
+ * filename and naming the export in `prerenderEntry.tsx` that renders it.
+ * `app.html` and `record.html` are deliberately absent — noindex JS shells,
+ * per CLAUDE.md's landing-split rules. An entry not in this map is left
+ * alone, not silently skipped-and-forgotten: see the explicit check below.
+ */
+const PRERENDER_ENTRIES: Record<string, keyof PrerenderModule> = {
+  "index.html": "renderLanding",
+  "terms-of-service.html": "renderTerms",
+  "privacy-policy.html": "renderPrivacy",
+};
+
+type PrerenderModule = {
+  renderLanding: () => string;
+  renderTerms: () => string;
+  renderPrivacy: () => string;
+};
+
 /** Build `prerenderEntry.tsx` for Node and run it. Returns the markup. */
-async function renderLandingHtml(root: string): Promise<string> {
+async function renderEntryHtml(
+  root: string,
+  exportName: keyof PrerenderModule,
+): Promise<string> {
   // Imported lazily and by name so this module stays cheap for `vite dev`.
   const { build } = await import("vite");
   const react = (await import("@vitejs/plugin-react")).default;
@@ -74,8 +99,8 @@ async function renderLandingHtml(root: string): Promise<string> {
     });
 
     const entry = pathToFileURL(join(outDir, "prerenderEntry.js")).href;
-    const mod = (await import(entry)) as { renderLanding: () => string };
-    return mod.renderLanding();
+    const mod = (await import(entry)) as PrerenderModule;
+    return mod[exportName]();
   } finally {
     await rm(outDir, { recursive: true, force: true });
   }
@@ -95,22 +120,22 @@ export function prerenderLanding(): Plugin {
       order: "post",
       async handler(html, ctx) {
         if (!isBuild) return html;
-        // The marketing entry only. `app.html` is the game and `record.html` is
-        // Jane's booth: both are noindex, and they must stay that way. The
-        // `endsWith("index.html")` test already excludes them, but naming them
-        // means a future rename fails visibly here rather than silently
-        // prerendering a JS shell.
+        // Only entries in PRERENDER_ENTRIES get baked in. `app.html` and
+        // `record.html` are noindex JS shells and must stay that way — they
+        // are absent from the map, not special-cased here, so a future
+        // rename can't accidentally start prerendering them.
         const file = ctx.filename.replace(/\\/g, "/");
-        if (file.includes("record") || file.endsWith("app.html")) return html;
-        if (!file.endsWith("index.html")) return html;
+        const basename = file.slice(file.lastIndexOf("/") + 1);
+        const exportName = PRERENDER_ENTRIES[basename];
+        if (!exportName) return html;
         if (!html.includes(ROOT_DIV)) {
           // Better a loud build than a silent regression to an empty page.
           throw new Error(
-            "prerender-landing: could not find an empty #root in index.html",
+            `prerender: could not find an empty #root in ${basename}`,
           );
         }
-        const landing = await renderLandingHtml(root);
-        return html.replace(ROOT_DIV, `<div id="root">${landing}</div>`);
+        const markup = await renderEntryHtml(root, exportName);
+        return html.replace(ROOT_DIV, `<div id="root">${markup}</div>`);
       },
     },
   };
