@@ -48,6 +48,7 @@ describe("api/ deploy surface", () => {
       "run.ts",
       "score.ts",
       "upload.ts",
+      "webhook-ls.ts",
     ]);
   });
 });

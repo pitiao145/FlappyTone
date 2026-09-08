@@ -6,6 +6,7 @@ import { MicError } from "../audio/mic";
 import { ensureMic, getMicSession, MicCancelled, stopMic } from "../audio/session";
 import { incrementDailyRuns, loadDailyRuns, refreshServerDailyRuns } from "../game/dailyLimit.ts";
 import { getAccount, localAggregates, pushAggregates, syncAccount } from "../data/account.ts";
+import { usePurchaseReturn } from "../data/purchaseReturn.ts";
 import {
   averageRangeHalves,
   COOLDOWN_TRACKING_WINDOW,
@@ -122,6 +123,16 @@ function initialIntent(): "visualiser" | null {
     /* no window (tests) */
   }
   return null;
+}
+
+/** Whether this load is the return trip from Lemon Squeezy checkout. */
+function isPurchaseReturn(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get("purchased") === "1";
+  } catch {
+    /* no window (tests) */
+    return false;
+  }
 }
 
 /**
@@ -336,6 +347,26 @@ export default function GameApp() {
   const openEarlyBird = useCallback((surface: EarlyBirdSurface, feature: string) => {
     setEarlyBird({ surface, feature });
   }, []);
+  /**
+   * `?purchased=1` means the player is back from Lemon Squeezy checkout.
+   * The webhook that grants access may not have landed yet, so this only
+   * ever resolves to "confirmed" or "still syncing" — never "failed" (see
+   * `purchaseReturn.ts`). Read once on mount; the strip effect below removes
+   * the param so a reload doesn't re-show the banner.
+   */
+  const [purchaseReturnActive] = useState(() => isPurchaseReturn());
+  const purchaseReturnState = usePurchaseReturn(purchaseReturnActive);
+  useEffect(() => {
+    if (!purchaseReturnActive) return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      params.delete("purchased");
+      const next = params.toString();
+      history.replaceState(null, "", next ? `?${next}` : window.location.pathname);
+    } catch {
+      /* no window (tests) */
+    }
+  }, [purchaseReturnActive]);
   /**
    * True once the day's 5 free "game" runs (see `incrementDailyRuns` in
    * `onRunOver` below) are used up. Tutorial and the visualiser are never
@@ -1028,6 +1059,18 @@ export default function GameApp() {
         )}
         </div>
       </div>
+      {purchaseReturnActive && (
+        <div
+          className={`purchase-return-banner${purchaseReturnState === "confirmed" ? " purchase-return-banner-done" : ""}`}
+          role="status"
+        >
+          {purchaseReturnState === "checking" && "Confirming your purchase…"}
+          {purchaseReturnState === "pending" &&
+            "Your purchase is confirmed and still syncing. EarlyBird access will appear here shortly."}
+          {purchaseReturnState === "confirmed" && "You're EarlyBird — access unlocked."}
+        </div>
+      )}
+
       {earlyBird && (
         <EarlyBirdModal
           surface={earlyBird.surface}

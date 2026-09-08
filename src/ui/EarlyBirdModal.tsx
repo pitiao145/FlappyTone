@@ -1,9 +1,26 @@
 import { useEffect, useId, useState } from "react";
 import { capturePostHogEvent } from "../analytics/posthog.ts";
+import { getAccount } from "../data/account.ts";
 import { useTier } from "../data/tier.ts";
 import { TIER_LIMITS } from "../game/tiers.ts";
 import { PRO_FEATURES, PRO_PRICE } from "./plan.ts";
 import { useNewsletterSubscribe } from "./useNewsletterSubscribe.ts";
+
+/**
+ * Build the hosted-checkout URL for a signed-in player.
+ *
+ * `checkout[custom][user_id]` is the whole mechanism: it's how the Lemon
+ * Squeezy webhook (owned elsewhere, see `api/`) knows which Supabase account
+ * to grant `entitlements.has_access` to once the payment clears — there is no
+ * other link between "someone paid" and "this player." `checkout[email]`
+ * only prefills the field; it plays no part in the account match.
+ */
+export function buildCheckoutUrl(baseUrl: string, userId: string, email: string | null): string {
+  const url = new URL(baseUrl);
+  url.searchParams.set("checkout[custom][user_id]", userId);
+  if (email) url.searchParams.set("checkout[email]", email);
+  return url.toString();
+}
 
 export type EarlyBirdSurface = "progress" | "profile" | "daily-limit" | "visualiser" | "leaderboard";
 
@@ -86,6 +103,33 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
   const copy = COPY[surface];
   const body = (isGuest && copy.guestBody) || copy.body;
   const showAccountDoor = isGuest && !!onCreateAccount;
+
+  // The store doesn't exist yet, so an unset checkout URL keeps today's
+  // behaviour exactly: the "disabled-look" button opens the email-capture
+  // fallback below rather than ever rendering a broken link.
+  const checkoutBase = import.meta.env.VITE_LEMONSQUEEZY_CHECKOUT_URL as string | undefined;
+  const [account, setAccount] = useState<{ userId: string | null; email: string | null } | null>(null);
+  useEffect(() => {
+    if (!checkoutBase) return;
+    let cancelled = false;
+    void getAccount().then((a) => {
+      if (!cancelled) setAccount({ userId: a.userId, email: a.email });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [checkoutBase]);
+
+  // Real checkout only when: the store exists, the player is signed in with
+  // a permanent account (sign-in is required before paying — a purchase with
+  // no user_id has nothing to attach to), and that account id has loaded.
+  // `free` is "permanent account, not Pro yet" — the state this button
+  // exists for; a guest gets the account door instead, and a `pro` player
+  // has no reason to see Pay at all.
+  const checkoutUrl =
+    checkoutBase && tier === "free" && account?.userId
+      ? buildCheckoutUrl(checkoutBase, account.userId, account.email)
+      : null;
 
   // Fired once per open, from the modal itself, so no call site can forget
   // it — the daily-limit surface used to be the only one tracking a "shown"
@@ -208,28 +252,56 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
             ))}
           </ul>
 
-          {/*
-            Not a native `disabled` button: disabled elements never dispatch a
-            click event, which silently threw away the one signal we actually
-            want right now (is anyone trying to pay before checkout exists?).
-            `.modal-pay`'s own styling (App.css) is already unconditional —
-            opacity/cursor don't key off `:disabled` — so dropping the
-            attribute changes nothing visually. `aria-disabled` keeps the
-            non-functional intent for assistive tech without blocking the click.
-          */}
-          <button
-            type="button"
-            className="primary modal-pay"
-            aria-disabled="true"
-            title="Checkout is coming soon"
-            onClick={() => {
-              capturePostHogEvent("earlybird_pay_click", { surface, feature });
-              setPayPromptOpen(true);
-            }}
-          >
-            🔒 Pay {PRO_PRICE} — get EarlyBird access
-          </button>
-          <p className="modal-pay-note">Checkout is coming soon.</p>
+          {checkoutUrl ? (
+            <a
+              className="primary modal-pay modal-pay-live"
+              href={checkoutUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => {
+                capturePostHogEvent("earlybird_pay_click", { surface, feature });
+                capturePostHogEvent("earlybird_checkout_opened", { surface, feature });
+              }}
+            >
+              Pay {PRO_PRICE} — get EarlyBird access
+            </a>
+          ) : isGuest ? (
+            <button
+              type="button"
+              className="primary modal-pay"
+              onClick={() => {
+                capturePostHogEvent("earlybird_pay_click", { surface, feature });
+                onCreateAccount?.();
+              }}
+            >
+              Pay {PRO_PRICE} — get EarlyBird access
+            </button>
+          ) : (
+            /*
+              Not a native `disabled` button: disabled elements never dispatch
+              a click event, which silently throws away the one signal we
+              actually want right now (is anyone trying to pay before
+              checkout exists?). `.modal-pay`'s own styling (App.css) is
+              already unconditional — opacity/cursor don't key off
+              `:disabled` — so dropping the attribute changes nothing
+              visually. `aria-disabled` keeps the non-functional intent for
+              assistive tech without blocking the click. This is also the
+              exact fallback the store's absence must keep working.
+            */
+            <button
+              type="button"
+              className="primary modal-pay"
+              aria-disabled="true"
+              title="Checkout is coming soon"
+              onClick={() => {
+                capturePostHogEvent("earlybird_pay_click", { surface, feature });
+                setPayPromptOpen(true);
+              }}
+            >
+              🔒 Pay {PRO_PRICE} — get EarlyBird access
+            </button>
+          )}
+          {!checkoutUrl && <p className="modal-pay-note">Checkout is coming soon.</p>}
 
           <div className="modal-divider">
             <span>or</span>
