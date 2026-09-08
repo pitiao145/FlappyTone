@@ -435,6 +435,23 @@ export async function pushAggregates(merged: Aggregates): Promise<AuthResult> {
   }
   const userId = account.userId;
   try {
+    // The row may not exist: only joining the board creates one, and a player
+    // can sign up having never joined. An `update` against no row matches
+    // nothing and reports no error, so the sync would claim success having
+    // written nothing at all. Insert-if-absent first; `ignoreDuplicates` keeps
+    // this from touching `display_name` on an existing row, which would trip
+    // the Pro-only rename trigger.
+    const { error: ensureError } = await supabase
+      .from("profiles")
+      .upsert(
+        { id: userId, display_name: displayName() },
+        { onConflict: "id", ignoreDuplicates: true },
+      );
+    if (ensureError) {
+      warn("account", `could not create the profile row: ${ensureError.message}`);
+      return { ok: false, reason: ensureError.message };
+    }
+
     const { error: profileError } = await supabase
       .from("profiles")
       .update({

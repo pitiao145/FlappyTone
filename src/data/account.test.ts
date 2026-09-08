@@ -6,7 +6,13 @@
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { EMPTY_AGGREGATES, mergeAggregates, signUpWithPassword, type Aggregates } from "./account.ts";
+import {
+  EMPTY_AGGREGATES,
+  mergeAggregates,
+  pushAggregates,
+  signUpWithPassword,
+  type Aggregates,
+} from "./account.ts";
 import * as supabaseModule from "./supabase.ts";
 
 vi.mock("./supabase.ts", async (importOriginal) => {
@@ -101,6 +107,65 @@ describe("signUpWithPassword", () => {
     expect(result).toEqual({ ok: false, reason: "password must be at least 8 characters" });
     expect(updateUser).not.toHaveBeenCalled();
     expect(signUp).not.toHaveBeenCalled();
+  });
+});
+
+describe("pushAggregates", () => {
+  beforeEach(() => {
+    vi.mocked(supabaseModule.warn).mockReset();
+  });
+
+  // Tracks call order across tables: only `profiles` matters for the
+  // upsert-before-update ordering this bug fix depends on.
+  function orderedClient(opts: { upsertError?: { message: string } } = {}) {
+    const calls: string[] = [];
+    const profileUpsert = vi.fn((..._args: unknown[]) => {
+      calls.push("upsert");
+      return Promise.resolve({ error: opts.upsertError ?? null });
+    });
+    const profileUpdate = vi.fn(() => {
+      calls.push("update");
+      return { eq: vi.fn().mockResolvedValue({ error: null }) };
+    });
+    const toneUpsert = vi.fn().mockResolvedValue({ error: null });
+    const client = {
+      from: vi.fn((table: string) => {
+        if (table === "profiles") return { upsert: profileUpsert, update: profileUpdate };
+        if (table === "tone_stats") return { upsert: toneUpsert };
+        throw new Error(`unexpected table ${table}`);
+      }),
+    };
+    return { client, calls, profileUpsert, profileUpdate, toneUpsert };
+  }
+
+  it("inserts the profile row (ignoreDuplicates upsert) before updating it", async () => {
+    const { client, calls, profileUpsert, profileUpdate } = orderedClient();
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client as never);
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session("permanent"));
+
+    const result = await pushAggregates(aggregates());
+
+    expect(profileUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "u1" }),
+      { onConflict: "id", ignoreDuplicates: true },
+    );
+    expect(profileUpdate).toHaveBeenCalled();
+    expect(calls).toEqual(["upsert", "update"]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("returns ok:false and skips the update when the insert-if-absent upsert errors", async () => {
+    const { client, calls, profileUpdate } = orderedClient({
+      upsertError: { message: "boom" },
+    });
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client as never);
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session("permanent"));
+
+    const result = await pushAggregates(aggregates());
+
+    expect(result).toEqual({ ok: false, reason: "boom" });
+    expect(profileUpdate).not.toHaveBeenCalled();
+    expect(calls).toEqual(["upsert"]);
   });
 });
 
