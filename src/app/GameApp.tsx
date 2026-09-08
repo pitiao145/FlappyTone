@@ -356,6 +356,7 @@ export default function GameApp() {
    */
   const [purchaseReturnActive] = useState(() => isPurchaseReturn());
   const purchaseReturnState = usePurchaseReturn(purchaseReturnActive);
+  const [purchaseReturnDismissed, setPurchaseReturnDismissed] = useState(false);
   useEffect(() => {
     if (!purchaseReturnActive) return;
     try {
@@ -367,6 +368,14 @@ export default function GameApp() {
       /* no window (tests) */
     }
   }, [purchaseReturnActive]);
+  // Auto-dismiss the banner 5s after it reaches a terminal state — never
+  // while still "checking", or it could vanish mid-poll and look like the
+  // purchase silently failed.
+  useEffect(() => {
+    if (purchaseReturnState !== "confirmed" && purchaseReturnState !== "pending") return;
+    const timer = setTimeout(() => setPurchaseReturnDismissed(true), 5000);
+    return () => clearTimeout(timer);
+  }, [purchaseReturnState]);
   /**
    * True once the day's 5 free "game" runs (see `incrementDailyRuns` in
    * `onRunOver` below) are used up. Tutorial and the visualiser are never
@@ -1059,7 +1068,7 @@ export default function GameApp() {
         )}
         </div>
       </div>
-      {purchaseReturnActive && (
+      {purchaseReturnActive && !purchaseReturnDismissed && (
         <div
           className={`purchase-return-banner${purchaseReturnState === "confirmed" ? " purchase-return-banner-done" : ""}`}
           role="status"
@@ -1067,7 +1076,7 @@ export default function GameApp() {
           {purchaseReturnState === "checking" && "Confirming your purchase…"}
           {purchaseReturnState === "pending" &&
             "Your purchase is confirmed and still syncing. EarlyBird access will appear here shortly."}
-          {purchaseReturnState === "confirmed" && "You're EarlyBird — access unlocked."}
+          {purchaseReturnState === "confirmed" && "You're EarlyBird! Access unlocked, go practice those tones!"}
         </div>
       )}
 

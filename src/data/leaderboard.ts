@@ -109,6 +109,20 @@ export function displayName(): string {
   return name;
 }
 
+/**
+ * Overwrites the locally cached board name, e.g. with the server's
+ * `display_name` on sign-in. One-way by convention: callers may only ever
+ * pull a name *down* from the server here, never push a locally-minted name
+ * up — that direction is `renameAccount()` alone, Pro-gated and explicit.
+ */
+export function setLocalDisplayName(name: string): void {
+  try {
+    localStorage.setItem(IDENTITY_KEY, JSON.stringify({ name }));
+  } catch {
+    // Storage blocked — the name just won't survive a reload.
+  }
+}
+
 /** Whether this player already has a board profile. Never signs them in. */
 export async function hasJoined(): Promise<boolean> {
   const supabase = getSupabase();

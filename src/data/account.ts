@@ -22,7 +22,7 @@ import { APP_PATH } from "../ui/appLink.ts";
 import { lifetimeToneStats, loadRunHistory, mergeIntoRunHistory } from "../game/runHistory.ts";
 import { loadStreak, mergeStreak } from "../game/streak.ts";
 import type { Tone } from "../game/gates.ts";
-import { displayName } from "./leaderboard.ts";
+import { displayName, setLocalDisplayName } from "./leaderboard.ts";
 
 import { currentSession, getSupabase, warn } from "./supabase.ts";
 
@@ -193,25 +193,35 @@ export async function requestPasswordReset(email: string): Promise<AuthResult> {
 }
 
 /**
- * Records marketing consent on the player's profile row. Upserts because a
- * player who never joined the leaderboard has no `profiles` row yet — only
- * `joinBoard()` creates one otherwise — so this must be able to create it too.
- * Never throws, never blocks account creation on the newsletter call.
+ * Records marketing consent on the player's profile row. A player who never
+ * joined the leaderboard has no `profiles` row yet — only `joinBoard()`
+ * creates one otherwise — so this establishes the row first (insert-only,
+ * `ignoreDuplicates`, same as `joinBoard`/`pushAggregates`) and then updates
+ * only the consent columns. Never a plain upsert of the whole row: that would
+ * carry `display_name` along and could overwrite an existing name with this
+ * device's locally cached one. Never throws, never blocks account creation on
+ * the newsletter call.
  */
 export async function recordMarketingConsent(consented: boolean): Promise<void> {
   const supabase = getSupabase();
   const account = await getAccount();
   if (!supabase || !account.userId) return;
   try {
-    const { error } = await supabase.from("profiles").upsert(
-      {
-        id: account.userId,
-        display_name: displayName(),
+    const { error: ensureError } = await supabase
+      .from("profiles")
+      .upsert(
+        { id: account.userId, display_name: displayName() },
+        { onConflict: "id", ignoreDuplicates: true },
+      );
+    if (ensureError) warn("account", `could not create the profile row: ${ensureError.message}`);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
         marketing_consent: consented,
         marketing_consent_at: consented ? new Date().toISOString() : null,
-      },
-      { onConflict: "id" },
-    );
+      })
+      .eq("id", account.userId);
     if (error) warn("account", `could not record marketing consent: ${error.message}`);
   } catch (err) {
     warn("account", "could not record marketing consent", err);
@@ -334,18 +344,28 @@ export const EMPTY_AGGREGATES: Aggregates = {
   perTone: [],
 };
 
+/** `fetchAggregates`'s return shape: the numeric aggregates plus the server's
+ * `display_name`, so `syncAccount` can pull the name down without a second
+ * round trip. The name is deliberately not part of `Aggregates`/
+ * `mergeAggregates` — it isn't a monotonic count, so max-merging it makes no
+ * sense, and it flows one way only (see `syncAccount`). */
+export interface RemoteAggregates {
+  aggregates: Aggregates;
+  displayName: string | null;
+}
+
 /** Reads the account's aggregates back. Empty when signed out or anonymous. */
-export async function fetchAggregates(): Promise<Aggregates> {
+export async function fetchAggregates(): Promise<RemoteAggregates> {
   const supabase = getSupabase();
   const account = await getAccount();
   if (!supabase || account.status !== "permanent" || !account.userId) {
-    return EMPTY_AGGREGATES;
+    return { aggregates: EMPTY_AGGREGATES, displayName: null };
   }
   try {
     const [profile, tones] = await Promise.all([
       supabase
         .from("profiles")
-        .select("best_score, total_runs, total_gates, streak_current, streak_best")
+        .select("best_score, total_runs, total_gates, streak_current, streak_best, display_name")
         .eq("id", account.userId)
         .maybeSingle(),
       supabase
@@ -355,25 +375,28 @@ export async function fetchAggregates(): Promise<Aggregates> {
     ]);
     if (profile.error) {
       warn("account", `could not read profile aggregates: ${profile.error.message}`);
-      return EMPTY_AGGREGATES;
+      return { aggregates: EMPTY_AGGREGATES, displayName: null };
     }
     return {
-      bestScore: profile.data?.best_score ?? 0,
-      totalRuns: profile.data?.total_runs ?? 0,
-      totalGates: profile.data?.total_gates ?? 0,
-      streakCurrent: profile.data?.streak_current ?? 0,
-      streakBest: profile.data?.streak_best ?? 0,
-      perTone: (tones.data ?? []).map((t) => ({
-        tone: t.tone,
-        attempts: Number(t.attempts),
-        unheard: Number(t.unheard),
-        accSum: t.sum_accuracy,
-        best: t.best_accuracy,
-      })),
+      aggregates: {
+        bestScore: profile.data?.best_score ?? 0,
+        totalRuns: profile.data?.total_runs ?? 0,
+        totalGates: profile.data?.total_gates ?? 0,
+        streakCurrent: profile.data?.streak_current ?? 0,
+        streakBest: profile.data?.streak_best ?? 0,
+        perTone: (tones.data ?? []).map((t) => ({
+          tone: t.tone,
+          attempts: Number(t.attempts),
+          unheard: Number(t.unheard),
+          accSum: t.sum_accuracy,
+          best: t.best_accuracy,
+        })),
+      },
+      displayName: profile.data?.display_name ?? null,
     };
   } catch (err) {
     warn("account", "could not read account aggregates", err);
-    return EMPTY_AGGREGATES;
+    return { aggregates: EMPTY_AGGREGATES, displayName: null };
   }
 }
 
@@ -410,7 +433,7 @@ export async function syncAccount(): Promise<AuthResult> {
     return { ok: false, reason: "sync needs an account" };
   }
   const local = localAggregates();
-  const remote = await fetchAggregates();
+  const { aggregates: remote, displayName: remoteName } = await fetchAggregates();
   const merged = mergeAggregates(local, remote);
 
   const pushed = await pushAggregates(merged);
@@ -423,6 +446,14 @@ export async function syncAccount(): Promise<AuthResult> {
     perTone: merged.perTone.map((t) => ({ ...t, tone: t.tone as Tone })),
   });
   mergeStreak({ current: merged.streakCurrent, best: merged.streakBest });
+
+  // Name flows down only, never up: the server already has this player's real
+  // name (set at signup, or renamed since on another device), so the local
+  // cache adopts it. Never write the local name back to the server here —
+  // that would let a second device's stale generated name clobber a real one.
+  // Only `renameAccount()` may change the server's `display_name`.
+  if (remoteName) setLocalDisplayName(remoteName);
+
   return { ok: true };
 }
 

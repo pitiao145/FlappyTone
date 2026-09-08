@@ -10,9 +10,12 @@ import {
   EMPTY_AGGREGATES,
   mergeAggregates,
   pushAggregates,
+  recordMarketingConsent,
   signUpWithPassword,
+  syncAccount,
   type Aggregates,
 } from "./account.ts";
+import { displayName } from "./leaderboard.ts";
 import * as supabaseModule from "./supabase.ts";
 
 vi.mock("./supabase.ts", async (importOriginal) => {
@@ -234,5 +237,134 @@ describe("mergeAggregates", () => {
       ],
     });
     expect(mergeAggregates(a, EMPTY_AGGREGATES).perTone.map((t) => t.tone)).toEqual([1, 4]);
+  });
+});
+
+describe("recordMarketingConsent", () => {
+  beforeEach(() => {
+    vi.mocked(supabaseModule.warn).mockReset();
+  });
+
+  it("establishes the row (insert-only) then updates only the consent columns — never display_name", async () => {
+    const calls: { table: string; op: string; arg: unknown }[] = [];
+    const profileUpsert = vi.fn((arg: unknown) => {
+      calls.push({ table: "profiles", op: "upsert", arg });
+      return Promise.resolve({ error: null });
+    });
+    const profileUpdate = vi.fn((arg: unknown) => {
+      calls.push({ table: "profiles", op: "update", arg });
+      return { eq: vi.fn().mockResolvedValue({ error: null }) };
+    });
+    const client = {
+      from: vi.fn(() => ({ upsert: profileUpsert, update: profileUpdate })),
+    };
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client as never);
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session("permanent"));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
+
+    await recordMarketingConsent(true);
+
+    expect(profileUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "u1", display_name: expect.any(String) }),
+      { onConflict: "id", ignoreDuplicates: true },
+    );
+    expect(profileUpdate).toHaveBeenCalledWith(
+      expect.not.objectContaining({ display_name: expect.anything() }),
+    );
+    expect(calls.map((c) => c.op)).toEqual(["upsert", "update"]);
+  });
+});
+
+describe("syncAccount name pull-down", () => {
+  beforeEach(() => {
+    vi.mocked(supabaseModule.warn).mockReset();
+    const storageMap: Record<string, string> = {};
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => storageMap[key] ?? null,
+      setItem: (key: string, value: string) => {
+        storageMap[key] = value;
+      },
+      removeItem: (key: string) => {
+        delete storageMap[key];
+      },
+    } as Storage);
+  });
+
+  function syncClient(remoteDisplayName: string | null) {
+    const profileSelect = {
+      eq: vi.fn(() => ({
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: {
+            best_score: 0,
+            total_runs: 0,
+            total_gates: 0,
+            streak_current: 0,
+            streak_best: 0,
+            display_name: remoteDisplayName,
+          },
+          error: null,
+        }),
+      })),
+    };
+    const toneSelect = { eq: vi.fn().mockResolvedValue({ data: [], error: null }) };
+    const profileUpsert = vi.fn().mockResolvedValue({ error: null });
+    const profileUpdate = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }));
+    const toneUpsert = vi.fn().mockResolvedValue({ error: null });
+    const client = {
+      from: vi.fn((table: string) => {
+        if (table === "profiles") {
+          return { select: () => profileSelect, upsert: profileUpsert, update: profileUpdate };
+        }
+        if (table === "tone_stats") return { select: () => toneSelect, upsert: toneUpsert };
+        throw new Error(`unexpected table ${table}`);
+      }),
+    };
+    return { client, profileUpsert };
+  }
+
+  it("overwrites the local cached name with the server's when the server has one", async () => {
+    const { client, profileUpsert } = syncClient("ServerName99");
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client as never);
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session("permanent"));
+
+    const before = displayName();
+    expect(before).not.toBe("ServerName99");
+
+    await syncAccount();
+
+    expect(displayName()).toBe("ServerName99");
+    // The push (ensure-step upsert) must not have been asked to write the
+    // server's own name back up as if it came from this device.
+    expect(profileUpsert).not.toHaveBeenCalledWith(
+      expect.objectContaining({ display_name: "ServerName99" }),
+      expect.anything(),
+    );
+  });
+
+  it("does not push the local name up when the server already has a name", async () => {
+    const { client, profileUpsert } = syncClient("ServerName99");
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client as never);
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session("permanent"));
+    const local = displayName();
+
+    await syncAccount();
+
+    // pushAggregates's ensure-step still runs (ignoreDuplicates, harmless on
+    // an existing row) but must carry this device's name, never overwriting
+    // the server's — ignoreDuplicates is what makes that safe either way.
+    expect(profileUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "u1", display_name: local }),
+      { onConflict: "id", ignoreDuplicates: true },
+    );
+  });
+
+  it("leaves the local cache alone when the server has no name", async () => {
+    const { client } = syncClient(null);
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client as never);
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session("permanent"));
+
+    const before = displayName();
+    await syncAccount();
+    expect(displayName()).toBe(before);
   });
 });
