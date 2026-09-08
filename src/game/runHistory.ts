@@ -248,3 +248,18 @@ export function toneAccuracyFromHistory(store: RunHistoryStore): ToneAccuracy[] 
     return { tone, pct: gates > 0 ? (accSum / gates) * 100 : null, gates };
   });
 }
+
+/**
+ * Accuracy per tone from lifetime totals (`lifetimePerTone`), for a device
+ * whose `lastRuns` is empty (e.g. a second device, before any local run has
+ * happened yet). Same unheard-exclusion rule as `toneAccuracyFromHistory`:
+ * `attempts` already counts only scored (voiced) gates, matching `gates`
+ * there, so the definition is `accSum / attempts`, gates included for parity
+ * with `ToneAccuracy`.
+ */
+export function lifetimeToneAccuracy(store: RunHistoryStore): ToneAccuracy[] {
+  return ([1, 2, 3, 4] as Tone[]).map((tone) => {
+    const t = store.lifetimePerTone[tone];
+    return { tone, pct: t.attempts > 0 ? (t.accSum / t.attempts) * 100 : null, gates: t.attempts };
+  });
+}

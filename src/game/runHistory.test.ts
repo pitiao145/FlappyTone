@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  lifetimeToneAccuracy,
   lifetimeToneStats,
   loadRunHistory,
   recordRun,
@@ -105,5 +106,33 @@ describe("recordRun / lifetimePerTone", () => {
     localStorage.setItem("toneflap.history.v1", JSON.stringify(store));
     const loaded = loadRunHistory();
     expect(loaded.lifetimePerTone[1].best).toBe(0.95);
+  });
+});
+
+describe("lifetimeToneAccuracy", () => {
+  it("computes accSum / attempts per tone", () => {
+    const snap1 = fakeSnapshot(300, ["w1"], (s) => applyGate(s, 1, "perfect", 1));
+    recordRun(snap1, "finished");
+    const snap2 = fakeSnapshot(150, ["w2"], (s) => applyGate(s, 1, "good", 0.7));
+    const store = recordRun(snap2, "finished");
+
+    const t1 = lifetimeToneAccuracy(store).find((t) => t.tone === 1)!;
+    expect(t1.gates).toBe(2);
+    expect(t1.pct).toBeCloseTo(85); // (1 + 0.7) / 2 * 100
+  });
+
+  it("excludes unheard gates from the accuracy figure", () => {
+    const snap = fakeSnapshot(0, [], (s) => applyGate(s, 2, "unheard", 0));
+    const store = recordRun(snap, "finished");
+    const t2 = lifetimeToneAccuracy(store).find((t) => t.tone === 2)!;
+    expect(t2.gates).toBe(0);
+    expect(t2.pct).toBeNull();
+  });
+
+  it("does not produce NaN for a tone with zero attempts", () => {
+    const store = loadRunHistory();
+    const t3 = lifetimeToneAccuracy(store).find((t) => t.tone === 3)!;
+    expect(t3.pct).toBeNull();
+    expect(Number.isNaN(t3.pct)).toBe(false);
   });
 });

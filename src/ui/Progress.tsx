@@ -3,6 +3,7 @@ import { capturePostHogEvent } from "../analytics/posthog.ts";
 import { loadInventory } from "../audio/inventory.ts";
 import type { Tone } from "../game/gates.ts";
 import {
+  lifetimeToneAccuracy,
   loadRunHistory,
   toneAccuracyFromHistory,
   type RunOutcome,
@@ -78,7 +79,14 @@ export function Progress({ onEarlyBird }: Props) {
   }, [words]);
 
   const history = useMemo(() => loadRunHistory(), []);
-  const toneAccuracy = useMemo(() => toneAccuracyFromHistory(history), [history]);
+  // Last-5-run accuracy is device-local and empty on a device with no local
+  // runs yet (e.g. just synced on a second device) — fall back to the
+  // lifetime figure from `lifetimePerTone`, which does sync.
+  const usingLifetimeAccuracy = history.lastRuns.length === 0;
+  const toneAccuracy = useMemo(
+    () => (usingLifetimeAccuracy ? lifetimeToneAccuracy(history) : toneAccuracyFromHistory(history)),
+    [history, usingLifetimeAccuracy],
+  );
   const streak = useMemo(() => loadStreak(), []);
 
   // Mock accuracy-over-time data for the Pro teaser chart — generated once so
@@ -157,6 +165,7 @@ export function Progress({ onEarlyBird }: Props) {
             <span className="stat-label">words</span>
           </div>
         </div>
+        <p className="note">Word count is for this device only.</p>
       </div>
 
       {/* ---- Leaderboard. Real data and open to everyone, unlike the Pro
@@ -193,7 +202,9 @@ export function Progress({ onEarlyBird }: Props) {
         {activeTab === "accuracy" ? (
           <>
             <p className="note">
-              Averaged over your last {Math.min(5, history.lastRuns.length)} runs.
+              {usingLifetimeAccuracy
+                ? "Averaged over all your runs."
+                : `Averaged over your last ${Math.min(5, history.lastRuns.length)} runs.`}
             </p>
             <div className="breakdown">
               {toneAccuracy.map((t) => (
@@ -257,6 +268,7 @@ export function Progress({ onEarlyBird }: Props) {
           <h3>Run history</h3>
           <span className="badge-solid badge-solid-jade">Last 5 runs</span>
         </div>
+        <p className="note">Shows runs from this device only.</p>
         {history.lastRuns.length === 0 ? (
           <p className="note">Play a run to see it here.</p>
         ) : (
