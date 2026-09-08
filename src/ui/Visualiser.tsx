@@ -4,11 +4,13 @@ import { MicError } from "../audio/mic.ts";
 import { isCueAudible, loadClip, playToneCue } from "../audio/reference.ts";
 import { ensureMic, getMicSession, MicCancelled, setFrameSink, stopMic } from "../audio/session.ts";
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
+import { useTier } from "../data/tier.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { ContourRecorder } from "../game/contours.ts";
 import { shapeForWord, type Tone } from "../game/gates.ts";
 import type { CalibrationSettings } from "../game/settings.ts";
 import { classifyTone, type ToneClassification } from "../game/toneClassifier.ts";
+import { TIER_LIMITS } from "../game/tiers.ts";
 import { tuning } from "../game/tuning.ts";
 import { visualAccuracy } from "../game/visualAccuracy.ts";
 import type { Word } from "../game/words.ts";
@@ -70,6 +72,8 @@ interface Props {
   settings: CalibrationSettings;
   canvasWidth: number;
   canvasHeight: number;
+  /** Called when a guest taps a locked tone row/pill or a locked word chip. */
+  onLocked?: (feature: string) => void;
 }
 
 /**
@@ -81,7 +85,9 @@ interface Props {
  * corridor at the same time, and when that fails there is no way to tell which
  * half went wrong. Here there is only one half.
  */
-export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
+export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Props) {
+  const tier = useTier();
+  const limits = TIER_LIMITS[tier];
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   /**
@@ -218,10 +224,12 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
     if (tone === null) return;
     const audio = getMicSession()?.ctx;
     if (!audio) return;
-    for (const w of wordsOfTone(words, tone)) void loadClip(audio, w);
-  }, [tone, words]);
+    for (const w of wordsOfTone(words, tone, limits.wordsPerTone)) void loadClip(audio, w);
+  }, [tone, words, limits.wordsPerTone]);
 
-  const wordsForTone = tone === null ? [] : wordsOfTone(words, tone);
+  const wordsForTone = tone === null ? [] : wordsOfTone(words, tone, limits.wordsPerTone);
+  /** The rest of that tone's inventory, shown as locked chips for free players. */
+  const lockedWordsForTone = tone === null ? [] : wordsOfTone(words, tone).slice(wordsForTone.length);
 
   // CSS (App.css) now stretches `.stage` to fill the real space it has —
   // full height on mobile, the 420px-capped column on desktop — instead of
@@ -389,6 +397,10 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
   }, [settings, canvasW, canvasH]);
 
   const chooseTone = (t: Tone | null) => {
+    if (t !== null && !limits.visualiserPerTone) {
+      onLocked?.("visualiser-tone-practice");
+      return;
+    }
     setTone(t);
     setSelectedWord(null);
     resetAttempts();
@@ -513,6 +525,19 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
     </button>
   );
 
+  /** Ghost chip standing in for a word behind the free word-count limit. */
+  const lockedWordChip = (w: Word) => (
+    <button
+      key={w.id}
+      className="choice-option word-chip is-locked"
+      onClick={() => onLocked?.("visualiser-word-list")}
+      aria-label={`${w.hanzi}, locked, Pro`}
+    >
+      <span className="word-chip-hanzi">{w.hanzi}</span>
+      <span className="word-chip-lock">🔒</span>
+    </button>
+  );
+
   /** Tab strip — shared by mobile popover and desktop panel. */
   const tonePickerTabs = (
     <div className="tone-popover-tabs">
@@ -560,13 +585,20 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
       {TONES.map((t) => (
         <button
           key={t}
-          className={tone === t ? "tone-popover-row active" : "tone-popover-row"}
+          className={
+            tone === t
+              ? "tone-popover-row active"
+              : !limits.visualiserPerTone
+                ? "tone-popover-row is-locked"
+                : "tone-popover-row"
+          }
           onClick={() => chooseTone(t)}
         >
           <span className="tone-popover-row-icon">
             <ToneMarkIcon tone={t} className="tone-mark-icon" />
           </span>
           Tone {t} · {TONE_SHORT_LABEL[t]}
+          {!limits.visualiserPerTone && <span className="pro-badge">🔒 Pro</span>}
         </button>
       ))}
     </div>
@@ -588,11 +620,18 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
       {TONES.map((t) => (
         <button
           key={t}
-          className={tone === t ? "choice-option tone-pill active" : "choice-option tone-pill"}
+          className={
+            tone === t
+              ? "choice-option tone-pill active"
+              : !limits.visualiserPerTone
+                ? "choice-option tone-pill is-locked"
+                : "choice-option tone-pill"
+          }
           onClick={() => chooseTone(t)}
-          aria-label={`Tone ${t}, ${TONE_SHORT_LABEL[t]}`}
+          aria-label={`Tone ${t}, ${TONE_SHORT_LABEL[t]}${!limits.visualiserPerTone ? ", locked, Pro" : ""}`}
         >
           <ToneMarkIcon tone={t} className="tone-mark-icon" />
+          {!limits.visualiserPerTone && <span className="tone-pill-lock">🔒</span>}
         </button>
       ))}
     </div>
@@ -680,7 +719,10 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
 
           <div className="word-rail-wrap">
             {tone !== null ? (
-              <div className="word-rail">{wordsForTone.map(wordChip)}</div>
+              <div className="word-rail">
+                {wordsForTone.map(wordChip)}
+                {lockedWordsForTone.map(lockedWordChip)}
+              </div>
             ) : (
               <p className="vis-free-hint">Select the tones you want to practice</p>
             )}
@@ -696,7 +738,12 @@ export function Visualiser({ settings, canvasWidth, canvasHeight }: Props) {
 
           <div className="vis-tone-picker">{desktopTonePickerPanel}</div>
 
-          {tone !== null && <div className="word-strip">{wordsForTone.map(wordChip)}</div>}
+          {tone !== null && (
+            <div className="word-strip">
+              {wordsForTone.map(wordChip)}
+              {lockedWordsForTone.map(lockedWordChip)}
+            </div>
+          )}
         </div>
 
         {tonePopoverOpen && (

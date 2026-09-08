@@ -4,7 +4,8 @@ import { capturePostHogEvent, initPostHog } from "../analytics/posthog.ts";
 import { loadInventory } from "../audio/inventory";
 import { MicError } from "../audio/mic";
 import { ensureMic, getMicSession, MicCancelled, stopMic } from "../audio/session";
-import { incrementDailyRuns, loadDailyRuns } from "../game/dailyLimit.ts";
+import { incrementDailyRuns, loadDailyRuns, refreshServerDailyRuns } from "../game/dailyLimit.ts";
+import { getAccount, localAggregates, pushAggregates, syncAccount } from "../data/account.ts";
 import {
   averageRangeHalves,
   COOLDOWN_TRACKING_WINDOW,
@@ -593,6 +594,13 @@ export default function GameApp() {
       incrementDailyRuns();
       // Same trigger advances the local daily streak (quits don't count).
       recordPlay();
+      // Fire-and-forget: a signed-in player's aggregates ride along with
+      // every completed run, not just at signup. Push only, no server read —
+      // syncAccount() already does the full merge elsewhere (app load).
+      // Never blocks setScreen("gameover") below.
+      void getAccount().then((account) => {
+        if (account.status === "permanent") void pushAggregates(localAggregates());
+      });
     }
 
     // Windowed recalibration check — see recalibration.ts. Only a completed,
@@ -718,6 +726,15 @@ export default function GameApp() {
     // first gates spawn. A failure resolves to an empty inventory and the game
     // falls back to the tuning defaults; nothing here can block a run.
     void loadInventory();
+    // Fire-and-forget, signed-in-only, never blocking render: refresh the
+    // cached server run count so a returning player's daily count is right
+    // before their first run, and pull down anything the account already
+    // knows (per `syncAccount`'s merge-by-max).
+    void getAccount().then((account) => {
+      if (account.status !== "permanent") return;
+      void refreshServerDailyRuns();
+      void syncAccount();
+    });
   }, []);
 
   /**
@@ -890,7 +907,12 @@ export default function GameApp() {
           // .frame this renders into is pixel-identical to Play's — no
           // separate constants, no separate CSS formula. See the
           // `.visualiser-screen.game-stage` rule in App.css.
-          <Visualiser settings={settings} canvasWidth={CANVAS_W} canvasHeight={GAME_CANVAS_H} />
+          <Visualiser
+            settings={settings}
+            canvasWidth={CANVAS_W}
+            canvasHeight={GAME_CANVAS_H}
+            onLocked={(feature) => openEarlyBird("visualiser", feature)}
+          />
         )}
 
         {screen === "visualiser" && !(settings && visualiserMicReady) && (

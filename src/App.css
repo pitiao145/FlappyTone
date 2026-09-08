@@ -2891,6 +2891,30 @@
   background: rgba(var(--accent-rgb), 0.1);
 }
 
+/* Guest tier: tone rows stay visible and tappable so a locked tone is
+   discoverable, not hidden — tapping one opens the upgrade path instead of
+   doing nothing. */
+.tone-popover-list .tone-popover-row.is-locked {
+  color: var(--ink-dim);
+  justify-content: space-between;
+}
+
+/* Same visual language as `.progress-screen .pro-badge` ("🔒 Pro"), scoped
+   here instead of reusing that class — this pill sits inside a row/pill
+   whose own layout differs from the progress screen's. */
+.tone-popover-row .pro-badge,
+.word-chip .pro-badge {
+  margin-left: auto;
+  white-space: nowrap;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--surface);
+  background: var(--warn);
+  border: 2px solid var(--ink);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+
 .tone-popover-row-icon {
   flex: 0 0 auto;
   width: 26px;
@@ -2989,6 +3013,21 @@
   font-weight: 500;
 }
 
+/* Guest tier — the mark stays visible (still discoverable) but muted, with a
+   small lock badge in the corner rather than replacing the icon. */
+.tone-pill.is-locked {
+  position: relative;
+  opacity: 0.55;
+}
+
+.tone-pill-lock {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  font-size: 10px;
+  line-height: 1;
+}
+
 .word-chip {
   flex: 0 0 auto;
   display: flex;
@@ -3020,6 +3059,20 @@
   border: none;
   background: var(--accent);
   color: var(--accent-ink);
+}
+
+/* Ghost chip for a word past the free tier's per-tone limit — dashed border,
+   muted ink, matching `.progress-screen .level-card`'s locked-teaser
+   language. Still tappable: it surfaces the upgrade path, not a dead end. */
+.word-chip.is-locked {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--ink) 28%, transparent);
+  background: color-mix(in srgb, var(--surface-panel) 50%, var(--surface));
+  color: var(--ink-dim);
+}
+
+.word-chip-lock {
+  font-size: 12px;
 }
 
 /* Desktop-only panel — hidden entirely on mobile (see below). Built and laid

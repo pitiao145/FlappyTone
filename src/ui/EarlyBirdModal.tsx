@@ -3,7 +3,7 @@ import { capturePostHogEvent } from "../analytics/posthog.ts";
 import { PRO_FEATURES, PRO_PRICE } from "./plan.ts";
 import { useNewsletterSubscribe } from "./useNewsletterSubscribe.ts";
 
-export type EarlyBirdSurface = "progress" | "profile" | "daily-limit";
+export type EarlyBirdSurface = "progress" | "profile" | "daily-limit" | "visualiser";
 
 interface Props {
   surface: EarlyBirdSurface;
@@ -30,8 +30,13 @@ const COPY: Record<EarlyBirdSurface, { eyebrow: string; title: string; body: str
   },
   "daily-limit": {
     eyebrow: "★ Daily limit reached",
-    title: "You've flown all 5 free runs today",
-    body: "Come back tomorrow for 5 more, or go EarlyBird now for unlimited play today and every day after — plus everything else as it lands. Full refund anytime.",
+    title: "You've flown all your free runs today",
+    body: "Come back tomorrow, or go EarlyBird now for unlimited play today and every day after — plus everything else as it lands. Full refund anytime.",
+  },
+  visualiser: {
+    eyebrow: "★ EarlyBird access",
+    title: "Practise every word, every tone",
+    body: "The visualiser's per-tone practice and the full word list come with EarlyBird — along with everything else as it lands. Full refund anytime.",
   },
 };
 

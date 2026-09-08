@@ -192,6 +192,32 @@ describe("clipS", () => {
   });
 });
 
+describe("wordsOfTone tier limit", () => {
+  const inventory = Array.from({ length: 30 }, (_, i) => word({ id: `t1_${i}`, tone: 1 }));
+
+  it("defaults to the whole pool, in inventory order", () => {
+    expect(wordsOfTone(inventory, 1).map((w) => w.id)).toEqual(inventory.map((w) => w.id));
+  });
+
+  it("slices to the first N words, deterministically", () => {
+    const sliced = wordsOfTone(inventory, 1, 5);
+    expect(sliced.map((w) => w.id)).toEqual(["t1_0", "t1_1", "t1_2", "t1_3", "t1_4"]);
+  });
+
+  it("returns nothing for a guest's 0-word limit", () => {
+    expect(wordsOfTone(inventory, 1, 0)).toEqual([]);
+  });
+
+  it("does not slice when the limit is Infinity (pro, and the gameplay default)", () => {
+    expect(wordsOfTone(inventory, 1, Infinity)).toHaveLength(30);
+  });
+
+  it("pickWord (the scored game/drill/learn path) is unaffected by a guest's 0-word limit", () => {
+    // pickWord calls wordsOfTone with no limit — a guest must still get gates.
+    expect(pickWord(inventory, 1, [], () => 0)).not.toBeNull();
+  });
+});
+
 describe("availableTones", () => {
   it("reports only the tones the inventory can build a gate for", () => {
     expect(availableTones([word({ tone: 1 }), word({ id: "b", tone: 4 })])).toEqual([1, 4]);

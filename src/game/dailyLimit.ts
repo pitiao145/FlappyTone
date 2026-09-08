@@ -1,16 +1,23 @@
 /**
- * The free tier's "N of 5 runs today" counter — localStorage only.
+ * The daily run cap — tier-aware, server-authoritative for accounts.
  *
- * This is explicitly NOT tamper-proof: there are no accounts (CLAUDE.md's
- * hard rule), so anyone can reset it by clearing site data or editing
- * localStorage in devtools. The `chk` field only deters a casual "edit the
- * number in devtools and reload" — it is a soft nudge for the free tier,
- * not enforcement. Don't build product logic that assumes this can't be
- * bypassed.
+ * The local day counter is unchanged from v1: still device-local, still not
+ * tamper-proof (CLAUDE.md's hard rule — clearing storage or editing devtools
+ * defeats it, and that's fine for a guest since a cleared guest mints a new
+ * anonymous identity anyway). What changed is where the *limit* comes from
+ * (`TIER_LIMITS[getTier()].runsPerDay`, not a flat constant) and that a
+ * signed-in player's count is also recorded server-side (`api/run.ts`),
+ * which a guest cannot be — no durable identity to count against.
+ *
+ * The local counter is deliberately never reset on a tier change: a guest at
+ * 3/3 who signs up becomes 3/10, not a fresh 0/10. Product logic, not a bug.
  */
+import { getSupabase } from "../data/supabase.ts";
+import { getTier } from "../data/tier.ts";
+import { TIER_LIMITS } from "./tiers.ts";
 
 const KEY = "toneflap.daily.v1";
-export const DAILY_RUN_LIMIT = 5;
+const SERVER_COUNT_KEY = "toneflap.daily.server.v1";
 
 interface DailyState {
   date: string; // YYYY-MM-DD, local
@@ -67,19 +74,114 @@ function save(state: DailyState): void {
   }
 }
 
+/** Cached last-known server count, for a signed-in player only. Read back
+ * so a page reload still shows a number without waiting on a network call. */
+function loadServerCount(): number | null {
+  try {
+    const raw = localStorage.getItem(SERVER_COUNT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { date?: unknown; count?: unknown };
+    if (typeof parsed.date !== "string" || typeof parsed.count !== "number") return null;
+    if (parsed.date !== today()) return null;
+    return parsed.count;
+  } catch {
+    return null;
+  }
+}
+
+function saveServerCount(count: number): void {
+  try {
+    localStorage.setItem(SERVER_COUNT_KEY, JSON.stringify({ date: today(), count }));
+  } catch {
+    // ignore
+  }
+}
+
 export interface DailyRuns {
   count: number;
+  /** `Infinity` for pro — callers must check `Number.isFinite(limit)` before
+   * rendering it, rather than assume every limit prints as a number. */
   limit: number;
 }
 
-export function loadDailyRuns(): DailyRuns {
-  return { count: load().count, limit: DAILY_RUN_LIMIT };
+function currentLimit(): number {
+  return TIER_LIMITS[getTier()].runsPerDay;
 }
 
-/** Call once per run start (behind the same mic gesture every run start already requires). */
+export function loadDailyRuns(): DailyRuns {
+  const local = load().count;
+  const server = getTier() !== "guest" ? loadServerCount() : null;
+  // The larger of the two: an offline session that only updated local
+  // should not show a number that goes backwards once the server is known.
+  const count = server != null ? Math.max(local, server) : local;
+  return { count, limit: currentLimit() };
+}
+
+/**
+ * Call once per run start (behind the same mic gesture every run start
+ * already requires).
+ *
+ * Guest: local only, same as before. Signed-in: also POSTs to `api/run.ts`
+ * and caches the returned count — but local is incremented either way, so an
+ * offline session still shows an honest number, and a failed request never
+ * blocks the run that's already starting. This is a deliberate bypass: a
+ * network blip must not make the game unplayable (CLAUDE.md's "never scores
+ * the player wrong" spirit applies here too).
+ */
 export function incrementDailyRuns(): DailyRuns {
   const state = load();
   const next = { date: state.date, count: state.count + 1 };
   save(next);
-  return { count: next.count, limit: DAILY_RUN_LIMIT };
+  const limit = currentLimit();
+
+  if (getTier() !== "guest") {
+    void recordServerRun();
+  }
+
+  return { count: next.count, limit };
+}
+
+async function recordServerRun(): Promise<void> {
+  try {
+    const supabase = getSupabase();
+    if (!supabase) return;
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return;
+    const res = await fetch("/api/run", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      body: JSON.stringify({ day: today() }),
+    });
+    if (!res.ok) return;
+    const payload = (await res.json()) as { count: number };
+    if (typeof payload.count === "number") saveServerCount(payload.count);
+  } catch {
+    // Never blocks a run — see this function's doc comment above. The local
+    // count above has already been saved, so the player still sees a
+    // number; the server just doesn't hear about this run until it can.
+  }
+}
+
+/** Refreshes the cached server count for a signed-in player, e.g. on app
+ * load. Never throws, never blocks — same contract as `src/data/`. */
+export async function refreshServerDailyRuns(): Promise<void> {
+  if (getTier() === "guest") return;
+  try {
+    const supabase = getSupabase();
+    if (!supabase) return;
+    const { data } = await supabase.auth.getSession();
+    const userId = data.session?.user.id;
+    if (!userId) return;
+    const { data: row, error } = await supabase
+      .from("daily_runs")
+      .select("count")
+      .eq("user_id", userId)
+      .eq("day", today())
+      .maybeSingle();
+    if (error || !row) return;
+    saveServerCount(row.count);
+  } catch {
+    // ignore — see module doc comment
+  }
 }

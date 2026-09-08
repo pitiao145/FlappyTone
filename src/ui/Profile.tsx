@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { capturePostHogEvent } from "../analytics/posthog.ts";
 import { getAccount, type Account } from "../data/account.ts";
 import { displayName } from "../data/leaderboard.ts";
-import { DAILY_RUN_LIMIT, loadDailyRuns } from "../game/dailyLimit.ts";
+import { loadDailyRuns } from "../game/dailyLimit.ts";
 import { AccountCard } from "./AccountCard.tsx";
 import { FREE_SUMMARY, PRO_FEATURES, PRO_PRICE } from "./plan.ts";
 
@@ -21,7 +21,8 @@ const DevTierCard = import.meta.env.DEV
 export function Profile({ onEarlyBird }: Props) {
   const daily = useMemo(() => loadDailyRuns(), []);
   const boardName = useMemo(() => displayName(), []);
-  const usedPct = Math.min(100, (daily.count / DAILY_RUN_LIMIT) * 100);
+  const unlimited = !Number.isFinite(daily.limit);
+  const usedPct = unlimited ? 0 : Math.min(100, (daily.count / daily.limit) * 100);
   const [account, setAccount] = useState<Account | null>(null);
 
   useEffect(() => {
@@ -68,7 +69,7 @@ export function Profile({ onEarlyBird }: Props) {
           <span className="badge badge-free">Free</span>
         </div>
         <p className="plan-usage">
-          {daily.count} / {DAILY_RUN_LIMIT} runs used today
+          {daily.count} / {unlimited ? "∞" : daily.limit} runs used today
         </p>
         <span className="teaser-bar plan-usage-bar">
           <span className="teaser-bar-fill" style={{ width: `${usedPct}%` }} />

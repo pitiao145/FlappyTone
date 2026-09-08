@@ -159,9 +159,19 @@ export function loadWords(manifest: unknown): Word[] {
   return words;
 }
 
-/** The words of one tone, in inventory order. */
-export function wordsOfTone(words: Word[], tone: Tone): Word[] {
-  return words.filter((w) => w.tone === tone);
+/**
+ * The words of one tone, in inventory order.
+ *
+ * `limit` slices to the first `limit` words in inventory order — fixed and
+ * deterministic, so a free player sees the same words every session. Default
+ * `Infinity` (no slice): gameplay callers (`pickWord`, feeding the scored
+ * game/drill/learn) must never run out of words for a gated tier, so they
+ * keep the unrestricted call. Only the practice/selection surface (the
+ * Visualiser's per-tone word list) passes a tier's `wordsPerTone` limit.
+ */
+export function wordsOfTone(words: Word[], tone: Tone, limit: number = Infinity): Word[] {
+  const pool = words.filter((w) => w.tone === tone);
+  return Number.isFinite(limit) ? pool.slice(0, Math.max(0, limit)) : pool;
 }
 
 /**
