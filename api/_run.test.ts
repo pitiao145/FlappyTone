@@ -84,6 +84,7 @@ describe("POST /api/run", () => {
     readError?: unknown;
     insertError?: unknown;
     updateError?: unknown;
+    entitlement?: { has_access: boolean } | null;
   }) {
     const user = "user" in opts ? opts.user : { id: "user-1", is_anonymous: false };
     const insertSingle = vi.fn(async () => ({
@@ -95,7 +96,22 @@ describe("POST /api/run", () => {
       error: opts.updateError ?? null,
     }));
 
-    const fromMock = vi.fn(() => {
+    const entitlementsEq = vi.fn();
+    const fromMock = vi.fn((table: string) => {
+      if (table === "entitlements") {
+        const entBuilder: any = {
+          select: vi.fn(() => entBuilder),
+          eq: vi.fn((...args: unknown[]) => {
+            entitlementsEq(...args);
+            return entBuilder;
+          }),
+          maybeSingle: vi.fn(async () => ({
+            data: opts.entitlement ?? null,
+            error: null,
+          })),
+        };
+        return entBuilder;
+      }
       const builder: any = {
         select: vi.fn(() => builder),
         eq: vi.fn(() => builder),
@@ -132,7 +148,8 @@ describe("POST /api/run", () => {
     }));
 
     vi.resetModules();
-    return import("./run.js");
+    const mod = await import("./run.js");
+    return { ...mod, entitlementsEq };
   }
 
   it("returns 401 when auth.getUser fails to resolve a user", async () => {
@@ -181,5 +198,58 @@ describe("POST /api/run", () => {
     });
     const res = await POST(req());
     expect(res.status).toBe(502);
+  });
+
+  it("gives an entitled user limit:null and allowed:true far past the free limit", async () => {
+    const { POST } = await loadWithMockedSupabase({
+      existingRow: { count: 999 },
+      entitlement: { has_access: true },
+    });
+    const res = await POST(req());
+    const text = await res.text();
+    expect(text).not.toContain("Infinity");
+    const payload = JSON.parse(text) as { count: number; limit: number | null; allowed: boolean };
+    expect(payload.count).toBe(1000);
+    expect(payload.limit).toBeNull();
+    expect(payload.allowed).toBe(true);
+  });
+
+  it("caps a user with no entitlements row at the free limit", async () => {
+    const { POST } = await loadWithMockedSupabase({
+      existingRow: { count: 10 },
+      entitlement: null,
+    });
+    const res = await POST(req());
+    const payload = (await res.json()) as { count: number; limit: number | null; allowed: boolean };
+    expect(payload.limit).toBe(10);
+    expect(payload.count).toBe(11);
+    expect(payload.allowed).toBe(false);
+  });
+
+  it("caps a user with has_access:false the same as no row", async () => {
+    const { POST } = await loadWithMockedSupabase({
+      existingRow: { count: 10 },
+      entitlement: { has_access: false },
+    });
+    const res = await POST(req());
+    const payload = (await res.json()) as { count: number; limit: number | null; allowed: boolean };
+    expect(payload.limit).toBe(10);
+    expect(payload.count).toBe(11);
+    expect(payload.allowed).toBe(false);
+  });
+
+  it("looks up entitlements using the JWT-verified user id, not the request body", async () => {
+    const { POST, entitlementsEq } = await loadWithMockedSupabase({
+      user: { id: "user-1", is_anonymous: false },
+      existingRow: null,
+      entitlement: { has_access: true },
+    });
+    const res = await POST(
+      req({ body: { day: "2026-09-08", userId: "attacker-controlled-id", user_id: "attacker-controlled-id" } }),
+    );
+    const payload = (await res.json()) as { limit: number | null; allowed: boolean };
+    expect(payload.limit).toBeNull();
+    expect(payload.allowed).toBe(true);
+    expect(entitlementsEq).toHaveBeenCalledWith("user_id", "user-1");
   });
 });

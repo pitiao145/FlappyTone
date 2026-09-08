@@ -5613,6 +5613,26 @@ section.hero-cards {
   padding: 2px 0;
 }
 
+/* Guest/free teaser cut-off — same "you'd rank" language as .leaderboard-pinned
+   below it, marking what's hidden rather than just stopping the list. */
+.leaderboard-locked-row {
+  color: var(--ink-muted);
+  justify-content: space-between;
+}
+
+/* Same visual language as `.progress-screen .pro-badge` ("🔒 Pro"), scoped
+   here since this pill sits inside a leaderboard row rather than a card header. */
+.leaderboard-locked-row .pro-badge {
+  white-space: nowrap;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--surface);
+  background: var(--warn);
+  border: 2px solid var(--ink);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+
 .leaderboard-pinned {
   border-bottom: none;
   border-radius: var(--radius-md);
@@ -6146,6 +6166,15 @@ section.hero-cards {
   border-bottom: 1px solid var(--line-strong);
 }
 
+/* Only two children (name + badge), not the rank/name/score triple the grid
+   above is built for — back to a plain flex row so the badge doesn't strand
+   itself in the middle grid column. */
+.progress-screen .leaderboard-locked-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .progress-screen .leaderboard-name {
   font-weight: 600;
 }
@@ -6203,6 +6232,15 @@ section.hero-cards {
   font-size: 1.5rem;
   font-weight: 800;
   margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Marks whichever column is the player's own current tier. */
+.price-card-current {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
 }
 
 /* .sticker-card's panel fill wins at equal-ish specificity — qualify so the
@@ -6807,6 +6845,16 @@ section.hero-cards {
   font-size: var(--text-xs);
   color: var(--ink-dim);
   margin: 4px 0 var(--space-3);
+}
+
+/* The guest-only "create a free account" door, above the Pro pay button. */
+.modal-create-account {
+  width: 100%;
+  padding: 12px 20px;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-base);
+  margin-bottom: var(--space-2);
 }
 
 .modal-divider {

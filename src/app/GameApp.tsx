@@ -1023,6 +1023,7 @@ export default function GameApp() {
             onRecalibrate={setSettings}
             mode={lastModeRef.current}
             challengeScore={challengeScoreState}
+            onUpgrade={() => openEarlyBird("leaderboard", "leaderboard-join")}
           />
         )}
         </div>
@@ -1032,6 +1033,10 @@ export default function GameApp() {
           surface={earlyBird.surface}
           feature={earlyBird.feature}
           onClose={() => setEarlyBird(null)}
+          onCreateAccount={() => {
+            setEarlyBird(null);
+            setScreen("profile");
+          }}
         />
       )}
     </div>

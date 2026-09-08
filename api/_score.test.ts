@@ -78,7 +78,7 @@ describe("POST /api/score", () => {
     // Each test dynamically re-imports score.ts after vi.resetModules() so
     // the module-level rate-limit Map doesn't leak state between tests.
     async function loadWithMockedSupabase(opts: {
-      user?: { id: string } | null;
+      user?: { id: string; is_anonymous?: boolean } | null;
       getUserError?: unknown;
       existingRow?: { best_score: number } | null;
       readError?: unknown;
@@ -150,6 +150,24 @@ describe("POST /api/score", () => {
       const { POST } = await loadWithMockedSupabase({ user: null });
       const res = await POST(req());
       expect(res.status).toBe(401);
+    });
+
+    it("returns 403 for an anonymous user (guests cannot join the board)", async () => {
+      const { POST } = await loadWithMockedSupabase({
+        user: { id: "user-1", is_anonymous: true },
+        existingRow: null,
+      });
+      const res = await POST(req());
+      expect(res.status).toBe(403);
+    });
+
+    it("accepts a permanent (non-anonymous) user", async () => {
+      const { POST } = await loadWithMockedSupabase({
+        user: { id: "user-1", is_anonymous: false },
+        existingRow: null,
+      });
+      const res = await POST(req({ body: { score: 500 } }));
+      expect(res.status).toBe(200);
     });
 
     it.each([1.5, -1, 1_000_001, NaN, "100"])("returns 400 for an invalid score %p", async (score) => {

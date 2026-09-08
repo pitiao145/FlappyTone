@@ -2,9 +2,10 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { capturePostHogEvent } from "../analytics/posthog.ts";
 import { getAccount, type Account } from "../data/account.ts";
 import { displayName } from "../data/leaderboard.ts";
+import { useTier } from "../data/tier.ts";
 import { loadDailyRuns } from "../game/dailyLimit.ts";
 import { AccountCard } from "./AccountCard.tsx";
-import { FREE_SUMMARY, PRO_FEATURES, PRO_PRICE } from "./plan.ts";
+import { FREE_SUMMARY, GUEST_SUMMARY, PRO_FEATURES, PRO_PRICE, TIER_LABEL } from "./plan.ts";
 
 interface Props {
   onEarlyBird: (feature: string) => void;
@@ -19,6 +20,7 @@ const DevTierCard = import.meta.env.DEV
 
 /** The Profile tab: account/guest identity, the real daily free-run count, and the EarlyBird pitch. */
 export function Profile({ onEarlyBird }: Props) {
+  const tier = useTier();
   const daily = useMemo(() => loadDailyRuns(), []);
   const boardName = useMemo(() => displayName(), []);
   const unlimited = !Number.isFinite(daily.limit);
@@ -66,7 +68,7 @@ export function Profile({ onEarlyBird }: Props) {
       <section className="progress-card">
         <div className="progress-card-header">
           <h3>Your plan</h3>
-          <span className="badge badge-free">Free</span>
+          <span className="badge badge-free">{TIER_LABEL[tier]}</span>
         </div>
         <p className="plan-usage">
           {daily.count} / {unlimited ? "∞" : daily.limit} runs used today
@@ -74,9 +76,16 @@ export function Profile({ onEarlyBird }: Props) {
         <span className="teaser-bar plan-usage-bar">
           <span className="teaser-bar-fill" style={{ width: `${usedPct}%` }} />
         </span>
-        <p className="note">Free includes: {FREE_SUMMARY}</p>
+        <p className="note">
+          {tier === "pro"
+            ? "Pro includes: everything, current and future."
+            : tier === "free"
+              ? `Free includes: ${FREE_SUMMARY}`
+              : `Guest includes: ${GUEST_SUMMARY}`}
+        </p>
       </section>
 
+      {tier !== "pro" && (
       <section className="earlybird-card">
         <p className="modal-eyebrow">★ Support the app with EarlyBird access</p>
         <p className="earlybird-price">
@@ -113,6 +122,7 @@ export function Profile({ onEarlyBird }: Props) {
           Not ready? Get notified at the EarlyBird price →
         </button>
       </section>
+      )}
     </div>
   );
 }

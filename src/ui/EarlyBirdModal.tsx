@@ -1,60 +1,100 @@
 import { useEffect, useId, useState } from "react";
 import { capturePostHogEvent } from "../analytics/posthog.ts";
+import { useTier } from "../data/tier.ts";
+import { TIER_LIMITS } from "../game/tiers.ts";
 import { PRO_FEATURES, PRO_PRICE } from "./plan.ts";
 import { useNewsletterSubscribe } from "./useNewsletterSubscribe.ts";
 
-export type EarlyBirdSurface = "progress" | "profile" | "daily-limit" | "visualiser";
+export type EarlyBirdSurface = "progress" | "profile" | "daily-limit" | "visualiser" | "leaderboard";
 
 interface Props {
   surface: EarlyBirdSurface;
   /** Which specific CTA opened the modal — tags the `earlybird_pay_click` event, not shown in copy. */
   feature: string;
   onClose: () => void;
+  /**
+   * Routes to the account UI (`AccountCard.tsx`, on the Profile screen) — the
+   * "create a free account" door. Only shown to a guest, and only when the
+   * caller wires this in; omit it to keep the door hidden (e.g. a spot that
+   * can't navigate to Profile). `GameApp.tsx` should pass something that
+   * switches to the Profile tab and closes this modal.
+   */
+  onCreateAccount?: () => void;
 }
 
 /**
- * Copy that actually differs by surface. Price, payment button and the
- * email-capture fallback below are identical for all of them — only the
- * reason the modal opened changes.
+ * Copy that actually differs by surface, and by whether the player is a
+ * guest (no account) or already free (account, no Pro). A guest's copy names
+ * the free account as the immediate next step; a free player's copy is
+ * Pro-only, since they already took that step.
  */
-const COPY: Record<EarlyBirdSurface, { eyebrow: string; title: string; body: string }> = {
+const COPY: Record<
+  EarlyBirdSurface,
+  { eyebrow: string; title: string; body: string; guestBody?: string }
+> = {
   progress: {
     eyebrow: "★ EarlyBird access",
     title: "Lock in the lowest price, forever",
     body: "FlappyTone is still early. Sign up now for unlimited play and access to all the future features. EarlyBirds get everything as it lands, and never pay again.",
+    guestBody:
+      "Create a free account to save your progress and get a real row on the leaderboard. Ready to go further? EarlyBird unlocks unlimited play and every future feature, for good.",
   },
   profile: {
     eyebrow: "★ EarlyBird access",
     title: "Lock in the lowest price, forever",
     body: "FlappyTone is still early. Sign up now for unlimited play and access to all the future features. EarlyBirds get everything as it lands, and never pay again.",
+    guestBody:
+      "Create a free account to save your progress and get a real row on the leaderboard. Ready to go further? EarlyBird unlocks unlimited play and every future feature, for good.",
   },
   "daily-limit": {
     eyebrow: "★ Daily limit reached",
     title: "You've flown all your free runs today",
     body: "Come back tomorrow, or go EarlyBird now for unlimited play today and every day after — plus everything else as it lands. Full refund anytime.",
+    guestBody: `Come back tomorrow, or create a free account for ${TIER_LIMITS.free.runsPerDay} runs a day instead of ${TIER_LIMITS.guest.runsPerDay}. Want no limit at all? EarlyBird gives unlimited play today and every day after.`,
+  },
+  leaderboard: {
+    eyebrow: "★ Claim your place",
+    title: "Your score is good enough to be on the board",
+    body: "A free account puts you on the weekly leaderboard and saves your progress across devices. EarlyBird adds your own name, every word, and unlimited runs.",
   },
   visualiser: {
     eyebrow: "★ EarlyBird access",
     title: "Practise every word, every tone",
     body: "The visualiser's per-tone practice and the full word list come with EarlyBird — along with everything else as it lands. Full refund anytime.",
+    guestBody:
+      "Create a free account to unlock per-tone practice. EarlyBird goes further, with every word for every tone and everything else as it lands.",
   },
 };
 
 /**
  * The EarlyBird signup modal — every locked "Soon" section across Progress
- * and Profile opens this same component, and so does hitting the free
- * tier's 5-runs-a-day cap (`dailyLimitReached` in GameApp.tsx). No payment
+ * and Profile opens this same component, and so does hitting the daily
+ * runs cap (`dailyLimitReached` in GameApp.tsx). A guest also sees a second
+ * door here: creating a free account, a smaller step than paying. No payment
  * processor is wired up yet, so "Pay" is disabled; only the email capture is
  * live, sharing the Kit integration `ComingSoon`/Landing already use
  * (`useNewsletterSubscribe`, `api/newsletter.ts`), tagged with the dedicated
  * "earlybird" source.
  */
-export function EarlyBirdModal({ surface, feature, onClose }: Props) {
+export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: Props) {
   const inputId = useId();
   const payPromptInputId = useId();
   const [email, setEmail] = useState("");
   const { status, error, submit } = useNewsletterSubscribe("earlybird");
+  const tier = useTier();
+  const isGuest = tier === "guest";
   const copy = COPY[surface];
+  const body = (isGuest && copy.guestBody) || copy.body;
+  const showAccountDoor = isGuest && !!onCreateAccount;
+
+  // Fired once per open, from the modal itself, so no call site can forget
+  // it — the daily-limit surface used to be the only one tracking a "shown"
+  // event, tagged separately at each call site.
+  useEffect(() => {
+    capturePostHogEvent("earlybird_modal_shown", { surface, feature, tier });
+    // Only on mount/surface change, not on every tier refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [surface, feature]);
   /**
    * "Pay" can't actually charge anyone yet, so a tap on it is a missed
    * conversion unless it's caught here — this opens a second, focused modal
@@ -141,7 +181,26 @@ export function EarlyBirdModal({ surface, feature, onClose }: Props) {
           <p className="modal-price">
             {PRO_PRICE} <span className="modal-price-note">once · lifetime</span>
           </p>
-          <p className="modal-body">{copy.body}</p>
+          <p className="modal-body">{body}</p>
+
+          {showAccountDoor && (
+            <button
+              type="button"
+              className="primary modal-create-account"
+              onClick={() => {
+                capturePostHogEvent("earlybird_create_account_click", { surface, feature });
+                onCreateAccount?.();
+              }}
+            >
+              Create a free account
+            </button>
+          )}
+
+          {showAccountDoor && (
+            <div className="modal-divider">
+              <span>or go further</span>
+            </div>
+          )}
 
           <ul className="modal-features">
             {PRO_FEATURES.map((label) => (

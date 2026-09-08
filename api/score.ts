@@ -91,6 +91,15 @@ export async function POST(request: Request): Promise<Response> {
   if (userError || !user) {
     return json(401, { error: "Invalid or expired session." });
   }
+  // Guests (signed-out or anonymous) cannot join the board — no row, no
+  // submission. The client gates this too (GameOver.tsx's `canJoin`), but
+  // that is only a UI courtesy; this is the actual enforcement, since the
+  // client cannot be trusted not to call this endpoint directly. A player
+  // reaches here only after `is_anonymous` has flipped false, i.e. after
+  // adding an email (`src/data/account.ts`).
+  if (user.is_anonymous) {
+    return json(403, { error: "A free account is required to join the leaderboard." });
+  }
   const userId = user.id;
 
   const score = (body as Record<string, unknown>)?.score;

@@ -9,8 +9,9 @@ import {
 } from "../game/runHistory.ts";
 import { loadStreak } from "../game/streak.ts";
 import type { Word } from "../game/words.ts";
+import { useTier } from "../data/tier.ts";
 import { Leaderboard } from "./Leaderboard.tsx";
-import { FREE_FEATURES, PRO_FEATURES, PRO_PRICE } from "./plan.ts";
+import { FREE_FEATURES, GUEST_FEATURES, PRO_FEATURES, PRO_PRICE, TIER_LABEL } from "./plan.ts";
 import { ToneAverageCard } from "./ToneAverageCard.tsx";
 import { TONE_LINE_COLOR } from "./toneColors.ts";
 
@@ -65,6 +66,7 @@ interface Props {
  * design handoff in docs/design_handoff_progress_pricing/.
  */
 export function Progress({ onEarlyBird }: Props) {
+  const tier = useTier();
   const [words, setWords] = useState<Word[] | null>(null);
   useEffect(() => {
     loadInventory().then(setWords, () => setWords([]));
@@ -334,10 +336,24 @@ export function Progress({ onEarlyBird }: Props) {
         </div>
 
         <div className="pricing-cards">
-          <div className="sticker-card price-card">
+          <div className={`sticker-card price-card${tier === "guest" ? " price-card-current" : ""}`}>
             <div className="price-card-head">
-              <h3>Free</h3>
-              <p className="note">Everything you&rsquo;re using today</p>
+              <h3>Guest{tier === "guest" && <span className="badge badge-free">{TIER_LABEL.guest}</span>}</h3>
+              <p className="note">No signup needed</p>
+            </div>
+            <ul className="price-list">
+              {GUEST_FEATURES.map((f) => (
+                <li key={f.label} className={f.soon ? "price-list-soon" : undefined}>
+                  {f.label}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className={`sticker-card price-card${tier === "free" ? " price-card-current" : ""}`}>
+            <div className="price-card-head">
+              <h3>Free{tier === "free" && <span className="badge badge-free">{TIER_LABEL.free}</span>}</h3>
+              <p className="note">Sign up with an email, no payment</p>
             </div>
             <ul className="price-list">
               {FREE_FEATURES.map((f) => (
@@ -348,7 +364,9 @@ export function Progress({ onEarlyBird }: Props) {
             </ul>
           </div>
 
-          <div className="sticker-card price-card price-card-pro">
+          <div
+            className={`sticker-card price-card price-card-pro${tier === "pro" ? " price-card-current" : ""}`}
+          >
             <div className="price-card-head price-card-head-pro">
               <h3>Pro - Support the app</h3>
               <span className="price-tag">
@@ -360,19 +378,21 @@ export function Progress({ onEarlyBird }: Props) {
                 <li key={label}>{label}</li>
               ))}
             </ul>
-            <button
-              type="button"
-              className="price-cta"
-              onClick={() => {
-                capturePostHogEvent("progress_earlybird_pricing_click", {});
-                onEarlyBird("pricing");
-              }}
-            >
-              Join EarlyBird
-            </button>
+            {tier !== "pro" && (
+              <button
+                type="button"
+                className="price-cta"
+                onClick={() => {
+                  capturePostHogEvent("progress_earlybird_pricing_click", {});
+                  onEarlyBird("pricing");
+                }}
+              >
+                Join EarlyBird
+              </button>
+            )}
             <p className="price-foot">
-              Later, Pro moves to credit-based system. You'll need to buy food for your bird to keep flying. EarlyBirds keep
-              full access and will have access toall the future features.
+              Beta price, before it moves to ongoing credits. EarlyBirds keep full access and get
+              every future feature as it ships, at no extra cost.
             </p>
           </div>
         </div>

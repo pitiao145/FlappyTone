@@ -12,9 +12,24 @@ interface Props {
   onDismiss: () => void;
   busy?: boolean;
   projected?: Projected | null;
+  /**
+   * False for a guest: they can see the board and their projected rank, but
+   * have no permanent account to hold a row. The modal becomes an upgrade
+   * prompt — `onJoin` still fires, but the caller wires it to opening the
+   * account/upgrade path instead of `joinBoard()`. Default true (the
+   * existing free/Pro "post my score" flow).
+   */
+  canJoin?: boolean;
 }
 
-export function JoinBoardModal({ name, onJoin, onDismiss, busy = false, projected = null }: Props) {
+export function JoinBoardModal({
+  name,
+  onJoin,
+  onDismiss,
+  busy = false,
+  projected = null,
+  canJoin = true,
+}: Props) {
   const titleId = useId();
 
   useEffect(() => {
@@ -22,6 +37,40 @@ export function JoinBoardModal({ name, onJoin, onDismiss, busy = false, projecte
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onDismiss]);
+
+  if (!canJoin) {
+    return (
+      <div className="modal-backdrop" onClick={onDismiss}>
+        <div
+          className="modal-card modal-card--sheet join-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="join-modal-handle" aria-hidden="true" />
+          <button type="button" className="modal-close" onClick={onDismiss} aria-label="Close">×</button>
+          <p className="join-modal-trophy" aria-hidden="true">🏆</p>
+          <h2 id={titleId} className="join-modal-title">Claim your place on the board</h2>
+          <p className="join-modal-projection">
+            {projected ? (
+              <>
+                <strong>{projected.points.toLocaleString()}</strong> would land you around{" "}
+                <strong>#{projected.rank} of {projected.total}</strong> this week — a free account
+                is what saves your spot.
+              </>
+            ) : (
+              "A free account is what lets your score hold a spot on the public leaderboard."
+            )}
+          </p>
+          <button type="button" className="join-modal-post-btn" onClick={onJoin} disabled={busy}>
+            {busy ? "Opening…" : "Create a free account"}
+          </button>
+          <button type="button" className="join-modal-dismiss-btn" onClick={onDismiss} disabled={busy}>Not now</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="modal-backdrop" onClick={onDismiss}>
