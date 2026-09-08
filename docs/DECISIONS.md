@@ -15,6 +15,67 @@ approach, or where the obvious-looking alternative was tried and failed.
 
 **How it's introduced, so it doesn't become slop:** identity via Supabase anonymous sign-in (an anonymous user upgrades in place to a permanent account on email signup — no guest-row migration); personal gameplay stats stay **local-first** and sync up only on signup; the only server write for anonymous users is the leaderboard score, through a server-authoritative Vercel function holding the service-role key (clients never write it). RLS on every table, written performance-correct from line one. Every schema change is a numbered migration. Region Tokyo (permanent). **Not yet shipped — the code is still client-only until each piece lands.** When a piece lands, update CLAUDE.md and PRD.md to match what is actually in the code, not what is planned.
 
+### Tier enforcement, server run counting, and payments ship (8 Sep 2026)
+
+Phases 3–4 of `docs/flappytone-SPEC-monetization-launch.md`: `TIER_LIMITS`
+went from defined-but-unconsumed to the thing that actually gates a run, a
+word list, and a leaderboard row, and `api/webhook-ls.ts` became the first
+real money in the codebase. Several of these closed gaps that only showed up
+once the wiring existed to expose them:
+
+**The run cap's day boundary is the client's local date, server-bounded, not
+UTC.** `api/run.ts` takes `day` from the client (`YYYY-MM-DD`, its own local
+date) rather than computing it server-side, because the cap should reset on
+the player's day, not UTC's — storing UTC would reset a Taiwan player's runs
+at 8am local. A client-supplied date is also a client-supplied lie, so the
+server bounds it to within `DAY_MS` of its own UTC clock: a device clock can
+shift the boundary by the timezone difference, but it cannot claim a day a
+week away to reset the counter early. This is the opposite tradeoff from
+`api/score.ts`'s `week_id`, which is computed server-side only — a leaderboard
+week is shared, contestable state where every player must agree on the
+boundary; a personal daily cap is not.
+
+**Guests are counted locally; accounts are counted server-side — not because
+one is more trusted, but because only one has a durable identity.**
+`daily_runs` (migration `0010`, tightened by `0011` to permanent accounts
+only) exists specifically so a free/Pro account's cap can't be reset by
+clearing `localStorage`. A guest's identity *is* whatever's in localStorage —
+clearing it mints a new anonymous user, so a server-side guest row would cap
+nothing a player couldn't already evade for free. `dailyLimit.ts` keeps
+guests local-only rather than pretending a server count means something for
+a tier that has no durable identity to hang it on.
+
+**`api/score.ts` was writable by anonymous sessions until this pass.** It
+verified the JWT but never checked `is_anonymous`, so anyone could open
+devtools, mint an anonymous Supabase session, and POST a real row onto the
+public leaderboard — `GameOver.tsx`'s `canJoin` gate was the only thing
+standing between a guest and a write, and a client-side gate is not
+enforcement. Closed with a `403` when `user.is_anonymous` (see
+`f42c0d1`). Recorded as an incident, not a tidy-up: the leaderboard was
+spoofable by anyone who opened devtools for the several days between Phase 1
+shipping and this fix.
+
+**`hasJoined()` tested for the existence of a `profiles` row, and that
+stopped being a fair proxy the moment something other than `joinBoard()`
+started creating one.** It was correct while `joinBoard()` was the only
+writer. Once account signup started creating a `profiles` row too (the stats
+sync, and the marketing-consent write), a brand-new account read as
+"already joined" and its first scored run posted to the public board with no
+opt-in — caught in play, by a real signup taking exactly this path. Fixed by
+checking `leaderboard_scores` instead (`1b2339a`): no client can write that
+table, so a row there is proof of an actual join, not an inference from a
+side effect.
+
+**Anonymous sign-in is now unreachable from any live path.** `joinBoard()`
+was the only caller of `signInAnonymously()`, and joining the board no longer
+signs a guest in anonymously first — a guest sees the board and their
+would-be rank without an identity at all, and only an email account can post
+a score (see `api/score.ts`'s `is_anonymous` check above). Existing anonymous
+rows from before this change were deliberately left alone: a legacy anonymous
+player who joined the board keeps their row and their scores, but a fresh
+run under that identity no longer submits, since posting requires a
+non-anonymous session now.
+
 ### A refunded player keeps their chosen name (8 Sep 2026)
 
 Renaming is Pro, enforced by a `BEFORE UPDATE` trigger on `profiles` that

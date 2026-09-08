@@ -1,6 +1,6 @@
 # FlappyTone — Tiers and Payment Spec
 
-**Status:** planning · **Branch base:** `feat/tiers-payment` · **Written:** 8 Sep 2026
+**Status:** Phases 1–4 shipped · **Branch:** `feat/tiers-payment` · **Written:** 8 Sep 2026 · **Updated:** 8 Sep 2026
 **Goal:** ship a paid beta to Reddit — guest/free/pro tiers, real accounts, and a working Lemon Squeezy checkout, with the game itself kept free and shareable.
 
 ## How to use this spec (for the coding agent)
@@ -23,6 +23,13 @@ Positioning: sold honestly as **beta** — "core live now, more ships weekly, pr
 ---
 
 ## Current codebase state (cross-reference)
+
+> **Historical, as of 8 Sep 2026 before any of this was built.** Phases 1–4
+> have since shipped and most of what follows is now out of date — it is kept
+> as the starting picture the plan was written against. For what the code
+> actually does today, read CLAUDE.md and `docs/PRD.md`, which were brought
+> level after Phase 4.
+
 
 - **Entitlement seam: does NOT exist.** No `has_access`, no tier concept anywhere.
 - **Run cap:** `src/game/dailyLimit.ts` — flat 5/day, localStorage only, **device-local, not tier-aware**. Consumed in `src/app/GameApp.tsx` (`dailyLimitReached`), shown in `src/ui/Profile.tsx`, `src/ui/GameOver.tsx`.
@@ -56,7 +63,7 @@ The current backend is already live and its **write model is deliberate**; `has_
 
 **`database.types.ts` is generated** — regenerate it after any schema change (new `entitlements` table, `marketing_consent` column) so the client stays typed.
 
-## PHASE 1 — Entitlement seam + dev toggle
+## PHASE 1 — Entitlement seam + dev toggle ✅ SHIPPED
 **Why first:** everything downstream reads this. Without it, gates get hardcoded and rewritten twice.
 **Deliverables:**
 - New module (e.g. `src/data/tier.ts`) exposing `getTier(): 'guest' | 'free' | 'pro'` and a React hook `useTier()`, derived from **account status** (`getAccount()` in `account.ts`) **+ a `has_access` flag** (see Phase 3 for where the flag comes from; stub it now).
@@ -64,7 +71,7 @@ The current backend is already live and its **write model is deliberate**; `has_
 - Central tier config: runs/day per tier (guest 3, free 10, pro ∞), words-per-tone per tier, feature flags. One source of truth.
 **Done when:** flipping the dev toggle changes `useTier()` and nothing else reads tier state directly.
 
-## PHASE 2 — Auth to production
+## PHASE 2 — Auth to production ✅ SHIPPED
 **Why:** the guest→free boundary needs real, persistent accounts.
 **Deliverables:**
 - Un-gate the account UI out of `src/dev/AccountCard.tsx` into the real app (Profile/Settings).
@@ -74,7 +81,7 @@ The current backend is already live and its **write model is deliberate**; `has_
 - **Automatic local→profile sync on signup.** The local-storage aggregates must merge into the profile **automatically** the moment an anonymous user upgrades to a real account — no manual step. Call `syncAccount()` (`src/data/account.ts`) on the success of the email-upgrade flow (`startEmailSignIn` → confirmation), and **remove the manual "Sync" button** (`handleSync` in `src/dev/AccountCard.tsx`). Keep the never-throw + merge-by-max contract intact (a failed sync must leave local data authoritative). Sync stays idempotent so a later sign-in on a new device still merges cleanly.
 **Done when:** a player can sign up (email+password), it persists across logout + devices, progress syncs, and consent is recorded.
 
-## PHASE 3 — Gate the app against `useTier()`
+## PHASE 3 — Gate the app against `useTier()` ✅ SHIPPED
 **Why:** biggest surface area; fully testable with the Phase 1 dev toggle, no payment needed.
 **Deliverables:**
 - Convert `dailyLimit.ts` + `GameApp.tsx` run cap from flat 5 to **tier-driven** (3/10/∞).
@@ -86,7 +93,7 @@ The current backend is already live and its **write model is deliberate**; `has_
 - Every lock opens the **two-door modal** (`EarlyBirdModal.tsx`): "Upgrade" + "Join mailing list". Instrument both per lock location (PostHog events).
 **Done when:** with the dev toggle, all three tiers show correct gating end-to-end and copy is consistent.
 
-## PHASE 4 — Wire Lemon Squeezy
+## PHASE 4 — Wire Lemon Squeezy ✅ SHIPPED
 **Why:** small, because Phase 3 already reads `has_access` everywhere.
 **Deliverables:**
 - Enable the Pay button in `EarlyBirdModal.tsx` → Lemon Squeezy hosted checkout (require sign-in first, so the purchase attaches to a real account).
@@ -95,14 +102,55 @@ The current backend is already live and its **write model is deliberate**; `has_
 **Done when:** one real $19 purchase flips the account to Pro automatically, a refund flips it back, verified on a real phone.
 
 ## PHASE 5 — Pre-launch hardening
-**Deliverables:**
-- Full loop test on a real phone: guest → signup → gated → pay → unlocked → logout/other device → still Pro.
-- Landing page pricing/beta section + "no AI" line; confirm `?ref=`/`?openExternalBrowser=1` share defaults.
-- **TOS + Privacy Policy updated** (payment via Lemon Squeezy as merchant-of-record, Supabase as processor, accounts + data stored, mailing-list consent). **Launch-gate item — must be live before the paid Reddit push.** (Tracked as a Notion task.)
-- Leaderboard tweaks/polish.
-**Done when:** the launch gate is fully green.
 
----
+Split after Phase 4, once the payment loop was verified end to end on a
+preview deploy. What remains divides into things that block a paid launch and
+things that are polish.
+
+### 5a — Launch gates (must be green before the paid Reddit push)
+
+- **TOS + Privacy Policy updated.** Lemon Squeezy as merchant of record,
+  Supabase as processor, accounts + data stored, mailing-list consent.
+  Tracked as a Notion task.
+- **Production environment variables.** Production currently has **no Supabase
+  and no Lemon Squeezy variables at all** — the whole backend is unconfigured
+  there, and everything built in Phases 1–4 is inert on `flappytone.com`.
+  Needs, in the Production scope: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`,
+  `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VITE_LEMONSQUEEZY_CHECKOUT_URL`,
+  `LEMONSQUEEZY_WEBHOOK_SECRET`.
+  **Going live is not just a deploy:** the Lemon Squeezy store has to be
+  switched to live mode, with its own webhook pointed at
+  `https://flappytone.com/api/webhook-ls` and its own signing secret. A
+  test-mode secret will not verify live payloads, and the failure looks like
+  the webhook silently doing nothing.
+- **Supabase dashboard settings** (settings, not code — see CLAUDE.md's
+  "Before accounts go live"):
+  - **Custom SMTP.** Mandatory. The built-in sender allows roughly two emails
+    an hour project-wide and is documented as unfit for production. Password
+    reset is unusable without it, and reset is the only recovery path a player
+    has, since email confirmation is deliberately off.
+  - **Leaked-password protection** (Auth → Passwords). Was harmless while auth
+    was magic-link only; password sign-in now ships, so it is real. Currently
+    the only outstanding security-advisor warning.
+  - **Redirect URLs allowlisted** per origin — production, previews, and
+    localhost. An unlisted redirect is silently replaced by the Site URL,
+    which is `/`, the marketing entry that ships no Supabase code: the
+    confirmation succeeds server-side and the browser never notices.
+  - **Re-run `get_advisors`** (security *and* performance) after the first real
+    signups; some lints only appear once tables hold data.
+
+### 5b — Deferred to a later session
+
+- **Full loop test on a real phone**: guest → signup → gated → pay → unlocked
+  → logout/other device → still Pro. The desktop loop was verified on a
+  preview deploy on 8 Sep 2026 (purchase granted, refund revoked, all four
+  tables consistent). The phone leg is the untested one, and it is where the
+  mic gesture and the checkout tab round-trip actually get exercised.
+- **Landing page**: pricing/beta section, the "no AI" line, confirm the
+  `?ref=` / `?openExternalBrowser=1` share defaults.
+- **Leaderboard tweaks/polish.**
+
+**Done when:** 5a is fully green. 5b is not a launch gate.
 
 ## Explicitly OUT of scope for launch
 Mascot roster · full trends/tone-shape charts (stay as SOON previews) · subscription SKU / monthly pricing · 7-day trial · tone-hint "why wrong" feature · iOS/Capacitor · Google OAuth (fast-follow if analytics show signup drop-off).

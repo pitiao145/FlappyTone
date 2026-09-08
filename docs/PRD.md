@@ -30,22 +30,30 @@ The four Mandarin tone marks (ˉ ˊ ˇ ˋ) are literally pitch-contour diagrams.
 a database backend are being added via Supabase (auth + Postgres) with
 Cloudflare R2 for object storage, starting with the leaderboard — see
 `docs/flappytone-ARCH-supabase.md` and `docs/flappytone-SPEC-supabase-phase1.md`.
-Payment is planned via Lemon Squeezy as merchant of record (EarlyBird), so
-building our own payment/billing backend stays out of scope.
+Payment is via Lemon Squeezy as merchant of record (EarlyBird) — `api/webhook-ls.ts`
+reacts to its webhook and never touches a card itself, so building our own
+payment/billing backend stays out of scope.
 
 **Phase 1 has shipped**: anonymous sign-in and a weekly leaderboard (§7.1).
 **Email accounts have shipped and are player-reachable**: the
 anonymous→permanent upgrade, per-tone stats on the server, and merge-by-max
 sync (§7.2). A free account is no longer the Pro tier — it's the guest→free
 gate (persistence, a real board row); Pro is depth and content on top.
-Voice-clip storage (Phase 3) is still ahead.
+**Tier gating is live**: the run cap, the visualiser's word list, and the
+leaderboard's visibility all read `TIER_LIMITS` now, and the Lemon Squeezy
+webhook is the sole writer of `has_access` (§7.2). Voice-clip storage
+(the backend arch's own Phase 3, object storage — distinct from the
+tiers/payment spec's own phase numbering) is still ahead.
 
-Personal gameplay state remains device-local and unsynced: the Progress tab's
-run history (`src/game/runHistory.ts`), the streak (`src/game/streak.ts`) and
-the "N of 5 free runs today" limiter (`src/game/dailyLimit.ts`) — none of it
-tamper-proof, none of it leaving the device. The sync-on-signup design carries
-these aggregates up once accounts land; today the leaderboard score is the only
-thing the game sends to a server.
+Personal gameplay state is local-first, not local-only. The Progress tab's
+run history (`src/game/runHistory.ts`) and the streak (`src/game/streak.ts`)
+stay device-local and unsynced — none of it tamper-proof. The daily run
+limiter (`src/game/dailyLimit.ts`) is local-only for a guest but
+server-authoritative for an account (`api/run.ts`, §7.2). Lifetime per-tone
+stats sync by merge-by-max for an account; an anonymous player's stats never
+reach the server at all. The leaderboard score, the run count, and the
+payment entitlement are the three values a signed-in player's browser sends
+to a server it doesn't fully trust itself on.
 
 ## 4. Platform & stack
 
@@ -196,16 +204,21 @@ cumulative total.
   devices" pitch. In Phase 2 the same user upgrades in place to a permanent
   account, keeping their scores.
 - **Names are generated, not chosen** (`BraveSparrow42`). Picking your own is a
-  planned Pro feature. Names are not unique; rows are distinguished by user id.
+  Pro feature. Names are not unique; rows are distinguished by user id.
 - **Joining is opt-in**, offered in a modal on game over and only after a
   personal best, so it cannot nag. A player who declines is offered again at
   their next best. Once joined, every scored run submits silently.
-- **The board is open to everyone** in this phase — no Pro gate on reading it.
-  Free players see the real top 50 and their own rank.
-- **Writes are server-authoritative.** The browser cannot write a score at all;
-  `api/score.ts` verifies the session, bounds the value, computes the week from
-  server time, and raises the standing best only. This stops casual spoofing;
-  it is not full anti-cheat, which remains out of scope.
+- **Reading the board is tier-gated, joining it needs an account.** A guest
+  sees the board and their own would-be rank but cannot join — no identity to
+  post under. A free account joins under its generated name; Pro gets a
+  chosen one. `Leaderboard.tsx` shows the top 10 plus the player's own pinned
+  row to anyone without the full-board entitlement; Pro sees the whole thing.
+- **Writes are server-authoritative and identity-gated.** The browser cannot
+  write a score at all; `api/score.ts` verifies the session, rejects an
+  anonymous one outright (a guest cannot join — see above), bounds the value,
+  computes the week from server time, and raises the standing best only. This
+  stops casual spoofing; it is not full anti-cheat, which remains out of
+  scope.
 - **It can never break a run.** Every call resolves; a failure shows an empty
   board, not an error.
 
@@ -228,18 +241,30 @@ Gate 2 (free→pro): depth, content and customization, not run quantity.
   unless the player's `entitlements` row has `has_access` — a check no RLS
   policy can express per-column.
 - **`has_access` is server-written only** (an `entitlements` table, no client
-  write policy), read client-side for tier resolution, and set by the
-  Lemon Squeezy webhook once payment lands. A tier read is UX gating only,
-  never the security boundary.
-- **Stats sync by merge-by-max**, in both directions, using the same operation
-  on signup as on a second device. Lifetime counts, streak and per-tone
-  aggregates are account-owned; the last-5 run list and the streak's
-  last-played date stay local, having no honest cross-device answer.
+  write policy), read client-side for tier resolution, and set by
+  `api/webhook-ls.ts` — the Lemon Squeezy webhook, the only writer. It
+  verifies the delivery's HMAC-SHA256 signature over the raw body before
+  parsing anything, and identifies the buyer only by
+  `meta.custom_data.user_id` (carried through the checkout link), never by
+  the order's email. Writes are absolute (`has_access = true`/`false`), so a
+  retried or out-of-order delivery converges instead of drifting. A tier read
+  is UX gating only, never the security boundary.
+- **Stats sync by merge-by-max**, in both directions, on signup, on a second
+  device, after every finished run, and on app load — all but sign-in are
+  fire-and-forget. Lifetime counts, streak and per-tone aggregates are
+  account-owned; the last-5 run list and the streak's last-played date stay
+  local, having no honest cross-device answer. Local remains authoritative for
+  rendering; a dead network degrades to "your stats still work," not an error.
 - **An anonymous player's stats never reach the server.** Row-level security
   on `tone_stats` enforces that, rather than trusting the client not to ask.
-- **`TIER_LIMITS` (`src/game/tiers.ts`) is defined but not yet enforced.**
-  `dailyLimit.ts` is still a flat 5/day; the visualiser and word list aren't
-  tier-gated yet. That wiring is a later phase of the tiers/payment work.
+- **`TIER_LIMITS` (`src/game/tiers.ts`) is enforced.** The run cap
+  (`runsPerDay`) is server-authoritative for accounts (`api/run.ts`,
+  `daily_runs`) and device-local for guests, who have no durable identity for
+  a server row to count against. The visualiser slices its per-tone word list
+  to `wordsPerTone` (`wordsOfTone`'s `limit` parameter — the scored game's own
+  word picker never passes a limit, so a guest's zero-word visualiser cap
+  cannot starve a real run). The leaderboard's visibility follows
+  `leaderboardFull` (§7.1).
 
 **Launch gates on the Supabase project** — custom SMTP (the built-in sender
 allows ~2 emails/hour and is documented as unfit for production), an
@@ -262,7 +287,7 @@ Actual screen set (`src/app/GameApp.tsx`'s `Screen` type): `play` (title/home), 
 - **Game** — the scored run: hearts, combo, difficulty ramp.
 - **Game over** — total score, best combo, per-tone accuracy breakdown, one-line takeaway (§7).
 - **Progress** — lifetime run/gate/word counts and the last 5 runs' per-tone accuracy, from `runHistory.ts` (device-local), plus the live weekly leaderboard (§7.1), which is the one section here reading from a server.
-- **Profile** — account-free profile surface backed by the same local stats; shows the daily free-run count (`dailyLimit.ts`) and the player's generated board name, so they can find their own row. Still labelled "Guest player" — there are no real accounts yet.
+- **Profile** — real account UI now (`src/ui/AccountCard.tsx`): signup/login/rename for a player with an account, backed by the same local-first stats. Shows the daily run count against the player's actual tier limit (`dailyLimit.ts`/`TIER_LIMITS`) and their board name, generated or chosen (Pro only), so they can find their own row.
 
 ### HUD (in-game)
 
