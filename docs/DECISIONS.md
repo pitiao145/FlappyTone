@@ -15,6 +15,56 @@ approach, or where the obvious-looking alternative was tried and failed.
 
 **How it's introduced, so it doesn't become slop:** identity via Supabase anonymous sign-in (an anonymous user upgrades in place to a permanent account on email signup — no guest-row migration); personal gameplay stats stay **local-first** and sync up only on signup; the only server write for anonymous users is the leaderboard score, through a server-authoritative Vercel function holding the service-role key (clients never write it). RLS on every table, written performance-correct from line one. Every schema change is a numbered migration. Region Tokyo (permanent). **Not yet shipped — the code is still client-only until each piece lands.** When a piece lands, update CLAUDE.md and PRD.md to match what is actually in the code, not what is planned.
 
+### Tiers and payment: accounts stop being the Pro tier (8 Sep 2026)
+
+**Accounts stopped being the Pro tier.** `docs/flappytone-SPEC-monetization-launch.md`
+Phase 2 splits identity from payment: a free email account is now the
+guest→free gate (persistence, a real leaderboard row, ~10 runs/day, per-tone
+visualiser practice), and Pro is a second, separate gate on top — depth,
+content and customization (every word, full history, customization), not run
+quantity. This resolves in the opposite direction from "Phase 2: accounts as
+the Pro tier, built ahead of the product" below (6 Sep 2026) — that entry is
+left as the historical record of what was decided then; this entry is what
+changed two days later and why. The earlier framing made sense when accounts
+were dev-gated with nothing downstream to protect; once a real signup funnel
+and a run-cap were both on the table, gating persistence itself behind a $19
+purchase was the wrong shape — a free account is what makes "sign up to save"
+honest, and Pro needs to be about depth or it has nothing to sell once saving
+your progress is free.
+
+**Email confirmation is off, deliberately.** Every confirm-on-signup is an
+inbox round-trip — leaving the game for the mail app and finding the way back
+— which is exactly where phone signup funnels lose people, and it breaks
+outright in a webview (same class of failure as the LINE mic bug). Cost
+accepted: an unverified address can be squatted by someone else; recovery
+rests on password reset, which does reach the real owner regardless. Custom
+SMTP remains a launch gate either way, since reset mail still needs to
+deliver.
+
+**The rename gate is a trigger, not a policy.** `prof_update` has to stay open
+to free accounts — the stats sync writes `best_score`/`total_runs`/`streak_*`
+through that same policy — so gating renames on Pro can't be "no policy for
+free accounts" the way `leaderboard_scores` gates writes entirely. RLS is
+per-row, not per-column: a policy cannot say "these columns but not that
+one," and `WITH CHECK` only sees the new row, so it can't even tell whether
+`display_name` changed. A `BEFORE UPDATE` trigger sees both rows, so
+`enforce_rename_entitlement()` (migration `0007`) lives there instead,
+raising only when `display_name` changes without an `entitlements` row with
+`has_access`. Verified against the live DB: rename blocked without Pro,
+allowed with it, non-name updates unaffected.
+
+**Two migrations were needed to take the trigger function off the API**
+(`0008` then `0009`). `0007`'s function must be `SECURITY DEFINER` — it reads
+`entitlements`, and the player it runs for can't see anyone's row but their
+own — which means it's also exposed as a PostgREST RPC, since every function
+in `public` is. `0008` revoked EXECUTE from `anon`/`authenticated` and the
+advisor still flagged it: Postgres grants EXECUTE on a new function to PUBLIC
+by default, and those two roles were reaching it through that grant, not one
+of their own, so revoking from the named roles removed nothing (`proacl`
+still read `=X/postgres`). `0009` revoked from PUBLIC, which is the grant
+that actually mattered. Worth recording so `0009` doesn't look like a
+redundant no-op migration later.
+
 ### Phase 1 shipped, and where it departs from its own spec (5 Sep 2026)
 
 Ring 1 landed: `profiles` + `leaderboard_scores`, `api/score.ts`, anonymous

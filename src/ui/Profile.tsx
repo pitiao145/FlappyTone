@@ -1,50 +1,64 @@
-import { lazy, Suspense, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { capturePostHogEvent } from "../analytics/posthog.ts";
+import { getAccount, type Account } from "../data/account.ts";
 import { displayName } from "../data/leaderboard.ts";
 import { DAILY_RUN_LIMIT, loadDailyRuns } from "../game/dailyLimit.ts";
+import { AccountCard } from "./AccountCard.tsx";
 import { FREE_SUMMARY, PRO_FEATURES, PRO_PRICE } from "./plan.ts";
 
 interface Props {
   onEarlyBird: (feature: string) => void;
 }
 
-/**
- * Accounts are a Pro feature that hasn't launched. Gated the same way as
- * `Lab`/`DevLogin` in `GameApp.tsx` — lazy import behind `import.meta.env.DEV`
- * plus a JSX gate at the usage site, so Rollup drops this from `dist/`.
- * See CLAUDE.md hard rule 7.
- */
-const AccountCard = import.meta.env.DEV
-  ? lazy(() => import("../dev/AccountCard.tsx").then((m) => ({ default: m.AccountCard })))
+/** Dev-only tier override toggle, gated the same way as `Lab`/`DevLogin` in
+ * `GameApp.tsx` — lazy import behind `import.meta.env.DEV` plus a JSX gate at
+ * the usage site, so Rollup drops this from `dist/`. See CLAUDE.md hard rule 7. */
+const DevTierCard = import.meta.env.DEV
+  ? lazy(() => import("../dev/AccountCard.tsx").then((m) => ({ default: m.DevTierCard })))
   : null;
 
-/** The Profile tab: guest identity, the real daily free-run count, and the EarlyBird pitch. */
+/** The Profile tab: account/guest identity, the real daily free-run count, and the EarlyBird pitch. */
 export function Profile({ onEarlyBird }: Props) {
   const daily = useMemo(() => loadDailyRuns(), []);
   const boardName = useMemo(() => displayName(), []);
   const usedPct = Math.min(100, (daily.count / DAILY_RUN_LIMIT) * 100);
+  const [account, setAccount] = useState<Account | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void getAccount().then((a) => {
+      if (live) setAccount(a);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   return (
     <div className="screen profile-screen">
       <h2>Profile</h2>
       <p className="note">Your account & plan</p>
 
-      <section className="progress-card profile-identity">
-        <span className="profile-avatar" aria-hidden>
-          P
-        </span>
-        <div>
-          <p className="profile-name">Guest player</p>
-          {/* The board name is generated, not chosen — showing it here is how
-              a player recognises their own row on the leaderboard. */}
-          <p className="note">On the board as {boardName}</p>
-          <p className="note">Progress saved on this device only</p>
-        </div>
-      </section>
+      {account?.status !== "permanent" && (
+        <section className="progress-card profile-identity">
+          <span className="profile-avatar" aria-hidden>
+            P
+          </span>
+          <div>
+            <p className="profile-name">Guest player</p>
+            {/* The board name is generated, not chosen — showing it here is how
+                a player recognises their own row on the leaderboard. */}
+            <p className="note">On the board as {boardName}</p>
+            <p className="note">Progress saved on this device only</p>
+          </div>
+        </section>
+      )}
 
-      {AccountCard && (
-        <Suspense fallback={<p className="note">loading account…</p>}>
-          <AccountCard />
+      <AccountCard />
+
+      {DevTierCard && (
+        <Suspense fallback={null}>
+          <DevTierCard />
         </Suspense>
       )}
 

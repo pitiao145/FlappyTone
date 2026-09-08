@@ -22,6 +22,7 @@ import { APP_PATH } from "../ui/appLink.ts";
 import { lifetimeToneStats, loadRunHistory, mergeIntoRunHistory } from "../game/runHistory.ts";
 import { loadStreak, mergeStreak } from "../game/streak.ts";
 import type { Tone } from "../game/gates.ts";
+import { displayName } from "./leaderboard.ts";
 
 import { currentSession, getSupabase, warn } from "./supabase.ts";
 
@@ -93,6 +94,138 @@ export async function startEmailSignIn(email: string): Promise<AuthResult> {
   } catch (err) {
     warn("account", "email sign-in threw", err);
     return { ok: false, reason: "network error" };
+  }
+}
+
+/**
+ * Signs up with a password, upgrading an anonymous player in place.
+ *
+ * Same trap as `startEmailSignIn`: an anonymous player must go through
+ * `updateUser({ email, password })`, never `signUp`, or they get a *second*
+ * user id and their scores stay behind on the first one. Email confirmation
+ * is off for this project, so the account is permanent the instant this
+ * resolves — no redirect to configure.
+ */
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  marketingConsent: boolean,
+): Promise<AuthResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, reason: "no Supabase client" };
+  const trimmed = email.trim();
+  if (!trimmed) return { ok: false, reason: "no email given" };
+  if (password.length < 8) return { ok: false, reason: "password must be at least 8 characters" };
+
+  try {
+    const account = await getAccount();
+    const { error } =
+      account.status === "anonymous"
+        ? await supabase.auth.updateUser({ email: trimmed, password })
+        : await supabase.auth.signUp({ email: trimmed, password });
+    if (error) {
+      warn("account", `password sign-up failed: ${error.message}`);
+      return { ok: false, reason: error.message };
+    }
+
+    // The session token minted before this call still carries the old
+    // `is_anonymous` claim baked in — RLS reads that claim, not the row, so
+    // every write looks like it's coming from the anonymous user until a
+    // fresh token is fetched. Must happen before syncAccount, which writes to
+    // permanent-only tables.
+    await supabase.auth.refreshSession();
+
+    const synced = await syncAccount();
+    if (!synced.ok) warn("account", `post-signup sync failed: ${synced.reason}`);
+
+    await recordMarketingConsent(marketingConsent);
+    return { ok: true };
+  } catch (err) {
+    warn("account", "password sign-up threw", err);
+    return { ok: false, reason: "network error" };
+  }
+}
+
+/** Second-device / returning-player sign-in. Merge-by-max makes the sync safe
+ * regardless of which side has more progress. */
+export async function signInWithPassword(email: string, password: string): Promise<AuthResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, reason: "no Supabase client" };
+  const trimmed = email.trim();
+  if (!trimmed) return { ok: false, reason: "no email given" };
+  if (!password) return { ok: false, reason: "no password given" };
+
+  try {
+    const { error } = await supabase.auth.signInWithPassword({ email: trimmed, password });
+    if (error) {
+      warn("account", `password sign-in failed: ${error.message}`);
+      return { ok: false, reason: error.message };
+    }
+    const synced = await syncAccount();
+    if (!synced.ok) warn("account", `post-signin sync failed: ${synced.reason}`);
+    return { ok: true };
+  } catch (err) {
+    warn("account", "password sign-in threw", err);
+    return { ok: false, reason: "network error" };
+  }
+}
+
+/** Sends a password-reset email. Needs an explicit redirect for the same
+ * reason `startEmailSignIn` does — an unset one lands the tokens on `/`. */
+export async function requestPasswordReset(email: string): Promise<AuthResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, reason: "no Supabase client" };
+  const trimmed = email.trim();
+  if (!trimmed) return { ok: false, reason: "no email given" };
+
+  try {
+    const redirect = new URL(APP_PATH, window.location.origin).toString();
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmed, { redirectTo: redirect });
+    if (error) {
+      warn("account", `password reset request failed: ${error.message}`);
+      return { ok: false, reason: error.message };
+    }
+    return { ok: true };
+  } catch (err) {
+    warn("account", "password reset request threw", err);
+    return { ok: false, reason: "network error" };
+  }
+}
+
+/**
+ * Records marketing consent on the player's profile row. Upserts because a
+ * player who never joined the leaderboard has no `profiles` row yet — only
+ * `joinBoard()` creates one otherwise — so this must be able to create it too.
+ * Never throws, never blocks account creation on the newsletter call.
+ */
+export async function recordMarketingConsent(consented: boolean): Promise<void> {
+  const supabase = getSupabase();
+  const account = await getAccount();
+  if (!supabase || !account.userId) return;
+  try {
+    const { error } = await supabase.from("profiles").upsert(
+      {
+        id: account.userId,
+        display_name: displayName(),
+        marketing_consent: consented,
+        marketing_consent_at: consented ? new Date().toISOString() : null,
+      },
+      { onConflict: "id" },
+    );
+    if (error) warn("account", `could not record marketing consent: ${error.message}`);
+  } catch (err) {
+    warn("account", "could not record marketing consent", err);
+  }
+
+  if (!consented) return;
+  try {
+    await fetch("/api/newsletter", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: account.email, source: "earlybird" }),
+    });
+  } catch (err) {
+    warn("account", "newsletter subscribe failed", err);
   }
 }
 

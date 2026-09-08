@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MicError } from "../audio/mic.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
+import { getAccount, signOut, type Account } from "../data/account.ts";
 import { micErrorCopy } from "./micErrors.ts";
 import { setSharingEnabled } from "../analytics/client.ts";
 import { setPostHogConsent } from "../analytics/posthog.ts";
@@ -109,6 +110,17 @@ export function Settings({
   const [sharing, setSharing] = useState<(typeof SHARING)[number]>(() =>
     loadShareData() ? "on" : "off",
   );
+  const [account, setAccount] = useState<Account | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void getAccount().then((a) => {
+      if (live) setAccount(a);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   // Both of these lead to screens that listen. iOS Safari grants getUserMedia
   // only inside the gesture, so the mic opens here rather than in the
@@ -247,6 +259,18 @@ export function Settings({
           </button>
         </div>
       </section>
+
+      {account?.status === "permanent" && (
+        <section className="setting setting-card">
+          <div className="setting-card-head">
+            <h3>Account</h3>
+          </div>
+          <p className="param-help">Signed in as {account.email}</p>
+          <div className="setting-actions">
+            <button onClick={() => void signOut()}>Sign out</button>
+          </div>
+        </section>
+      )}
 
       {error && <p className="error">{error}</p>}
 

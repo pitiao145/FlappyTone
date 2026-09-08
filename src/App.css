@@ -6399,6 +6399,54 @@ section.hero-cards {
   margin-left: auto;
 }
 
+/* Account card: sign-up/log-in form on the Profile tab. */
+.account-mode-row {
+  margin-bottom: var(--space-3);
+}
+
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.account-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.account-field input {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-base);
+}
+
+.account-field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.account-consent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.account-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
 .earlybird-feature-live {
   color: var(--good-dim);
 }

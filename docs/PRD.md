@@ -34,9 +34,10 @@ Payment is planned via Lemon Squeezy as merchant of record (EarlyBird), so
 building our own payment/billing backend stays out of scope.
 
 **Phase 1 has shipped**: anonymous sign-in and a weekly leaderboard (§7.1).
-**Phase 2's plumbing has landed but is dev-gated**: email accounts, the
+**Email accounts have shipped and are player-reachable**: the
 anonymous→permanent upgrade, per-tone stats on the server, and merge-by-max
-sync. Accounts are the Pro tier, so no player can reach any of it yet.
+sync (§7.2). A free account is no longer the Pro tier — it's the guest→free
+gate (persistence, a real board row); Pro is depth and content on top.
 Voice-clip storage (Phase 3) is still ahead.
 
 Personal gameplay state remains device-local and unsynced: the Progress tab's
@@ -208,26 +209,43 @@ cumulative total.
 - **It can never break a run.** Every call resolves; a failure shows an empty
   board, not an error.
 
-### 7.2 Accounts (built, dev-gated — not reachable by a player)
+### 7.2 Accounts and tiers (built, live — reachable by a player)
 
-An account **is** the Pro tier: signing up is the paid product, not a free
-convenience, so the plumbing exists ahead of the features it will unlock.
+Three tiers, two gates: **guest** (anonymous/signed-out — 3 runs/day, local
+progress only), **free** (email account — 10 runs/day, saved+synced progress,
+a real board row, per-tone visualiser practice, ~5 words/tone), **pro** (paid
+— unlimited runs, every word, full history, customization). Signing up is
+Gate 1 (guest→free): persistence and run cap, not a paid feature. Pro is
+Gate 2 (free→pro): depth, content and customization, not run quantity.
 
 - **Adding an email upgrades the player's existing anonymous user**, keeping
   their id and therefore their scores. There is no guest-data migration.
-- **Renaming needs an account.** Anonymous players keep their generated name;
-  the `prof_update` policy enforces this on the `is_anonymous` claim.
+  Email+password is the primary method now; magic link is offered as a
+  secondary path.
+- **Renaming needs Pro, not merely an account.** Free accounts can still write
+  their own `profiles` row (the stats sync depends on that), so the gate is a
+  `BEFORE UPDATE` trigger on `profiles` that blocks a `display_name` change
+  unless the player's `entitlements` row has `has_access` — a check no RLS
+  policy can express per-column.
+- **`has_access` is server-written only** (an `entitlements` table, no client
+  write policy), read client-side for tier resolution, and set by the
+  Lemon Squeezy webhook once payment lands. A tier read is UX gating only,
+  never the security boundary.
 - **Stats sync by merge-by-max**, in both directions, using the same operation
   on signup as on a second device. Lifetime counts, streak and per-tone
   aggregates are account-owned; the last-5 run list and the streak's
   last-played date stay local, having no honest cross-device answer.
 - **An anonymous player's stats never reach the server.** Row-level security
   on `tone_stats` enforces that, rather than trusting the client not to ask.
+- **`TIER_LIMITS` (`src/game/tiers.ts`) is defined but not yet enforced.**
+  `dailyLimit.ts` is still a flat 5/day; the visualiser and word list aren't
+  tier-gated yet. That wiring is a later phase of the tiers/payment work.
 
-**Not shippable until the Supabase project is configured for it** — custom
-SMTP (the built-in sender allows ~2 emails/hour and is documented as unfit for
-production) and an allowlisted redirect URL per origin. See CLAUDE.md's
-"Before accounts go live". These are settings, not code.
+**Launch gates on the Supabase project** — custom SMTP (the built-in sender
+allows ~2 emails/hour and is documented as unfit for production), an
+allowlisted redirect URL per origin, and leaked-password protection (password
+sign-in ships now). See CLAUDE.md's "Before accounts go live". These are
+settings, not code, and they now affect real signups.
 
 ## 8. Screens
 

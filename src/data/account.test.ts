@@ -4,13 +4,105 @@
  * bug quietly returns a smaller number and a player's practice is gone with no
  * error anywhere. So it is pure, and it is tested directly.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { EMPTY_AGGREGATES, mergeAggregates, type Aggregates } from "./account.ts";
+import { EMPTY_AGGREGATES, mergeAggregates, signUpWithPassword, type Aggregates } from "./account.ts";
+import * as supabaseModule from "./supabase.ts";
+
+vi.mock("./supabase.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./supabase.ts")>();
+  return {
+    ...actual,
+    getSupabase: vi.fn(),
+    currentSession: vi.fn(),
+    warn: vi.fn(),
+  };
+});
 
 function aggregates(over: Partial<Aggregates> = {}): Aggregates {
   return { ...EMPTY_AGGREGATES, ...over };
 }
+
+function fakeClient() {
+  const updateUser = vi.fn().mockResolvedValue({ error: null });
+  const signUp = vi.fn().mockResolvedValue({ error: null });
+  const signInWithOtp = vi.fn().mockResolvedValue({ error: null });
+  const refreshSession = vi.fn().mockResolvedValue({ data: {}, error: null });
+  const upsert = vi.fn().mockResolvedValue({ error: null });
+  const client = {
+    auth: { updateUser, signUp, signInWithOtp, refreshSession },
+    from: vi.fn(() => ({
+      upsert,
+      update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({ maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) })),
+      })),
+    })),
+  };
+  return { client, updateUser, signUp, signInWithOtp, refreshSession, upsert };
+}
+
+function session(status: "anonymous" | "permanent" | null) {
+  if (status === null) return null;
+  return {
+    access_token: "t",
+    user: { id: "u1", is_anonymous: status === "anonymous", email: null },
+  } as unknown as Awaited<ReturnType<typeof supabaseModule.currentSession>>;
+}
+
+describe("signUpWithPassword", () => {
+  beforeEach(() => {
+    vi.mocked(supabaseModule.warn).mockReset();
+  });
+
+  it("upgrades an anonymous user in place, never signUp/signInWithOtp", async () => {
+    const { client, updateUser, signUp, signInWithOtp } = fakeClient();
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client as never);
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session("anonymous"));
+
+    const result = await signUpWithPassword("a@b.com", "longenough", false);
+
+    expect(updateUser).toHaveBeenCalledWith({ email: "a@b.com", password: "longenough" });
+    expect(signUp).not.toHaveBeenCalled();
+    expect(signInWithOtp).not.toHaveBeenCalled();
+    expect(result.ok).toBe(true);
+  });
+
+  it("uses signUp for a signed-out user", async () => {
+    const { client, updateUser, signUp } = fakeClient();
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client as never);
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session(null));
+
+    const result = await signUpWithPassword("a@b.com", "longenough", false);
+
+    expect(signUp).toHaveBeenCalledWith({ email: "a@b.com", password: "longenough" });
+    expect(updateUser).not.toHaveBeenCalled();
+    expect(result.ok).toBe(true);
+  });
+
+  it("still returns ok when the post-signup sync fails", async () => {
+    const { client } = fakeClient();
+    // Session stays anonymous even after "signup" — syncAccount requires
+    // "permanent" and so fails here, standing in for any sync failure.
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client as never);
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session("anonymous"));
+
+    const result = await signUpWithPassword("a@b.com", "longenough", false);
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects a short password before any network call", async () => {
+    const { client, updateUser, signUp } = fakeClient();
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client as never);
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session("anonymous"));
+
+    const result = await signUpWithPassword("a@b.com", "short", false);
+
+    expect(result).toEqual({ ok: false, reason: "password must be at least 8 characters" });
+    expect(updateUser).not.toHaveBeenCalled();
+    expect(signUp).not.toHaveBeenCalled();
+  });
+});
 
 describe("mergeAggregates", () => {
   it("keeps the larger of every scalar", () => {

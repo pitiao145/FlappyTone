@@ -18,12 +18,18 @@ React 19 + TypeScript + Vite. Canvas 2D. Web Audio API. Plain CSS with a design-
 - **Migrations live in `supabase/migrations/` and are applied via the Supabase MCP `apply_migration`**, never by hand in the dashboard. Regenerate and commit `src/data/database.types.ts` after each one, and run `get_advisors` (security *and* performance) before calling a schema change done. Raw-SQL migrations must include explicit `GRANT`s — the dashboard's table editor adds them for you and a migration does not, and RLS policies alone will not save you: RLS narrows access, it does not grant it.
 - **Personal stats are local-first, and sync only for an account.** `runHistory.ts`, `streak.ts` and `dailyLimit.ts` remain the source of truth on the device. An anonymous player's stats never leave it — `tone_stats`'s RLS enforces that, not just the client.
 
-**What has landed (Ring 2 / Phase 2): accounts, dev-gated.** Accounts *are* the Pro tier, so none of this is reachable by a player — `src/dev/AccountCard.tsx` is gated at its mount site in `Profile.tsx` like the Lab.
+**What has landed (accounts — no longer dev-gated, no longer the Pro tier).** As of the tiers/payment spec (8 Sep 2026), a free email account is the guest→free gate, not a paid feature. `src/ui/AccountCard.tsx` is the real, player-facing account UI (signup/login/rename), mounted in Profile without a dev guard. `src/dev/AccountCard.tsx` is now only a dev tier-override toggle (Auto/Guest/Free/Pro), still gated behind `import.meta.env.DEV` at its mount site like the Lab.
 
-- **Adding an email upgrades the anonymous user in place.** `src/data/account.ts` calls `updateUser({ email })` for an anonymous player, never `signInWithOtp` — the latter signs them into a *different* user and silently abandons their scores. That distinction is the single most damaging mistake available in that file; the comment there says so.
+- **Three tiers, two gates.** `guest` (anonymous/signed-out): 3 runs/day, local-only progress, no per-tone visualiser practice. `free` (email account): 10 runs/day, saved+synced progress, a real leaderboard row, per-tone visualiser practice, ~5 words/tone. `pro` (paid): unlimited runs, every word, full history, customization. Gate 1 (guest→free) is runs-cap + persistence; Gate 2 (free→pro) is depth/content/customization, **not** run quantity.
+- **`src/game/tiers.ts` holds `TIER_LIMITS`**, the single source of truth for per-tier limits (`runsPerDay`, `wordsPerTone`, `visualiserPerTone`, `leaderboardFull`, `customization`). Deliberately free of `src/data/` imports, so game code and the UI can read limits without pulling in the Supabase graph. **Nothing consumes it yet** — enforcement is a later phase; `dailyLimit.ts` today is still a flat 5/day, not tier-aware. Don't describe gating that isn't wired up.
+- **`src/data/tier.ts` resolves the tier and exposes `useTier()`.** Paid access (`has_access`) wins outright; otherwise a permanent account is `free`, anything else (anonymous or signed-out) is `guest`. Client-side tier reads are UX gating only, never the security boundary — same stance `dailyLimit.ts` already documents.
+- **`has_access` is a server-written flag on its own `entitlements` table, never a `profiles` column.** `src/data/entitlements.ts` only reads it. `entitlements` is select-own with **no client write policy at all** — the same enforcement shape as `leaderboard_scores`. A column on `profiles` would have been client-flippable in one devtools call, since `profiles` is client-writable under RLS. Only a future payment webhook writes it.
+- **Auth is email+password now, magic link secondary.** `signUpWithPassword` (`src/data/account.ts`) keeps the upgrade-in-place rule: an anonymous player gets `updateUser({ email, password })`, never `signUp`, which would sign them into a different user and abandon their scores. It must call `refreshSession()` right after — the pre-upgrade JWT still carries `is_anonymous: true`, and RLS reads the claim, not the row, so every write fails until the token is refreshed. `syncAccount()` then runs automatically; there is no manual Sync button. A failed sync does not fail the signup — local stays authoritative.
 - **Sync is merge-by-max, both directions, and identical on signup and on a second device.** That is why there is no "claim your guest data" path. The server is written before local, so a failed sync leaves the device still holding everything.
 - **Lifetime per-tone stats accumulate locally** in `runHistory.ts`'s `lifetimePerTone`, shaped 1:1 to the `tone_stats` columns. It was added additively — the `toneflap.history.v1` key is deliberately *not* bumped, since that would wipe every player's history to gain a field that can be seeded from `lastRuns`.
 - **`lastRuns` and `lastPlayedDate` never sync.** One is a display cache of this device's own runs, the other decides whether today continues the streak. Neither has an honest cross-device answer, so neither is an account's business.
+- **Renaming is still Pro, but enforced by a `BEFORE UPDATE` trigger on `profiles`, not an RLS policy.** `prof_update` has to stay open to free accounts, because the stats sync writes `best_score`/`total_runs`/`streak_*` through that same policy, and RLS is per-row, not per-column — a policy can't say "these columns but not that one," and `WITH CHECK` can't see the old row to tell whether `display_name` changed. `enforce_rename_entitlement()` (migration `0007`) can, since a trigger sees both. Two follow-up migrations (`0008`, `0009`) were needed to take that function off the PostgREST API — see DECISIONS.md.
+- **Marketing consent is one unchecked checkbox at signup**, stored as `marketing_consent`/`marketing_consent_at` on `profiles`, upserted (a player who never joined the board has no `profiles` row). Account creation is never conditional on it.
 
 Everything below this line is still device-local, and none of it moved:
 
@@ -180,14 +186,14 @@ Ground truth is `fixtures/captures/jane_*.wav` (native Taiwanese speaker, direct
 
 Speech recognition or syllable verification · tone sandhi, multi-syllable words, sentences · native app builds · listening/perception drills.
 
-Accounts and a backend are no longer on this list — anonymous auth and the leaderboard have shipped (see above). Still not built, and not to be built ahead of their phase: **public email accounts and cross-device sync** (Phase 2), **player-chosen display names** (Pro), **voice-clip storage** (Phase 3), **payments or billing of our own** (Lemon Squeezy is the merchant of record), and **server-enforced daily limits** — the limit stays local, because clearing storage mints a new anonymous identity anyway.
+Accounts and a backend are no longer on this list — anonymous auth, the leaderboard, and public email accounts with cross-device sync have all shipped (see above). Still not built, and not to be built ahead of their phase: **player-chosen display names** (Pro), **voice-clip storage** (Phase 3), **payments or billing of our own** (Lemon Squeezy is the merchant of record), and **server-enforced daily limits** — the limit stays local, because clearing storage mints a new anonymous identity anyway.
 
 ## Before accounts go live — Supabase settings, not code
 
 These are dashboard settings that no amount of application code can substitute
-for. None of them affects a player today (accounts are dev-gated, and nothing
-a real player does sends an email), but shipping accounts without them means
-signups that silently fail.
+for. **Accounts are reachable by a player now** (`src/ui/AccountCard.tsx` is
+live, not dev-gated), which makes every item below a launch gate, not a
+someday concern — a real signup goes through this path today.
 
 - **Custom SMTP is mandatory.** Supabase's built-in sender is a testing
   convenience: roughly two emails per hour, project-wide, on shared
@@ -203,20 +209,24 @@ signups that silently fail.
   Supabase code, so the auth tokens land where nothing can read them. The
   confirmation still succeeds server-side, so this fails in the most confusing
   way available: the account is upgraded and the browser never notices.
-- **Enable leaked-password protection** (Auth → Passwords) if password sign-in
-  is ever used. Flagged by the security advisor; harmless while auth is
-  magic-link only.
+- **Enable leaked-password protection** (Auth → Passwords). Password sign-in
+  is now the primary method, not a hypothetical — this is genuinely relevant,
+  not the "harmless while magic-link only" caveat it used to be.
 - **Re-check `get_advisors` after the first real signups**, since some lints
   only appear once tables hold data.
+- **Email confirmation is deliberately OFF.** A signup is permanent the
+  instant `updateUser`/`signUp` resolves — no confirm-your-email round trip.
+  See DECISIONS.md for why (funnel loss, webview breakage) and the accepted
+  cost (an unverified address can be squatted; password reset is the recovery
+  path, which is why custom SMTP is still non-negotiable).
 
-**Decide before launch, not settled:** magic link is the only sign-in method
-built, and it always costs an email round-trip — on a phone that means leaving
-the game for the mail app and finding the way back, which is where sign-up
-funnels usually lose people. **Google sign-in** avoids the round-trip entirely
-and suits a phone-first audience better; it is a provider toggle plus a button,
-and it disturbs none of the identity work, since the anonymous→permanent
-upgrade path is identical. Worth weighing against keeping one method to
-maintain. Not urgent while accounts are dev-gated.
+**Decide before launch, not settled:** email+password is now the primary
+method and costs no round-trip, with magic link kept as the secondary path.
+**Google sign-in** would remove the password entirely and suits a phone-first
+audience; it is a provider toggle plus a button, and it disturbs none of the
+identity work, since the anonymous→permanent upgrade path is identical. The
+spec files it as a post-launch fast-follow, to be revisited if analytics show
+signup drop-off.
 
 ## Known limitations — do not try to "fix" these silently
 

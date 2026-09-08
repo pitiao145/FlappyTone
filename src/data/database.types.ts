@@ -86,6 +86,8 @@ export type Database = {
           display_name: string
           id: string
           is_public: boolean
+          marketing_consent: boolean
+          marketing_consent_at: string | null
           streak_best: number
           streak_current: number
           synced_at: string | null
@@ -98,6 +100,8 @@ export type Database = {
           display_name: string
           id: string
           is_public?: boolean
+          marketing_consent?: boolean
+          marketing_consent_at?: string | null
           streak_best?: number
           streak_current?: number
           synced_at?: string | null
@@ -110,6 +114,8 @@ export type Database = {
           display_name?: string
           id?: string
           is_public?: boolean
+          marketing_consent?: boolean
+          marketing_consent_at?: string | null
           streak_best?: number
           streak_current?: number
           synced_at?: string | null
