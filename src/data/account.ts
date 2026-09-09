@@ -23,6 +23,7 @@ import { lifetimeToneStats, loadRunHistory, mergeIntoRunHistory } from "../game/
 import { loadStreak, mergeStreak } from "../game/streak.ts";
 import type { Tone } from "../game/gates.ts";
 import { displayName, setLocalDisplayName } from "./leaderboard.ts";
+import { bumpSessionVersion } from "./sessionVersion.ts";
 
 import { currentSession, getSupabase, warn } from "./supabase.ts";
 
@@ -244,6 +245,10 @@ export async function signOut(): Promise<void> {
   if (!supabase) return;
   try {
     await supabase.auth.signOut();
+    // Nothing local was rewritten (signed-out state has no localStorage of
+    // its own), but every surface reading account-derived data still needs
+    // to re-read and fall back to guest — see `sessionVersion.ts`.
+    bumpSessionVersion();
   } catch (err) {
     warn("account", "sign-out failed", err);
   }
@@ -276,6 +281,10 @@ export async function renameAccount(name: string): Promise<AuthResult> {
       warn("account", `rename failed: ${error.message}`);
       return { ok: false, reason: error.message };
     }
+    // The board name is cached locally (`displayName()` reads it without a
+    // round trip); without this, a rename shows nowhere until the next sync.
+    setLocalDisplayName(trimmed);
+    bumpSessionVersion();
     return { ok: true };
   } catch (err) {
     warn("account", "rename threw", err);
@@ -453,6 +462,12 @@ export async function syncAccount(): Promise<AuthResult> {
   // that would let a second device's stale generated name clobber a real one.
   // Only `renameAccount()` may change the server's `display_name`.
   if (remoteName) setLocalDisplayName(remoteName);
+
+  // Everything above is the actual localStorage rewrite this sync exists to
+  // do. Bump only now — after it's done, not when the auth event that
+  // triggered the sync fired — so a subscribed component's re-read lands on
+  // the merged values, not the pre-sync ones.
+  bumpSessionVersion();
 
   return { ok: true };
 }

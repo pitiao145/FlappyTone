@@ -917,10 +917,11 @@
   color: var(--ink-muted);
 }
 
-/* Checkout-return status, shown on `/app?purchased=1` until the tier reads
-   pro or the poll gives up. Fixed at the top so it survives whichever screen
-   the player lands back on. */
-.purchase-return-banner {
+/* Shell-level status toast: checkout-return confirmation
+   (`/app?purchased=1`, until the tier reads pro or the poll gives up) and the
+   sign-in/sign-out confirmations from `AccountCard` both use this. Fixed at
+   the top so it survives whichever screen the player lands back on. */
+.app-toast {
   position: fixed;
   top: var(--space-3);
   left: 50%;
@@ -937,7 +938,7 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
-.purchase-return-banner-done {
+.app-toast-positive {
   border-color: var(--accent);
   color: var(--ink);
 }

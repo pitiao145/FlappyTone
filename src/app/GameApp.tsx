@@ -6,6 +6,7 @@ import { MicError } from "../audio/mic";
 import { ensureMic, getMicSession, MicCancelled, stopMic } from "../audio/session";
 import { incrementDailyRuns, loadDailyRuns, refreshServerDailyRuns } from "../game/dailyLimit.ts";
 import { getAccount, localAggregates, pushAggregates, syncAccount } from "../data/account.ts";
+import { AUTH_TOAST_TEXT, subscribeAuthToast, type AuthToastKind } from "../data/authToast.ts";
 import { usePurchaseReturn } from "../data/purchaseReturn.ts";
 import {
   averageRangeHalves,
@@ -376,6 +377,19 @@ export default function GameApp() {
     const timer = setTimeout(() => setPurchaseReturnDismissed(true), 5000);
     return () => clearTimeout(timer);
   }, [purchaseReturnState]);
+  /**
+   * "Signed in."/"Signed out." — fired from `AccountCard` via `authToast.ts`,
+   * shown here at the shell level so it survives whichever tab triggered it.
+   * Same auto-dismiss rule as the purchase banner; a second toast while one
+   * is up replaces it and restarts the 5s clock (no queue).
+   */
+  const [authToast, setAuthToast] = useState<AuthToastKind | null>(null);
+  useEffect(() => subscribeAuthToast(setAuthToast), []);
+  useEffect(() => {
+    if (!authToast) return;
+    const timer = setTimeout(() => setAuthToast(null), 5000);
+    return () => clearTimeout(timer);
+  }, [authToast]);
   /**
    * True once the day's 5 free "game" runs (see `incrementDailyRuns` in
    * `onRunOver` below) are used up. Tutorial and the visualiser are never
@@ -1070,13 +1084,19 @@ export default function GameApp() {
       </div>
       {purchaseReturnActive && !purchaseReturnDismissed && (
         <div
-          className={`purchase-return-banner${purchaseReturnState === "confirmed" ? " purchase-return-banner-done" : ""}`}
+          className={`app-toast${purchaseReturnState === "confirmed" ? " app-toast-positive" : ""}`}
           role="status"
         >
           {purchaseReturnState === "checking" && "Confirming your purchase…"}
           {purchaseReturnState === "pending" &&
             "Your purchase is confirmed and still syncing. EarlyBird access will appear here shortly."}
           {purchaseReturnState === "confirmed" && "You're EarlyBird! Access unlocked, go practice those tones!"}
+        </div>
+      )}
+
+      {authToast && (
+        <div className="app-toast app-toast-positive" role="status">
+          {AUTH_TOAST_TEXT[authToast]}
         </div>
       )}
 

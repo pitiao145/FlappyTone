@@ -10,6 +10,7 @@ import {
 } from "../game/runHistory.ts";
 import { loadStreak } from "../game/streak.ts";
 import type { Word } from "../game/words.ts";
+import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
 import { Leaderboard } from "./Leaderboard.tsx";
 import { FREE_FEATURES, GUEST_FEATURES, PRO_FEATURES, PRO_PRICE, TIER_LABEL } from "./plan.ts";
@@ -78,7 +79,11 @@ export function Progress({ onEarlyBird }: Props) {
     return map;
   }, [words]);
 
-  const history = useMemo(() => loadRunHistory(), []);
+  // Ticks after a sign-in/sign-out finishes syncing local storage (or, for a
+  // sign-out, right away) — see `sessionVersion.ts`. Without it these stats
+  // stayed frozen at whatever they were when the tab first mounted.
+  const version = useSessionVersion();
+  const history = useMemo(() => loadRunHistory(), [version]);
   // Last-5-run accuracy is device-local and empty on a device with no local
   // runs yet (e.g. just synced on a second device) — fall back to the
   // lifetime figure from `lifetimePerTone`, which does sync.
@@ -87,7 +92,7 @@ export function Progress({ onEarlyBird }: Props) {
     () => (usingLifetimeAccuracy ? lifetimeToneAccuracy(history) : toneAccuracyFromHistory(history)),
     [history, usingLifetimeAccuracy],
   );
-  const streak = useMemo(() => loadStreak(), []);
+  const streak = useMemo(() => loadStreak(), [version]);
 
   // Mock accuracy-over-time data for the Pro teaser chart — generated once so
   // switching tabs/tones doesn't re-randomise. No real time-series exists yet.

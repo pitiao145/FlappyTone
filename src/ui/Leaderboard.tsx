@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { getBoard, myUserId, type Board } from "../data/leaderboard.ts";
+import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
 import { TIER_LIMITS } from "../game/tiers.ts";
 
@@ -43,6 +44,11 @@ export function Leaderboard({ limit = 50, onClose }: Props) {
   const [userId, setUserId] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const titleId = useId();
+  // Ticks on sign-in/sign-out (see `sessionVersion.ts`) — a fresh sign-in can
+  // change which id is "you" and, once synced, a joined player's row/name;
+  // re-fetching keeps the "you" highlight and pinned row correct without a
+  // reload.
+  const version = useSessionVersion();
 
   useEffect(() => {
     let cancelled = false;
@@ -62,7 +68,7 @@ export function Leaderboard({ limit = 50, onClose }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [limit]);
+  }, [limit, version]);
 
   useEffect(() => {
     if (!onClose) return;

@@ -10,6 +10,7 @@ import { useSyncExternalStore } from "react";
 
 import { getAccount, type AccountStatus } from "./account.ts";
 import { fetchHasAccess } from "./entitlements.ts";
+import { bumpSessionVersion } from "./sessionVersion.ts";
 import { getSupabase } from "./supabase.ts";
 import type { Tier } from "../game/tiers.ts";
 
@@ -88,5 +89,11 @@ const supabase = getSupabase();
 if (supabase) {
   supabase.auth.onAuthStateChange(() => {
     void refreshTier();
+    // A first, immediate nudge to any component reading account-derived
+    // local data — account.ts's `syncAccount()`/`signOut()` bump again once
+    // their own localStorage rewrite finishes, which is the bump that
+    // matters for correctness; this one just gets status-only UI (e.g. the
+    // "Guest player" card) moving without waiting on a sync round trip.
+    bumpSessionVersion();
   });
 }

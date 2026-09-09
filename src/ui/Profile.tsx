@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { capturePostHogEvent } from "../analytics/posthog.ts";
 import { getAccount, type Account } from "../data/account.ts";
 import { displayName } from "../data/leaderboard.ts";
+import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
 import { loadDailyRuns } from "../game/dailyLimit.ts";
 import { AccountCard } from "./AccountCard.tsx";
@@ -21,8 +22,13 @@ const DevTierCard = import.meta.env.DEV
 /** The Profile tab: account/guest identity, the real daily free-run count, and the EarlyBird pitch. */
 export function Profile({ onEarlyBird }: Props) {
   const tier = useTier();
-  const daily = useMemo(() => loadDailyRuns(), []);
-  const boardName = useMemo(() => displayName(), []);
+  // `version` ticks after a sign-in/sign-out finishes syncing (or, for a
+  // sign-out, right away) — see `sessionVersion.ts`. Without it these three
+  // reads are captured once at mount and never revisited, which is why the
+  // tab used to keep showing "Guest player" after a real sign-in.
+  const version = useSessionVersion();
+  const daily = useMemo(() => loadDailyRuns(), [version]);
+  const boardName = useMemo(() => displayName(), [version]);
   const unlimited = !Number.isFinite(daily.limit);
   const usedPct = unlimited ? 0 : Math.min(100, (daily.count / daily.limit) * 100);
   const [account, setAccount] = useState<Account | null>(null);
@@ -35,7 +41,7 @@ export function Profile({ onEarlyBird }: Props) {
     return () => {
       live = false;
     };
-  }, []);
+  }, [version]);
 
   return (
     <div className="screen profile-screen">

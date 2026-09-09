@@ -18,6 +18,7 @@ import {
   startEmailSignIn,
   type Account,
 } from "../data/account.ts";
+import { fireAuthToast } from "../data/authToast.ts";
 import { displayName } from "../data/leaderboard.ts";
 import { getSupabase } from "../data/supabase.ts";
 import { useTier } from "../data/tier.ts";
@@ -70,6 +71,7 @@ export function AccountCard() {
     setMessage(result.ok ? "" : result.reason);
     if (result.ok) {
       setPassword("");
+      fireAuthToast("signed-in");
     }
   }
 
@@ -142,7 +144,13 @@ export function AccountCard() {
           </p>
         )}
         {message && <p className="note">{message}</p>}
-        <button type="button" className="link" onClick={() => void signOut()}>
+        <button
+          type="button"
+          className="link"
+          onClick={() => {
+            void signOut().then(() => fireAuthToast("signed-out"));
+          }}
+        >
           Sign out
         </button>
       </section>
