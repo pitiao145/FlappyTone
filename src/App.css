@@ -5578,6 +5578,17 @@ section.hero-cards {
   font-weight: 600;
 }
 
+/* A feature not built for any tier yet — distinct from .progress-card-cta's
+   upsell link, since there is nothing to click through to. */
+.progress-card-cta-soon {
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--line-strong);
+}
+
 /* Scoped to .progress-card, not the bare .tone-average-grid class the
    landing page and the Lab also use — an unscoped rule here would win by
    source order and override their own layouts. Single column by default so
@@ -5789,6 +5800,19 @@ section.hero-cards {
   color: var(--surface);
   background: var(--warn);
   border: 2px solid var(--ink);
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+}
+
+/* "Not built yet", distinct from .pro-badge's "pay to unlock" — a neutral
+   pill so a Pro player (who already paid) never reads it as a paywall. */
+.progress-screen .soon-badge {
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--ink-dim);
+  background: var(--surface);
+  border: 2px solid var(--line-strong);
   padding: 4px 12px;
   border-radius: var(--radius-pill);
 }

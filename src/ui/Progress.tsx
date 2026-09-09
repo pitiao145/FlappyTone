@@ -110,16 +110,49 @@ export function Progress({ onEarlyBird }: Props) {
 
   const [activeTab, setActiveTab] = useState<AccuracyTab>("accuracy");
   const [selectedTone, setSelectedTone] = useState<Tone>(1);
+  const isPro = tier === "pro";
 
   /** Each teaser CTA fires its own named event (see call sites below) before scrolling. */
   const scrollToPricing = () => {
     document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  /**
+   * Full trends/tone-shape charts and a >5-run history aren't built for any
+   * tier yet (see docs/flappytone-SPEC-monetization-launch.md, "Explicitly
+   * OUT of scope for launch"). A Pro player has already paid, so they get a
+   * plain "Soon" instead of an upsell that would just re-sell them the thing
+   * they own; guest/free keep the existing Pro-locked preview.
+   */
+  const soonOrLockBadge = isPro ? (
+    <span className="soon-badge">Soon</span>
+  ) : (
+    <span className="pro-badge">🔒 Pro</span>
+  );
+  const soonOrLockCta = (label: string, eventName: string) =>
+    isPro ? (
+      <p className="note progress-card-cta-soon">Coming soon.</p>
+    ) : (
+      <button
+        type="button"
+        className="link progress-card-cta"
+        onClick={() => {
+          capturePostHogEvent(eventName, {});
+          scrollToPricing();
+        }}
+      >
+        {label}
+      </button>
+    );
+
   return (
     <div className="screen progress-screen">
       <h2>Your progress</h2>
-      <p className="note">Saved on this device · sign up to keep it forever</p>
+      <p className="note">
+        {tier === "guest"
+          ? "Saved on this device · sign up to keep it forever"
+          : "Synced to your account"}
+      </p>
 
       {/* ---- Overview: streak + level, then the stat strip */}
       <div className="progress-overview">
@@ -135,14 +168,16 @@ export function Progress({ onEarlyBird }: Props) {
               streak{streak.best > streak.current ? ` · best ${streak.best}` : ""}
             </span>
             <span className="streak-warning">
-              ⚠️ Saved only on this device — clearing your browser data resets it.
+              {tier === "guest"
+                ? "⚠️ Saved only on this device — clearing your browser data resets it."
+                : "Synced to your account."}
             </span>
           </div>
 
           <div className="sticker-card level-card">
             <div className="level-head">
               <span className="level-label">Level</span>
-              <span className="pro-badge">🔒 Pro</span>
+              <span className="soon-badge">Soon</span>
             </div>
             <span className="level-big">Level 4</span>
             <span className="level-bar">
@@ -201,7 +236,7 @@ export function Progress({ onEarlyBird }: Props) {
               Accuracy progress
             </button>
           </div>
-          {activeTab === "progress" && <span className="pro-badge">🔒 Pro</span>}
+          {activeTab === "progress" && soonOrLockBadge}
         </div>
 
         {activeTab === "accuracy" ? (
@@ -253,16 +288,10 @@ export function Progress({ onEarlyBird }: Props) {
                 data={mock.series[selectedTone]}
               />
             </Suspense>
-            <button
-              type="button"
-              className="link progress-card-cta"
-              onClick={() => {
-                capturePostHogEvent("progress_accuracy_chart_upsell_click", {});
-                scrollToPricing();
-              }}
-            >
-              🔒 Compare against your own attempts — unlock with Pro
-            </button>
+            {soonOrLockCta(
+              "🔒 Compare against your own attempts — unlock with Pro",
+              "progress_accuracy_chart_upsell_click",
+            )}
           </>
         )}
       </section>
@@ -302,23 +331,17 @@ export function Progress({ onEarlyBird }: Props) {
             })}
           </div>
         )}
-        <button
-          type="button"
-          className="link progress-card-cta"
-          onClick={() => {
-            capturePostHogEvent("progress_run_history_upsell_click", {});
-            scrollToPricing();
-          }}
-        >
-          🔒 See all {history.totalRuns} runs &amp; trends — unlock with Pro
-        </button>
+        {soonOrLockCta(
+          `🔒 See all ${history.totalRuns} runs & trends — unlock with Pro`,
+          "progress_run_history_upsell_click",
+        )}
       </section>
 
       {/* ---- Tone evolution (kept from today, restyled) */}
       <section className="progress-card sticker-card">
         <div className="progress-card-header">
           <h3>See how your tones evolve over time</h3>
-          <span className="pro-badge">🔒 Pro</span>
+          {soonOrLockBadge}
         </div>
         <div className="tone-average-grid">
           {TONES.map((t) => (
@@ -330,19 +353,15 @@ export function Progress({ onEarlyBird }: Props) {
             />
           ))}
         </div>
-        <button
-          type="button"
-          className="link progress-card-cta"
-          onClick={() => {
-            capturePostHogEvent("progress_tone_evolution_upsell_click", {});
-            scrollToPricing();
-          }}
-        >
-          🔒 Compare against your own attempts — unlock with Pro
-        </button>
+        {soonOrLockCta(
+          "🔒 Compare against your own attempts — unlock with Pro",
+          "progress_tone_evolution_upsell_click",
+        )}
       </section>
 
-      {/* ---- Pricing */}
+      {/* ---- Pricing: a Pro player already has everything for sale here, so
+          the plan comparison and "Join EarlyBird" CTA are for guest/free only. */}
+      {!isPro && (
       <section id="pricing" className="pricing-section">
         <div className="pricing-head">
           <h2>Free today, more with Pro</h2>
@@ -381,9 +400,7 @@ export function Progress({ onEarlyBird }: Props) {
             </ul>
           </div>
 
-          <div
-            className={`sticker-card price-card price-card-pro${tier === "pro" ? " price-card-current" : ""}`}
-          >
+          <div className="sticker-card price-card price-card-pro">
             <div className="price-card-head price-card-head-pro">
               <h3>Pro - Support the app</h3>
               <span className="price-tag">
@@ -395,18 +412,16 @@ export function Progress({ onEarlyBird }: Props) {
                 <li key={label}>{label}</li>
               ))}
             </ul>
-            {tier !== "pro" && (
-              <button
-                type="button"
-                className="price-cta"
-                onClick={() => {
-                  capturePostHogEvent("progress_earlybird_pricing_click", {});
-                  onEarlyBird("pricing");
-                }}
-              >
-                Join EarlyBird
-              </button>
-            )}
+            <button
+              type="button"
+              className="price-cta"
+              onClick={() => {
+                capturePostHogEvent("progress_earlybird_pricing_click", {});
+                onEarlyBird("pricing");
+              }}
+            >
+              Join EarlyBird
+            </button>
             <p className="price-foot">
               Beta price, before it moves to ongoing credits. EarlyBirds keep full access and get
               every future feature as it ships, at no extra cost.
@@ -414,6 +429,7 @@ export function Progress({ onEarlyBird }: Props) {
           </div>
         </div>
       </section>
+      )}
     </div>
   );
 }
