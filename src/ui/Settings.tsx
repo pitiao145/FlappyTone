@@ -71,7 +71,8 @@ function BookIcon() {
 interface Props {
   /** The saved calibration, or null if the player has never calibrated. */
   settings: CalibrationSettings | null;
-  onBack: () => void;
+  
+  /** Called after the calibration is recalibrated, so the router can re-check it. */
   onRecalibrate: () => void;
   /** Opens the live preview + sensitivity slider, seeded from `settings`. */
   onFineTune: () => void;
@@ -96,7 +97,6 @@ interface Props {
  */
 export function Settings({
   settings,
-  onBack,
   onRecalibrate,
   onFineTune,
   onForget,
@@ -274,9 +274,7 @@ export function Settings({
 
       {error && <p className="error">{error}</p>}
 
-      <button className="primary" onClick={onBack}>
-        Done
-      </button>
+      
     </div>
   );
 }
