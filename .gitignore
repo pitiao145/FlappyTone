@@ -38,3 +38,4 @@ fixtures/analytics/
 .env*.local
 
 .worktrees/
+.claude/
