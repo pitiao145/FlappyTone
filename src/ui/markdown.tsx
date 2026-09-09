@@ -28,8 +28,13 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
     if (m.index > last) nodes.push(text.slice(last, m.index));
     const key = `${keyPrefix}-${i++}`;
     if (m[1] !== undefined) {
+      const external = m[2].startsWith("http");
+      // Whitelist safe schemes so a stray `javascript:`/`data:` URL renders as
+      // inert text, not a clickable script — cheap insurance if this generic
+      // renderer is ever pointed at anything but our own static legal copy.
+      const href = /^(https?:|mailto:|\/|#)/i.test(m[2]) ? m[2] : undefined;
       nodes.push(
-        <a key={key} href={m[2]} target={m[2].startsWith("http") ? "_blank" : undefined} rel={m[2].startsWith("http") ? "noopener noreferrer" : undefined}>
+        <a key={key} href={href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>
           {m[1]}
         </a>,
       );

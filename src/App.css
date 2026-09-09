@@ -6482,67 +6482,173 @@ section.hero-cards {
 }
 
 /* Profile: identity block + plan + EarlyBird pitch. */
-.profile-identity {
+/* Profile hero banner — full-bleed gradient band at the top of the card. */
+.profile-hero-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.profile-hero {
+  position: relative;
+  padding: var(--space-4);
+  background: linear-gradient(150deg, var(--accent), var(--accent-bright));
+  color: var(--accent-ink);
+}
+
+.profile-hero-eyebrow {
+  margin: 0 0 var(--space-3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  opacity: 0.75;
+}
+
+.profile-hero-row {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  min-width: 0;
 }
 
 .profile-avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 52px;
+  height: 52px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
-  color: var(--accent);
-  font-family: var(--font-display);
-  font-weight: 700;
+  background: color-mix(in srgb, var(--accent-ink) 82%, var(--accent));
+  border: 2px solid color-mix(in srgb, var(--accent-ink) 50%, transparent);
+  overflow: hidden;
 }
 
-.profile-name {
+.profile-avatar-pro {
+  border-color: var(--beak);
+}
+
+.profile-avatar img {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+}
+
+.profile-hero-id {
+  min-width: 0;
+}
+
+.profile-hero-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.profile-hero-pills {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: 4px;
+  font-size: var(--text-xs);
+}
+
+.profile-hero-pill {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent-ink) 20%, transparent);
+}
+
+.profile-hero-plan {
+  opacity: 0.85;
+}
+
+.profile-hero-badge {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--beak);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: var(--text-xs);
+}
+
+/* EarlyBird upsell sticker — a calm one-line card, not the old bordered hero.
+   Scoped past `.screen button` (which resets border/bg/radius on any button). */
+.profile-screen .profile-earlybird-sticker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--beak);
+  background: color-mix(in srgb, var(--beak) 8%, var(--surface-panel));
+  box-shadow: var(--shadow-sticker-pro);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.profile-earlybird-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-earlybird-title {
+  font-family: var(--font-display);
   font-weight: 600;
 }
 
-.earlybird-card {
-  padding: var(--space-5) var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--surface-panel);
-  border: 2px solid var(--accent);
-  text-align: left;
+.profile-earlybird-arrow {
+  font-size: var(--text-xl);
+  color: var(--beak);
+  flex-shrink: 0;
 }
 
-.earlybird-price {
+.profile-celebration {
+  text-align: center;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-panel));
+}
+
+.profile-celebration-title {
   font-family: var(--font-display);
-  font-size: var(--text-2xl);
-  margin: var(--space-2) 0 var(--space-3);
+  font-weight: 600;
+  margin: 0 0 var(--space-2);
 }
 
-.earlybird-features {
-  list-style: none;
-  margin: 0 0 var(--space-4);
-  padding: 0;
+/* Account card: sign-up/log-in form, or the signed-in board-name row. */
+.account-board-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.account-rename-locked {
+  color: var(--ink-muted);
+  background: var(--line-soft);
+}
+
+.account-rename-form {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: var(--text-sm);
+  gap: var(--space-2);
 }
 
-.earlybird-features li {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.account-hairline {
+  height: 1px;
+  margin: var(--space-3) 0;
+  background: var(--line);
 }
 
-.earlybird-features li .badge {
+.account-signout {
+  display: block;
   margin-left: auto;
-}
-
-/* Account card: sign-up/log-in form on the Profile tab. */
-.account-mode-row {
-  margin-bottom: var(--space-3);
 }
 
 .account-form {
@@ -6586,25 +6692,6 @@ section.hero-cards {
   flex-wrap: wrap;
   gap: var(--space-2);
   margin-top: var(--space-2);
-}
-
-.earlybird-feature-live {
-  color: var(--good-dim);
-}
-
-.earlybird-cta {
-  width: 100%;
-}
-
-.earlybird-note {
-  text-align: center;
-  margin-top: var(--space-2);
-}
-
-.earlybird-notify {
-  display: block;
-  width: 100%;
-  text-align: center;
 }
 
 /* EarlyBird modal — the app's only modal, so kept local rather than a generic component. */
@@ -6876,18 +6963,10 @@ section.hero-cards {
   font-size: var(--text-base);
   text-align: center;
   text-decoration: none;
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* The real checkout link (store configured, player signed in) — same shape
-   as the disabled-look button above, just clickable. */
-.modal-pay-live {
-  opacity: 1;
   cursor: pointer;
 }
 
-.modal-pay-live:hover {
+.modal-pay:hover {
   background: color-mix(in srgb, var(--accent) 88%, white);
 }
 
@@ -6902,13 +6981,6 @@ section.hero-cards {
 
 .modal-notify-form button:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent) 88%, white);
-}
-
-.modal-pay-note {
-  text-align: center;
-  font-size: var(--text-xs);
-  color: var(--ink-dim);
-  margin: 4px 0 var(--space-3);
 }
 
 /* The guest-only "create a free account" door, above the Pro pay button. */

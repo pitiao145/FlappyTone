@@ -1,26 +1,12 @@
 import { useEffect, useId, useState } from "react";
 import { capturePostHogEvent } from "../analytics/posthog.ts";
 import { getAccount } from "../data/account.ts";
+import { buildCheckoutUrl, redirectToCheckoutForCurrentAccount } from "../data/checkout.ts";
+import { setPendingCheckout } from "../data/checkoutIntent.ts";
 import { useTier } from "../data/tier.ts";
 import { TIER_LIMITS } from "../game/tiers.ts";
 import { PRO_FEATURES, PRO_PRICE } from "./plan.ts";
 import { useNewsletterSubscribe } from "./useNewsletterSubscribe.ts";
-
-/**
- * Build the hosted-checkout URL for a signed-in player.
- *
- * `checkout[custom][user_id]` is the whole mechanism: it's how the Lemon
- * Squeezy webhook (owned elsewhere, see `api/`) knows which Supabase account
- * to grant `entitlements.has_access` to once the payment clears — there is no
- * other link between "someone paid" and "this player." `checkout[email]`
- * only prefills the field; it plays no part in the account match.
- */
-export function buildCheckoutUrl(baseUrl: string, userId: string, email: string | null): string {
-  const url = new URL(baseUrl);
-  url.searchParams.set("checkout[custom][user_id]", userId);
-  if (email) url.searchParams.set("checkout[email]", email);
-  return url.toString();
-}
 
 export type EarlyBirdSurface = "progress" | "profile" | "daily-limit" | "visualiser" | "leaderboard";
 
@@ -34,9 +20,12 @@ interface Props {
    * "create a free account" door. Only shown to a guest, and only when the
    * caller wires this in; omit it to keep the door hidden (e.g. a spot that
    * can't navigate to Profile). `GameApp.tsx` should pass something that
-   * switches to the Profile tab and closes this modal.
+   * switches to the Profile tab and closes this modal. Passing `"checkout"`
+   * (the guest Pay button below) tells the caller to open the dedicated
+   * checkout-signup screen instead, so the account form isn't buried under
+   * the Profile tab's other cards on the way to paying.
    */
-  onCreateAccount?: () => void;
+  onCreateAccount?: (intent?: "checkout") => void;
 }
 
 /**
@@ -87,15 +76,15 @@ const COPY: Record<
  * The EarlyBird signup modal — every locked "Soon" section across Progress
  * and Profile opens this same component, and so does hitting the daily
  * runs cap (`dailyLimitReached` in GameApp.tsx). A guest also sees a second
- * door here: creating a free account, a smaller step than paying. No payment
- * processor is wired up yet, so "Pay" is disabled; only the email capture is
- * live, sharing the Kit integration `ComingSoon`/Landing already use
- * (`useNewsletterSubscribe`, `api/newsletter.ts`), tagged with the dedicated
- * "earlybird" source.
+ * door here: creating a free account, a smaller step than paying. Pay is a
+ * live Lemon Squeezy checkout for a signed-in free account; a guest's Pay
+ * routes through the create-account-first screen and on to checkout. The
+ * email capture below stays as a "not ready to pay" fallback, sharing the Kit
+ * integration `ComingSoon`/Landing already use (`useNewsletterSubscribe`,
+ * `api/newsletter.ts`), tagged with the dedicated "earlybird" source.
  */
 export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: Props) {
   const inputId = useId();
-  const payPromptInputId = useId();
   const [email, setEmail] = useState("");
   const { status, error, submit } = useNewsletterSubscribe("earlybird");
   const tier = useTier();
@@ -139,27 +128,14 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
     // Only on mount/surface change, not on every tier refresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [surface, feature]);
-  /**
-   * "Pay" can't actually charge anyone yet, so a tap on it is a missed
-   * conversion unless it's caught here — this opens a second, focused modal
-   * with the same email capture the main card already has below the fold,
-   * for whoever clicked Pay without noticing it (or without scrolling to it
-   * at all on a short viewport).
-   */
-  const [payPromptOpen, setPayPromptOpen] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      // Escape backs out one layer at a time — closing the whole EarlyBird
-      // modal out from under someone mid-email-entry in the Pay prompt would
-      // throw away what they were doing for no reason.
-      if (payPromptOpen) setPayPromptOpen(false);
-      else onClose();
+      if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, payPromptOpen]);
+  }, [onClose]);
 
   /** The email-capture form, shared verbatim by the main card and the Pay prompt — same `useNewsletterSubscribe` state either way, just a distinct `id` so both can exist in the DOM at once without colliding. */
   const notifyForm = (id: string) => (
@@ -254,7 +230,7 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
 
           {checkoutUrl ? (
             <a
-              className="primary modal-pay modal-pay-live"
+              className="primary modal-pay"
               href={checkoutUrl}
               target="_blank"
               rel="noopener noreferrer"
@@ -265,43 +241,26 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
             >
               Pay {PRO_PRICE} — get EarlyBird access
             </a>
-          ) : isGuest ? (
+          ) : (
             <button
               type="button"
               className="primary modal-pay"
               onClick={() => {
-                capturePostHogEvent("earlybird_pay_click", { surface, feature });
-                onCreateAccount?.();
+                void (async () => {
+                  capturePostHogEvent("earlybird_pay_click", { surface, feature });
+                  // A signed-in player whose account id hadn't loaded when the
+                  // page rendered can still go straight to checkout. A guest
+                  // (or anyone we can't check out) detours through account
+                  // creation, which picks the intent back up post-signup.
+                  if (!isGuest && (await redirectToCheckoutForCurrentAccount())) return;
+                  setPendingCheckout();
+                  onCreateAccount?.("checkout");
+                })();
               }}
             >
               Pay {PRO_PRICE} — get EarlyBird access
             </button>
-          ) : (
-            /*
-              Not a native `disabled` button: disabled elements never dispatch
-              a click event, which silently throws away the one signal we
-              actually want right now (is anyone trying to pay before
-              checkout exists?). `.modal-pay`'s own styling (App.css) is
-              already unconditional — opacity/cursor don't key off
-              `:disabled` — so dropping the attribute changes nothing
-              visually. `aria-disabled` keeps the non-functional intent for
-              assistive tech without blocking the click. This is also the
-              exact fallback the store's absence must keep working.
-            */
-            <button
-              type="button"
-              className="primary modal-pay"
-              aria-disabled="true"
-              title="Checkout is coming soon"
-              onClick={() => {
-                capturePostHogEvent("earlybird_pay_click", { surface, feature });
-                setPayPromptOpen(true);
-              }}
-            >
-              🔒 Pay {PRO_PRICE} — get EarlyBird access
-            </button>
           )}
-          {!checkoutUrl && <p className="modal-pay-note">Checkout is coming soon.</p>}
 
           <div className="modal-divider">
             <span>or</span>
@@ -313,34 +272,6 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
           </p>
         </div>
       </div>
-
-      {payPromptOpen && (
-        <div className="modal-backdrop" onClick={() => setPayPromptOpen(false)}>
-          <div
-            className="modal-card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={`${payPromptInputId}-title`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="modal-close"
-              onClick={() => setPayPromptOpen(false)}
-              aria-label="Close"
-            >
-              ×
-            </button>
-            <p className="modal-eyebrow">★ Checkout isn&rsquo;t open yet</p>
-            <h2 id={`${payPromptInputId}-title`}>Get the EarlyBird price the moment it is</h2>
-            <p className="modal-body">
-              Payments aren&rsquo;t live yet. Leave your email and we&rsquo;ll notify you the second
-              checkout opens, still at the EarlyBird price.
-            </p>
-            {notifyForm(payPromptInputId)}
-          </div>
-        </div>
-      )}
     </>
   );
 }

@@ -19,6 +19,8 @@ import {
   type Account,
 } from "../data/account.ts";
 import { fireAuthToast } from "../data/authToast.ts";
+import { redirectToCheckoutForCurrentAccount } from "../data/checkout.ts";
+import { consumePendingCheckout } from "../data/checkoutIntent.ts";
 import { displayName } from "../data/leaderboard.ts";
 import { getSupabase } from "../data/supabase.ts";
 import { useTier } from "../data/tier.ts";
@@ -26,7 +28,12 @@ import { useTier } from "../data/tier.ts";
 type Mode = "signup" | "login";
 type Busy = "idle" | "submitting" | "magic" | "reset" | "renaming";
 
-export function AccountCard() {
+interface Props {
+  /** Omits the "Save your progress"/"Log in" header on the guest branch only — for a screen that already carries its own title (see `CheckoutSignup.tsx`). */
+  hideGuestHeader?: boolean;
+}
+
+export function AccountCard({ hideGuestHeader = false }: Props) {
   const [account, setAccount] = useState<Account | null>(null);
   const [mode, setMode] = useState<Mode>("signup");
   const [email, setEmail] = useState("");
@@ -72,6 +79,9 @@ export function AccountCard() {
     if (result.ok) {
       setPassword("");
       fireAuthToast("signed-in");
+      // Only consume the flag on success — a failed attempt shouldn't burn the
+      // guest's one shot at getting bounced through to checkout.
+      if (consumePendingCheckout()) void redirectToCheckoutForCurrentAccount();
     }
   }
 
@@ -119,34 +129,37 @@ export function AccountCard() {
   if (account.status === "permanent") {
     return (
       <section className="progress-card account-card">
-        <div className="progress-card-header">
-          <h3>Account</h3>
-          <span className="badge badge-free">Signed in</span>
-        </div>
-        <p className="note">{account.email}</p>
         {tier === "pro" ? (
-          <form className="coming-soon-form" onSubmit={handleRename}>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={displayName()}
-              aria-label="Board name"
-              maxLength={24}
-            />
-            <button type="submit" disabled={busy === "renaming"}>
-              {busy === "renaming" ? "Saving…" : "Rename"}
-            </button>
-          </form>
+          <>
+            <div className="progress-card-header">
+              <h3>Board name</h3>
+            </div>
+            <form className="account-rename-form" onSubmit={handleRename}>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={displayName()}
+                aria-label="Board name"
+                maxLength={24}
+              />
+              <button type="submit" disabled={busy === "renaming"}>
+                {busy === "renaming" ? "Saving…" : "Rename"}
+              </button>
+            </form>
+          </>
         ) : (
-          <p className="note">
-            On the board as {displayName()}. Renaming is a Pro feature.
-          </p>
+          <div className="progress-card-header">
+            <h3>Board name</h3>
+            <span className="badge account-rename-locked">Pro to rename</span>
+          </div>
         )}
+        {tier !== "pro" && <p className="account-board-name">{displayName()}</p>}
         {message && <p className="note">{message}</p>}
+        <div className="account-hairline" />
         <button
           type="button"
-          className="link"
+          className="link account-signout"
           onClick={() => {
             void signOut().then(() => fireAuthToast("signed-out"));
           }}
@@ -161,33 +174,18 @@ export function AccountCard() {
 
   return (
     <section className="progress-card account-card">
-      <div className="progress-card-header">
-        <h3>Account</h3>
-      </div>
+      {!hideGuestHeader && (
+        <div className="progress-card-header">
+          <h3>{mode === "signup" ? "Save your progress" : "Log in"}</h3>
+        </div>
+      )}
 
-      {isAnonymous && (
+      {isAnonymous && mode === "signup" && (
         <p className="note">
           On the board as {displayName()}. Adding a password keeps this account
           and your board place — nothing is lost.
         </p>
       )}
-
-      <div className="pace-row account-mode-row">
-        <button
-          type="button"
-          className={`pace ${mode === "signup" ? "active" : ""}`}
-          onClick={() => setMode("signup")}
-        >
-          Create account
-        </button>
-        <button
-          type="button"
-          className={`pace ${mode === "login" ? "active" : ""}`}
-          onClick={() => setMode("login")}
-        >
-          Log in
-        </button>
-      </div>
 
       <form className="account-form" onSubmit={handleSubmit}>
         <label className="account-field">
@@ -238,14 +236,19 @@ export function AccountCard() {
         <button type="button" className="link" onClick={() => void handleMagicLink()} disabled={busy === "magic"}>
           Email me a link instead
         </button>
-        <button
-          type="button"
-          className="link"
-          onClick={() => void handleForgotPassword()}
-          disabled={busy === "reset"}
-        >
-          Forgot password?
+        <button type="button" className="link" onClick={() => setMode(mode === "signup" ? "login" : "signup")}>
+          {mode === "signup" ? "Log in" : "Create account instead"}
         </button>
+        {mode === "login" && (
+          <button
+            type="button"
+            className="link"
+            onClick={() => void handleForgotPassword()}
+            disabled={busy === "reset"}
+          >
+            Forgot password?
+          </button>
+        )}
       </div>
 
       {message && <p className="note">{message}</p>}

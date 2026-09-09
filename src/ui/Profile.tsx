@@ -6,7 +6,7 @@ import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
 import { loadDailyRuns } from "../game/dailyLimit.ts";
 import { AccountCard } from "./AccountCard.tsx";
-import { FREE_SUMMARY, GUEST_SUMMARY, PRO_FEATURES, PRO_PRICE, TIER_LABEL } from "./plan.ts";
+import { FREE_SUMMARY, GUEST_SUMMARY, PRO_PRICE, TIER_LABEL } from "./plan.ts";
 
 interface Props {
   onEarlyBird: (feature: string) => void;
@@ -43,25 +43,30 @@ export function Profile({ onEarlyBird }: Props) {
     };
   }, [version]);
 
+  const isPro = tier === "pro";
+  const heroName = account?.status === "permanent" ? account.email : "Guest player";
+  const planLabel = isPro ? "EarlyBird Pro" : tier === "free" ? "Free plan" : "Guest plan";
+
   return (
     <div className="screen profile-screen">
-      <h2>Profile</h2>
-      <p className="note">Your account & plan</p>
-
-      {account?.status !== "permanent" && (
-        <section className="progress-card profile-identity">
-          <span className="profile-avatar" aria-hidden>
-            P
-          </span>
-          <div>
-            <p className="profile-name">Guest player</p>
-            {/* The board name is generated, not chosen — showing it here is how
-                a player recognises their own row on the leaderboard. */}
-            <p className="note">On the board as {boardName}</p>
-            <p className="note">Progress saved on this device only</p>
+      <section className="progress-card profile-hero-card">
+        <div className="profile-hero">
+          {isPro && <span className="profile-hero-badge">★ PRO</span>}
+          <p className="profile-hero-eyebrow">PROFILE</p>
+          <div className="profile-hero-row">
+            <span className={`profile-avatar${isPro ? " profile-avatar-pro" : ""}`} aria-hidden>
+              <img src="/Bird-hor-halo.png" alt="" />
+            </span>
+            <div className="profile-hero-id">
+              <p className="profile-hero-name">{heroName}</p>
+              <div className="profile-hero-pills">
+                <span className="profile-hero-pill">@{boardName}</span>
+                <span className="profile-hero-plan">{planLabel}</span>
+              </div>
+            </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       <AccountCard />
 
@@ -73,61 +78,42 @@ export function Profile({ onEarlyBird }: Props) {
 
       <section className="progress-card">
         <div className="progress-card-header">
-          <h3>Your plan</h3>
+          <h3>Daily runs</h3>
           <span className="badge badge-free">{TIER_LABEL[tier]}</span>
         </div>
         <p className="plan-usage">
-          {daily.count} / {unlimited ? "∞" : daily.limit} runs used today
+          {daily.count} / {unlimited ? "∞" : daily.limit} today
         </p>
         <span className="teaser-bar plan-usage-bar">
           <span className="teaser-bar-fill" style={{ width: `${usedPct}%` }} />
         </span>
         <p className="note">
-          {tier === "pro"
-            ? "Pro includes: everything, current and future."
-            : tier === "free"
-              ? `Free includes: ${FREE_SUMMARY}`
-              : `Guest includes: ${GUEST_SUMMARY}`}
+          {isPro ? "everything, current and future" : tier === "free" ? FREE_SUMMARY : GUEST_SUMMARY}
         </p>
       </section>
 
-      {tier !== "pro" && (
-      <section className="earlybird-card">
-        <p className="modal-eyebrow">★ Support the app with EarlyBird access</p>
-        <p className="earlybird-price">
-          {PRO_PRICE} <span className="modal-price-note">once · yours for life</span>
-        </p>
-        <ul className="earlybird-features">
-          {PRO_FEATURES.map((label) => (
-            <li key={label} className="earlybird-feature-live">
-              ✓ {label}
-            </li>
-          ))}
-        </ul>
+      {isPro ? (
+        <section className="progress-card profile-celebration">
+          <p className="profile-celebration-title">Thanks for being an EarlyBird 🎉</p>
+          <p className="note">Everything's unlocked, current and future.</p>
+        </section>
+      ) : (
         <button
           type="button"
-          className="primary earlybird-cta"
+          className="profile-earlybird-sticker"
           onClick={() => {
             capturePostHogEvent("profile_earlybird_cta_click", {});
             onEarlyBird("plan_card");
           }}
         >
-          🔒 Get EarlyBird access · {PRO_PRICE}
+          <span className="profile-earlybird-copy">
+            <span className="profile-earlybird-title">EarlyBird · {PRO_PRICE} once</span>
+            <span className="note">Unlock everything, forever</span>
+          </span>
+          <span className="profile-earlybird-arrow" aria-hidden>
+            →
+          </span>
         </button>
-        <p className="note earlybird-note">
-          Still early. Core is live, more features ship weekly.
-        </p>
-        <button
-          type="button"
-          className="link earlybird-notify"
-          onClick={() => {
-            capturePostHogEvent("profile_earlybird_notify_click", {});
-            onEarlyBird("plan_card");
-          }}
-        >
-          Not ready? Get notified at the EarlyBird price →
-        </button>
-      </section>
       )}
     </div>
   );

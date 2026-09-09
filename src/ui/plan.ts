@@ -45,7 +45,7 @@ export const GUEST_FEATURES: PlanFeature[] = [
 export const FREE_FEATURES: PlanFeature[] = [
   { label: runsLabel("free") },
   { label: "Progress saved and synced to your account" },
-  { label: "A real row on the leaderboard, under a generated name" },
+  { label: "A real entry on the leaderboard, under a generated name" },
   { label: "Basic stats: tone accuracy for your last 5 runs" },
   { label: wordsLabel("free") },
   { label: "HSK / TOCFL word lists (coming soon)", soon: true },
@@ -59,6 +59,7 @@ export const PRO_FEATURES: string[] = [
   "Accuracy per tone across every run, plus its evolution over time",
   "Your average tone shape, and how it evolves over time",
   "Full run history & trends",
+  "Tone pair practice",
   "Leaderboard under a name you choose",
   "Customize your bird & profile",
   "Every future feature, as it ships",

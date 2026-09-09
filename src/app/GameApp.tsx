@@ -32,6 +32,7 @@ import { Calibration } from "../ui/Calibration";
 import { Game, type GameHandle } from "../ui/Game";
 import { GameOver } from "../ui/GameOver";
 import { EarlyBirdModal, type EarlyBirdSurface } from "../ui/EarlyBirdModal.tsx";
+import { CheckoutSignup } from "../ui/CheckoutSignup.tsx";
 import { HowTo } from "../ui/HowTo";
 import { Loading } from "../ui/Loading";
 import { ModeSelect } from "../ui/ModeSelect.tsx";
@@ -63,6 +64,7 @@ type Screen =
   | "visualiser"
   | "progress"
   | "profile"
+  | "checkoutSignup"
   | "lab"
   | "devlogin";
 
@@ -77,6 +79,7 @@ function navTabFor(screen: Screen): NavTab {
     case "progress":
       return "progress";
     case "profile":
+    case "checkoutSignup":
       return "profile";
     case "howto":
     case "settings":
@@ -941,6 +944,8 @@ export default function GameApp() {
           <Profile onEarlyBird={(feature) => openEarlyBird("profile", feature)} />
         )}
 
+        {screen === "checkoutSignup" && <CheckoutSignup onBack={() => setScreen("play")} />}
+
         {screen === "settings" && (
           <Settings
             settings={settings}
@@ -1105,9 +1110,9 @@ export default function GameApp() {
           surface={earlyBird.surface}
           feature={earlyBird.feature}
           onClose={() => setEarlyBird(null)}
-          onCreateAccount={() => {
+          onCreateAccount={(intent) => {
             setEarlyBird(null);
-            setScreen("profile");
+            setScreen(intent === "checkout" ? "checkoutSignup" : "profile");
           }}
         />
       )}
