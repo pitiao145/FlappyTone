@@ -10,6 +10,8 @@ import { FREE_SUMMARY, GUEST_SUMMARY, PRO_PRICE, TIER_LABEL } from "./plan.ts";
 
 interface Props {
   onEarlyBird: (feature: string) => void;
+  /** Forwarded to `AccountCard`, called after sign-out resolves. */
+  onSignedOut?: () => void;
 }
 
 /** Dev-only tier override toggle, gated the same way as `Lab`/`DevLogin` in
@@ -20,7 +22,7 @@ const DevTierCard = import.meta.env.DEV
   : null;
 
 /** The Profile tab: account/guest identity, the real daily free-run count, and the EarlyBird pitch. */
-export function Profile({ onEarlyBird }: Props) {
+export function Profile({ onEarlyBird, onSignedOut }: Props) {
   const tier = useTier();
   // `version` ticks after a sign-in/sign-out finishes syncing (or, for a
   // sign-out, right away) — see `sessionVersion.ts`. Without it these three
@@ -68,7 +70,7 @@ export function Profile({ onEarlyBird }: Props) {
         </div>
       </section>
 
-      <AccountCard />
+      <AccountCard onSignedOut={onSignedOut} />
 
       {DevTierCard && (
         <Suspense fallback={null}>

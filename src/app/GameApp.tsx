@@ -7,6 +7,10 @@ import { ensureMic, getMicSession, MicCancelled, stopMic } from "../audio/sessio
 import { incrementDailyRuns, loadDailyRuns, refreshServerDailyRuns } from "../game/dailyLimit.ts";
 import { getAccount, localAggregates, pushAggregates, syncAccount } from "../data/account.ts";
 import { AUTH_TOAST_TEXT, subscribeAuthToast, type AuthToastKind } from "../data/authToast.ts";
+import { consumePendingJoin } from "../data/joinIntent.ts";
+import { getBoard, joinBoard, submitScore } from "../data/leaderboard.ts";
+import { useSessionVersion } from "../data/sessionVersion.ts";
+import { getSupabase } from "../data/supabase.ts";
 import { usePurchaseReturn } from "../data/purchaseReturn.ts";
 import {
   averageRangeHalves,
@@ -40,6 +44,7 @@ import { PlayHome, type PlayIntent } from "../ui/PlayHome";
 import type { Tone } from "../game/gates.ts";
 import { Profile } from "../ui/Profile.tsx";
 import { Progress } from "../ui/Progress.tsx";
+import { ResetPassword } from "../ui/ResetPassword.tsx";
 import { Settings } from "../ui/Settings";
 import { TutorialDone } from "../ui/TutorialDone.tsx";
 import { Visualiser } from "../ui/Visualiser";
@@ -65,6 +70,7 @@ type Screen =
   | "progress"
   | "profile"
   | "checkoutSignup"
+  | "resetPassword"
   | "lab"
   | "devlogin";
 
@@ -83,6 +89,7 @@ function navTabFor(screen: Screen): NavTab {
       return "profile";
     case "howto":
     case "settings":
+    case "resetPassword":
       return "settings";
     default:
       return "play";
@@ -393,6 +400,59 @@ export default function GameApp() {
     const timer = setTimeout(() => setAuthToast(null), 5000);
     return () => clearTimeout(timer);
   }, [authToast]);
+  /**
+   * "You're on the board — #N of M!" — shown once a guest who declined the
+   * board CTA (`GameOver`'s `acceptUpgrade`, via `setPendingJoin`) finishes
+   * signup. Same auto-dismiss shape as `authToast`.
+   */
+  const [boardJoinToast, setBoardJoinToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!boardJoinToast) return;
+    const timer = setTimeout(() => setBoardJoinToast(null), 5000);
+    return () => clearTimeout(timer);
+  }, [boardJoinToast]);
+  /**
+   * The intent is only consumed once the account is confirmed permanent —
+   * reading it on a still-anonymous version bump would burn the flag on a
+   * signup that hasn't actually landed yet.
+   */
+  const sessionVersion = useSessionVersion();
+  useEffect(() => {
+    void (async () => {
+      try {
+        const account = await getAccount();
+        if (account.status !== "permanent") return;
+        const score = consumePendingJoin();
+        if (score == null) return;
+        await joinBoard();
+        const result = await submitScore(score);
+        if (!result.ok) return;
+        const board = await getBoard();
+        setBoardJoinToast(
+          board.myRank != null
+            ? `You're on the board — #${board.myRank} of ${board.total}!`
+            : "You're on the board!",
+        );
+      } catch {
+        // Never blocks anything — the player just doesn't get the toast.
+      }
+    })();
+  }, [sessionVersion]);
+  /**
+   * A reset-password link opens with `detectSessionInUrl` and Supabase fires
+   * `PASSWORD_RECOVERY` on the client, not a URL param — the only reliable
+   * hook for "this load is a recovery link, not an ordinary return visit."
+   * Subscribed once at the shell level so it can route from any screen.
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const supabase = getSupabase();
+    if (!supabase) return;
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setScreen("resetPassword");
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
   /**
    * True once the day's 5 free "game" runs (see `incrementDailyRuns` in
    * `onRunOver` below) are used up. Tutorial and the visualiser are never
@@ -941,7 +1001,10 @@ export default function GameApp() {
         )}
 
         {screen === "profile" && (
-          <Profile onEarlyBird={(feature) => openEarlyBird("profile", feature)} />
+          <Profile
+            onEarlyBird={(feature) => openEarlyBird("profile", feature)}
+            onSignedOut={() => setScreen("play")}
+          />
         )}
 
         {screen === "checkoutSignup" && <CheckoutSignup onBack={() => setScreen("play")} />}
@@ -957,7 +1020,12 @@ export default function GameApp() {
             onForget={() => setSettings(null)}
             onTutorial={() => startPlay("tutorial")}
             onHowTo={() => setScreen("howto")}
+            onSignedOut={() => setScreen("play")}
           />
+        )}
+
+        {screen === "resetPassword" && (
+          <ResetPassword onDone={() => setScreen("play")} />
         )}
 
         {screen === "visualiser" && settings && visualiserMicReady && (
@@ -1101,6 +1169,12 @@ export default function GameApp() {
       {authToast && (
         <div className="app-toast app-toast-positive" role="status">
           {AUTH_TOAST_TEXT[authToast]}
+        </div>
+      )}
+
+      {boardJoinToast && (
+        <div className="app-toast app-toast-positive" role="status">
+          {boardJoinToast}
         </div>
       )}
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { MicError } from "../audio/mic.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
 import { getAccount, signOut, type Account } from "../data/account.ts";
+import { fireAuthToast } from "../data/authToast.ts";
 import { micErrorCopy } from "./micErrors.ts";
 import { setSharingEnabled } from "../analytics/client.ts";
 import { setPostHogConsent } from "../analytics/posthog.ts";
@@ -81,6 +82,8 @@ interface Props {
   /** Opens the mic and starts a tutorial run — same gate as the Play tab's own button. */
   onTutorial: () => void;
   onHowTo: () => void;
+  /** Called after sign-out resolves, so the router can land on Play home. */
+  onSignedOut?: () => void;
 }
 
 /**
@@ -102,6 +105,7 @@ export function Settings({
   onForget,
   onTutorial,
   onHowTo,
+  onSignedOut,
 }: Props) {
   const [confirmForget, setConfirmForget] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -267,7 +271,16 @@ export function Settings({
           </div>
           <p className="param-help">Signed in as {account.email}</p>
           <div className="setting-actions">
-            <button onClick={() => void signOut()}>Sign out</button>
+            <button
+              onClick={() => {
+                void signOut().then(() => {
+                  fireAuthToast("signed-out");
+                  onSignedOut?.();
+                });
+              }}
+            >
+              Sign out
+            </button>
           </div>
         </section>
       )}

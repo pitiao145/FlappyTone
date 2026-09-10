@@ -6766,6 +6766,29 @@ section.hero-cards {
   text-decoration: underline;
 }
 
+/* Sign-up/log-in feedback: a tint so an error reads as an error, not another
+   italic note (see `messageKind` in AccountCard.tsx/ResetPassword.tsx). */
+.account-message {
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-style: normal;
+  text-align: left;
+  margin-top: var(--space-2);
+}
+
+.account-message-error {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  color: var(--danger-strong);
+}
+
+.account-message-info {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent-bright);
+}
+
 /* EarlyBird modal — the app's only modal, so kept local rather than a generic component. */
 .modal-backdrop {
   position: fixed;

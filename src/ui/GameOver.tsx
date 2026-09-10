@@ -20,6 +20,7 @@ import {
   submitScore,
   type Board,
 } from "../data/leaderboard.ts";
+import { setPendingJoin } from "../data/joinIntent.ts";
 import { JoinBoardModal } from "./JoinBoardModal.tsx";
 import { Leaderboard } from "./Leaderboard.tsx";
 import { useTier } from "../data/tier.ts";
@@ -226,8 +227,14 @@ export function GameOver({
     return gap > 0 ? gap : null;
   }, [board, userId]);
 
-  /** A guest tapping the modal's CTA: no join, just the upgrade path. */
+  /**
+   * A guest tapping the modal's CTA: no join, just the upgrade path. The
+   * score is stashed so GameApp can post it automatically once the account
+   * exists — otherwise the whole reason they tapped through gets lost in
+   * the signup detour.
+   */
   const acceptUpgrade = () => {
+    setPendingJoin(stats.score);
     track({ type: "join_board_submitted", accepted: true, joined: false, ok: false });
     setJoinOffer(false);
     onUpgrade();
@@ -250,6 +257,16 @@ export function GameOver({
       if (didJoin) {
         setJoined(true);
         track({ type: "score_submitted", score: stats.score, is_best: isNewBest, ok: result.ok });
+        if (result.ok) {
+          // The `board` snapshot is from before this join — refetch so
+          // `go-rank-row`'s "#N of M" shows the real rank, not a stale one.
+          try {
+            const b = await getBoard();
+            setBoard(b);
+          } catch {
+            /* Keep the stale snapshot. Not worth failing the join over. */
+          }
+        }
       }
       if (!result.ok) setBoardError(result.reason);
     } catch (err) {

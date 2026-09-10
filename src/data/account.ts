@@ -194,6 +194,29 @@ export async function requestPasswordReset(email: string): Promise<AuthResult> {
 }
 
 /**
+ * Sets a new password from a recovery session (opened by the reset-password
+ * link, which puts Supabase into a `PASSWORD_RECOVERY` state — see
+ * `GameApp.tsx`). Same validation as signup, same never-throw contract.
+ */
+export async function updatePassword(password: string): Promise<AuthResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, reason: "no Supabase client" };
+  if (password.length < 8) return { ok: false, reason: "password must be at least 8 characters" };
+
+  try {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      warn("account", `password update failed: ${error.message}`);
+      return { ok: false, reason: error.message };
+    }
+    return { ok: true };
+  } catch (err) {
+    warn("account", "password update threw", err);
+    return { ok: false, reason: "network error" };
+  }
+}
+
+/**
  * Records marketing consent on the player's profile row. A player who never
  * joined the leaderboard has no `profiles` row yet — only `joinBoard()`
  * creates one otherwise — so this establishes the row first (insert-only,

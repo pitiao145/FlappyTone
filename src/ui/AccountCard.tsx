@@ -28,12 +28,16 @@ import { useTier } from "../data/tier.ts";
 type Mode = "signup" | "login";
 type Busy = "idle" | "submitting" | "magic" | "reset" | "renaming";
 
+type MessageKind = "error" | "info" | null;
+
 interface Props {
   /** Omits the "Save your progress"/"Log in" header on the guest branch only — for a screen that already carries its own title (see `CheckoutSignup.tsx`). */
   hideGuestHeader?: boolean;
+  /** Called after sign-out resolves, so the router can land on Play home. */
+  onSignedOut?: () => void;
 }
 
-export function AccountCard({ hideGuestHeader = false }: Props) {
+export function AccountCard({ hideGuestHeader = false, onSignedOut }: Props) {
   const [account, setAccount] = useState<Account | null>(null);
   const [mode, setMode] = useState<Mode>("signup");
   const [email, setEmail] = useState("");
@@ -42,6 +46,7 @@ export function AccountCard({ hideGuestHeader = false }: Props) {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState<Busy>("idle");
   const [message, setMessage] = useState("");
+  const [messageKind, setMessageKind] = useState<MessageKind>(null);
   const tier = useTier();
 
   useEffect(() => {
@@ -76,6 +81,7 @@ export function AccountCard({ hideGuestHeader = false }: Props) {
         : await signInWithPassword(email, password);
     setBusy("idle");
     setMessage(result.ok ? "" : result.reason);
+    setMessageKind(result.ok ? null : "error");
     if (result.ok) {
       setPassword("");
       fireAuthToast("signed-in");
@@ -88,6 +94,7 @@ export function AccountCard({ hideGuestHeader = false }: Props) {
   async function handleMagicLink() {
     if (!email.trim()) {
       setMessage("Enter your email first.");
+      setMessageKind("error");
       return;
     }
     setBusy("magic");
@@ -95,11 +102,13 @@ export function AccountCard({ hideGuestHeader = false }: Props) {
     const result = await startEmailSignIn(email);
     setBusy("idle");
     setMessage(result.ok ? "Check your inbox for the link." : result.reason);
+    setMessageKind(result.ok ? "info" : "error");
   }
 
   async function handleForgotPassword() {
     if (!email.trim()) {
       setMessage("Enter your email first.");
+      setMessageKind("error");
       return;
     }
     setBusy("reset");
@@ -107,6 +116,7 @@ export function AccountCard({ hideGuestHeader = false }: Props) {
     const result = await requestPasswordReset(email);
     setBusy("idle");
     setMessage(result.ok ? "Check your inbox for a reset link." : result.reason);
+    setMessageKind(result.ok ? "info" : "error");
   }
 
   async function handleRename(e: React.FormEvent) {
@@ -116,6 +126,7 @@ export function AccountCard({ hideGuestHeader = false }: Props) {
     const result = await renameAccount(name);
     setBusy("idle");
     setMessage(result.ok ? "Name updated." : result.reason);
+    setMessageKind(result.ok ? "info" : "error");
   }
 
   if (!account) {
@@ -155,13 +166,26 @@ export function AccountCard({ hideGuestHeader = false }: Props) {
           </div>
         )}
         {tier !== "pro" && <p className="account-board-name">{displayName()}</p>}
-        {message && <p className="note">{message}</p>}
+        {message && (
+          <p
+            className={
+              messageKind === "error"
+                ? "account-message account-message-error"
+                : "account-message account-message-info"
+            }
+          >
+            {message}
+          </p>
+        )}
         <div className="account-hairline" />
         <button
           type="button"
           className="link account-signout"
           onClick={() => {
-            void signOut().then(() => fireAuthToast("signed-out"));
+            void signOut().then(() => {
+              fireAuthToast("signed-out");
+              onSignedOut?.();
+            });
           }}
         >
           Sign out
@@ -279,7 +303,17 @@ export function AccountCard({ hideGuestHeader = false }: Props) {
         )}
       </div>
 
-      {message && <p className="note">{message}</p>}
+      {message && (
+        <p
+          className={
+            messageKind === "error"
+              ? "account-message account-message-error"
+              : "account-message account-message-info"
+          }
+        >
+          {message}
+        </p>
+      )}
     </section>
   );
 }
