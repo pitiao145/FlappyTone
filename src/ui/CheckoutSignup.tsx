@@ -1,28 +1,51 @@
 /**
- * The guest→checkout signup gate: opened from the EarlyBird modal's Pay
- * button when the player has no account yet. Nothing here talks to Lemon
- * Squeezy directly — `AccountCard.tsx` already redirects to checkout on a
- * successful signup via `src/data/checkoutIntent.ts`'s pending-checkout flag.
+ * The guest signup gate: a focused "create an account" screen the guest lands
+ * on directly (no intermediate modal) when an action needs an account first —
+ * either buying EarlyBird (`reason="checkout"`) or joining the leaderboard
+ * (`reason="join"`). Nothing here does the follow-up itself: `AccountCard`
+ * redirects to checkout on the pending-checkout flag, and `GameApp` posts the
+ * board score on the pending-join flag, both after a successful signup.
  */
 import { useEffect } from "react";
 import { consumePendingCheckout } from "../data/checkoutIntent.ts";
+import { consumePendingJoin } from "../data/joinIntent.ts";
 import { AccountCard } from "./AccountCard.tsx";
 
 interface Props {
   onBack: () => void;
+  reason?: "checkout" | "join";
 }
 
-export function CheckoutSignup({ onBack }: Props) {
-  // Tie the pending-checkout intent's lifetime to this screen: on a successful
-  // signup AccountCard already consumed it and navigated away, so this cleanup
-  // only fires when the player leaves without checking out — clearing the flag
-  // so it can't bounce an unrelated later signup straight into checkout.
-  useEffect(() => () => void consumePendingCheckout(), []);
+const COPY = {
+  checkout: {
+    title: "Create an account first",
+    note: "You’ll go straight to checkout once your account is ready.",
+  },
+  join: {
+    title: "Create an account to join",
+    note: "Your score posts to the weekly leaderboard once you’re signed up.",
+  },
+} as const;
+
+export function CheckoutSignup({ onBack, reason = "checkout" }: Props) {
+  // Tie the pending intents' lifetime to this screen: on a successful signup
+  // the follow-up (checkout redirect / board post) already fired, so this
+  // cleanup only runs when the player leaves without finishing — clearing the
+  // flags so a stray one can't fire on an unrelated later signup.
+  useEffect(
+    () => () => {
+      void consumePendingCheckout();
+      void consumePendingJoin();
+    },
+    [],
+  );
+
+  const copy = COPY[reason];
 
   return (
     <div className="screen checkout-signup-screen">
-      <h2>Create an account first</h2>
-      <p className="note">You&rsquo;ll go straight to checkout once your account is ready.</p>
+      <h2>{copy.title}</h2>
+      <p className="note">{copy.note}</p>
       <AccountCard hideGuestHeader />
       <button type="button" className="link" onClick={onBack}>
         ← Back

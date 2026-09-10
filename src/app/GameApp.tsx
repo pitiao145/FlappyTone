@@ -406,6 +406,8 @@ export default function GameApp() {
    * signup. Same auto-dismiss shape as `authToast`.
    */
   const [boardJoinToast, setBoardJoinToast] = useState<string | null>(null);
+  /** Which copy the shared signup gate (`checkoutSignup` screen) shows. */
+  const [signupReason, setSignupReason] = useState<"checkout" | "join">("checkout");
   useEffect(() => {
     if (!boardJoinToast) return;
     const timer = setTimeout(() => setBoardJoinToast(null), 5000);
@@ -433,6 +435,8 @@ export default function GameApp() {
             ? `You're on the board — #${board.myRank} of ${board.total}!`
             : "You're on the board!",
         );
+        // They came here to join — land them on Progress where the board is.
+        setScreen("progress");
       } catch {
         // Never blocks anything — the player just doesn't get the toast.
       }
@@ -1007,7 +1011,9 @@ export default function GameApp() {
           />
         )}
 
-        {screen === "checkoutSignup" && <CheckoutSignup onBack={() => setScreen("play")} />}
+        {screen === "checkoutSignup" && (
+          <CheckoutSignup reason={signupReason} onBack={() => setScreen("play")} />
+        )}
 
         {screen === "settings" && (
           <Settings
@@ -1149,7 +1155,12 @@ export default function GameApp() {
             onRecalibrate={setSettings}
             mode={lastModeRef.current}
             challengeScore={challengeScoreState}
-            onUpgrade={() => openEarlyBird("leaderboard", "leaderboard-join")}
+            onUpgrade={() => {
+              // Guest chose to join: they already know an account is needed, so
+              // go straight to the signup gate — no EarlyBird modal in between.
+              setSignupReason("join");
+              setScreen("checkoutSignup");
+            }}
           />
         )}
         </div>
@@ -1185,7 +1196,12 @@ export default function GameApp() {
           onClose={() => setEarlyBird(null)}
           onCreateAccount={(intent) => {
             setEarlyBird(null);
-            setScreen(intent === "checkout" ? "checkoutSignup" : "profile");
+            if (intent === "checkout") {
+              setSignupReason("checkout");
+              setScreen("checkoutSignup");
+            } else {
+              setScreen("profile");
+            }
           }}
         />
       )}
