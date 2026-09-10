@@ -180,6 +180,23 @@ export function AccountCard({ hideGuestHeader = false }: Props) {
         </div>
       )}
 
+      <div className="pace-row account-mode-row">
+        <button
+          type="button"
+          className={`pace ${mode === "signup" ? "active" : ""}`}
+          onClick={() => setMode("signup")}
+        >
+          Sign up
+        </button>
+        <button
+          type="button"
+          className={`pace ${mode === "login" ? "active" : ""}`}
+          onClick={() => setMode("login")}
+        >
+          Log in
+        </button>
+      </div>
+
       {isAnonymous && mode === "signup" && (
         <p className="note">
           On the board as {displayName()}. Adding a password keeps this account
@@ -230,14 +247,25 @@ export function AccountCard({ hideGuestHeader = false }: Props) {
               ? "Create account"
               : "Log in"}
         </button>
+
+        {mode === "signup" && (
+          <p className="note account-legal">
+            By signing up, you agree to our{" "}
+            <a href="/terms-of-service" target="_blank" rel="noopener noreferrer">
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a href="/privacy-policy" target="_blank" rel="noopener noreferrer">
+              Privacy Policy
+            </a>
+            .
+          </p>
+        )}
       </form>
 
       <div className="account-links">
         <button type="button" className="link" onClick={() => void handleMagicLink()} disabled={busy === "magic"}>
           Email me a link instead
-        </button>
-        <button type="button" className="link" onClick={() => setMode(mode === "signup" ? "login" : "signup")}>
-          {mode === "signup" ? "Log in" : "Create account instead"}
         </button>
         {mode === "login" && (
           <button
