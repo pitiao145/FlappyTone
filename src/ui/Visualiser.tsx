@@ -100,7 +100,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   const [measured, setMeasured] = useState<{ w: number; h: number } | null>(null);
   const canvasW = measured?.w ?? canvasWidth;
   const canvasH = measured?.h ?? canvasHeight;
-  const [tone, setTone] = useState<Tone | null>(1);
+  const [tone, setTone] = useState<Tone | null>(null);
   const [words, setWords] = useState<Word[]>(() => inventoryNow() ?? []);
   const [selectedWord, setSelectedWord] = useState<Word | null>(null);
   const [paused, setPaused] = useState(false);

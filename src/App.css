@@ -292,6 +292,20 @@
   }
 }
 
+/* Game-over is a scrolling menu shell, not the 9:16 board — it must NOT inherit
+   the base `.frame` height-derived width cap, which starves it on a real mobile
+   browser (short `svh` while the URL bar shows → cap far under screen width →
+   inset gutters). Wide on desktop for the 3-column grid. */
+.frame:has(.gameover-screen) {
+  max-width: 640px;
+}
+
+@media (min-width: 720px) {
+  .frame:has(.gameover-screen) {
+    max-width: min(1080px, calc(100vw - var(--nav-sidebar-w) - 64px));
+  }
+}
+
 .stage {
   position: relative;
   margin-top: 16px;
@@ -1511,11 +1525,34 @@
 .go-footer {
   position: sticky;
   bottom: 0;
+  z-index: 2;
   display: flex;
   justify-content: center;
   gap: var(--space-3);
-  padding: var(--space-3) 0;
+  /* Extra top pad so the blur extends above the pill — coach/CTA buttons
+     scrolling under Play again read as softened, not stacked on it. */
+  padding: var(--space-5) 0 var(--space-3);
   background: transparent;
+  isolation: isolate;
+}
+
+/* Clear glass pad behind the floating button (no tint — blur only). */
+.go-footer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  /* Soft top edge — reads as a blur halo around the floating button, not a dock. */
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 42%, #000 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 42%, #000 100%);
+}
+
+.go-footer > * {
+  position: relative;
+  z-index: 1;
 }
 
 .go-footer .go-btn-ghost {
@@ -6753,6 +6790,12 @@ section.hero-cards {
 .modal-backdrop:has(.modal-card--sheet) {
   align-items: flex-end;
   padding: 0;
+  /* Anchor the overlay to the *visible* viewport height: base `.modal-backdrop`
+     is `inset:0`, whose bottom is the large layout-viewport bottom (behind the
+     iOS toolbar). Release the bottom and give it a dvh height so `flex-end`
+     seats the sheet at the visible bottom, not under the toolbar. */
+  bottom: auto;
+  height: 100dvh;
 }
 
 .modal-card--sheet {
@@ -6760,6 +6803,14 @@ section.hero-cards {
   width: 100%;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   padding-top: var(--space-3);
+  /* Track the *visible* (dynamic) viewport, not iOS's large layout viewport
+     that `vh`/`inset:0` resolve against — otherwise the sheet's bottom seats
+     behind the browser toolbar, so it can't use the full height and reads as
+     "not reaching the top". Bottom padding clears the home indicator / toolbar
+     so the last row and CTA aren't cut off. PWA is unaffected (no toolbar, so
+     dvh == vh). */
+  max-height: 92dvh;
+  padding-bottom: max(var(--space-5), env(safe-area-inset-bottom));
 }
 
 @media (min-width: 720px) {
@@ -6771,6 +6822,10 @@ section.hero-cards {
   .modal-card--sheet {
     border-radius: var(--radius-md);
     padding-top: var(--space-6);
+    /* Desktop is a centered modal again — the base 90vh cap is fine and dvh
+       buys nothing, but keep it consistent with the base card. */
+    max-height: 90dvh;
+    padding-bottom: var(--space-5);
   }
 
   .join-modal-handle {

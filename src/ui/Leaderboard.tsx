@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from "react";
+import { createPortal } from "react-dom";
 import { getBoard, myUserId, type Board } from "../data/leaderboard.ts";
 import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
@@ -189,7 +190,11 @@ export function Leaderboard({ limit = 50, onClose }: Props) {
     );
   }
 
-  return (
+  // Portal to <body>: `.frame` uses `container-type`, which makes it the
+  // containing block for `position: fixed`, so a modal rendered inside the
+  // frame (this one opens from GameOver) would anchor to the frame — above the
+  // nav — instead of the viewport, clipping the sheet's bottom.
+  return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
       <div
         className="modal-card modal-card--sheet leaderboard-sheet"
@@ -210,6 +215,7 @@ export function Leaderboard({ limit = 50, onClose }: Props) {
         <div className="leaderboard-preview leaderboard-sheet-body">{body}</div>
         {footer}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

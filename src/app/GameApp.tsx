@@ -949,7 +949,6 @@ export default function GameApp() {
         {screen === "settings" && (
           <Settings
             settings={settings}
-            onBack={() => setScreen("play")}
             onRecalibrate={() => {
               pendingRef.current = null;
               setScreen("calibrate");

@@ -1,4 +1,5 @@
 import { useEffect, useId } from "react";
+import { createPortal } from "react-dom";
 
 interface Projected {
   points: number;
@@ -39,7 +40,10 @@ export function JoinBoardModal({
   }, [onDismiss]);
 
   if (!canJoin) {
-    return (
+    // Portal to <body>: `.frame` is a `container-type` element, which makes it
+    // the containing block for `position: fixed`, so a modal rendered in the
+    // frame anchors to the frame (above the nav) instead of the viewport.
+    return createPortal(
       <div className="modal-backdrop" onClick={onDismiss}>
         <div
           className="modal-card modal-card--sheet join-modal"
@@ -68,11 +72,12 @@ export function JoinBoardModal({
           </button>
           <button type="button" className="join-modal-dismiss-btn" onClick={onDismiss} disabled={busy}>Not now</button>
         </div>
-      </div>
+      </div>,
+      document.body,
     );
   }
 
-  return (
+  return createPortal(
     <div className="modal-backdrop" onClick={onDismiss}>
       <div
         className="modal-card modal-card--sheet join-modal"
@@ -107,6 +112,7 @@ export function JoinBoardModal({
         </button>
         <button type="button" className="join-modal-dismiss-btn" onClick={onDismiss} disabled={busy}>Not now</button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
