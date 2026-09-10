@@ -62,7 +62,11 @@ export function Profile({ onEarlyBird, onSignedOut }: Props) {
             <div className="profile-hero-id">
               <p className="profile-hero-name">{heroName}</p>
               <div className="profile-hero-pills">
-                <span className="profile-hero-pill">@{boardName}</span>
+                {/* A guest has no leaderboard identity yet — only show the board
+                    name once there's a real account behind it. */}
+                {account?.status === "permanent" && (
+                  <span className="profile-hero-pill">@{boardName}</span>
+                )}
                 <span className="profile-hero-plan">{planLabel}</span>
               </div>
             </div>
