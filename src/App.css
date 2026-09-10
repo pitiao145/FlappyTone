@@ -5322,6 +5322,28 @@ section.hero-cards {
   padding: var(--space-6);
 }
 
+/* Back-to-marketing-site logo, mobile only — the game nav's brand link is
+   desktop-only (bottom bar has no room), so this is the sole way out. */
+.playhome-home-link {
+  display: none;
+}
+
+@media (max-width: 719px) {
+  .playhome-home-link {
+    position: absolute;
+    top: var(--space-3);
+    left: var(--space-3);
+    z-index: 2;
+    display: inline-flex;
+    padding: var(--space-1);
+  }
+
+  .playhome-home-link img {
+    display: block;
+    border-radius: var(--radius-sm);
+  }
+}
+
 .playhome-mascot {
   width: min(340px, 85%);
   height: auto;

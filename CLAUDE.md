@@ -202,23 +202,20 @@ for. **Accounts are reachable by a player now** (`src/ui/AccountCard.tsx` is
 live, not dev-gated), which makes every item below a launch gate, not a
 someday concern — a real signup goes through this path today.
 
-- **Custom SMTP is mandatory.** Supabase's built-in sender is a testing
-  convenience: roughly two emails per hour, project-wide, on shared
-  infrastructure Supabase explicitly documents as unfit for production. Hitting
-  it looks like `email rate limit exceeded`. Connect a real provider under Auth
-  → SMTP Settings (Resend/Postmark/Brevo/SES all have ample free tiers) and
-  verify `flappytone.com` as the sending domain — DNS is on Cloudflare, so this
-  is a few records, and it is most of what keeps the mail out of spam.
-- **Redirect URLs must be allowlisted** under Auth → URL Configuration, for
-  every origin that signs in — production, previews, and `http://localhost:3000/**`
-  for local work. A redirect that isn't listed is silently replaced by the
-  project's Site URL, which is `/` — the marketing entry, which ships no
-  Supabase code, so the auth tokens land where nothing can read them. The
-  confirmation still succeeds server-side, so this fails in the most confusing
-  way available: the account is upgraded and the browser never notices.
-- **Enable leaked-password protection** (Auth → Passwords). Password sign-in
-  is now the primary method, not a hypothetical — this is genuinely relevant,
-  not the "harmless while magic-link only" caveat it used to be.
+- **Custom SMTP is done.** Resend is the provider, sending as
+  `info@flappytone.com` — `flappytone.com` is verified in Resend (DKIM/SPF
+  records added to Cloudflare DNS) and Supabase Auth → SMTP Settings points at
+  `smtp.resend.com` with a sending-only Resend API key. No longer the shared
+  ~2-emails/hour sender.
+- **Redirect URLs are allowlisted** under Auth → URL Configuration. A redirect
+  that isn't listed is silently replaced by the project's Site URL, which is
+  `/` — the marketing entry, which ships no Supabase code, so the auth tokens
+  land where nothing can read them. The confirmation still succeeds
+  server-side, so this fails in the most confusing way available: the account
+  is upgraded and the browser never notices.
+- **Leaked-password protection is a paid Supabase feature (Pro plan), not
+  available on this project's tier.** Not configured; revisit if/when the
+  project upgrades.
 - **Re-check `get_advisors` after the first real signups**, since some lints
   only appear once tables hold data.
 - **Email confirmation is deliberately OFF.** A signup is permanent the

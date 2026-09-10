@@ -2,6 +2,7 @@ import { useState } from "react";
 import { MicError } from "../audio/mic.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
 import { micErrorCopy } from "./micErrors.ts";
+import { SITE_HREF } from "./appLink.ts";
 import { brand } from "../brand.ts";
 
 /** "drill" and "learn" are only ever started from ModeSelect, never from a
@@ -75,6 +76,11 @@ export function PlayHome({
         className="playhome-canvas"
         style={{ width: canvasWidth, height: canvasHeight }}
       >
+        {/* Mobile only (CSS): the game nav has no brand link on the bottom
+            bar, so this is the way back out to the marketing site. */}
+        <a className="playhome-home-link" href={SITE_HREF} aria-label="Back to FlappyTone.com">
+          <img src="/icons/icon-32.png" alt="" width={28} height={28} />
+        </a>
         <div className="screen playhome-overlay">
           <img
             src="/Bird-hor-no-halo.png"
