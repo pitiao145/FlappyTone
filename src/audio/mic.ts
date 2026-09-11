@@ -92,6 +92,15 @@ registerProcessor("capture-processor", CaptureProcessor);
  */
 export async function startMic(
   onFrame: (frame: Float32Array, sampleRate: number) => void,
+  /**
+   * Fired when the capture is lost mid-session — the mic track ends or mutes
+   * (an OS interruption: a call, Siri, another app grabbing the mic), or the
+   * AudioContext goes `interrupted` (iOS). The stream is not automatically
+   * re-acquired here; the coordinator in session.ts decides how to recover.
+   * iOS frequently never fires the matching `unmute`, so recovery must be
+   * proactive, not a wait — see docs/flappytone-SPEC-ios-audio-routing.md.
+   */
+  onLost?: () => void,
 ): Promise<MicSession> {
   if (typeof AudioWorkletNode === "undefined") {
     throw new MicError(
@@ -128,10 +137,34 @@ export async function startMic(
   let stream: MediaStream | null = null;
   let source: MediaStreamAudioSourceNode | null = null;
 
+  // Coalesce loss signals: a track ending often also flips the context, and we
+  // want one recovery attempt, not three. Reset on each fresh acquire.
+  let lostFired = false;
+  const fireLost = (): void => {
+    if (lostFired) return;
+    lostFired = true;
+    onLost?.();
+  };
+
+  // An interrupted context (iOS) is a loss even if the track looks alive.
+  ctx.onstatechange = () => {
+    if (ctx.state === "interrupted") fireLost();
+  };
+
   const releaseStream = (): void => {
     source?.disconnect();
     source = null;
-    stream?.getTracks().forEach((t) => t.stop());
+    // Detach the loss listeners and suppress `fireLost` before stopping, so a
+    // deliberate release (a cue, or recovery teardown) does not read its own
+    // `ended` as an OS interruption. Re-armed by the next acquireStream.
+    lostFired = true;
+    if (stream) {
+      for (const t of stream.getAudioTracks()) {
+        t.removeEventListener("ended", fireLost);
+        t.removeEventListener("mute", fireLost);
+        t.stop();
+      }
+    }
     stream = null;
   };
 
@@ -164,6 +197,13 @@ export async function startMic(
     }
     source = ctx.createMediaStreamSource(stream);
     source.connect(node);
+    // A fresh stream can be lost again; re-arm and watch this stream's track.
+    // `mute` fires on an OS interruption; `ended` when the device is reclaimed.
+    lostFired = false;
+    for (const t of stream.getAudioTracks()) {
+      t.addEventListener("ended", fireLost);
+      t.addEventListener("mute", fireLost);
+    }
   };
 
   try {
@@ -184,6 +224,7 @@ export async function startMic(
     acquireStream,
     stop: () => {
       node.port.onmessage = null;
+      ctx.onstatechange = null;
       releaseStream();
       void ctx.close();
     },

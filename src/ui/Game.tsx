@@ -16,6 +16,7 @@ import {
 } from "../audio/reference.ts";
 import { inventoryNow, loadInventory } from "../audio/inventory.ts";
 import { isIOS } from "../audio/platform.ts";
+import { MicStatusBanner } from "./MicStatus.tsx";
 import {
   acquireMicStream,
   getMicSession,
@@ -820,6 +821,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         style={{ width: canvasWidth, height: canvasHeight }}
       >
         <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} />
+
+        <MicStatusBanner />
 
         <div className="hud">
           <div className="hud-top">

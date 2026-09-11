@@ -773,6 +773,49 @@
   animation: your-turn-pop 0.25s ease-out;
 }
 
+/* Mic-loss indicator (docs/flappytone-SPEC-ios-audio-routing.md, Fix B). */
+.mic-status {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 90%;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 0.82rem;
+  text-align: center;
+  color: var(--danger);
+  background: rgba(var(--surface-rgb), 0.92);
+  border: 1px solid rgba(var(--danger-rgb), 0.4);
+}
+
+.mic-status__dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+.mic-status__dot[data-recovering="true"] {
+  background: var(--warn);
+  animation: mic-status-pulse 1s ease-in-out infinite;
+}
+
+@keyframes mic-status-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 @keyframes your-turn-pop {
   from {
     transform: scale(1.25);

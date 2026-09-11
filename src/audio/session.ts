@@ -44,7 +44,13 @@ export function ensureMic(): Promise<MicSession> {
       startingGen = -1;
     }
   };
-  const pending = startMic((frame, sampleRate) => sink?.(frame, sampleRate)).then(
+  const pending = startMic(
+    (frame, sampleRate) => sink?.(frame, sampleRate),
+    // Loss (OS interruption / interrupted context) routes into the recovery
+    // coordinator below, not straight into a re-acquire, so status and
+    // debouncing live in one place.
+    () => onMicLost(),
+  ).then(
     (s) => {
       clearIfCurrent();
       if (gen !== generation) {
@@ -52,6 +58,7 @@ export function ensureMic(): Promise<MicSession> {
         throw new MicCancelled();
       }
       session = s;
+      setMicStatus("live");
       // The single choke point for mic outcome — four UI call sites route
       // through here, and a denied mic is the most common reason a tester
       // never reaches a gate at all.
@@ -112,8 +119,10 @@ export async function acquireMicStream(): Promise<void> {
     await s.acquireStream();
   } catch (err) {
     if (!(err instanceof MicError)) throw err;
-    // A re-acquire that fails leaves the mic released; the recovery path
-    // (Fix B) surfaces the dead-mic state to the UI. Nothing to do here.
+    // A re-acquire that fails (e.g. the OS still holds the mic after a cue)
+    // leaves the game deaf. Mark it lost so the UI shows it and the
+    // visibility/gesture retry (Fix B) can recover.
+    setMicStatus("lost");
   }
 }
 
@@ -127,4 +136,91 @@ export function stopMic(): void {
   sink = null;
   session?.stop();
   session = null;
+  setMicStatus("idle");
+}
+
+// --------------------------------------------------------- mic health / recovery
+//
+// Fix B of docs/flappytone-SPEC-ios-audio-routing.md. An OS interruption (a
+// call, Siri, another app) can leave the mic track dead or the AudioContext
+// `interrupted`, and on iOS the matching `unmute` frequently never fires — so
+// recovery is proactive: stop the dead stream and re-acquire, rather than
+// waiting. The UI subscribes to the status so a deaf mic is never invisible;
+// per hard rule 8 the game reads neutral, not failed, while the mic is down.
+
+/**
+ * "idle": no session. "live": capturing. "lost": interrupted and not yet
+ * recovered (the UI should tell the player). "recovering": a re-acquire is in
+ * flight.
+ */
+export type MicStatus = "idle" | "live" | "lost" | "recovering";
+
+let micStatus: MicStatus = "idle";
+const statusListeners = new Set<(s: MicStatus) => void>();
+
+function setMicStatus(next: MicStatus): void {
+  if (next === micStatus) return;
+  micStatus = next;
+  for (const cb of statusListeners) cb(next);
+}
+
+export function getMicStatus(): MicStatus {
+  return micStatus;
+}
+
+/** Subscribe to mic-status changes. Returns an unsubscribe function. */
+export function subscribeMicStatus(cb: (s: MicStatus) => void): () => void {
+  statusListeners.add(cb);
+  return () => statusListeners.delete(cb);
+}
+
+let recovering = false;
+
+function onMicLost(): void {
+  // Ignore a loss reported after the session was already torn down.
+  if (!session) return;
+  setMicStatus("lost");
+  void recoverMic();
+}
+
+/**
+ * Proactively re-acquires a lost mic: drop the dead stream, get a fresh one,
+ * and resume the context. Never throws. Guarded against re-entry. A failure
+ * leaves status "lost" so the UI can prompt and a later visibility/gesture can
+ * retry. When the context stays `interrupted` even after `resume()` (a reported
+ * iOS dead-end), the session is rebuilt from scratch on the next `ensureMic`.
+ */
+export async function recoverMic(): Promise<void> {
+  const s = session;
+  if (!s || recovering) return;
+  recovering = true;
+  setMicStatus("recovering");
+  try {
+    s.releaseStream();
+    await s.acquireStream();
+    if (s.ctx.state === "suspended" || s.ctx.state === "interrupted") {
+      try {
+        await s.ctx.resume();
+      } catch {
+        // resume can reject on iOS without a gesture; the visibility/gesture
+        // retry below covers it.
+      }
+    }
+    setMicStatus(s.hasStream() && s.ctx.state === "running" ? "live" : "lost");
+  } catch {
+    setMicStatus("lost");
+  } finally {
+    recovering = false;
+  }
+}
+
+// Returning to the foreground is the most reliable moment to retry: it fires on
+// iOS, and it often coincides with the interruption clearing. Retry only when
+// something is actually wrong, so a normal resume costs nothing.
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") return;
+    if (!session) return;
+    if (micStatus === "lost" || !session.hasStream()) void recoverMic();
+  });
 }

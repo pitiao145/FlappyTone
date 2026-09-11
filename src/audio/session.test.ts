@@ -2,29 +2,58 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /** Resolvers for each pending startMic call, in order. */
 const pendingStarts: Array<(s: unknown) => void> = [];
+/** The `onLost` callback handed to the most recent startMic. */
+let lastOnLost: (() => void) | undefined;
 
 vi.mock("./mic.ts", () => ({
   MicError: class extends Error {},
   startMic: vi.fn(
-    () =>
+    (_sink: unknown, onLost?: () => void) =>
       new Promise((resolve) => {
+        lastOnLost = onLost;
         pendingStarts.push(resolve);
       }),
   ),
 }));
 
-const { ensureMic, getMicSession, MicCancelled, stopMic } = await import(
-  "./session.ts"
-);
+const {
+  ensureMic,
+  getMicSession,
+  getMicStatus,
+  MicCancelled,
+  recoverMic,
+  stopMic,
+} = await import("./session.ts");
 const { startMic } = await import("./mic.ts");
 
 function makeSession() {
   return { sampleRate: 48000, ctx: {} as AudioContext, stop: vi.fn() };
 }
 
+/** A session with the full stream lifecycle, for recovery tests. */
+function makeLiveSession() {
+  const ctx = { state: "running" } as { state: string };
+  let live = true;
+  return {
+    sampleRate: 48000,
+    ctx: ctx as unknown as AudioContext,
+    hasStream: vi.fn(() => live),
+    releaseStream: vi.fn(() => {
+      live = false;
+    }),
+    acquireStream: vi.fn(async () => {
+      live = true;
+    }),
+    stop: vi.fn(() => {
+      live = false;
+    }),
+  };
+}
+
 describe("mic session cancellation", () => {
   beforeEach(() => {
     pendingStarts.length = 0;
+    lastOnLost = undefined;
     vi.mocked(startMic).mockClear();
     stopMic();
   });
@@ -73,5 +102,52 @@ describe("mic session cancellation", () => {
     expect(abandoned.stop).toHaveBeenCalledTimes(1);
     expect(fresh.stop).not.toHaveBeenCalled();
     expect(getMicSession()).toBe(fresh);
+  });
+});
+
+describe("mic status & recovery", () => {
+  beforeEach(() => {
+    pendingStarts.length = 0;
+    lastOnLost = undefined;
+    vi.mocked(startMic).mockClear();
+    stopMic();
+  });
+
+  it("goes live on open and idle on stop", async () => {
+    const pending = ensureMic();
+    pendingStarts[0](makeLiveSession());
+    await pending;
+    expect(getMicStatus()).toBe("live");
+    stopMic();
+    expect(getMicStatus()).toBe("idle");
+  });
+
+  it("recovers a lost mic by releasing and re-acquiring the stream", async () => {
+    const pending = ensureMic();
+    const s = makeLiveSession();
+    pendingStarts[0](s);
+    await pending;
+
+    // An OS interruption fires the onLost handed to startMic.
+    lastOnLost?.();
+    // The proactive recovery runs its release + re-acquire microtasks.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(s.releaseStream).toHaveBeenCalledTimes(1);
+    expect(s.acquireStream).toHaveBeenCalledTimes(1);
+    expect(getMicStatus()).toBe("live");
+  });
+
+  it("marks the mic lost when re-acquisition fails", async () => {
+    const pending = ensureMic();
+    const s = makeLiveSession();
+    s.acquireStream.mockRejectedValueOnce(new Error("still held"));
+    s.hasStream.mockReturnValue(false);
+    pendingStarts[0](s);
+    await pending;
+
+    await recoverMic();
+    expect(getMicStatus()).toBe("lost");
   });
 });

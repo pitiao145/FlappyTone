@@ -1,8 +1,25 @@
 # SPEC — iOS audio routing: loud cues + mic-loss recovery
 
-**Status:** Proposed, not built. Written after on-device measurement (Sept 2026).
-Scope: **iOS only** (Safari, Chrome-iOS = WebKit, installed PWA). Nothing here
-changes desktop or Android behaviour.
+**Status:** Implemented on branch `fix/ios-audio-routing`, **pending on-device
+verification and tuning** (the checklist below is not yet run). Written after
+on-device measurement (Sept 2026). Scope: **iOS only** (Safari, Chrome-iOS =
+WebKit, installed PWA). Nothing here changes desktop or Android behaviour.
+
+What landed:
+- **Phase 1** — `mic.ts`/`session.ts`: the AudioContext + capture worklet are
+  persistent; only the `MediaStream` is released/re-acquired
+  (`releaseStream`/`acquireStream`, `releaseMicStream`/`acquireMicStream`).
+- **Phase 2 (Fix A)** — the game releases the mic during each cue on iOS
+  (`isIOS()` gate), waits `tuning().cueReleaseMs` for the route to flip, plays
+  the clip on the speaker, then re-acquires. `run.ts` carries the leading
+  `playDelayMs` so freeze/trace/audio stay in sync (`render/world.ts`).
+- **Phase 3 (Fix B)** — `mic.ts` reports loss (track `ended`/`mute`, ctx
+  `interrupted`); `session.ts` coordinates proactive recovery + a `MicStatus`
+  the UI subscribes to (`ui/MicStatus.tsx` banner in the game HUD).
+
+**Not yet done:** the Visualiser and Calibration cue paths still play through
+the live-mic (earpiece) route — a documented follow-up, not covered here.
+Tunables (`cueReleaseMs`) still need flying on a real iPhone.
 
 This spec covers two mic/audio issues that share one fix surface:
 
