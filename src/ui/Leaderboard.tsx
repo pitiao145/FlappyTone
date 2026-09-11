@@ -23,6 +23,12 @@ interface Props {
    * no backdrop/header, unchanged from before.
    */
   onClose?: () => void;
+  /**
+   * A not-yet-joined player's run score — renders a dashed "ghost" row at the
+   * rank it would land, instead of the old text-only "you'd rank #N". Ignored
+   * once the player has a real row on the board (`myRank != null`).
+   */
+  projectedScore?: number;
 }
 
 function rankLabel(rank: number): string {
@@ -38,7 +44,7 @@ function rankLabel(rank: number): string {
  * `src/data/leaderboard.ts` never throws, so every failure just shows the
  * empty-board copy rather than an error.
  */
-export function Leaderboard({ limit = 50, onClose }: Props) {
+export function Leaderboard({ limit = 50, onClose, projectedScore }: Props) {
   const tier = useTier();
   const full = TIER_LIMITS[tier].leaderboardFull;
   const [board, setBoard] = useState<Board | null>(null);
@@ -98,19 +104,41 @@ export function Leaderboard({ limit = 50, onClose }: Props) {
     const belowCut = board.myRank != null && userId != null && !visibleIds.has(userId);
     const myRow = userId != null ? board.rows.find((r) => r.userId === userId) : undefined;
 
+    // Ghost row: only for a not-yet-joined player (no real row of their own).
+    const showGhost = projectedScore != null && board.myRank == null;
+    const ghostRank = showGhost
+      ? board.rows.filter((r) => r.score > projectedScore).length + 1
+      : null;
+    const ghostBelowCut = showGhost && ghostRank != null && ghostRank > visibleRows.length;
+    // Insertion index within visibleRows (0-based) — where the ghost slots in.
+    const ghostInsertAt = showGhost && !ghostBelowCut && ghostRank != null ? ghostRank - 1 : null;
+
+    const ghostRow = (rank: number) => (
+      <div key="ghost" className="leaderboard-row leaderboard-you leaderboard-ghost">
+        <span className="leaderboard-rank">{rank}</span>
+        <span className="leaderboard-name">You&rsquo;d land here</span>
+        <span className="leaderboard-score">{projectedScore!.toLocaleString()}</span>
+      </div>
+    );
+
+    const rowEls: React.ReactNode[] = [];
+    visibleRows.forEach((row, i) => {
+      if (ghostInsertAt === i) rowEls.push(ghostRow(ghostRank!));
+      const rank = i + 1;
+      const isYou = userId != null && row.userId === userId;
+      rowEls.push(
+        <div key={row.userId} className={isYou ? "leaderboard-row leaderboard-you" : "leaderboard-row"}>
+          <span className="leaderboard-rank">{rankLabel(rank)}</span>
+          <span className="leaderboard-name">{row.name}</span>
+          <span className="leaderboard-score">{row.score.toLocaleString()}</span>
+        </div>,
+      );
+    });
+    if (ghostInsertAt === visibleRows.length) rowEls.push(ghostRow(ghostRank!));
+
     body = (
       <>
-        {visibleRows.map((row, i) => {
-          const rank = i + 1;
-          const isYou = userId != null && row.userId === userId;
-          return (
-            <div key={row.userId} className={isYou ? "leaderboard-row leaderboard-you" : "leaderboard-row"}>
-              <span className="leaderboard-rank">{rankLabel(rank)}</span>
-              <span className="leaderboard-name">{row.name}</span>
-              <span className="leaderboard-score">{row.score.toLocaleString()}</span>
-            </div>
-          );
-        })}
+        {rowEls}
         {!full && hiddenCount > 0 && (
           <div className="leaderboard-row leaderboard-locked-row">
             <span className="leaderboard-name">
@@ -130,6 +158,16 @@ export function Leaderboard({ limit = 50, onClose }: Props) {
               {myRow != null && (
                 <span className="leaderboard-score">{myRow.score.toLocaleString()}</span>
               )}
+            </div>
+          </>
+        )}
+        {ghostBelowCut && (
+          <>
+            <div className="leaderboard-gap">···</div>
+            <div className="leaderboard-row leaderboard-you leaderboard-ghost leaderboard-pinned">
+              <span className="leaderboard-rank">{ghostRank}</span>
+              <span className="leaderboard-name">You&rsquo;d land here</span>
+              <span className="leaderboard-score">{projectedScore!.toLocaleString()}</span>
             </div>
           </>
         )}
@@ -178,6 +216,8 @@ export function Leaderboard({ limit = 50, onClose }: Props) {
           You&rsquo;re #{board.myRank} of {board.total}
         </p>
       );
+    } else if (showGhost && tier === "guest") {
+      footer = <p className="note leaderboard-footer-note">Create a free account to claim your spot.</p>;
     }
   }
 
@@ -207,7 +247,7 @@ export function Leaderboard({ limit = 50, onClose }: Props) {
         <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
           ×
         </button>
-        <p className="modal-eyebrow">★ Weekly leaderboard</p>
+        <p className="modal-eyebrow">🏆 Weekly leaderboard</p>
         <h2 id={titleId}>This week</h2>
         <p className="note leaderboard-sheet-subtitle">
           Resets Monday{board ? ` · ${board.total} players` : ""}

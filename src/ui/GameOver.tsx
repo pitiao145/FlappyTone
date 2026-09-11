@@ -22,6 +22,7 @@ import {
 } from "../data/leaderboard.ts";
 import { setPendingJoin } from "../data/joinIntent.ts";
 import { JoinBoardModal } from "./JoinBoardModal.tsx";
+import { HighScoreModal } from "./HighScoreModal.tsx";
 import { Leaderboard } from "./Leaderboard.tsx";
 import { useTier } from "../data/tier.ts";
 import type { AnalyticsEvent } from "../analytics/session.ts";
@@ -154,6 +155,13 @@ export function GameOver({
   const [boardError, setBoardError] = useState<string | null>(null);
   const boardName = useMemo(() => displayName(), []);
   const boardEligible = mode === "game" && stats.score > 0;
+  /**
+   * The celebration modal folds the join offer into itself, so a new best
+   * shows ONE modal, not two: this replaces the old "open JoinBoardModal
+   * directly on a new best" path. Tapping its join CTA closes this and opens
+   * JoinBoardModal, reusing the existing acceptJoin/acceptUpgrade flow.
+   */
+  const [celebrateOpen, setCelebrateOpen] = useState(isNewBest && boardEligible);
 
   useEffect(() => {
     if (!boardEligible) return;
@@ -176,14 +184,14 @@ export function GameOver({
             track({ type: "score_submitted", score: stats.score, is_best: isNewBest, ok: result.ok });
             if (!result.ok) setBoardError(result.reason);
           } else if (isNewBest) {
-            setJoinOffer(true);
+            // The celebration modal (celebrateOpen, opened on mount) carries
+            // this offer now — no separate JoinBoardModal pops up alongside it.
             track({ type: "join_board_shown", score: stats.score });
           }
         } else if (isNewBest) {
           // Guest: nothing to submit, but the personal-best moment is still
           // when the "you'd rank #N" teaser (and the upgrade nudge) means
-          // the most.
-          setJoinOffer(true);
+          // the most. Folded into the celebration modal, same as above.
           track({ type: "join_board_shown", score: stats.score });
         }
         // Fetched last so a joined player's freshly-submitted score is
@@ -626,7 +634,33 @@ export function GameOver({
         />
       )}
 
-      {leaderboardOpen && <Leaderboard onClose={() => setLeaderboardOpen(false)} />}
+      {celebrateOpen && (
+        <HighScoreModal
+          score={stats.score}
+          rank={projected?.rank ?? board?.myRank ?? null}
+          total={projected?.total ?? board?.total ?? null}
+          canJoin={canJoin}
+          joined={joined}
+          shareBusy={shareBusy}
+          onClose={() => setCelebrateOpen(false)}
+          onViewLeaderboard={() => {
+            setCelebrateOpen(false);
+            setLeaderboardOpen(true);
+          }}
+          onShare={() => void onShare()}
+          onJoin={() => {
+            setCelebrateOpen(false);
+            setJoinOffer(true);
+          }}
+        />
+      )}
+
+      {leaderboardOpen && (
+        <Leaderboard
+          onClose={() => setLeaderboardOpen(false)}
+          projectedScore={joined ? undefined : stats.score}
+        />
+      )}
     </div>
   );
 }
