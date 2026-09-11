@@ -89,6 +89,34 @@ export function getMicSession(): MicSession | null {
   return session;
 }
 
+/**
+ * Releases the current session's mic stream (keeping its context alive) so iOS
+ * reverts the output route to the loud speaker for a reference cue. No-op if no
+ * session is open. See `docs/flappytone-SPEC-ios-audio-routing.md`.
+ */
+export function releaseMicStream(): void {
+  session?.releaseStream();
+}
+
+/**
+ * Re-acquires the current session's mic stream after a cue (or after an OS
+ * interruption killed it). Resolves silently if there is no session or the
+ * stream is already live; swallows failures so a re-acquire can never throw
+ * into the run loop — a caller that needs the outcome checks
+ * `getMicSession()?.hasStream()`.
+ */
+export async function acquireMicStream(): Promise<void> {
+  const s = session;
+  if (!s) return;
+  try {
+    await s.acquireStream();
+  } catch (err) {
+    if (!(err instanceof MicError)) throw err;
+    // A re-acquire that fails leaves the mic released; the recovery path
+    // (Fix B) surfaces the dead-mic state to the UI. Nothing to do here.
+  }
+}
+
 /** Installs (or clears) the consumer of analysis frames. */
 export function setFrameSink(fn: FrameSink | null): void {
   sink = fn;

@@ -20,8 +20,35 @@ export interface MicSession {
    * The capture AudioContext. Exposed so the host can suspend it when the tab
    * is backgrounded (PRD §10) and so reference cues can be played through the
    * same, already-gesture-resumed context.
+   *
+   * The context and its capture worklet node outlive any individual mic
+   * MediaStream: `releaseStream`/`acquireStream` add and remove only the
+   * `getUserMedia` stream and its source node against this persistent context.
+   * That split is what lets a reference cue play on the loud speaker — see
+   * `docs/flappytone-SPEC-ios-audio-routing.md`. On iOS the audio route is
+   * process-wide and forced to the earpiece (`play-and-record`) whenever *any*
+   * live mic track exists; releasing the stream reverts it to the speaker
+   * without tearing down the context.
    */
   ctx: AudioContext;
+  /** True while a live mic MediaStream is connected to the worklet. */
+  hasStream: () => boolean;
+  /**
+   * Stops the mic MediaStream (its tracks) and disconnects its source node,
+   * keeping the context and worklet alive. On iOS this reverts the output
+   * route to the built-in speaker. Idempotent; safe to call when already
+   * released.
+   */
+  releaseStream: () => void;
+  /**
+   * Re-acquires the mic MediaStream and connects it to the persistent worklet.
+   * Idempotent — resolves immediately if a stream is already live. Throws
+   * `MicError` on failure, same mapping as the initial open. The re-acquire
+   * during a run happens outside a user gesture; iOS allows it because the
+   * permission was already granted for this document.
+   */
+  acquireStream: () => Promise<void>;
+  /** Fully tears down: releases the stream, then closes the context. */
   stop: () => void;
 }
 
@@ -73,27 +100,11 @@ export async function startMic(
     );
   }
 
-  let stream: MediaStream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-      },
-    });
-  } catch (err) {
-    if (err instanceof DOMException) {
-      if (err.name === "NotAllowedError" || err.name === "SecurityError") {
-        throw new MicError("permission-denied", "Microphone access was denied.");
-      }
-      if (err.name === "NotFoundError" || err.name === "OverconstrainedError") {
-        throw new MicError("no-microphone", "No microphone was found.");
-      }
-    }
-    throw new MicError("unknown", String(err));
-  }
-
+  // The context and worklet are created once and persist for the whole
+  // session; only the MediaStream + its source node come and go (see
+  // MicSession's doc comment). Creating the context here — before the first
+  // getUserMedia — is still inside the caller's user gesture, which is what
+  // iOS requires for resume().
   const ctx = new AudioContext();
   await ctx.resume();
 
@@ -106,7 +117,6 @@ export async function startMic(
     URL.revokeObjectURL(workletUrl);
   }
 
-  const source = ctx.createMediaStreamSource(stream);
   const node = new AudioWorkletNode(ctx, "capture-processor", {
     numberOfInputs: 1,
     numberOfOutputs: 0,
@@ -114,15 +124,67 @@ export async function startMic(
   node.port.onmessage = (e: MessageEvent<Float32Array>) => {
     onFrame(e.data, ctx.sampleRate);
   };
-  source.connect(node);
+
+  let stream: MediaStream | null = null;
+  let source: MediaStreamAudioSourceNode | null = null;
+
+  const releaseStream = (): void => {
+    source?.disconnect();
+    source = null;
+    stream?.getTracks().forEach((t) => t.stop());
+    stream = null;
+  };
+
+  const acquireStream = async (): Promise<void> => {
+    // Idempotent: a live source means the stream is already connected. Never
+    // hold two live getUserMedia streams at once — that is the iOS
+    // muted-track / NotReadableError landmine (see the spec).
+    if (source) return;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      });
+    } catch (err) {
+      if (err instanceof DOMException) {
+        if (err.name === "NotAllowedError" || err.name === "SecurityError") {
+          throw new MicError(
+            "permission-denied",
+            "Microphone access was denied.",
+          );
+        }
+        if (err.name === "NotFoundError" || err.name === "OverconstrainedError") {
+          throw new MicError("no-microphone", "No microphone was found.");
+        }
+      }
+      throw new MicError("unknown", String(err));
+    }
+    source = ctx.createMediaStreamSource(stream);
+    source.connect(node);
+  };
+
+  try {
+    // Initial acquire, still inside the gesture. A failure here must not leak
+    // the context we just opened.
+    await acquireStream();
+  } catch (err) {
+    node.port.onmessage = null;
+    void ctx.close();
+    throw err;
+  }
 
   return {
     sampleRate: ctx.sampleRate,
     ctx,
+    hasStream: () => source !== null,
+    releaseStream,
+    acquireStream,
     stop: () => {
       node.port.onmessage = null;
-      source.disconnect();
-      stream.getTracks().forEach((t) => t.stop());
+      releaseStream();
       void ctx.close();
     },
   };
