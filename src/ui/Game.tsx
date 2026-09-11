@@ -15,7 +15,14 @@ import {
   playToneCue,
 } from "../audio/reference.ts";
 import { inventoryNow, loadInventory } from "../audio/inventory.ts";
-import { getMicSession, setFrameSink, stopMic } from "../audio/session.ts";
+import { isIOS } from "../audio/platform.ts";
+import {
+  acquireMicStream,
+  getMicSession,
+  releaseMicStream,
+  setFrameSink,
+  stopMic,
+} from "../audio/session.ts";
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
@@ -405,6 +412,10 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     frozenAccumMsRef.current = 0;
     freezeStartedAtRef.current = 0;
     if (mode === "tutorial" && !autoStart) setWalkthroughStep("intro");
+    // iOS forces cue playback to the earpiece while the mic is live; the host
+    // releases the mic during each cue so it plays on the loud speaker, then
+    // re-acquires it. Off everywhere else — no routing problem, no churn.
+    const releaseMicForCue = isIOS();
     const run = new Run({
       mode,
       width: canvasWidth,
@@ -412,6 +423,11 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       cueStyle,
       // Queried at cue time — clips finish loading after the Run exists.
       cueDurationMsFor,
+      // On iOS, releasing the mic while a cue plays reverts the output route
+      // from the earpiece to the loud speaker (the routing fix). The Run only
+      // needs the flag so its cue carries the leading route-cling delay; the
+      // host below performs the actual release/re-acquire.
+      releaseMicForCue,
       // Whatever the manifest fetch has produced by now. Empty is a valid run:
       // it flies the tuning defaults with synthetic cues.
       words: inventoryNow() ?? [],
@@ -437,6 +453,17 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // The run decides when a cue fires (snapshot.cue); the host only plays
     // the audio, edge-triggered on the cued gate's stable xStart.
     let lastPlayedXStart = -Infinity;
+    // Pending timers for the iOS release-during-cue dance (play after the route
+    // cling, re-acquire after the clip). Cleared on teardown so a stale timer
+    // never plays a cue or re-acquires the mic into a torn-down or restarted run.
+    const cueTimers = new Set<number>();
+    const laterCue = (fn: () => void, ms: number) => {
+      const id = window.setTimeout(() => {
+        cueTimers.delete(id);
+        fn();
+      }, ms);
+      cueTimers.add(id);
+    };
     /** Resolve time of the gate the HUD has already reacted to. */
     let lastFlashedAtMs = -Infinity;
     // Walkthrough edge-detection (tutorial only) — mirrors lastPlayedXStart's
@@ -568,24 +595,41 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
 
       if (snap.cue && snap.cue.xStart > lastPlayedXStart && !frozenRef.current) {
         lastPlayedXStart = snap.cue.xStart;
-        const audio = getMicSession()?.ctx;
-        // Same context the mic runs on, so it is already gesture-resumed.
-        if (audio && audio.state === "running") {
-          const playedClip = playToneCue(
-            audio,
-            snap.cue.tone,
-            settings.f0Center,
-            settings.rangeSemitones,
-            snap.cue.word,
-            settings.rangeDownSemitones,
-            mode === "learn",
-          );
-          // Learn mode always takes the synth branch on purpose — only
-          // Classic/Drill falling back to it is a real clip-load failure
-          // worth tracking.
-          if (!playedClip && mode !== "learn") {
-            track({ type: "cue_fallback", tone: snap.cue.tone });
+        const cue = snap.cue;
+        const playCue = () => {
+          const audio = getMicSession()?.ctx;
+          // Same context the mic runs on, so it is already gesture-resumed.
+          if (audio && audio.state === "running") {
+            const playedClip = playToneCue(
+              audio,
+              cue.tone,
+              settings.f0Center,
+              settings.rangeSemitones,
+              cue.word,
+              settings.rangeDownSemitones,
+              mode === "learn",
+            );
+            // Learn mode always takes the synth branch on purpose — only
+            // Classic/Drill falling back to it is a real clip-load failure
+            // worth tracking.
+            if (!playedClip && mode !== "learn") {
+              track({ type: "cue_fallback", tone: cue.tone });
+            }
           }
+        };
+        if (releaseMicForCue) {
+          // iOS: stop the mic so the output route flips to the loud speaker,
+          // wait out the route cling (cue.playDelayMs), play the clip, then
+          // re-acquire the mic once the clip is done — all inside the frozen
+          // "listen" window (see the routing spec). The mic frames captured
+          // during the clip's audible tail are dropped by `isCueAudible()`.
+          releaseMicStream();
+          laterCue(() => {
+            playCue();
+            laterCue(() => void acquireMicStream(), cue.durationMs);
+          }, cue.playDelayMs);
+        } else {
+          playCue();
         }
       }
 
@@ -691,6 +735,16 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       running = false;
       cancelAnimationFrame(rafId);
       clearInterval(hudTimer);
+      cueTimers.forEach((id) => clearTimeout(id));
+      cueTimers.clear();
+      // If we tore down mid-cue (restart, quit) the mic may be released, and
+      // the session is a shared singleton the next run inherits — leaving it
+      // streamless would make that run deaf. Restore it. A no-op when the run
+      // ended via game-over (that path called stopMic, so there is no session)
+      // or when the stream is already live.
+      if (getMicSession() && !getMicSession()!.hasStream()) {
+        void acquireMicStream();
+      }
       document.removeEventListener("visibilitychange", onVisibility);
       releaseWakeLock();
       setFrameSink(null);

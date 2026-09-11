@@ -88,6 +88,16 @@ export interface RunConfig {
    */
   cueDurationMsFor?: (word: Word | null, tone: Tone) => number;
   /**
+   * Whether the host releases the mic while a cue plays, then re-acquires it
+   * (the iOS loud-speaker fix — see docs/flappytone-SPEC-ios-audio-routing.md).
+   * When true, each cue carries a leading `playDelayMs` (`tuning().cueReleaseMs`)
+   * so the freeze window, the demo trace and the audio all shift together to
+   * cover iOS's route "cling" after the mic is stopped. The host performs the
+   * actual release/re-acquire; the Run only needs to know the delay so its
+   * timing stays in sync. Defaults false (desktop/Android need no dance).
+   */
+  releaseMicForCue?: boolean;
+  /**
    * The clip inventory, from `public/ref/manifest.json`. Omitted or empty, the
    * run builds gates from the tuning defaults and cues them synthetically —
    * which is what a failed manifest fetch degrades to, deliberately.
@@ -199,6 +209,14 @@ export interface CueView {
   xStart: number;
   /** When the cue fired (host clock, same nowMs fed to tick*). */
   atMs: number;
+  /**
+   * How long after `atMs` the audio (and the demo trace) is delayed, to cover
+   * iOS's output-route "cling" after the host stops the mic. 0 unless
+   * `releaseMicForCue` — see the config field. The freeze window is extended by
+   * this, and the demo trace shifts by it, so eye, ear and frozen world stay in
+   * sync while the route flips to the loud speaker.
+   */
+  playDelayMs: number;
   /** How long the audible cue lasts — drives the freeze window. */
   durationMs: number;
   /** How long the demo dot takes to trace the corridor. Usually the same. */
@@ -464,6 +482,7 @@ export class Run {
   private readonly corridor: CorridorWidth;
   private cueStyle: CueStyle;
   private readonly cueDurationMsFor: (word: Word | null, tone: Tone) => number;
+  private readonly releaseMicForCue: boolean;
 
   /** Distance the world has scrolled, in px. The bird's world position. */
   private worldX = 0;
@@ -551,6 +570,7 @@ export class Run {
     this.corridor = cfg.corridor ?? "normal";
     this.cueStyle = cfg.cueStyle ?? "pause";
     this.cueDurationMsFor = cfg.cueDurationMsFor ?? (() => CUE_DURATION_MS);
+    this.releaseMicForCue = cfg.releaseMicForCue ?? false;
     this.words = cfg.words ?? [];
     this.singleWord = cfg.singleWord ?? null;
     this.tutorialTones = cfg.tutorialTones ?? TUTORIAL_TONES;
@@ -696,7 +716,8 @@ export class Run {
     return (
       this.cueStyle === "pause" &&
       this.cue !== null &&
-      nowMs - this.cue.atMs < this.cue.durationMs + tuning().cuePauseHoldMs
+      nowMs - this.cue.atMs <
+        this.cue.playDelayMs + this.cue.durationMs + tuning().cuePauseHoldMs
     );
   }
 
@@ -745,6 +766,10 @@ export class Run {
         shape: next.shape,
         xStart: next.xStart,
         atMs: nowMs,
+        // The host stops the mic at cue fire; iOS clings to the earpiece route
+        // for a beat before flipping to the speaker, so the audio and trace
+        // wait it out. 0 when the host isn't doing the release dance.
+        playDelayMs: this.releaseMicForCue ? tuning().cueReleaseMs : 0,
         durationMs: this.cueDurationMsFor(next.word, next.tone),
         // The dot traces the corridor, so it takes the corridor's own time —
         // which is the audible length for every tone but 3, where the gate

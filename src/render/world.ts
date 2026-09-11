@@ -520,7 +520,10 @@ function drawCueDemo(
 ): void {
   const cue = snap.cue;
   if (!cue) return;
-  const raw = (now - cue.atMs - cue.sweepDelayMs) / cue.sweepMs;
+  // `playDelayMs` shifts the trace to start with the audio when the host holds
+  // the clip back through iOS's route cling (see run.ts / the routing spec).
+  const raw =
+    (now - cue.atMs - cue.playDelayMs - cue.sweepDelayMs) / cue.sweepMs;
   // Negative through the consonant: the dot appears when the tone starts, not
   // when the sound does.
   if (raw < 0) return;

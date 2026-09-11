@@ -121,6 +121,17 @@ export interface Tuning {
    */
   cuePauseHoldMs: number;
   /**
+   * Leading delay before a cue's audio plays when the host releases the mic for
+   * it (iOS loud-speaker fix — docs/flappytone-SPEC-ios-audio-routing.md). After
+   * the mic's MediaStream is stopped, iOS clings to the earpiece route for a few
+   * hundred ms before flipping the process route to the built-in speaker; play
+   * the clip before that and it still comes out the earpiece. Sits entirely
+   * inside the frozen "listen" window, so it costs no gameplay time. Only
+   * applied when `releaseMicForCue` is set (iOS); 0 elsewhere. Measured/tuned on
+   * a real iPhone — the default is a conservative starting point.
+   */
+  cueReleaseMs: number;
+  /**
    * The bird's fixed horizontal position, as a fraction of canvas width.
    *
    * This is half of the call-and-response beat, and the cheap half. The gap
@@ -360,6 +371,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   baseRestMs: 2400,
   restMsFloor: 1200,
   cuePauseHoldMs: 800,
+  cueReleaseMs: 300,
   birdXFrac: 0.2,
   cueApproachMs: 825,
   collisionSustainMs: 200,
