@@ -97,11 +97,21 @@ export function getMicSession(): MicSession | null {
 }
 
 /**
+ * True while the mic is *deliberately* released for a cue. The recovery
+ * coordinator reads `!hasStream()` to spot a dead mic, but a cue release makes
+ * that true by design — this flag tells the two apart, so a visibility change
+ * mid-cue can't trigger a "recovery" that re-acquires the mic while the cue is
+ * still audible (which on iOS flips the route straight back to the earpiece).
+ */
+let cueReleaseActive = false;
+
+/**
  * Releases the current session's mic stream (keeping its context alive) so iOS
  * reverts the output route to the loud speaker for a reference cue. No-op if no
  * session is open. See `docs/flappytone-SPEC-ios-audio-routing.md`.
  */
 export function releaseMicStream(): void {
+  cueReleaseActive = true;
   session?.releaseStream();
 }
 
@@ -114,7 +124,10 @@ export function releaseMicStream(): void {
  */
 export async function acquireMicStream(): Promise<void> {
   const s = session;
-  if (!s) return;
+  if (!s) {
+    cueReleaseActive = false;
+    return;
+  }
   try {
     await s.acquireStream();
   } catch (err) {
@@ -123,6 +136,10 @@ export async function acquireMicStream(): Promise<void> {
     // leaves the game deaf. Mark it lost so the UI shows it and the
     // visibility/gesture retry (Fix B) can recover.
     setMicStatus("lost");
+  } finally {
+    // The cue release is resolved either way — the coordinator may treat a
+    // still-missing stream as a real loss again from here.
+    cueReleaseActive = false;
   }
 }
 
@@ -134,6 +151,7 @@ export function setFrameSink(fn: FrameSink | null): void {
 export function stopMic(): void {
   generation += 1;
   sink = null;
+  cueReleaseActive = false;
   session?.stop();
   session = null;
   setMicStatus("idle");
@@ -192,7 +210,9 @@ function onMicLost(): void {
  */
 export async function recoverMic(): Promise<void> {
   const s = session;
-  if (!s || recovering) return;
+  // Never recover mid-cue: the missing stream is deliberate, and re-acquiring
+  // now would flip the route back to the earpiece while the cue plays.
+  if (!s || recovering || cueReleaseActive) return;
   recovering = true;
   setMicStatus("recovering");
   try {
@@ -220,7 +240,7 @@ export async function recoverMic(): Promise<void> {
 if (typeof document !== "undefined") {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
-    if (!session) return;
+    if (!session || cueReleaseActive) return;
     if (micStatus === "lost" || !session.hasStream()) void recoverMic();
   });
 }

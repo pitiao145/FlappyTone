@@ -136,6 +136,16 @@ export async function startMic(
 
   let stream: MediaStream | null = null;
   let source: MediaStreamAudioSourceNode | null = null;
+  // The acquire in flight, if any — so overlapping acquire triggers (a cue
+  // re-acquire and a visibility-driven recovery landing together) share one
+  // getUserMedia instead of opening two live streams (the iOS muted-track /
+  // NotReadableError landmine).
+  let acquiring: Promise<void> | null = null;
+  // Bumped by every release. An acquire that was in flight when a release
+  // happened is stale: it must discard the stream it just got rather than
+  // connect it, or a release-then-acquire race (e.g. a run torn down mid-cue
+  // while its getUserMedia is still resolving) leaves a live mic behind.
+  let streamEpoch = 0;
 
   // Coalesce loss signals: a track ending often also flips the context, and we
   // want one recovery attempt, not three. Reset on each fresh acquire.
@@ -152,6 +162,7 @@ export async function startMic(
   };
 
   const releaseStream = (): void => {
+    streamEpoch += 1;
     source?.disconnect();
     source = null;
     // Detach the loss listeners and suppress `fireLost` before stopping, so a
@@ -168,42 +179,64 @@ export async function startMic(
     stream = null;
   };
 
-  const acquireStream = async (): Promise<void> => {
-    // Idempotent: a live source means the stream is already connected. Never
-    // hold two live getUserMedia streams at once — that is the iOS
-    // muted-track / NotReadableError landmine (see the spec).
-    if (source) return;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
-      });
-    } catch (err) {
-      if (err instanceof DOMException) {
-        if (err.name === "NotAllowedError" || err.name === "SecurityError") {
-          throw new MicError(
-            "permission-denied",
-            "Microphone access was denied.",
-          );
+  const acquireStream = (): Promise<void> => {
+    // Idempotent: a live source means the stream is already connected.
+    if (source) return Promise.resolve();
+    // Share an acquire already in flight rather than starting a second
+    // getUserMedia — never hold two live streams at once (see the spec).
+    if (acquiring) return acquiring;
+
+    const epoch = streamEpoch;
+    const p = (async () => {
+      let s: MediaStream;
+      try {
+        s = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+          },
+        });
+      } catch (err) {
+        if (err instanceof DOMException) {
+          if (err.name === "NotAllowedError" || err.name === "SecurityError") {
+            throw new MicError(
+              "permission-denied",
+              "Microphone access was denied.",
+            );
+          }
+          if (
+            err.name === "NotFoundError" ||
+            err.name === "OverconstrainedError"
+          ) {
+            throw new MicError("no-microphone", "No microphone was found.");
+          }
         }
-        if (err.name === "NotFoundError" || err.name === "OverconstrainedError") {
-          throw new MicError("no-microphone", "No microphone was found.");
-        }
+        throw new MicError("unknown", String(err));
       }
-      throw new MicError("unknown", String(err));
-    }
-    source = ctx.createMediaStreamSource(stream);
-    source.connect(node);
-    // A fresh stream can be lost again; re-arm and watch this stream's track.
-    // `mute` fires on an OS interruption; `ended` when the device is reclaimed.
-    lostFired = false;
-    for (const t of stream.getAudioTracks()) {
-      t.addEventListener("ended", fireLost);
-      t.addEventListener("mute", fireLost);
-    }
+      // A release happened (or another acquire won) while we awaited: this
+      // stream is stale — stop it rather than connect a mic nobody expects.
+      if (epoch !== streamEpoch || source) {
+        s.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      stream = s;
+      source = ctx.createMediaStreamSource(stream);
+      source.connect(node);
+      // A fresh stream can be lost again; re-arm and watch this stream's track.
+      // `mute` fires on an OS interruption; `ended` when the device is reclaimed.
+      lostFired = false;
+      for (const t of stream.getAudioTracks()) {
+        t.addEventListener("ended", fireLost);
+        t.addEventListener("mute", fireLost);
+      }
+    })();
+
+    const wrapped = p.finally(() => {
+      if (acquiring === wrapped) acquiring = null;
+    });
+    acquiring = wrapped;
+    return acquiring;
   };
 
   try {

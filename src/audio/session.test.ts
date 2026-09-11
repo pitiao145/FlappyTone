@@ -22,6 +22,7 @@ const {
   getMicStatus,
   MicCancelled,
   recoverMic,
+  releaseMicStream,
   stopMic,
 } = await import("./session.ts");
 const { startMic } = await import("./mic.ts");
@@ -149,5 +150,20 @@ describe("mic status & recovery", () => {
 
     await recoverMic();
     expect(getMicStatus()).toBe("lost");
+  });
+
+  it("does not recover while the mic is deliberately released for a cue", async () => {
+    const pending = ensureMic();
+    const s = makeLiveSession();
+    pendingStarts[0](s);
+    await pending;
+
+    releaseMicStream(); // cue release: hasStream() is now false by design
+    s.acquireStream.mockClear();
+    await recoverMic();
+
+    // The cue-release flag must stop recovery from re-acquiring mid-cue (which
+    // on iOS would flip the route back to the earpiece while the cue plays).
+    expect(s.acquireStream).not.toHaveBeenCalled();
   });
 });

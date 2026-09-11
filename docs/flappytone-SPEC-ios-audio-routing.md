@@ -192,6 +192,17 @@ already in-memory (`GameApp`'s `Screen` state), so this is a "keep it that way"
 rule, not a change — but it must be stated, and any future deep-linking work
 must respect it.
 
+## Accepted gap: a real interruption during a cue release
+
+While the mic is deliberately released for a cue, `mic.ts` suppresses its own
+loss signal (`lostFired`) so the release isn't misread as an interruption. If a
+genuine OS interruption (call/Siri) lands in that same short window, its
+`onLost` is swallowed too. The re-acquire after the cue, or the next
+foreground `visibilitychange`, recovers it — so this is a recovery-latency gap
+of at most a cue's length, not a permanent-deaf bug. Accepted rather than
+solved, because distinguishing a real interruption from our own release inside
+that window is not reliably possible on iOS.
+
 ## What this does NOT fix
 
 - The earpiece route **while the mic is live** — impossible on iOS web; the fix
