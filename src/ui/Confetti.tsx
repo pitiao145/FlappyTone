@@ -86,11 +86,12 @@ export function Confetti({ onDone }: Props) {
     window.addEventListener("resize", resize);
 
     const originX = window.innerWidth / 2;
+    // Fountain from the bottom-centre: strong upward launch, gravity arcs them back.
     const makeParticle = (now: number): Particle => ({
-      x: originX + (Math.random() - 0.5) * 60,
-      y: -10,
-      vx: (Math.random() - 0.5) * 260,
-      vy: 120 + Math.random() * 180,
+      x: originX + (Math.random() - 0.5) * window.innerWidth * 0.5,
+      y: window.innerHeight + 10,
+      vx: (Math.random() - 0.5) * 520,
+      vy: -(520 + Math.random() * 320),
       rot: Math.random() * Math.PI * 2,
       vrot: (Math.random() - 0.5) * 8,
       size: 6 + Math.random() * 8,
@@ -106,7 +107,7 @@ export function Confetti({ onDone }: Props) {
       const now = performance.now();
       for (let i = 0; i < PARTICLE_COUNT; i++) {
         const p = makeParticle(now);
-        p.y = 40 + Math.random() * 120;
+        p.y = window.innerHeight * (0.35 + Math.random() * 0.4);
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rot);

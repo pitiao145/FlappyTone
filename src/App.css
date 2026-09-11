@@ -5703,20 +5703,26 @@ section.hero-cards {
   color: var(--accent);
 }
 
-/* Hypothetical rank for a not-yet-joined player — dashed/outlined, distinct
-   from the solid-fill `.leaderboard-pinned` "you" row, so it reads as a
-   projection rather than a real, posted score. */
+/* Hypothetical rank for a not-yet-joined player — a real, readable row tinted
+   with the accent and an italic "Your position" name, distinct from posted
+   scores without disappearing into the background. */
 .leaderboard-ghost {
-  border: 2px dashed var(--accent);
+  border: 1px solid var(--accent);
   border-radius: var(--radius-md);
-  padding: 9px var(--space-3);
-  background: transparent;
-  color: var(--accent);
+  padding: 8px var(--space-3);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--ink);
 }
 
-.leaderboard-ghost.leaderboard-pinned {
-  background: transparent;
-  color: var(--accent);
+.leaderboard-ghost .leaderboard-name em {
+  color: var(--accent-bright);
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* Pinned below the teaser cut — no bottom border to fight the rounded box. */
+.leaderboard-ghost-pinned {
+  border-bottom: 1px solid var(--accent);
 }
 
 .leaderboard-gap {
@@ -7326,24 +7332,34 @@ section.hero-cards {
 
 .hsm-actions {
   display: flex;
+  align-items: stretch;
   gap: var(--space-3);
 }
 
-.hsm-btn-secondary {
+.hsm-action-btn {
   flex: 1;
-  padding: 12px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--ink-soft);
-}
-
-.hsm-btn-secondary:hover:not(:disabled) {
-  border-color: var(--ink-soft);
-  color: var(--ink);
 }
 
 .hsm-share-btn {
-  flex: 1;
-  width: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: 1px solid var(--gold-deep, #a86c20);
+  border-radius: var(--radius-pill);
+  background: linear-gradient(180deg, #dca24b, var(--beak));
+  color: #fffdf7;
+  font-weight: 700;
+  font-size: var(--text-base);
+}
+
+.hsm-share-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.hsm-share-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }

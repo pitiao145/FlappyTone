@@ -68,12 +68,12 @@ export function HighScoreModal({
         )}
 
         <div className="hsm-actions">
-          <button type="button" className="hsm-btn-secondary" onClick={onViewLeaderboard}>
+          <button type="button" className="go-btn-ghost hsm-action-btn" onClick={onViewLeaderboard}>
             See leaderboard
           </button>
           <button
             type="button"
-            className="gameover-share hsm-share-btn"
+            className="hsm-share-btn hsm-action-btn"
             disabled={shareBusy}
             onClick={onShare}
           >

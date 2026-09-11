@@ -114,9 +114,11 @@ export function Leaderboard({ limit = 50, onClose, projectedScore }: Props) {
     const ghostInsertAt = showGhost && !ghostBelowCut && ghostRank != null ? ghostRank - 1 : null;
 
     const ghostRow = (rank: number) => (
-      <div key="ghost" className="leaderboard-row leaderboard-you leaderboard-ghost">
+      <div key="ghost" className="leaderboard-row leaderboard-ghost">
         <span className="leaderboard-rank">{rank}</span>
-        <span className="leaderboard-name">You&rsquo;d land here</span>
+        <span className="leaderboard-name">
+          <em>Your position</em>
+        </span>
         <span className="leaderboard-score">{projectedScore!.toLocaleString()}</span>
       </div>
     );
@@ -164,9 +166,11 @@ export function Leaderboard({ limit = 50, onClose, projectedScore }: Props) {
         {ghostBelowCut && (
           <>
             <div className="leaderboard-gap">···</div>
-            <div className="leaderboard-row leaderboard-you leaderboard-ghost leaderboard-pinned">
+            <div className="leaderboard-row leaderboard-ghost leaderboard-ghost-pinned">
               <span className="leaderboard-rank">{ghostRank}</span>
-              <span className="leaderboard-name">You&rsquo;d land here</span>
+              <span className="leaderboard-name">
+                <em>Your position</em>
+              </span>
               <span className="leaderboard-score">{projectedScore!.toLocaleString()}</span>
             </div>
           </>
