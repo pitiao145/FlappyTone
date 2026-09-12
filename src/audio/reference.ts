@@ -16,6 +16,8 @@ import { corridorChaoAt,
   shapeForTone, GATE_DURATION_S, type Tone } from "../game/gates.ts";
 import { RANGE_SEMITONES } from "../pitch/math.ts";
 import type { Word } from "../game/words.ts";
+import { isChromeIOS } from "./platform.ts";
+import { getMicSession } from "./session.ts";
 
 /**
  * The dedicated, output-only playback context for reference cues.
@@ -30,8 +32,25 @@ import type { Word } from "../game/words.ts";
  */
 let ctx: AudioContext | null = null;
 
-/** The shared playback context, created lazily. Output-only — no mic, ever. */
+/**
+ * The context cues play on.
+ *
+ * Safari/PWA/desktop: a dedicated output-only context (created lazily), so a
+ * mic release for the loud-speaker route can't suspend it.
+ *
+ * Chrome/Firefox iOS (the legacy path): the mic's OWN context. Those browsers
+ * can't do the loud-speaker dance anyway (the per-cue re-acquire toasts), and a
+ * second AudioContext contends with the mic's and cuts capture mid-utterance on
+ * them. So they play cues exactly like production always has — one context, no
+ * dance — accepting the quieter earpiece route. See
+ * docs/flappytone-SPEC-ios-audio-routing.md. Falls back to the dedicated
+ * context only if the mic isn't open yet (cues never actually play then).
+ */
 export function getPlaybackCtx(): AudioContext {
+  if (isChromeIOS()) {
+    const mic = getMicSession()?.ctx;
+    if (mic) return mic;
+  }
   ctx ??= new AudioContext();
   return ctx;
 }

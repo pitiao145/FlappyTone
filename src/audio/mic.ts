@@ -1,3 +1,5 @@
+import { isChromeIOS } from "./platform.ts";
+
 export type MicErrorKind =
   | "permission-denied"
   | "no-microphone"
@@ -156,15 +158,17 @@ export async function startMic(
     onLost?.();
   };
 
-  // iOS can flip the context to `interrupted` transiently — e.g. contention
-  // with the separate cue-playback context — while the mic track stays live.
-  // Tearing the stream down and re-acquiring on that would cut off capture
-  // mid-utterance (seen on Chrome-iOS). So just try to resume the context; a
-  // *real* loss (a call, Siri, the device reclaimed) comes through the track's
-  // own `ended`/`mute` listeners below, which do trigger recovery.
-  ctx.onstatechange = () => {
-    if (ctx.state === "interrupted") void ctx.resume();
-  };
+  // iOS can flip the context to `interrupted` transiently while the mic track
+  // stays live. Just try to resume it — never tear the stream down, which would
+  // cut capture mid-utterance. A *real* loss (a call, Siri, the device
+  // reclaimed) comes through the track's own `ended`/`mute` listeners below.
+  // Not wired on the Chrome/Firefox-iOS legacy path (production had no such
+  // handler); there the browser handles its own single context.
+  if (!isChromeIOS()) {
+    ctx.onstatechange = () => {
+      if (ctx.state === "interrupted") void ctx.resume();
+    };
+  }
 
   const releaseStream = (): void => {
     streamEpoch += 1;
@@ -230,10 +234,15 @@ export async function startMic(
       source.connect(node);
       // A fresh stream can be lost again; re-arm and watch this stream's track.
       // `mute` fires on an OS interruption; `ended` when the device is reclaimed.
+      // Skipped on the Chrome/Firefox-iOS legacy path — those run production's
+      // no-recovery behaviour, where a transient mute must not tear the mic down
+      // mid-utterance (see reference.ts's getPlaybackCtx).
       lostFired = false;
-      for (const t of stream.getAudioTracks()) {
-        t.addEventListener("ended", fireLost);
-        t.addEventListener("mute", fireLost);
+      if (!isChromeIOS()) {
+        for (const t of stream.getAudioTracks()) {
+          t.addEventListener("ended", fireLost);
+          t.addEventListener("mute", fireLost);
+        }
       }
     })();
 
