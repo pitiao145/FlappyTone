@@ -241,6 +241,9 @@ if (typeof document !== "undefined") {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
     if (!session || cueReleaseActive) return;
+    // A context left `interrupted`/`suspended` by the background (with the
+    // stream still live) just needs resuming — not a stream teardown.
+    if (session.ctx.state !== "running") void session.ctx.resume();
     if (micStatus === "lost" || !session.hasStream()) void recoverMic();
   });
 }

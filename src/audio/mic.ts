@@ -156,9 +156,14 @@ export async function startMic(
     onLost?.();
   };
 
-  // An interrupted context (iOS) is a loss even if the track looks alive.
+  // iOS can flip the context to `interrupted` transiently — e.g. contention
+  // with the separate cue-playback context — while the mic track stays live.
+  // Tearing the stream down and re-acquiring on that would cut off capture
+  // mid-utterance (seen on Chrome-iOS). So just try to resume the context; a
+  // *real* loss (a call, Siri, the device reclaimed) comes through the track's
+  // own `ended`/`mute` listeners below, which do trigger recovery.
   ctx.onstatechange = () => {
-    if (ctx.state === "interrupted") fireLost();
+    if (ctx.state === "interrupted") void ctx.resume();
   };
 
   const releaseStream = (): void => {
