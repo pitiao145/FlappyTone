@@ -17,7 +17,40 @@ import { corridorChaoAt,
 import { RANGE_SEMITONES } from "../pitch/math.ts";
 import type { Word } from "../game/words.ts";
 
+/**
+ * The dedicated, output-only playback context for reference cues.
+ *
+ * Cues must NOT play through the mic's AudioContext: on iOS, releasing the mic
+ * to move output to the loud speaker (the game's cue "dance") can auto-suspend
+ * that context, silently dropping the clip. A separate context that never holds
+ * a mic source is never suspended by a mic release, so playback stays reliable
+ * and loud. It is output-only — it never calls getUserMedia — so resuming it
+ * needs a user gesture but pops no permission prompt. See
+ * docs/flappytone-SPEC-ios-audio-routing.md.
+ */
 let ctx: AudioContext | null = null;
+
+/** The shared playback context, created lazily. Output-only — no mic, ever. */
+export function getPlaybackCtx(): AudioContext {
+  ctx ??= new AudioContext();
+  return ctx;
+}
+
+/**
+ * Creates (if needed) and resumes the playback context. **Must be called from a
+ * user gesture on iOS** — call it alongside `ensureMic()` in each gesture
+ * handler. Idempotent (resuming a running context is a no-op) and never throws.
+ */
+export async function ensurePlaybackCtx(): Promise<void> {
+  const c = getPlaybackCtx();
+  if (c.state !== "running") {
+    try {
+      await c.resume();
+    } catch {
+      // resume() can reject outside a gesture; the next gesture retries.
+    }
+  }
+}
 
 /**
  * Fallback cue length when no native clip is loaded. The synthetic sweep must
@@ -73,9 +106,12 @@ const loads = new Map<string, Promise<void>>();
  * dozen. The Run asks for a word two gates ahead of the bird, which is seconds
  * of warning for a ~100KB file.
  */
-export function loadClip(audio: AudioContext, word: Word): Promise<void> {
+export function loadClip(word: Word): Promise<void> {
   const existing = loads.get(word.id);
   if (existing) return existing;
+  // Decode on the playback context, so the AudioBuffer matches the context it
+  // will be played on (buffers belong to their decoding context).
+  const audio = getPlaybackCtx();
   const load = (async () => {
     const url = `${import.meta.env.BASE_URL}ref/${word.file}`;
     const res = await fetch(url);
@@ -150,7 +186,6 @@ export function isCueAudible(): boolean {
  * the `clips` lookup.
  */
 export function playToneCue(
-  ctx: AudioContext,
   tone: Tone,
   f0Center: number,
   rangeSemitones: number = RANGE_SEMITONES,
@@ -163,6 +198,11 @@ export function playToneCue(
    */
   forceSynth: boolean = false,
 ): boolean {
+  // Play on the dedicated output-only context (never the mic's), so a mic
+  // release for the loud-speaker route can't have suspended it. Best-effort
+  // resume in case a backgrounding suspended it; a gesture retries otherwise.
+  const ctx = getPlaybackCtx();
+  if (ctx.state !== "running") void ctx.resume();
   const clip = forceSynth ? undefined : word ? clips.get(word.id) : undefined;
   if (clip) {
     const src = ctx.createBufferSource();
@@ -214,7 +254,6 @@ export async function playReferenceTone(
   rangeSemitones: number = RANGE_SEMITONES,
   rangeDownSemitones: number = rangeSemitones,
 ): Promise<void> {
-  ctx ??= new AudioContext();
-  if (ctx.state === "suspended") await ctx.resume();
-  playToneCue(ctx, tone, f0Center, rangeSemitones, null, rangeDownSemitones);
+  await ensurePlaybackCtx();
+  playToneCue(tone, f0Center, rangeSemitones, null, rangeDownSemitones);
 }

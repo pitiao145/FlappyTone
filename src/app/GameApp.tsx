@@ -3,6 +3,7 @@ import { initAnalytics, track, trackCalibration } from "../analytics/client";
 import { capturePostHogEvent, initPostHog } from "../analytics/posthog.ts";
 import { loadInventory } from "../audio/inventory";
 import { MicError } from "../audio/mic";
+import { ensurePlaybackCtx } from "../audio/reference";
 import { ensureMic, getMicSession, MicCancelled, stopMic } from "../audio/session";
 import { incrementDailyRuns, loadDailyRuns, refreshServerDailyRuns } from "../game/dailyLimit.ts";
 import { getAccount, localAggregates, pushAggregates, syncAccount } from "../data/account.ts";
@@ -609,6 +610,7 @@ export default function GameApp() {
   const startFromTutorialDone = useCallback(
     async (intent: "game" | "tutorial") => {
       try {
+        void ensurePlaybackCtx(); // resume cue-playback ctx in-gesture (reference.ts)
         await ensureMic();
         startPlay(intent);
       } catch (err) {
@@ -761,6 +763,7 @@ export default function GameApp() {
     const gen = ++navRef.current;
     try {
       // Retry is a click, so this reopens the mic inside a user gesture.
+      void ensurePlaybackCtx(); // resume cue-playback ctx in-gesture (reference.ts)
       await ensureMic();
       if (gen !== navRef.current) return; // player left while we were waiting
       if (
@@ -895,6 +898,7 @@ export default function GameApp() {
     setError(null);
     if (gameAlive) gameRef.current?.pause();
     if (!settings) pendingRef.current = "visualiser";
+    void ensurePlaybackCtx(); // resume cue-playback ctx in-gesture (reference.ts)
     void ensureMic()
       .then(async () => {
         const audio = getMicSession()?.ctx;

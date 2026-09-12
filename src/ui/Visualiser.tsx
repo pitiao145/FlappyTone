@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { inventoryNow, loadInventory } from "../audio/inventory.ts";
 import { MicError } from "../audio/mic.ts";
-import { isCueAudible, loadClip, playToneCue } from "../audio/reference.ts";
+import {
+  ensurePlaybackCtx,
+  isCueAudible,
+  loadClip,
+  playToneCue,
+} from "../audio/reference.ts";
 import { ensureMic, getMicSession, MicCancelled, setFrameSink, stopMic } from "../audio/session.ts";
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { useTier } from "../data/tier.ts";
@@ -185,6 +190,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     setMuteBusy(true);
     setMuteError(null);
     try {
+      void ensurePlaybackCtx(); // resume cue-playback ctx in-gesture (reference.ts)
       await ensureMic();
       setFrameSink(frameSinkRef.current);
       setMuted(false);
@@ -222,9 +228,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   // instantly without fetching every word up front.
   useEffect(() => {
     if (tone === null) return;
-    const audio = getMicSession()?.ctx;
-    if (!audio) return;
-    for (const w of wordsOfTone(words, tone, limits.wordsPerTone)) void loadClip(audio, w);
+    for (const w of wordsOfTone(words, tone, limits.wordsPerTone)) void loadClip(w);
   }, [tone, words, limits.wordsPerTone]);
 
   const wordsForTone = tone === null ? [] : wordsOfTone(words, tone, limits.wordsPerTone);
@@ -413,18 +417,14 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     // new word — the trail and the running accuracy must survive it.
     if (selectedWord?.id !== word.id) resetAttempts();
     setSelectedWord(word);
-    const audio = getMicSession()?.ctx;
-    // Same context the mic runs on, so it is already gesture-resumed.
-    if (audio && audio.state === "running") {
-      playToneCue(
-        audio,
-        word.tone,
-        settings.f0Center,
-        settings.rangeSemitones,
-        word,
-        settings.rangeDownSemitones,
-      );
-    }
+    // Plays on the dedicated output-only context (reference.ts).
+    playToneCue(
+      word.tone,
+      settings.f0Center,
+      settings.rangeSemitones,
+      word,
+      settings.rangeDownSemitones,
+    );
   };
 
   /**

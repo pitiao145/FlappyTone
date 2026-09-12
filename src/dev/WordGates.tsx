@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { loadInventory } from "../audio/inventory.ts";
-import { loadClip, playToneCue } from "../audio/reference.ts";
+import { ensurePlaybackCtx, loadClip, playToneCue } from "../audio/reference.ts";
 import {
   corridorChaoAt,
   shapeForWord,
@@ -177,12 +177,10 @@ function Card({ word, tolH, band }: { word: Word; tolH: number; band: Band }) {
 
   const play = async () => {
     // Gesture-scoped, as every audio entry point in this app must be.
-    const audio = new AudioContext();
-    if (audio.state === "suspended") await audio.resume();
+    await ensurePlaybackCtx();
     const s = loadSettings();
-    await loadClip(audio, word);
+    await loadClip(word);
     playToneCue(
-      audio,
       word.tone,
       s?.f0Center ?? DEFAULT_CONFIG.f0Center,
       s?.rangeSemitones ?? DEFAULT_CONFIG.rangeSemitones,

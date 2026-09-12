@@ -600,24 +600,22 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         lastPlayedXStart = snap.cue.xStart;
         const cue = snap.cue;
         const playCue = () => {
-          const audio = getMicSession()?.ctx;
-          // Same context the mic runs on, so it is already gesture-resumed.
-          if (audio && audio.state === "running") {
-            const playedClip = playToneCue(
-              audio,
-              cue.tone,
-              settings.f0Center,
-              settings.rangeSemitones,
-              cue.word,
-              settings.rangeDownSemitones,
-              mode === "learn",
-            );
-            // Learn mode always takes the synth branch on purpose — only
-            // Classic/Drill falling back to it is a real clip-load failure
-            // worth tracking.
-            if (!playedClip && mode !== "learn") {
-              track({ type: "cue_fallback", tone: cue.tone });
-            }
+          // Plays on the dedicated output-only context (reference.ts), not the
+          // mic's — so the mic release for the loud-speaker route can't have
+          // suspended it.
+          const playedClip = playToneCue(
+            cue.tone,
+            settings.f0Center,
+            settings.rangeSemitones,
+            cue.word,
+            settings.rangeDownSemitones,
+            mode === "learn",
+          );
+          // Learn mode always takes the synth branch on purpose — only
+          // Classic/Drill falling back to it is a real clip-load failure
+          // worth tracking.
+          if (!playedClip && mode !== "learn") {
+            track({ type: "cue_fallback", tone: cue.tone });
           }
         };
         if (releaseMicForCue) {
@@ -660,12 +658,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         // Fetch the audio for every gate still ahead of the bird. loadClip is
         // idempotent per id, so this is a no-op once a word is in flight; the
         // queue runs two gates ahead, which is seconds of warning.
-        {
-          const audio = getMicSession()?.ctx;
-          if (audio) {
-            for (const g of snap.gates) if (g.word) void loadClip(audio, g.word);
-          }
-        }
+        for (const g of snap.gates) if (g.word) void loadClip(g.word);
         // Mirrored every tick, not just at game over, so quitting mid-run or
         // closing the tab still leaves the numbers behind.
         saveGateLog(snap.gateLog, snap.missedUtterances);

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MicError } from "../audio/mic.ts";
+import { ensurePlaybackCtx } from "../audio/reference.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
 import { micErrorCopy } from "./micErrors.ts";
 import { SITE_HREF } from "./appLink.ts";
@@ -59,6 +60,9 @@ export function PlayHome({
     setPendingIntent(intent);
     setOwnError(null);
     try {
+      // Resume the cue-playback context in the same gesture (output-only, no
+      // permission prompt) so reference cues can play — see reference.ts.
+      void ensurePlaybackCtx();
       await ensureMic();
       onStart(intent);
     } catch (err) {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { MicError } from "../audio/mic.ts";
+import { ensurePlaybackCtx } from "../audio/reference.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
 import { getAccount, signOut, type Account } from "../data/account.ts";
 import { fireAuthToast } from "../data/authToast.ts";
@@ -133,6 +134,7 @@ export function Settings({
     setBusy(true);
     setError(null);
     try {
+      void ensurePlaybackCtx(); // resume cue-playback ctx in-gesture (reference.ts)
       await ensureMic();
       then();
     } catch (err) {

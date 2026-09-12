@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { inventoryNow } from "../audio/inventory.ts";
 import { MicError } from "../audio/mic.ts";
+import { ensurePlaybackCtx } from "../audio/reference.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
 import type { Tone } from "../game/gates.ts";
 import { availableTones } from "../game/words.ts";
@@ -48,6 +49,7 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
     setPending(intent);
     setOwnError(null);
     try {
+      void ensurePlaybackCtx(); // resume cue-playback ctx in-gesture (reference.ts)
       await ensureMic();
       onStart(intent, drillTone !== undefined ? { drillTone } : undefined);
     } catch (err) {
