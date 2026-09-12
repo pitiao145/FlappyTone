@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { track } from "../analytics/client.ts";
+import { ensurePlaybackCtx } from "../audio/reference.ts";
 import { getMicSession, setFrameSink } from "../audio/session.ts";
 import {
   configureTracker,
@@ -248,6 +249,7 @@ export function Calibration({
   }, []);
 
   const resume = () => {
+    void ensurePlaybackCtx(); // keep the cue-playback ctx alive in-gesture
     const audio = getMicSession()?.ctx;
     // resume() must happen in this click handler — iOS Safari requires it.
     if (audio && audio.state === "suspended") void audio.resume();
@@ -456,7 +458,9 @@ export function Calibration({
     if (!s) return;
     // The first-run flow hands straight to the calibration tutorial, which
     // auto-starts (no card). This click is the iOS-safe gesture, so resume the
-    // AudioContext here rather than relying on a later, gesture-less start.
+    // AudioContext (and the cue-playback ctx) here rather than relying on a
+    // later, gesture-less start.
+    void ensurePlaybackCtx();
     const audio = getMicSession()?.ctx;
     if (audio && audio.state === "suspended") void audio.resume();
     saveSettings(s);

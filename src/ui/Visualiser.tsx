@@ -7,7 +7,16 @@ import {
   loadClip,
   playToneCue,
 } from "../audio/reference.ts";
-import { ensureMic, getMicSession, MicCancelled, setFrameSink, stopMic } from "../audio/session.ts";
+import { isChromeIOS, isIOS } from "../audio/platform.ts";
+import {
+  acquireMicStream,
+  ensureMic,
+  getMicSession,
+  MicCancelled,
+  releaseMicStream,
+  setFrameSink,
+  stopMic,
+} from "../audio/session.ts";
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { useTier } from "../data/tier.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
@@ -128,6 +137,8 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   wordRef.current = selectedWord;
   const recorderRef = useRef<ContourRecorder | null>(null);
   const resumeRef = useRef<() => void>(() => {});
+  /** Pending timers for the iOS loud-cue dance, cleared on unmount. */
+  const cueTimersRef = useRef<Set<number>>(new Set());
   /** Combined accuracy for the current word — reset on word change or Clear. */
   const wordStatsRef = useRef<WordStats>({ attempts: 0, sumAccuracy: 0 });
   /** `startedAtMs` of the last finished attempt already folded into `wordStatsRef`. */
@@ -400,6 +411,19 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     };
   }, [settings, canvasW, canvasH]);
 
+  // Clean up the loud-cue dance on unmount: drop pending timers, and if we left
+  // mid-cue with the mic released, restore the shared stream so the next screen
+  // isn't deaf (same guard as Game.tsx).
+  useEffect(() => {
+    const timers = cueTimersRef.current;
+    return () => {
+      timers.forEach((id) => clearTimeout(id));
+      timers.clear();
+      const s = getMicSession();
+      if (s && !s.hasStream()) void acquireMicStream();
+    };
+  }, []);
+
   const chooseTone = (t: Tone | null) => {
     if (t !== null && !limits.visualiserPerTone) {
       onLocked?.("visualiser-tone-practice");
@@ -417,14 +441,36 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     // new word — the trail and the running accuracy must survive it.
     if (selectedWord?.id !== word.id) resetAttempts();
     setSelectedWord(word);
-    // Plays on the dedicated output-only context (reference.ts).
-    playToneCue(
-      word.tone,
-      settings.f0Center,
-      settings.rangeSemitones,
-      word,
-      settings.rangeDownSemitones,
-    );
+    const play = () =>
+      // Plays on the dedicated output-only context (reference.ts).
+      playToneCue(
+        word.tone,
+        settings.f0Center,
+        settings.rangeSemitones,
+        word,
+        settings.rangeDownSemitones,
+      );
+    if (isIOS() && !isChromeIOS()) {
+      // Loud-speaker dance (Safari/PWA), same as the game: release the mic so
+      // output routes to the speaker, wait out the route cling, play, then
+      // re-acquire. The visualiser ignores mic frames while the cue is audible
+      // (isCueAudible), so releasing costs nothing here. Chrome/Firefox iOS
+      // take the plain branch (legacy path — quieter but stable).
+      const timers = cueTimersRef.current;
+      releaseMicStream();
+      const t1 = window.setTimeout(() => {
+        timers.delete(t1);
+        play();
+        const t2 = window.setTimeout(() => {
+          timers.delete(t2);
+          void acquireMicStream();
+        }, word.clipS * 1000);
+        timers.add(t2);
+      }, tuning().cueReleaseMs);
+      timers.add(t1);
+    } else {
+      play();
+    }
   };
 
   /**
