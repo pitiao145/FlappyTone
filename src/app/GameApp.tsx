@@ -33,6 +33,7 @@ import {
 } from "../game/settings";
 import type { RangeHalves } from "../pitch/calibration.ts";
 import type { RunStats } from "../game/scoring";
+import { BrowserHint } from "../ui/BrowserHint";
 import { Calibration } from "../ui/Calibration";
 import { Game, type GameHandle } from "../ui/Game";
 import { GameOver } from "../ui/GameOver";
@@ -955,6 +956,7 @@ export default function GameApp() {
       <GameNav active={navTabFor(screen)} onNavigate={onNavigate} />
       <div className="app-main" ref={mainRef}>
         <div className="frame">
+          {screen === "play" && <BrowserHint />}
           {screen === "play" && (
             <PlayHome
               calibrated={settings !== null}

@@ -30,3 +30,18 @@ export function isChromeIOS(): boolean {
   if (!isIOS()) return false;
   return /CriOS|FxiOS/.test(navigator.userAgent);
 }
+
+/**
+ * True when running as an installed PWA (added to the Home Screen), where the
+ * loud-speaker cue fix works and there is no browser chrome. `navigator.standalone`
+ * is the iOS signal; the display-mode query covers other platforms.
+ */
+export function isStandalonePWA(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const iosStandalone = (navigator as { standalone?: boolean }).standalone;
+  if (iosStandalone) return true;
+  return (
+    typeof matchMedia === "function" &&
+    matchMedia("(display-mode: standalone)").matches
+  );
+}
