@@ -15,7 +15,7 @@ import {
   playToneCue,
 } from "../audio/reference.ts";
 import { inventoryNow, loadInventory } from "../audio/inventory.ts";
-import { isIOS } from "../audio/platform.ts";
+import { isChromeIOS, isIOS } from "../audio/platform.ts";
 import { MicStatusBanner } from "./MicStatus.tsx";
 import {
   acquireMicStream,
@@ -415,8 +415,10 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     if (mode === "tutorial" && !autoStart) setWalkthroughStep("intro");
     // iOS forces cue playback to the earpiece while the mic is live; the host
     // releases the mic during each cue so it plays on the loud speaker, then
-    // re-acquires it. Off everywhere else — no routing problem, no churn.
-    const releaseMicForCue = isIOS();
+    // re-acquires it. Off everywhere else — no routing problem, no churn — and
+    // off on Chrome/Firefox iOS, where the per-cue re-acquire toasts and
+    // degrades the mic (isChromeIOS); those fall back to the earpiece route.
+    const releaseMicForCue = isIOS() && !isChromeIOS();
     const run = new Run({
       mode,
       width: canvasWidth,

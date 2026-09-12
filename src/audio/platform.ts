@@ -18,3 +18,15 @@ export function isIOS(): boolean {
   if (/iPad|iPhone|iPod/.test(ua)) return true;
   return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
 }
+
+/**
+ * True for Chrome (`CriOS`) or Firefox (`FxiOS`) on iOS. Still WebKit
+ * underneath, but their app wrappers pop a "microphone access" toast on every
+ * fresh `getUserMedia` and degrade capture when the mic is re-acquired per cue
+ * — so the release-during-cue dance is a net loss there. Callers gate it off
+ * (the cue falls back to the earpiece route, like Safari/PWA before the fix).
+ */
+export function isChromeIOS(): boolean {
+  if (!isIOS()) return false;
+  return /CriOS|FxiOS/.test(navigator.userAgent);
+}
