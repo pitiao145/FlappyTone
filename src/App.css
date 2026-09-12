@@ -262,6 +262,15 @@
   padding-top: 0px;
 }
 
+/* A paused run keeps <Game> mounted but display:none, so its `.game-stage`
+   stays in the DOM and `:has()` still matches it — which knocks out the
+   `:not(:has(.stage))` padding above the moment you open a menu tab mid-run.
+   Restore padding for the menu shells directly, independent of that. */
+.frame:has(.settings-screen, .progress-screen, .profile-screen, .howto-screen, .gameover-screen) {
+  padding: 16px;
+  padding-top: 0px;
+}
+
 /* Menu shells (how-to, settings, game-over, the placeholder tabs) aren't the
    9:16 game board — they're a column of buttons/text with room to breathe on
    a wide viewport, so they get a wider cap than the game frame while staying
