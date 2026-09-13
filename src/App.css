@@ -710,6 +710,25 @@
   color: var(--accent);
 }
 
+/* Bigger, more confident live numbers on mobile (SPEC-game-UI.md) — HUD
+   layout/positioning is unchanged, only the type scale inside it. */
+@media (max-width: 719px) {
+  .hud-top .score {
+    font-size: 1.6rem;
+    font-weight: 700;
+  }
+
+  .heart svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .hud-top .combo {
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+}
+
 .hud-syllable {
   display: flex;
   flex-direction: column;
@@ -1002,12 +1021,20 @@
   line-height: 1.35;
 }
 
-.browser-hint--warn {
-  border-color: rgba(var(--warn-rgb, 200, 140, 0), 0.5);
-}
-
 .browser-hint__text {
   flex: 1 1 auto;
+}
+
+.browser-hint__link {
+  display: inline;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .browser-hint__dismiss {
@@ -1024,6 +1051,48 @@
 
 .browser-hint__dismiss:hover {
   color: var(--ink);
+}
+
+/* Chrome/Firefox-iOS steering modal — a harder stop than the Safari banner,
+   since the audio gap there is worse (SPEC-game-UI.md). */
+.browser-hint-modal-body {
+  color: var(--ink-muted);
+  margin: var(--space-2) 0 var(--space-4);
+}
+
+.browser-hint-modal-cta {
+  width: 100%;
+  margin-bottom: var(--space-2);
+}
+
+/* The "Add to Home Screen" video overlay, shared by the Chrome-iOS modal's
+   "Show me how" and the Safari banner's inline link. */
+.browser-hint-video-card {
+  text-align: center;
+}
+
+.browser-hint-video-frame {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin: var(--space-3) 0;
+  border: 1px solid var(--line);
+}
+
+.browser-hint-video-frame video {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.browser-hint-steps {
+  text-align: left;
+  margin: 0;
+  padding-left: 1.2em;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .app-toast {
@@ -1212,6 +1281,22 @@
   color: var(--ink);
 }
 
+/* The shareable moment's hero number — bigger and more confident on mobile
+   (SPEC-game-UI.md). */
+@media (max-width: 719px) {
+  .go-score {
+    font-size: var(--text-3xl);
+  }
+
+  .go-bird {
+    width: 92px;
+  }
+
+  .go-header {
+    padding: var(--space-6) var(--space-4) var(--space-5);
+  }
+}
+
 .go-score-unit {
   font-size: var(--text-sm);
   color: var(--ink-soft);
@@ -1393,6 +1478,14 @@
   font-size: var(--text-xl);
   color: var(--ink);
   font-variant-numeric: tabular-nums;
+}
+
+/* "You're #N" is the proof-of-standing moment on the end screen — make it
+   read that way on mobile (SPEC-game-UI.md). */
+@media (max-width: 719px) {
+  .go-rank-num strong {
+    font-size: var(--text-2xl);
+  }
 }
 
 .go-rank-num small {
@@ -1610,6 +1703,18 @@
   color: var(--ink-soft);
   font-weight: 600;
   font-size: var(--text-base);
+}
+
+/* Thumb-friendly primary actions on mobile (SPEC-game-UI.md): Play again,
+   Add to leaderboard, Share all get a taller, more confident tap target. */
+@media (max-width: 719px) {
+  .go-btn-primary,
+  .go-btn-ghost,
+  .screen button.go-btn-gold {
+    padding: 15px 26px;
+    min-height: 52px;
+    font-size: var(--text-lg);
+  }
 }
 
 /* ---- 8. sticky primary actions, mobile only (desktop uses the header band) */
@@ -5413,6 +5518,24 @@ section.hero-cards {
   padding: var(--space-6);
 }
 
+.playhome-overlay h1 {
+  font-family: var(--font-display);
+  margin: 0;
+}
+
+/* Mobile: read as a game's title screen, not a utility form — bigger
+   heading, more air around it (SPEC-game-UI.md). */
+@media (max-width: 719px) {
+  .playhome-overlay {
+    gap: var(--space-5);
+    padding: var(--space-7) var(--space-6);
+  }
+
+  .playhome-overlay h1 {
+    font-size: var(--text-2xl);
+  }
+}
+
 /* Back-to-marketing-site logo, mobile only — the game nav's brand link is
    desktop-only (bottom bar has no room), so this is the sole way out. */
 .playhome-home-link {
@@ -5450,6 +5573,22 @@ section.hero-cards {
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+
+/* Thumb-friendly primary actions on the title screen (SPEC-game-UI.md). */
+@media (max-width: 719px) {
+  .playhome-mascot {
+    width: min(380px, 90%);
+  }
+
+  .playhome-menu {
+    max-width: 280px;
+  }
+
+  .playhome-menu button {
+    min-height: 52px;
+    font-size: var(--text-lg);
+  }
 }
 
 .mode-select-cards {
@@ -5788,6 +5927,30 @@ section.hero-cards {
 .leaderboard-score {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
+}
+
+/* Bigger rows with clearer rank/name/score hierarchy and more breathing
+   room on mobile — the board reads cramped at the current sizes
+   (SPEC-game-UI.md). */
+@media (max-width: 719px) {
+  .leaderboard-preview {
+    gap: var(--space-1);
+  }
+
+  .leaderboard-row {
+    padding: 14px 0;
+    font-size: var(--text-lg);
+  }
+
+  .leaderboard-rank {
+    width: 40px;
+    font-size: var(--text-lg);
+  }
+
+  .leaderboard-score {
+    font-size: var(--text-lg);
+    font-weight: 700;
+  }
 }
 
 .leaderboard-you {
@@ -7408,6 +7571,14 @@ section.hero-cards {
   font-family: var(--font-display);
   font-size: var(--text-2xl);
   margin: 0 0 var(--space-2);
+}
+
+/* The celebration card's whole point is this number — bigger on mobile,
+   same weight the game-over score gets (SPEC-game-UI.md). */
+@media (max-width: 719px) {
+  .hsm-score {
+    font-size: var(--text-3xl);
+  }
 }
 
 .hsm-rank {
