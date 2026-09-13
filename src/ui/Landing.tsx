@@ -211,16 +211,6 @@ export function Landing({ onPlay, onVisualiser }: Props) {
       <ComingSoon />
 
       <section id="mobile" className="landing-section">
-        <div className="mobile-row">
-          <div className="mobile-video">
-            <video
-              src="/PWA-instructions.mp4"
-              autoPlay
-              muted
-              loop
-              playsInline
-            />
-          </div>
 
           <div className="mobile-text">
             <p className="section-eyebrow">{brand.mobile.eyebrow}</p>
@@ -266,11 +256,20 @@ export function Landing({ onPlay, onVisualiser }: Props) {
               </p>
             )}
             <p className="coming-soon-disclaimer">{brand.mobile.notify.disclaimer}</p>
-          </div>
         </div>
 
         <div className="mobile-platforms">
           <h3>{brand.mobile.homeScreen.title}</h3>
+          <div className="mobile-row">
+          <div className="mobile-video">
+            <video
+              src="/PWA-instructions.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+            />
+          </div>
           <div className="home-screen-guide">
             {[brand.mobile.homeScreen.ios, brand.mobile.homeScreen.android].map((platform) => (
               <div className="home-screen-platform" key={platform.label}>
@@ -290,6 +289,7 @@ export function Landing({ onPlay, onVisualiser }: Props) {
                 </ol>
               </div>
             ))}
+          </div>
           </div>
           <p className="note">{brand.mobile.homeScreen.body}</p>
         </div>
