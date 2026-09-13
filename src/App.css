@@ -1066,25 +1066,38 @@
 }
 
 /* The "Add to Home Screen" video overlay, shared by the Chrome-iOS modal's
-   "Show me how" and the Safari banner's inline link. */
+   "Show me how" and the Safari banner's inline link. A fixed-height flex
+   column, not content-sized: `.modal-card`'s own `overflow-y: auto` means
+   any taller content just scrolls, and a portrait screen-recording plus its
+   own title/steps was tall enough to hide the video below the fold (caught
+   in review 13 Sep 2026). The video is the flexible child — it fills
+   whatever height title + steps leave it, so nothing here needs to scroll. */
 .browser-hint-video-card {
+  display: flex;
+  flex-direction: column;
+  height: min(620px, 82dvh);
   text-align: center;
 }
 
 .browser-hint-video-frame {
+  flex: 1 1 auto;
+  min-height: 0;
   border-radius: var(--radius-md);
   overflow: hidden;
   margin: var(--space-3) 0;
   border: 1px solid var(--line);
+  background: var(--surface-panel);
 }
 
 .browser-hint-video-frame video {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: contain;
 }
 
 .browser-hint-steps {
+  flex: 0 0 auto;
   text-align: left;
   margin: 0;
   padding-left: 1.2em;
@@ -5524,15 +5537,20 @@ section.hero-cards {
 }
 
 /* Mobile: read as a game's title screen, not a utility form — bigger
-   heading, more air around it (SPEC-game-UI.md). */
+   heading, more air around it (SPEC-game-UI.md). Kept modest, not the
+   desktop-style generous gap: the canvas is a fixed 9:16 box independent of
+   viewport height, and with the BrowserHint banner also taking flow space
+   above it, an overly tall overlay pushed Tutorial off the bottom of real
+   phones (caught in review 13 Sep 2026). */
 @media (max-width: 719px) {
   .playhome-overlay {
-    gap: var(--space-5);
-    padding: var(--space-7) var(--space-6);
+    gap: var(--space-3);
+    padding: var(--space-5) var(--space-6);
   }
 
   .playhome-overlay h1 {
     font-size: var(--text-2xl);
+    margin: 0 0 -4px;
   }
 }
 
@@ -5575,10 +5593,14 @@ section.hero-cards {
   gap: 8px;
 }
 
-/* Thumb-friendly primary actions on the title screen (SPEC-game-UI.md). */
+/* Thumb-friendly primary actions on the title screen (SPEC-game-UI.md).
+   Mascot is smaller than the desktop default, not bigger — the canvas is a
+   fixed 9:16 box, and the mascot is the one element here with room to give
+   back so the buttons stay on screen with the BrowserHint banner present
+   (caught in review 13 Sep 2026: everything was clipped below the fold). */
 @media (max-width: 719px) {
   .playhome-mascot {
-    width: min(380px, 90%);
+    width: min(220px, 55%);
   }
 
   .playhome-menu {
@@ -5586,8 +5608,8 @@ section.hero-cards {
   }
 
   .playhome-menu button {
-    min-height: 52px;
-    font-size: var(--text-lg);
+    min-height: 48px;
+    font-size: var(--text-base);
   }
 }
 
