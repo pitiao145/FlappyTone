@@ -212,6 +212,16 @@ export function Landing({ onPlay, onVisualiser }: Props) {
 
       <section id="mobile" className="landing-section">
         <div className="mobile-row">
+          <div className="mobile-video">
+            <video
+              src="/PWA-instructions.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+            />
+          </div>
+
           <div className="mobile-text">
             <p className="section-eyebrow">{brand.mobile.eyebrow}</p>
             <h2>{brand.mobile.title}</h2>
@@ -257,31 +267,31 @@ export function Landing({ onPlay, onVisualiser }: Props) {
             )}
             <p className="coming-soon-disclaimer">{brand.mobile.notify.disclaimer}</p>
           </div>
+        </div>
 
-          <div className="mobile-instructions">
-            <h3>{brand.mobile.homeScreen.title}</h3>
-            <div className="home-screen-guide">
-              {[brand.mobile.homeScreen.ios, brand.mobile.homeScreen.android].map((platform) => (
-                <div className="home-screen-platform" key={platform.label}>
-                  <h4>{platform.label}</h4>
-                  <ol className="home-screen-step-list">
-                    {platform.steps.map((step, i) => {
-                      const Icon = HOME_SCREEN_ICONS[step.icon];
-                      return (
-                        <li key={i}>
-                          <span className="home-screen-step-icon">
-                            <Icon />
-                          </span>
-                          <span>{step.text}</span>
-                        </li>
-                      );
-                    })}
-                  </ol>
-                </div>
-              ))}
-              <p className="note">{brand.mobile.homeScreen.body}</p>
-            </div>
+        <div className="mobile-platforms">
+          <h3>{brand.mobile.homeScreen.title}</h3>
+          <div className="home-screen-guide">
+            {[brand.mobile.homeScreen.ios, brand.mobile.homeScreen.android].map((platform) => (
+              <div className="home-screen-platform" key={platform.label}>
+                <h4>{platform.label}</h4>
+                <ol className="home-screen-step-list">
+                  {platform.steps.map((step, i) => {
+                    const Icon = HOME_SCREEN_ICONS[step.icon];
+                    return (
+                      <li key={i}>
+                        <span className="home-screen-step-icon">
+                          <Icon />
+                        </span>
+                        <span>{step.text}</span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+            ))}
           </div>
+          <p className="note">{brand.mobile.homeScreen.body}</p>
         </div>
       </section>
 

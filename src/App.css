@@ -4610,37 +4610,80 @@ section.hero-cards {
   gap: var(--space-6);
 }
 
-.mobile-text,
-.mobile-instructions {
+.mobile-text {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+/* The clip is a portrait phone recording (~502:1080) — sizing by width alone
+   made it nearly 2.5x the height of the pitch column beside it. Fix the box
+   by width and aspect-ratio instead so it reads as a companion visual, not
+   the dominant element in the row. */
+.mobile-video {
+  align-self: center;
+  width: min(220px, 100%);
+  aspect-ratio: 502 / 1080;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--surface-panel);
+}
+
+.mobile-video video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 @media (min-width: 901px) {
   .mobile-row {
     flex-direction: row;
-    align-items: flex-start;
+    align-items: center;
     gap: 56px;
   }
 
-  .mobile-text,
-  .mobile-instructions {
+  .mobile-text {
     flex: 1 1 50%;
     min-width: 0;
   }
+
+  .mobile-video {
+    flex: 0 0 auto;
+    align-self: flex-start;
+  }
 }
 
-.home-screen-guide {
+/* The iPhone/Android instructions move below the video+pitch row and read
+   as their own full-width comparison, not a column competing with the video
+   for the same 50% (SPEC feedback 13 Sep 2026). */
+.mobile-platforms {
+  margin-top: var(--space-8);
   display: flex;
-  flex: 1 1 50%;
-  min-width: 0;
   flex-direction: column;
   gap: var(--space-4);
 }
 
+.mobile-platforms h3 {
+  margin: 0;
+}
+
+.home-screen-guide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+@media (min-width: 640px) {
+  .home-screen-guide {
+    flex-direction: row;
+  }
+}
+
 .home-screen-platform {
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
