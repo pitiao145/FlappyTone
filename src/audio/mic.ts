@@ -143,6 +143,9 @@ export async function startMic(
   // getUserMedia instead of opening two live streams (the iOS muted-track /
   // NotReadableError landmine).
   let acquiring: Promise<void> | null = null;
+  // The epoch `acquiring` was started for, so a later caller can tell whether
+  // the in-flight acquire is still valid or has been superseded by a release.
+  let acquiringEpoch = -1;
   // Bumped by every release. An acquire that was in flight when a release
   // happened is stale: it must discard the stream it just got rather than
   // connect it, or a release-then-acquire race (e.g. a run torn down mid-cue
@@ -192,10 +195,18 @@ export async function startMic(
     // Idempotent: a live source means the stream is already connected.
     if (source) return Promise.resolve();
     // Share an acquire already in flight rather than starting a second
-    // getUserMedia — never hold two live streams at once (see the spec).
-    if (acquiring) return acquiring;
+    // getUserMedia — never hold two live streams at once (see the spec). But
+    // only within the same epoch: a release since it started makes the in-flight
+    // acquire stale (it will discard its own stream), so chain a fresh acquire
+    // after it settles rather than handing back a promise that resolves to no
+    // stream.
+    if (acquiring) {
+      if (acquiringEpoch === streamEpoch) return acquiring;
+      return acquiring.then(acquireStream, acquireStream);
+    }
 
     const epoch = streamEpoch;
+    acquiringEpoch = epoch;
     const p = (async () => {
       let s: MediaStream;
       try {

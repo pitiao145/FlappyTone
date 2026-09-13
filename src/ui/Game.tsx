@@ -738,7 +738,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // streamless would make that run deaf. Restore it. A no-op when the run
       // ended via game-over (that path called stopMic, so there is no session)
       // or when the stream is already live.
-      if (getMicSession() && !getMicSession()!.hasStream()) {
+      const micSession = getMicSession();
+      if (micSession && !micSession.hasStream()) {
         void acquireMicStream();
       }
       document.removeEventListener("visibilitychange", onVisibility);

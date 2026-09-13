@@ -457,6 +457,11 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       // (isCueAudible), so releasing costs nothing here. Chrome/Firefox iOS
       // take the plain branch (legacy path — quieter but stable).
       const timers = cueTimersRef.current;
+      // A new tap supersedes any dance still pending from a previous one — clear
+      // its timers so two cues can't overlap and a stale re-acquire can't clear
+      // cueReleaseActive while this cue is still playing.
+      timers.forEach((id) => clearTimeout(id));
+      timers.clear();
       releaseMicStream();
       const t1 = window.setTimeout(() => {
         timers.delete(t1);

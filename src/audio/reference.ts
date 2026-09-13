@@ -61,6 +61,22 @@ export function getPlaybackCtx(): AudioContext {
  * handler. Idempotent (resuming a running context is a no-op) and never throws.
  */
 export async function ensurePlaybackCtx(): Promise<void> {
+  // On the Chrome/Firefox-iOS legacy path there is no dedicated context — cues
+  // play on the mic's own. Never create one here (getPlaybackCtx would fall
+  // through to `new AudioContext()` before the mic is open), which would
+  // reintroduce the second context the legacy path exists to avoid. Resume the
+  // mic context if it's already open; otherwise the mic's own gesture covers it.
+  if (isChromeIOS()) {
+    const mic = getMicSession()?.ctx;
+    if (mic && mic.state !== "running") {
+      try {
+        await mic.resume();
+      } catch {
+        // ignore — a later gesture retries.
+      }
+    }
+    return;
+  }
   const c = getPlaybackCtx();
   if (c.state !== "running") {
     try {
@@ -128,8 +144,11 @@ const loads = new Map<string, Promise<void>>();
 export function loadClip(word: Word): Promise<void> {
   const existing = loads.get(word.id);
   if (existing) return existing;
-  // Decode on the playback context, so the AudioBuffer matches the context it
-  // will be played on (buffers belong to their decoding context).
+  // Decode on the playback context (AudioBuffers are context-independent and
+  // playable on any context, but decoding on the one we play on keeps the
+  // sample rate matched). On the Chrome-iOS legacy path this is the mic
+  // context, which a later stopMic closes; the cached buffer stays valid and
+  // replays fine on the next session's context.
   const audio = getPlaybackCtx();
   const load = (async () => {
     const url = `${import.meta.env.BASE_URL}ref/${word.file}`;
