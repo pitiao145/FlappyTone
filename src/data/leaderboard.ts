@@ -253,7 +253,7 @@ interface BoardPayload {
  * from `auth.uid()` internally, which is why there is no user id to pass here
  * — a caller can ask where *they* are, never where someone else is.
  */
-export async function getBoard(limit = 50): Promise<Board> {
+export async function getBoard(limit = 20): Promise<Board> {
   const supabase = getSupabase();
   if (!supabase) return EMPTY;
   const weekId = currentWeekId();
@@ -281,6 +281,47 @@ export async function getBoard(limit = 50): Promise<Board> {
   } catch (err) {
     warn("leaderboard", "could not read the board", err);
     return { ...EMPTY, weekId };
+  }
+}
+
+export type Period = "week" | "month" | "all";
+
+/**
+ * Week/month/all-time board. "week" matches the ISO week_id column (same
+ * boundary as `getBoard`'s current-week filter — empties out at the start of
+ * a new week); "month" is a rolling 30-day window off `updated_at` (a
+ * player's weekly-best row updates only when they beat their standing best,
+ * so this reads as "best score raised in the last 30 days", not exact run
+ * times — the table has no per-run timestamp). Same never-throws contract as
+ * `getBoard`.
+ */
+export async function getBoardPeriod(period: Period, limit = 20): Promise<Board> {
+  const supabase = getSupabase();
+  if (!supabase) return EMPTY;
+  try {
+    const { data, error } = await supabase.rpc("board_period", {
+      p_period: period,
+      p_limit: limit,
+    });
+    if (error) {
+      warn("leaderboard", `could not read the ${period} board: ${error.message}`);
+      return EMPTY;
+    }
+    const payload = data as unknown as BoardPayload | null;
+    const rows: BoardRow[] = (payload?.rows ?? []).map((r) => ({
+      userId: r.user_id,
+      name: r.display_name,
+      score: r.best_score,
+    }));
+    return {
+      weekId: "",
+      rows,
+      myRank: payload?.my_rank ?? null,
+      total: payload?.total ?? rows.length,
+    };
+  } catch (err) {
+    warn("leaderboard", `could not read the ${period} board`, err);
+    return EMPTY;
   }
 }
 

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { capturePostHogEvent } from "../analytics/posthog.ts";
 import { loadInventory } from "../audio/inventory.ts";
 import type { Tone } from "../game/gates.ts";
@@ -58,6 +58,14 @@ type AccuracyTab = "accuracy" | "progress";
 interface Props {
   /** Opens the EarlyBird modal — used only by the pricing card's "Join EarlyBird" CTA now. */
   onEarlyBird: (feature: string) => void;
+  /**
+   * Set true by GameOver's "view full leaderboard" link right before this
+   * screen mounts. Read and cleared inside this component's own mount
+   * effect, not by the caller during render — a ref read-and-cleared in the
+   * render body can be torn by a second render pass (e.g. Strict Mode's
+   * dev-only double-invoke) before this component ever sees `true`.
+   */
+  leaderboardIntentRef?: { current: boolean };
 }
 
 /**
@@ -67,11 +75,25 @@ interface Props {
  * section at the bottom instead of opening the upsell modal directly. See the
  * design handoff in docs/design_handoff_progress_pricing/.
  */
-export function Progress({ onEarlyBird }: Props) {
+export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
   const tier = useTier();
   const [words, setWords] = useState<Word[] | null>(null);
   useEffect(() => {
     loadInventory().then(setWords, () => setWords([]));
+  }, []);
+  const leaderboardSectionRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    // Read-and-clear happens here, after commit, not during GameApp's
+    // render — a ref mutated during render can be torn by a second render
+    // pass (e.g. Strict Mode's dev-only double-invoke) before this effect
+    // ever runs, silently dropping the scroll.
+    if (leaderboardIntentRef?.current) {
+      leaderboardIntentRef.current = false;
+      leaderboardSectionRef.current?.scrollIntoView({ block: "start" });
+    }
+    // Runs once, on mount — GameOver's link remounts this screen fresh each
+    // time, it never toggles the ref live.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const wordsByTone = useMemo(() => {
     const map = new Map<Tone, Word[]>();
@@ -210,11 +232,11 @@ export function Progress({ onEarlyBird }: Props) {
 
       {/* ---- Leaderboard. Real data and open to everyone, unlike the Pro
            sections below — a board only works if people can see it. */}
-      <section className="progress-card sticker-card">
+      <section className="progress-card sticker-card" ref={leaderboardSectionRef}>
         <div className="progress-card-header">
           <h3>Leaderboard</h3>
         </div>
-        <Leaderboard />
+        <Leaderboard tabs />
       </section>
 
       {/* ---- Accuracy (tabbed) */}

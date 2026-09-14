@@ -61,6 +61,8 @@ interface Props {
   challengeScore: number | null;
   /** Opens the account/upgrade path — a guest gets this instead of joining the board. */
   onUpgrade: () => void;
+  /** Navigates to the full (week/month/all-time) leaderboard on the Progress screen. */
+  onViewFullLeaderboard: () => void;
 }
 
 export function GameOver({
@@ -76,6 +78,7 @@ export function GameOver({
   mode,
   challengeScore,
   onUpgrade,
+  onViewFullLeaderboard,
 }: Props) {
   const breakdown = toneBreakdown(stats);
   const tier = useTier();
@@ -659,6 +662,7 @@ export function GameOver({
         <Leaderboard
           onClose={() => setLeaderboardOpen(false)}
           projectedScore={joined ? undefined : stats.score}
+          onViewFull={onViewFullLeaderboard}
         />
       )}
     </div>

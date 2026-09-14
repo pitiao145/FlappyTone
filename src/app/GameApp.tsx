@@ -471,6 +471,8 @@ export default function GameApp() {
   }, []);
   /** Where to go once calibration finishes, when Play/Tutorial routed through it. */
   const pendingRef = useRef<StartIntent | null>(null);
+  /** Set by GameOver's "view full leaderboard" link, read once when Progress mounts. */
+  const progressLeaderboardRef = useRef(false);
   /**
    * True while the tutorial that immediately follows a calibration is running:
    * its measured range seeds the grid (calibration itself only sites the centre
@@ -1007,7 +1009,10 @@ export default function GameApp() {
         {screen === "howto" && <HowTo onBack={() => setScreen("settings")} />}
 
         {screen === "progress" && (
-          <Progress onEarlyBird={(feature) => openEarlyBird("progress", feature)} />
+          <Progress
+            onEarlyBird={(feature) => openEarlyBird("progress", feature)}
+            leaderboardIntentRef={progressLeaderboardRef}
+          />
         )}
 
         {screen === "profile" && (
@@ -1166,6 +1171,10 @@ export default function GameApp() {
               // go straight to the signup gate — no EarlyBird modal in between.
               setSignupReason("join");
               setScreen("checkoutSignup");
+            }}
+            onViewFullLeaderboard={() => {
+              progressLeaderboardRef.current = true;
+              setScreen("progress");
             }}
           />
         )}

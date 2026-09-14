@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
-import { getBoard, myUserId, type Board } from "../data/leaderboard.ts";
+import { getBoard, getBoardPeriod, myUserId, type Board, type Period } from "../data/leaderboard.ts";
 import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
 import { TIER_LIMITS } from "../game/tiers.ts";
@@ -14,7 +14,7 @@ import { TIER_LIMITS } from "../game/tiers.ts";
 const TEASER_ROWS = 10;
 
 interface Props {
-  /** How many rows to fetch and show. Default 50. */
+  /** How many rows to fetch and show. Default 20. */
   limit?: number;
   /**
    * When provided, renders as a modal/bottom-sheet (backdrop + card, header,
@@ -29,7 +29,22 @@ interface Props {
    * once the player has a real row on the board (`myRank != null`).
    */
   projectedScore?: number;
+  /**
+   * Show week/month/all-time period tabs instead of the fixed current-week
+   * board. Used by the full leaderboard (Progress); the GameOver modal stays
+   * weekly-only (omitted/false).
+   */
+  tabs?: boolean;
+  /** Modal-only: shows a "View full leaderboard" link, calling this on click. */
+  onViewFull?: () => void;
 }
+
+const PERIOD_LABELS: Record<Period, string> = { week: "Week", month: "Month", all: "All time" };
+const PERIOD_EMPTY: Record<Period, string> = {
+  week: "No scores yet this week — be the first.",
+  month: "No scores yet this month — be the first.",
+  all: "No scores yet — be the first.",
+};
 
 function rankLabel(rank: number): string {
   if (rank === 1) return "🥇";
@@ -44,10 +59,17 @@ function rankLabel(rank: number): string {
  * `src/data/leaderboard.ts` never throws, so every failure just shows the
  * empty-board copy rather than an error.
  */
-export function Leaderboard({ limit = 50, onClose, projectedScore }: Props) {
+export function Leaderboard({ limit = 20, onClose, projectedScore, tabs = false, onViewFull }: Props) {
   const tier = useTier();
   const full = TIER_LIMITS[tier].leaderboardFull;
-  const [board, setBoard] = useState<Board | null>(null);
+  const [period, setPeriod] = useState<Period>("week");
+  // Only used when `!tabs` (GameOver's weekly modal / Progress's old inline
+  // usage). The `tabs` mode reads from `periodCache` instead — see `board`.
+  const [weeklyBoard, setWeeklyBoard] = useState<Board | null>(null);
+  // Only used when `tabs` — all three periods fetched once and cached, so
+  // switching tabs reads from memory instead of re-fetching and flashing
+  // "Loading the board…" every click.
+  const [periodCache, setPeriodCache] = useState<Partial<Record<Period, Board>>>({});
   const [userId, setUserId] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const titleId = useId();
@@ -56,17 +78,30 @@ export function Leaderboard({ limit = 50, onClose, projectedScore }: Props) {
   // re-fetching keeps the "you" highlight and pinned row correct without a
   // reload.
   const version = useSessionVersion();
+  const FAILED_BOARD = { weekId: "", rows: [], myRank: null, total: 0 } satisfies Board;
 
   useEffect(() => {
     let cancelled = false;
-    // `getBoard` is contracted never to reject, but a rejection here would
-    // leave the card stuck on "Loading the board…" forever rather than
-    // falling through to the empty state. Cheap to be certain.
-    getBoard(limit)
-      .catch(() => ({ weekId: "", rows: [], myRank: null, total: 0 }) satisfies Board)
-      .then((b) => {
-        if (!cancelled) setBoard(b);
+    if (tabs) {
+      setPeriodCache({});
+      // `getBoardPeriod` is contracted never to reject, but a rejection here
+      // would leave the card stuck loading forever rather than falling
+      // through to the empty state. Cheap to be certain.
+      Promise.all(
+        (["week", "month", "all"] as Period[]).map((p) =>
+          getBoardPeriod(p, limit).catch(() => FAILED_BOARD),
+        ),
+      ).then(([week, month, all]) => {
+        if (!cancelled) setPeriodCache({ week, month, all });
       });
+    } else {
+      setWeeklyBoard(null);
+      getBoard(limit)
+        .catch(() => FAILED_BOARD)
+        .then((b) => {
+          if (!cancelled) setWeeklyBoard(b);
+        });
+    }
     myUserId()
       .catch(() => null)
       .then((id) => {
@@ -75,7 +110,10 @@ export function Leaderboard({ limit = 50, onClose, projectedScore }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [limit, version]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [limit, tabs, version]);
+
+  const board = tabs ? (periodCache[period] ?? null) : weeklyBoard;
 
   useEffect(() => {
     if (!onClose) return;
@@ -92,7 +130,7 @@ export function Leaderboard({ limit = 50, onClose, projectedScore }: Props) {
   if (!board) {
     body = <p className="note">Loading the board…</p>;
   } else if (board.rows.length === 0) {
-    body = <p className="note">No scores yet this week — be the first.</p>;
+    body = <p className="note">{tabs ? PERIOD_EMPTY[period] : PERIOD_EMPTY.week}</p>;
   } else {
     // A guest/free tier only sees the top TEASER_ROWS — enough to show the
     // board is real and competitive — plus their own pinned row below the
@@ -113,9 +151,13 @@ export function Leaderboard({ limit = 50, onClose, projectedScore }: Props) {
     // Insertion index within visibleRows (0-based) — where the ghost slots in.
     const ghostInsertAt = showGhost && !ghostBelowCut && ghostRank != null ? ghostRank - 1 : null;
 
-    const ghostRow = (rank: number) => (
+    // A signed-out player has no identity the rank could actually attach
+    // to — show "?" rather than a number that looks like a real position.
+    const ghostRankBadge = userId == null ? "?" : String(ghostRank);
+
+    const ghostRow = () => (
       <div key="ghost" className="leaderboard-row leaderboard-ghost">
-        <span className="leaderboard-rank">{rank}</span>
+        <span className="leaderboard-rank">{ghostRankBadge}</span>
         <span className="leaderboard-name">
           <em>Your position</em>
         </span>
@@ -125,7 +167,7 @@ export function Leaderboard({ limit = 50, onClose, projectedScore }: Props) {
 
     const rowEls: React.ReactNode[] = [];
     visibleRows.forEach((row, i) => {
-      if (ghostInsertAt === i) rowEls.push(ghostRow(ghostRank!));
+      if (ghostInsertAt === i) rowEls.push(ghostRow());
       const rank = i + 1;
       const isYou = userId != null && row.userId === userId;
       rowEls.push(
@@ -136,7 +178,7 @@ export function Leaderboard({ limit = 50, onClose, projectedScore }: Props) {
         </div>,
       );
     });
-    if (ghostInsertAt === visibleRows.length) rowEls.push(ghostRow(ghostRank!));
+    if (ghostInsertAt === visibleRows.length) rowEls.push(ghostRow());
 
     body = (
       <>
@@ -167,7 +209,7 @@ export function Leaderboard({ limit = 50, onClose, projectedScore }: Props) {
           <>
             <div className="leaderboard-gap">···</div>
             <div className="leaderboard-row leaderboard-ghost leaderboard-ghost-pinned">
-              <span className="leaderboard-rank">{ghostRank}</span>
+              <span className="leaderboard-rank">{ghostRankBadge}</span>
               <span className="leaderboard-name">
                 <em>Your position</em>
               </span>
@@ -228,6 +270,20 @@ export function Leaderboard({ limit = 50, onClose, projectedScore }: Props) {
   if (!onClose) {
     return (
       <div className="leaderboard-preview">
+        {tabs && (
+          <div className="acc-tabs leaderboard-period-tabs">
+            {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
+              <button
+                key={p}
+                type="button"
+                className={`acc-tab${p === period ? " acc-tab-active" : ""}`}
+                onClick={() => setPeriod(p)}
+              >
+                {PERIOD_LABELS[p]}
+              </button>
+            ))}
+          </div>
+        )}
         {body}
         {footer}
       </div>
@@ -258,6 +314,18 @@ export function Leaderboard({ limit = 50, onClose, projectedScore }: Props) {
         </p>
         <div className="leaderboard-preview leaderboard-sheet-body">{body}</div>
         {footer}
+        {onViewFull && (
+          <button
+            type="button"
+            className="leaderboard-view-full-link"
+            onClick={() => {
+              onClose();
+              onViewFull();
+            }}
+          >
+            View full leaderboard
+          </button>
+        )}
       </div>
     </div>,
     document.body,

@@ -6113,6 +6113,26 @@ section.hero-cards {
   flex: 1;
 }
 
+.progress-screen .acc-tabs.leaderboard-period-tabs {
+  flex: 0 0 auto;
+  margin-bottom: var(--space-3);
+}
+
+.leaderboard-view-full-link {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border: 0;
+  border-top: 1px solid var(--line-soft);
+  background: none;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-align: center;
+  cursor: pointer;
+}
+
 .leaderboard-share {
   --gold: #c98a3c;
   --gold-deep: #a86c20;

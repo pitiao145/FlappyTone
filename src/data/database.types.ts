@@ -197,6 +197,10 @@ export type Database = {
     }
     Functions: {
       board: { Args: { p_limit?: number; p_week: string }; Returns: Json }
+      board_period: {
+        Args: { p_limit?: number; p_period: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

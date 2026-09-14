@@ -258,7 +258,7 @@ export function AccountCard({ hideGuestHeader = false, onSignedOut }: Props) {
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}
             />
-            <span>Email me product updates — optional</span>
+            <span>Stay in the loop with product updates and future features.</span>
           </label>
         )}
 
