@@ -1,70 +1,90 @@
-# FlappyTone — R2 Setup (Cloudflare Dashboard)
+# FlappyTone — R2 + Worker Setup (Cloudflare Dashboard)
 
-One-time setup, done manually in the Cloudflare dashboard, before the coding agent
-touches anything. ~15 minutes. Pairs with `docs/flappytone-SPEC-r2-clip-storage.md`,
-which is what your coding agent implements once this is done.
+**Status: superseded and largely done.** This file originally described a
+single **public** R2 bucket for `docs/SPECS/flappytone-SPEC-r2-clip-storage.md`
+(a spec that was never implemented — no code references it). The clip storage
+that actually shipped is `docs/SPECS/flappytone-SPEC-clip-catalog-r2.md`'s
+model instead: **two private buckets**, read only through a Cloudflare Worker
+that mints short-lived play tickets — see CLAUDE.md's "The clip catalog and
+its Worker" and `docs/DECISIONS.md`'s "Clip catalog: DB + R2 migration"
+entry for why (guests get clips too; protection is defence-in-depth, not a
+public/private wall alone). Steps 1–4 below are **done** (Task 5/6/8 of the
+migration plan; the Worker is live at `clips.flappytone.com`). Step 5 (the
+rate-limit WAF rule) is the one item still outstanding — it is a genuine gap,
+not paperwork: a live probe of 20 rapid `POST /token` from one IP currently
+returns all `200`s, no `429`.
 
-## 1. Create the bucket
-Cloudflare dashboard → R2 Object Storage → Create bucket.
-- Name: `flappytone-clips` (internal only, never user-facing)
-- Location: Automatic
+## 1. Enable R2 — done
 
-## 2. Public access — custom subdomain (recommended)
-Bucket → Settings → Public access → Connect Domain.
-- Use a subdomain of your existing domain, e.g. `clips.pierrebuilds.dev`
-- DNS record is created automatically since the domain's already on this account
-- Wait for the certificate to provision (a few minutes)
+Cloudflare dashboard → R2 Object Storage → Enable. Needs a payment method on
+file; the free allowance covers this project (10 GB storage, 10M reads/month).
 
-Quick-start alternative: enable the `r2.dev` public URL instead — instant, no DNS
-wait, fine for testing. Switch to the custom domain before relying on it, since
-some aggressive ad/privacy blocklists are more likely to flag generic
-`*.r2.dev`/cloud-storage hostnames than a subdomain of your own site.
+## 2. Two private buckets — done
 
-## 3. CORS
-Bucket → Settings → CORS Policy → add:
+Create, location Automatic:
+- `flappytone-raw` — Jane's uncut takes from `/record`, one per recording.
+- `flappytone-clips` — the processed, game-ready clips `process-clips` writes.
 
-```json
-[
-  {
-    "AllowedOrigins": [
-      "https://flappytone.com",
-      "https://*.vercel.app",
-      "http://localhost:5173"
-    ],
-    "AllowedMethods": ["GET", "HEAD"],
-    "AllowedHeaders": ["*"],
-    "MaxAgeSeconds": 3600
-  }
-]
-```
+**Do not** enable public access, an `r2.dev` URL, or a custom domain on
+either bucket, and add **no CORS policy** — the Worker is the only reader of
+both. This is the load-bearing difference from the original (unimplemented)
+public-bucket spec this file used to describe: nothing outside the Worker can
+list or fetch an object directly, at any layer.
 
-The `*.vercel.app` entry matters because a Vercel preview deploy is a production
-build (per CLAUDE.md) and needs to fetch clips too.
+## 3. Custom domain for the Worker — done
 
-## 4. API token — for the upload script only, never shipped to the browser
-R2 → Manage API Tokens → Create API Token.
-- Permissions: Object Read & Write
-- Scope: **this bucket only**, not account-wide — least privilege
-- No expiry is fine for now; note the creation date so you know when to consider
-  rotating it
-- The secret is shown once — save Access Key ID + Secret Access Key in a
-  password manager immediately
+After `wrangler deploy` (the Worker's own deploy, `npm run worker:deploy`),
+Workers & Pages → `flappytone-clips-api` → Settings → Domains & Routes → Add
+custom domain `clips.flappytone.com`. Cloudflare creates the DNS record.
+`workers/clips/wrangler.toml` already declares the route
+(`{ pattern = "clips.flappytone.com", custom_domain = true }`); the dashboard
+step is only needed if the deploy itself couldn't create it.
 
-## 5. Note down five values
-You'll need these for env vars in the spec below — keep them somewhere safe,
-you don't need to send them to anyone:
-- Account ID (R2 dashboard sidebar)
-- Bucket name
-- Access Key ID
-- Secret Access Key
-- Public URL (your custom domain or the r2.dev URL)
+## 4. Secrets — done
 
-## 6. Account hygiene
-Turn on 2FA on your Cloudflare account if it isn't already — it also controls
-your domain's DNS, worth protecting beyond just this one bucket.
+Four secrets, set with `wrangler secret put <NAME>` from `workers/clips/`
+(needs `npx wrangler login` once): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+(same values `api/score.ts` uses on Vercel), `RECORD_PASSCODE` (same as the
+booth's Vercel value), `CLIP_TOKEN_SECRET` (a fresh value —
+`openssl rand -base64 48` — this is the HS256 secret the Worker signs play
+tickets with; it is unrelated to Supabase's own ES256 session-JWT key, which
+the Worker verifies against Supabase's public JWKS instead of holding a
+secret for). None of these are in `wrangler.toml` or any committed file.
 
-## 7. Where the values go (this is for your coding agent, not you to build)
-- Local dev: `.env.local` (already gitignored)
-- Production: Vercel dashboard → Project → Settings → Environment Variables
-- Exact variable names are fixed in `docs/flappytone-SPEC-r2-clip-storage.md` so
-  both sides agree on naming without you having to relay them by hand.
+`VITE_CLIPS_BASE_URL=https://clips.flappytone.com` is set in `.env.local`.
+**It is not yet confirmed set in Vercel** (Production or Preview) — per the
+build ledger this was flagged as Pierre's outstanding step twice (after
+Task 7 and again after Task 11) and never confirmed done. This is why the
+migration's own precondition for retiring the old `public/ref/*.wav` path (a
+full run played off R2 in production) hasn't been met yet, and why the
+booth shows "Recording isn't configured" in a deployed build until it's set.
+See CLAUDE.md's "clip catalog" section and DECISIONS.md's pending-Task-13
+checklist.
+
+## 5. Rate limit — NOT DONE
+
+Security → WAF → Rate limiting rules → Create:
+- Name `clips per ip`; expression
+  `(http.host eq "clips.flappytone.com" and starts_with(http.request.uri.path, "/clip/"))`;
+  characteristics IP; period 1 minute; requests 60; action Block for 1 minute.
+- A second rule for `/token`: same shape, 20 requests/minute per IP.
+
+This is the last layer of the defence-in-depth list CLAUDE.md describes
+(private buckets, no listing, one clip per request, short-lived IP-bound
+tickets, rate limit). The first four are live; this one is a dashboard step
+only Pierre can do. Re-run the manual probe in `docs/TESTING.md` §8 once it
+exists.
+
+## 6. After the old path is retired (Task 13, not yet done)
+
+Once `public/ref/*.wav`, the manifest, and the Vercel upload routes are
+actually deleted (see CLAUDE.md's pending-Task-13 note): Vercel → Storage →
+delete the Blob store; Vercel → Settings → Environment Variables → remove
+`BLOB_READ_WRITE_TOKEN` and the booth's Vercel-side `RECORD_PASSCODE` (the
+Worker has its own copy as a `wrangler secret`, independent of Vercel's).
+
+## 7. Account hygiene
+
+Turn on 2FA on the Cloudflare account if it isn't already — it also controls
+the domain's DNS and the Worker's route, worth protecting beyond just these
+two buckets.

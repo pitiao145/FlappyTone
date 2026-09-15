@@ -1,8 +1,25 @@
 # FlappyTone — Word Catalog + Cloudflare Clip Storage (Spec for coding agent)
 
-Status: DECIDED, not started. Supersedes `flappytone-SPEC-r2-clip-storage.md`
-(that spec's public-bucket model is replaced by the private-bucket + JWT Worker
-below). Author-locked decisions are in §0 — do not re-open them.
+**Status: BUILT and live (audio-migration branch, Sep 2026), with one task
+still open.** Supersedes `flappytone-SPEC-r2-clip-storage.md` (that spec's
+public-bucket model is replaced by the private-bucket + JWT Worker below, as
+originally planned here). The catalog DB, the Worker, the play-ticket model,
+and the pipeline scripts below all shipped — see
+`.superpowers/sdd/2026-09-15-audio-migration/progress.md` for the full task
+ledger. **Several decisions in this document were overridden during the
+build**; read `docs/DECISIONS.md`'s "Clip catalog: DB + R2 migration" entry
+and CLAUDE.md's "The clip catalog and its Worker" section for what actually
+shipped instead — in particular Decision 1 (ES256, not HS256), Decision 2
+(guests get a ticket too; "no JWT ⇒ no clips" was dropped), Decision 6 (the
+cache/private split, unchanged in substance but restated there), Decision 7
+(`contour` dropped from the bundled fallback), and Decision 9 (the pitch-seed
+constant). The one thing in this spec **not yet done** is retiring the old
+`public/ref/*.wav`/manifest/Vercel-upload path this spec's §6 describes —
+blocked on its own precondition (a production run off R2, the booth recording
+a word end to end), tracked as Task 13 in the ledger above. Author-locked
+decisions in §0 below reflect the original plan, not all of which survived
+contact with the build — treat the override doc as authoritative where they
+conflict.
 
 ## Context & goal
 

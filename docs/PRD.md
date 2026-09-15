@@ -65,8 +65,8 @@ to a server it doesn't fully trust itself on.
 | Audio | Web Audio API via `AudioWorkletNode` only |
 | Pitch detection | Custom band-limited McLeod Pitch Method implementation (`src/pitch/mpm.ts`) — no longer the `pitchy` package; `pitchy` remains a listed dependency but is unused in source |
 | Styling | Plain CSS with a design-token system (`src/ui/tokens.css`, `docs/BRAND.md`) |
-| Deploy | Vercel, static + small serverless functions under `api/` for the recording booth, newsletter signup, and the leaderboard write (`api/score.ts`) |
-| Backend | Supabase (Postgres + Auth) in Tokyo (ap-northeast-1). Anonymous sign-in; leaderboard only. Schema in `supabase/migrations/`. |
+| Deploy | Vercel (static + serverless functions under `api/`) plus a Cloudflare Worker (`workers/clips/`, `clips.flappytone.com`) for clip audio — two deploy targets, two toolchains. The recording booth still uses Vercel's `api/upload.ts`/`api/auth.ts`/Blob storage alongside its newer Worker routes (`/raw`, `/booth/words`); retiring the Vercel side is planned but not done — see CLAUDE.md's "clip catalog" section. |
+| Backend | Supabase (Postgres + Auth) in Tokyo (ap-northeast-1): accounts, leaderboard, entitlements, and (new) the `words` catalog table. Cloudflare R2 (two private buckets, `flappytone-raw`/`flappytone-clips`) for clip audio, read only through the Worker above. Schema in `supabase/migrations/`. |
 | Target | Portrait mobile-first layout, playable on desktop |
 
 **Layout:** 9:16 portrait canvas, max-width 420px, centred, dark neutral backdrop filling the rest of the viewport.
@@ -298,9 +298,9 @@ Actual screen set (`src/app/GameApp.tsx`'s `Screen` type): `play` (title/home), 
 
 ## 9. Audio reference
 
-**Source:** 120 words (30 per tone), recorded by Jane (native Taiwanese speaker) at `/record` and cut with `npm run make-clips`. Not a third-party corpus — no MSU Tone Perfect, no audio-cmn; those were early options, never shipped, and no code references them today. See CLAUDE.md's "clip inventory" section for the recording→corridor pipeline.
+**Source:** 120 words (30 per tone), recorded by Jane (native Taiwanese speaker) at `/record` and cut with `npm run process-clips`. Not a third-party corpus — no MSU Tone Perfect, no audio-cmn; those were early options, never shipped, and no code references them today. See CLAUDE.md's "The clip catalog and its Worker" section for the recording→corridor pipeline and the current DB/R2 migration status (in progress — the older `public/ref/*.wav` + manifest path is still present and working, not yet retired).
 
-Reference audio plays before the gate arrives (call-and-response): hear it, then produce it. `src/audio/reference.ts` handles playback and falls back to a synthetic sweep through the player's own calibrated range if a clip fails to load/decode.
+Reference audio plays before the gate arrives (call-and-response): hear it, then produce it. `src/audio/reference.ts` handles playback and falls back to a synthetic sweep through the player's own calibrated range if a clip fails to load/decode — now also the fallback for an unauthorized or unreachable clip fetch (a missing play ticket, a 403 on a pro word without access, a network failure against the Worker), not only a decode error.
 
 ## 10. Edge cases
 
@@ -325,7 +325,7 @@ Reference audio plays before the gate arrives (call-and-response): hear it, then
 
 - Does the trail read better as a solid line, dots-per-frame, or a fading ribbon? (Unresolved — not re-verified since the original v1 build; check current `render/` before assuming either way.)
 - Should T1/T3's gate duration be restored to match their clip length, and if so, how is T1's regressed scoring (the reason it was shortened) addressed instead?
-- `public/ref/*.wav` is still git-tracked; the R2 migration proposed in `docs/flappytone-SPEC-r2-clip-storage.md`/`docs/R2_SETUP.md` hasn't happened. Worth doing before the repo grows further, or drop the proposal?
+- The R2/Worker migration (`docs/SPECS/flappytone-SPEC-clip-catalog-r2.md`) has happened for the live path — clips are served from R2 through the Worker, guest and free/pro alike. What hasn't happened is the retirement of the old path it was meant to replace: `public/ref/*.wav` is still git-tracked, `api/upload.ts`/`api/auth.ts`/`@vercel/blob` are still live, blocked on two human verifications (a full run played off R2 in production, and the booth recording a new word end to end — see CLAUDE.md's "clip catalog" section and DECISIONS.md's pending-Task-13 checklist). Once both land, that deletion is a short, already-scoped task.
 - The Progress/Profile/daily-limit feature (§3, §8) is a real retention/monetisation-adjacent surface the v1 non-goals didn't anticipate. Is a paid tier actually on the roadmap, or does `dailyLimit.ts` stay a soft nudge indefinitely?
 - Taiwan vs Beijing reference audio: resolved in practice (Jane's own voice is the whole inventory now), but the original open question about *which* register to default new content to, if the inventory is ever extended with another speaker, is still open.
 - Does anyone play it twice? Read this from PostHog now, not a local report script.

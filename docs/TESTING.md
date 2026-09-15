@@ -236,3 +236,49 @@ The fixture tests cover the pipeline. They do not cover *feel*. These require Pi
 - iOS Safari, on a real device: does the gesture-gated audio flow actually start?
 
 When reporting a feel problem, use the dev panel numbers, not adjectives. "Clarity drops to 0.4 during the T3 dip and the bird freezes for ~400ms" is actionable. "Tone 3 feels bad" is not.
+
+## 8. The clips Worker — testing the R2/ticket path
+
+`workers/clips/` is its own workspace with its own test runner, excluded from
+the root `npm run test` (see `vite.config.ts`'s test `exclude`):
+
+```bash
+npm run worker:test   # npm -w workers/clips test — the Worker's own vitest suite
+npm run worker:dev     # wrangler dev — exercises the Worker standalone, not wired into `npm run dev`
+```
+
+Automated coverage (`workers/clips/test/`) pins ticket signing/verification,
+CORS, the passcode gate, and each route's status codes against mocked
+Supabase/R2. It does not, and cannot, prove the deployed Worker, live R2
+objects, or a real Supabase JWT behave the same way — that needs a manual
+pass against `https://clips.flappytone.com`:
+
+- [ ] `POST /token` with no `Authorization` header ⇒ `200`, `tier: "guest"` —
+      **not** a 401. This is deliberate (Decision 2 override, see
+      DECISIONS.md): a missing or invalid session JWT degrades to a guest
+      ticket, it never hard-fails.
+- [ ] `POST /token` with a valid anonymous Supabase JWT ⇒ still `tier:
+      "guest"` (an anonymous session is not `free` — same line
+      `src/data/tier.ts` draws elsewhere).
+- [ ] `POST /token` with a signed-in free account's JWT ⇒ `tier: "free"`; with
+      a Pro account's ⇒ `tier: "pro"`.
+- [ ] `GET /clip/:id` with a guest ticket on a `min_tier='free'` word ⇒ `200
+      audio/wav`. (Every word is `min_tier='free'` today — see CLAUDE.md's
+      "clip catalog" section — so there is currently no live word to probe
+      the 403 branch with; the Worker's own unit tests cover that branch
+      against a mocked `pro` row instead.)
+- [ ] Second fetch of the same `id?v=` ⇒ `cf-cache-status: HIT` in the
+      response headers (the shared edge cache; see Decision "the shared edge
+      cache stores public" in DECISIONS.md).
+- [ ] A malformed clip id (e.g. a raw `%ff` escape) ⇒ `400`, not `500`.
+- [ ] No ticket at all on `/clip/:id` ⇒ `401`.
+- [ ] Rate limiting: **not yet configured** (Cloudflare WAF rule pending —
+      `docs/SPECS/R2_SETUP.md`). A rapid burst of `POST /token` from one IP
+      currently returns all `200`s. Re-run this check once the rule exists;
+      expect `429` past 20/min on `/token` and 60/min on `/clip/*`.
+- [ ] App-level: a full run on a free account plays real clips (not the
+      synthetic sweep) — watch the network panel, not just listen, since a
+      failed fetch degrades silently to synth by design.
+- [ ] Dead network / Worker unreachable ⇒ the app still loads (catalog falls
+      back to `wordsFallback.json`, cues fall back to the synthetic sweep),
+      no broken end screen.

@@ -10,7 +10,7 @@ React 19 + TypeScript + Vite. Canvas 2D. Web Audio API. Plain CSS with a design-
 
 **What has landed (Ring 1 / Phase 1):** anonymous auth and the weekly leaderboard.
 
-- **`src/data/`** is the only place that talks to Supabase. `supabase.ts` holds the single client and `ensureAnonSession()`; `leaderboard.ts` holds every read and write of the board. Both obey one contract: **nothing in `src/data/` may throw into a caller.** A failure returns an empty board or `false`, so a dead network degrades to "no board today", never to a broken end screen — the same rule `src/share/share.ts` and `src/analytics/client.ts` already keep.
+- **`src/data/`** is the only place that talks to Supabase. `supabase.ts` holds the single client and `ensureAnonSession()`; `leaderboard.ts` holds every read and write of the board. Both obey one contract: **nothing in `src/data/` may throw into a caller.** A failure returns an empty board or `false`, so a dead network degrades to "no board today", never to a broken end screen — the same rule `src/share/share.ts` and `src/analytics/client.ts` already keep. `src/data/words.ts` (catalog fetch: live query against the `words` table, falling back to the bundled `wordsFallback.json` snapshot) and `src/data/catalogRows.ts` (the wire shape, `CATALOG_SELECT`/`CatalogRow`) now live here too, obeying the same never-throw contract — see "The clip catalog and its Worker" below.
 - **Sign-in is lazy, deliberately.** `signInAnonymously()` runs when a player joins the board, *not* at app load, so a visitor who never submits a score never becomes a row in `auth.users`.
 - **Two write lanes, split by whether the client may decide the value.** The player's `profiles` row is written by the browser and guarded by RLS (`auth.uid() = id`). Their score is written *only* by `api/score.ts`, which holds the service-role key, verifies the JWT, and computes the ISO week from server time. `leaderboard_scores` has **no client write policy at all** — that is the enforcement, not a convention. If the client could lie about a value and it matters, it goes through a function.
 - **Display names are generated, never typed.** The player gets something like `BraveSparrow42`, cached at `toneflap.identity.v1` and copied into their profile on join. Choosing a name is a planned Pro feature. This also keeps the "nothing the player typed" promise in `src/analytics/session.ts` intact — no board name is ever sent to PostHog.
@@ -76,6 +76,7 @@ src/
   analytics/  what a play session sends home. session.ts is pure; client.ts/posthog.ts are the impure part.
   dev/        the Lab (dev-only tuning instance) + CLI analysis/build scripts.
 api/          Vercel functions: the record booth, newsletter signup, and score.ts/run.ts/webhook-ls.ts (the leaderboard, the server run count, and has_access — each the sole writer of its value).
+workers/clips/  the Cloudflare Worker (`flappytone-clips-api`, deployed at clips.flappytone.com) that mints play tickets and serves clip audio from R2. See "The clip catalog and its Worker" below — separate deploy target, separate `npm -w workers/clips` toolchain, not part of the Vercel `api/` count.
 supabase/     numbered SQL migrations, applied through the Supabase MCP. The schema's source of truth.
 LandingApp.tsx  the / entry's shell: landing + terms, and nothing else.
 fixtures/     WAV files for offline tests — see docs/TESTING.md
@@ -109,11 +110,16 @@ One analytics consequence: **`landed` means "opened `/app`", not "visited the si
 ```bash
 npm run dev            # vite dev server, over HTTPS — use for anything not touching api/
 npm run dev:api        # vercel dev: the only way to exercise api/ (score submission)
-npm run test           # vitest
+npm run worker:dev     # wrangler dev, for workers/clips (the clips Worker) — separate toolchain, npm -w workers/clips
+npm run worker:deploy  # wrangler deploy — pushes workers/clips to clips.flappytone.com
+npm run worker:test    # workers/clips' own vitest suite (npm -w workers/clips test)
+npm run test           # vitest — root app suite only; workers/clips is excluded (own runner, own tests)
 npm run analyze <wav>  # print ASCII contour for a fixture — use this to "see" pitch output
 npm run typecheck
 npm run build           # also gates dev-tooling exclusion, see hard rule 7
 ```
+
+**`VITE_CLIPS_BASE_URL` is the clips Worker's origin** (`https://clips.flappytone.com` in prod, same value works from `npm run dev` against the live Worker — there is no local Worker-in-the-loop dev flow today; `npm run worker:dev` runs the Worker standalone against your own `.dev.vars`, it is not wired into `npm run dev`'s Vite server). Absent, every cue falls back to the synthetic sweep — a valid build, just an audibly worse one; nothing throws. Set it in `.env.local` for local work against production clips, and it must be present in Vercel Production + Preview or a deployed build never hears a real clip.
 
 **`dev:api` sources `.env.local` itself.** This repo is linked to Vercel through `.vercel/repo.json` (a repo-style link, not `project.json`), and in that setup `vercel dev` does not pick up `.env.local` — every function sees an empty `process.env` and fails closed, which for `api/score.ts` means a 503 that looks exactly like a missing key. The script therefore exports the file before starting. Values with spaces or `#` would need quoting, since this is shell sourcing rather than a dotenv parser.
 
@@ -134,28 +140,31 @@ npm run update-demo hero ~/Downloads/new-hero-take.mp4
 
 It strips any audio track, regenerates the matching `.webm`, and rewrites the size constants in both files. Doesn't run the build — check with `npm run build` (or `npm run dev`) after.
 
-## The clip inventory
+## The clip catalog and its Worker
 
-Reference clips are recorded by Jane at `/record`, not cut by hand:
+**Status: migrated to a Supabase `words` table + Cloudflare R2/Worker pipeline (audio-migration branch, Sep 2026), per `docs/SPECS/flappytone-SPEC-clip-catalog-r2.md`. The plan's own Decisions 1, 2, 6, 7, 9 were overridden during the build — see DECISIONS.md "Clip catalog: DB + R2 migration" for why — and Task 13 (retiring the pre-migration path below) has NOT landed. Both pipelines are live in the code today; read this section for what's true now, not what Task 13 will delete.**
 
-```bash
-npm run pull-recordings [session]  # Blob -> fixtures/recordings/<session>/ (gitignored)
-npm run make-clips                 # -> public/ref/<id>.wav + manifest.json, with a review report
-```
+**The pipeline, current shape:** `npm run import-words` still writes a TSV into the `words` table (no longer just `wordlist.ts`) → Jane records at `/record`, which now talks to the Worker's `/raw` and `/booth/words` routes, not `api/upload.ts`/`api/auth.ts` directly (those Vercel functions and `@vercel/blob` are still present and still work — see "Not yet retired" below) → `npm run process-clips` measures the take (same `src/dev/clipCut.ts` as before, byte-identical), uploads the finished clip to the private `flappytone-clips` R2 bucket, and writes `duration_s`/`onset_s`/`clip_s`/`polyline`/`contour` onto the word's DB row → `npm run export-fallback` snapshots the published catalog into `src/data/wordsFallback.json`, the bundle's offline fallback.
 
-The word list comes from a two-column TSV (hanzi, pinyin) via `npm run import-words`, merged into `src/record/wordlist.ts` — a registry, not a generated file; an id, once minted, never moves. See DECISIONS.md if you need the reasoning.
+**The app reads the catalog live, falls back to the bundled snapshot.** `src/data/words.ts` queries `words` (columns: `CATALOG_SELECT` in `src/data/catalogRows.ts`) filtered to `status='published'`; a failed query — never throws, per the `src/data/` contract — falls back to `wordsFallback.json`. `wordsFallback.json` deliberately **excludes** `contour`, `raw_key`, and `recorded_session`: nothing in `src/` reads a fallback row's `contour` (the landing tone charts read `polyline` via `toneAverages`/`averagePolyline`), and shipping it was ~23kB gzip of dead weight on the landing critical path (Decision 7 override — see DECISIONS.md). The DB column itself is untouched; `process-clips` still writes it.
 
-**A gate is built from a word, not a tone.** `manifest.json` carries each clip's `durationS` and its corridor `polyline`; `src/game/words.ts` parses it, `shapeForWord` turns it into the corridor, `src/audio/reference.ts` plays the cue. `public/ref/` is the shipped inventory (still git-tracked — the migration to R2 proposed in `docs/flappytone-SPEC-r2-clip-storage.md` hasn't happened). The four `ma` anchors used for offline dev tooling live separately at `fixtures/anchors/`.
+**Clip audio is gated behind a play ticket, and guests get clips too.** `POST /token` on the Worker (`clips.flappytone.com`, source in `workers/clips/`) verifies a Supabase session JWT if one is sent — **ES256 against the project's JWKS, not HS256 against a shared secret** (Decision 1 override: Supabase signs asymmetrically; there is no `SUPABASE_JWT_SECRET`) — and mints a short-lived (30 min), IP-bound HS256 ticket carrying a `tier` (`guest`/`free`/`pro`). It **never hard-fails**: a missing, malformed, expired or anonymous-session JWT all resolve to a `guest` ticket rather than a 401 (Decision 2 override — the spec's "no JWT ⇒ no clips" was dropped; clips are what makes the game playable at all). `GET /clip/:id` then checks the ticket and, only for a `min_tier='pro'` word, the ticket's tier. **Protection against bulk download is defence-in-depth, not a hard wall:** private buckets (no `r2.dev`/public domain/CORS on either), no listing endpoint, one clip per request, 30-minute IP-bound tickets, and a Cloudflare WAF rate-limit rule on `/clip/*` and `/token` — **the rate-limit rule itself is not yet configured** (blocked on Pierre's Cloudflare dashboard step; see `docs/SPECS/R2_SETUP.md`).
 
-**`clipS` ≠ `onsetS + durationS`.** Three separate clocks (file length / lead-in / tone window) matter here and have been folded together by mistake twice — see the table in DECISIONS.md before touching any of `clipCut.ts`, `run.ts`'s cue timing, or `manifest.json`'s schema.
+**`min_tier` (game access) and `TIER_LIMITS.wordsPerTone` (visualiser practice depth) are two different gates — keep them that way.** They were tangled once: the spec's per-tier word split (first N words/tone free, rest `pro`) was implemented faithfully but contradicted an invariant this file already stated — "a guest's zero-word visualiser cap must never starve their actual game" — so the scored game played a synthetic sweep for ~83% of cues for every non-Pro player. Logged as a real incident in DECISIONS.md, not a tidy-up. Fixed: every word's `min_tier` is `'free'` today; the run's word pool and `/clip`'s gate read `min_tier`, the visualiser's practice-list slice reads `TIER_LIMITS[tier].wordsPerTone` (unchanged, still `0/5/all`). `src/dev/process-clips.ts` must keep defaulting new words to `min_tier='free'` — do not reintroduce the first-N-per-tone rule.
 
-Five rules that hold the pipeline together — see DECISIONS.md for the incidents behind each:
+**The prefetch is two ordered tiers, and deliberately does not predict the run's RNG.** `src/audio/prefetch.ts` warms the queued gates' exact words first (guarantees the next cue), then a mode-scoped slice capped at `tuning().prefetchWordsPerTone` — never the whole catalog at once (an earlier version saturated all four connection slots before the first gate's own load, so the first cue always cued synthetically on a cold cache). It does not clone the run's RNG to predict `pickWord`'s draw, since advancing that generator would change the run — the speculative tier is a bet by construction, only the exact tier is guaranteed correct. `learn` mode fetches no clips at all (it always cues synthetically, so a fetch would be pure waste).
 
-1. **`src/dev/clipCut.ts` is the only measurement**, shared by `make-ref-clips` (the four anchors) and `make-clips` (everything Jane records). After touching it, regenerate and check `git diff fixtures/anchors` is empty and `manifest.json`'s `polyline`/`contour` fields didn't move.
+**Not yet retired (Task 13, blocked on two human verifications — see below):** `public/ref/*.wav` (120 files) and `public/ref/manifest.json` are still git-tracked and still what `src/dev/make-clips.ts` writes; `api/upload.ts`, `api/auth.ts`, `api/_passcode.ts` and `@vercel/blob` are still live and still what the pre-migration booth flow used; `src/dev/pull-recordings.ts` and `src/dev/manifest.test.ts` are still present and registered in `package.json`; `src/record/wordlist.ts`'s `WORDS` literal is still exported. None of this is reachable from a live player path any more (the booth talks to the Worker now, the game reads the DB/fallback, not the manifest) but none of it has been deleted, because the retirement's own precondition hasn't been met: a full run played off R2 in production (`VITE_CLIPS_BASE_URL` is not yet set in Vercel) and the booth recording a new word end to end. Do not delete any of it until both have happened and Task 13 runs.
+
+**`clipS` ≠ `onsetS + durationS`.** Three separate clocks (file length / lead-in / tone window) matter here and have been folded together by mistake twice — see the table in DECISIONS.md before touching any of `clipCut.ts`, `run.ts`'s cue timing, or the catalog row schema.
+
+Five rules that hold the pipeline together, restated against `process-clips` (formerly against `make-clips`) — see DECISIONS.md for the incidents behind each:
+
+1. **`src/dev/clipCut.ts` is the only measurement**, shared by `make-ref-clips` (the four anchors) and `process-clips` (everything Jane records, via `src/dev/clipPipeline.ts`). After touching it, regenerate and check `git diff fixtures/anchors` is empty and the catalog rows' `polyline`/`contour` didn't move (`npm run process-clips -- --dry-run` diffs before writing).
 2. **`takeDetector` and `clipCut` must find the same voiced run.** `takeDetector.test.ts` pins this to the millisecond against Jane's four captures.
 3. **`clipReview.ts` flags, it never blocks.** Its tests assert Jane's four anchor clips pass clean.
-4. **`f0Center` is measured per session, not read from `speakers.json`.** Pitch drifts between sittings; `measurePitchReference` pools the session's own voiced frames.
-5. **`manifest.test.ts` is the seam between the cutter and the game.** A renamed field surfaces as an empty inventory — which silently degrades to tuning defaults and looks exactly like the game working.
+4. **`f0Center` is measured per session, not read from `speakers.json`.** Pitch drifts between sittings; `measurePitchReference` pools the session's own voiced frames. Exception: the pipeline's pitch-search *seed* is the pinned constant `SEED_F0_CENTER = 168` in `src/dev/clipPipeline.ts`, not derived from the catalog — seeding from the last published word's own reference moved 90 of 120 polylines in the 3rd decimal. Guarded by a golden `cutClip` test over all four anchors.
+5. **`src/data/catalogSeam.test.ts` is the seam between the pipeline and the game** — successor to `manifest.test.ts` (invariant unchanged, target moved). It pins `CATALOG_SELECT`/`wordsFromCatalog`/`FALLBACK_COLUMNS` together: a renamed DB column still surfaces as an empty inventory, which still silently degrades to tuning defaults and looks exactly like the game working. `manifest.test.ts` still exists too, pinning the old path until Task 13 removes it.
 
 ## Play analytics
 
