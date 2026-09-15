@@ -15,17 +15,26 @@
  * Idempotent: both upserts use `onConflict: "id"` (and the composite PK for
  * `word_lists`), so re-running after a manifest update just refreshes rows.
  *
- * `min_tier` follows the tiers spec: for each tone, in `position` order, the
- * first `TIER_LIMITS.free.wordsPerTone` words are `free`, the rest `pro` —
- * read from `src/game/tiers.ts` rather than hardcoded, so a tuning change
- * there doesn't silently desync this script.
+ * `min_tier` defaults OPEN: every seeded word is `'free'`.
+ *
+ * `min_tier` is the GAME gate — "may this tier's run fly this word" — and it
+ * is the same value the clips Worker enforces at `/clip/:id`. Marking a word
+ * `'pro'` therefore removes it from a non-Pro run's pool *and* has its clip
+ * refused at the edge, consistently, with no code change. Nothing today is
+ * `'pro'`, so every tier plays all 120 words, exactly as production always
+ * did.
+ *
+ * This script used to mark the first `TIER_LIMITS.free.wordsPerTone` words of
+ * each tone `free` and the rest `pro`, conflating this with the visualiser's
+ * practice depth. Those are two different limits: `wordsPerTone` is a COUNT
+ * applied only to the visualiser's per-tone practice list, and it must never
+ * reach the game's pool — a guest's cap is zero. See `docs/DECISIONS.md`.
  */
 
 import { readFileSync } from "node:fs";
 
 import { GLOSSARY } from "../record/glossary.ts";
 import { WORDS } from "../record/wordlist.ts";
-import { TIER_LIMITS } from "../game/tiers.ts";
 import { serviceClient } from "./serviceClient.ts";
 import type { Database } from "../data/database.types.ts";
 
@@ -80,22 +89,8 @@ const sessionRef = manifest.sessions[0];
 
 const clipsById = new Map(manifest.clips.map((clip) => [clip.id, clip]));
 
-const freeWordsPerTone = TIER_LIMITS.free.wordsPerTone;
-
-// Track how many words of each tone have already been assigned `free`, in
-// `position` order, so the first N per tone are free and the rest are pro.
-const freeCountByTone: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
-
 const wordRows: WordRow[] = WORDS.map((word, position) => {
   const clip = clipsById.get(word.id);
-
-  let minTier: "free" | "pro";
-  if (freeCountByTone[word.tone] < freeWordsPerTone) {
-    minTier = "free";
-    freeCountByTone[word.tone] += 1;
-  } else {
-    minTier = "pro";
-  }
 
   const row: WordRow = {
     id: word.id,
@@ -107,7 +102,7 @@ const wordRows: WordRow[] = WORDS.map((word, position) => {
     syllables: 1,
     position,
     status: clip ? "published" : "pending",
-    min_tier: minTier,
+    min_tier: "free",
     clip_key: clip ? `${word.id}.wav` : null,
     duration_s: clip ? clip.durationS : null,
     onset_s: clip ? clip.onsetS : null,

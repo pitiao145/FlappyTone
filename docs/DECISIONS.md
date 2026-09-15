@@ -9,6 +9,46 @@ approach, or where the obvious-looking alternative was tried and failed.
 
 ## Backend, accounts & persistence
 
+### Two tier gates, two meanings — and every word is free (15 Sep 2026)
+
+`docs/SPECS/flappytone-SPEC-clip-catalog-r2.md` had the clip pipeline mark the
+first `TIER_LIMITS.free.wordsPerTone` words of each tone `min_tier='free'` and
+the remaining 25 `'pro'`, reusing one number for two different jobs. The clips
+Worker enforces `min_tier` at `/clip/:id` with a 403, but `Game.tsx` built the
+run from the UNFILTERED inventory — so a guest or free player flew words whose
+clips were refused and heard the synthetic sweep for roughly 83% of cues. It
+also contradicted a rule CLAUDE.md already stated: `pickWord`, feeding a scored
+run, must never be limited by a tier's word count, because a guest's count is
+zero.
+
+Resolved by splitting the two gates rather than deleting either:
+
+- **`min_tier` = game access.** "May this tier's run fly this word." It is what
+  the Worker enforces at the edge, and now also what the run's word pool is
+  filtered by — the two cannot disagree. Marking a future word `'pro'` gates it
+  in both places at once, with no code change. That lever is the reason the
+  per-tier architecture was kept.
+- **`TIER_LIMITS[tier].wordsPerTone` = practice depth.** A COUNT, applied only
+  to the visualiser's per-tone practice list (guest 0, free 5, pro all). It
+  never reaches the game's pool.
+
+**Every one of the 120 words is `min_tier='free'` today** (a data update, not a
+migration), and `seed-words.ts` now defaults new words open. So observable
+behaviour is identical to production: all 120 words for every tier, guests
+included, and no cue that was recorded becomes synthetic.
+
+**The run's pool reads the tier synchronously, from `tier.ts`'s store, not from
+`useTier()`.** `tier` could not simply join the run-owning effect's dependency
+array — a late answer would tear down and rebuild a live `Run` mid-flight,
+which is exactly why the prefetch already lives in its own effect. `getTier()`
+answers immediately and, after the first resolution in a session, correctly.
+The one stale case is the very first run after a cold load, where the store
+still holds its `"guest"` default; a small effect keyed on `tier` repairs it in
+place through `run.setWords()` — the same seam a late inventory fetch uses,
+which leaves already-spawned gates alone and tears nothing down. Since the
+store's default is the narrowest tier, resolution only ever widens the pool.
+
+
 **v1's "no accounts / no gameplay backend / no persistence" was a shipping boundary, and it is now deliberately lifted (5 Sep 2026).** It was the right call for v1 — staying client-only let the game ship and validate fast, and kept the privacy story simple (no server ever sees a voice). It was never a permanent architectural law. Real traction changed the calculus: a leaderboard is inherently shared state that cannot live in one browser, cross-device progress is the honest payoff behind "sign up to save," and the EarlyBird monetisation needs a notion of a paying account. So accounts + a backend are now the decided direction, not a non-goal.
 
 **Chosen stack: Supabase (auth + Postgres) + Cloudflare R2 for object storage.** The deciding factor was auth — Cloudflare has no managed consumer-auth product, so an all-Cloudflare path meant hand-rolling auth on D1; Supabase Auth (incl. anonymous sign-in) covers it first-party, and Postgres fits the tone-analytics roadmap better than D1's SQLite. R2 wins object storage on zero egress and is already the repo's clip-storage plan. Full rationale + the schema/security/scaling design live in `docs/flappytone-ARCH-supabase.md`; the scoped first build in `docs/flappytone-SPEC-supabase-phase1.md`.

@@ -8,6 +8,7 @@ import {
   wordsOfTone,
   type Word,
 } from "./words.ts";
+import fallback from "../data/wordsFallback.json";
 import { corridorChaoAt, makeGate, newDifficulty, shapeForTone, shapeForWord } from "./gates.ts";
 
 /** A well-formed `words` table row, as `wordsFromCatalog` sees it. */
@@ -204,6 +205,69 @@ describe("wordsForTier", () => {
 
   it("guest behaves like free", () => {
     expect(wordsForTier(words, "guest").map((w) => w.id)).toEqual(["free1"]);
+  });
+});
+
+/**
+ * `min_tier` is the GAME gate, and it is what the clips Worker enforces at
+ * `/clip/:id`. The run's pool is filtered by it (Game.tsx), so the two must
+ * agree: a word a tier's run can fly is a word whose clip that tier can fetch.
+ *
+ * The shipped catalog marks everything `free` today, so every tier flies all
+ * 120 words — exactly what production always did. A run pool of 20 for a guest
+ * is the regression this guards (the visualiser's 5-per-tone practice depth is
+ * a COUNT, `TIER_LIMITS.wordsPerTone`, and must never reach this pool).
+ */
+describe("the shipped catalog is open to every tier's game", () => {
+  const catalog = wordsFromCatalog(fallback.rows);
+
+  it("ships 120 published words", () => {
+    expect(catalog).toHaveLength(120);
+  });
+
+  it("gives a guest's run pool every word, not a per-tone slice", () => {
+    expect(wordsForTier(catalog, "guest")).toHaveLength(120);
+    expect(wordsForTier(catalog, "free")).toHaveLength(120);
+    expect(wordsForTier(catalog, "pro")).toHaveLength(120);
+  });
+
+  it("has no pro-gated word left in the catalog", () => {
+    expect(catalog.filter((w) => w.minTier === "pro")).toEqual([]);
+  });
+
+  it("can still pick a word of every tone for a guest", () => {
+    const pool = wordsForTier(catalog, "guest");
+    for (const tone of [1, 2, 3, 4] as const) {
+      expect(wordsOfTone(pool, tone).length).toBeGreaterThan(5);
+      expect(pickWord(pool, tone, [], () => 0)).not.toBeNull();
+    }
+  });
+});
+
+/**
+ * The lever Pierre wants kept: marking one future word `pro` must remove it
+ * from a non-Pro run's pool, with no code change — and the Worker's 403 on the
+ * same column keeps the clip route consistent with it.
+ */
+describe("marking a word pro still gates it (the lever)", () => {
+  const open = word({ id: "open1", min_tier: "free" });
+  const gated = word({ id: "gated1", min_tier: "pro", position: 1 });
+  const catalog = [open, gated];
+
+  it("is absent from a guest's and a free account's pool", () => {
+    expect(wordsForTier(catalog, "guest").map((w) => w.id)).toEqual(["open1"]);
+    expect(wordsForTier(catalog, "free").map((w) => w.id)).toEqual(["open1"]);
+  });
+
+  it("is present in a Pro pool", () => {
+    expect(wordsForTier(catalog, "pro").map((w) => w.id)).toEqual(["open1", "gated1"]);
+  });
+
+  it("is never picked for a guest's gate", () => {
+    const pool = wordsForTier(catalog, "guest");
+    for (let i = 0; i < 10; i += 1) {
+      expect(pickWord(pool, 1, [], () => i / 10)?.id).toBe("open1");
+    }
   });
 });
 

@@ -28,7 +28,7 @@ import {
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
-import { useTier } from "../data/tier.ts";
+import { getTier, useTier } from "../data/tier.ts";
 import { wordsForTier } from "../game/words.ts";
 import { TONE_INFO, type Tone } from "../game/gates.ts";
 import { CALIBRATION_TONES, Run, type RunMode, type RunSnapshot } from "../game/run.ts";
@@ -435,9 +435,25 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // needs the flag so its cue carries the leading route-cling delay; the
       // host below performs the actual release/re-acquire.
       releaseMicForCue,
-      // Whatever the manifest fetch has produced by now. Empty is a valid run:
-      // it flies the tuning defaults with synthetic cues.
-      words: inventoryNow() ?? [],
+      // Whatever the manifest fetch has produced by now, narrowed to the words
+      // this tier's game may use. Empty is a valid run: it flies the tuning
+      // defaults with synthetic cues.
+      //
+      // `min_tier` is the *game* gate — the same value the Worker enforces at
+      // `/clip/:id` — so the pool has to agree with it or a gated word flies
+      // with a synthetic sweep instead of its recording. (The visualiser's
+      // `wordsPerTone` is a separate, count-based practice limit; it must
+      // never reach this pool, or a guest's 0-word cap would starve the game.)
+      //
+      // Read from the store (`getTier()`), not the `tier` this component holds
+      // from `useTier()`: `tier` resolves asynchronously, and putting it in
+      // this effect's dependency array would tear down and rebuild a live Run
+      // the moment the answer landed. The store answers synchronously and, in
+      // a session where the tier has already resolved once, correctly. The one
+      // stale case — the very first run after a cold load, where the store
+      // still holds its "guest" default — is repaired in place by the
+      // tier-pool effect below, via `setWords`, with no teardown.
+      words: wordsForTier(inventoryNow() ?? [], getTier()),
       singleWord,
       drillTone,
       // The calibration flight (autoStart) flies only the grid-anchoring tones;
@@ -451,7 +467,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // read against the harder one's settings.
     track({ type: "run_start", mode, corridor, cue: cueStyle });
     // If the manifest had not landed when the Run was built, catch it up.
-    if (!inventoryNow()) void loadInventory().then((w) => run.setWords(w));
+    // `getTier()` is read again here rather than captured above: the tier may
+    // well have resolved while the fetch was in flight.
+    if (!inventoryNow()) void loadInventory().then((w) => run.setWords(wordsForTier(w, getTier())));
     let tracker: PitchTracker | null = null;
     let rafId = 0;
     let running = true;
@@ -789,6 +807,27 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     if (now) prefetchPool(wordsForTier(now, tier));
     else void loadInventory().then((w) => prefetchPool(wordsForTier(w, tier)), () => undefined);
   }, [scored, tier, runGen]);
+
+  /**
+   * Re-narrow a live run's word pool once the tier answer lands.
+   *
+   * The Run is built from `getTier()`'s synchronous store read, which on the
+   * very first run after a cold load is still the "guest" default. This pushes
+   * the resolved pool into the existing Run through the same `setWords` seam a
+   * late inventory fetch uses — gates already spawned keep the corridor they
+   * were built with, and nothing is torn down. Deliberately *not* a dependency
+   * of the run-owning effect above, which would rebuild the run instead.
+   *
+   * Resolution only ever widens the pool in practice (the store's default is
+   * the narrowest tier), so this adds words rather than taking any away, and
+   * `pickWord` only ever consults it for a gate not yet spawned.
+   */
+  useEffect(() => {
+    const run = runRef.current;
+    if (!run) return;
+    const now = inventoryNow();
+    if (now) run.setWords(wordsForTier(now, tier));
+  }, [tier, runGen]);
 
   // Show the *active* gate's tone while flying it — showing the next gate's
   // tone mid-gate would teach the wrong contour (this matters most in the

@@ -36,6 +36,15 @@ Vercel — only the storage/clip layer moves to Cloudflare.
   captured once); the goal is killing the cheap whole-dataset lift.
 
 ## 0. Locked decisions (do not re-open)
+
+> **Correction (15 Sep 2026):** this spec's `min_tier` model — "the pipeline
+> sets the first `TIER_LIMITS.free.wordsPerTone` words per tone to `free`, the
+> rest `pro`" (§ below) — was wrong for this product and broke the scored game
+> for guest and free players. `min_tier` is game access; the visualiser's
+> `wordsPerTone` is a separate practice-depth count. Every word is `free`
+> today. See `docs/DECISIONS.md`, "Two tier gates, two meanings". The rest of
+> this spec stands.
+
 - **Clip protection = Supabase JWT, enforced in a Cloudflare Worker.** Anonymous
   / no JWT ⇒ no clips. Pro-gated words additionally require `has_access`.
 - **Both R2 buckets private.** No public domain on either.

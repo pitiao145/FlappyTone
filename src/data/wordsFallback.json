@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": "2026-09-15T00:54:56.684Z",
+  "exportedAt": "2026-09-15T05:38:22.312Z",
   "rows": [
     {
       "clip_key": "ma1b.wav",
@@ -31,14 +31,14 @@
         ]
       ],
       "position": 0,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/ma1b.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:27.856869+00:00"
     },
     {
       "clip_key": "ba1.wav",
@@ -69,14 +69,14 @@
         ]
       ],
       "position": 1,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/ba1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:20.45075+00:00"
     },
     {
       "clip_key": "san1.wav",
@@ -107,14 +107,14 @@
         ]
       ],
       "position": 2,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/san1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:31.210238+00:00"
     },
     {
       "clip_key": "qi1.wav",
@@ -145,14 +145,14 @@
         ]
       ],
       "position": 3,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/qi1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:30.196716+00:00"
     },
     {
       "clip_key": "tian1.wav",
@@ -183,14 +183,14 @@
         ]
       ],
       "position": 4,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/tian1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:32.58531+00:00"
     },
     {
       "clip_key": "hua1.wav",
@@ -207,7 +207,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "huā",
       "polyline": [
@@ -221,14 +221,14 @@
         ]
       ],
       "position": 5,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/hua1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "shu1.wav",
@@ -245,7 +245,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "shū",
       "polyline": [
@@ -259,14 +259,14 @@
         ]
       ],
       "position": 6,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/shu1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "dong1.wav",
@@ -283,7 +283,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.211,
       "pinyin": "dōng",
       "polyline": [
@@ -297,14 +297,14 @@
         ]
       ],
       "position": 7,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/dong1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "jia1.wav",
@@ -321,7 +321,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "jiā",
       "polyline": [
@@ -335,14 +335,14 @@
         ]
       ],
       "position": 8,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/jia1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "che1.wav",
@@ -359,7 +359,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "chē",
       "polyline": [
@@ -373,14 +373,14 @@
         ]
       ],
       "position": 9,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/che1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "shuo1.wav",
@@ -397,7 +397,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "shuō",
       "polyline": [
@@ -411,14 +411,14 @@
         ]
       ],
       "position": 10,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/shuo1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "chi1.wav",
@@ -435,7 +435,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "chī",
       "polyline": [
@@ -449,14 +449,14 @@
         ]
       ],
       "position": 11,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/chi1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "he1.wav",
@@ -473,7 +473,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.275,
       "pinyin": "hē",
       "polyline": [
@@ -487,14 +487,14 @@
         ]
       ],
       "position": 12,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/he1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "shan1.wav",
@@ -511,7 +511,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "shān",
       "polyline": [
@@ -525,14 +525,14 @@
         ]
       ],
       "position": 13,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/shan1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "xin1.wav",
@@ -549,7 +549,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "xīn",
       "polyline": [
@@ -563,14 +563,14 @@
         ]
       ],
       "position": 14,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/xin1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "kai1.wav",
@@ -587,7 +587,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "kāi",
       "polyline": [
@@ -601,14 +601,14 @@
         ]
       ],
       "position": 15,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/kai1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "mao1.wav",
@@ -625,7 +625,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "māo",
       "polyline": [
@@ -639,14 +639,14 @@
         ]
       ],
       "position": 16,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/mao1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "chun1.wav",
@@ -663,7 +663,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "chūn",
       "polyline": [
@@ -677,14 +677,14 @@
         ]
       ],
       "position": 17,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/chun1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "gao1.wav",
@@ -701,7 +701,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "gāo",
       "polyline": [
@@ -715,14 +715,14 @@
         ]
       ],
       "position": 18,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/gao1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "zhong1.wav",
@@ -739,7 +739,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "zhōng",
       "polyline": [
@@ -753,14 +753,14 @@
         ]
       ],
       "position": 19,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/zhong1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "duo1.wav",
@@ -777,7 +777,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "duō",
       "polyline": [
@@ -791,14 +791,14 @@
         ]
       ],
       "position": 20,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/duo1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "jie1.wav",
@@ -815,7 +815,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "jiē",
       "polyline": [
@@ -829,14 +829,14 @@
         ]
       ],
       "position": 21,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/jie1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "tang1.wav",
@@ -853,7 +853,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "tāng",
       "polyline": [
@@ -867,14 +867,14 @@
         ]
       ],
       "position": 22,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/tang1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "bao1.wav",
@@ -891,7 +891,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "bāo",
       "polyline": [
@@ -905,14 +905,14 @@
         ]
       ],
       "position": 23,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/bao1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "bei1.wav",
@@ -929,7 +929,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "bēi",
       "polyline": [
@@ -943,14 +943,14 @@
         ]
       ],
       "position": 24,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/bei1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "fei1.wav",
@@ -967,7 +967,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "fēi",
       "polyline": [
@@ -981,14 +981,14 @@
         ]
       ],
       "position": 25,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/fei1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "xing1.wav",
@@ -1005,7 +1005,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "xīng",
       "polyline": [
@@ -1019,14 +1019,14 @@
         ]
       ],
       "position": 26,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/xing1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "xiang1.wav",
@@ -1043,7 +1043,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "xiāng",
       "polyline": [
@@ -1057,14 +1057,14 @@
         ]
       ],
       "position": 27,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/xiang1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "bing1.wav",
@@ -1081,7 +1081,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "bīng",
       "polyline": [
@@ -1095,14 +1095,14 @@
         ]
       ],
       "position": 28,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/bing1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "ting1.wav",
@@ -1119,7 +1119,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "tīng",
       "polyline": [
@@ -1133,14 +1133,14 @@
         ]
       ],
       "position": 29,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/ting1.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "ma2.wav",
@@ -1175,14 +1175,14 @@
         ]
       ],
       "position": 30,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/ma2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:20.022255+00:00"
     },
     {
       "clip_key": "ba2.wav",
@@ -1217,14 +1217,14 @@
         ]
       ],
       "position": 31,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/ba2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:20.579236+00:00"
     },
     {
       "clip_key": "shi2.wav",
@@ -1259,14 +1259,14 @@
         ]
       ],
       "position": 32,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/shi2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:31.452544+00:00"
     },
     {
       "clip_key": "ren2.wav",
@@ -1301,14 +1301,14 @@
         ]
       ],
       "position": 33,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/ren2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:31.020404+00:00"
     },
     {
       "clip_key": "lai2.wav",
@@ -1343,14 +1343,14 @@
         ]
       ],
       "position": 34,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/lai2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:27.112638+00:00"
     },
     {
       "clip_key": "tou2.wav",
@@ -1367,7 +1367,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "tóu",
       "polyline": [
@@ -1385,14 +1385,14 @@
         ]
       ],
       "position": 35,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/tou2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "qian2.wav",
@@ -1409,7 +1409,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.254,
       "pinyin": "qián",
       "polyline": [
@@ -1427,14 +1427,14 @@
         ]
       ],
       "position": 36,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/qian2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "fang2.wav",
@@ -1451,7 +1451,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "fáng",
       "polyline": [
@@ -1469,14 +1469,14 @@
         ]
       ],
       "position": 37,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/fang2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "men2.wav",
@@ -1493,7 +1493,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "mén",
       "polyline": [
@@ -1511,14 +1511,14 @@
         ]
       ],
       "position": 38,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/men2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "xue2.wav",
@@ -1535,7 +1535,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "xué",
       "polyline": [
@@ -1553,14 +1553,14 @@
         ]
       ],
       "position": 39,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/xue2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "hong2.wav",
@@ -1577,7 +1577,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "hóng",
       "polyline": [
@@ -1595,14 +1595,14 @@
         ]
       ],
       "position": 40,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/hong2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "bai2.wav",
@@ -1619,7 +1619,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "bái",
       "polyline": [
@@ -1637,14 +1637,14 @@
         ]
       ],
       "position": 41,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/bai2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "yu2.wav",
@@ -1661,7 +1661,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "yú",
       "polyline": [
@@ -1679,14 +1679,14 @@
         ]
       ],
       "position": 42,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/yu2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "niu2.wav",
@@ -1703,7 +1703,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "niú",
       "polyline": [
@@ -1721,14 +1721,14 @@
         ]
       ],
       "position": 43,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/niu2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "yang2.wav",
@@ -1745,7 +1745,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "yáng",
       "polyline": [
@@ -1763,14 +1763,14 @@
         ]
       ],
       "position": 44,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/yang2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "cha2.wav",
@@ -1787,7 +1787,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "chá",
       "polyline": [
@@ -1805,14 +1805,14 @@
         ]
       ],
       "position": 45,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/cha2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "tian2.wav",
@@ -1829,7 +1829,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "tián",
       "polyline": [
@@ -1847,14 +1847,14 @@
         ]
       ],
       "position": 46,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/tian2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "chang2.wav",
@@ -1871,7 +1871,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "cháng",
       "polyline": [
@@ -1889,14 +1889,14 @@
         ]
       ],
       "position": 47,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/chang2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "nian2.wav",
@@ -1913,7 +1913,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "nián",
       "polyline": [
@@ -1931,14 +1931,14 @@
         ]
       ],
       "position": 48,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/nian2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "ming2.wav",
@@ -1955,7 +1955,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "míng",
       "polyline": [
@@ -1973,14 +1973,14 @@
         ]
       ],
       "position": 49,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/ming2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "mang2.wav",
@@ -1997,7 +1997,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "máng",
       "polyline": [
@@ -2015,14 +2015,14 @@
         ]
       ],
       "position": 50,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/mang2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "nan2.wav",
@@ -2039,7 +2039,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "nán",
       "polyline": [
@@ -2057,14 +2057,14 @@
         ]
       ],
       "position": 51,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/nan2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "wan2.wav",
@@ -2081,7 +2081,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "wán",
       "polyline": [
@@ -2099,14 +2099,14 @@
         ]
       ],
       "position": 52,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/wan2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "wang2.wav",
@@ -2123,7 +2123,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "wáng",
       "polyline": [
@@ -2141,14 +2141,14 @@
         ]
       ],
       "position": 53,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/wang2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "cai2.wav",
@@ -2165,7 +2165,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "cái",
       "polyline": [
@@ -2183,14 +2183,14 @@
         ]
       ],
       "position": 54,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/cai2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "qiu2.wav",
@@ -2207,7 +2207,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "qiú",
       "polyline": [
@@ -2225,14 +2225,14 @@
         ]
       ],
       "position": 55,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/qiu2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "tu2.wav",
@@ -2249,7 +2249,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "tú",
       "polyline": [
@@ -2267,14 +2267,14 @@
         ]
       ],
       "position": 56,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/tu2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "e2.wav",
@@ -2291,7 +2291,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "é",
       "polyline": [
@@ -2309,14 +2309,14 @@
         ]
       ],
       "position": 57,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/e2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "lan2.wav",
@@ -2333,7 +2333,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "lán",
       "polyline": [
@@ -2351,14 +2351,14 @@
         ]
       ],
       "position": 58,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/lan2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "huang2.wav",
@@ -2375,7 +2375,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "huáng",
       "polyline": [
@@ -2393,14 +2393,14 @@
         ]
       ],
       "position": 59,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/huang2.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 2,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "ma3b.wav",
@@ -2439,14 +2439,14 @@
         ]
       ],
       "position": 60,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/ma3b.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:27.971364+00:00"
     },
     {
       "clip_key": "ba3.wav",
@@ -2485,14 +2485,14 @@
         ]
       ],
       "position": 61,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/ba3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:20.69893+00:00"
     },
     {
       "clip_key": "wu3.wav",
@@ -2531,14 +2531,14 @@
         ]
       ],
       "position": 62,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/wu3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:33.643556+00:00"
     },
     {
       "clip_key": "jiu3.wav",
@@ -2577,14 +2577,14 @@
         ]
       ],
       "position": 63,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/jiu3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:26.294401+00:00"
     },
     {
       "clip_key": "wo3.wav",
@@ -2623,14 +2623,14 @@
         ]
       ],
       "position": 64,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/wo3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:33.503603+00:00"
     },
     {
       "clip_key": "ni3.wav",
@@ -2647,7 +2647,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "nǐ",
       "polyline": [
@@ -2669,14 +2669,14 @@
         ]
       ],
       "position": 65,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/ni3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "hao3.wav",
@@ -2693,7 +2693,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "hǎo",
       "polyline": [
@@ -2715,14 +2715,14 @@
         ]
       ],
       "position": 66,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/hao3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "mai3.wav",
@@ -2739,7 +2739,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "mǎi",
       "polyline": [
@@ -2761,14 +2761,14 @@
         ]
       ],
       "position": 67,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/mai3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "shui3.wav",
@@ -2785,7 +2785,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "shuǐ",
       "polyline": [
@@ -2807,14 +2807,14 @@
         ]
       ],
       "position": 68,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/shui3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "gou3.wav",
@@ -2831,7 +2831,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "gǒu",
       "polyline": [
@@ -2853,14 +2853,14 @@
         ]
       ],
       "position": 69,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/gou3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "shou3.wav",
@@ -2877,7 +2877,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "shǒu",
       "polyline": [
@@ -2899,14 +2899,14 @@
         ]
       ],
       "position": 70,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/shou3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "kou3.wav",
@@ -2923,7 +2923,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "kǒu",
       "polyline": [
@@ -2945,14 +2945,14 @@
         ]
       ],
       "position": 71,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/kou3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "yan3.wav",
@@ -2969,7 +2969,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "yǎn",
       "polyline": [
@@ -2991,14 +2991,14 @@
         ]
       ],
       "position": 72,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/yan3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "er3.wav",
@@ -3015,7 +3015,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "ěr",
       "polyline": [
@@ -3037,14 +3037,14 @@
         ]
       ],
       "position": 73,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/er3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "zao3.wav",
@@ -3061,7 +3061,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "zǎo",
       "polyline": [
@@ -3083,14 +3083,14 @@
         ]
       ],
       "position": 74,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/zao3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "zou3.wav",
@@ -3107,7 +3107,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "zǒu",
       "polyline": [
@@ -3129,14 +3129,14 @@
         ]
       ],
       "position": 75,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/zou3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "pao3.wav",
@@ -3153,7 +3153,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "pǎo",
       "polyline": [
@@ -3175,14 +3175,14 @@
         ]
       ],
       "position": 76,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/pao3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "xiang3.wav",
@@ -3199,7 +3199,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "xiǎng",
       "polyline": [
@@ -3221,14 +3221,14 @@
         ]
       ],
       "position": 77,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/xiang3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "xiao3.wav",
@@ -3245,7 +3245,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "xiǎo",
       "polyline": [
@@ -3267,14 +3267,14 @@
         ]
       ],
       "position": 78,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/xiao3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "lao3.wav",
@@ -3291,7 +3291,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "lǎo",
       "polyline": [
@@ -3313,14 +3313,14 @@
         ]
       ],
       "position": 79,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/lao3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "leng3.wav",
@@ -3337,7 +3337,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "lěng",
       "polyline": [
@@ -3359,14 +3359,14 @@
         ]
       ],
       "position": 80,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/leng3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "duan3.wav",
@@ -3383,7 +3383,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "duǎn",
       "polyline": [
@@ -3405,14 +3405,14 @@
         ]
       ],
       "position": 81,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/duan3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "yuan3.wav",
@@ -3429,7 +3429,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "yuǎn",
       "polyline": [
@@ -3451,14 +3451,14 @@
         ]
       ],
       "position": 82,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/yuan3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "mi3.wav",
@@ -3475,7 +3475,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "mǐ",
       "polyline": [
@@ -3497,14 +3497,14 @@
         ]
       ],
       "position": 83,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/mi3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "you3.wav",
@@ -3521,7 +3521,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.211,
       "pinyin": "yǒu",
       "polyline": [
@@ -3543,14 +3543,14 @@
         ]
       ],
       "position": 84,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/you3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "nv3.wav",
@@ -3567,7 +3567,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "nǚ",
       "polyline": [
@@ -3589,14 +3589,14 @@
         ]
       ],
       "position": 85,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/nv3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "yu3.wav",
@@ -3613,7 +3613,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "yǔ",
       "polyline": [
@@ -3635,14 +3635,14 @@
         ]
       ],
       "position": 86,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/yu3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "yi3.wav",
@@ -3659,7 +3659,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "yǐ",
       "polyline": [
@@ -3681,14 +3681,14 @@
         ]
       ],
       "position": 87,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/yi3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "zhi3.wav",
@@ -3705,7 +3705,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "zhǐ",
       "polyline": [
@@ -3727,14 +3727,14 @@
         ]
       ],
       "position": 88,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/zhi3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "qing3.wav",
@@ -3751,7 +3751,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "qǐng",
       "polyline": [
@@ -3773,14 +3773,14 @@
         ]
       ],
       "position": 89,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/qing3.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 3,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "ma4b.wav",
@@ -3815,14 +3815,14 @@
         ]
       ],
       "position": 90,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/ma4b.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:28.132718+00:00"
     },
     {
       "clip_key": "ba4.wav",
@@ -3857,14 +3857,14 @@
         ]
       ],
       "position": 91,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/ba4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:20.805452+00:00"
     },
     {
       "clip_key": "si4.wav",
@@ -3899,14 +3899,14 @@
         ]
       ],
       "position": 92,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/si4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:32.325136+00:00"
     },
     {
       "clip_key": "liu4.wav",
@@ -3941,14 +3941,14 @@
         ]
       ],
       "position": 93,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/liu4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:27.590205+00:00"
     },
     {
       "clip_key": "er4.wav",
@@ -3983,14 +3983,14 @@
         ]
       ],
       "position": 94,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/er4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T04:56:23.912914+00:00"
     },
     {
       "clip_key": "da4.wav",
@@ -4007,7 +4007,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "dà",
       "polyline": [
@@ -4025,14 +4025,14 @@
         ]
       ],
       "position": 95,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/da4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "shi4.wav",
@@ -4049,7 +4049,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "shì",
       "polyline": [
@@ -4067,14 +4067,14 @@
         ]
       ],
       "position": 96,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/shi4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "mai4.wav",
@@ -4091,7 +4091,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "mài",
       "polyline": [
@@ -4109,14 +4109,14 @@
         ]
       ],
       "position": 97,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/mai4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "dui4.wav",
@@ -4133,7 +4133,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "duì",
       "polyline": [
@@ -4151,14 +4151,14 @@
         ]
       ],
       "position": 98,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/dui4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "kan4.wav",
@@ -4175,7 +4175,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "kàn",
       "polyline": [
@@ -4193,14 +4193,14 @@
         ]
       ],
       "position": 99,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/kan4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "qu4.wav",
@@ -4217,7 +4217,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "qù",
       "polyline": [
@@ -4235,14 +4235,14 @@
         ]
       ],
       "position": 100,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/qu4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "yao4.wav",
@@ -4259,7 +4259,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.254,
       "pinyin": "yào",
       "polyline": [
@@ -4277,14 +4277,14 @@
         ]
       ],
       "position": 101,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/yao4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "hui4.wav",
@@ -4301,7 +4301,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "huì",
       "polyline": [
@@ -4319,14 +4319,14 @@
         ]
       ],
       "position": 102,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/hui4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "kuai4.wav",
@@ -4343,7 +4343,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.211,
       "pinyin": "kuài",
       "polyline": [
@@ -4361,14 +4361,14 @@
         ]
       ],
       "position": 103,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/kuai4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "man4.wav",
@@ -4385,7 +4385,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.254,
       "pinyin": "màn",
       "polyline": [
@@ -4403,14 +4403,14 @@
         ]
       ],
       "position": 104,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/man4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "re4.wav",
@@ -4427,7 +4427,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "rè",
       "polyline": [
@@ -4445,14 +4445,14 @@
         ]
       ],
       "position": 105,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/re4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "shu4.wav",
@@ -4469,7 +4469,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "shù",
       "polyline": [
@@ -4487,14 +4487,14 @@
         ]
       ],
       "position": 106,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/shu4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "hua4.wav",
@@ -4511,7 +4511,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "huà",
       "polyline": [
@@ -4529,14 +4529,14 @@
         ]
       ],
       "position": 107,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/hua4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "fan4.wav",
@@ -4553,7 +4553,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "fàn",
       "polyline": [
@@ -4571,14 +4571,14 @@
         ]
       ],
       "position": 108,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/fan4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "cai4.wav",
@@ -4595,7 +4595,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "cài",
       "polyline": [
@@ -4613,14 +4613,14 @@
         ]
       ],
       "position": 109,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/cai4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "rou4.wav",
@@ -4637,7 +4637,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "ròu",
       "polyline": [
@@ -4655,14 +4655,14 @@
         ]
       ],
       "position": 110,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/rou4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "mian4.wav",
@@ -4679,7 +4679,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "miàn",
       "polyline": [
@@ -4697,14 +4697,14 @@
         ]
       ],
       "position": 111,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/mian4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "dian4.wav",
@@ -4721,7 +4721,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "diàn",
       "polyline": [
@@ -4739,14 +4739,14 @@
         ]
       ],
       "position": 112,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/dian4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "lu4.wav",
@@ -4763,7 +4763,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "lù",
       "polyline": [
@@ -4781,14 +4781,14 @@
         ]
       ],
       "position": 113,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/lu4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "yue4.wav",
@@ -4805,7 +4805,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "yuè",
       "polyline": [
@@ -4823,14 +4823,14 @@
         ]
       ],
       "position": 114,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/yue4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "ke4.wav",
@@ -4847,7 +4847,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "kè",
       "polyline": [
@@ -4865,14 +4865,14 @@
         ]
       ],
       "position": 115,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/ke4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "di4.wav",
@@ -4889,7 +4889,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "dì",
       "polyline": [
@@ -4907,14 +4907,14 @@
         ]
       ],
       "position": 116,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/di4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "mei4.wav",
@@ -4931,7 +4931,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "mèi",
       "polyline": [
@@ -4949,14 +4949,14 @@
         ]
       ],
       "position": 117,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/mei4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "zuo4.wav",
@@ -4973,7 +4973,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "zuò",
       "polyline": [
@@ -4991,14 +4991,14 @@
         ]
       ],
       "position": 118,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/zuo4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     },
     {
       "clip_key": "chang4.wav",
@@ -5015,7 +5015,7 @@
           "rangeSemitones": 7.5
         }
       },
-      "min_tier": "pro",
+      "min_tier": "free",
       "onset_s": 0.232,
       "pinyin": "chàng",
       "polyline": [
@@ -5033,14 +5033,14 @@
         ]
       ],
       "position": 119,
-      "raw_key": null,
+      "raw_key": "raw/2026-08-07-xujzgs/chang4.wav",
       "recorded_at": null,
-      "recorded_session": null,
+      "recorded_session": "2026-08-07-xujzgs",
       "status": "published",
       "syllables": 1,
       "tone": 4,
       "tones": [],
-      "updated_at": "2026-09-15T00:39:26.986185+00:00"
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
     }
   ]
 }

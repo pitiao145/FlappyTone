@@ -64,7 +64,11 @@ export interface Word {
   clipS: number;
   /** The measured contour, simplified to corridor vertices. */
   polyline: Polyline;
-  /** Gate 2 (free→pro): "pro" words need `TIER_LIMITS.pro`. */
+  /**
+   * Game access: which tier's run may fly this word. The same value the clips
+   * Worker enforces at `/clip/:id`, so the pool and the clip route agree.
+   * Distinct from the visualiser's `wordsPerTone` practice depth.
+   */
   minTier: "free" | "pro";
   updatedAt: string;
 }
@@ -228,9 +232,16 @@ export function loadWords(manifest: unknown): Word[] {
 }
 
 /**
- * The words a given tier may see. Pro gets everything the catalog shipped;
- * free and guest both stop at `minTier: "free"` — Gate 2 (free→pro) is depth
- * and content, not run quantity, so guest reads the same slice as free here.
+ * The words a given tier's GAME may use — the run's pool, and the visualiser's
+ * clip access. Pro gets everything the catalog shipped; free and guest both
+ * stop at `minTier: "free"` (guest reads the same slice as free: Gate 2 is
+ * depth and content, not run quantity).
+ *
+ * This is the client's half of the same gate the clips Worker enforces at
+ * `/clip/:id`, so a word a tier can fly is a word whose clip it can fetch.
+ * Nothing in the shipped catalog is `"pro"` today, so every tier gets all 120.
+ * Not to be confused with `wordsOfTone`'s `limit` — a COUNT, and the
+ * visualiser's practice depth only.
  */
 export function wordsForTier(words: Word[], tier: Tier): Word[] {
   return tier === "pro" ? words : words.filter((w) => w.minTier === "free");
