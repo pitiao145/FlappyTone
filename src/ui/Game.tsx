@@ -15,6 +15,7 @@ import {
   playToneCue,
 } from "../audio/reference.ts";
 import { inventoryNow, loadInventory } from "../audio/inventory.ts";
+import { prefetchPool } from "../audio/prefetch.ts";
 import { isChromeIOS, isIOS } from "../audio/platform.ts";
 import { MicStatusBanner } from "./MicStatus.tsx";
 import {
@@ -27,6 +28,8 @@ import {
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
+import { useTier } from "../data/tier.ts";
+import { wordsForTier } from "../game/words.ts";
 import { TONE_INFO, type Tone } from "../game/gates.ts";
 import { CALIBRATION_TONES, Run, type RunMode, type RunSnapshot } from "../game/run.ts";
 import type { Word } from "../game/words.ts";
@@ -187,6 +190,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   // "tutorial" and "single" — the HUD elements gated on this once read
   // `mode === "game"` alone, back when "game" was the only scored mode.
   const scored = mode === "game" || mode === "drill" || mode === "learn";
+  const tier = useTier();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   /**
    * Latest `canvasHeight`, read by the run-owning effect's tick loop without
@@ -764,6 +768,27 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     reportGates,
     reportRunEnd,
   ]);
+
+  /**
+   * Warm the whole run's word pool in the background.
+   *
+   * The Run's own look-ahead (two gates, in the HUD timer above) is what
+   * guarantees the *next* cue; this just means a later gate is usually already
+   * decoded when it arrives. Deliberately its own effect rather than a line in
+   * the run-owning effect above: `tier` resolves asynchronously, and adding it
+   * to that effect's dependencies would tear down and rebuild a live Run the
+   * moment the tier answer landed.
+   *
+   * Filtered by tier so a guest never prefetches a pro word the Worker would
+   * 403 — a cached failure for a word they might legitimately get later.
+   * Fire-and-forget by definition; nothing here can delay a run.
+   */
+  useEffect(() => {
+    if (!scored) return;
+    const now = inventoryNow();
+    if (now) prefetchPool(wordsForTier(now, tier));
+    else void loadInventory().then((w) => prefetchPool(wordsForTier(w, tier)), () => undefined);
+  }, [scored, tier, runGen]);
 
   // Show the *active* gate's tone while flying it — showing the next gate's
   // tone mid-gate would teach the wrong contour (this matters most in the

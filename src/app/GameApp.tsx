@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { initAnalytics, track, trackCalibration } from "../analytics/client";
 import { capturePostHogEvent, initPostHog } from "../analytics/posthog.ts";
 import { loadInventory } from "../audio/inventory";
+import { getPlayTicket, invalidatePlayTicket } from "../audio/clipToken";
 import { MicError } from "../audio/mic";
 import { ensurePlaybackCtx } from "../audio/reference";
 import { ensureMic, getMicSession, MicCancelled, stopMic } from "../audio/session";
@@ -456,6 +457,10 @@ export default function GameApp() {
     if (!supabase) return;
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setScreen("resetPassword");
+      // A ticket carries the tier it was minted for, so a signup (guest -> free)
+      // or a sign-out must drop it — otherwise the player keeps their old
+      // entitlements until it expires on its own, up to half an hour later.
+      invalidatePlayTicket();
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -853,6 +858,12 @@ export default function GameApp() {
     // first gates spawn. A failure resolves to an empty inventory and the game
     // falls back to the tuning defaults; nothing here can block a run.
     void loadInventory();
+    // The play ticket the clips Worker wants, minted alongside the inventory so
+    // the first gate's clip fetch does not also pay for a /token round trip.
+    // A plain fetch — it touches no AudioContext, so it is safe outside a user
+    // gesture (hard rule 4) — and it never throws: no ticket just means the
+    // cues are synthetic.
+    void getPlayTicket();
     // Fire-and-forget, signed-in-only, never blocking render: refresh the
     // cached server run count so a returning player's daily count is right
     // before their first run, and pull down anything the account already

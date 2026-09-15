@@ -16,6 +16,7 @@ import { corridorChaoAt,
   shapeForTone, GATE_DURATION_S, type Tone } from "../game/gates.ts";
 import { RANGE_SEMITONES } from "../pitch/math.ts";
 import type { Word } from "../game/words.ts";
+import { CLIPS_BASE_URL, getPlayTicket, invalidatePlayTicket } from "./clipToken.ts";
 import { isChromeIOS } from "./platform.ts";
 import { getMicSession } from "./session.ts";
 
@@ -131,6 +132,13 @@ const clips = new Map<string, RefClip>();
 /** In-flight or finished loads, so a word is fetched at most once. */
 const loads = new Map<string, Promise<void>>();
 
+/** A 401 from the Worker: the ticket is stale, the clip itself may be fine. */
+class TicketError extends Error {
+  constructor() {
+    super("ticket");
+  }
+}
+
 /**
  * Fetches and decodes one word's clip (idempotent per id). Failures are silent
  * by design — a missing clip must never block a run; the cue falls back to the
@@ -144,18 +152,33 @@ const loads = new Map<string, Promise<void>>();
 export function loadClip(word: Word): Promise<void> {
   const existing = loads.get(word.id);
   if (existing) return existing;
-  // Decode on the playback context (AudioBuffers are context-independent and
-  // playable on any context, but decoding on the one we play on keeps the
-  // sample rate matched). On the Chrome-iOS legacy path this is the mic
-  // context, which a later stopMic closes; the cached buffer stays valid and
-  // replays fine on the next session's context.
-  const audio = getPlaybackCtx();
   const load = (async () => {
-    // TEMPORARY: still the local /public/ref/ path. Task 7 replaces this with
-    // the R2-backed URL built from word.clipKey.
-    const url = `${import.meta.env.BASE_URL}ref/${word.clipKey}`;
-    const res = await fetch(url);
+    // The clips live in R2 behind the Worker, which serves nothing without a
+    // short-lived play ticket. No base URL or no ticket is not an error worth
+    // reporting to the player — it degrades to the synthetic sweep below.
+    const ticket = await getPlayTicket();
+    if (!CLIPS_BASE_URL || !ticket) throw new Error("no clips source");
+    const url = `${CLIPS_BASE_URL}/clip/${word.id}?v=${encodeURIComponent(word.updatedAt)}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${ticket}` } });
+    if (res.status === 401) {
+      // The ticket expired, or the player's IP moved. Drop it so the next
+      // gate mints a fresh one — and drop this load from `loads` below, or
+      // this word would be stuck on the cached failure for the whole session.
+      invalidatePlayTicket();
+      throw new TicketError();
+    }
     if (!res.ok) throw new Error(`${url}: ${res.status}`);
+    // Decode on the playback context (AudioBuffers are context-independent and
+    // playable on any context, but decoding on the one we play on keeps the
+    // sample rate matched). On the Chrome-iOS legacy path this is the mic
+    // context, which a later stopMic closes; the cached buffer stays valid and
+    // replays fine on the next session's context.
+    //
+    // Resolved here, after the fetch, rather than at call time: a prefetch or a
+    // build with no clips source must not be what brings an AudioContext into
+    // existence (hard rule 4). By the time a clip has actually arrived, the
+    // gesture that started the run has long since happened.
+    const audio = getPlaybackCtx();
     const buffer = await audio.decodeAudioData(await res.arrayBuffer());
     clips.set(word.id, {
       buffer,
@@ -163,7 +186,13 @@ export function loadClip(word: Word): Promise<void> {
       durationS: word.durationS,
       clipS: word.clipS,
     });
-  })().catch(() => undefined);
+  })().catch((err: unknown) => {
+    // A cached failure is right for every other cause (a 404 for a clip that
+    // isn't in R2 stays a 404 all session) but wrong for a stale ticket, which
+    // the very next request can fix.
+    if (err instanceof TicketError && loads.get(word.id) === load) loads.delete(word.id);
+    return undefined;
+  });
   loads.set(word.id, load);
   return load;
 }
