@@ -47,6 +47,11 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
   // greying every tile.
   const words = inventoryNow();
   const tierWords = words ? wordsForTier(words, tier) : null;
+  // availableTones(tierWords), not availableTones(words): this mirrors the
+  // run's own tier-filtered pool, so a tone whose words are all `pro` is not
+  // offered to a tier that could never actually fly it. No behavior change
+  // today — every tone has at least one free word — but the coupling to
+  // wordsForTier is deliberate, not incidental.
   const tones = tierWords && tierWords.length ? availableTones(tierWords) : ALL_TONES;
 
   const go = (intent: PlayIntent, drillTone?: Tone) => async () => {

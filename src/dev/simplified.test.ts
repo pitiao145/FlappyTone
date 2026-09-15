@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { hasSimplified, simplifiedChars, simplifiedIn } from "./simplified.ts";
+import { hasSimplified, simplifiedIn } from "./simplified.ts";
 import { WORDS } from "../record/wordlist.ts";
 
 describe("hasSimplified", () => {
@@ -55,10 +55,12 @@ describe("the screened set", () => {
   });
 
   it("is big enough to be worth having", () => {
-    expect(simplifiedChars().size).toBeGreaterThan(200);
-  });
-
-  it("holds only single characters", () => {
-    for (const char of simplifiedChars()) expect([...char].length).toBe(1);
+    // simplifiedChars() used to be exported just to check the set's size —
+    // the only caller was this test. Inlined: flag a long, varied sample of
+    // Simplified-only characters instead of reaching into the module's
+    // internals.
+    const sample =
+      "计钱饥红贝车门见马辽队们个为与书东妈吗农业丛丧严丽举义乐习乡买乱亏亚产亲仅从仓仪价众优会伞伟传伤伦伪侦侧俭债倾偿储儿兑兰关兴养兽军冯冲决净准凑凭凯击凿刘则刚创剂剑劝办务劲动励劳势华协单卖卫厂厅历厉压厌县参双发变叙叠叶号叹吓吨听启员响哑团园围图圆圣坏块坚坛坝坟垒垦垫墙壮声壳处备复够头夹夺奋奖妆妇娇娱婴孙学宁宝实审宪宫宽宾对寻导寿将尔尘尝层届属岁岂岗岛岭峡币帅师帐帘帜带帮归当录彻忆忧怀态怜总恋恳恼悬惊惧惨惩战戏扑执扩扫扬扰抚抛择挂挠挡挣挤换据损捡揽摄摆摇摊敌数断无旧时昼显晒晓晕暂朴机杀杂权条来极构枢枪枫柜标栋栏树样桩档桥梦检楼欢欧歼残殴毁毕毙汇汉汤沟沦沧浅浆浇浊测济浑浓涛涡润涨渐湾湿滚满滤滨滩灭灯灵炉炼点烂烛热烧营爱爷牵牺状犹独狱狮狭猎猪献环现玺琐疗疮疯痒痪皱盏盐监盖盘睁瞒码砖础硕确碍碱礼祸离积称稳穷窃窍窜窝竖竞笔笼筑简篮类罗罚罢翘耻聂聋职联肠肤肾肿胀胆脏脑脸艰艺节芦苇苏苹荐荣药莱莲获莹萝萤萧蒋蓝虏虑虾蚀蚁蚂蚕蛮蜡蝇衔补衬袄袜装褴踪辆长";
+    expect(simplifiedIn(sample).length).toBeGreaterThan(200);
   });
 });

@@ -13,7 +13,7 @@ import { useState } from "react";
 import { ensureMic } from "../audio/session.ts";
 import { MicError } from "../audio/mic.ts";
 import { Recorder } from "./Recorder.tsx";
-import { RECORD_BASE_URL } from "./boothWords.ts";
+import { requireRecordBaseUrl } from "./boothWords.ts";
 
 type Phase = "passcode" | "ready" | "recording";
 
@@ -35,8 +35,16 @@ export function RecordApp() {
     e.preventDefault();
     setChecking(true);
     setError(null);
+    let baseUrl: string;
     try {
-      const res = await fetch(`${RECORD_BASE_URL}/auth`, {
+      baseUrl = requireRecordBaseUrl();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Recording isn't configured — tell Pierre.");
+      setChecking(false);
+      return;
+    }
+    try {
+      const res = await fetch(`${baseUrl}/auth`, {
         method: "GET",
         headers: { "x-record-passcode": passcode },
       });

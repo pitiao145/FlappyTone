@@ -59,11 +59,6 @@ const SIMPLIFIED_ONLY_CHARS =
 
 const SIMPLIFIED_ONLY = new Set(SIMPLIFIED_ONLY_CHARS);
 
-/** The characters the screen knows about, for tests and for a report. */
-export function simplifiedChars(): ReadonlySet<string> {
-  return SIMPLIFIED_ONLY;
-}
-
 /** Every Simplified-only character in `text`, in order of first appearance. */
 export function simplifiedIn(text: string): string[] {
   const found: string[] = [];

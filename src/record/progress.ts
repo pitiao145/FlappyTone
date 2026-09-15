@@ -39,7 +39,14 @@ export function loadProgress(storage: Storage = localStorage): Progress {
   return { sessionId: newSessionId() };
 }
 
-/** Forgets everything, for "start over". */
+/**
+ * Forgets everything, for "start over" — deliberately unwired to any booth
+ * control today. Nothing in the UI needs a fresh session id: the server
+ * (`GET /booth/words`) is the source of truth for what's recorded, and a
+ * resumed session just keeps uploading into the same folder. Kept exported
+ * for tests and as the obvious hook if a real "new session" affordance is
+ * ever added — inventing that UI is out of scope for a fix wave.
+ */
 export function clearProgress(storage: Storage = localStorage): void {
   try {
     storage.removeItem(KEY);

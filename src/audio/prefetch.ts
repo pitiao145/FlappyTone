@@ -92,11 +92,11 @@ function speculativeWords(input: PrefetchPlanInput): Word[] {
   switch (input.mode) {
     case "single":
     case "tutorial":
+    case "learn": // learn always cues synthetically (Game.tsx forces it), so cuesUseClips===false already returns [] before this switch runs
       return [];
     case "drill":
       return input.drillTone ? wordsOfTone(input.pool, input.drillTone, cap) : [];
     case "game":
-    case "learn":
       return ALL_TONES.flatMap((t) => wordsOfTone(input.pool, t, cap));
   }
 }

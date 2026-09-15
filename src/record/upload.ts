@@ -152,6 +152,13 @@ export class Uploader {
   }
 
   private async send(job: Job): Promise<boolean> {
+    // No Worker base URL configured — this will never succeed on retry, so
+    // fail permanently now (same shape as the 4xx short-circuit below)
+    // rather than burning through MAX_ATTEMPTS with backoff for nothing.
+    if (!RECORD_BASE_URL) {
+      job.attempts = MAX_ATTEMPTS;
+      return false;
+    }
     try {
       const params = new URLSearchParams({ id: job.id, session: this.options.sessionId });
       const res = await this.fetchImpl(`${RECORD_BASE_URL}/raw?${params}`, {

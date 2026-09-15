@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Uploader, type UploadState } from "./upload.ts";
 
 const blob = () => new Blob([new Uint8Array([1, 2, 3])], { type: "audio/wav" });
@@ -167,5 +167,33 @@ describe("Uploader", () => {
     uploader.enqueue("ma1", blob());
     uploader.enqueue("ma2", blob());
     expect(uploader.getState().pending).toBe(2);
+  });
+
+  describe("with no VITE_CLIPS_BASE_URL configured", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    });
+
+    it("fails a take immediately instead of retrying MAX_ATTEMPTS times against an unconfigured Worker", async () => {
+      vi.resetModules();
+      vi.stubEnv("VITE_CLIPS_BASE_URL", "");
+      const { Uploader: UnconfiguredUploader } = await import("./upload.ts");
+      const fetchImpl = vi.fn(ok) as unknown as typeof fetch;
+      const states: UploadState[] = [];
+      const uploader = new UnconfiguredUploader({
+        sessionId: "s1",
+        passcode: "open",
+        onChange: (s) => states.push(s),
+        fetchImpl,
+        sleep: () => Promise.resolve(),
+      });
+      uploader.enqueue("ma1", blob());
+      await uploader.flush();
+      // Never actually called the network — the guard short-circuits before fetch.
+      expect(fetchImpl).not.toHaveBeenCalled();
+      expect(uploader.getState().byId.ma1).toBe("failed");
+      expect(uploader.getState().failed).toBe(1);
+    });
   });
 });

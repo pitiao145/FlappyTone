@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchBoothWords, type BoothWord } from "./boothWords.ts";
 
 const pending: BoothWord[] = [{ id: "ce4", hanzi: "測", pinyin: "cè", tone: 4, status: "pending" }];
@@ -48,5 +48,26 @@ describe("fetchBoothWords", () => {
       Promise.resolve(new Response(JSON.stringify({ oops: true }), { status: 200 })),
     ) as unknown as typeof fetch;
     await expect(fetchBoothWords("open", fetchImpl)).rejects.toThrow();
+  });
+});
+
+describe("requireRecordBaseUrl", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("throws a clear message when VITE_CLIPS_BASE_URL is unset", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_CLIPS_BASE_URL", "");
+    const { requireRecordBaseUrl } = await import("./boothWords.ts");
+    expect(() => requireRecordBaseUrl()).toThrow("Recording isn't configured — tell Pierre.");
+  });
+
+  it("returns the base URL when configured — this is what RecordApp's passcode check and Uploader.send() both call before hitting the Worker", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_CLIPS_BASE_URL", "https://clips.example.com");
+    const { requireRecordBaseUrl } = await import("./boothWords.ts");
+    expect(requireRecordBaseUrl()).toBe("https://clips.example.com");
   });
 });

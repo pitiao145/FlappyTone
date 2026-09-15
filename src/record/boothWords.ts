@@ -30,6 +30,20 @@ export const RECORD_BASE_URL: string = (
   (import.meta.env.VITE_CLIPS_BASE_URL as string | undefined) ?? ""
 ).replace(/\/+$/, "");
 
+/**
+ * Every call site that hits the Worker directly (`RecordApp`'s passcode
+ * check, `Uploader`'s take upload) must guard `RECORD_BASE_URL` the same way
+ * `fetchBoothWords` always has — an unset `VITE_CLIPS_BASE_URL` must never
+ * silently become a same-origin request to `/auth` or `/raw`, which 404s in
+ * a way that reads exactly like a real server error.
+ */
+export function requireRecordBaseUrl(): string {
+  if (!RECORD_BASE_URL) {
+    throw new Error("Recording isn't configured — tell Pierre.");
+  }
+  return RECORD_BASE_URL;
+}
+
 interface BoothWordsResponse {
   pending: BoothWord[];
   recorded: BoothWord[];
@@ -46,13 +60,11 @@ export async function fetchBoothWords(
   passcode: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<BoothWordsResponse> {
-  if (!RECORD_BASE_URL) {
-    throw new Error("Recording isn't configured — tell Pierre.");
-  }
+  const baseUrl = requireRecordBaseUrl();
 
   let res: Response;
   try {
-    res = await fetchImpl(`${RECORD_BASE_URL}/booth/words`, {
+    res = await fetchImpl(`${baseUrl}/booth/words`, {
       headers: { "x-record-passcode": passcode },
     });
   } catch {
