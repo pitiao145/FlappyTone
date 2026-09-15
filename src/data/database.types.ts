@@ -108,6 +108,27 @@ export type Database = {
           },
         ]
       }
+      lists: {
+        Row: {
+          id: string
+          meta: Json
+          name: string
+          source: string | null
+        }
+        Insert: {
+          id: string
+          meta?: Json
+          name: string
+          source?: string | null
+        }
+        Update: {
+          id?: string
+          meta?: Json
+          name?: string
+          source?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           best_score: number
@@ -190,6 +211,111 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      word_lists: {
+        Row: {
+          list_id: string
+          word_id: string
+        }
+        Insert: {
+          list_id: string
+          word_id: string
+        }
+        Update: {
+          list_id?: string
+          word_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "word_lists_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "word_lists_word_id_fkey"
+            columns: ["word_id"]
+            isOneToOne: false
+            referencedRelation: "words"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      words: {
+        Row: {
+          clip_key: string | null
+          clip_s: number | null
+          contour: Json | null
+          created_at: string
+          duration_s: number | null
+          english: string
+          hanzi: string
+          id: string
+          meta: Json
+          min_tier: string
+          onset_s: number | null
+          pinyin: string
+          polyline: Json | null
+          position: number
+          raw_key: string | null
+          recorded_at: string | null
+          recorded_session: string | null
+          status: string
+          syllables: number
+          tone: number
+          tones: number[]
+          updated_at: string
+        }
+        Insert: {
+          clip_key?: string | null
+          clip_s?: number | null
+          contour?: Json | null
+          created_at?: string
+          duration_s?: number | null
+          english?: string
+          hanzi: string
+          id: string
+          meta?: Json
+          min_tier?: string
+          onset_s?: number | null
+          pinyin: string
+          polyline?: Json | null
+          position: number
+          raw_key?: string | null
+          recorded_at?: string | null
+          recorded_session?: string | null
+          status?: string
+          syllables?: number
+          tone: number
+          tones?: number[]
+          updated_at?: string
+        }
+        Update: {
+          clip_key?: string | null
+          clip_s?: number | null
+          contour?: Json | null
+          created_at?: string
+          duration_s?: number | null
+          english?: string
+          hanzi?: string
+          id?: string
+          meta?: Json
+          min_tier?: string
+          onset_s?: number | null
+          pinyin?: string
+          polyline?: Json | null
+          position?: number
+          raw_key?: string | null
+          recorded_at?: string | null
+          recorded_session?: string | null
+          status?: string
+          syllables?: number
+          tone?: number
+          tones?: number[]
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {
