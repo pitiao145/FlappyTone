@@ -143,6 +143,7 @@ export function wordsFromCatalog(rows: unknown): Word[] {
       typeof r.status !== "string" ||
       r.status !== "published" ||
       typeof r.clip_key !== "string" ||
+      (r.min_tier !== "free" && r.min_tier !== "pro") ||
       typeof r.duration_s !== "number" ||
       !Number.isFinite(r.duration_s) ||
       r.duration_s <= 0 ||
@@ -177,7 +178,7 @@ export function wordsFromCatalog(rows: unknown): Word[] {
         onsetS,
         clipS: clipS ?? onsetS + r.duration_s,
         polyline: r.polyline,
-        minTier: r.min_tier === "pro" ? "pro" : "free",
+        minTier: r.min_tier,
         updatedAt: typeof r.updated_at === "string" ? r.updated_at : "",
       },
     });

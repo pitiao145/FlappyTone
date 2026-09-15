@@ -69,6 +69,14 @@ describe("wordsFromCatalog", () => {
     expect(words.map((w) => w.id)).toEqual(["ok"]);
   });
 
+  it("drops a row with an unrecognised min_tier rather than defaulting it to free", () => {
+    // Gate 2 (free->pro) reads minTier to withhold paid content — a typo'd or
+    // unknown value (e.g. a future "plus" tier) must not silently fail open
+    // into "free" and leak a pro word.
+    const words = wordsFromCatalog([row({ min_tier: "plus" }), row({ id: "ok", position: 1 })]);
+    expect(words.map((w) => w.id)).toEqual(["ok"]);
+  });
+
   // Every one of these is a corridor the player would collide with invisibly,
   // or a crash on a fetch that returned something unexpected. A bad row is one
   // missing word; a throw is a blank screen.
