@@ -56,6 +56,12 @@
     "src/record/wordlist.ts",
     "src/record/pinyin.ts",
     "src/dev/import-words.ts",
-    "src/render/palette.test.ts"
+    "src/render/palette.test.ts",
+    "src/dev/env.ts",
+    "src/dev/serviceClient.ts",
+    "src/dev/seed-words.ts",
+    "src/record/glossary.ts",
+    "src/game/tiers.ts",
+    "src/data/database.types.ts"
   ]
 }

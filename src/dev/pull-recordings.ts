@@ -12,32 +12,15 @@
  * Needs `BLOB_READ_WRITE_TOKEN`, read from the environment or `.env.local`.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { get, list } from "@vercel/blob";
+
+import { envVar } from "./env.ts";
 
 const root = new URL("../../", import.meta.url).pathname;
 
-/**
- * Minimal `.env.local` reader. Not dotenv: this wants one variable, and adding
- * a dependency to a repo whose whole dependency list is five packages is a
- * worse trade than fifteen lines.
- */
-function loadToken(): string {
-  if (process.env.BLOB_READ_WRITE_TOKEN) return process.env.BLOB_READ_WRITE_TOKEN;
-  const file = `${root}.env.local`;
-  if (existsSync(file)) {
-    for (const line of readFileSync(file, "utf8").split("\n")) {
-      const match = /^\s*(?:export\s+)?BLOB_READ_WRITE_TOKEN\s*=\s*(.*)$/.exec(line);
-      if (match) return match[1].trim().replace(/^["']|["']$/g, "");
-    }
-  }
-  throw new Error(
-    "BLOB_READ_WRITE_TOKEN is not set. Put it in .env.local (get it with `vercel env pull .env.local`).",
-  );
-}
-
 const wanted = process.argv[2];
-const token = loadToken();
+const token = envVar("BLOB_READ_WRITE_TOKEN");
 
 const prefix = wanted ? `recordings/${wanted}/` : "recordings/";
 const { blobs } = await list({ prefix, token, limit: 1000 });
