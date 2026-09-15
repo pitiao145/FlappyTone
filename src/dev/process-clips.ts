@@ -77,6 +77,7 @@ import {
   pinnedFractionOf,
   polylineSpan,
 } from "./clipNormalize.ts";
+import { MIN_REFERENCE_FRAMES, SEED_F0_CENTER } from "./clipPipeline.ts";
 import { median, reviewClip } from "./clipReview.ts";
 import { DEFAULT_POLYLINES } from "../game/tuning.ts";
 import type { Tone } from "../game/gates.ts";
@@ -85,31 +86,12 @@ import { r2Get, r2Put } from "./r2.ts";
 import { serviceClient } from "./serviceClient.ts";
 
 /**
- * Below this a session's own voiced frames are too few to measure a centre and
- * a range from, and `computeF0Center`/`computeRangeSemitones` would be
- * describing a handful of syllables rather than a voice. Jane's 120-take
- * session gives tens of thousands; a two-word top-up gives a few hundred, and
- * a range measured from two syllables of one tone is not a tone space.
+ * `SEED_F0_CENTER` and `MIN_REFERENCE_FRAMES` live in `clipPipeline.ts`, not
+ * here: this script opens a Supabase client and awaits at top level, so no
+ * test can import it, and the seed is the one value in this pipeline that
+ * silently moves every shipped corridor when it changes. See
+ * `clipPipeline.test.ts`, which pins the number AND the cut it produces.
  */
-const MIN_REFERENCE_FRAMES = 400;
-
-/**
- * Where the pitch search starts — NOT the reference it reports.
- *
- * `measurePitchReference` recentres off the session's own voiced frames, so
- * this does not decide the answer. It does decide the `PitchTracker`'s
- * band-limit and octave correction while those frames are being collected, so
- * a different seed moves a handful of frames in or out and shifts every
- * resulting polyline in the third decimal. That is not a better or worse
- * measurement, but it IS a different one, and it would move 90 of the 120
- * shipped corridors under players for no reason anyone asked for.
- *
- * So it is pinned at the value `make-clips` used (`speakers.json`'s "jane"),
- * carried here as a constant rather than an import because it is now a
- * property of the pipeline, not a fact about a speaker. Changing it re-cuts
- * the whole inventory — do that deliberately, with `--all`, or not at all.
- */
-const SEED_F0_CENTER = 168;
 
 const root = new URL("../../", import.meta.url).pathname;
 const recordingsDir = `${root}fixtures/recordings`;
@@ -119,7 +101,15 @@ const args = process.argv.slice(2);
 const all = args.includes("--all");
 const dryRun = args.includes("--dry-run");
 const sessionIdx = args.indexOf("--session");
-if (sessionIdx !== -1 && !args[sessionIdx + 1]) throw new Error("--session needs a session id");
+// A flag is not a session id. Taking the next token blindly means
+// `-- --session --dry-run` silently filters on the session "--dry-run",
+// matches nothing, and reports "nothing to process" as if that were the
+// truth. Same guard as `--only` in the Task 8 scripts.
+if (sessionIdx !== -1 && (!args[sessionIdx + 1] || args[sessionIdx + 1].startsWith("--"))) {
+  throw new Error(
+    `--session needs a session id, got ${args[sessionIdx + 1] ? `"${args[sessionIdx + 1]}"` : "nothing"}.`,
+  );
+}
 const onlySession = sessionIdx !== -1 ? args[sessionIdx + 1] : null;
 
 const supabase = serviceClient();

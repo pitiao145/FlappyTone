@@ -34,6 +34,14 @@ describe("the catalog row shape", () => {
   it("asks for every column the parser reads", () => {
     // The wire side. A column dropped from CATALOG_SELECT arrives `undefined`,
     // fails `wordsFromCatalog`'s check, and the word vanishes.
+    //
+    // ⚠ This list is a hand-kept duplicate of CATALOG_SELECT and is NOT
+    // authoritative: a column added to both the select and the parser, but not
+    // added here, is not pinned by this test. It is a fast, readable check
+    // against a DELETION, nothing more. The real net is
+    // "parses every row — none dropped by validation" below, which runs the
+    // shipped snapshot through the actual parser and asserts the count; that
+    // one catches an addition, a rename and a deletion alike.
     const asked = new Set(CATALOG_SELECT.split(","));
     for (const required of [
       "id",
