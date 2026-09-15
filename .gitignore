@@ -44,7 +44,9 @@ fixtures/analytics/
 workers/clips/.wrangler/
 workers/clips/*.tsbuildinfo
 
-# Scratch downloads from `npm run verify-clips`, re-fetched from R2 each run
-# to byte-compare against the committed/pulled sources. Not evidence of
-# anything on its own.
+# Cut clips written by `npm run process-clips` before they go to R2, plus the
+# scratch downloads `npm run verify-clips` re-fetches to byte-compare against
+# them. Neither is the artefact: the published clip lives in the
+# flappytone-clips bucket and is named by the row's clip_key. These stay local
+# so a clip that came out wrong can be listened to without another round trip.
 fixtures/clips/

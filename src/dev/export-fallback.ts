@@ -36,6 +36,7 @@
 
 import { writeFileSync } from "node:fs";
 
+import { FALLBACK_COLUMNS } from "../data/catalogRows.ts";
 import { serviceClient } from "./serviceClient.ts";
 
 const root = new URL("../../", import.meta.url).pathname;
@@ -43,29 +44,11 @@ const outPath = `${root}src/data/wordsFallback.json`;
 
 /**
  * Spelled out rather than `*` so a column added to the table later has to be
- * opted in here, and so `contour` cannot come back by accident.
+ * opted in, and so `contour` cannot come back by accident. The list itself
+ * lives in `src/data/catalogRows.ts` beside `CATALOG_SELECT`, where a test can
+ * import it — this file cannot be imported, it queries on load.
  */
-const COLUMNS = [
-  "id",
-  "hanzi",
-  "pinyin",
-  "english",
-  "tone",
-  "tones",
-  "syllables",
-  "position",
-  "status",
-  "min_tier",
-  "clip_key",
-  "duration_s",
-  "onset_s",
-  "clip_s",
-  "polyline",
-  "meta",
-  "recorded_at",
-  "created_at",
-  "updated_at",
-].join(",");
+const COLUMNS = FALLBACK_COLUMNS.join(",");
 
 const supabase = serviceClient();
 

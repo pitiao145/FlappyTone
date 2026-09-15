@@ -32,3 +32,37 @@ export interface CatalogRow {
 
 export const CATALOG_SELECT =
   "id,hanzi,pinyin,english,tone,tones,syllables,position,status,min_tier,clip_key,duration_s,onset_s,clip_s,polyline,updated_at";
+
+/**
+ * The columns `export-fallback` bakes into `src/data/wordsFallback.json`.
+ *
+ * Here rather than in `src/dev/export-fallback.ts` so the seam this file
+ * defines can be pinned by a test: `export-fallback.ts` is a script with
+ * top-level effects (it queries Supabase on import), so a test cannot import
+ * anything from it.
+ *
+ * A superset of `CATALOG_SELECT`'s live columns plus the bookkeeping the Lab
+ * wants offline, minus `contour`, `raw_key` and `recorded_session` — see that
+ * script's header for why each is dropped.
+ */
+export const FALLBACK_COLUMNS = [
+  "id",
+  "hanzi",
+  "pinyin",
+  "english",
+  "tone",
+  "tones",
+  "syllables",
+  "position",
+  "status",
+  "min_tier",
+  "clip_key",
+  "duration_s",
+  "onset_s",
+  "clip_s",
+  "polyline",
+  "meta",
+  "recorded_at",
+  "created_at",
+  "updated_at",
+] as const;

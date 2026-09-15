@@ -51,6 +51,9 @@
     "src/dev/r2.ts",
     "src/dev/upload-clips.ts",
     "src/dev/migrate-raw.ts",
-    "src/dev/verify-clips.ts"
+    "src/dev/verify-clips.ts",
+    "src/dev/simplified.ts",
+    "src/dev/simplified.test.ts",
+    "src/dev/process-clips.ts"
   ]
 }

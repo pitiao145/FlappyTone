@@ -31,7 +31,8 @@
     "export-fallback": "node --experimental-strip-types src/dev/export-fallback.ts",
     "upload-clips": "node --experimental-strip-types src/dev/upload-clips.ts",
     "migrate-raw": "node --experimental-strip-types src/dev/migrate-raw.ts",
-    "verify-clips": "node --experimental-strip-types src/dev/verify-clips.ts"
+    "verify-clips": "node --experimental-strip-types src/dev/verify-clips.ts",
+    "process-clips": "node --experimental-strip-types src/dev/process-clips.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",
