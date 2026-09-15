@@ -31,6 +31,7 @@ const recordingsDir = `${root}fixtures/recordings`;
 
 const dryRun = process.argv.includes("--dry-run");
 const onlyIdx = process.argv.indexOf("--only");
+if (onlyIdx !== -1 && !process.argv[onlyIdx + 1]) throw new Error("--only needs an id");
 const only = onlyIdx !== -1 ? process.argv[onlyIdx + 1] : null;
 
 // Step 1: refresh fixtures/recordings/ from Blob (every session).

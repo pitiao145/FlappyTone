@@ -22,6 +22,7 @@ const root = new URL("../../", import.meta.url).pathname;
 
 const dryRun = process.argv.includes("--dry-run");
 const onlyIdx = process.argv.indexOf("--only");
+if (onlyIdx !== -1 && !process.argv[onlyIdx + 1]) throw new Error("--only needs an id");
 const only = onlyIdx !== -1 ? process.argv[onlyIdx + 1] : null;
 
 const supabase = serviceClient();

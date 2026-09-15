@@ -15,7 +15,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 
 import { serviceClient } from "./serviceClient.ts";
 import { r2Get } from "./r2.ts";
@@ -25,6 +25,7 @@ const scratchDir = `${root}fixtures/clips/verify`;
 
 const isRaw = process.argv.includes("--raw");
 const onlyIdx = process.argv.indexOf("--only");
+if (onlyIdx !== -1 && !process.argv[onlyIdx + 1]) throw new Error("--only needs an id");
 const only = onlyIdx !== -1 ? process.argv[onlyIdx + 1] : null;
 
 mkdirSync(scratchDir, { recursive: true });
@@ -77,6 +78,7 @@ for (const row of rows) {
   }
 
   const downloaded = `${scratchDir}/${row.id}.wav`;
+  rmSync(downloaded, { force: true });
   try {
     r2Get(bucket, row.bucketKey, downloaded);
   } catch (e) {
