@@ -1,8 +1,8 @@
 /**
  * Router skeleton for the clips API. Only the cross-cutting concerns live
  * here: CORS, the OPTIONS preflight, and dispatch. The actual routes —
- * `/token`, `/clip/:id` and `/auth` live in `./routes/`; `/raw` and
- * `/booth/words` (Task 10) are still seams below.
+ * `/token`, `/clip/:id`, `/auth`, `/raw` and `/booth/words` — live in
+ * `./routes/`.
  *
  * Every response, success or error, goes out through `corsHeaders` — a
  * browser fetch from an allowed origin must be able to read even a 404 or a
@@ -10,7 +10,9 @@
  */
 import { corsHeaders } from "./cors.ts";
 import { handleAuth } from "./routes/auth.ts";
+import { handleBoothWords } from "./routes/boothWords.ts";
 import { handleClip } from "./routes/clip.ts";
+import { handleRaw } from "./routes/raw.ts";
 import { handleToken } from "./routes/token.ts";
 
 export interface Env {
@@ -57,9 +59,11 @@ export default {
       case "POST /auth":
         return cors(handleAuth(req, env));
 
-      // --- Task 10 ---
-      // case "GET /raw": return cors(await handleRaw(req, env));
-      // case "GET /booth/words": return cors(await handleBoothWords(req, env));
+      case "POST /raw":
+        return cors(await handleRaw(req, env));
+
+      case "GET /booth/words":
+        return cors(await handleBoothWords(req, env));
 
       default:
         return cors(Response.json({ error: "Not found." }, { status: 404 }));
