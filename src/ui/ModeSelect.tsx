@@ -4,9 +4,10 @@ import { MicError } from "../audio/mic.ts";
 import { ensurePlaybackCtx } from "../audio/reference.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
 import type { Tone } from "../game/gates.ts";
-import { availableTones } from "../game/words.ts";
+import { availableTones, wordsForTier } from "../game/words.ts";
 import type { PlayIntent } from "./PlayHome.tsx";
 import { micErrorCopy } from "./micErrors.ts";
+import { useTier } from "../data/tier.ts";
 import { ToneMarkIcon } from "./toneIcons.tsx";
 
 const ALL_TONES: Tone[] = [1, 2, 3, 4];
@@ -33,16 +34,20 @@ interface Props {
  * `ensureMic()`.
  */
 export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth, canvasHeight }: Props) {
+  const tier = useTier();
   const [step, setStep] = useState<"mode" | "tone" | "learn">("mode");
   const [ownError, setOwnError] = useState<string | null>(null);
   const [pending, setPending] = useState<PlayIntent | null>(null);
   const busy = pending !== null;
   const error = ownError ?? externalError;
 
-  // Whatever the manifest fetch has produced by now. Empty (not yet loaded)
-  // means "don't know yet" — offer all four rather than greying every tile.
+  // Whatever the catalog read has produced by now, narrowed to what this tier
+  // may see — a drill tile must not offer a tone whose only words are locked.
+  // Empty (not yet loaded) means "don't know yet" — offer all four rather than
+  // greying every tile.
   const words = inventoryNow();
-  const tones = words && words.length ? availableTones(words) : ALL_TONES;
+  const tierWords = words ? wordsForTier(words, tier) : null;
+  const tones = tierWords && tierWords.length ? availableTones(tierWords) : ALL_TONES;
 
   const go = (intent: PlayIntent, drillTone?: Tone) => async () => {
     if (busy) return;

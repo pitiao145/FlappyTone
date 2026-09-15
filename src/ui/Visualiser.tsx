@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { inventoryNow, loadInventory } from "../audio/inventory.ts";
 import { MicError } from "../audio/mic.ts";
 import {
@@ -28,7 +28,7 @@ import { TIER_LIMITS } from "../game/tiers.ts";
 import { tuning } from "../game/tuning.ts";
 import { visualAccuracy } from "../game/visualAccuracy.ts";
 import type { Word } from "../game/words.ts";
-import { wordsOfTone } from "../game/words.ts";
+import { wordsForTier, wordsOfTone } from "../game/words.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawVisualiser } from "../render/visualiser.ts";
@@ -235,14 +235,23 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     void loadInventory().then(setWords);
   }, [words.length]);
 
+  /**
+   * The catalog says which words this tier may have at all (`min_tier`), and
+   * `TIER_LIMITS` says how many of them the practice list shows. Both, in that
+   * order, and the count still applies on top: it is what keeps a guest's
+   * practice list empty (`wordsPerTone: 0`) even though a guest reads the same
+   * free slice a free account does.
+   */
+  const tierWords = useMemo(() => wordsForTier(words, tier), [words, tier]);
+
   // Preload only the selected tone's clips (not all 120) so a tap plays
   // instantly without fetching every word up front.
   useEffect(() => {
     if (tone === null) return;
-    for (const w of wordsOfTone(words, tone, limits.wordsPerTone)) void loadClip(w);
-  }, [tone, words, limits.wordsPerTone]);
+    for (const w of wordsOfTone(tierWords, tone, limits.wordsPerTone)) void loadClip(w);
+  }, [tone, tierWords, limits.wordsPerTone]);
 
-  const wordsForTone = tone === null ? [] : wordsOfTone(words, tone, limits.wordsPerTone);
+  const wordsForTone = tone === null ? [] : wordsOfTone(tierWords, tone, limits.wordsPerTone);
   /** The rest of that tone's inventory, shown as locked chips for free players. */
   const lockedWordsForTone = tone === null ? [] : wordsOfTone(words, tone).slice(wordsForTone.length);
 

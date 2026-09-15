@@ -23,7 +23,8 @@
     "pull-recordings": "node --experimental-strip-types src/dev/pull-recordings.ts",
     "make-icons": "node --experimental-strip-types src/dev/make-icons.ts",
     "update-demo": "node --experimental-strip-types src/dev/update-demo.ts",
-    "seed-words": "node --experimental-strip-types src/dev/seed-words.ts"
+    "seed-words": "node --experimental-strip-types src/dev/seed-words.ts",
+    "export-fallback": "node --experimental-strip-types src/dev/export-fallback.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",

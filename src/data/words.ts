@@ -1,0 +1,119 @@
+/**
+ * The word catalog, read from the `words` table.
+ *
+ * Three sources, in order, and the order is the whole design:
+ *
+ *   1. **Live** — the published rows, ordered by `position`. The catalog is
+ *      editable now; a word added or unpublished in the database has to reach
+ *      players without a deploy.
+ *   2. **The `localStorage` cache** — the last successful read. A returning
+ *      player on a dead network still gets the words they had yesterday, and
+ *      `catalogFromCache()` is what lets `inventoryNow()` answer
+ *      *synchronously* on the second visit, which the game loop needs (a Run
+ *      is built inside an effect and the first gates spawn there).
+ *   3. **`wordsFallback.json`** — the published catalog as it stood at build
+ *      time, bundled. The floor under a first-time visitor whose network or
+ *      whose Supabase project is down. Regenerate with `npm run
+ *      export-fallback`.
+ *
+ * Obeys `supabase.ts`'s first rule without exception: **nothing here throws
+ * into a caller.** `fetchCatalog` cannot reject. Every failure is one
+ * `warn()` line and a step down the list — a broken catalog read costs the
+ * player freshness, never a run.
+ */
+
+import { wordsFromCatalog, type Word } from "../game/words.ts";
+import { CATALOG_SELECT } from "./catalogRows.ts";
+import fallback from "./wordsFallback.json";
+import { getSupabase, warn } from "./supabase.ts";
+
+export const CATALOG_KEY = "toneflap.catalog.v1";
+
+interface CachedCatalog {
+  savedAt: number;
+  rows: unknown[];
+}
+
+/**
+ * The words from the last successful live read, or `null` when there is no
+ * usable cache — no storage, nothing stored, unparseable JSON, or rows that
+ * no longer survive `wordsFromCatalog` (a schema the current code can't
+ * read is the same as no cache).
+ *
+ * Deliberately not time-limited. A stale word list is a playable word list;
+ * expiring it would trade a working offline game for freshness the live read
+ * already provides whenever it can.
+ */
+export function catalogFromCache(): Word[] | null {
+  try {
+    const raw = localStorage.getItem(CATALOG_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<CachedCatalog>;
+    if (!Array.isArray(parsed?.rows)) return null;
+    const words = wordsFromCatalog(parsed.rows);
+    return words.length > 0 ? words : null;
+  } catch {
+    // Corrupt value, blocked storage, or no `localStorage` at all (a Node
+    // test, a prerender). All of them mean the same thing to a caller.
+    return null;
+  }
+}
+
+function writeCache(rows: unknown[]): void {
+  try {
+    localStorage.setItem(CATALOG_KEY, JSON.stringify({ savedAt: Date.now(), rows }));
+  } catch (err) {
+    // Full or blocked storage. The words are already in hand; only the next
+    // cold start loses out.
+    warn("catalog", "could not cache the catalog", err);
+  }
+}
+
+/** The bundled export, parsed. The last resort, and never empty in practice. */
+function catalogFromFallback(): Word[] {
+  return wordsFromCatalog(fallback.rows);
+}
+
+/**
+ * The published catalog: live if it can be had, else cached, else bundled.
+ * Never rejects and never returns an empty array unless the bundled export is
+ * itself empty.
+ *
+ * `listId` narrows to one curated list through the `word_lists` join table.
+ * Unused by the game today — every player gets the whole catalog — and here
+ * because the join is the one part of the query shape that would otherwise be
+ * guessed at later.
+ */
+export async function fetchCatalog(opts?: { listId?: string }): Promise<Word[]> {
+  try {
+    const supabase = getSupabase();
+    if (supabase) {
+      const select = opts?.listId
+        ? `${CATALOG_SELECT},word_lists!inner(list_id)`
+        : CATALOG_SELECT;
+      let query = supabase
+        .from("words")
+        .select(select)
+        .eq("status", "published");
+      if (opts?.listId) query = query.eq("word_lists.list_id", opts.listId);
+      const { data, error } = await query.order("position", { ascending: true });
+      if (error) {
+        warn("catalog", `words select failed: ${error.message}`);
+      } else {
+        const rows = (data ?? []) as unknown[];
+        const words = wordsFromCatalog(rows);
+        if (words.length > 0) {
+          writeCache(rows);
+          return words;
+        }
+        // A live read that parses to nothing is a misconfiguration, not an
+        // empty catalog — publishing every word away is not a thing anyone
+        // does. Keep the cache and fall through rather than caching it.
+        warn("catalog", "live catalog parsed to zero words; keeping the cached/bundled list");
+      }
+    }
+  } catch (err) {
+    warn("catalog", "catalog read threw", err);
+  }
+  return catalogFromCache() ?? catalogFromFallback();
+}

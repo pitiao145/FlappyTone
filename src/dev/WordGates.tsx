@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { loadInventory } from "../audio/inventory.ts";
+import fallback from "../data/wordsFallback.json";
 import { ensurePlaybackCtx, loadClip, playToneCue } from "../audio/reference.ts";
 import {
   corridorChaoAt,
@@ -10,7 +10,7 @@ import {
 } from "../game/gates.ts";
 import { loadSettings } from "../game/settings.ts";
 import { tuning } from "../game/tuning.ts";
-import type { Word } from "../game/words.ts";
+import { wordsFromCatalog, type Word } from "../game/words.ts";
 import { DEFAULT_CONFIG } from "../pitch/PitchTracker.ts";
 import { corridorEdges } from "../render/world.ts";
 import { traceSmoothPath } from "../render/scene.ts";
@@ -210,16 +210,14 @@ function Card({ word, tolH, band }: { word: Word; tolH: number; band: Band }) {
 }
 
 export function WordGates() {
-  const [words, setWords] = useState<Word[] | null>(null);
+  /**
+   * The bundled catalog export, same reason as the Lab's own picker: this page
+   * is a fixed reference sheet of every corridor, and it should not change
+   * shape because the database did mid-session. `npm run export-fallback`
+   * refreshes it.
+   */
+  const words = useMemo(() => wordsFromCatalog(fallback.rows), []);
   const [tone, setTone] = useState<Tone | "all">("all");
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadInventory().then(
-      (w) => setWords(w),
-      (e: unknown) => setError(e instanceof Error ? e.message : "manifest failed"),
-    );
-  }, []);
 
   const tolH = tuning().baseToleranceH;
   // Every card on one scale, measured across the whole inventory rather than
@@ -230,16 +228,14 @@ export function WordGates() {
   // Above the early returns, and it has to stay there: the manifest arrives
   // after the first render, so a hook below them is called a different number
   // of times before and after it lands.
-  const band = useMemo(() => bandFor(words ?? [], tolH), [words, tolH]);
+  const band = useMemo(() => bandFor(words, tolH), [words, tolH]);
 
-  if (error) return <p className="error">{error}</p>;
-  if (!words) return <p className="param-help">loading the manifest…</p>;
   if (words.length === 0) {
     return (
       <p className="param-help">
-        The inventory is empty — public/ref/manifest.json did not load. A run
+        The inventory is empty — src/data/wordsFallback.json has no rows. A run
         would degrade to the tuning defaults here, which looks like the game
-        working; this does not.
+        working; this does not. Run `npm run export-fallback`.
       </p>
     );
   }

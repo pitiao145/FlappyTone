@@ -1,8 +1,8 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { brand } from "../brand.ts";
-import { loadInventory } from "../audio/inventory.ts";
 import type { Tone } from "../game/gates.ts";
-import type { Word } from "../game/words.ts";
+import { wordsFromCatalog, type Word } from "../game/words.ts";
+import fallback from "../data/wordsFallback.json";
 import { capturePostHogEvent } from "../analytics/posthog.ts";
 import { ComingSoon } from "./ComingSoon.tsx";
 import { DemoLoop, VisualiserDemoLoop } from "./DemoLoop.tsx";
@@ -54,23 +54,25 @@ interface Props {
  * files, not fifteen JSX strings.
  */
 export function Landing({ onPlay, onVisualiser }: Props) {
-  const [words, setWords] = useState<Word[] | null>(null);
   const mobileEmailId = useId();
   const [mobileEmail, setMobileEmail] = useState("");
   const mobileNewsletter = useNewsletterSubscribe("mobile");
 
-  // The "how it works" cards want the same measured contours the corridors
-  // are built from. This is the only thing on the page that needs the clip
-  // inventory, so it starts the fetch itself — the game's own warm-up runs on
-  // the other entry now.
-  useEffect(() => {
-    loadInventory().then(setWords, () => setWords([]));
-  }, []);
+  /**
+   * The "how it works" cards want the same measured contours the corridors are
+   * built from. They read the *bundled* catalog export, not the live one: this
+   * page may not import `src/data/` code at all (the marketing chunk must stay
+   * free of the Supabase graph, same rule that keeps `src/audio/` and
+   * `src/pitch/` out of it), and a JSON import pulls in no module. The cards
+   * are illustration, not inventory — a catalog edit reaching them on the next
+   * deploy is fine.
+   */
+  const words = useMemo(() => wordsFromCatalog(fallback.rows), []);
 
   const wordsByTone = useMemo(() => {
     const map = new Map<Tone, Word[]>();
     for (const t of TONES) {
-      map.set(t, (words ?? []).filter((w) => w.tone === t));
+      map.set(t, words.filter((w) => w.tone === t));
     }
     return map;
   }, [words]);
