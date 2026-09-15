@@ -2,20 +2,27 @@
  * The clip inventory, as the game sees it.
  *
  * A word is everything a gate needs: the corridor's shape and length, the audio
- * to cue it with, and the label to put in the HUD — all measured from one take
- * by `npm run make-clips`, which writes `public/ref/manifest.json`. PRD §6 makes
- * "demo length == gate length == polyline timeline" an invariant; with more than
- * one syllable in the inventory, carrying them together on one object is what
+ * to cue it with, and the label to put in the HUD. PRD §6 makes "demo length
+ * == gate length == polyline timeline" an invariant; with more than one
+ * syllable in the inventory, carrying them together on one object is what
  * holds it.
  *
- * Pure: parsing and selection only, no fetch. The fetch lives in `src/ui/`.
+ * The source is the `words` table's catalog rows (`CatalogRow`, imported
+ * type-only from `src/data/catalogRows.ts` so this module drags no
+ * `src/data/` value into the landing-page chunk). `loadWords(manifest)`
+ * remains as a thin adapter over the old `public/ref/manifest.json` shape,
+ * for the Lab and older tests, until Task 13 removes it.
+ *
+ * Pure: parsing and selection only, no fetch. The fetch lives in `src/data/`.
  */
 
 import type { Polyline } from "./tuning.ts";
 import type { Tone } from "./gates.ts";
+import type { CatalogRow } from "../data/catalogRows.ts";
+import type { Tier } from "./tiers.ts";
 
 export interface Word {
-  /** Filename stem, and the key everything else is looked up by. */
+  /** The catalog row's id, and the key everything else is looked up by. */
   id: string;
   hanzi: string;
   pinyin: string;
@@ -26,8 +33,10 @@ export interface Word {
    */
   english: string;
   tone: Tone;
-  /** Filename under `public/ref/`. */
-  file: string;
+  tones: Tone[];
+  syllables: number;
+  /** Object-storage key for the clip, under `public/ref/` until Task 7. */
+  clipKey: string;
   /**
    * The tone window — the gate lasts exactly as long as the tone does.
    *
@@ -42,19 +51,22 @@ export interface Word {
    *
    * The clip plays from 0 so the player hears the whole syllable; the corridor
    * and the demo dot start `onsetS` later, so the tone still begins at gate
-   * t=0. 0 for any manifest that predates the field.
+   * t=0. 0 for any row that predates the field.
    */
   onsetS: number;
   /**
    * The whole file, in seconds — how long the cue is actually audible.
    *
    * What freezes the world during "listen", and what `isCueAudible` counts
-   * down. Falls back to `onsetS + durationS` for a manifest written before the
+   * down. Falls back to `onsetS + durationS` for a row written before the
    * clips became the raw takes, which is exactly what those clips were.
    */
   clipS: number;
   /** The measured contour, simplified to corridor vertices. */
   polyline: Polyline;
+  /** Gate 2 (free→pro): "pro" words need `TIER_LIMITS.pro`. */
+  minTier: "free" | "pro";
+  updatedAt: string;
 }
 
 /** Longest a clip may be and still be a gate, in seconds. */
@@ -107,56 +119,120 @@ function isPolyline(value: unknown): value is Polyline {
 }
 
 /**
- * Reads a manifest into words, dropping anything malformed rather than throwing.
+ * Reads catalog rows (the `words` table's shape) into words, dropping
+ * anything malformed rather than throwing.
  *
- * A bad entry is one missing word; a throw is a blank screen. The manifest is
- * fetched at runtime and can be stale, half-written, or from an older cutter, so
- * every field is checked — a corridor built from `undefined` is an invisible
- * wall the player collides with.
+ * A bad row is one missing word; a throw is a blank screen. The fetch that
+ * produces these rows can return something stale, half-written, or from a
+ * draft entry, so every field is checked — a corridor built from `undefined`
+ * is an invisible wall the player collides with. Result is sorted by
+ * `position`, the catalog's own ordering.
  */
-export function loadWords(manifest: unknown): Word[] {
-  if (typeof manifest !== "object" || manifest === null) return [];
-  const clips = (manifest as { clips?: unknown }).clips;
-  if (!Array.isArray(clips)) return [];
+export function wordsFromCatalog(rows: unknown): Word[] {
+  if (!Array.isArray(rows)) return [];
 
-  const words: Word[] = [];
+  const entries: Array<{ word: Word; position: number }> = [];
   const seen = new Set<string>();
-  for (const clip of clips) {
-    if (typeof clip !== "object" || clip === null) continue;
-    const c = clip as Record<string, unknown>;
+  for (const row of rows) {
+    if (typeof row !== "object" || row === null) continue;
+    const r = row as Record<string, unknown>;
     if (
-      typeof c.id !== "string" ||
-      typeof c.hanzi !== "string" ||
-      typeof c.pinyin !== "string" ||
-      typeof c.file !== "string" ||
-      typeof c.durationS !== "number" ||
-      !Number.isFinite(c.durationS) ||
-      c.durationS <= 0 ||
-      c.durationS > MAX_DURATION_S ||
-      typeof c.tone !== "number" ||
-      ![1, 2, 3, 4].includes(c.tone) ||
-      !isPolyline(c.polyline) ||
-      seen.has(c.id)
+      typeof r.id !== "string" ||
+      typeof r.hanzi !== "string" ||
+      typeof r.pinyin !== "string" ||
+      typeof r.status !== "string" ||
+      r.status !== "published" ||
+      typeof r.clip_key !== "string" ||
+      typeof r.duration_s !== "number" ||
+      !Number.isFinite(r.duration_s) ||
+      r.duration_s <= 0 ||
+      r.duration_s > MAX_DURATION_S ||
+      typeof r.tone !== "number" ||
+      ![1, 2, 3, 4].includes(r.tone) ||
+      !isPolyline(r.polyline) ||
+      seen.has(r.id)
     ) {
       continue;
     }
-    seen.add(c.id);
-    const clipS = readClipS(c.clipS, c.durationS);
-    const onsetS = readOnsetS(c.onsetS, clipS ?? c.durationS);
-    words.push({
-      id: c.id,
-      hanzi: c.hanzi,
-      pinyin: c.pinyin,
-      english: typeof c.english === "string" ? c.english : "",
-      tone: c.tone as Tone,
-      file: c.file,
-      durationS: c.durationS,
-      onsetS,
-      clipS: clipS ?? onsetS + c.durationS,
-      polyline: c.polyline,
+    seen.add(r.id);
+    const clipS = readClipS(r.clip_s, r.duration_s);
+    const onsetS = readOnsetS(r.onset_s, clipS ?? r.duration_s);
+    const tone = r.tone as Tone;
+    const tones = Array.isArray(r.tones)
+      ? (r.tones.filter((t): t is Tone => [1, 2, 3, 4].includes(t as number)) as Tone[])
+      : [tone];
+    const position = typeof r.position === "number" && Number.isFinite(r.position) ? r.position : 0;
+    entries.push({
+      position,
+      word: {
+        id: r.id,
+        hanzi: r.hanzi,
+        pinyin: r.pinyin,
+        english: typeof r.english === "string" ? r.english : "",
+        tone,
+        tones: tones.length > 0 ? tones : [tone],
+        syllables: typeof r.syllables === "number" && Number.isFinite(r.syllables) ? r.syllables : 1,
+        clipKey: r.clip_key,
+        durationS: r.duration_s,
+        onsetS,
+        clipS: clipS ?? onsetS + r.duration_s,
+        polyline: r.polyline,
+        minTier: r.min_tier === "pro" ? "pro" : "free",
+        updatedAt: typeof r.updated_at === "string" ? r.updated_at : "",
+      },
     });
   }
-  return words;
+  return entries.sort((a, b) => a.position - b.position).map((e) => e.word);
+}
+
+/**
+ * Adapts the old `public/ref/manifest.json` shape into catalog rows, so
+ * `loadWords` can stay a thin wrapper over `wordsFromCatalog` while the Lab
+ * and older tests still speak the manifest shape. Removed in Task 13.
+ */
+function manifestToRows(manifest: unknown): CatalogRow[] {
+  if (typeof manifest !== "object" || manifest === null) return [];
+  const clips = (manifest as { clips?: unknown }).clips;
+  if (!Array.isArray(clips)) return [];
+  return clips.map((clip, index) => {
+    const c = (typeof clip === "object" && clip !== null ? clip : {}) as Record<string, unknown>;
+    return {
+      id: c.id as string,
+      hanzi: c.hanzi as string,
+      pinyin: c.pinyin as string,
+      english: (c.english as string | undefined) ?? "",
+      tone: c.tone as number,
+      tones: [c.tone as number],
+      syllables: 1,
+      position: index,
+      status: "published",
+      min_tier: "free",
+      clip_key: (c.file as string | undefined) ?? null,
+      duration_s: c.durationS as number,
+      onset_s: (c.onsetS as number | undefined) ?? null,
+      clip_s: (c.clipS as number | undefined) ?? null,
+      polyline: c.polyline,
+      updated_at: "",
+    } as CatalogRow;
+  });
+}
+
+/**
+ * Reads a manifest into words — a thin adapter over `wordsFromCatalog`, kept
+ * for the Lab and older tests until Task 13 removes the manifest path
+ * entirely. See `manifestToRows`.
+ */
+export function loadWords(manifest: unknown): Word[] {
+  return wordsFromCatalog(manifestToRows(manifest));
+}
+
+/**
+ * The words a given tier may see. Pro gets everything the catalog shipped;
+ * free and guest both stop at `minTier: "free"` — Gate 2 (free→pro) is depth
+ * and content, not run quantity, so guest reads the same slice as free here.
+ */
+export function wordsForTier(words: Word[], tier: Tier): Word[] {
+  return tier === "pro" ? words : words.filter((w) => w.minTier === "free");
 }
 
 /**

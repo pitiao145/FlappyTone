@@ -38,14 +38,14 @@ describe("the shipped manifest", () => {
 
   it("points at audio that is actually there", () => {
     for (const w of words) {
-      expect(existsSync(`${root}public/ref/${w.file}`), w.file).toBe(true);
+      expect(existsSync(`${root}public/ref/${w.clipKey}`), w.clipKey).toBe(true);
     }
   });
 
   it("ships no clip the manifest does not list", () => {
     // An orphan is a file the game can never cue, and usually the trace of an
     // id that moved — which relabels audio that is already recorded.
-    const listed = new Set(words.map((w) => w.file));
+    const listed = new Set(words.map((w) => w.clipKey));
     const onDisk = readdirSync(`${root}public/ref`).filter((f) => f.endsWith(".wav"));
     expect(onDisk.filter((f) => !listed.has(f))).toEqual([]);
   });
@@ -92,7 +92,7 @@ describe("the shipped manifest", () => {
     // cutter dropped.
     for (const w of words) {
       const { samples, sampleRate } = decodeWav(
-        new Uint8Array(readFileSync(`${root}public/ref/${w.file}`)),
+        new Uint8Array(readFileSync(`${root}public/ref/${w.clipKey}`)),
       );
       expect(samples.length / sampleRate, w.id).toBeCloseTo(w.clipS, 3);
     }

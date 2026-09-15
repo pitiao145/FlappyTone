@@ -151,7 +151,9 @@ export function loadClip(word: Word): Promise<void> {
   // replays fine on the next session's context.
   const audio = getPlaybackCtx();
   const load = (async () => {
-    const url = `${import.meta.env.BASE_URL}ref/${word.file}`;
+    // TEMPORARY: still the local /public/ref/ path. Task 7 replaces this with
+    // the R2-backed URL built from word.clipKey.
+    const url = `${import.meta.env.BASE_URL}ref/${word.clipKey}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`${url}: ${res.status}`);
     const buffer = await audio.decodeAudioData(await res.arrayBuffer());
