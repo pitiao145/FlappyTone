@@ -270,7 +270,7 @@ pass against `https://clips.flappytone.com`:
 - [ ] Second fetch of the same `id?v=` ⇒ `cf-cache-status: HIT` in the
       response headers (the shared edge cache; see Decision "the shared edge
       cache stores public" in DECISIONS.md).
-- [ ] A malformed clip id (e.g. a raw `%ff` escape) ⇒ `400`, not `500`.
+- [ ] With a valid ticket, a malformed clip id (e.g. a raw `%ff` escape) ⇒ `400`, not `500` (the ticket check at `clip.ts:93` runs before the `ID_RE` check, so the same probe with no/invalid ticket is `401` instead).
 - [ ] No ticket at all on `/clip/:id` ⇒ `401`.
 - [ ] Rate limiting: **not yet configured** (Cloudflare WAF rule pending —
       `docs/SPECS/R2_SETUP.md`). A rapid burst of `POST /token` from one IP

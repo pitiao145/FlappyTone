@@ -65,7 +65,7 @@ to a server it doesn't fully trust itself on.
 | Audio | Web Audio API via `AudioWorkletNode` only |
 | Pitch detection | Custom band-limited McLeod Pitch Method implementation (`src/pitch/mpm.ts`) — no longer the `pitchy` package; `pitchy` remains a listed dependency but is unused in source |
 | Styling | Plain CSS with a design-token system (`src/ui/tokens.css`, `docs/BRAND.md`) |
-| Deploy | Vercel (static + serverless functions under `api/`) plus a Cloudflare Worker (`workers/clips/`, `clips.flappytone.com`) for clip audio — two deploy targets, two toolchains. The recording booth still uses Vercel's `api/upload.ts`/`api/auth.ts`/Blob storage alongside its newer Worker routes (`/raw`, `/booth/words`); retiring the Vercel side is planned but not done — see CLAUDE.md's "clip catalog" section. |
+| Deploy | Vercel (static + serverless functions under `api/`) plus a Cloudflare Worker (`workers/clips/`, `clips.flappytone.com`) for clip audio — two deploy targets, two toolchains. The recording booth now talks to the Worker's `/raw` and `/booth/words` routes; the Vercel `api/upload.ts`/`api/auth.ts` routes and the Blob store still exist but are no longer used by the booth — deleting them is pending Task 13, see CLAUDE.md's "clip catalog" section. |
 | Backend | Supabase (Postgres + Auth) in Tokyo (ap-northeast-1): accounts, leaderboard, entitlements, and (new) the `words` catalog table. Cloudflare R2 (two private buckets, `flappytone-raw`/`flappytone-clips`) for clip audio, read only through the Worker above. Schema in `supabase/migrations/`. |
 | Target | Portrait mobile-first layout, playable on desktop |
 
