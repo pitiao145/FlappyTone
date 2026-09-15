@@ -47,6 +47,10 @@
     "src/dev/export-fallback.ts",
     "src/dev/clipCut.test.ts",
     "src/dev/manifest.test.ts",
-    "src/render/palette.test.ts"
+    "src/render/palette.test.ts",
+    "src/dev/r2.ts",
+    "src/dev/upload-clips.ts",
+    "src/dev/migrate-raw.ts",
+    "src/dev/verify-clips.ts"
   ]
 }
