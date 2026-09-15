@@ -40,8 +40,16 @@ export interface PrefetchPlanInput {
   mode: RunMode;
   /** The tone every `drill` gate is drawn from. Ignored in other modes. */
   drillTone?: Tone | null;
-  /** The words of the gates already queued by the Run — the exact tier. */
-  queued: Array<Word | null | undefined>;
+  /**
+   * The words of the gates already queued by the Run — the exact tier.
+   *
+   * `null` means the Run's queue was not readable at all (the host's ref was
+   * empty). That must NOT degrade to "just fetch the pool", which is exactly
+   * the bulk-first inversion this module exists to remove, so it plans nothing
+   * and leaves the whole job to the HUD tick's own look-ahead. Failing to
+   * nothing is recoverable; failing to bulk-first is the bug coming back.
+   */
+  queued: Array<Word | null | undefined> | null;
   /** The tier-filtered inventory the run may draw from. */
   pool: Word[];
   /** Speculative words per tone — `tuning().prefetchWordsPerTone`. */
@@ -65,6 +73,7 @@ export interface PrefetchPlanInput {
  */
 export function planPrefetch(input: PrefetchPlanInput): Word[] {
   if (input.cuesUseClips === false) return [];
+  if (input.queued === null) return [];
   const ordered: Word[] = [];
   const seen = new Set<string>();
   const push = (w: Word | null | undefined): void => {

@@ -133,7 +133,20 @@ describe("planPrefetch", () => {
   });
 
   it("ships a speculative cap as a tuning field, not a bare constant", () => {
-    expect(tuning().prefetchWordsPerTone).toBe(6);
+    // Deliberately not pinning the tuned number — that is the Lab's to move.
+    const cap = tuning().prefetchWordsPerTone;
+    expect(Number.isFinite(cap)).toBe(true);
+    expect(cap).toBeGreaterThan(0);
+  });
+
+  it("plans nothing — not the pool — when the run's queue is unreadable", () => {
+    // The host passes null when its Run ref is empty. Falling back to the
+    // whole pool here is precisely the bulk-first inversion this fixes, and it
+    // would fail silently, so the plan must be empty instead.
+    expect(planPrefetch({ mode: "game", queued: null, pool: POOL, perTone: 6 })).toEqual([]);
+    expect(planPrefetch({ mode: "drill", drillTone: 3, queued: null, pool: POOL, perTone: 6 })).toEqual(
+      [],
+    );
   });
 });
 

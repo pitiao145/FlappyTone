@@ -418,6 +418,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     const cueStyle = mode === "tutorial" ? "pause" : loadCueStyle();
     // Every fresh Run (mount, or a pause-menu Restart bumping runGen)
     // replays the walkthrough from the top.
+    // NB: this effect's position ABOVE the prefetch effect is load-bearing —
+    // React runs effects in declaration order, and the prefetch reads this
+    // run's already-queued gates to put them ahead of its speculative tier.
     frozenRef.current = false;
     frozenAccumMsRef.current = 0;
     freezeStartedAtRef.current = 0;
@@ -821,10 +824,14 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   useEffect(() => {
     if (!scored || !cuesUseClips) return;
     const start = (all: Word[]): void => {
-      // The Run is built (and its queue filled) by the effect above, which runs
-      // first on mount — so its already-queued gates are readable here, and go
-      // out ahead of anything speculative.
-      const queued = runRef.current?.snapshot().gates.map((g) => g.word) ?? [];
+      // The Run is built (and its queue filled) by the run-owning effect
+      // above, which React runs first on mount because it is DECLARED first —
+      // that declaration order is load-bearing, and moving this effect above
+      // it would put the speculative tier back in front of the first gate.
+      // It is not left resting on that alone: a null here (an empty ref) plans
+      // *nothing* rather than falling back to the pool, so the worst case is
+      // the HUD tick's own look-ahead, never the bulk-first inversion.
+      const queued = runRef.current?.snapshot().gates.map((g) => g.word) ?? null;
       prefetchPool(
         planPrefetch({
           mode,
