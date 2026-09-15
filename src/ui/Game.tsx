@@ -15,7 +15,7 @@ import {
   playToneCue,
 } from "../audio/reference.ts";
 import { inventoryNow, loadInventory } from "../audio/inventory.ts";
-import { prefetchPool } from "../audio/prefetch.ts";
+import { planPrefetch, prefetchPool } from "../audio/prefetch.ts";
 import { isChromeIOS, isIOS } from "../audio/platform.ts";
 import { MicStatusBanner } from "./MicStatus.tsx";
 import {
@@ -31,6 +31,7 @@ import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { getTier, useTier } from "../data/tier.ts";
 import { wordsForTier } from "../game/words.ts";
 import { TONE_INFO, type Tone } from "../game/gates.ts";
+import { tuning } from "../game/tuning.ts";
 import { CALIBRATION_TONES, Run, type RunMode, type RunSnapshot } from "../game/run.ts";
 import type { Word } from "../game/words.ts";
 import type { GateOutcome, UnheardHint } from "../game/scoring.ts";
@@ -190,6 +191,10 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   // "tutorial" and "single" — the HUD elements gated on this once read
   // `mode === "game"` alone, back when "game" was the only scored mode.
   const scored = mode === "game" || mode === "drill" || mode === "learn";
+  // Learn mode always takes playToneCue's synth branch (see the cue below), so
+  // a clip fetched for it would never be heard. Every other mode cues a clip
+  // when it has one.
+  const cuesUseClips = mode !== "learn";
   const tier = useTier();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   /**
@@ -679,8 +684,13 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         setHud(snap);
         // Fetch the audio for every gate still ahead of the bird. loadClip is
         // idempotent per id, so this is a no-op once a word is in flight; the
-        // queue runs two gates ahead, which is seconds of warning.
-        for (const g of snap.gates) if (g.word) void loadClip(g.word);
+        // queue runs two gates ahead, which is seconds of warning. This is the
+        // exact tier (audio/prefetch.ts) as the run advances — the mount-time
+        // effect below seeds it for the gates that exist before the first tick,
+        // which is what stops the first gate losing the race to the bulk pool.
+        // Skipped entirely in learn mode, which cues synthetically by design
+        // (see playToneCue's forceSynth above) and would never play the clip.
+        if (cuesUseClips) for (const g of snap.gates) if (g.word) void loadClip(g.word);
         // Mirrored every tick, not just at game over, so quitting mid-run or
         // closing the tab still leaves the numbers behind.
         saveGateLog(snap.gateLog, snap.missedUtterances);
@@ -788,25 +798,47 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   ]);
 
   /**
-   * Warm the whole run's word pool in the background.
+   * Seed the clip cache for this run, in priority order.
    *
    * The Run's own look-ahead (two gates, in the HUD timer above) is what
-   * guarantees the *next* cue; this just means a later gate is usually already
-   * decoded when it arrives. Deliberately its own effect rather than a line in
-   * the run-owning effect above: `tier` resolves asynchronously, and adding it
-   * to that effect's dependencies would tear down and rebuild a live Run the
-   * moment the tier answer landed.
+   * guarantees the *next* cue, but it only starts on the first HUD tick — by
+   * which time an unordered bulk prefetch has already taken all four
+   * connection slots, which is why the first gate of every run used to cue as
+   * a synthetic sweep. So this runs the same two tiers in one ordered list
+   * (`planPrefetch`): the gates already queued first, then a mode-scoped,
+   * `prefetchWordsPerTone`-capped bet on what a later gate might pick. The HUD
+   * tick takes the exact tier over from here as the queue advances.
+   *
+   * Deliberately its own effect rather than a line in the run-owning effect
+   * above: `tier` resolves asynchronously, and adding it to that effect's
+   * dependencies would tear down and rebuild a live Run the moment the tier
+   * answer landed.
    *
    * Filtered by tier so a guest never prefetches a pro word the Worker would
    * 403 — a cached failure for a word they might legitimately get later.
    * Fire-and-forget by definition; nothing here can delay a run.
    */
   useEffect(() => {
-    if (!scored) return;
+    if (!scored || !cuesUseClips) return;
+    const start = (all: Word[]): void => {
+      // The Run is built (and its queue filled) by the effect above, which runs
+      // first on mount — so its already-queued gates are readable here, and go
+      // out ahead of anything speculative.
+      const queued = runRef.current?.snapshot().gates.map((g) => g.word) ?? [];
+      prefetchPool(
+        planPrefetch({
+          mode,
+          drillTone,
+          queued,
+          pool: wordsForTier(all, tier),
+          perTone: tuning().prefetchWordsPerTone,
+        }),
+      );
+    };
     const now = inventoryNow();
-    if (now) prefetchPool(wordsForTier(now, tier));
-    else void loadInventory().then((w) => prefetchPool(wordsForTier(w, tier)), () => undefined);
-  }, [scored, tier, runGen]);
+    if (now) start(now);
+    else void loadInventory().then(start, () => undefined);
+  }, [scored, cuesUseClips, mode, drillTone, tier, runGen]);
 
   /**
    * Re-narrow a live run's word pool once the tier answer lands.
