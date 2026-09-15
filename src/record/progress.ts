@@ -1,19 +1,19 @@
 /**
- * Remembers which words are already recorded, so closing the tab is not a
- * setback.
+ * Remembers the session id across a reload, so a resumed session's uploads
+ * land in the same folder instead of scattering across two.
  *
- * Jane will not do a hundred words in one sitting. If reopening the page put
- * her back at word one she would either re-record everything or give up, so
- * progress survives in `localStorage` alongside the session id — the same id
- * the blobs are filed under, so a resumed session lands in the same folder.
+ * Which words are done used to live here too, but the server (`GET
+ * /booth/words`) is the truth for that now — a locally-remembered `done` set
+ * could drift from what's actually in the database (another device, a
+ * dropped upload that later succeeded after the tab closed) and show Jane a
+ * list that doesn't match reality. `Recorder.tsx` gets pending/recorded from
+ * `fetchBoothWords` on every load instead.
  */
 
 const KEY = "flaptone.record.progress.v1";
 
 export interface Progress {
   sessionId: string;
-  /** Word ids the server has confirmed. */
-  done: string[];
 }
 
 function newSessionId(): string {
@@ -28,24 +28,15 @@ export function loadProgress(storage: Storage = localStorage): Progress {
     const raw = storage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Progress>;
-      if (typeof parsed.sessionId === "string" && Array.isArray(parsed.done)) {
-        return { sessionId: parsed.sessionId, done: parsed.done.filter((d) => typeof d === "string") };
+      if (typeof parsed.sessionId === "string") {
+        return { sessionId: parsed.sessionId };
       }
     }
   } catch {
     // Corrupt or unavailable storage is not worth failing over: she can record
     // from the top, which is annoying, rather than see a blank page.
   }
-  return { sessionId: newSessionId(), done: [] };
-}
-
-export function saveProgress(progress: Progress, storage: Storage = localStorage): void {
-  try {
-    storage.setItem(KEY, JSON.stringify(progress));
-  } catch {
-    // Private browsing, quota, a blocked origin — none of which should stop
-    // her recording. She just loses resume.
-  }
+  return { sessionId: newSessionId() };
 }
 
 /** Forgets everything, for "start over". */
@@ -54,5 +45,14 @@ export function clearProgress(storage: Storage = localStorage): void {
     storage.removeItem(KEY);
   } catch {
     /* see above */
+  }
+}
+
+export function saveProgress(progress: Progress, storage: Storage = localStorage): void {
+  try {
+    storage.setItem(KEY, JSON.stringify(progress));
+  } catch {
+    // Private browsing, quota, a blocked origin — none of which should stop
+    // her recording. She just loses resume.
   }
 }

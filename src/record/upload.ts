@@ -11,6 +11,7 @@
  * decided the earlier take was wrong, and uploading both would race over the
  * same key.
  */
+import { RECORD_BASE_URL } from "./boothWords.ts";
 
 export type UploadStatus = "queued" | "uploading" | "done" | "failed";
 
@@ -153,7 +154,7 @@ export class Uploader {
   private async send(job: Job): Promise<boolean> {
     try {
       const params = new URLSearchParams({ id: job.id, session: this.options.sessionId });
-      const res = await this.fetchImpl(`/api/upload?${params}`, {
+      const res = await this.fetchImpl(`${RECORD_BASE_URL}/raw?${params}`, {
         method: "POST",
         headers: {
           "content-type": "audio/wav",

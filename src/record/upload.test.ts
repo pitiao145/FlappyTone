@@ -34,6 +34,7 @@ describe("Uploader", () => {
     uploader.enqueue("hao3", blob());
     await uploader.flush();
     const [url, init] = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toContain("/raw?");
     expect(url).toContain("id=hao3");
     expect(url).toContain("session=s1");
     expect((init as RequestInit).headers).toMatchObject({ "x-record-passcode": "open" });

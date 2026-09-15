@@ -197,6 +197,21 @@ body {
   padding: 10px 14px;
 }
 
+.rec-recorded {
+  flex: none;
+}
+
+.rec-recorded-toggle {
+  width: 100%;
+  text-align: left;
+  padding: 8px 0;
+  background: none;
+  border: none;
+  color: var(--rec-dim);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
 .rec-count {
   color: var(--rec-dim);
   font-size: 0.9rem;

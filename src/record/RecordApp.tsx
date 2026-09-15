@@ -13,6 +13,7 @@ import { useState } from "react";
 import { ensureMic } from "../audio/session.ts";
 import { MicError } from "../audio/mic.ts";
 import { Recorder } from "./Recorder.tsx";
+import { RECORD_BASE_URL } from "./boothWords.ts";
 
 type Phase = "passcode" | "ready" | "recording";
 
@@ -35,8 +36,8 @@ export function RecordApp() {
     setChecking(true);
     setError(null);
     try {
-      const res = await fetch("/api/auth", {
-        method: "POST",
+      const res = await fetch(`${RECORD_BASE_URL}/auth`, {
+        method: "GET",
         headers: { "x-record-passcode": passcode },
       });
       // Only 401 means the code is wrong. Reporting every failure as a bad
