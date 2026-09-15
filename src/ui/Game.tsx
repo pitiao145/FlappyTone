@@ -818,9 +818,12 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
    * were built with, and nothing is torn down. Deliberately *not* a dependency
    * of the run-owning effect above, which would rebuild the run instead.
    *
-   * Resolution only ever widens the pool in practice (the store's default is
-   * the narrowest tier), so this adds words rather than taking any away, and
-   * `pickWord` only ever consults it for a gate not yet spawned.
+   * The pool can move either way. Cold-load resolution widens it (the store's
+   * default is `"guest"`, the narrowest tier); a mid-run sign-out narrows it
+   * (`onAuthStateChange` refreshes the tier, pro → guest). Both are safe for
+   * the same reason: `setWords` only feeds `pickWord`, which is consulted for
+   * a gate not yet spawned. A gate already on screen or in flight keeps the
+   * word and corridor it was built with either way.
    */
   useEffect(() => {
     const run = runRef.current;

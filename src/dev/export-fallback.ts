@@ -15,7 +15,7 @@
  *   - the Lab and `make-tone-averages` — dev tooling that wants a fixed,
  *     offline inventory rather than whatever the database says today.
  *
- * Every catalog column **except `contour`**. Nothing in `src/` reads a
+ * Every catalog column except `contour`, `raw_key` and `recorded_session`. Nothing in `src/` reads a
  * fallback row's `contour`: `wordsFromCatalog` never looks at it, `Word` has
  * no such field, and the tone charts (landing page, Lab's averages tab,
  * `make-tone-averages`) all measure from `polyline` via `averagePolyline`.
@@ -23,6 +23,12 @@
  * marketing entry — so exporting it would put ~28 kB gzip of unread data on
  * the landing page's critical path. The column stays in the database; only
  * this snapshot drops it.
+ *
+ * `raw_key` and `recorded_session` are dropped for the same reason plus one
+ * more: nothing in `src/` or `workers/` reads either from the fallback
+ * (`verify-clips.ts` and `migrate-raw.ts` query Supabase directly), and they
+ * are internal R2 object keys and session ids — no reason to ship them to
+ * every visitor of the landing page.
  *
  * Rerun and commit the JSON after any change to the `words` table's published
  * rows.
@@ -51,14 +57,12 @@ const COLUMNS = [
   "status",
   "min_tier",
   "clip_key",
-  "raw_key",
   "duration_s",
   "onset_s",
   "clip_s",
   "polyline",
   "meta",
   "recorded_at",
-  "recorded_session",
   "created_at",
   "updated_at",
 ].join(",");
