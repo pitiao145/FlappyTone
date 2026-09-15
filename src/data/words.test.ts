@@ -148,6 +148,25 @@ describe("fetchCatalog", () => {
     expect(catalogFromCache()).toBeNull();
   });
 
+  it("survives a localStorage that throws on every access", () => {
+    // Safari private mode, and any browser with site data blocked: the
+    // accessors exist and throw. The catalog read must degrade to the bundled
+    // export, not to a rejected promise or a lost cache write.
+    const blocked = () => {
+      throw new Error("storage disabled");
+    };
+    vi.stubGlobal("localStorage", {
+      getItem: blocked,
+      setItem: blocked,
+      removeItem: blocked,
+    } as unknown as Storage);
+    const c = client({ data: [row()], error: null });
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(c.supabase);
+
+    expect(catalogFromCache()).toBeNull();
+    return expect(fetchCatalog()).resolves.not.toHaveLength(0);
+  });
+
   it("filters through word_lists when a listId is given", async () => {
     const c = client({ data: [row()], error: null });
     vi.mocked(supabaseModule.getSupabase).mockReturnValue(c.supabase);

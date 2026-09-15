@@ -15,10 +15,17 @@
  *   - the Lab and `make-tone-averages` — dev tooling that wants a fixed,
  *     offline inventory rather than whatever the database says today.
  *
- * Selects `*`, not `CATALOG_SELECT`: `contour` is not part of the runtime
- * catalog read (the game only needs `polyline`), but the Lab and the averaged
- * tone shapes are measured from it. Rerun and commit the JSON after any change
- * to the `words` table's published rows.
+ * Every catalog column **except `contour`**. Nothing in `src/` reads a
+ * fallback row's `contour`: `wordsFromCatalog` never looks at it, `Word` has
+ * no such field, and the tone charts (landing page, Lab's averages tab,
+ * `make-tone-averages`) all measure from `polyline` via `averagePolyline`.
+ * It is by far the largest field, and this file is statically imported by the
+ * marketing entry — so exporting it would put ~28 kB gzip of unread data on
+ * the landing page's critical path. The column stays in the database; only
+ * this snapshot drops it.
+ *
+ * Rerun and commit the JSON after any change to the `words` table's published
+ * rows.
  */
 
 import { writeFileSync } from "node:fs";
@@ -28,11 +35,39 @@ import { serviceClient } from "./serviceClient.ts";
 const root = new URL("../../", import.meta.url).pathname;
 const outPath = `${root}src/data/wordsFallback.json`;
 
+/**
+ * Spelled out rather than `*` so a column added to the table later has to be
+ * opted in here, and so `contour` cannot come back by accident.
+ */
+const COLUMNS = [
+  "id",
+  "hanzi",
+  "pinyin",
+  "english",
+  "tone",
+  "tones",
+  "syllables",
+  "position",
+  "status",
+  "min_tier",
+  "clip_key",
+  "raw_key",
+  "duration_s",
+  "onset_s",
+  "clip_s",
+  "polyline",
+  "meta",
+  "recorded_at",
+  "recorded_session",
+  "created_at",
+  "updated_at",
+].join(",");
+
 const supabase = serviceClient();
 
 const { data, error } = await supabase
   .from("words")
-  .select("*")
+  .select(COLUMNS)
   .eq("status", "published")
   .order("position", { ascending: true });
 
@@ -64,7 +99,7 @@ function sortKeys(row: Record<string, unknown>): Record<string, unknown> {
 const payload = {
   version: 1,
   exportedAt: new Date().toISOString(),
-  rows: rows.map((row) => sortKeys(row as Record<string, unknown>)),
+  rows: rows.map((row) => sortKeys(row as unknown as Record<string, unknown>)),
 };
 
 writeFileSync(outPath, `${JSON.stringify(payload, null, 2)}\n`);
