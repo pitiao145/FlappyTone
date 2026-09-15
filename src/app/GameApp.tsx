@@ -457,9 +457,15 @@ export default function GameApp() {
     if (!supabase) return;
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setScreen("resetPassword");
-      // A ticket carries the tier it was minted for, so a signup (guest -> free)
-      // or a sign-out must drop it — otherwise the player keeps their old
-      // entitlements until it expires on its own, up to half an hour later.
+      // A ticket carries the tier it was minted for, so any event that could
+      // mean a tier change (signup, sign-out, a session refresh) must drop it
+      // — otherwise the player keeps their old entitlements until it expires
+      // on its own, up to half an hour later. Deliberately unconditional
+      // rather than filtered to a specific event list: invalidation is cheap
+      // (it only clears a cache, it never fetches) and a stray extra drop on
+      // an unrelated event like INITIAL_SESSION costs one `/token` call the
+      // next time a clip is needed, not a refetch storm — concurrent callers
+      // still share one in-flight mint.
       invalidatePlayTicket();
     });
     return () => sub.subscription.unsubscribe();

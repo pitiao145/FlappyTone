@@ -133,4 +133,27 @@ describe("invalidatePlayTicket", () => {
     expect(await getPlayTicket()).toBe("tok-2");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it("does not let a stale in-flight mint re-cache after invalidation", async () => {
+    const { getPlayTicket, invalidatePlayTicket } = await load();
+    let resolveFetch!: (res: Response) => void;
+    fetchMock.mockReturnValueOnce(
+      new Promise<Response>((resolve) => {
+        resolveFetch = resolve;
+      }),
+    );
+    // Start a mint (e.g. the pre-signup ticket warm-up) and, while it is still
+    // in flight, invalidate — simulating a signup landing before that request
+    // resolves.
+    const inFlight = getPlayTicket();
+    invalidatePlayTicket();
+    // The stale request now resolves with a guest ticket.
+    resolveFetch(tokenResponse("stale-guest-tok"));
+    expect(await inFlight).toBe("stale-guest-tok");
+    // It must not have been cached — the next call issues a fresh /token
+    // request rather than returning the stale one.
+    fetchMock.mockResolvedValueOnce(tokenResponse("fresh-tok"));
+    expect(await getPlayTicket()).toBe("fresh-tok");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

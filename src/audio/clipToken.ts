@@ -55,6 +55,15 @@ let cached: Ticket | null = null;
 let pending: Promise<string | null> | null = null;
 
 /**
+ * Bumped by `invalidatePlayTicket()`. A `mint()` in flight when that happens
+ * still resolves and hands its caller the token it got — but must not write
+ * it to `cached`, or a signup that fires while a pre-signup `/token` request
+ * is still in flight would have its invalidation silently undone moments
+ * later by that stale request re-caching a guest ticket for ~28 minutes.
+ */
+let gen = 0;
+
+/**
  * A valid play ticket, minting one if needed. Never throws; `null` means "no
  * clips this time" and the caller falls back to the synthetic sweep.
  */
@@ -77,9 +86,11 @@ export function getPlayTicket(): Promise<string | null> {
  */
 export function invalidatePlayTicket(): void {
   cached = null;
+  gen++;
 }
 
 async function mint(): Promise<string | null> {
+  const myGen = gen;
   try {
     const session = await currentSession();
     const headers: Record<string, string> = {};
@@ -98,10 +109,12 @@ async function mint(): Promise<string | null> {
       typeof body.expiresIn === "number" && Number.isFinite(body.expiresIn) && body.expiresIn > 0
         ? body.expiresIn
         : 1800;
-    cached = {
-      token: body.token,
-      goodUntilMs: Date.now() + Math.max(0, expiresInS * 1000 - EXPIRY_MARGIN_MS),
-    };
+    if (myGen === gen) {
+      cached = {
+        token: body.token,
+        goodUntilMs: Date.now() + Math.max(0, expiresInS * 1000 - EXPIRY_MARGIN_MS),
+      };
+    }
     return body.token;
   } catch (err) {
     warn("clips", "/token failed", err);
