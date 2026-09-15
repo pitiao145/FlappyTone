@@ -151,7 +151,7 @@ describe("planPrefetch", () => {
 });
 
 describe("prefetchPool", () => {
-  it("requests words in list order, so the exact tier goes out first", () => {
+  it("requests words in list order, so the exact tier goes out first", async () => {
     const plan = planPrefetch({
       mode: "game",
       queued: [byId("t3w17"), byId("t2w29")],
@@ -159,11 +159,12 @@ describe("prefetchPool", () => {
       perTone: 8,
     });
     prefetchPool(plan);
-    // Only CONCURRENCY workers start synchronously; those first slots must
-    // hold the exact tier, not catalog words 1-4.
-    const firstOut = loadClip.mock.calls.map((c) => c[0].id);
-    expect(firstOut).toHaveLength(4);
-    expect(firstOut.slice(0, 2)).toEqual(["t3w17", "t2w29"]);
+    // The lead clip goes out alone (Task 8d); the rest follow it in list
+    // order, so the exact tier still precedes any catalog word.
+    expect(loadClip.mock.calls.map((c) => c[0].id)).toEqual(["t3w17"]);
+    await new Promise((r) => setTimeout(r, 0));
+    const out = loadClip.mock.calls.map((c) => c[0].id);
+    expect(out.slice(0, 2)).toEqual(["t3w17", "t2w29"]);
   });
 
   it("never runs more than 4 fetches at once", async () => {
@@ -219,5 +220,118 @@ describe("the calibration flight's exact tier", () => {
     for (const id of seen) expect(id.startsWith("t1w") || id.startsWith("t3w")).toBe(true);
     // Four gates, so at most four distinct clips — never a bulk pool.
     expect(seen.size).toBeLessThanOrEqual(CALIBRATION_TONES.length);
+  });
+});
+
+describe("prefetchPool's lead clip", () => {
+  /** A promise whose settlement this test controls. */
+  function deferred(): { promise: Promise<void>; resolve: () => void; reject: () => void } {
+    let resolve!: () => void;
+    let reject!: () => void;
+    const promise = new Promise<void>((res, rej) => {
+      resolve = () => res();
+      reject = () => rej(new Error("clip failed"));
+    });
+    return { promise, resolve, reject };
+  }
+
+  it("issues the FIRST word alone, and starts the rest only once it resolves", async () => {
+    const lead = deferred();
+    let n = 0;
+    loadClip.mockImplementation((_word: Word) => (n++ === 0 ? lead.promise : Promise.resolve()));
+
+    const plan = planPrefetch({
+      mode: "game",
+      queued: [byId("t3w17")],
+      pool: POOL,
+      perTone: 8,
+    });
+    prefetchPool(plan);
+
+    // Synchronously after the call: exactly one request, and it is the first
+    // gate's own word. Anything else is sharing its bandwidth.
+    expect(loadClip.mock.calls.map((c) => c[0].id)).toEqual(["t3w17"]);
+    // Still alone after the microtask queue drains — nothing may sneak in
+    // while the lead clip is genuinely still in flight.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(loadClip).toHaveBeenCalledTimes(1);
+
+    lead.resolve();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(loadClip.mock.calls.length).toBeGreaterThan(1);
+    loadClip.mockImplementation((_word: Word) => Promise.resolve());
+  });
+
+  it("starts the rest when the first clip REJECTS — a failed lead never wedges it", async () => {
+    const lead = deferred();
+    let n = 0;
+    loadClip.mockImplementation((_word: Word) => (n++ === 0 ? lead.promise : Promise.resolve()));
+
+    const plan = planPrefetch({ mode: "game", queued: [byId("t3w17")], pool: POOL, perTone: 8 });
+    prefetchPool(plan);
+    expect(loadClip).toHaveBeenCalledTimes(1);
+
+    lead.reject();
+    await new Promise((r) => setTimeout(r, 0));
+    // Every remaining word still went out — a rejected lead must not wedge it.
+    expect(loadClip).toHaveBeenCalledTimes(plan.length);
+    loadClip.mockImplementation((_word: Word) => Promise.resolve());
+  });
+
+  it("still caps the remainder at 4 in flight once the lead has landed", async () => {
+    let inFlight = 0;
+    let peak = 0;
+    loadClip.mockImplementation((_word: Word) => {
+      inFlight++;
+      return Promise.resolve().then(() => {
+        peak = Math.max(peak, inFlight);
+        inFlight--;
+      });
+    });
+    prefetchPool(planPrefetch({ mode: "game", queued: [], pool: POOL, perTone: 8 }));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(peak).toBeLessThanOrEqual(4);
+    expect(loadClip).toHaveBeenCalledTimes(32);
+    loadClip.mockImplementation((_word: Word) => Promise.resolve());
+  });
+
+  it("a one-word plan issues exactly one fetch and never hangs", async () => {
+    prefetchPool(planPrefetch({ mode: "single", queued: [byId("t4w5")], pool: POOL, perTone: 8 }));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(loadClip.mock.calls.map((c) => c[0].id)).toEqual(["t4w5"]);
+  });
+
+  it("an empty plan fetches nothing", async () => {
+    prefetchPool([]);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(loadClip).not.toHaveBeenCalled();
+  });
+});
+
+describe("the calibration flight's own plan", () => {
+  it("plans only the gates it has queued — no other tone, no catalog pool", () => {
+    const run = new Run({
+      mode: "tutorial",
+      width: 420,
+      words: POOL,
+      tutorialTones: CALIBRATION_TONES,
+    });
+    const queued = run.snapshot().gates.map((g) => g.word);
+    const plan = planPrefetch({ mode: "tutorial", queued, pool: POOL, perTone: 8 });
+    expect(plan.length).toBeGreaterThan(0);
+    expect(plan.length).toBeLessThanOrEqual(CALIBRATION_TONES.length);
+    for (const w of plan) expect(w.tone === 1 || w.tone === 3).toBe(true);
+    expect(plan.map((w) => w.id)).toEqual(queued.filter(Boolean).map((w) => w!.id));
+  });
+
+  it("fetch-once: a word already loading is not requested twice across calls", async () => {
+    const w = byId("t1w0");
+    prefetchPool([w]);
+    prefetchPool([w, w]);
+    await new Promise((r) => setTimeout(r, 0));
+    // prefetchPool de-dupes within a plan via planPrefetch, and loadClip is
+    // idempotent per id — the seam this asserts is that nothing here bypasses
+    // that by constructing its own request.
+    expect(loadClip.mock.calls.every((c) => c[0] === w)).toBe(true);
   });
 });

@@ -101,6 +101,24 @@ function speculativeWords(input: PrefetchPlanInput): Word[] {
   }
 }
 
+/**
+ * Requests the plan, lead clip first and **alone**.
+ *
+ * Ordering alone was not enough. Starting all four workers at once put the
+ * first gate's clip on a connection it shared three ways: measured cold, the
+ * first four clips took 1.23-1.43s each where every later one took ~180-200ms,
+ * same file sizes. The budget before the first gate is `baseRestMs` (2400ms)
+ * minus a `/token` round trip (~359ms) minus a CORS preflight — 1.4s plus
+ * decode does not reliably fit, and the first cue fell back to the synthetic
+ * sweep. So word 0 gets the road to itself, and the speculative workers start
+ * only once it has *settled*.
+ *
+ * Settled, not resolved: `loadClip` swallows its own failures today, but a
+ * lead clip that rejected must never wedge the rest of the plan forever, and
+ * that must not rest on a promise contract owned by another module.
+ *
+ * Still fire-and-forget — this returns nothing a caller could await.
+ */
 export function prefetchPool(words: Word[]): void {
   const queue = [...words];
   const next = (): void => {
@@ -110,5 +128,10 @@ export function prefetchPool(words: Word[]): void {
     // enough to keep the worker going through a 404 as well as a success.
     void loadClip(word).then(next, next);
   };
-  for (let i = 0; i < CONCURRENCY; i++) next();
+  const lead = queue.shift();
+  if (!lead) return;
+  const rest = (): void => {
+    for (let i = 0; i < CONCURRENCY; i++) next();
+  };
+  void loadClip(lead).then(rest, rest);
 }

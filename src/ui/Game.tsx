@@ -822,7 +822,15 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
    * Fire-and-forget by definition; nothing here can delay a run.
    */
   useEffect(() => {
-    if (!scored || !cuesUseClips) return;
+    // Every mode that cues a clip gets the EXACT tier — `tutorial` (which is
+    // also the calibration flight) and `single` included. They used to be
+    // excluded by `scored`, which left them relying solely on the HUD tick at
+    // HUD_HZ = 4: up to 250ms before the first fetch even starts, then the
+    // full /token round trip, on a flight of at most four fixed gates that has
+    // no reason to be cold. Widening the gate does NOT widen the speculative
+    // tier — `planPrefetch` still returns [] for both modes, so calibration
+    // can never acquire a catalog-wide pool.
+    if (!cuesUseClips) return;
     const start = (all: Word[]): void => {
       // The Run is built (and its queue filled) by the run-owning effect
       // above, which React runs first on mount because it is DECLARED first —
@@ -845,7 +853,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     const now = inventoryNow();
     if (now) start(now);
     else void loadInventory().then(start, () => undefined);
-  }, [scored, cuesUseClips, mode, drillTone, tier, runGen]);
+  }, [cuesUseClips, mode, drillTone, tier, runGen]);
 
   /**
    * Re-narrow a live run's word pool once the tier answer lands.
