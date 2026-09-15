@@ -79,8 +79,8 @@ describe("GET /clip/:id", () => {
 
   it("400s a malformed id, before touching R2", async () => {
     const t = await ticketFor("free");
-    for (const bad of ["../x", "BA1", "ba_1", "a".repeat(33), ""]) {
-      const res = await get(`/clip/${encodeURIComponent(bad)}?v=1`, t, env);
+    for (const bad of ["..%2Fx", "BA1", "ba_1", "a".repeat(33), "", "%ff", "%e0%80%80", "%"]) {
+      const res = await get(`/clip/${bad}?v=1`, t, env);
       expect(res.status).toBe(400);
     }
     expect(clips.getCalls).toBe(0);

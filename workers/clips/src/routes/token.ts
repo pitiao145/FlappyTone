@@ -21,6 +21,13 @@ function bearer(req: Request): string | null {
   return match ? match[1] : null;
 }
 
+/**
+ * Inside Cloudflare this header is always set, so `""` only ever means a
+ * misconfigured deploy (or a test). It is not a fallback with a meaning:
+ * a ticket minted with `""` would only verify against another `""` caller,
+ * i.e. the IP binding degrades to a no-op for everyone at once rather than
+ * silently weakening for one caller.
+ */
 export function callerIp(req: Request): string {
   return req.headers.get("CF-Connecting-IP") ?? "";
 }

@@ -81,7 +81,12 @@ function privateCopy(res: Response): Response {
 
 export async function handleClip(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(req.url);
-  const id = decodeURIComponent(url.pathname.slice("/clip/".length));
+  // Deliberately NOT decoded: the id alphabet is [a-z0-9], so nothing
+  // legitimate needs decoding, and `decodeURIComponent` THROWS a URIError on
+  // a malformed or invalid-UTF-8 escape (`%ff`, `%e0%80%80`) — which, running
+  // before the ticket check, turned an unauthenticated probe into a 500
+  // instead of the contracted 400. `ID_RE` rejects any escape as-is.
+  const id = url.pathname.slice("/clip/".length);
 
   const match = /^Bearer (.+)$/.exec(req.headers.get("authorization") ?? "");
   const ticket = match ? await verifyTicket(match[1], env.CLIP_TOKEN_SECRET, callerIp(req)) : null;
@@ -98,7 +103,9 @@ export async function handleClip(req: Request, env: Env, ctx: ExecutionContext):
 
   const word = inventory.get(id);
   if (!word || !word.clipKey) return Response.json({ error: "Not found." }, { status: 404 });
-  if (word.minTier === "pro" && ticket.tier !== "pro") {
+  // Default-deny: anything that is not exactly "free" needs a pro ticket, so
+  // a third tier added to `words.min_tier` later fails closed rather than open.
+  if (word.minTier !== "free" && ticket.tier !== "pro") {
     return Response.json({ error: "This clip needs Pro." }, { status: 403 });
   }
 
