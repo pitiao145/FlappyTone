@@ -25,7 +25,8 @@ import { TakeBuffer } from "./takeBuffer.ts";
 import { TakeDetector, type RejectReason } from "./takeDetector.ts";
 import { Uploader, type UploadState } from "./upload.ts";
 import { fetchBoothWords, type BoothWord } from "./boothWords.ts";
-import { loadProgress } from "./progress.ts";
+import { loadProgress, saveProgress } from "./progress.ts";
+import { nextPendingId } from "./boothQueue.ts";
 
 const FRAME_MS_HZ = 10;
 /** How long "got it" stays up before the next word. Long enough to register. */
@@ -52,11 +53,26 @@ type LoadState = "loading" | "error" | "ready";
 
 export function Recorder({ passcode }: Props) {
   const [progress] = useState(() => loadProgress());
+  // Persist once, on mount: nothing else in this component changes
+  // `progress` after that, but the old Recorder saved it and this rewrite
+  // originally dropped the call — without it, a mid-session reload minted a
+  // fresh session id (and folder) instead of resuming the one Jane was
+  // already recording into.
+  useEffect(() => {
+    saveProgress(progress);
+  }, [progress]);
 
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [pending, setPending] = useState<BoothWord[]>([]);
-  const [recorded, setRecorded] = useState<BoothWord[]>([]);
+  // pending/recorded live together so a confirmed upload moves a word between
+  // them in one update — two separate `useState`s meant `markConfirmed` had
+  // to call `setRecorded` from inside `setPending`'s updater, a side effect
+  // tucked inside a reducer that only worked by accident of StrictMode's
+  // idempotency guard.
+  const [words, setWords] = useState<{ pending: BoothWord[]; recorded: BoothWord[] }>({
+    pending: [],
+    recorded: [],
+  });
   /**
    * The order pending words are worked through, fixed at load (or refresh).
    * Advance walks this list rather than the mutating `pending` array, so a
@@ -83,11 +99,10 @@ export function Recorder({ passcode }: Props) {
     setLoadState("loading");
     setLoadError(null);
     try {
-      const words = await fetchBoothWords(passcode);
-      setPending(words.pending);
-      setRecorded(words.recorded);
-      orderRef.current = words.pending.map((w) => w.id);
-      setCurrentId(words.pending[0]?.id ?? null);
+      const fetched = await fetchBoothWords(passcode);
+      setWords({ pending: fetched.pending, recorded: fetched.recorded });
+      orderRef.current = fetched.pending.map((w) => w.id);
+      setCurrentId(fetched.pending[0]?.id ?? null);
       setLoadState("ready");
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Something went wrong.");
@@ -105,11 +120,15 @@ export function Recorder({ passcode }: Props) {
    * this only ever removes from `pending`.
    */
   const markConfirmed = useCallback((id: string) => {
-    setPending((prev) => {
-      const word = prev.find((w) => w.id === id);
+    setWords((prev) => {
+      const word = prev.pending.find((w) => w.id === id);
       if (!word) return prev;
-      setRecorded((r) => (r.some((w) => w.id === id) ? r : [...r, { ...word, status: "recorded" }]));
-      return prev.filter((w) => w.id !== id);
+      return {
+        pending: prev.pending.filter((w) => w.id !== id),
+        recorded: prev.recorded.some((w) => w.id === id)
+          ? prev.recorded
+          : [...prev.recorded, { ...word, status: "recorded" }],
+      };
     });
   }, []);
 
@@ -132,27 +151,31 @@ export function Recorder({ passcode }: Props) {
     setCaptured((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
   }, []);
 
+  const { pending, recorded } = words;
   const current: BoothWord | undefined =
     pending.find((w) => w.id === currentId) ?? recorded.find((w) => w.id === currentId);
   const allDone = loadState === "ready" && pending.length === 0;
   const total = pending.length + recorded.length;
 
-  /** Picks the next word to work on: the first `order` entry still in `pending`, after `afterId`. */
-  const nextPendingId = useCallback(
-    (afterId: string | null): string | null => {
-      const order = orderRef.current;
-      const startAt = afterId ? order.indexOf(afterId) + 1 : 0;
-      for (let i = Math.max(startAt, 0); i < order.length; i++) {
-        const id = order[i];
-        if (pending.some((w) => w.id === id) && !captured.has(id)) return id;
-      }
-      // Nothing left in original order (e.g. everything past this point is
-      // already captured/confirmed) — fall back to the first still-pending word.
-      const fallback = pending.find((w) => !captured.has(w.id));
-      return fallback?.id ?? null;
-    },
-    [pending, captured],
-  );
+  /**
+   * The frame-sink effect below is installed once per `loadState` change
+   * (not per render — re-installing it on every `pending`/`captured` update
+   * would tear down and rebuild the pre-roll buffer exactly when she starts
+   * speaking, per the effect's own comment). That effect's `setTimeout`
+   * needs `nextPendingId(order, pending, captured, …)` evaluated with
+   * *current* `pending`/`captured`, not whatever they were the one time the
+   * effect ran — closing over them directly used to freeze both at their
+   * initial-load values, so every advance after the first ready render
+   * fell straight to `nextPendingId`'s fallback path over the frozen
+   * (empty) `captured` set and the frozen (full) `pending` list, i.e. always
+   * back toward the top of the original list. A ref updated every render
+   * keeps the call live without pulling `pending`/`captured` into the sink
+   * effect's own deps.
+   */
+  const advanceRef = useRef<(afterId: string | null) => string | null>(() => null);
+  useEffect(() => {
+    advanceRef.current = (afterId) => nextPendingId(orderRef.current, pending, captured, afterId);
+  });
 
   // Live meters, at 10Hz. Never per frame.
   useEffect(() => {
@@ -211,7 +234,7 @@ export function Recorder({ passcode }: Props) {
 
       // Advance after a beat, then listen again for the next word.
       setTimeout(() => {
-        setCurrentId((cur) => nextPendingId(cur));
+        setCurrentId((cur) => advanceRef.current(cur));
         setFeedback({ kind: "idle" });
         detector.arm();
       }, ADVANCE_DELAY_MS);
@@ -363,6 +386,11 @@ export function Recorder({ passcode }: Props) {
         <button className="rec-btn" onClick={() => void load()}>
           Refresh list
         </button>
+        {uploads.failed > 0 && (
+          <button className="rec-btn" onClick={() => uploader.retryFailed()}>
+            Try {uploads.failed} again
+          </button>
+        )}
         <span className="rec-count">
           {recorded.length} / {total}
           {uploads.pending > 0 && ` · ${uploads.pending} uploading`}
