@@ -33,6 +33,9 @@ export async function verifySupabaseJwt(
   try {
     const jwks = jwksFor(supabaseUrl);
     const { payload } = await jwtVerify(jwt, jwks, {
+      // Pinned: without it, `jwtVerify` would accept whatever `alg` the
+      // token's own header claims that the JWKS can satisfy.
+      algorithms: ["ES256"],
       issuer: `${supabaseUrl}/auth/v1`,
     });
     if (typeof payload.sub !== "string") return null;
