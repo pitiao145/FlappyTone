@@ -3,8 +3,12 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": ["workers/clips"],
   "scripts": {
     "dev": "vite",
+    "worker:dev": "npm -w workers/clips run dev",
+    "worker:deploy": "npm -w workers/clips run deploy",
+    "worker:test": "npm -w workers/clips test",
     "dev:api": "if [ -f .env.local ]; then set -a; . ./.env.local; set +a; fi; FT_NO_SSL=1 vercel dev",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

@@ -1,0 +1,19 @@
+name = "flappytone-clips-api"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+routes = [{ pattern = "clips.flappytone.com", custom_domain = true }]
+
+[[r2_buckets]]
+binding = "RAW"
+bucket_name = "flappytone-raw"
+
+[[r2_buckets]]
+binding = "CLIPS"
+bucket_name = "flappytone-clips"
+
+[vars]
+ALLOWED_ORIGINS = "https://flappytone.com,https://www.flappytone.com,https://*.vercel.app,http://localhost:5173,https://localhost:5173"
+
+# Secrets (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, CLIP_TOKEN_SECRET,
+# RECORD_PASSCODE) are set with `wrangler secret put` — never here, and never
+# in any committed file.

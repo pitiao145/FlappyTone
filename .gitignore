@@ -39,3 +39,7 @@ fixtures/analytics/
 
 .worktrees/
 .claude/
+
+# Wrangler's local dev/build state for the clips Worker.
+workers/clips/.wrangler/
+workers/clips/*.tsbuildinfo

@@ -1,5 +1,5 @@
 import { resolve } from 'node:path'
-import { defineConfig } from 'vite'
+import { configDefaults, defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import basicSsl from '@vitejs/plugin-basic-ssl'
 import { prerenderLanding } from './src/dev/prerender.ts'
@@ -50,5 +50,11 @@ export default defineConfig({
         'privacy-policy': resolve(import.meta.dirname, 'privacy-policy.html'),
       },
     },
+  },
+  // workers/clips is its own npm workspace with its own vitest config/runner
+  // (`npm run worker:test`) — this repo's own `test` script must not also
+  // collect it, since it's a separate Worker runtime environment.
+  test: {
+    exclude: [...configDefaults.exclude, 'workers/**'],
   },
 })
