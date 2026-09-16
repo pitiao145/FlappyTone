@@ -127,7 +127,14 @@ interface RefClip {
   clipS: number;
 }
 
-/** Keyed by word id — the inventory is 120 clips now, not four per tone. */
+/**
+ * Keyed by `speaker:id` — the inventory is 120 clips per voice now, not four
+ * per tone. The speaker is part of the key, not decoration: the same word id
+ * exists for every voice on the roster, so a key of `id` alone would serve one
+ * speaker's audio under another's name with no error and nothing to notice.
+ */
+const clipKeyFor = (word: Word): string => `${word.speakerId}:${word.id}`;
+
 const clips = new Map<string, RefClip>();
 /** In-flight or finished loads, so a word is fetched at most once. */
 const loads = new Map<string, Promise<void>>();
@@ -150,7 +157,8 @@ class TicketError extends Error {
  * of warning for a ~100KB file.
  */
 export function loadClip(word: Word): Promise<void> {
-  const existing = loads.get(word.id);
+  const key = clipKeyFor(word);
+  const existing = loads.get(key);
   if (existing) return existing;
   const load = (async () => {
     // The clips live in R2 behind the Worker, which serves nothing without a
@@ -158,7 +166,7 @@ export function loadClip(word: Word): Promise<void> {
     // reporting to the player — it degrades to the synthetic sweep below.
     const ticket = await getPlayTicket();
     if (!CLIPS_BASE_URL || !ticket) throw new Error("no clips source");
-    const url = `${CLIPS_BASE_URL}/clip/${word.id}?v=${encodeURIComponent(word.updatedAt)}`;
+    const url = `${CLIPS_BASE_URL}/clip/${word.speakerId}/${word.id}?v=${encodeURIComponent(word.updatedAt)}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${ticket}` } });
     if (res.status === 401) {
       // The ticket expired, or the player's IP moved. Drop it so the next
@@ -180,7 +188,7 @@ export function loadClip(word: Word): Promise<void> {
     // gesture that started the run has long since happened.
     const audio = getPlaybackCtx();
     const buffer = await audio.decodeAudioData(await res.arrayBuffer());
-    clips.set(word.id, {
+    clips.set(key, {
       buffer,
       onsetS: word.onsetS,
       durationS: word.durationS,
@@ -190,10 +198,10 @@ export function loadClip(word: Word): Promise<void> {
     // A cached failure is right for every other cause (a 404 for a clip that
     // isn't in R2 stays a 404 all session) but wrong for a stale ticket, which
     // the very next request can fix.
-    if (err instanceof TicketError && loads.get(word.id) === load) loads.delete(word.id);
+    if (err instanceof TicketError && loads.get(key) === load) loads.delete(key);
     return undefined;
   });
-  loads.set(word.id, load);
+  loads.set(key, load);
   return load;
 }
 
@@ -207,7 +215,7 @@ export function loadClip(word: Word): Promise<void> {
  * however long the fetch takes.
  */
 export function cueDurationMsFor(word: Word | null, tone: Tone): number {
-  const clip = word ? clips.get(word.id) : undefined;
+  const clip = word ? clips.get(clipKeyFor(word)) : undefined;
   if (clip) return clip.clipS * 1000;
   return word ? word.clipS * 1000 : synthCueMsFor(tone);
 }
@@ -272,7 +280,7 @@ export function playToneCue(
   // resume in case a backgrounding suspended it; a gesture retries otherwise.
   const ctx = getPlaybackCtx();
   if (ctx.state !== "running") void ctx.resume();
-  const clip = forceSynth ? undefined : word ? clips.get(word.id) : undefined;
+  const clip = forceSynth ? undefined : word ? clips.get(clipKeyFor(word)) : undefined;
   if (clip) {
     const src = ctx.createBufferSource();
     src.buffer = clip.buffer;

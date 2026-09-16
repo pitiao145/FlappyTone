@@ -23,11 +23,22 @@
  */
 
 import { wordsFromCatalog, type Word } from "../game/words.ts";
-import { CATALOG_SELECT, DEFAULT_SPEAKER_ID } from "./catalogRows.ts";
+import { CATALOG_SELECT, DEFAULT_SPEAKER_ID, flattenCatalogRows } from "./catalogRows.ts";
 import fallback from "./wordsFallback.json";
 import { getSupabase, warn } from "./supabase.ts";
 
-export const CATALOG_KEY = "toneflap.catalog.v1";
+/**
+ * v2 because the row shape changed (the measurements moved to `word_clips`),
+ * and per-speaker because a cache keyed on neither would hand a player the
+ * other voice's geometry with no error and no way to notice.
+ *
+ * Old `toneflap.catalog.v1` entries are deliberately not migrated and not
+ * cleaned up: a stale catalog cache costs exactly one cold fetch, and a
+ * removal pass would be code that exists forever to reclaim a few kB once.
+ */
+export const CATALOG_KEY_PREFIX = "toneflap.catalog.v2.";
+
+const keyFor = (speaker: string): string => `${CATALOG_KEY_PREFIX}${speaker}`;
 
 interface CachedCatalog {
   savedAt: number;
@@ -44,12 +55,16 @@ interface CachedCatalog {
  * expiring it would trade a working offline game for freshness the live read
  * already provides whenever it can.
  */
-export function catalogFromCache(): Word[] | null {
+export function catalogFromCache(speaker: string): Word[] | null {
   try {
-    const raw = localStorage.getItem(CATALOG_KEY);
+    const raw = localStorage.getItem(keyFor(speaker));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<CachedCatalog>;
     if (!Array.isArray(parsed?.rows)) return null;
+    // Cached rows are already flattened by `writeCache`, so they parse
+    // directly. Flattening again here would find no `word_clips` key and drop
+    // every row — a silent fall-through to the bundled snapshot on every cold
+    // start.
     const words = wordsFromCatalog(parsed.rows);
     return words.length > 0 ? words : null;
   } catch {
@@ -59,9 +74,9 @@ export function catalogFromCache(): Word[] | null {
   }
 }
 
-function writeCache(rows: unknown[]): void {
+function writeCache(speaker: string, rows: unknown[]): void {
   try {
-    localStorage.setItem(CATALOG_KEY, JSON.stringify({ savedAt: Date.now(), rows }));
+    localStorage.setItem(keyFor(speaker), JSON.stringify({ savedAt: Date.now(), rows }));
   } catch (err) {
     // Full or blocked storage. The words are already in hand; only the next
     // cold start loses out.
@@ -93,26 +108,35 @@ function catalogFromFallback(): Word[] {
  * because the join is the one part of the query shape that would otherwise be
  * guessed at later.
  */
-export async function fetchCatalog(opts?: { listId?: string }): Promise<Word[]> {
+export async function fetchCatalog(opts: { speaker: string; listId?: string }): Promise<Word[]> {
   try {
     const supabase = getSupabase();
     if (supabase) {
-      const select = opts?.listId
+      const select = opts.listId
         ? `${CATALOG_SELECT},word_lists!inner(list_id)`
         : CATALOG_SELECT;
+      // No `words.status` filter, and its absence is deliberate: publication is
+      // a property of the *recording* now, not of the word, so it is filtered
+      // inside the embed (`word_clips.status`) below. The `words.status`
+      // column still physically exists until a later contract migration, so
+      // the old filter would keep working and mask the change.
       let query = supabase
         .from("words")
         .select(select)
-        .eq("status", "published");
-      if (opts?.listId) query = query.eq("word_lists.list_id", opts.listId);
+        .eq("word_clips.speaker_id", opts.speaker)
+        .eq("word_clips.status", "published");
+      if (opts.listId) query = query.eq("word_lists.list_id", opts.listId);
       const { data, error } = await query.order("position", { ascending: true });
       if (error) {
         warn("catalog", `words select failed: ${error.message}`);
       } else {
-        const rows = (data ?? []) as unknown[];
+        // Flattened once, before both the parse and the cache write: caching
+        // the raw embed rows would make every later cold start parse them to
+        // zero words and silently fall through to the bundled snapshot.
+        const rows = flattenCatalogRows((data ?? []) as unknown[]);
         const words = wordsFromCatalog(rows);
         if (words.length > 0) {
-          writeCache(rows);
+          writeCache(opts.speaker, rows);
           return words;
         }
         // A live read that parses to nothing is a misconfiguration, not an
@@ -124,5 +148,5 @@ export async function fetchCatalog(opts?: { listId?: string }): Promise<Word[]> 
   } catch (err) {
     warn("catalog", "catalog read threw", err);
   }
-  return catalogFromCache() ?? catalogFromFallback();
+  return catalogFromCache(opts.speaker) ?? catalogFromFallback();
 }

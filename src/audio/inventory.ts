@@ -17,6 +17,7 @@
  * is seeded synchronously from the cache below.
  */
 
+import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
 import { catalogFromCache, fetchCatalog } from "../data/words.ts";
 import { type Word } from "../game/words.ts";
 
@@ -27,7 +28,10 @@ let cache: Promise<Word[]> | null = null;
  * on the first frame of a returning visit rather than after a round trip.
  * Replaced by the live list the moment `loadInventory()` resolves.
  */
-let resolved: Word[] | null = catalogFromCache();
+// The speaker is passed explicitly rather than defaulted inside
+// `fetchCatalog`, so the task that introduces a resolved speaker cannot miss a
+// call site by leaving one silently on Jane.
+let resolved: Word[] | null = catalogFromCache(DEFAULT_SPEAKER_ID);
 
 /**
  * The inventory if it has already landed, else null.
@@ -43,7 +47,7 @@ export function inventoryNow(): Word[] | null {
 }
 
 export function loadInventory(): Promise<Word[]> {
-  cache ??= fetchCatalog().then((words) => {
+  cache ??= fetchCatalog({ speaker: DEFAULT_SPEAKER_ID }).then((words) => {
     // `fetchCatalog` never rejects and never returns an empty list unless the
     // bundled export is itself empty, so there is nothing left to catch here.
     resolved = words;
