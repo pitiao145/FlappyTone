@@ -60,6 +60,13 @@ const output = `/**
  * The same measurement \`averagePolyline\` (src/ui/toneAverageChart.ts)
  * produces for the Lab's \`averages\` tab and the landing page's cards —
  * baked here so \`src/game/toneClassifier.ts\` can read it with zero I/O.
+ *
+ * These are the **default speaker's** averages, and they stay that way on
+ * purpose even now that there is a roster. This is a tone *shape* reference in
+ * Chao space, and Chao space is normalised per speaker — a man's Tone 2 and a
+ * woman's Tone 2 already describe the same curve here, in different Hz. Making
+ * this a per-speaker table would change the classifier's reading for every
+ * player to gain nothing a second voice actually needs.
  */
 
 import type { Tone } from "./gates.ts";

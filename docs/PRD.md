@@ -66,7 +66,7 @@ to a server it doesn't fully trust itself on.
 | Pitch detection | Custom band-limited McLeod Pitch Method implementation (`src/pitch/mpm.ts`) — no longer the `pitchy` package; `pitchy` remains a listed dependency but is unused in source |
 | Styling | Plain CSS with a design-token system (`src/ui/tokens.css`, `docs/BRAND.md`) |
 | Deploy | Vercel (static + serverless functions under `api/`) plus a Cloudflare Worker (`workers/clips/`, `clips.flappytone.com`) for clip audio — two deploy targets, two toolchains. The recording booth talks to the Worker's `/raw` and `/booth/words` routes; the pre-migration Vercel `api/upload.ts`/`api/auth.ts` routes and the Blob store were retired in Task 13 (Sep 2026). |
-| Backend | Supabase (Postgres + Auth) in Tokyo (ap-northeast-1): accounts, leaderboard, entitlements, and (new) the `words` catalog table. Cloudflare R2 (two private buckets, `flappytone-raw`/`flappytone-clips`) for clip audio, read only through the Worker above. Schema in `supabase/migrations/`. |
+| Backend | Supabase (Postgres + Auth) in Tokyo (ap-northeast-1): accounts, leaderboard, entitlements, and the word catalog — now three tables, `words` (the word, and its `min_tier` game access) + `speakers` (the voice roster) + `word_clips` (one row per recording, keyed `(word_id, speaker_id)`, holding every measurement). Cloudflare R2 (two private buckets, `flappytone-raw`/`flappytone-clips`) for clip audio, read only through the Worker above. Schema in `supabase/migrations/`. |
 | Target | Portrait mobile-first layout, playable on desktop |
 
 **Layout:** 9:16 portrait canvas, max-width 420px, centred, dark neutral backdrop filling the rest of the viewport.
@@ -280,7 +280,7 @@ Actual screen set (`src/app/GameApp.tsx`'s `Screen` type): `play` (title/home), 
 
 - **Title/Play home** — Play, Modes, Calibrate, Settings, How to play, and tabs into Progress/Profile.
 - **Calibration** — as in §5.4, plus a re-calibrate/forget path from Settings.
-- **Settings** — voice (calibration read-back, re-calibrate, forget), tunnel width, motion preference, link into the visualiser.
+- **Settings** — voice (calibration read-back, re-calibrate, forget), tunnel width, motion preference, link into the visualiser. The voice section also carries the **recorded-voice switch**: which speaker's recordings the player hears and whose corridors they fly. It is auto-picked from their measured f0 centre during calibration and never re-guessed once chosen, and it is hidden entirely while fewer than two speakers are active — so with today's one-voice roster it does not render. It matches pitch range, not the player: a low-voiced woman flying the man's recordings is the intended outcome.
 - **Tone visualiser** — no gates, no scrolling, no score; x is time-since-utterance-began so repeated attempts overlay each other and the target contour, and the standalone tone classifier gives a live read of which tone a shape most resembles.
 - **Tutorial run** — fixed short sequence, one tone type at a time, double tolerance, no hearts, no scoring, text cue per gate.
 - **Drill** — repeated single-tone practice, picked from `modes`.
@@ -298,7 +298,7 @@ Actual screen set (`src/app/GameApp.tsx`'s `Screen` type): `play` (title/home), 
 
 ## 9. Audio reference
 
-**Source:** 120 words (30 per tone), recorded by Jane (native Taiwanese speaker) at `/record` and cut with `npm run process-clips`. Not a third-party corpus — no MSU Tone Perfect, no audio-cmn; those were early options, never shipped, and no code references them today. See CLAUDE.md's "The clip catalog and its Worker" section for the recording→corridor pipeline; the DB/R2 migration is complete, and the pre-migration `public/ref/*.wav` + manifest path was retired in Task 13 (Sep 2026).
+**Source:** a roster of recorded speakers, not one. 120 words (30 per tone) per voice, recorded at `/record` and cut with `npm run process-clips`; Jane (native Taiwanese speaker) is the default speaker and, today, the whole roster. Each voice carries its own measurements — polyline, onset, clip length — so the corridor a player flies is measured from the clip they just heard. Clips are served per speaker at `/clip/:speaker/:id`. Not a third-party corpus — no MSU Tone Perfect, no audio-cmn; those were early options, never shipped, and no code references them today. See CLAUDE.md's "The clip catalog and its Worker" section for the recording→corridor pipeline; the DB/R2 migration is complete, and the pre-migration `public/ref/*.wav` + manifest path was retired in Task 13 (Sep 2026).
 
 Reference audio plays before the gate arrives (call-and-response): hear it, then produce it. `src/audio/reference.ts` handles playback and falls back to a synthetic sweep through the player's own calibrated range if a clip fails to load/decode — now also the fallback for an unauthorized or unreachable clip fetch (a missing play ticket, a 403 on a pro word without access, a network failure against the Worker), not only a decode error.
 

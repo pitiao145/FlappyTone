@@ -288,6 +288,58 @@ neither has an honest cross-device answer.
 
 ## Clip pipeline
 
+### A speaker, not a voice enum (16 Sep 2026)
+
+The game needed a second recorded voice, and the cheap version of that is a
+`voice` column on the clip: `'female' | 'male'`. It was rejected before it was
+written, because one column would have carried three unrelated facts — who
+recorded the take, what range it reads as to a player, and what accent they
+speak. The moment a Beijing recording exists, a `voice` enum either grows a
+second dimension or starts lying.
+
+So a voice is a **row** (`speakers`) with attributes — `gender`, `accent`,
+`is_default`, `active` — and a recording is a row in `word_clips`, keyed
+`(word_id, speaker_id)`. A third speaker is an `INSERT`, not a migration. If
+adding a voice ever needs a schema change, the shape is wrong.
+
+**The player's setting stores an axis, never a speaker id.**
+`CalibrationSettings.voice` is `{ gender }` and nothing else. A stored id
+breaks the day the roster holds two male Taiwanese speakers — which one did
+they mean? — and it breaks worse when that speaker goes inactive, since a
+preference then names a voice that cannot be played. `resolveSpeaker` answers
+the id fresh each session from whatever is active, and deliberately falls back
+to the default when the axis matches more than one active speaker: picking
+arbitrarily would make the voice a player hears depend on row order.
+
+**Each voice flies its own measurements.** `word_clips` holds `polyline`,
+`onset_s`, `clip_s` and `duration_s` per recording, not per word. That is not
+thoroughness, it is the call-and-response contract: the corridor has to be
+measured from the clip the player just heard, or the demo teaches one timing
+and the gate scores another — the exact invariant PRD §6 exists to hold ("demo
+length == gate length == polyline timeline"), which one shared polyline across
+two voices would break for whichever voice did not record it. It is also
+cheap, because polylines are in Chao space, normalised per speaker: the two
+voices' contours are already directly comparable, so nothing downstream has to
+learn about speakers to read them.
+
+**`AVERAGED_TONE_SHAPE` and `toneClassifier.ts` stay voice-independent, on
+purpose.** This will look like an oversight to whoever reads the roster work
+next, and it is not. The averaged shape is a tone *shape* reference in Chao
+space, which is already normalised per speaker — a man's Tone 2 and a woman's
+Tone 2 are the same curve there, in different Hz. Turning it into a
+per-speaker table would change the classifier's reading, and therefore
+scoring, for every player who has ever played, to gain nothing a second voice
+actually needs. The generator (`src/dev/make-tone-averages.ts`) says so in the
+header it emits, so a regeneration cannot quietly drop the warning.
+
+**The back-compat `/clip/:id` route was removed early**, rather than carried to
+a later contract step as the plan had it. Back-compat exists for users running
+the old thing; nobody is — live flappytone.com still serves the pre-migration
+Blob build, so the single-segment route had no caller anywhere in the world.
+Keeping it would have meant a route that guesses a speaker, which is precisely
+the failure mode the speaker-scoped cache key exists to prevent.
+
+
 ### The booth arms the mic on purpose now, not by arriving (16 Sep 2026)
 
 The recording booth used to go passcode → "Tap to start" → a live
