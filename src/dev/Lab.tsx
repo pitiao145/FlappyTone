@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { loadInventory } from "../audio/inventory.ts";
+import fallback from "../data/wordsFallback.json";
 import { ensureMic, setFrameSink, stopMic } from "../audio/session.ts";
 import { setActiveTracker } from "../game/activeTracker.ts";
 import type { Contour } from "../game/contours.ts";
@@ -29,7 +29,7 @@ import {
 } from "../game/settings.ts";
 import { classifyTone } from "../game/toneClassifier.ts";
 import { tuning } from "../game/tuning.ts";
-import type { Word } from "../game/words.ts";
+import { wordsFromCatalog, type Word } from "../game/words.ts";
 import { DEFAULT_CONFIG } from "../pitch/PitchTracker.ts";
 import { BACKDROP, chaoToY, drawChaoGrid, drawPip } from "../render/scene.ts";
 import { drawGate } from "../render/world.ts";
@@ -116,9 +116,14 @@ export function Lab({ onBack }: Props) {
     stopMic();
   };
 
-  const [words, setWords] = useState<Word[] | null>(null);
+  /**
+   * The bundled catalog export, not the live read: tuning is a comparison
+   * across sessions, and a word list that changes underneath it makes two
+   * Lab runs incomparable. Regenerate with `npm run export-fallback`.
+   */
+  const words = useMemo(() => wordsFromCatalog(fallback.rows), []);
   const [toneFilter, setToneFilter] = useState<Tone | "all">("all");
-  const [selectedWord, setSelectedWord] = useState<Word | null>(null);
+  const [selectedWord, setSelectedWord] = useState<Word | null>(() => words[0] ?? null);
   const [gateKey, setGateKey] = useState(0);
   const [flyingGate, setFlyingGate] = useState(false);
   const [gateResult, setGateResult] = useState<RunSnapshot | null>(null);
@@ -164,16 +169,6 @@ export function Lab({ onBack }: Props) {
    * gates (`makeGate`/`shapeForWord`) are unaffected either way.
    */
   const [showCitation, setShowCitation] = useState(false);
-
-  useEffect(() => {
-    loadInventory().then(
-      (w) => {
-        setWords(w);
-        setSelectedWord((cur) => cur ?? w[0] ?? null);
-      },
-      () => setWords([]),
-    );
-  }, []);
 
   const testGate = async () => {
     setGateError(null);
@@ -397,14 +392,14 @@ function GatePicker({
   selected,
   onSelect,
 }: {
-  words: Word[] | null;
+  words: Word[];
   tone: Tone | "all";
   onTone: (t: Tone | "all") => void;
   selected: Word | null;
   onSelect: (w: Word) => void;
 }) {
   const shown = useMemo(
-    () => (tone === "all" ? (words ?? []) : (words ?? []).filter((w) => w.tone === tone)),
+    () => (tone === "all" ? words : words.filter((w) => w.tone === tone)),
     [words, tone],
   );
 
@@ -421,10 +416,10 @@ function GatePicker({
           </button>
         ))}
       </nav>
-      {words === null && <p className="param-help">loading the manifest…</p>}
-      {words?.length === 0 && (
+      {words.length === 0 && (
         <p className="param-help">
-          The inventory is empty — public/ref/manifest.json did not load.
+          The inventory is empty — src/data/wordsFallback.json has no rows. Run
+          `npm run export-fallback`.
         </p>
       )}
       <div className="gate-picker-list">

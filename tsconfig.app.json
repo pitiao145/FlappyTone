@@ -41,8 +41,20 @@
     "src/dev/make-tone-averages.ts",
     "src/dev/pull-recordings.ts",
     "src/dev/import-words.ts",
+    "src/dev/env.ts",
+    "src/dev/serviceClient.ts",
+    "src/dev/export-fallback.ts",
     "src/dev/clipCut.test.ts",
     "src/dev/manifest.test.ts",
-    "src/render/palette.test.ts"
+    "src/render/palette.test.ts",
+    "src/dev/r2.ts",
+    "src/dev/upload-clips.ts",
+    "src/dev/migrate-raw.ts",
+    "src/dev/verify-clips.ts",
+    "src/dev/simplified.ts",
+    "src/dev/simplified.test.ts",
+    "src/dev/process-clips.ts",
+    "src/dev/clipPipeline.ts",
+    "src/dev/clipPipeline.test.ts"
   ]
 }

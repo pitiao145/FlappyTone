@@ -15,7 +15,7 @@
  * a determined attacker.
  */
 import { createClient } from "@supabase/supabase-js";
-import { json } from "./_passcode.js";
+import { json } from "./_json.js";
 
 const MAX_SCORE = 1_000_000;
 const RATE_LIMIT_WINDOW_MS = 3000;

@@ -1,14 +1,23 @@
 /**
- * The recording booth.
+ * The recording screen.
  *
- * One word at a time, big. The mic runs continuously; silence ends a take and
- * advances. Jane never has to press anything to record, and never has to make a
- * keep-or-retake decision — the only controls are for when something went
- * wrong. Everything about this screen is downstream of "she is doing this alone
- * and her time is the scarce resource".
+ * One word at a time, big. While the microphone is armed it runs continuously:
+ * silence ends a take and advances, so working down the pending list costs
+ * Jane no taps at all. That is the booth's reason to exist and nothing here
+ * may cost it.
  *
- * Per CLAUDE.md rule 1, the meters do not re-render per frame: the detector and
- * tracker run in a frame sink outside React, and React sees a 10Hz readout.
+ * What is new is that armed is a state she can see and control, not an
+ * invisible consequence of which screen she is on. `boothArming.ts` holds the
+ * three rules and the incident behind them; in short, the bulk pass arms
+ * itself and every other way of reaching a word does not.
+ *
+ * The word list, the `Uploader` and the session id belong to `Overview.tsx` —
+ * this screen is handed them, so leaving it (Back to list) cannot drop an
+ * upload that is still in flight.
+ *
+ * Per CLAUDE.md rule 1, the meters do not re-render per frame: the detector
+ * and tracker run in a frame sink outside React, and React sees a 10Hz
+ * readout.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { setFrameSink, stopMic } from "../audio/session.ts";
@@ -16,9 +25,11 @@ import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { encodeWav } from "../dev/wav.ts";
 import { TakeBuffer } from "./takeBuffer.ts";
 import { TakeDetector, type RejectReason } from "./takeDetector.ts";
-import { Uploader, type UploadState } from "./upload.ts";
-import { WORDS, type WordItem } from "./wordlist.ts";
-import { loadProgress, saveProgress } from "./progress.ts";
+import { ConfirmRedo } from "./ConfirmRedo.tsx";
+import type { Uploader, UploadState } from "./upload.ts";
+import type { BoothWord, BoothWordStatus } from "./boothWords.ts";
+import { nextPendingId } from "./boothQueue.ts";
+import { afterTake, initialArmed, needsRedoConfirm, type BoothEntry } from "./boothArming.ts";
 
 const FRAME_MS_HZ = 10;
 /** How long "got it" stays up before the next word. Long enough to register. */
@@ -26,6 +37,7 @@ const ADVANCE_DELAY_MS = 700;
 
 type Feedback =
   | { kind: "idle" }
+  | { kind: "paused" }
   | { kind: "hearing" }
   | { kind: "got-it" }
   | { kind: "rejected"; reason: RejectReason };
@@ -38,70 +50,97 @@ const REJECT_COPY: Record<RejectReason, string> = {
 };
 
 interface Props {
-  passcode: string;
+  pending: BoothWord[];
+  recorded: BoothWord[];
+  captured: Set<string>;
+  markCaptured: (id: string) => void;
+  uploader: Uploader;
+  uploads: UploadState;
+  /** The word to open on; `null` means "the first still-pending one". */
+  startId: string | null;
+  entry: BoothEntry;
+  onExit: () => void;
 }
 
-export function Recorder({ passcode }: Props) {
-  const [progress, setProgress] = useState(() => loadProgress());
-  const [index, setIndex] = useState(() => {
-    const p = loadProgress();
-    const next = WORDS.findIndex((w) => !p.done.includes(w.id));
-    return next === -1 ? WORDS.length : next;
-  });
-  const [feedback, setFeedback] = useState<Feedback>({ kind: "idle" });
+export function Recorder({
+  pending,
+  recorded,
+  captured,
+  markCaptured,
+  uploader,
+  uploads,
+  startId,
+  entry,
+  onExit,
+}: Props) {
+  /**
+   * The order pending words are worked through, fixed when this screen opens.
+   * Advance walks this list rather than the mutating `pending` array, so a
+   * word moving to `recorded` mid-session doesn't reshuffle what "next" means.
+   */
+  const [order] = useState<string[]>(() => pending.map((w) => w.id));
+  const [currentId, setCurrentId] = useState<string | null>(
+    () => startId ?? pending[0]?.id ?? null,
+  );
+  const [armed, setArmedState] = useState(() => initialArmed(entry));
+  const [feedback, setFeedback] = useState<Feedback>(() =>
+    initialArmed(entry) ? { kind: "idle" } : { kind: "paused" },
+  );
   const [level, setLevel] = useState(0);
-  const [uploads, setUploads] = useState<UploadState>({ byId: {}, pending: 0, failed: 0 });
+  const [showRecorded, setShowRecorded] = useState(false);
+  const [confirming, setConfirming] = useState<BoothWord | null>(null);
 
   const detectorRef = useRef(new TakeDetector());
   const bufferRef = useRef<TakeBuffer | null>(null);
   const levelRef = useRef(0);
   // The current word, readable from the frame sink without re-installing it.
-  const indexRef = useRef(index);
+  const currentIdRef = useRef(currentId);
   useEffect(() => {
-    indexRef.current = index;
-  }, [index]);
+    currentIdRef.current = currentId;
+  }, [currentId]);
 
   /**
-   * Persisted progress follows the *server*, not the microphone.
-   *
-   * Resume reads this, so a word is only recorded here once the upload has been
-   * acknowledged. Marking it on capture meant a permanently failed upload was
-   * still remembered as done, and coming back to the page would skip a word
-   * that never reached storage — the one failure mode resume exists to prevent.
+   * Armed, readable from the frame sink. The sink is installed once and must
+   * not be torn down on a pause — rebuilding it drops the pre-roll buffer, so
+   * resuming would clip the start of the next word.
    */
-  const markConfirmed = useCallback((id: string) => {
-    setProgress((prev) => {
-      if (prev.done.includes(id)) return prev;
-      const next = { ...prev, done: [...prev.done, id] };
-      saveProgress(next);
-      return next;
-    });
+  const armedRef = useRef(armed);
+  const setArmed = useCallback((on: boolean) => {
+    armedRef.current = on;
+    setArmedState(on);
+    const detector = detectorRef.current;
+    if (on) detector.arm();
+    else detector.disarm();
+    setFeedback(on ? { kind: "idle" } : { kind: "paused" });
   }, []);
 
-  // Lazy initialiser, not a ref assigned during render: the queue must outlive
-  // re-renders but must also not be rebuilt by one, which would drop pending
-  // uploads on the floor.
-  const [uploader] = useState(
-    () =>
-      new Uploader({
-        sessionId: progress.sessionId,
-        passcode,
-        onChange: setUploads,
-        onConfirmed: markConfirmed,
-      }),
-  );
+  /**
+   * Status by id, for the sink's after-take decision. Kept in a ref, updated
+   * after every render, for the same reason `advanceRef` is: the sink is
+   * installed once and must read live state without being torn down.
+   */
+  const statusRef = useRef<Map<string, BoothWordStatus>>(new Map());
+  useEffect(() => {
+    statusRef.current = new Map([...pending, ...recorded].map((w) => [w.id, w.status] as const));
+  });
 
-  /** Captured this session but not yet acknowledged — drives the tick, not resume. */
-  const [captured, setCaptured] = useState<Set<string>>(new Set());
-  const markCaptured = useCallback((id: string) => {
-    setCaptured((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
-  }, []);
+  const current: BoothWord | undefined =
+    pending.find((w) => w.id === currentId) ?? recorded.find((w) => w.id === currentId);
+  const allDone = pending.length === 0;
+  const total = pending.length + recorded.length;
 
-  // Ticked = captured this session or confirmed on the server. She should not
-  // watch a word untick itself while the upload is in flight.
-  const done = new Set([...progress.done, ...captured]);
-  const word: WordItem | undefined = WORDS[index];
-  const finished = index >= WORDS.length;
+  /**
+   * `nextPendingId` needs *current* `pending`/`captured`, not whatever they
+   * were the one time the sink effect ran — closing over them directly froze
+   * both at their initial values, so every advance fell to the fallback path
+   * over an empty `captured` set and walked back toward the top of the list. A
+   * ref updated every render keeps the call live without pulling
+   * `pending`/`captured` into the sink effect's deps.
+   */
+  const advanceRef = useRef<(afterId: string | null) => string | null>(() => null);
+  useEffect(() => {
+    advanceRef.current = (afterId) => nextPendingId(order, pending, captured, afterId);
+  });
 
   // Live meters, at 10Hz. Never per frame.
   useEffect(() => {
@@ -109,12 +148,14 @@ export function Recorder({ passcode }: Props) {
     return () => clearInterval(timer);
   }, []);
 
-  // One frame sink for the life of the screen. It reads the current word
-  // through a ref rather than being torn down and rebuilt on every advance,
-  // which would drop the pre-roll buffer exactly when she starts speaking.
+  // One frame sink for the life of the screen. It reads the current word and
+  // the armed flag through refs rather than being torn down and rebuilt on
+  // every advance or pause, which would drop the pre-roll buffer exactly when
+  // she starts speaking.
   useEffect(() => {
     let tracker: PitchTracker | null = null;
     const detector = detectorRef.current;
+    if (armedRef.current) detector.arm();
 
     setFrameSink((frame, sampleRate) => {
       tracker ??= new PitchTracker({ sampleRate });
@@ -131,8 +172,13 @@ export function Recorder({ passcode }: Props) {
       }
       levelRef.current = peak;
 
-      const current = WORDS[indexRef.current];
-      if (!current) return;
+      // Paused: the buffer keeps filling (so Resume doesn't clip her first
+      // syllable) but nothing reaches the detector, so nothing can be
+      // captured or uploaded.
+      if (!armedRef.current) return;
+
+      const id = currentIdRef.current;
+      if (!id) return;
       if (!detector.isArmed) detector.arm();
 
       const event = detector.push(buffer.elapsedMs, state.voiced, peak);
@@ -151,24 +197,25 @@ export function Recorder({ passcode }: Props) {
       const samples = buffer.slice(event.startMs, event.endMs);
       const wav = encodeWav(samples, buffer.sampleRate);
       uploader.enqueue(
-        current.id,
+        id,
         new Blob([wav.slice() as Uint8Array<ArrayBuffer>], { type: "audio/wav" }),
       );
-      markCaptured(current.id);
+      markCaptured(id);
       setFeedback({ kind: "got-it" });
 
-      // Advance after a beat, then listen again for the next word.
+      const after = afterTake(statusRef.current.get(id) ?? "pending");
+
       setTimeout(() => {
-        setIndex((i) => {
-          const from = Math.max(i, indexRef.current);
-          let next = from + 1;
-          // Skip anything already recorded — she may have jumped back to redo
-          // one word and should land past it, not walk the whole list again.
-          while (next < WORDS.length && uploader.getState().byId[WORDS[next].id] === "done") {
-            next++;
-          }
-          return next;
-        });
+        if (!after.advance) {
+          // A take that just replaced a published clip. Stop here rather than
+          // running on into the next word with the microphone still live.
+          armedRef.current = false;
+          setArmedState(false);
+          detector.disarm();
+          setFeedback({ kind: "paused" });
+          return;
+        }
+        setCurrentId((cur) => advanceRef.current(cur));
         setFeedback({ kind: "idle" });
         detector.arm();
       }, ADVANCE_DELAY_MS);
@@ -180,42 +227,64 @@ export function Recorder({ passcode }: Props) {
     };
   }, [markCaptured, uploader]);
 
+  // Leaving this screen turns the microphone off for real — the overview is
+  // not a place where anything can be recorded.
   useEffect(() => () => stopMic(), []);
 
-  const goTo = (i: number) => {
-    detectorRef.current.arm();
-    setFeedback({ kind: "idle" });
-    setIndex(i);
-  };
+  const goTo = useCallback(
+    (word: BoothWord) => {
+      if (needsRedoConfirm(word.status)) {
+        setConfirming(word);
+        return;
+      }
+      setCurrentId(word.id);
+      setArmed(false);
+    },
+    [setArmed],
+  );
 
-  if (finished) {
+  if (!allDone && !current) {
+    // Shouldn't happen — pending is non-empty but currentId didn't resolve.
+    // Fail visibly rather than render a blank screen.
+    return (
+      <div className="rec rec-gate">
+        <p className="rec-warn">Lost track of the current word.</p>
+        <button className="rec-btn rec-btn-primary" onClick={onExit}>
+          Back to list
+        </button>
+      </div>
+    );
+  }
+
+  if (allDone && !current) {
     return (
       <div className="rec">
         <h1 className="rec-done">All done — thank you!</h1>
         <p className="rec-sub">
-          {WORDS.length} words recorded.
+          {recorded.length} words recorded.
           {uploads.pending > 0 && ` ${uploads.pending} still uploading — keep this open a moment.`}
         </p>
         {uploads.failed > 0 && (
           <>
             <p className="rec-warn">
-              {uploads.failed} didn't reach the server. Nothing is lost while this page stays
-              open.
+              {uploads.failed} didn't reach the server. Nothing is lost while this page stays open.
             </p>
             <button className="rec-btn" onClick={() => uploader.retryFailed()}>
               Try those again
             </button>
           </>
         )}
-        <button className="rec-btn" onClick={() => goTo(0)}>
-          Back to the list
+        <button className="rec-btn rec-btn-primary" onClick={onExit}>
+          Back to list
         </button>
       </div>
     );
   }
 
+  const word = current as BoothWord;
+
   return (
-    <div className="rec">
+    <div className={"rec" + (armed ? "" : " rec-paused")}>
       <div className="rec-level" aria-hidden>
         <div className="rec-level-fill" style={{ width: `${Math.min(100, level * 140)}%` }} />
       </div>
@@ -229,39 +298,93 @@ export function Recorder({ passcode }: Props) {
 
       <div className={`rec-feedback rec-feedback-${feedback.kind}`}>
         {feedback.kind === "idle" && "Say it when you're ready"}
+        {feedback.kind === "paused" && "Mic paused — nothing is being recorded"}
         {feedback.kind === "hearing" && "listening…"}
         {feedback.kind === "got-it" && "got it ✓"}
         {feedback.kind === "rejected" && REJECT_COPY[feedback.reason]}
       </div>
 
+      <button
+        className={"rec-btn " + (armed ? "rec-btn-pause" : "rec-btn-primary")}
+        onClick={() => setArmed(!armed)}
+      >
+        {armed ? "Pause mic" : "Resume — start listening"}
+      </button>
+
       <div className="rec-strip">
-        {WORDS.map((w, i) => (
+        {pending.map((w) => (
           <button
             key={w.id}
             className={
               "rec-chip" +
-              (i === index ? " rec-chip-current" : "") +
-              (done.has(w.id) ? " rec-chip-done" : "")
+              (w.id === word.id ? " rec-chip-current" : "") +
+              (captured.has(w.id) ? " rec-chip-done" : "")
             }
-            onClick={() => goTo(i)}
+            onClick={() => goTo(w)}
             title={`re-record ${w.pinyin}`}
           >
-            {done.has(w.id) ? "✓ " : ""}
+            {captured.has(w.id) ? "✓ " : ""}
             {w.pinyin}
           </button>
         ))}
       </div>
 
+      {recorded.length > 0 && (
+        <div className="rec-recorded">
+          <button
+            className="rec-recorded-toggle"
+            onClick={() => setShowRecorded((s) => !s)}
+            aria-expanded={showRecorded}
+          >
+            {showRecorded ? "▾" : "▸"} Recorded ({recorded.length}) — tap to redo
+          </button>
+          {showRecorded && (
+            <div className="rec-strip">
+              {recorded.map((w) => (
+                <button
+                  key={w.id}
+                  className={
+                    "rec-chip rec-chip-done" + (w.id === word.id ? " rec-chip-current" : "")
+                  }
+                  onClick={() => goTo(w)}
+                  title={`re-record ${w.pinyin}`}
+                >
+                  ✓ {w.pinyin}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="rec-footer">
-        <button className="rec-btn" onClick={() => goTo(Math.max(0, index - 1))}>
-          Redo last
+        <button className="rec-btn" onClick={onExit}>
+          Back to list
         </button>
+        {uploads.failed > 0 && (
+          <button className="rec-btn" onClick={() => uploader.retryFailed()}>
+            Try {uploads.failed} again
+          </button>
+        )}
         <span className="rec-count">
-          {done.size} / {WORDS.length}
+          {recorded.length} / {total}
           {uploads.pending > 0 && ` · ${uploads.pending} uploading`}
           {uploads.failed > 0 && ` · ${uploads.failed} failed`}
         </span>
       </div>
+
+      {confirming && (
+        <ConfirmRedo
+          word={confirming}
+          onConfirm={() => {
+            const w = confirming;
+            setConfirming(null);
+            setCurrentId(w.id);
+            setArmed(false);
+          }}
+          onCancel={() => setConfirming(null)}
+        />
+      )}
     </div>
   );
 }

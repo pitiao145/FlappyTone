@@ -56,6 +56,21 @@
     "src/record/wordlist.ts",
     "src/record/pinyin.ts",
     "src/dev/import-words.ts",
-    "src/render/palette.test.ts"
+    "src/render/palette.test.ts",
+    "src/dev/env.ts",
+    "src/dev/serviceClient.ts",
+    "src/dev/export-fallback.ts",
+    "src/game/tiers.ts",
+    "src/data/database.types.ts",
+    "src/dev/r2.ts",
+    "src/dev/upload-clips.ts",
+    "src/dev/migrate-raw.ts",
+    "src/dev/verify-clips.ts",
+    "src/dev/simplified.ts",
+    "src/dev/simplified.test.ts",
+    "src/dev/process-clips.ts",
+    "src/record/wordIds.ts",
+    "src/dev/clipPipeline.ts",
+    "src/dev/clipPipeline.test.ts"
   ]
 }

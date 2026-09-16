@@ -326,6 +326,25 @@ export interface Tuning {
   /** Seconds of movement kept in the trail. */
   trailSeconds: number;
 
+  // ---- audio prefetch
+  /**
+   * Speculative clip prefetch depth, in words per tone.
+   *
+   * The gates the Run has already queued are fetched unconditionally and
+   * first (audio/prefetch.ts's "exact" tier); this is the bet placed on top
+   * of it, and the only thing it costs is bandwidth. `pickWord` draws
+   * pseudo-randomly from the full 30-word tone pool, so a cap of N warms
+   * roughly N/30 of the gates a run actually flies. Chosen by simulating the
+   * pick over a 20-gate run: 6 costs ~39 clips (~4.7 MB) for a ~20% hit rate,
+   * 8 costs ~46 (~5.5 MB) for ~27%, against the whole 120-clip, ~15 MB
+   * catalog the prefetch used to pull. A 3-heart run reaches ~20-40 gates, so
+   * anything much deeper is paying for words the run will never reach.
+   * 0 disables the speculative tier entirely,
+   * leaving only the 2-gate look-ahead (production's behaviour before the
+   * prefetch existed).
+   */
+  prefetchWordsPerTone: number;
+
   // ---- calibration
   /**
    * Fraction of the measured Tone-1 level that becomes the board's upward half
@@ -401,6 +420,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   easeTauMs: 35,
   driftChaoPerSec: 5.33,
   trailSeconds: 1.0,
+  prefetchWordsPerTone: 6,
   reachToToneSpaceUp: 1,
   reachToToneSpaceDown: 1,
   gateDurationS: Object.freeze({ 1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6 }),

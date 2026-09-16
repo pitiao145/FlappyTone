@@ -15,6 +15,7 @@ import {
   playToneCue,
 } from "../audio/reference.ts";
 import { inventoryNow, loadInventory } from "../audio/inventory.ts";
+import { planPrefetch, prefetchPool } from "../audio/prefetch.ts";
 import { isChromeIOS, isIOS } from "../audio/platform.ts";
 import { MicStatusBanner } from "./MicStatus.tsx";
 import {
@@ -27,7 +28,10 @@ import {
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
+import { getTier, useTier } from "../data/tier.ts";
+import { wordsForTier } from "../game/words.ts";
 import { TONE_INFO, type Tone } from "../game/gates.ts";
+import { tuning } from "../game/tuning.ts";
 import { CALIBRATION_TONES, Run, type RunMode, type RunSnapshot } from "../game/run.ts";
 import type { Word } from "../game/words.ts";
 import type { GateOutcome, UnheardHint } from "../game/scoring.ts";
@@ -187,6 +191,11 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   // "tutorial" and "single" — the HUD elements gated on this once read
   // `mode === "game"` alone, back when "game" was the only scored mode.
   const scored = mode === "game" || mode === "drill" || mode === "learn";
+  // Learn mode always takes playToneCue's synth branch (see the cue below), so
+  // a clip fetched for it would never be heard. Every other mode cues a clip
+  // when it has one.
+  const cuesUseClips = mode !== "learn";
+  const tier = useTier();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   /**
    * Latest `canvasHeight`, read by the run-owning effect's tick loop without
@@ -409,6 +418,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     const cueStyle = mode === "tutorial" ? "pause" : loadCueStyle();
     // Every fresh Run (mount, or a pause-menu Restart bumping runGen)
     // replays the walkthrough from the top.
+    // NB: this effect's position ABOVE the prefetch effect is load-bearing —
+    // React runs effects in declaration order, and the prefetch reads this
+    // run's already-queued gates to put them ahead of its speculative tier.
     frozenRef.current = false;
     frozenAccumMsRef.current = 0;
     freezeStartedAtRef.current = 0;
@@ -431,9 +443,25 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // needs the flag so its cue carries the leading route-cling delay; the
       // host below performs the actual release/re-acquire.
       releaseMicForCue,
-      // Whatever the manifest fetch has produced by now. Empty is a valid run:
-      // it flies the tuning defaults with synthetic cues.
-      words: inventoryNow() ?? [],
+      // Whatever the manifest fetch has produced by now, narrowed to the words
+      // this tier's game may use. Empty is a valid run: it flies the tuning
+      // defaults with synthetic cues.
+      //
+      // `min_tier` is the *game* gate — the same value the Worker enforces at
+      // `/clip/:id` — so the pool has to agree with it or a gated word flies
+      // with a synthetic sweep instead of its recording. (The visualiser's
+      // `wordsPerTone` is a separate, count-based practice limit; it must
+      // never reach this pool, or a guest's 0-word cap would starve the game.)
+      //
+      // Read from the store (`getTier()`), not the `tier` this component holds
+      // from `useTier()`: `tier` resolves asynchronously, and putting it in
+      // this effect's dependency array would tear down and rebuild a live Run
+      // the moment the answer landed. The store answers synchronously and, in
+      // a session where the tier has already resolved once, correctly. The one
+      // stale case — the very first run after a cold load, where the store
+      // still holds its "guest" default — is repaired in place by the
+      // tier-pool effect below, via `setWords`, with no teardown.
+      words: wordsForTier(inventoryNow() ?? [], getTier()),
       singleWord,
       drillTone,
       // The calibration flight (autoStart) flies only the grid-anchoring tones;
@@ -447,7 +475,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // read against the harder one's settings.
     track({ type: "run_start", mode, corridor, cue: cueStyle });
     // If the manifest had not landed when the Run was built, catch it up.
-    if (!inventoryNow()) void loadInventory().then((w) => run.setWords(w));
+    // `getTier()` is read again here rather than captured above: the tier may
+    // well have resolved while the fetch was in flight.
+    if (!inventoryNow()) void loadInventory().then((w) => run.setWords(wordsForTier(w, getTier())));
     let tracker: PitchTracker | null = null;
     let rafId = 0;
     let running = true;
@@ -657,8 +687,13 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         setHud(snap);
         // Fetch the audio for every gate still ahead of the bird. loadClip is
         // idempotent per id, so this is a no-op once a word is in flight; the
-        // queue runs two gates ahead, which is seconds of warning.
-        for (const g of snap.gates) if (g.word) void loadClip(g.word);
+        // queue runs two gates ahead, which is seconds of warning. This is the
+        // exact tier (audio/prefetch.ts) as the run advances — the mount-time
+        // effect below seeds it for the gates that exist before the first tick,
+        // which is what stops the first gate losing the race to the bulk pool.
+        // Skipped entirely in learn mode, which cues synthetically by design
+        // (see playToneCue's forceSynth above) and would never play the clip.
+        if (cuesUseClips) for (const g of snap.gates) if (g.word) void loadClip(g.word);
         // Mirrored every tick, not just at game over, so quitting mid-run or
         // closing the tab still leaves the numbers behind.
         saveGateLog(snap.gateLog, snap.missedUtterances);
@@ -764,6 +799,85 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     reportGates,
     reportRunEnd,
   ]);
+
+  /**
+   * Seed the clip cache for this run, in priority order.
+   *
+   * The Run's own look-ahead (two gates, in the HUD timer above) is what
+   * guarantees the *next* cue, but it only starts on the first HUD tick — by
+   * which time an unordered bulk prefetch has already taken all four
+   * connection slots, which is why the first gate of every run used to cue as
+   * a synthetic sweep. So this runs the same two tiers in one ordered list
+   * (`planPrefetch`): the gates already queued first, then a mode-scoped,
+   * `prefetchWordsPerTone`-capped bet on what a later gate might pick. The HUD
+   * tick takes the exact tier over from here as the queue advances.
+   *
+   * Deliberately its own effect rather than a line in the run-owning effect
+   * above: `tier` resolves asynchronously, and adding it to that effect's
+   * dependencies would tear down and rebuild a live Run the moment the tier
+   * answer landed.
+   *
+   * Filtered by tier so a guest never prefetches a pro word the Worker would
+   * 403 — a cached failure for a word they might legitimately get later.
+   * Fire-and-forget by definition; nothing here can delay a run.
+   */
+  useEffect(() => {
+    // Every mode that cues a clip gets the EXACT tier — `tutorial` (which is
+    // also the calibration flight) and `single` included. They used to be
+    // excluded by `scored`, which left them relying solely on the HUD tick at
+    // HUD_HZ = 4: up to 250ms before the first fetch even starts, then the
+    // full /token round trip, on a flight of at most four fixed gates that has
+    // no reason to be cold. Widening the gate does NOT widen the speculative
+    // tier — `planPrefetch` still returns [] for both modes, so calibration
+    // can never acquire a catalog-wide pool.
+    if (!cuesUseClips) return;
+    const start = (all: Word[]): void => {
+      // The Run is built (and its queue filled) by the run-owning effect
+      // above, which React runs first on mount because it is DECLARED first —
+      // that declaration order is load-bearing, and moving this effect above
+      // it would put the speculative tier back in front of the first gate.
+      // It is not left resting on that alone: a null here (an empty ref) plans
+      // *nothing* rather than falling back to the pool, so the worst case is
+      // the HUD tick's own look-ahead, never the bulk-first inversion.
+      const queued = runRef.current?.snapshot().gates.map((g) => g.word) ?? null;
+      prefetchPool(
+        planPrefetch({
+          mode,
+          drillTone,
+          queued,
+          pool: wordsForTier(all, tier),
+          perTone: tuning().prefetchWordsPerTone,
+        }),
+      );
+    };
+    const now = inventoryNow();
+    if (now) start(now);
+    else void loadInventory().then(start, () => undefined);
+  }, [cuesUseClips, mode, drillTone, tier, runGen]);
+
+  /**
+   * Re-narrow a live run's word pool once the tier answer lands.
+   *
+   * The Run is built from `getTier()`'s synchronous store read, which on the
+   * very first run after a cold load is still the "guest" default. This pushes
+   * the resolved pool into the existing Run through the same `setWords` seam a
+   * late inventory fetch uses — gates already spawned keep the corridor they
+   * were built with, and nothing is torn down. Deliberately *not* a dependency
+   * of the run-owning effect above, which would rebuild the run instead.
+   *
+   * The pool can move either way. Cold-load resolution widens it (the store's
+   * default is `"guest"`, the narrowest tier); a mid-run sign-out narrows it
+   * (`onAuthStateChange` refreshes the tier, pro → guest). Both are safe for
+   * the same reason: `setWords` only feeds `pickWord`, which is consulted for
+   * a gate not yet spawned. A gate already on screen or in flight keeps the
+   * word and corridor it was built with either way.
+   */
+  useEffect(() => {
+    const run = runRef.current;
+    if (!run) return;
+    const now = inventoryNow();
+    if (now) run.setWords(wordsForTier(now, tier));
+  }, [tier, runGen]);
 
   // Show the *active* gate's tone while flying it — showing the next gate's
   // tone mid-gate would teach the wrong contour (this matters most in the

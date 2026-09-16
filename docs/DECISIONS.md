@@ -9,6 +9,46 @@ approach, or where the obvious-looking alternative was tried and failed.
 
 ## Backend, accounts & persistence
 
+### Two tier gates, two meanings — and every word is free (15 Sep 2026)
+
+`docs/SPECS/flappytone-SPEC-clip-catalog-r2.md` had the clip pipeline mark the
+first `TIER_LIMITS.free.wordsPerTone` words of each tone `min_tier='free'` and
+the remaining 25 `'pro'`, reusing one number for two different jobs. The clips
+Worker enforces `min_tier` at `/clip/:id` with a 403, but `Game.tsx` built the
+run from the UNFILTERED inventory — so a guest or free player flew words whose
+clips were refused and heard the synthetic sweep for roughly 83% of cues. It
+also contradicted a rule CLAUDE.md already stated: `pickWord`, feeding a scored
+run, must never be limited by a tier's word count, because a guest's count is
+zero.
+
+Resolved by splitting the two gates rather than deleting either:
+
+- **`min_tier` = game access.** "May this tier's run fly this word." It is what
+  the Worker enforces at the edge, and now also what the run's word pool is
+  filtered by — the two cannot disagree. Marking a future word `'pro'` gates it
+  in both places at once, with no code change. That lever is the reason the
+  per-tier architecture was kept.
+- **`TIER_LIMITS[tier].wordsPerTone` = practice depth.** A COUNT, applied only
+  to the visualiser's per-tone practice list (guest 0, free 5, pro all). It
+  never reaches the game's pool.
+
+**Every one of the 120 words is `min_tier='free'` today** (a data update, not a
+migration), and `seed-words.ts` now defaults new words open. So observable
+behaviour is identical to production: all 120 words for every tier, guests
+included, and no cue that was recorded becomes synthetic.
+
+**The run's pool reads the tier synchronously, from `tier.ts`'s store, not from
+`useTier()`.** `tier` could not simply join the run-owning effect's dependency
+array — a late answer would tear down and rebuild a live `Run` mid-flight,
+which is exactly why the prefetch already lives in its own effect. `getTier()`
+answers immediately and, after the first resolution in a session, correctly.
+The one stale case is the very first run after a cold load, where the store
+still holds its `"guest"` default; a small effect keyed on `tier` repairs it in
+place through `run.setWords()` — the same seam a late inventory fetch uses,
+which leaves already-spawned gates alone and tears nothing down. Since the
+store's default is the narrowest tier, resolution only ever widens the pool.
+
+
 **v1's "no accounts / no gameplay backend / no persistence" was a shipping boundary, and it is now deliberately lifted (5 Sep 2026).** It was the right call for v1 — staying client-only let the game ship and validate fast, and kept the privacy story simple (no server ever sees a voice). It was never a permanent architectural law. Real traction changed the calculus: a leaderboard is inherently shared state that cannot live in one browser, cross-device progress is the honest payoff behind "sign up to save," and the EarlyBird monetisation needs a notion of a paying account. So accounts + a backend are now the decided direction, not a non-goal.
 
 **Chosen stack: Supabase (auth + Postgres) + Cloudflare R2 for object storage.** The deciding factor was auth — Cloudflare has no managed consumer-auth product, so an all-Cloudflare path meant hand-rolling auth on D1; Supabase Auth (incl. anonymous sign-in) covers it first-party, and Postgres fits the tone-analytics roadmap better than D1's SQLite. R2 wins object storage on zero egress and is already the repo's clip-storage plan. Full rationale + the schema/security/scaling design live in `docs/flappytone-ARCH-supabase.md`; the scoped first build in `docs/flappytone-SPEC-supabase-phase1.md`.
@@ -247,6 +287,172 @@ of *this* device, the other decides whether today continues the streak, and
 neither has an honest cross-device answer.
 
 ## Clip pipeline
+
+### The booth arms the mic on purpose now, not by arriving (16 Sep 2026)
+
+The recording booth used to go passcode → "Tap to start" → a live
+microphone. The screen that told Jane to get ready *was* the screen that was
+already recording, and there was no state in between where she could see what
+was left, what was done, or decide to do nothing.
+
+That cost real audio. The all-done screen's "Redo a word" button read
+`goTo(recorded[0].id)` — no picker, just a jump to whatever sat first in the
+recorded list, microphone live. During the live pipeline test Pierre tapped
+it expecting a list, landed on `ma1b` (媽) without realising the booth was
+listening, spoke, and replaced Jane's published take with his own voice. The
+row flipped to `recorded`, which removed 媽 from the published catalog, from
+the Worker's word map and from the calibration flight; running
+`process-clips` would have shipped the wrong voice. Repaired by hand with an
+`update words` and an R2 delete.
+
+The fix is not a picker — a picker alone would have made that tap land on the
+right word with the microphone just as live. Three rules, in
+`src/record/boothArming.ts` so they are testable and cannot drift back into
+render code:
+
+- **Only the bulk pass arms itself.** Working down the pending list is the
+  booth's whole reason to exist and must still cost zero taps, so "Start
+  recording" arms immediately. Every other way of reaching a word — "Record
+  this one" from the overview, a chip on the recording screen — lands
+  **paused**. Re-recording is now two deliberate taps rather than none.
+- **A `published` word asks first.** `published` means the clip is live in the
+  game; `recorded` means uploaded but not yet through `process-clips`, so
+  nothing downstream has consumed it and replacing it costs nothing. Only the
+  destructive case gets a confirm.
+- **A take that replaced a published clip stops the run.** Without this, a redo
+  advances straight into the next word with the microphone still live — the
+  same accident wearing a different hat.
+
+Two structural consequences. `Overview.tsx` now owns the word fetch, the
+session id and the `Uploader`, because "Back to list" must not rebuild the
+upload queue and drop a take still in flight; `Recorder.tsx` is handed all of
+it as props. And **pause does not tear down the frame sink** — it returns
+early inside it and disarms the detector, because rebuilding the sink would
+drop the pre-roll buffer and clip the first syllable after Resume. The sink's
+install-once discipline predates this and is load-bearing for a different
+reason (see its own comment); pause had to fit around it, not through it.
+
+**Multi-voice is deliberately not built here.** The same 120 words need a male
+recording, but `words.status` is one row per word and a second voice makes
+that a one-to-many — a schema question with knock-ons into R2 key layout and
+`process-clips`, not a UI one. All the booth carries today is
+`BOOTH_VOICE` (one constant, rendered in the overview header) and a refusal to
+cache the pending/recorded split locally, so a reshaped `GET /booth/words`
+needs no reconciliation when that lands.
+
+
+### Clip catalog: DB + R2 migration overrides the plan (Sep 2026)
+
+`docs/SPECS/flappytone-SPEC-clip-catalog-r2.md` moved the word catalog from
+three flat files (`wordlist.ts`, `glossary.ts`, `public/ref/manifest.json`)
+to a Supabase `words` table, and clip audio from git-tracked
+`public/ref/*.wav` to two private Cloudflare R2 buckets behind a Worker
+(`workers/clips/`, `clips.flappytone.com`). Several of the spec's own
+decisions were overridden while building it — recorded here because the spec
+text itself still says the earlier thing:
+
+**ES256, not HS256, for the Supabase session JWT.** Supabase signs with an
+asymmetric P-256 key, not a shared HMAC secret — the project has no
+`SUPABASE_JWT_SECRET` to give the Worker. `workers/clips/src/supabaseJwt.ts`
+verifies against the project's own JWKS (`createRemoteJWKSet`, cached per
+isolate) and pins `algorithms: ["ES256"]` explicitly, so a future weaker key
+type can't silently widen what's accepted. This is a different trust model
+than `api/score.ts`'s, which never needed to name an algorithm because it was
+never written against a plan that assumed HS256.
+
+**Guests get clips; the spec's "no JWT ⇒ no clips" was dropped.**
+`POST /token` never hard-fails — a missing, malformed, expired, or anonymous
+Supabase session all mint a `guest`-tier ticket rather than a 401, because a
+guest playing with real reference audio is the product; only
+`min_tier='pro'` words are actually gated at `GET /clip/:id`. Since nothing
+gates the *common* case any more, bulk download is now stopped by
+defence-in-depth rather than a single wall: both R2 buckets are private (no
+`r2.dev` URL, no public/custom domain, no CORS policy — the Worker is the
+only reader), there is no listing endpoint, `/clip/:id` serves one clip per
+request, and tickets are short-lived (30 min) and IP-bound
+(`verifyTicket` rejects a ticket replayed from a different IP outright, not
+just "less trusted"). The last layer — a Cloudflare WAF rate-limit rule on
+`/clip/*` and `/token` — is specified in `docs/SPECS/R2_SETUP.md` but **not
+yet configured**; a live probe of 20 rapid `POST /token` from one IP returned
+20×200, no 429. Until that rule exists the defence-in-depth list is one
+layer short of what this section describes.
+
+**`min_tier` gates game access; `TIER_LIMITS.wordsPerTone` gates visualiser
+practice depth — conflating them was a real incident, not a design choice.**
+The spec's per-tier word split (a fixed number of words per tone free, the
+rest `min_tier='pro'`) was implemented exactly as written, by every agent
+that touched it, and still broke the game: `CLAUDE.md` already stated "a
+guest's zero-word visualiser cap must never starve their actual game," and
+the spec's split put ~83% of the run's own word pool behind `pro` for every
+non-Pro player, so the scored game played a synthetic sweep for most cues.
+The bug was invisible to a task-vs-task or task-vs-plan pre-flight scan
+because both sides were internally consistent with the spec — it was the
+spec that contradicted an existing invariant, and nothing was checking specs
+against `CLAUDE.md`. Fixed by splitting the two gates for good: every word's
+`min_tier` is `'free'` today (the game's run pool and `/clip`'s gate both
+read it, and stay in agreement by construction, not by convention);
+`TIER_LIMITS[tier].wordsPerTone` still controls how many words per tone the
+*visualiser* lets a tier practise, independent of `min_tier`. Re-tiering the
+game later is a data-only `UPDATE`, not a rule change.
+
+**The shared edge cache stores `public`; the browser is handed `private`.**
+`GET /clip/:id`'s cache key carries only `id` and the catalog's own
+`updated_at` (as `?v=`) — nothing about the caller — so the object behind it
+is safe to share across every requester once the pro gate has already run.
+Cloudflare's Cache API refuses to store a response marked `private`, so the
+cached copy is written `public, max-age=604800, immutable` and rewritten to
+`private` only on the way out to the browser, so no intermediary between the
+edge and the player holds a per-player response.
+
+**`contour` is excluded from `wordsFallback.json`**, along with `raw_key` and
+`recorded_session` — overriding the original plan's Decision 7, which
+assumed the landing tone charts read a fallback row's `contour`. They don't:
+`ToneAverageCard`/`ContourSpark` read `polyline` via `toneAverages.ts`, and
+nothing in `src/` reads `contour` off a fallback row at all. Shipping it
+anyway was ~23kB gzip of dead weight on the landing page's critical path,
+against the migration's own de-bloat goal. The DB column is untouched —
+`process-clips` still writes real `contour` data to every row — this only
+narrows what gets bundled into the client.
+
+**`SEED_F0_CENTER = 168` is a pinned constant, not derived from the
+catalog.** The pipeline's pitch-search reference used to be read off the
+last published word's own measured `f0Center`; seeding from that (201.4Hz on
+one run) instead of `make-clips`'s original literal 168 moved 90 of the 120
+shipped polylines in their 3rd decimal place — small, but silent, and not
+re-derivable after the fact without the exact prior seed. Now a named
+constant in the side-effect-free `src/dev/clipPipeline.ts`, guarded by a
+golden `cutClip` test over all four anchor takes (verified non-vacuous: the
+201.4 seed fails all four).
+
+**`manifest.test.ts`'s job moved to `src/data/catalogSeam.test.ts`, the
+invariant did not.** `CLAUDE.md`'s pipeline rule #5 said the manifest test
+is the seam between the cutter and the game — a renamed field there
+degrades silently to an empty inventory, which looks exactly like the game
+working. The manifest itself is on its way out (Task 13, not yet done — see
+CLAUDE.md's "clip catalog" section), so the seam moved to the catalog row
+shape: `catalogSeam.test.ts` pins `CATALOG_SELECT`/`wordsFromCatalog`/
+`FALLBACK_COLUMNS` together and lives in `src/data/`, outside everything
+Task 13 deletes, so the guard survives that task rather than needing to be
+rewritten by it.
+
+**Task 13 landed (Sep 2026).** `public/ref/*.wav` is untracked (kept on disk
+locally, not deleted), `public/ref/manifest.json` is deleted, and so are
+`api/upload.ts`, `api/auth.ts`, `api/_passcode.ts` + its test,
+`src/dev/pull-recordings.ts`, `src/dev/make-clips.ts`, and
+`src/dev/manifest.test.ts`. `@vercel/blob` is out of `package.json`.
+`wordlist.ts`'s `WORDS` array and `words.ts`'s `loadWords`/`manifestToRows`
+adapter are gone; `wordlist.test.ts` and `simplified.test.ts` were
+retargeted at `wordsFallback.json` rows, and `run.test.ts`/`words.test.ts`
+at `wordsFromCatalog` directly. `_passcode.ts`'s `json` helper — the one
+piece of it the four surviving functions still needed — moved to
+`api/_json.ts` rather than being deleted with the passcode gate itself.
+`seed-words.ts`, `upload-clips.ts` and `migrate-raw.ts` are kept as frozen,
+already-run historical scripts (their own headers say so now);
+`seed-words.ts` no longer compiles (both its inputs are gone) and was
+dropped from `tsconfig.node.json`'s `include`. CLAUDE.md, PRD.md and this
+file were updated to match; TESTING.md needed no changes (its one
+`public/ref/` reference is to files that are still present on disk, just
+untracked).
 
 **Clips are the whole take, not the voiced window (9 Aug 2026).** Cutting on
 voicing dropped a median of 360ms of audible material, worst on Tone 3 where

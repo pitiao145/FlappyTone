@@ -11,7 +11,7 @@
  * human-readable name like "FT-roadmap-signup" instead of a numeric id you'd
  * have to go find in the Kit dashboard first.
  */
-import { json } from "./_passcode.js";
+import { json } from "./_json.js";
 
 const KIT_API_BASE = "https://api.kit.com";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

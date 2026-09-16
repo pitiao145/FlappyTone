@@ -1,0 +1,4806 @@
+{
+  "version": 1,
+  "exportedAt": "2026-09-15T05:48:23.746Z",
+  "rows": [
+    {
+      "clip_key": "ma1b.wav",
+      "clip_s": 1.8367,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.4767,
+      "english": "mother",
+      "hanzi": "媽",
+      "id": "ma1b",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "mā",
+      "polyline": [
+        [
+          0,
+          4.681
+        ],
+        [
+          1,
+          4.681
+        ]
+      ],
+      "position": 0,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:27.856869+00:00"
+    },
+    {
+      "clip_key": "ba1.wav",
+      "clip_s": 1.538,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.178,
+      "english": "eight",
+      "hanzi": "八",
+      "id": "ba1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "bā",
+      "polyline": [
+        [
+          0,
+          4.444
+        ],
+        [
+          1,
+          4.444
+        ]
+      ],
+      "position": 1,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:20.45075+00:00"
+    },
+    {
+      "clip_key": "san1.wav",
+      "clip_s": 1.6233,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.2634,
+      "english": "three",
+      "hanzi": "三",
+      "id": "san1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "sān",
+      "polyline": [
+        [
+          0,
+          4.418
+        ],
+        [
+          1,
+          4.418
+        ]
+      ],
+      "position": 2,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:31.210238+00:00"
+    },
+    {
+      "clip_key": "qi1.wav",
+      "clip_s": 1.4313,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0714,
+      "english": "seven",
+      "hanzi": "七",
+      "id": "qi1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "qī",
+      "polyline": [
+        [
+          0,
+          4.455
+        ],
+        [
+          1,
+          4.455
+        ]
+      ],
+      "position": 3,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:30.196716+00:00"
+    },
+    {
+      "clip_key": "tian1.wav",
+      "clip_s": 1.5167,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.1567,
+      "english": "sky, day",
+      "hanzi": "天",
+      "id": "tian1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "tiān",
+      "polyline": [
+        [
+          0,
+          4.328
+        ],
+        [
+          1,
+          4.328
+        ]
+      ],
+      "position": 4,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:32.58531+00:00"
+    },
+    {
+      "clip_key": "hua1.wav",
+      "clip_s": 1.4953,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.1354,
+      "english": "flower",
+      "hanzi": "花",
+      "id": "hua1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "huā",
+      "polyline": [
+        [
+          0,
+          4.458
+        ],
+        [
+          1,
+          4.458
+        ]
+      ],
+      "position": 5,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "shu1.wav",
+      "clip_s": 1.3033,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9434,
+      "english": "book",
+      "hanzi": "書",
+      "id": "shu1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "shū",
+      "polyline": [
+        [
+          0,
+          4.856
+        ],
+        [
+          1,
+          4.856
+        ]
+      ],
+      "position": 6,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "dong1.wav",
+      "clip_s": 1.346,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0074,
+      "english": "east",
+      "hanzi": "東",
+      "id": "dong1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.211,
+      "pinyin": "dōng",
+      "polyline": [
+        [
+          0,
+          4.519
+        ],
+        [
+          1,
+          4.519
+        ]
+      ],
+      "position": 7,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "jia1.wav",
+      "clip_s": 1.282,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.922,
+      "english": "home",
+      "hanzi": "家",
+      "id": "jia1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "jiā",
+      "polyline": [
+        [
+          0,
+          4.455
+        ],
+        [
+          1,
+          4.455
+        ]
+      ],
+      "position": 8,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "che1.wav",
+      "clip_s": 1.2393,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.8794,
+      "english": "car",
+      "hanzi": "車",
+      "id": "che1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "chē",
+      "polyline": [
+        [
+          0,
+          4.518
+        ],
+        [
+          1,
+          4.518
+        ]
+      ],
+      "position": 9,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "shuo1.wav",
+      "clip_s": 1.3247,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9647,
+      "english": "to speak",
+      "hanzi": "說",
+      "id": "shuo1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "shuō",
+      "polyline": [
+        [
+          0,
+          4.494
+        ],
+        [
+          1,
+          4.494
+        ]
+      ],
+      "position": 10,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "chi1.wav",
+      "clip_s": 1.2393,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.8794,
+      "english": "to eat",
+      "hanzi": "吃",
+      "id": "chi1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "chī",
+      "polyline": [
+        [
+          0,
+          4.583
+        ],
+        [
+          1,
+          4.583
+        ]
+      ],
+      "position": 11,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "he1.wav",
+      "clip_s": 1.3247,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.922,
+      "english": "to drink",
+      "hanzi": "喝",
+      "id": "he1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.275,
+      "pinyin": "hē",
+      "polyline": [
+        [
+          0,
+          4.508
+        ],
+        [
+          1,
+          4.508
+        ]
+      ],
+      "position": 12,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "shan1.wav",
+      "clip_s": 1.346,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.986,
+      "english": "mountain",
+      "hanzi": "山",
+      "id": "shan1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "shān",
+      "polyline": [
+        [
+          0,
+          4.47
+        ],
+        [
+          1,
+          4.47
+        ]
+      ],
+      "position": 13,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "xin1.wav",
+      "clip_s": 1.2393,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.8794,
+      "english": "heart",
+      "hanzi": "心",
+      "id": "xin1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "xīn",
+      "polyline": [
+        [
+          0,
+          4.496
+        ],
+        [
+          1,
+          4.496
+        ]
+      ],
+      "position": 14,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "kai1.wav",
+      "clip_s": 1.3247,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9647,
+      "english": "to open",
+      "hanzi": "開",
+      "id": "kai1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "kāi",
+      "polyline": [
+        [
+          0,
+          4.383
+        ],
+        [
+          1,
+          4.383
+        ]
+      ],
+      "position": 15,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "mao1.wav",
+      "clip_s": 1.3033,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9434,
+      "english": "cat",
+      "hanzi": "貓",
+      "id": "mao1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "māo",
+      "polyline": [
+        [
+          0,
+          4.362
+        ],
+        [
+          1,
+          4.362
+        ]
+      ],
+      "position": 16,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "chun1.wav",
+      "clip_s": 1.3033,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9434,
+      "english": "spring",
+      "hanzi": "春",
+      "id": "chun1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "chūn",
+      "polyline": [
+        [
+          0,
+          4.446
+        ],
+        [
+          1,
+          4.446
+        ]
+      ],
+      "position": 17,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "gao1.wav",
+      "clip_s": 1.346,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.986,
+      "english": "tall",
+      "hanzi": "高",
+      "id": "gao1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "gāo",
+      "polyline": [
+        [
+          0,
+          4.362
+        ],
+        [
+          1,
+          4.362
+        ]
+      ],
+      "position": 18,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "zhong1.wav",
+      "clip_s": 1.4313,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0714,
+      "english": "middle",
+      "hanzi": "中",
+      "id": "zhong1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "zhōng",
+      "polyline": [
+        [
+          0,
+          4.427
+        ],
+        [
+          1,
+          4.427
+        ]
+      ],
+      "position": 19,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "duo1.wav",
+      "clip_s": 1.3887,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0287,
+      "english": "many",
+      "hanzi": "多",
+      "id": "duo1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "duō",
+      "polyline": [
+        [
+          0,
+          4.56
+        ],
+        [
+          1,
+          4.56
+        ]
+      ],
+      "position": 20,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "jie1.wav",
+      "clip_s": 1.3887,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0287,
+      "english": "street",
+      "hanzi": "街",
+      "id": "jie1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "jiē",
+      "polyline": [
+        [
+          0,
+          4.521
+        ],
+        [
+          1,
+          4.521
+        ]
+      ],
+      "position": 21,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "tang1.wav",
+      "clip_s": 1.41,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0714,
+      "english": "soup",
+      "hanzi": "湯",
+      "id": "tang1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "tāng",
+      "polyline": [
+        [
+          0,
+          4.477
+        ],
+        [
+          1,
+          4.477
+        ]
+      ],
+      "position": 22,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "bao1.wav",
+      "clip_s": 1.41,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.05,
+      "english": "bag",
+      "hanzi": "包",
+      "id": "bao1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "bāo",
+      "polyline": [
+        [
+          0,
+          4.414
+        ],
+        [
+          1,
+          4.414
+        ]
+      ],
+      "position": 23,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "bei1.wav",
+      "clip_s": 1.346,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.986,
+      "english": "cup",
+      "hanzi": "杯",
+      "id": "bei1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "bēi",
+      "polyline": [
+        [
+          0,
+          4.53
+        ],
+        [
+          1,
+          4.53
+        ]
+      ],
+      "position": 24,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "fei1.wav",
+      "clip_s": 1.4313,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0714,
+      "english": "to fly",
+      "hanzi": "飛",
+      "id": "fei1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "fēi",
+      "polyline": [
+        [
+          0,
+          4.423
+        ],
+        [
+          1,
+          4.423
+        ]
+      ],
+      "position": 25,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "xing1.wav",
+      "clip_s": 1.3887,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0287,
+      "english": "star",
+      "hanzi": "星",
+      "id": "xing1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "xīng",
+      "polyline": [
+        [
+          0,
+          4.75
+        ],
+        [
+          1,
+          4.75
+        ]
+      ],
+      "position": 26,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "xiang1.wav",
+      "clip_s": 1.3247,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9647,
+      "english": "fragrant",
+      "hanzi": "香",
+      "id": "xiang1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "xiāng",
+      "polyline": [
+        [
+          0,
+          4.65
+        ],
+        [
+          1,
+          4.65
+        ]
+      ],
+      "position": 27,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "bing1.wav",
+      "clip_s": 1.2607,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9007,
+      "english": "ice",
+      "hanzi": "冰",
+      "id": "bing1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "bīng",
+      "polyline": [
+        [
+          0,
+          4.707
+        ],
+        [
+          1,
+          4.707
+        ]
+      ],
+      "position": 28,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "ting1.wav",
+      "clip_s": 1.2393,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.8794,
+      "english": "to listen",
+      "hanzi": "聽",
+      "id": "ting1",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "tīng",
+      "polyline": [
+        [
+          0,
+          4.676
+        ],
+        [
+          1,
+          4.676
+        ]
+      ],
+      "position": 29,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 1,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "ma2.wav",
+      "clip_s": 1.3887,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0287,
+      "english": "hemp",
+      "hanzi": "麻",
+      "id": "ma2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "má",
+      "polyline": [
+        [
+          0,
+          2.07
+        ],
+        [
+          0.2696,
+          1.577
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 30,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:20.022255+00:00"
+    },
+    {
+      "clip_key": "ba2.wav",
+      "clip_s": 1.3247,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9434,
+      "english": "to pull out",
+      "hanzi": "拔",
+      "id": "ba2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.254,
+      "pinyin": "bá",
+      "polyline": [
+        [
+          0,
+          2.454
+        ],
+        [
+          0.3166,
+          1.83
+        ],
+        [
+          1,
+          4.643
+        ]
+      ],
+      "position": 31,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:20.579236+00:00"
+    },
+    {
+      "clip_key": "shi2.wav",
+      "clip_s": 1.218,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.858,
+      "english": "ten",
+      "hanzi": "十",
+      "id": "shi2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "shí",
+      "polyline": [
+        [
+          0,
+          2.618
+        ],
+        [
+          0.2486,
+          2.238
+        ],
+        [
+          1,
+          4.682
+        ]
+      ],
+      "position": 32,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:31.452544+00:00"
+    },
+    {
+      "clip_key": "ren2.wav",
+      "clip_s": 1.41,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.05,
+      "english": "person",
+      "hanzi": "人",
+      "id": "ren2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "rén",
+      "polyline": [
+        [
+          0,
+          2.571
+        ],
+        [
+          0.3251,
+          2.178
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 33,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:31.020404+00:00"
+    },
+    {
+      "clip_key": "lai2.wav",
+      "clip_s": 1.41,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.05,
+      "english": "to come",
+      "hanzi": "來",
+      "id": "lai2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "lái",
+      "polyline": [
+        [
+          0,
+          2.603
+        ],
+        [
+          0.4673,
+          1.976
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 34,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:27.112638+00:00"
+    },
+    {
+      "clip_key": "tou2.wav",
+      "clip_s": 1.3673,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0074,
+      "english": "head",
+      "hanzi": "頭",
+      "id": "tou2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "tóu",
+      "polyline": [
+        [
+          0,
+          3.409
+        ],
+        [
+          0.3812,
+          2.383
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 35,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "qian2.wav",
+      "clip_s": 1.4527,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0714,
+      "english": "money",
+      "hanzi": "錢",
+      "id": "qian2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.254,
+      "pinyin": "qián",
+      "polyline": [
+        [
+          0,
+          3.415
+        ],
+        [
+          0.3982,
+          2.402
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 36,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "fang2.wav",
+      "clip_s": 1.3033,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9434,
+      "english": "house",
+      "hanzi": "房",
+      "id": "fang2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "fáng",
+      "polyline": [
+        [
+          0,
+          3.081
+        ],
+        [
+          0.2488,
+          2.083
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 37,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "men2.wav",
+      "clip_s": 1.73,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0927,
+      "english": "door",
+      "hanzi": "門",
+      "id": "men2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "mén",
+      "polyline": [
+        [
+          0,
+          2.851
+        ],
+        [
+          0.3514,
+          2.333
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 38,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "xue2.wav",
+      "clip_s": 1.3887,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0287,
+      "english": "to study",
+      "hanzi": "學",
+      "id": "xue2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "xué",
+      "polyline": [
+        [
+          0,
+          2.656
+        ],
+        [
+          0.2696,
+          2.009
+        ],
+        [
+          1,
+          4.773
+        ]
+      ],
+      "position": 39,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "hong2.wav",
+      "clip_s": 1.4313,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0714,
+      "english": "red",
+      "hanzi": "紅",
+      "id": "hong2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "hóng",
+      "polyline": [
+        [
+          0,
+          2.912
+        ],
+        [
+          0.2987,
+          1.789
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 40,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "bai2.wav",
+      "clip_s": 1.4527,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0927,
+      "english": "white",
+      "hanzi": "白",
+      "id": "bai2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "bái",
+      "polyline": [
+        [
+          0,
+          2.566
+        ],
+        [
+          0.2929,
+          1.782
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 41,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "yu2.wav",
+      "clip_s": 1.3247,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9647,
+      "english": "fish",
+      "hanzi": "魚",
+      "id": "yu2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "yú",
+      "polyline": [
+        [
+          0,
+          3.117
+        ],
+        [
+          0.3538,
+          2.134
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 42,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "niu2.wav",
+      "clip_s": 1.538,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.178,
+      "english": "cow",
+      "hanzi": "牛",
+      "id": "niu2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "niú",
+      "polyline": [
+        [
+          0,
+          2.769
+        ],
+        [
+          0.4165,
+          2.208
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 43,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "yang2.wav",
+      "clip_s": 1.4953,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.1354,
+      "english": "sheep",
+      "hanzi": "羊",
+      "id": "yang2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "yáng",
+      "polyline": [
+        [
+          0,
+          2.851
+        ],
+        [
+          0.3194,
+          2.051
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 44,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "cha2.wav",
+      "clip_s": 1.41,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.05,
+      "english": "tea",
+      "hanzi": "茶",
+      "id": "cha2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "chá",
+      "polyline": [
+        [
+          0,
+          3.217
+        ],
+        [
+          0.386,
+          1.954
+        ],
+        [
+          1,
+          4.986
+        ]
+      ],
+      "position": 45,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "tian2.wav",
+      "clip_s": 1.4313,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0714,
+      "english": "sweet",
+      "hanzi": "甜",
+      "id": "tian2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "tián",
+      "polyline": [
+        [
+          0,
+          3.462
+        ],
+        [
+          0.3186,
+          2.202
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 46,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "chang2.wav",
+      "clip_s": 1.3673,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0074,
+      "english": "long",
+      "hanzi": "長",
+      "id": "chang2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "cháng",
+      "polyline": [
+        [
+          0,
+          3.153
+        ],
+        [
+          0.2118,
+          2.207
+        ],
+        [
+          1,
+          4.875
+        ]
+      ],
+      "position": 47,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "nian2.wav",
+      "clip_s": 1.5167,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.1567,
+      "english": "year",
+      "hanzi": "年",
+      "id": "nian2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "nián",
+      "polyline": [
+        [
+          0,
+          2.923
+        ],
+        [
+          0.498,
+          2.258
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 48,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "ming2.wav",
+      "clip_s": 1.4527,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0927,
+      "english": "bright",
+      "hanzi": "明",
+      "id": "ming2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "míng",
+      "polyline": [
+        [
+          0,
+          2.917
+        ],
+        [
+          0.449,
+          2.348
+        ],
+        [
+          1,
+          4.832
+        ]
+      ],
+      "position": 49,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "mang2.wav",
+      "clip_s": 1.4527,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0927,
+      "english": "busy",
+      "hanzi": "忙",
+      "id": "mang2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "máng",
+      "polyline": [
+        [
+          0,
+          3.006
+        ],
+        [
+          0.371,
+          2.293
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 50,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "nan2.wav",
+      "clip_s": 1.4953,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.1354,
+      "english": "difficult",
+      "hanzi": "難",
+      "id": "nan2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "nán",
+      "polyline": [
+        [
+          0,
+          3.118
+        ],
+        [
+          0.4134,
+          2.372
+        ],
+        [
+          1,
+          4.971
+        ]
+      ],
+      "position": 51,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "wan2.wav",
+      "clip_s": 1.3887,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0287,
+      "english": "to play",
+      "hanzi": "玩",
+      "id": "wan2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "wán",
+      "polyline": [
+        [
+          0,
+          3.013
+        ],
+        [
+          0.3318,
+          2.463
+        ],
+        [
+          1,
+          4.957
+        ]
+      ],
+      "position": 52,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "wang2.wav",
+      "clip_s": 1.41,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.05,
+      "english": "king",
+      "hanzi": "王",
+      "id": "wang2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "wáng",
+      "polyline": [
+        [
+          0,
+          2.691
+        ],
+        [
+          0.3251,
+          2.452
+        ],
+        [
+          1,
+          4.989
+        ]
+      ],
+      "position": 53,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "cai2.wav",
+      "clip_s": 1.3247,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9647,
+      "english": "only then",
+      "hanzi": "才",
+      "id": "cai2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "cái",
+      "polyline": [
+        [
+          0,
+          3.258
+        ],
+        [
+          0.3096,
+          2.174
+        ],
+        [
+          1,
+          4.755
+        ]
+      ],
+      "position": 54,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "qiu2.wav",
+      "clip_s": 1.346,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.986,
+      "english": "ball",
+      "hanzi": "球",
+      "id": "qiu2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "qiú",
+      "polyline": [
+        [
+          0,
+          3.487
+        ],
+        [
+          0.3245,
+          2.2
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 55,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "tu2.wav",
+      "clip_s": 1.3673,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0074,
+      "english": "picture",
+      "hanzi": "圖",
+      "id": "tu2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "tú",
+      "polyline": [
+        [
+          0,
+          3.306
+        ],
+        [
+          0.2118,
+          2.199
+        ],
+        [
+          1,
+          4.893
+        ]
+      ],
+      "position": 56,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "e2.wav",
+      "clip_s": 1.2607,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9007,
+      "english": "goose",
+      "hanzi": "鵝",
+      "id": "e2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "é",
+      "polyline": [
+        [
+          0,
+          2.988
+        ],
+        [
+          0.379,
+          2.455
+        ],
+        [
+          1,
+          4.81
+        ]
+      ],
+      "position": 57,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "lan2.wav",
+      "clip_s": 1.474,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.114,
+      "english": "blue",
+      "hanzi": "藍",
+      "id": "lan2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "lán",
+      "polyline": [
+        [
+          0,
+          3.007
+        ],
+        [
+          0.4021,
+          2.34
+        ],
+        [
+          1,
+          4.811
+        ]
+      ],
+      "position": 58,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "huang2.wav",
+      "clip_s": 1.4953,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.1354,
+      "english": "yellow",
+      "hanzi": "黃",
+      "id": "huang2",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "huáng",
+      "polyline": [
+        [
+          0,
+          3.018
+        ],
+        [
+          0.2443,
+          2.219
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 59,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 2,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "ma3b.wav",
+      "clip_s": 1.3673,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0074,
+      "english": "horse",
+      "hanzi": "馬",
+      "id": "ma3b",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "mǎ",
+      "polyline": [
+        [
+          0,
+          3.008
+        ],
+        [
+          0.7412,
+          1.705
+        ],
+        [
+          0.8683,
+          2.617
+        ],
+        [
+          1,
+          4.181
+        ]
+      ],
+      "position": 60,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:27.971364+00:00"
+    },
+    {
+      "clip_key": "ba3.wav",
+      "clip_s": 1.3247,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9647,
+      "english": "handle",
+      "hanzi": "把",
+      "id": "ba3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "bǎ",
+      "polyline": [
+        [
+          0,
+          3.496
+        ],
+        [
+          0.7077,
+          1.533
+        ],
+        [
+          0.8625,
+          2.52
+        ],
+        [
+          1,
+          3.416
+        ]
+      ],
+      "position": 61,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:20.69893+00:00"
+    },
+    {
+      "clip_key": "wu3.wav",
+      "clip_s": 1.3887,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0287,
+      "english": "five",
+      "hanzi": "五",
+      "id": "wu3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "wǔ",
+      "polyline": [
+        [
+          0,
+          4.162
+        ],
+        [
+          0.4355,
+          1
+        ],
+        [
+          0.7258,
+          1.598
+        ],
+        [
+          1,
+          4.934
+        ]
+      ],
+      "position": 62,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:33.643556+00:00"
+    },
+    {
+      "clip_key": "jiu3.wav",
+      "clip_s": 1.346,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.986,
+      "english": "nine",
+      "hanzi": "九",
+      "id": "jiu3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "jiǔ",
+      "polyline": [
+        [
+          0,
+          2.919
+        ],
+        [
+          0.2596,
+          1.565
+        ],
+        [
+          0.6274,
+          1.773
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 63,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:26.294401+00:00"
+    },
+    {
+      "clip_key": "wo3.wav",
+      "clip_s": 1.3887,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0287,
+      "english": "I, me",
+      "hanzi": "我",
+      "id": "wo3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "wǒ",
+      "polyline": [
+        [
+          0,
+          3.024
+        ],
+        [
+          0.6844,
+          1.364
+        ],
+        [
+          0.8503,
+          2.938
+        ],
+        [
+          1,
+          4.306
+        ]
+      ],
+      "position": 64,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:33.503603+00:00"
+    },
+    {
+      "clip_key": "ni3.wav",
+      "clip_s": 1.4953,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.1354,
+      "english": "you",
+      "hanzi": "你",
+      "id": "ni3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "nǐ",
+      "polyline": [
+        [
+          0,
+          2.988
+        ],
+        [
+          0.6389,
+          1.659
+        ],
+        [
+          0.8268,
+          3.256
+        ],
+        [
+          1,
+          4.694
+        ]
+      ],
+      "position": 65,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "hao3.wav",
+      "clip_s": 1.346,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.986,
+      "english": "good",
+      "hanzi": "好",
+      "id": "hao3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "hǎo",
+      "polyline": [
+        [
+          0,
+          3.445
+        ],
+        [
+          0.6274,
+          1.496
+        ],
+        [
+          0.8222,
+          2.834
+        ],
+        [
+          1,
+          4.541
+        ]
+      ],
+      "position": 66,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "mai3.wav",
+      "clip_s": 1.41,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.05,
+      "english": "to buy",
+      "hanzi": "買",
+      "id": "mai3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "mǎi",
+      "polyline": [
+        [
+          0,
+          3.18
+        ],
+        [
+          0.6298,
+          1.83
+        ],
+        [
+          0.8127,
+          3.163
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 67,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "shui3.wav",
+      "clip_s": 1.3887,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0287,
+      "english": "water",
+      "hanzi": "水",
+      "id": "shui3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "shuǐ",
+      "polyline": [
+        [
+          0,
+          3.418
+        ],
+        [
+          0.5185,
+          1.43
+        ],
+        [
+          0.7673,
+          2.855
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 68,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "gou3.wav",
+      "clip_s": 1.4527,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0927,
+      "english": "dog",
+      "hanzi": "狗",
+      "id": "gou3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "gǒu",
+      "polyline": [
+        [
+          0,
+          3.51
+        ],
+        [
+          0.5271,
+          1.073
+        ],
+        [
+          0.7614,
+          2.471
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 69,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "shou3.wav",
+      "clip_s": 1.4527,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0927,
+      "english": "hand",
+      "hanzi": "手",
+      "id": "shou3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "shǒu",
+      "polyline": [
+        [
+          0,
+          3.631
+        ],
+        [
+          0.4686,
+          1.467
+        ],
+        [
+          0.7419,
+          2.819
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 70,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "kou3.wav",
+      "clip_s": 1.4313,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.05,
+      "english": "mouth",
+      "hanzi": "口",
+      "id": "kou3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "kǒu",
+      "polyline": [
+        [
+          0,
+          3.454
+        ],
+        [
+          0.5079,
+          1.129
+        ],
+        [
+          0.7517,
+          2.249
+        ],
+        [
+          1,
+          4.588
+        ]
+      ],
+      "position": 71,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "yan3.wav",
+      "clip_s": 1.5167,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.1567,
+      "english": "eye",
+      "hanzi": "眼",
+      "id": "yan3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "yǎn",
+      "polyline": [
+        [
+          0,
+          3.015
+        ],
+        [
+          0.5902,
+          1.665
+        ],
+        [
+          0.7931,
+          3.147
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 72,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "er3.wav",
+      "clip_s": 1.3673,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0074,
+      "english": "ear",
+      "hanzi": "耳",
+      "id": "er3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "ěr",
+      "polyline": [
+        [
+          0,
+          3.858
+        ],
+        [
+          0.5718,
+          1.765
+        ],
+        [
+          0.7836,
+          2.725
+        ],
+        [
+          1,
+          4.771
+        ]
+      ],
+      "position": 73,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "zao3.wav",
+      "clip_s": 1.3247,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9647,
+      "english": "early",
+      "hanzi": "早",
+      "id": "zao3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "zǎo",
+      "polyline": [
+        [
+          0,
+          3.608
+        ],
+        [
+          0.5529,
+          1.332
+        ],
+        [
+          0.774,
+          2.609
+        ],
+        [
+          1,
+          4.841
+        ]
+      ],
+      "position": 74,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "zou3.wav",
+      "clip_s": 1.474,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.114,
+      "english": "to walk",
+      "hanzi": "走",
+      "id": "zou3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "zǒu",
+      "polyline": [
+        [
+          0,
+          3.4
+        ],
+        [
+          0.3638,
+          1.335
+        ],
+        [
+          0.6894,
+          2.084
+        ],
+        [
+          1,
+          4.922
+        ]
+      ],
+      "position": 75,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "pao3.wav",
+      "clip_s": 1.41,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0714,
+      "english": "to run",
+      "hanzi": "跑",
+      "id": "pao3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "pǎo",
+      "polyline": [
+        [
+          0,
+          3.4
+        ],
+        [
+          0.3982,
+          1.087
+        ],
+        [
+          0.6969,
+          1.521
+        ],
+        [
+          1,
+          4.073
+        ]
+      ],
+      "position": 76,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "xiang3.wav",
+      "clip_s": 1.3887,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0287,
+      "english": "to think",
+      "hanzi": "想",
+      "id": "xiang3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "xiǎng",
+      "polyline": [
+        [
+          0,
+          3.656
+        ],
+        [
+          0.4562,
+          1.419
+        ],
+        [
+          0.7258,
+          2.375
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 77,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "xiao3.wav",
+      "clip_s": 1.3247,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9647,
+      "english": "small",
+      "hanzi": "小",
+      "id": "xiao3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "xiǎo",
+      "polyline": [
+        [
+          0,
+          3.759
+        ],
+        [
+          0.5971,
+          1.393
+        ],
+        [
+          0.7961,
+          2.377
+        ],
+        [
+          1,
+          4.469
+        ]
+      ],
+      "position": 78,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "lao3.wav",
+      "clip_s": 1.3673,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0074,
+      "english": "old",
+      "hanzi": "老",
+      "id": "lao3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "lǎo",
+      "polyline": [
+        [
+          0,
+          3.363
+        ],
+        [
+          0.6353,
+          1.38
+        ],
+        [
+          0.8259,
+          2.245
+        ],
+        [
+          1,
+          4.563
+        ]
+      ],
+      "position": 79,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "leng3.wav",
+      "clip_s": 1.3247,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.986,
+      "english": "cold",
+      "hanzi": "冷",
+      "id": "leng3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "lěng",
+      "polyline": [
+        [
+          0,
+          3.311
+        ],
+        [
+          0.6058,
+          1.643
+        ],
+        [
+          0.8005,
+          2.568
+        ],
+        [
+          1,
+          4.977
+        ]
+      ],
+      "position": 80,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "duan3.wav",
+      "clip_s": 1.3887,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0287,
+      "english": "short",
+      "hanzi": "短",
+      "id": "duan3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "duǎn",
+      "polyline": [
+        [
+          0,
+          3.78
+        ],
+        [
+          0.3733,
+          1.27
+        ],
+        [
+          0.6844,
+          1.808
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 81,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "yuan3.wav",
+      "clip_s": 1.4953,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.1354,
+      "english": "far",
+      "hanzi": "遠",
+      "id": "yuan3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "yuǎn",
+      "polyline": [
+        [
+          0,
+          3.32
+        ],
+        [
+          0.357,
+          1.799
+        ],
+        [
+          0.6764,
+          1.954
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 82,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "mi3.wav",
+      "clip_s": 1.4953,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.1354,
+      "english": "rice",
+      "hanzi": "米",
+      "id": "mi3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "mǐ",
+      "polyline": [
+        [
+          0,
+          2.991
+        ],
+        [
+          0.6013,
+          1.576
+        ],
+        [
+          0.808,
+          2.943
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 83,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "you3.wav",
+      "clip_s": 1.474,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.1354,
+      "english": "to have",
+      "hanzi": "有",
+      "id": "you3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.211,
+      "pinyin": "yǒu",
+      "polyline": [
+        [
+          0,
+          2.877
+        ],
+        [
+          0.4698,
+          1.236
+        ],
+        [
+          0.7328,
+          1.969
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 84,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "nv3.wav",
+      "clip_s": 1.538,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.178,
+      "english": "female",
+      "hanzi": "女",
+      "id": "nv3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "nǚ",
+      "polyline": [
+        [
+          0,
+          2.886
+        ],
+        [
+          0.6519,
+          1.424
+        ],
+        [
+          0.833,
+          2.938
+        ],
+        [
+          1,
+          4.678
+        ]
+      ],
+      "position": 85,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "yu3.wav",
+      "clip_s": 1.3887,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0287,
+      "english": "rain",
+      "hanzi": "雨",
+      "id": "yu3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "yǔ",
+      "polyline": [
+        [
+          0,
+          4.046
+        ],
+        [
+          0.394,
+          1.878
+        ],
+        [
+          0.7051,
+          2.288
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 86,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "yi3.wav",
+      "clip_s": 1.4313,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 1.0714,
+      "english": "chair",
+      "hanzi": "椅",
+      "id": "yi3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "yǐ",
+      "polyline": [
+        [
+          0,
+          4.354
+        ],
+        [
+          0.4779,
+          1.852
+        ],
+        [
+          0.7368,
+          2.706
+        ],
+        [
+          1,
+          4.802
+        ]
+      ],
+      "position": 87,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "zhi3.wav",
+      "clip_s": 1.2607,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9007,
+      "english": "paper",
+      "hanzi": "紙",
+      "id": "zhi3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "zhǐ",
+      "polyline": [
+        [
+          0,
+          3.389
+        ],
+        [
+          0.6632,
+          1.978
+        ],
+        [
+          0.829,
+          3.115
+        ],
+        [
+          1,
+          4.785
+        ]
+      ],
+      "position": 88,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "qing3.wav",
+      "clip_s": 1.3247,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.9647,
+      "english": "please",
+      "hanzi": "請",
+      "id": "qing3",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "qǐng",
+      "polyline": [
+        [
+          0,
+          4.269
+        ],
+        [
+          0.5086,
+          1.72
+        ],
+        [
+          0.7519,
+          3.522
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 89,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 3,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "ma4b.wav",
+      "clip_s": 1.0047,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.6447,
+      "english": "to scold",
+      "hanzi": "罵",
+      "id": "ma4b",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "mà",
+      "polyline": [
+        [
+          0,
+          3.087
+        ],
+        [
+          0.3971,
+          4.994
+        ],
+        [
+          1,
+          1.724
+        ]
+      ],
+      "position": 90,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:28.132718+00:00"
+    },
+    {
+      "clip_key": "ba4.wav",
+      "clip_s": 0.8767,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.5167,
+      "english": "dad",
+      "hanzi": "爸",
+      "id": "ba4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "bà",
+      "polyline": [
+        [
+          0,
+          4.091
+        ],
+        [
+          0.2064,
+          4.397
+        ],
+        [
+          1,
+          1.258
+        ]
+      ],
+      "position": 91,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:20.805452+00:00"
+    },
+    {
+      "clip_key": "si4.wav",
+      "clip_s": 0.8767,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.4954,
+      "english": "four",
+      "hanzi": "四",
+      "id": "si4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "sì",
+      "polyline": [
+        [
+          0,
+          4.261
+        ],
+        [
+          0.2153,
+          4.796
+        ],
+        [
+          1,
+          1.582
+        ]
+      ],
+      "position": 92,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:32.325136+00:00"
+    },
+    {
+      "clip_key": "liu4.wav",
+      "clip_s": 1.154,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.6874,
+      "english": "six",
+      "hanzi": "六",
+      "id": "liu4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "liù",
+      "polyline": [
+        [
+          0,
+          3.734
+        ],
+        [
+          0.4035,
+          4.744
+        ],
+        [
+          1,
+          1.158
+        ]
+      ],
+      "position": 93,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:27.590205+00:00"
+    },
+    {
+      "clip_key": "er4.wav",
+      "clip_s": 0.9833,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.6234,
+      "english": "two",
+      "hanzi": "二",
+      "id": "er4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "èr",
+      "polyline": [
+        [
+          0,
+          3.802
+        ],
+        [
+          0.2738,
+          4.441
+        ],
+        [
+          1,
+          1.236
+        ]
+      ],
+      "position": 94,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T04:56:23.912914+00:00"
+    },
+    {
+      "clip_key": "da4.wav",
+      "clip_s": 0.898,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.538,
+      "english": "big",
+      "hanzi": "大",
+      "id": "da4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "dà",
+      "polyline": [
+        [
+          0,
+          4.188
+        ],
+        [
+          0.1983,
+          4.536
+        ],
+        [
+          1,
+          1.82
+        ]
+      ],
+      "position": 95,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "shi4.wav",
+      "clip_s": 0.8767,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.5167,
+      "english": "to be",
+      "hanzi": "是",
+      "id": "shi4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "shì",
+      "polyline": [
+        [
+          0,
+          4.186
+        ],
+        [
+          0.3303,
+          4.693
+        ],
+        [
+          1,
+          1.478
+        ]
+      ],
+      "position": 96,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "mai4.wav",
+      "clip_s": 1.1113,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.7514,
+      "english": "to sell",
+      "hanzi": "賣",
+      "id": "mai4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "mài",
+      "polyline": [
+        [
+          0,
+          3.543
+        ],
+        [
+          0.2839,
+          4.642
+        ],
+        [
+          1,
+          1.142
+        ]
+      ],
+      "position": 97,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "dui4.wav",
+      "clip_s": 1.026,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.666,
+      "english": "correct",
+      "hanzi": "對",
+      "id": "dui4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "duì",
+      "polyline": [
+        [
+          0,
+          4.425
+        ],
+        [
+          0.2242,
+          4.845
+        ],
+        [
+          1,
+          1.169
+        ]
+      ],
+      "position": 98,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "kan4.wav",
+      "clip_s": 0.9833,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.6234,
+      "english": "to look",
+      "hanzi": "看",
+      "id": "kan4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "kàn",
+      "polyline": [
+        [
+          0,
+          4.007
+        ],
+        [
+          0.1711,
+          4.72
+        ],
+        [
+          1,
+          1.133
+        ]
+      ],
+      "position": 99,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "qu4.wav",
+      "clip_s": 0.9407,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.5807,
+      "english": "to go",
+      "hanzi": "去",
+      "id": "qu4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "qù",
+      "polyline": [
+        [
+          0,
+          4.506
+        ],
+        [
+          0.147,
+          4.985
+        ],
+        [
+          1,
+          1.161
+        ]
+      ],
+      "position": 100,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "yao4.wav",
+      "clip_s": 1.09,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.7087,
+      "english": "to want",
+      "hanzi": "要",
+      "id": "yao4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.254,
+      "pinyin": "yào",
+      "polyline": [
+        [
+          0,
+          3.579
+        ],
+        [
+          0.3612,
+          4.63
+        ],
+        [
+          1,
+          1.19
+        ]
+      ],
+      "position": 101,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "hui4.wav",
+      "clip_s": 1.0047,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.6447,
+      "english": "can, will",
+      "hanzi": "會",
+      "id": "hui4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "huì",
+      "polyline": [
+        [
+          0,
+          4.606
+        ],
+        [
+          0.1985,
+          4.973
+        ],
+        [
+          1,
+          1.182
+        ]
+      ],
+      "position": 102,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "kuai4.wav",
+      "clip_s": 1.026,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.7087,
+      "english": "fast",
+      "hanzi": "快",
+      "id": "kuai4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.211,
+      "pinyin": "kuài",
+      "polyline": [
+        [
+          0,
+          4.246
+        ],
+        [
+          0.1505,
+          4.714
+        ],
+        [
+          1,
+          1.218
+        ]
+      ],
+      "position": 103,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "man4.wav",
+      "clip_s": 1.1967,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.8154,
+      "english": "slow",
+      "hanzi": "慢",
+      "id": "man4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.254,
+      "pinyin": "màn",
+      "polyline": [
+        [
+          0,
+          3.2
+        ],
+        [
+          0.3663,
+          4.658
+        ],
+        [
+          1,
+          1.246
+        ]
+      ],
+      "position": 104,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "re4.wav",
+      "clip_s": 1.09,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.7514,
+      "english": "hot",
+      "hanzi": "熱",
+      "id": "re4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "rè",
+      "polyline": [
+        [
+          0,
+          2.758
+        ],
+        [
+          0.5395,
+          4.972
+        ],
+        [
+          1,
+          1.427
+        ]
+      ],
+      "position": 105,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "shu4.wav",
+      "clip_s": 0.8553,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.4954,
+      "english": "tree",
+      "hanzi": "樹",
+      "id": "shu4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "shù",
+      "polyline": [
+        [
+          0,
+          4.59
+        ],
+        [
+          0.1723,
+          4.963
+        ],
+        [
+          1,
+          1.476
+        ]
+      ],
+      "position": 106,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "hua4.wav",
+      "clip_s": 0.9193,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.5594,
+      "english": "speech",
+      "hanzi": "話",
+      "id": "hua4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "huà",
+      "polyline": [
+        [
+          0,
+          4.456
+        ],
+        [
+          0.1907,
+          4.749
+        ],
+        [
+          1,
+          1.392
+        ]
+      ],
+      "position": 107,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "fan4.wav",
+      "clip_s": 0.9193,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.5594,
+      "english": "rice, meal",
+      "hanzi": "飯",
+      "id": "fan4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "fàn",
+      "polyline": [
+        [
+          0,
+          4.399
+        ],
+        [
+          0.2288,
+          4.724
+        ],
+        [
+          1,
+          1.429
+        ]
+      ],
+      "position": 108,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "cai4.wav",
+      "clip_s": 0.9407,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.602,
+      "english": "vegetable",
+      "hanzi": "菜",
+      "id": "cai4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "cài",
+      "polyline": [
+        [
+          0,
+          3.755
+        ],
+        [
+          0.1772,
+          4.506
+        ],
+        [
+          1,
+          1.199
+        ]
+      ],
+      "position": 109,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "rou4.wav",
+      "clip_s": 1.1327,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.794,
+      "english": "meat",
+      "hanzi": "肉",
+      "id": "rou4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "ròu",
+      "polyline": [
+        [
+          0,
+          3.029
+        ],
+        [
+          0.403,
+          4.732
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "position": 110,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "mian4.wav",
+      "clip_s": 1.0473,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.6874,
+      "english": "noodles",
+      "hanzi": "麵",
+      "id": "mian4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "miàn",
+      "polyline": [
+        [
+          0,
+          3.551
+        ],
+        [
+          0.3414,
+          4.558
+        ],
+        [
+          1,
+          1.213
+        ]
+      ],
+      "position": 111,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "dian4.wav",
+      "clip_s": 0.9833,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.6234,
+      "english": "electricity",
+      "hanzi": "電",
+      "id": "dian4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "diàn",
+      "polyline": [
+        [
+          0,
+          4.269
+        ],
+        [
+          0.2738,
+          4.643
+        ],
+        [
+          1,
+          1.161
+        ]
+      ],
+      "position": 112,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "lu4.wav",
+      "clip_s": 1.1327,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.7514,
+      "english": "road",
+      "hanzi": "路",
+      "id": "lu4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "lù",
+      "polyline": [
+        [
+          0,
+          3.824
+        ],
+        [
+          0.3123,
+          5
+        ],
+        [
+          1,
+          1.229
+        ]
+      ],
+      "position": 113,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "yue4.wav",
+      "clip_s": 1.1113,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.7514,
+      "english": "moon, month",
+      "hanzi": "月",
+      "id": "yue4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "yuè",
+      "polyline": [
+        [
+          0,
+          3.498
+        ],
+        [
+          0.5111,
+          4.602
+        ],
+        [
+          1,
+          1.322
+        ]
+      ],
+      "position": 114,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "ke4.wav",
+      "clip_s": 0.9407,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.5807,
+      "english": "lesson",
+      "hanzi": "課",
+      "id": "ke4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "kè",
+      "polyline": [
+        [
+          0,
+          4.505
+        ],
+        [
+          0.147,
+          5
+        ],
+        [
+          1,
+          1.471
+        ]
+      ],
+      "position": 115,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "di4.wav",
+      "clip_s": 1.026,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.666,
+      "english": "younger brother",
+      "hanzi": "弟",
+      "id": "di4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "dì",
+      "polyline": [
+        [
+          0,
+          4.457
+        ],
+        [
+          0.1602,
+          4.927
+        ],
+        [
+          1,
+          1.216
+        ]
+      ],
+      "position": 116,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "mei4.wav",
+      "clip_s": 1.1327,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.7514,
+      "english": "younger sister",
+      "hanzi": "妹",
+      "id": "mei4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "mèi",
+      "polyline": [
+        [
+          0,
+          3.59
+        ],
+        [
+          0.3407,
+          4.76
+        ],
+        [
+          1,
+          1.21
+        ]
+      ],
+      "position": 117,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "zuo4.wav",
+      "clip_s": 1.0473,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.6874,
+      "english": "to sit",
+      "hanzi": "坐",
+      "id": "zuo4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "zuò",
+      "polyline": [
+        [
+          0,
+          4.503
+        ],
+        [
+          0.1241,
+          5
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "position": 118,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "chang4.wav",
+      "clip_s": 1.0047,
+      "created_at": "2026-09-15T00:39:26.986185+00:00",
+      "duration_s": 0.6447,
+      "english": "to sing",
+      "hanzi": "唱",
+      "id": "chang4",
+      "meta": {
+        "reference": {
+          "session": "2026-08-07-xujzgs",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.232,
+      "pinyin": "chàng",
+      "polyline": [
+        [
+          0,
+          4.231
+        ],
+        [
+          0.2316,
+          4.764
+        ],
+        [
+          1,
+          1.214
+        ]
+      ],
+      "position": 119,
+      "recorded_at": null,
+      "status": "published",
+      "syllables": 1,
+      "tone": 4,
+      "tones": [],
+      "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    }
+  ]
+}

@@ -43,11 +43,9 @@ describe("api/ deploy surface", () => {
 
   it("only exposes the endpoints we meant to expose", () => {
     expect(files.filter((f) => !f.startsWith("_")).sort()).toEqual([
-      "auth.ts",
       "newsletter.ts",
       "run.ts",
       "score.ts",
-      "upload.ts",
       "webhook-ls.ts",
     ]);
   });

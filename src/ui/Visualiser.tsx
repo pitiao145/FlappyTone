@@ -242,6 +242,16 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     for (const w of wordsOfTone(words, tone, limits.wordsPerTone)) void loadClip(w);
   }, [tone, words, limits.wordsPerTone]);
 
+  /**
+   * The practice list is limited by COUNT, not by `min_tier`.
+   *
+   * The two gates mean different things: `min_tier` is game access (enforced
+   * at the clip route and in the run's pool — see `Game.tsx`), while
+   * `TIER_LIMITS[tier].wordsPerTone` is how deep this tier may practise per
+   * tone here. Filtering by both would tangle them; the count alone is what
+   * keeps a guest's practice list empty (`wordsPerTone: 0`) and a free
+   * account's at five, in `position` order.
+   */
   const wordsForTone = tone === null ? [] : wordsOfTone(words, tone, limits.wordsPerTone);
   /** The rest of that tone's inventory, shown as locked chips for free players. */
   const lockedWordsForTone = tone === null ? [] : wordsOfTone(words, tone).slice(wordsForTone.length);

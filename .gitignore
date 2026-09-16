@@ -39,3 +39,20 @@ fixtures/analytics/
 
 .worktrees/
 .claude/
+
+# Wrangler's local dev/build state for the clips Worker.
+workers/clips/.wrangler/
+workers/clips/*.tsbuildinfo
+
+# Cut clips written by `npm run process-clips` before they go to R2, plus the
+# scratch downloads `npm run verify-clips` re-fetches to byte-compare against
+# them. Neither is the artefact: the published clip lives in the
+# flappytone-clips bucket and is named by the row's clip_key. These stay local
+# so a clip that came out wrong can be listened to without another round trip.
+fixtures/clips/
+
+# Pre-migration reference recordings. Untracked as of Task 13 (audio now lives
+# in the flappytone-clips R2 bucket, served through the Worker) but kept on
+# disk locally as a safety net — not re-pullable from anywhere else, so don't
+# delete your own copy.
+public/ref/*.wav

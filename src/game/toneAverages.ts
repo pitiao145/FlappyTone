@@ -1,6 +1,6 @@
 /**
  * GENERATED — do not hand-edit. Run `npm run make-tone-averages` to
- * regenerate after `public/ref/manifest.json` changes.
+ * regenerate after `src/data/wordsFallback.json` changes.
  *
  * Each tone's chao value averaged point-for-point, across every one of its
  * recorded words' own measured polyline, sampled at t = k/60 for k = 0..60.

@@ -1,35 +1,37 @@
 /**
  * Bakes each tone's averaged measured shape into a static, checked-in file
  * the tone classifier reads at zero cost — no fetch, no async, no dependency
- * on the manifest being loaded.
+ * on the catalog being loaded.
  *
  *   npm run make-tone-averages
  *
- * Reads `public/ref/manifest.json`, parses it with the same `loadWords` the
- * app itself uses, and for each tone averages every one of its recorded
+ * Reads `src/data/wordsFallback.json` — the bundled export of the published
+ * catalog (`npm run export-fallback`) — parses it with the same
+ * `wordsFromCatalog` the app itself uses, and for each tone averages every one of its recorded
  * words' own measured polylines via `averagePolyline` — the identical
  * measurement the Lab's `averages` tab and the landing page's "how it
  * works" cards already draw, so this is not a second implementation of that
  * average, just a third place it gets read.
  *
- * Rerun this whenever `public/ref/manifest.json` changes (new recordings via
- * `npm run make-clips`) and commit the regenerated `src/game/toneAverages.ts`
+ * Rerun this whenever the catalog changes (new recordings via `npm run
+ * process-clips`, then `npm run export-fallback`) and commit the
+ * regenerated `src/game/toneAverages.ts`
  * — the same manual-but-explicit workflow this repo already uses for every
  * other derived-from-recordings artifact.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
-import { loadWords, wordsOfTone } from "../game/words.ts";
+import { wordsFromCatalog, wordsOfTone } from "../game/words.ts";
 import type { Tone } from "../game/gates.ts";
 import { averagePolyline } from "../game/toneAverage.ts";
 
 const root = new URL("../../", import.meta.url).pathname;
-const manifestPath = `${root}public/ref/manifest.json`;
+const fallbackPath = `${root}src/data/wordsFallback.json`;
 
-const raw = readFileSync(manifestPath, "utf8");
-const words = loadWords(JSON.parse(raw));
+const raw = readFileSync(fallbackPath, "utf8");
+const words = wordsFromCatalog((JSON.parse(raw) as { rows: unknown[] }).rows);
 if (words.length === 0) {
-  console.error(`No words parsed from ${manifestPath}.`);
+  console.error(`No words parsed from ${fallbackPath}.`);
   process.exit(1);
 }
 
@@ -39,7 +41,7 @@ const averaged: Record<Tone, number[]> = {} as Record<Tone, number[]>;
 for (const tone of TONES) {
   const toneWords = wordsOfTone(words, tone);
   if (toneWords.length === 0) {
-    console.error(`No words found for tone ${tone} in ${manifestPath}.`);
+    console.error(`No words found for tone ${tone} in ${fallbackPath}.`);
     process.exit(1);
   }
   averaged[tone] = averagePolyline(toneWords);
@@ -51,7 +53,7 @@ const formatRow = (values: number[]) =>
 
 const output = `/**
  * GENERATED — do not hand-edit. Run \`npm run make-tone-averages\` to
- * regenerate after \`public/ref/manifest.json\` changes.
+ * regenerate after \`src/data/wordsFallback.json\` changes.
  *
  * Each tone's chao value averaged point-for-point, across every one of its
  * recorded words' own measured polyline, sampled at t = k/60 for k = 0..60.
