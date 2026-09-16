@@ -10,11 +10,17 @@
  * for the same anonymous-events-only posture this file already had.
  *
  * The discipline that made the old wall unnecessary to keep: `session.ts`'s
- * `AnalyticsEvent` union is still the closed vocabulary for what a gameplay
- * event can contain, and `before_send` below re-enforces it at the transport
- * boundary the way `api/analytics.ts` used to server-side — every property on
- * a known gameplay event name is reduced to a fixed allowlist before it ever
- * leaves the SDK's queue.
+ * `AnalyticsEvent` union is the closed vocabulary for what a gameplay event
+ * can contain — and it is the ONLY property-level gate. Be exact about what
+ * `before_send` below actually does, because it is easy to read as more: it
+ * matches the event NAME against `GAME_EVENTS`, then drops `$`-prefixed keys
+ * except the two country-level geo fields, and passes every other property
+ * straight through. It filters PostHog's defaults, not ours.
+ *
+ * The consequence, stated plainly: a field added to `AnalyticsEvent` ships
+ * unfiltered. Nothing downstream will catch it. That is why the union has to
+ * stay a closed, reviewed type rather than a convenience — reviewing the
+ * addition is the whole control, and there is no second one.
  *
  * Three things are switched off that PostHog turns on by default: autocapture
  * (every click and input on the page), session recording, and `$exception`

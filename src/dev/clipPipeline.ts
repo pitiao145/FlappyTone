@@ -55,9 +55,21 @@ export const SEED_F0_CENTER = 168;
  * rather than reaching this default, which is the point: defaulting a male
  * speaker's seed to a female speaker's would be the silent version of the
  * failure this parameter exists to prevent.
+ *
+ * `Number.isFinite`, not `typeof === "number"`. `Number(undefined)` is `NaN`
+ * and `NaN` IS a number, so the obvious guard would let a renamed or dropped
+ * `f0_seed` column through as a seed of `NaN` — which does not throw, it cuts
+ * the whole inventory off a garbage search band and prints "seed NaNHz". That
+ * is precisely the silent-corruption class this parameter exists to prevent,
+ * from the one direction the guard looked like it already covered.
+ *
+ * Note what this does NOT do: a non-finite value is only defaulted here for a
+ * caller that never had a speaker. A caller that has already validated one
+ * against the roster and still reads a non-finite seed is looking at a bug,
+ * and `process-clips` refuses rather than quietly cutting as Jane.
  */
 export function resolveSeed(f0Seed: number | null | undefined): number {
-  return typeof f0Seed === "number" ? f0Seed : SEED_F0_CENTER;
+  return Number.isFinite(f0Seed) ? (f0Seed as number) : SEED_F0_CENTER;
 }
 
 /**

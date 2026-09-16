@@ -124,8 +124,14 @@ export type AnalyticsEvent =
        * Here rather than on `run_start` because `run_end` is the event every
        * outcome number already lives on: with the voice beside them, "do runs
        * with the male voice score worse, or quit earlier?" is a breakdown
-       * rather than a join. Optional so a run reported before a speaker
-       * resolves is still a run, not a dropped event.
+       * rather than a join.
+       *
+       * Optional because this union is read by more than the game — a future
+       * emitter with no inventory in scope must be able to send a `run_end`
+       * without inventing a speaker id. The one caller today
+       * (`Game.tsx`'s `reportRunEnd`) always has one: `inventorySpeaker()`
+       * returns a string unconditionally, defaulting to the default speaker,
+       * so in practice the property is always present.
        */
       voice?: string;
     }

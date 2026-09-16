@@ -164,7 +164,25 @@ if (!speakerRow) {
 // Bound to a non-null const: the guard above narrows `speakerRow` here, but
 // not inside the closures further down.
 const speaker = speakerRow;
-const seedF0 = resolveSeed(Number(speaker.f0_seed));
+
+/**
+ * Refused, not defaulted. `resolveSeed`'s fallback is for a caller with no
+ * speaker at all; this one has a validated roster row, so a seed that is not a
+ * finite number means the column was renamed, dropped, or holds something
+ * `numeric` should never have held. Cutting as Jane instead would hand back a
+ * full inventory of plausible polylines measured off the wrong search band —
+ * the exact failure `--speaker` was made mandatory to prevent.
+ */
+const rawSeed = Number(speaker.f0_seed);
+if (!Number.isFinite(rawSeed)) {
+  console.error(
+    `Speaker "${speaker.id}" has no usable f0_seed (read ${JSON.stringify(speaker.f0_seed)}).\n` +
+      "That column is `not null numeric` in migration 0015, so this means the schema moved.\n" +
+      "Refusing to cut: a wrong seed does not fail loudly, it ships wrong corridors.",
+  );
+  process.exit(1);
+}
+const seedF0 = resolveSeed(rawSeed);
 console.log(`Speaker ${speaker.id} (${speaker.name}) — pitch-search seed ${seedF0}Hz.`);
 
 interface Row {

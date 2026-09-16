@@ -60,6 +60,21 @@ describe("resolveSeed", () => {
   it("is what Jane's row resolves to, unchanged", () => {
     expect(resolveSeed(168)).toBe(SEED_F0_CENTER);
   });
+
+  it("does not mistake NaN for a seed", () => {
+    // `Number(undefined)` is NaN and `typeof NaN === "number"`, so the obvious
+    // guard would pass NaN straight through as a search band. It does not
+    // throw downstream — it cuts the whole inventory off garbage.
+    expect(resolveSeed(Number(undefined))).toBe(SEED_F0_CENTER);
+    expect(resolveSeed(NaN)).toBe(SEED_F0_CENTER);
+    expect(resolveSeed(Infinity)).toBe(SEED_F0_CENTER);
+  });
+
+  it("still passes a real seed through untouched, including one below Jane's", () => {
+    // The default must not swallow a legitimately low male seed on its way in.
+    expect(resolveSeed(110)).toBe(110);
+    expect(resolveSeed(0.5)).toBe(0.5);
+  });
 });
 
 describe("MIN_REFERENCE_FRAMES", () => {
