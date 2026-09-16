@@ -223,3 +223,133 @@ body {
   font-size: 1.8rem;
   text-align: center;
 }
+
+/* ---------------------------------------------------------------- overview */
+
+.rec-head {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rec-list {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rec-list-head {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--rec-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 4px 0 0;
+}
+
+.rec-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #1c2531;
+  border-radius: 10px;
+  background: #0b1118;
+}
+
+.rec-row-word {
+  flex: 1;
+  min-width: 0;
+  color: var(--rec-fg);
+}
+
+.rec-row-hanzi {
+  font-size: 1.4rem;
+  margin-right: 4px;
+}
+
+.rec-row-btn {
+  width: auto;
+  flex: none;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+
+.rec-badge {
+  flex: none;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1px solid #2a3442;
+  color: var(--rec-dim);
+}
+
+.rec-badge-recorded {
+  color: var(--rec-good);
+  border-color: #1f4030;
+}
+
+/* Published means the clip is live in the game right now. It is the one
+   status where re-recording is destructive, so it reads as a warning. */
+.rec-badge-published {
+  color: var(--rec-warn-c);
+  border-color: #4a3a12;
+}
+
+/* ------------------------------------------------------------ armed/paused */
+
+.rec-btn-pause {
+  background: #1a1410;
+  border-color: #4a3a12;
+  color: var(--rec-warn-c);
+}
+
+.rec-feedback-paused {
+  color: var(--rec-warn-c);
+}
+
+/* The level bar is the booth's answer to "is it hearing me?" — while paused it
+   must not look like the answer is yes. */
+.rec-paused .rec-level-fill {
+  background: #2a3442;
+}
+
+.rec-paused .rec-hanzi,
+.rec-paused .rec-pinyin {
+  opacity: 0.45;
+}
+
+/* --------------------------------------------------------------- confirm */
+
+.rec-confirm {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 6, 10, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 10;
+}
+
+.rec-confirm-card {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 14px;
+  border: 1px solid #2a3442;
+  background: #0b1118;
+  text-align: center;
+}
+
+.rec-confirm-word {
+  font-size: 2.4rem;
+  margin: 0;
+}

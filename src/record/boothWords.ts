@@ -5,9 +5,21 @@
  * network there degrades a *player's* game to "no board today"), this module
  * DOES throw. The booth is not a player surface — it is Jane's one working
  * tool, and a stale or empty list silently rendered as "nothing to record"
- * would cost a whole session before anyone noticed. `Recorder.tsx` catches
+ * would cost a whole session before anyone noticed. `Overview.tsx` catches
  * the throw and shows an error with a Retry button instead.
  */
+
+/**
+ * Whose voice this booth session is recording.
+ *
+ * One value today. It is a named constant rather than copy baked into the
+ * overview screen because the same 120 words are going to be recorded a
+ * second time by a male speaker, and `words.status` is one row per word — a
+ * second voice makes that a one-to-many and needs its own spec (schema, R2
+ * key layout, `process-clips`). This constant is the single place the booth
+ * will have to read a real answer from when that lands.
+ */
+export const BOOTH_VOICE = "Jane";
 
 export type Tone = 1 | 2 | 3 | 4;
 export type BoothWordStatus = "pending" | "recorded" | "published";

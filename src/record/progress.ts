@@ -6,7 +6,7 @@
  * /booth/words`) is the truth for that now — a locally-remembered `done` set
  * could drift from what's actually in the database (another device, a
  * dropped upload that later succeeded after the tab closed) and show Jane a
- * list that doesn't match reality. `Recorder.tsx` gets pending/recorded from
+ * list that doesn't match reality. `Overview.tsx` gets pending/recorded from
  * `fetchBoothWords` on every load instead.
  */
 

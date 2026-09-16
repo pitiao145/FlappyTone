@@ -37,7 +37,7 @@ export interface UploaderOptions {
   onChange: (state: UploadState) => void;
   /**
    * Called once per word, when the server has actually stored it. This is what
-   * resume is allowed to trust — see `Recorder.tsx`.
+   * resume is allowed to trust — see `Overview.tsx`.
    */
   onConfirmed?: (id: string) => void;
   /** Injected in tests. */

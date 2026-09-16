@@ -288,6 +288,59 @@ neither has an honest cross-device answer.
 
 ## Clip pipeline
 
+### The booth arms the mic on purpose now, not by arriving (16 Sep 2026)
+
+The recording booth used to go passcode → "Tap to start" → a live
+microphone. The screen that told Jane to get ready *was* the screen that was
+already recording, and there was no state in between where she could see what
+was left, what was done, or decide to do nothing.
+
+That cost real audio. The all-done screen's "Redo a word" button read
+`goTo(recorded[0].id)` — no picker, just a jump to whatever sat first in the
+recorded list, microphone live. During the live pipeline test Pierre tapped
+it expecting a list, landed on `ma1b` (媽) without realising the booth was
+listening, spoke, and replaced Jane's published take with his own voice. The
+row flipped to `recorded`, which removed 媽 from the published catalog, from
+the Worker's word map and from the calibration flight; running
+`process-clips` would have shipped the wrong voice. Repaired by hand with an
+`update words` and an R2 delete.
+
+The fix is not a picker — a picker alone would have made that tap land on the
+right word with the microphone just as live. Three rules, in
+`src/record/boothArming.ts` so they are testable and cannot drift back into
+render code:
+
+- **Only the bulk pass arms itself.** Working down the pending list is the
+  booth's whole reason to exist and must still cost zero taps, so "Start
+  recording" arms immediately. Every other way of reaching a word — "Record
+  this one" from the overview, a chip on the recording screen — lands
+  **paused**. Re-recording is now two deliberate taps rather than none.
+- **A `published` word asks first.** `published` means the clip is live in the
+  game; `recorded` means uploaded but not yet through `process-clips`, so
+  nothing downstream has consumed it and replacing it costs nothing. Only the
+  destructive case gets a confirm.
+- **A take that replaced a published clip stops the run.** Without this, a redo
+  advances straight into the next word with the microphone still live — the
+  same accident wearing a different hat.
+
+Two structural consequences. `Overview.tsx` now owns the word fetch, the
+session id and the `Uploader`, because "Back to list" must not rebuild the
+upload queue and drop a take still in flight; `Recorder.tsx` is handed all of
+it as props. And **pause does not tear down the frame sink** — it returns
+early inside it and disarms the detector, because rebuilding the sink would
+drop the pre-roll buffer and clip the first syllable after Resume. The sink's
+install-once discipline predates this and is load-bearing for a different
+reason (see its own comment); pause had to fit around it, not through it.
+
+**Multi-voice is deliberately not built here.** The same 120 words need a male
+recording, but `words.status` is one row per word and a second voice makes
+that a one-to-many — a schema question with knock-ons into R2 key layout and
+`process-clips`, not a UI one. All the booth carries today is
+`BOOTH_VOICE` (one constant, rendered in the overview header) and a refusal to
+cache the pending/recorded split locally, so a reshaped `GET /booth/words`
+needs no reconciliation when that lands.
+
+
 ### Clip catalog: DB + R2 migration overrides the plan (Sep 2026)
 
 `docs/SPECS/flappytone-SPEC-clip-catalog-r2.md` moved the word catalog from
