@@ -336,6 +336,14 @@ const TUTORIAL_TONES: Tone[] = [1, 1, 2, 2, 3, 3, 4, 4];
 // and two T3 (down) — so it stays short. See GameApp's calibration handoff and
 // run.ts `measuredRange`.
 export const CALIBRATION_TONES: Tone[] = [1, 1, 3, 3];
+// The calibration flight's own script, not a tunable — every player measuring
+// against the same four words is more consistent than each getting a random
+// set, and pinning them is what lets Calibration.tsx warm their clips ahead
+// of time (the flight itself picks a word the moment it opens gate i, too
+// late to start a fetch). Order pairs 1:1 with CALIBRATION_TONES. A ma1b/mao1
+// pair anchors the same T1 measurement CALIBRATION_TONES[0..1] used to draw
+// randomly, ma3b/wo3 the T3 one.
+export const CALIBRATION_WORD_IDS: string[] = ["ma1b", "mao1", "ma3b", "wo3"];
 const TUTORIAL_TOLERANCE_FACTOR = 2;
 
 /**
@@ -500,6 +508,16 @@ export class Run {
   /** The tutorial's fixed tone order and length. Full teach set, or the short
    * calibration set — see `CALIBRATION_TONES`. */
   private readonly tutorialTones: Tone[];
+  /**
+   * True only when this Run *is* the calibration flight — identified by
+   * reference equality against the exported `CALIBRATION_TONES` array
+   * (Game.tsx passes that exact constant, never a copy), captured here
+   * before `tutorialTones` gets its default. Narrower than `mode ===
+   * "tutorial"`, which the guided teaching tutorial also uses: only the
+   * calibration flight gets fixed words (`CALIBRATION_WORD_IDS`); the
+   * teaching tutorial keeps drawing randomly via `pickWord`.
+   */
+  private readonly isCalibrationFlight: boolean;
   /** The fixed tone for `mode === "drill"`. Unused otherwise. */
   private readonly drillTone: Tone | null;
   private active: ActiveGateState | null = null;
@@ -573,6 +591,7 @@ export class Run {
     this.releaseMicForCue = cfg.releaseMicForCue ?? false;
     this.words = cfg.words ?? [];
     this.singleWord = cfg.singleWord ?? null;
+    this.isCalibrationFlight = cfg.tutorialTones === CALIBRATION_TONES;
     this.tutorialTones = cfg.tutorialTones ?? TUTORIAL_TONES;
     this.drillTone = cfg.drillTone ?? null;
     this.difficulty = this.difficultyFor(0);
@@ -1229,7 +1248,10 @@ export class Run {
       const word =
         this.mode === "single"
           ? this.singleWord
-          : pickWord(this.words, tone, this.spawnedWords, this.rand);
+          : this.isCalibrationFlight
+            ? (this.calibrationWordFor(this.spawnedTones.length) ??
+              pickWord(this.words, tone, this.spawnedWords, this.rand))
+            : pickWord(this.words, tone, this.spawnedWords, this.rand);
       this.gates.push(makeGate(word ?? tone, this.nextSpawnX(), this.difficulty));
       this.spawnedTones.push(tone);
       if (word) this.spawnedWords.push(word);
@@ -1255,6 +1277,19 @@ export class Run {
       return this.drillTone;
     }
     return nextTone(this.spawnedTones, this.rand);
+  }
+
+  /**
+   * The calibration flight's fixed word for gate index `i`, by id against
+   * `this.words` — `null` if that id isn't in the inventory (retired,
+   * unpublished, or a manifest fetch that failed), which `fillQueue` falls
+   * back to `pickWord` for. Never throws, never returns a word of the wrong
+   * tone: an id lookup miss is the only way this returns null.
+   */
+  private calibrationWordFor(i: number): Word | null {
+    const id = CALIBRATION_WORD_IDS[i];
+    if (!id) return null;
+    return this.words.find((w) => w.id === id) ?? null;
   }
 
   private nextSpawnX(): number {

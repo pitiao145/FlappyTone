@@ -438,6 +438,24 @@ describe("Run — tutorial mode", () => {
       6,
     );
   });
+
+  it("still picks words randomly via pickWord, unaffected by the calibration flight's fixed ids", () => {
+    // Same tone-1 pool the calibration flight uses one word of (ma1b) plus
+    // extras — the guided tutorial must keep drawing from the whole pool via
+    // `rand`, never pin to the calibration ids.
+    const words: Word[] = loadWords({
+      clips: [
+        { id: "ma1b", hanzi: "媽", pinyin: "mā", tone: 1, file: "ma1b.wav", durationS: 0.55,
+          polyline: [[0, 4.5], [1, 4.5]] },
+        { id: "t1extra", hanzi: "八", pinyin: "bā", tone: 1, file: "t1extra.wav", durationS: 0.5,
+          polyline: [[0, 4.5], [1, 4.5]] },
+      ],
+    });
+    // rand always 0.999 -> picks the last word of the (unfiltered) pool.
+    const run = new Run({ mode: "tutorial", width: W, words, rand: () => 0.999 });
+    const first = run.snapshot().gates[0];
+    expect(first.word?.id).toBe("t1extra");
+  });
 });
 
 describe("Run — drill mode", () => {
@@ -1238,6 +1256,97 @@ describe("measuredRange (tone-anchored)", () => {
     const measured = flyTutorial().snapshot().measuredRange;
     expect(measured!.up).toBeLessThan(semisFor[4]);
     expect(measured!.up).toBe(3);
+  });
+});
+
+describe("Run — calibration flight uses fixed words, not random ones", () => {
+  /** The catalog's four calibration ids, one word each, so they're trivially found. */
+  const calibrationWords: Word[] = loadWords({
+    clips: [
+      { id: "ma1b", hanzi: "媽", pinyin: "mā", tone: 1, file: "ma1b.wav", durationS: 0.55,
+        polyline: [[0, 4.5], [1, 4.5]] },
+      { id: "mao1", hanzi: "貓", pinyin: "māo", tone: 1, file: "mao1.wav", durationS: 0.6,
+        polyline: [[0, 4.5], [1, 4.5]] },
+      { id: "ma3b", hanzi: "馬", pinyin: "mǎ", tone: 3, file: "ma3b.wav", durationS: 1.25,
+        polyline: [[0, 2.2], [1, 5]] },
+      { id: "wo3", hanzi: "我", pinyin: "wǒ", tone: 3, file: "wo3.wav", durationS: 1.1,
+        polyline: [[0, 2.2], [1, 5]] },
+      // Extra words of the same tones, so an adversarial `rand` that always
+      // picks index 0 or the last index would grab one of these instead of
+      // the fixed id, if the fixed-word path were not actually wired in.
+      { id: "t1extra", hanzi: "八", pinyin: "bā", tone: 1, file: "t1extra.wav", durationS: 0.5,
+        polyline: [[0, 4.5], [1, 4.5]] },
+      { id: "t3extra", hanzi: "我", pinyin: "wǒ", tone: 3, file: "t3extra.wav", durationS: 0.5,
+        polyline: [[0, 2.2], [1, 5]] },
+    ],
+  });
+
+  function calibrationRun(rand: () => number, words: Word[] = calibrationWords) {
+    return new Run({
+      mode: "tutorial",
+      width: W,
+      words,
+      tutorialTones: CALIBRATION_TONES,
+      rand,
+    });
+  }
+
+  it("spawns exactly ma1b, mao1, ma3b, wo3 in order, even with an adversarial rand always at 0", () => {
+    const run = calibrationRun(() => 0);
+    const { snapshots } = simulate(run, 3000, () => pitch(1));
+    const seen: string[] = [];
+    for (const s of snapshots) {
+      for (const g of s.gates) {
+        if (g.word && !seen.includes(g.word.id)) seen.push(g.word.id);
+      }
+    }
+    expect(seen).toEqual(["ma1b", "mao1", "ma3b", "wo3"]);
+  });
+
+  it("spawns exactly ma1b, mao1, ma3b, wo3 in order, even with an adversarial rand always at 0.999", () => {
+    const run = calibrationRun(() => 0.999);
+    const { snapshots } = simulate(run, 3000, () => pitch(1));
+    const seen: string[] = [];
+    for (const s of snapshots) {
+      for (const g of s.gates) {
+        if (g.word && !seen.includes(g.word.id)) seen.push(g.word.id);
+      }
+    }
+    expect(seen).toEqual(["ma1b", "mao1", "ma3b", "wo3"]);
+  });
+
+  it("falls back to pickWord for a fixed id missing from the inventory, without losing the gate or its tone", () => {
+    // No ma1b/mao1/ma3b/wo3 at all — every fixed id is missing.
+    const fallbackPool: Word[] = loadWords({
+      clips: [
+        { id: "t1only", hanzi: "八", pinyin: "bā", tone: 1, file: "t1only.wav", durationS: 0.5,
+          polyline: [[0, 4.5], [1, 4.5]] },
+        { id: "t3only", hanzi: "我", pinyin: "wǒ", tone: 3, file: "t3only.wav", durationS: 0.5,
+          polyline: [[0, 2.2], [1, 5]] },
+      ],
+    });
+    const run = calibrationRun(() => 0, fallbackPool);
+    const { snapshots } = simulate(run, 3000, () => pitch(1));
+    const outcomes = outcomesOf(snapshots);
+    expect(outcomes.map((o) => o.tone)).toEqual([1, 1, 3, 3]);
+    const seen: string[] = [];
+    for (const s of snapshots) {
+      for (const g of s.gates) {
+        if (g.word && !seen.includes(g.word.id)) seen.push(g.word.id);
+      }
+    }
+    // Every spawned word is one of the fallback pool's own words, matching
+    // the gate's own tone (t1only for the two T1 gates, t3only for T3).
+    for (const id of seen) expect(["t1only", "t3only"]).toContain(id);
+    expect(seen.length).toBeGreaterThan(0);
+  });
+
+  it("still flies all four tone-only gates with an empty inventory, exactly as today", () => {
+    const run = calibrationRun(() => 0, []);
+    const { snapshots } = simulate(run, 3000, () => pitch(1));
+    const outcomes = outcomesOf(snapshots);
+    expect(outcomes.map((o) => o.tone)).toEqual([1, 1, 3, 3]);
+    for (const s of snapshots) for (const g of s.gates) expect(g.word).toBeNull();
   });
 });
 

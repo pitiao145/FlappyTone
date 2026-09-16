@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { track } from "../analytics/client.ts";
+import { inventoryNow, loadInventory } from "../audio/inventory.ts";
+import { prefetchPool } from "../audio/prefetch.ts";
 import { ensurePlaybackCtx } from "../audio/reference.ts";
 import { getMicSession, setFrameSink } from "../audio/session.ts";
 import {
@@ -9,11 +11,13 @@ import {
   handleFrame,
   startLoop,
 } from "../game/loop.ts";
+import { CALIBRATION_WORD_IDS } from "../game/run.ts";
 import {
   resetRecalTracking,
   saveSettings,
   type CalibrationSettings,
 } from "../game/settings.ts";
+import type { Word } from "../game/words.ts";
 import {
   RANGE_DOWN_SEMITONES_MIN,
   RANGE_SEMITONES_MAX,
@@ -489,6 +493,27 @@ export function Calibration({
     // settingsNow closes over the three values in the deps below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, f0Center, noiseFloor, range]);
+
+  // Warm the calibration flight's four fixed clips (task 8e) the moment this
+  // screen appears, not on "Let's go" — the whole point is to spend the
+  // seconds the player spends reading this card on the fetch, since by the
+  // time the flight's own first gate opens it's too late to start one.
+  // Fire-and-forget: `prefetchPool` never throws and this effect awaits
+  // nothing, so a slow or dead network never delays "Let's go" or the flight
+  // itself, which just falls back to the synthetic sweep as usual.
+  useEffect(() => {
+    if (step !== "done") return;
+    const warm = (words: Word[]) => {
+      const byId = new Map(words.map((w) => [w.id, w]));
+      const found = CALIBRATION_WORD_IDS.map((id) => byId.get(id)).filter(
+        (w): w is Word => !!w,
+      );
+      if (found.length > 0) prefetchPool(found);
+    };
+    const cached = inventoryNow();
+    if (cached) warm(cached);
+    else void loadInventory().then(warm, () => undefined);
+  }, [step]);
 
   /**
    * The slider stays one control over a board with two halves: it moves the

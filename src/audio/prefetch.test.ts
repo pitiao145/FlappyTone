@@ -221,6 +221,74 @@ describe("the calibration flight's exact tier", () => {
     // Four gates, so at most four distinct clips — never a bulk pool.
     expect(seen.size).toBeLessThanOrEqual(CALIBRATION_TONES.length);
   });
+
+  it("warms exactly the four fixed calibration ids, and nothing else, when the inventory has them", () => {
+    const withCalibrationWords = wordsFromCatalog([
+      ...POOL.map((w) => ({
+        id: w.id,
+        hanzi: w.hanzi,
+        pinyin: w.pinyin,
+        english: w.english,
+        tone: w.tone,
+        tones: w.tones,
+        syllables: 1,
+        position: 0,
+        status: "published",
+        min_tier: "free",
+        clip_key: `${w.id}.wav`,
+        duration_s: w.durationS,
+        onset_s: null,
+        clip_s: null,
+        polyline: w.polyline,
+        updated_at: w.updatedAt,
+      })),
+      ...(
+        [
+          ["ma1b", "媽", "mā", 1],
+          ["mao1", "貓", "māo", 1],
+          ["ma3b", "馬", "mǎ", 3],
+          ["wo3", "我", "wǒ", 3],
+        ] as const
+      ).map(([id, hanzi, pinyin, tone]) => ({
+        id,
+        hanzi,
+        pinyin,
+        english: "",
+        tone,
+        tones: [tone],
+        syllables: 1,
+        position: 0,
+        status: "published",
+        min_tier: "free",
+        clip_key: `${id}.wav`,
+        duration_s: 1,
+        onset_s: null,
+        clip_s: null,
+        polyline: [
+          [0, 4.5],
+          [1, 4.5],
+        ],
+        updated_at: "2026-09-01T00:00:00Z",
+      })),
+    ]);
+    const run = new Run({
+      mode: "tutorial",
+      width: 420,
+      words: withCalibrationWords,
+      tutorialTones: CALIBRATION_TONES,
+    });
+    const seen = new Set<string>();
+    let now = 0;
+    for (let i = 0; i < 4000; i++) {
+      const snap = run.snapshot();
+      for (const g of snap.gates) if (g.word) seen.add(g.word.id);
+      if (snap.over) break;
+      run.tickAudio(silence(), now);
+      run.tickFrame(16, now);
+      now += 16;
+    }
+    expect(seen).toEqual(new Set(["ma1b", "mao1", "ma3b", "wo3"]));
+  });
 });
 
 describe("prefetchPool's lead clip", () => {
