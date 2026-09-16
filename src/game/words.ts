@@ -28,6 +28,12 @@ export interface Word {
   hanzi: string;
   pinyin: string;
   /**
+   * Which speaker's recording this word's audio and geometry come from.
+   * Part of the cache key everywhere a clip is stored, because a cached entry
+   * keyed on id alone serves the wrong voice with no error.
+   */
+  speakerId: string;
+  /**
    * English gloss, or "" when the glossary has no entry yet. Optional on the
    * wire and never a reason to drop a word: a missing translation costs one
    * line of HUD, a dropped word costs the whole gate.
@@ -145,6 +151,8 @@ export function wordsFromCatalog(rows: unknown): Word[] {
       typeof r.id !== "string" ||
       typeof r.hanzi !== "string" ||
       typeof r.pinyin !== "string" ||
+      typeof r.speaker_id !== "string" ||
+      r.speaker_id === "" ||
       typeof r.status !== "string" ||
       r.status !== "published" ||
       typeof r.clip_key !== "string" ||
@@ -174,6 +182,7 @@ export function wordsFromCatalog(rows: unknown): Word[] {
         id: r.id,
         hanzi: r.hanzi,
         pinyin: r.pinyin,
+        speakerId: r.speaker_id,
         english: typeof r.english === "string" ? r.english : "",
         tone,
         tones: tones.length > 0 ? tones : [tone],

@@ -27,6 +27,7 @@ function word(id: string): Word {
     id,
     hanzi: "媽",
     pinyin: "mā",
+    speakerId: "jane",
     english: "mother",
     tone: 1,
     tones: [1],

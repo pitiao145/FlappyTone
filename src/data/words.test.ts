@@ -29,6 +29,7 @@ function row(over: Record<string, unknown> = {}) {
     position: 0,
     status: "published",
     min_tier: "free",
+    speaker_id: "jane",
     clip_key: "ma1.wav",
     duration_s: 0.8,
     onset_s: 0.1,

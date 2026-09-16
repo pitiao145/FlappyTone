@@ -23,7 +23,7 @@
  */
 
 import { wordsFromCatalog, type Word } from "../game/words.ts";
-import { CATALOG_SELECT } from "./catalogRows.ts";
+import { CATALOG_SELECT, DEFAULT_SPEAKER_ID } from "./catalogRows.ts";
 import fallback from "./wordsFallback.json";
 import { getSupabase, warn } from "./supabase.ts";
 
@@ -69,9 +69,18 @@ function writeCache(rows: unknown[]): void {
   }
 }
 
-/** The bundled export, parsed. The last resort, and never empty in practice. */
+/**
+ * The bundled export, parsed. The last resort, and never empty in practice.
+ *
+ * `wordsFromCatalog` drops any row without a non-empty `speaker_id`, and the
+ * bundle carries none — `export-fallback` writes `is_default` only, not
+ * `speaker_id`. Stamping the default speaker id on here (rather than
+ * defaulting it inside the parser) is deliberate: the bundle is the default
+ * speaker's catalog by construction, but a *live* row missing `speaker_id`
+ * must still be dropped, not silently attributed to Jane.
+ */
 function catalogFromFallback(): Word[] {
-  return wordsFromCatalog(fallback.rows);
+  return wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID })));
 }
 
 /**
