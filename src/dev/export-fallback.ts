@@ -30,8 +30,23 @@
  * are internal R2 object keys and session ids — no reason to ship them to
  * every visitor of the landing page.
  *
- * Rerun and commit the JSON after any change to the `words` table's published
- * rows.
+ * ## The DEFAULT SPEAKER only, on purpose
+ *
+ * Since the voice roster a word has one row per voice, and this snapshot takes
+ * exactly one of them: the speaker whose `speakers.is_default` is true. Not a
+ * simplification to revisit — the bundle is the dead-network path, and a dead
+ * network means the clips Worker is unreachable too, so NO clip audio plays
+ * whichever voice the player picked. A second voice's rows would add weight to
+ * the landing page's critical path to describe geometry nobody can hear. The
+ * live query (`src/data/words.ts`) is speaker-scoped and is what serves a
+ * player who actually chose a voice.
+ *
+ * The rows therefore carry no `speaker_id`; `src/data/words.ts` stamps
+ * `DEFAULT_SPEAKER_ID` on at the call site, so a LIVE row missing one is still
+ * dropped rather than silently attributed.
+ *
+ * Rerun and commit the JSON after any change to the default speaker's
+ * published clips.
  */
 
 import { writeFileSync } from "node:fs";
@@ -42,20 +57,47 @@ import { serviceClient } from "./serviceClient.ts";
 const root = new URL("../../", import.meta.url).pathname;
 const outPath = `${root}src/data/wordsFallback.json`;
 
-/**
- * Spelled out rather than `*` so a column added to the table later has to be
- * opted in, and so `contour` cannot come back by accident. The list itself
- * lives in `src/data/catalogRows.ts` beside `CATALOG_SELECT`, where a test can
- * import it — this file cannot be imported, it queries on load.
- */
-const COLUMNS = FALLBACK_COLUMNS.join(",");
-
 const supabase = serviceClient();
+
+const { data: defaultSpeaker, error: speakerError } = await supabase
+  .from("speakers")
+  .select("id")
+  .eq("is_default", true)
+  .maybeSingle();
+if (speakerError) {
+  console.error(`speakers select failed: ${speakerError.message}`);
+  process.exit(1);
+}
+if (!defaultSpeaker) {
+  // A unique partial index guarantees at most one default; zero means the
+  // roster is misconfigured, and guessing a speaker here would bundle whichever
+  // voice sorted first.
+  console.error("No speaker has is_default — refusing to guess which voice to bundle.");
+  process.exit(1);
+}
+
+/**
+ * The columns are spelled out rather than `*`, so one added to either table
+ * later has to be opted in and `contour` cannot come back by accident. The
+ * list lives in `src/data/catalogRows.ts` beside `CATALOG_SELECT`, where a
+ * test can import it — this file cannot be imported, it queries on load.
+ *
+ * The word-level ones come from `words`; the clip-level ones from that
+ * speaker's `word_clips` row. Split this way rather than read off `words`'
+ * pre-roster measurement columns, which migration 0015 left in place and which
+ * are the default speaker's regardless of the roster — right today, silently
+ * wrong the moment they are dropped or a second voice is published.
+ */
+const WORD_LEVEL = new Set(["id", "hanzi", "pinyin", "english", "tone", "tones", "syllables", "position", "min_tier", "meta", "created_at"]);
+const wordColumns = FALLBACK_COLUMNS.filter((c) => WORD_LEVEL.has(c));
+const clipColumns = FALLBACK_COLUMNS.filter((c) => !WORD_LEVEL.has(c));
 
 const { data, error } = await supabase
   .from("words")
-  .select(COLUMNS)
-  .eq("status", "published")
+  // `!inner`, so a word this speaker has not recorded does not arrive at all.
+  .select(`${wordColumns.join(",")},word_clips!inner(${clipColumns.join(",")})`)
+  .eq("word_clips.speaker_id", defaultSpeaker.id)
+  .eq("word_clips.status", "published")
   .order("position", { ascending: true });
 
 if (error) {
@@ -63,7 +105,13 @@ if (error) {
   process.exit(1);
 }
 
-const rows = data ?? [];
+/** Lifts the single embedded clip onto the word, as `flattenCatalogRows` does. */
+const rows = ((data ?? []) as unknown as Record<string, unknown>[]).flatMap((row) => {
+  const clips = row.word_clips;
+  if (!Array.isArray(clips) || clips.length !== 1) return [];
+  const { word_clips: _drop, ...word } = row;
+  return [{ ...word, ...(clips[0] as Record<string, unknown>) }];
+});
 if (rows.length === 0) {
   // A zero-row export would silently replace a working fallback with an empty
   // one, which reads downstream exactly like "the game works, there are just
@@ -83,9 +131,15 @@ function sortKeys(row: Record<string, unknown>): Record<string, unknown> {
   return out;
 }
 
+/**
+ * No `exportedAt`. This file's whole job is to be diffable — a re-export with
+ * no data change must produce an EMPTY `git diff`, which is what proves a
+ * pipeline refactor moved no measurement. A timestamp made every run diff by
+ * one line, so the one signal the file exists to give had to be read past
+ * every time, and nothing in the repo ever read the value.
+ */
 const payload = {
   version: 1,
-  exportedAt: new Date().toISOString(),
   rows: rows.map((row) => sortKeys(row as unknown as Record<string, unknown>)),
 };
 

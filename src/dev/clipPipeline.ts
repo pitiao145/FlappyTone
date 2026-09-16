@@ -26,16 +26,39 @@
  *
  * So it is pinned at the value `make-clips` used — `fixtures/captures/
  * speakers.json`'s `{"jane": 168}`, resolved at `make-clips.ts:52` — carried
- * here as a constant rather than an import, because it is now a property of
- * the pipeline and not a fact about a speaker. A second speaker does not get
- * a second seed; they get the same search band and their own measured
- * reference.
+ * here as a constant rather than an import, because Jane's number must not
+ * move whatever the roster says.
  *
- * Changing this re-cuts the whole inventory. Do it deliberately, with
- * `--all`, or not at all. `clipPipeline.test.ts` pins both the number and the
- * cut it produces.
+ * It is no longer the only answer, though. A second speaker DOES get a second
+ * seed: `speakers.f0_seed`, read by `process-clips` for the `--speaker` it was
+ * given and passed through `resolveSeed` below. A ~110Hz male voice searched
+ * from 168 is a band centred nearly an octave above his own register, which is
+ * precisely the condition octave correction exists to survive and sometimes
+ * does not — and a seed that wrong does not fail loudly, it produces a
+ * plausible polyline measured off the wrong harmonic. Jane's row holds exactly
+ * `168`, so her 120 corridors resolve to the same number by a different route.
+ *
+ * Changing this — or a speaker's `f0_seed` — re-cuts that speaker's whole
+ * inventory. Do it deliberately, with `--all`, or not at all.
+ * `clipPipeline.test.ts` pins the number, the resolution, and the cut it
+ * produces, and proves the golden still moves at another speaker's seed.
  */
 export const SEED_F0_CENTER = 168;
+
+/**
+ * The seed for one speaker: their own `f0_seed`, or Jane's pinned constant
+ * when there is no roster row to read one from.
+ *
+ * The fallback is for a caller with no speaker at all, not for a blank column
+ * — `speakers.f0_seed` is `not null` in the schema (migration 0015), so a row
+ * always carries one. `process-clips` refuses an unknown `--speaker` outright
+ * rather than reaching this default, which is the point: defaulting a male
+ * speaker's seed to a female speaker's would be the silent version of the
+ * failure this parameter exists to prevent.
+ */
+export function resolveSeed(f0Seed: number | null | undefined): number {
+  return typeof f0Seed === "number" ? f0Seed : SEED_F0_CENTER;
+}
 
 /**
  * Below this a session's own voiced frames are too few to measure a centre and
