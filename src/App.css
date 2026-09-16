@@ -7709,3 +7709,64 @@ section.hero-cards {
   opacity: 0.7;
   cursor: not-allowed;
 }
+
+/* ---------------------------------------------------------------- warm-up
+   The brief hold between "Play" and the run starting, while the first gate's
+   reference clip finishes loading (see Game.tsx's `beginWhenWarm`). On a warm
+   cache this is on screen for `tuning().warmupMinMs` and no longer, so it is
+   deliberately quiet: no card, no button, nothing to read twice. */
+.warming {
+  cursor: default;
+  background: rgba(var(--surface-rgb), 0.92);
+}
+
+.warming p {
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.warming-dots {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.warming-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.35;
+  animation: warming-pulse 1.05s ease-in-out infinite;
+}
+
+.warming-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.warming-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes warming-pulse {
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Two ways off the animation: the OS preference, and the game's own
+   reduce-motion setting (Settings > motion) when it is explicitly ON. An
+   explicit OFF does not re-enable it against an OS reduce preference — this
+   is three dots on a screen that is up for under a second, not worth a JS
+   read of matchMedia to resolve the conflict the renderer's own
+   `refreshMotionPreference` resolves for the canvas. */
+.warming--still .warming-dots span {
+  animation: none;
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .warming-dots span {
+    animation: none;
+    opacity: 0.6;
+  }
+}

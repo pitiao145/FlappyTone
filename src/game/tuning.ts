@@ -345,6 +345,28 @@ export interface Tuning {
    */
   prefetchWordsPerTone: number;
 
+  /**
+   * The cap on the pre-run warm-up wait, in ms.
+   *
+   * When the player presses Play the run holds on a short warming screen
+   * until the first gate's own clip has fetched and decoded, so the very
+   * first cue is a real recording rather than the synthetic sweep. This is
+   * the ceiling on that hold: past it the run starts anyway and the first cue
+   * falls back to the sweep. A dead or pathological network must never be
+   * able to trap the player on a loading screen — a worse first cue is
+   * recoverable, a run that never begins is not.
+   */
+  warmupMaxMs: number;
+  /**
+   * The floor on the pre-run warm-up wait, in ms.
+   *
+   * On a warm cache `loadClip` resolves in single-digit ms, and a screen that
+   * appears and vanishes inside a frame or two reads as a flicker rather than
+   * as the game getting ready. Holding it for a beat makes the transition
+   * deliberate. Kept well under the cap so the common case is still a blink.
+   */
+  warmupMinMs: number;
+
   // ---- calibration
   /**
    * Fraction of the measured Tone-1 level that becomes the board's upward half
@@ -432,6 +454,8 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   driftChaoPerSec: 5.33,
   trailSeconds: 1.0,
   prefetchWordsPerTone: 6,
+  warmupMaxMs: 2500,
+  warmupMinMs: 400,
   reachToToneSpaceUp: 1,
   reachToToneSpaceDown: 1,
   gateDurationS: Object.freeze({ 1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6 }),
