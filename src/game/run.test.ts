@@ -1348,6 +1348,27 @@ describe("Run — calibration flight uses fixed words, not random ones", () => {
     expect(outcomes.map((o) => o.tone)).toEqual([1, 1, 3, 3]);
     for (const s of snapshots) for (const g of s.gates) expect(g.word).toBeNull();
   });
+
+  it("still gets the fixed words from a content-equal COPY of CALIBRATION_TONES, not just the exact constant", () => {
+    // Guards against reverting to identity comparison: a future call site
+    // that spreads or slices CALIBRATION_TONES before passing it must not
+    // silently fall back to random word choice.
+    const run = new Run({
+      mode: "tutorial",
+      width: W,
+      words: calibrationWords,
+      tutorialTones: [...CALIBRATION_TONES],
+      rand: () => 0,
+    });
+    const { snapshots } = simulate(run, 3000, () => pitch(1));
+    const seen: string[] = [];
+    for (const s of snapshots) {
+      for (const g of s.gates) {
+        if (g.word && !seen.includes(g.word.id)) seen.push(g.word.id);
+      }
+    }
+    expect(seen).toEqual(["ma1b", "mao1", "ma3b", "wo3"]);
+  });
 });
 
 describe("Run — calibration flight", () => {

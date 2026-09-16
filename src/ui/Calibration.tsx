@@ -501,6 +501,15 @@ export function Calibration({
   // Fire-and-forget: `prefetchPool` never throws and this effect awaits
   // nothing, so a slow or dead network never delays "Let's go" or the flight
   // itself, which just falls back to the synthetic sweep as usual.
+  //
+  // Reads the untier-filtered inventory, unlike Game.tsx's Run (which gets
+  // `wordsForTier(...)`) — deliberate here, not an oversight: every word
+  // ships `min_tier: "free"` today, so the two pools agree. If a calibration
+  // word were ever marked `pro`, a guest would still warm a real clip here
+  // but the flight's own Run (tier-filtered) would fall back to `pickWord`
+  // for that gate, so the warm would go to waste — a wasted fetch, not a
+  // wrong tone or a lost gate, since `/clip/:id`'s 403 already degrades to
+  // the synthetic sweep either way.
   useEffect(() => {
     if (step !== "done") return;
     const warm = (words: Word[]) => {

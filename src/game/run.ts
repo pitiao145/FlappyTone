@@ -344,6 +344,23 @@ export const CALIBRATION_TONES: Tone[] = [1, 1, 3, 3];
 // pair anchors the same T1 measurement CALIBRATION_TONES[0..1] used to draw
 // randomly, ma3b/wo3 the T3 one.
 export const CALIBRATION_WORD_IDS: string[] = ["ma1b", "mao1", "ma3b", "wo3"];
+
+/**
+ * Is `tones` the calibration flight's own tone script — by content, not
+ * reference. `Game.tsx` today always passes the exact `CALIBRATION_TONES`
+ * constant, so identity would work, but a future `[...CALIBRATION_TONES]` or
+ * `.slice()` at that call site would pass identity's check while silently
+ * reverting the flight to random words, with no test failing. Comparing
+ * content instead means any array that says "two T1, two T3" gets the fixed
+ * words, which is exactly the behavior this function exists to guarantee.
+ */
+function isCalibrationTones(tones: Tone[] | undefined): boolean {
+  return (
+    !!tones &&
+    tones.length === CALIBRATION_TONES.length &&
+    tones.every((t, i) => t === CALIBRATION_TONES[i])
+  );
+}
 const TUTORIAL_TOLERANCE_FACTOR = 2;
 
 /**
@@ -510,12 +527,14 @@ export class Run {
   private readonly tutorialTones: Tone[];
   /**
    * True only when this Run *is* the calibration flight — identified by
-   * reference equality against the exported `CALIBRATION_TONES` array
-   * (Game.tsx passes that exact constant, never a copy), captured here
-   * before `tutorialTones` gets its default. Narrower than `mode ===
-   * "tutorial"`, which the guided teaching tutorial also uses: only the
-   * calibration flight gets fixed words (`CALIBRATION_WORD_IDS`); the
-   * teaching tutorial keeps drawing randomly via `pickWord`.
+   * `isCalibrationTones` (a content comparison against `CALIBRATION_TONES`,
+   * not reference equality: a future `[...CALIBRATION_TONES]` or `.slice()`
+   * at a call site must not silently revert calibration to random words with
+   * nothing failing), captured here before `tutorialTones` gets its default.
+   * Narrower than `mode === "tutorial"`, which the guided teaching tutorial
+   * also uses: only the calibration flight gets fixed words
+   * (`CALIBRATION_WORD_IDS`); the teaching tutorial keeps drawing randomly
+   * via `pickWord`.
    */
   private readonly isCalibrationFlight: boolean;
   /** The fixed tone for `mode === "drill"`. Unused otherwise. */
@@ -591,7 +610,7 @@ export class Run {
     this.releaseMicForCue = cfg.releaseMicForCue ?? false;
     this.words = cfg.words ?? [];
     this.singleWord = cfg.singleWord ?? null;
-    this.isCalibrationFlight = cfg.tutorialTones === CALIBRATION_TONES;
+    this.isCalibrationFlight = isCalibrationTones(cfg.tutorialTones);
     this.tutorialTones = cfg.tutorialTones ?? TUTORIAL_TONES;
     this.drillTone = cfg.drillTone ?? null;
     this.difficulty = this.difficultyFor(0);
