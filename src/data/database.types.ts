@@ -174,6 +174,39 @@ export type Database = {
         }
         Relationships: []
       }
+      speakers: {
+        Row: {
+          accent: string
+          active: boolean
+          created_at: string
+          f0_seed: number
+          gender: string
+          id: string
+          is_default: boolean
+          name: string
+        }
+        Insert: {
+          accent?: string
+          active?: boolean
+          created_at?: string
+          f0_seed: number
+          gender: string
+          id: string
+          is_default?: boolean
+          name: string
+        }
+        Update: {
+          accent?: string
+          active?: boolean
+          created_at?: string
+          f0_seed?: number
+          gender?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       tone_stats: {
         Row: {
           attempts: number
@@ -208,6 +241,72 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      word_clips: {
+        Row: {
+          clip_key: string | null
+          clip_s: number | null
+          contour: Json | null
+          created_at: string
+          duration_s: number | null
+          onset_s: number | null
+          polyline: Json | null
+          raw_key: string | null
+          recorded_at: string | null
+          recorded_session: string | null
+          speaker_id: string
+          status: string
+          updated_at: string
+          word_id: string
+        }
+        Insert: {
+          clip_key?: string | null
+          clip_s?: number | null
+          contour?: Json | null
+          created_at?: string
+          duration_s?: number | null
+          onset_s?: number | null
+          polyline?: Json | null
+          raw_key?: string | null
+          recorded_at?: string | null
+          recorded_session?: string | null
+          speaker_id: string
+          status?: string
+          updated_at?: string
+          word_id: string
+        }
+        Update: {
+          clip_key?: string | null
+          clip_s?: number | null
+          contour?: Json | null
+          created_at?: string
+          duration_s?: number | null
+          onset_s?: number | null
+          polyline?: Json | null
+          raw_key?: string | null
+          recorded_at?: string | null
+          recorded_session?: string | null
+          speaker_id?: string
+          status?: string
+          updated_at?: string
+          word_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "word_clips_speaker_id_fkey"
+            columns: ["speaker_id"]
+            isOneToOne: false
+            referencedRelation: "speakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "word_clips_word_id_fkey"
+            columns: ["word_id"]
+            isOneToOne: false
+            referencedRelation: "words"
             referencedColumns: ["id"]
           },
         ]
