@@ -21,7 +21,8 @@ export interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   CLIP_TOKEN_SECRET: string;
-  RECORD_PASSCODE: string;
+  /** JSON object mapping each booth passcode to a `speakers.id`. */
+  RECORD_PASSCODES: string;
   /** Comma-separated; entries may be "https://*.vercel.app". */
   ALLOWED_ORIGINS: string;
 }

@@ -80,7 +80,7 @@ export function fakeEnv(over: Partial<Env> = {}): Env {
     SUPABASE_URL: "https://example.supabase.co",
     SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
     CLIP_TOKEN_SECRET: TEST_SECRET,
-    RECORD_PASSCODE: "hunter2",
+    RECORD_PASSCODES: '{"hunter2":"jane","mark-code":"mark"}',
     ALLOWED_ORIGINS: "https://flappytone.com",
     ...over,
   };
