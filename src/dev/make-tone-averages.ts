@@ -14,8 +14,8 @@
  * average, just a third place it gets read.
  *
  * Rerun this whenever the catalog changes (new recordings via `npm run
- * make-clips`, then `npm run seed-words` and `npm run export-fallback`) and
- * commit the regenerated `src/game/toneAverages.ts`
+ * process-clips`, then `npm run export-fallback`) and commit the
+ * regenerated `src/game/toneAverages.ts`
  * — the same manual-but-explicit workflow this repo already uses for every
  * other derived-from-recordings artifact.
  */

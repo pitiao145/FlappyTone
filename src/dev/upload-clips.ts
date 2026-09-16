@@ -3,9 +3,13 @@
  * script (Task 13, Sep 2026). Uploaded every `public/ref/<id>.wav` that had
  * a matching `words` row into `flappytone-clips` as `<id>.wav` — the exact
  * key shape `handleClip` (`workers/clips/src/routes/clip.ts`) reads with
- * `env.CLIPS.get(word.clipKey)`. Kept only as the historical record;
- * `public/ref/*.wav` is untracked as of Task 13 but still present on disk
- * locally, so this still runs if it's ever needed again.
+ * `env.CLIPS.get(word.clipKey)`. Kept only as the historical record.
+ *
+ * `public/ref/*.wav` was untracked in Task 13 (Sep 2026) — git history
+ * keeps it, but it is no longer checked out. This script only works against
+ * a working copy that still has those files on disk (whoever ran the
+ * original migration); a fresh clone will NOT have them and this will fail
+ * with ENOENT for every id.
  *
  *   node --experimental-strip-types src/dev/upload-clips.ts              # all 120
  *   node --experimental-strip-types src/dev/upload-clips.ts -- --only ma1   # just one id

@@ -27,7 +27,6 @@
     "import-words": "node --experimental-strip-types src/dev/import-words.ts",
     "make-icons": "node --experimental-strip-types src/dev/make-icons.ts",
     "update-demo": "node --experimental-strip-types src/dev/update-demo.ts",
-    "seed-words": "node --experimental-strip-types src/dev/seed-words.ts",
     "export-fallback": "node --experimental-strip-types src/dev/export-fallback.ts",
     "verify-clips": "node --experimental-strip-types src/dev/verify-clips.ts",
     "process-clips": "node --experimental-strip-types src/dev/process-clips.ts"

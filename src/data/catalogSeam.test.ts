@@ -116,6 +116,17 @@ describe("the shipped fallback", () => {
     for (const w of words) expect(w.english, w.id).not.toBe("");
   });
 
+  it("gives every word a non-empty hanzi and pinyin", () => {
+    // Successor to a check `wordlist.test.ts` used to hold ("gives every
+    // word a tone, hanzi and pinyin"), retargeted here now that the catalog
+    // table is the source of truth rather than a flat `WORDS` array. Tone
+    // coverage is asserted separately above ("covers all four tones").
+    for (const w of words) {
+      expect(w.hanzi.length, w.id).toBeGreaterThan(0);
+      expect(w.pinyin.length, w.id).toBeGreaterThan(0);
+    }
+  });
+
   it("keeps the three clocks apart", () => {
     // duration_s is the tone window, onset_s the lead-in, clip_s the whole
     // file. `clip_s` collapsing back onto the tone window would re-open the

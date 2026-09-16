@@ -14,10 +14,13 @@
  *
  * Exits 1 on any mismatch or missing object.
  *
- * As of Task 13, `public/ref/*.wav` is untracked (Task 13, Sep 2026) but
- * still present on disk for whoever ran the migration — this script still
- * works locally against those files. It has no reason to run again unless
- * R2 content is ever suspected of drifting from the local originals.
+ * `public/ref/*.wav` was untracked in Task 13 (Sep 2026) — git history
+ * keeps it, but it is no longer checked out. This script only works against
+ * a working copy that still has those files on disk (whoever ran the
+ * original migration); a fresh clone will NOT have them and non-`--raw`
+ * runs will fail to find a local source file to compare against. It has no
+ * reason to run again unless R2 content is ever suspected of drifting from
+ * the local originals.
  */
 
 import { createHash } from "node:crypto";

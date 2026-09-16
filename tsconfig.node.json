@@ -60,7 +60,6 @@
     "src/dev/env.ts",
     "src/dev/serviceClient.ts",
     "src/dev/export-fallback.ts",
-    "src/record/glossary.ts",
     "src/game/tiers.ts",
     "src/data/database.types.ts",
     "src/dev/r2.ts",

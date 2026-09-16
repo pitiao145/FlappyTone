@@ -43,7 +43,6 @@
     "src/dev/import-words.ts",
     "src/dev/env.ts",
     "src/dev/serviceClient.ts",
-    "src/dev/seed-words.ts",
     "src/dev/export-fallback.ts",
     "src/dev/clipCut.test.ts",
     "src/dev/manifest.test.ts",

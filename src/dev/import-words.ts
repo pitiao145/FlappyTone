@@ -46,7 +46,8 @@
  * `recorded_session`, `meta`) are left exactly as they are — a re-import must
  * never un-publish a word or discard a measurement. New words land as
  * `status='pending'`, `min_tier='free'` (open by default — see
- * `seed-words.ts`), at the end of `position` order, in file order.
+ * docs/DECISIONS.md's "Two tier gates, two meanings" entry), at the end of
+ * `position` order, in file order.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -310,7 +311,7 @@ for (let i = 0; i < parsed.length; i++) {
       position: nextPosition++,
       status: "pending",
       // Open by default. `min_tier` is the GAME gate, not the visualiser's
-      // practice depth — see seed-words.ts and docs/DECISIONS.md.
+      // practice depth — see docs/DECISIONS.md.
       min_tier: "free",
     });
   }
