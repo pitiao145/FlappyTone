@@ -1,7 +1,8 @@
 /**
- * One-time seed: writes the 120 shipped words into the `words`/`lists`/
- * `word_lists` tables, from the three flat sources that were the only
- * inventory before this migration:
+ * FROZEN — one-time seed, already run against production; do not run again.
+ * It wrote the 120 shipped words into the `words`/`lists`/`word_lists`
+ * tables, from the three flat sources that were the only inventory before
+ * this migration:
  *
  *   - `src/record/wordlist.ts`  — id/hanzi/pinyin/tone, in `position` order
  *   - `src/record/glossary.ts`  — english gloss, keyed by id
@@ -13,7 +14,13 @@
  *   npm run seed-words                # upserts words + lists + word_lists
  *
  * Idempotent: both upserts use `onConflict: "id"` (and the composite PK for
- * `word_lists`), so re-running after a manifest update just refreshes rows.
+ * `word_lists`), so re-running after a manifest update would just refresh
+ * rows — but both of its inputs, `wordlist.ts`'s `WORDS` array and
+ * `public/ref/manifest.json`, were retired in Task 13 (Sep 2026). This file
+ * is kept only as the historical record of how the `words` table was
+ * originally populated; it no longer compiles (see `tsconfig.node.json`,
+ * which excludes it) and cannot be run. `npm run import-words` is the live
+ * path for adding a word today.
  *
  * `min_tier` defaults OPEN: every seeded word is `'free'`.
  *

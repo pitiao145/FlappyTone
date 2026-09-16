@@ -1,8 +1,9 @@
 /**
- * Verifies the R2 upload by reading objects back OUT of R2 and comparing
- * byte length AND SHA-256 against the local source file. This is the gate:
- * an upload's exit code, or an object listing, proves nothing about
- * content — only a re-download and a hash comparison does.
+ * One-time verification script: verifies the R2 upload by reading objects
+ * back OUT of R2 and comparing byte length AND SHA-256 against the local
+ * source file. This is the gate: an upload's exit code, or an object
+ * listing, proves nothing about content — only a re-download and a hash
+ * comparison does.
  *
  *   npm run verify-clips             # every words.clip_key vs public/ref/
  *   npm run verify-clips -- --raw    # every words.raw_key vs fixtures/recordings/
@@ -12,6 +13,11 @@
  * never touching `public/ref/` or `fixtures/recordings/` themselves.
  *
  * Exits 1 on any mismatch or missing object.
+ *
+ * As of Task 13, `public/ref/*.wav` is untracked (Task 13, Sep 2026) but
+ * still present on disk for whoever ran the migration — this script still
+ * works locally against those files. It has no reason to run again unless
+ * R2 content is ever suspected of drifting from the local originals.
  */
 
 import { createHash } from "node:crypto";

@@ -10,7 +10,11 @@
 import { describe, expect, it } from "vitest";
 
 import { hasSimplified, simplifiedIn } from "./simplified.ts";
-import { WORDS } from "../record/wordlist.ts";
+import wordsFallback from "../data/wordsFallback.json" with { type: "json" };
+
+// Retargeted at the published catalog snapshot (Task 13, Sep 2026) — the
+// word list is a Supabase `words` table now, not `wordlist.ts`'s `WORDS`.
+const WORDS = wordsFallback.rows as { id: string; hanzi: string }[];
 
 describe("hasSimplified", () => {
   it("flags a Simplified character", () => {

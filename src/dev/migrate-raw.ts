@@ -1,10 +1,14 @@
 /**
- * One-time upload of every raw take into `flappytone-raw`, then points each
- * `words` row at the take that fed its shipped clip.
+ * FROZEN — one-time upload, already run; no longer wired to a package.json
+ * script (Task 13, Sep 2026, which also deleted `pull-recordings.ts`, its
+ * Step 1 below — this file still compiles, since the call is a subprocess
+ * string, but it cannot actually run any more). Uploaded every raw take into
+ * `flappytone-raw`, then pointed each `words` row at the take that fed its
+ * shipped clip. Kept only as the historical record.
  *
- *   npm run migrate-raw              # all sessions, all ids
- *   npm run migrate-raw -- --only ma1
- *   npm run migrate-raw -- --dry-run
+ *   node --experimental-strip-types src/dev/migrate-raw.ts              # all sessions, all ids
+ *   node --experimental-strip-types src/dev/migrate-raw.ts -- --only ma1
+ *   node --experimental-strip-types src/dev/migrate-raw.ts -- --dry-run
  *
  * Steps:
  *  1. `npm run pull-recordings` (no session arg — every session in Blob),

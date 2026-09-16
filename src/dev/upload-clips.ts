@@ -1,12 +1,15 @@
 /**
- * One-time upload: every `public/ref/<id>.wav` that has a matching `words`
- * row goes into `flappytone-clips` as `<id>.wav` — the exact key shape
- * `handleClip` (`workers/clips/src/routes/clip.ts`) reads with
- * `env.CLIPS.get(word.clipKey)`.
+ * FROZEN — one-time upload, already run; no longer wired to a package.json
+ * script (Task 13, Sep 2026). Uploaded every `public/ref/<id>.wav` that had
+ * a matching `words` row into `flappytone-clips` as `<id>.wav` — the exact
+ * key shape `handleClip` (`workers/clips/src/routes/clip.ts`) reads with
+ * `env.CLIPS.get(word.clipKey)`. Kept only as the historical record;
+ * `public/ref/*.wav` is untracked as of Task 13 but still present on disk
+ * locally, so this still runs if it's ever needed again.
  *
- *   npm run upload-clips              # all 120
- *   npm run upload-clips -- --only ma1   # just one id
- *   npm run upload-clips -- --dry-run    # print what would upload, write nothing
+ *   node --experimental-strip-types src/dev/upload-clips.ts              # all 120
+ *   node --experimental-strip-types src/dev/upload-clips.ts -- --only ma1   # just one id
+ *   node --experimental-strip-types src/dev/upload-clips.ts -- --dry-run    # print what would upload, write nothing
  *
  * Source of truth for "which ids exist" is the `words` table, not the
  * directory listing — a stray file in `public/ref/` with no `words` row

@@ -7,18 +7,19 @@
  * syllable in the inventory, carrying them together on one object is what
  * holds it.
  *
- * The source is the `words` table's catalog rows (`CatalogRow`, imported
- * type-only from `src/data/catalogRows.ts` so this module drags no
- * `src/data/` value into the landing-page chunk). `loadWords(manifest)`
- * remains as a thin adapter over the old `public/ref/manifest.json` shape,
- * for the Lab and older tests, until Task 13 removes it.
+ * The source is the `words` table's catalog rows, shaped by
+ * `src/data/catalogRows.ts`'s `CatalogRow`/`CATALOG_SELECT` — `wordsFromCatalog`
+ * below takes `unknown` and validates field-by-field rather than importing
+ * that type, so this module drags no `src/data/` value into the
+ * landing-page chunk. The old `public/ref/manifest.json` adapter
+ * (`loadWords`/`manifestToRows`) was removed in Task 13 (Sep 2026) —
+ * `wordsFromCatalog` is the only entry point now.
  *
  * Pure: parsing and selection only, no fetch. The fetch lives in `src/data/`.
  */
 
 import type { Polyline } from "./tuning.ts";
 import type { Tone } from "./gates.ts";
-import type { CatalogRow } from "../data/catalogRows.ts";
 import type { Tier } from "./tiers.ts";
 
 export interface Word {
@@ -188,47 +189,6 @@ export function wordsFromCatalog(rows: unknown): Word[] {
     });
   }
   return entries.sort((a, b) => a.position - b.position).map((e) => e.word);
-}
-
-/**
- * Adapts the old `public/ref/manifest.json` shape into catalog rows, so
- * `loadWords` can stay a thin wrapper over `wordsFromCatalog` while the Lab
- * and older tests still speak the manifest shape. Removed in Task 13.
- */
-function manifestToRows(manifest: unknown): CatalogRow[] {
-  if (typeof manifest !== "object" || manifest === null) return [];
-  const clips = (manifest as { clips?: unknown }).clips;
-  if (!Array.isArray(clips)) return [];
-  return clips.map((clip, index) => {
-    const c = (typeof clip === "object" && clip !== null ? clip : {}) as Record<string, unknown>;
-    return {
-      id: c.id as string,
-      hanzi: c.hanzi as string,
-      pinyin: c.pinyin as string,
-      english: (c.english as string | undefined) ?? "",
-      tone: c.tone as number,
-      tones: [c.tone as number],
-      syllables: 1,
-      position: index,
-      status: "published",
-      min_tier: "free",
-      clip_key: (c.file as string | undefined) ?? null,
-      duration_s: c.durationS as number,
-      onset_s: (c.onsetS as number | undefined) ?? null,
-      clip_s: (c.clipS as number | undefined) ?? null,
-      polyline: c.polyline,
-      updated_at: "",
-    } as CatalogRow;
-  });
-}
-
-/**
- * Reads a manifest into words — a thin adapter over `wordsFromCatalog`, kept
- * for the Lab and older tests until Task 13 removes the manifest path
- * entirely. See `manifestToRows`.
- */
-export function loadWords(manifest: unknown): Word[] {
-  return wordsFromCatalog(manifestToRows(manifest));
 }
 
 /**

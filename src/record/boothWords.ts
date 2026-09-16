@@ -22,9 +22,9 @@ export interface BoothWord {
 
 /**
  * The Worker's origin. The booth cannot run without it — there is no
- * fallback list to fall back to (Task 13 removes the bundled `WORDS` array
- * this used to read; until then it's still there, but this module never
- * touches it).
+ * fallback list to fall back to (the bundled `WORDS` array this used to read
+ * was removed from `wordlist.ts` in Task 13, Sep 2026; this module never
+ * touched it even before that).
  */
 export const RECORD_BASE_URL: string = (
   (import.meta.env.VITE_CLIPS_BASE_URL as string | undefined) ?? ""

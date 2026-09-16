@@ -382,31 +382,24 @@ shape: `catalogSeam.test.ts` pins `CATALOG_SELECT`/`wordsFromCatalog`/
 Task 13 deletes, so the guard survives that task rather than needing to be
 rewritten by it.
 
-**Pending Task 13 — exact doc lines to change when the old path is retired:**
-
-- `CLAUDE.md` "The clip catalog and its Worker": delete the "Not yet
-  retired" paragraph entirely; delete the "both pipelines are live... read
-  this section for what's true now" caveat in the status line; delete rule
-  5's trailing sentence "`manifest.test.ts` still exists too... Task 13
-  removes it."
-- `CLAUDE.md`'s `api/*.ts` bullet ("seven small Vercel functions"): becomes
-  four (`newsletter.ts`, `score.ts`, `run.ts`, `webhook-ls.ts`) once
-  `upload.ts`/`auth.ts`/`_passcode.ts` are deleted; drop the
-  `/record`-upload clause.
-- `CLAUDE.md` Layout block's `api/` line: drop "the record booth" from the
-  description.
-- `docs/PRD.md` §9: drop the `npm run make-clips` mention, point at
-  `process-clips` only; drop the `public/ref/`-still-tracked framing if it's
-  gone.
-- `docs/TESTING.md`: remove any remaining `make-clips`/`manifest.json`
-  references (Step 4 of this task already retargeted the live ones; check
-  for stragglers Task 13 exposes).
-- `package.json`: `make-clips`, `pull-recordings`, `import-words` (old TSV
-  form, if superseded) scripts removed — re-check this file's own docs
-  references once Task 13's PR lands.
-- Remove `@vercel/blob` from `package.json` dependencies once nothing
-  imports it — grep first, `api/upload.ts` and `src/dev/pull-recordings.ts`
-  are today's only importers.
+**Task 13 landed (Sep 2026).** `public/ref/*.wav` is untracked (kept on disk
+locally, not deleted), `public/ref/manifest.json` is deleted, and so are
+`api/upload.ts`, `api/auth.ts`, `api/_passcode.ts` + its test,
+`src/dev/pull-recordings.ts`, `src/dev/make-clips.ts`, and
+`src/dev/manifest.test.ts`. `@vercel/blob` is out of `package.json`.
+`wordlist.ts`'s `WORDS` array and `words.ts`'s `loadWords`/`manifestToRows`
+adapter are gone; `wordlist.test.ts` and `simplified.test.ts` were
+retargeted at `wordsFallback.json` rows, and `run.test.ts`/`words.test.ts`
+at `wordsFromCatalog` directly. `_passcode.ts`'s `json` helper — the one
+piece of it the four surviving functions still needed — moved to
+`api/_json.ts` rather than being deleted with the passcode gate itself.
+`seed-words.ts`, `upload-clips.ts` and `migrate-raw.ts` are kept as frozen,
+already-run historical scripts (their own headers say so now);
+`seed-words.ts` no longer compiles (both its inputs are gone) and was
+dropped from `tsconfig.node.json`'s `include`. CLAUDE.md, PRD.md and this
+file were updated to match; TESTING.md needed no changes (its one
+`public/ref/` reference is to files that are still present on disk, just
+untracked).
 
 **Clips are the whole take, not the voiced window (9 Aug 2026).** Cutting on
 voicing dropped a median of 360ms of audible material, worst on Tone 3 where

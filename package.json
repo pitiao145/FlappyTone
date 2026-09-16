@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "workspaces": ["workers/clips"],
+  "workspaces": [
+    "workers/clips"
+  ],
   "scripts": {
     "dev": "vite",
     "worker:dev": "npm -w workers/clips run dev",
@@ -21,22 +23,17 @@
     "report": "node --experimental-strip-types src/dev/report.ts",
     "analyze-recording": "node --experimental-strip-types src/dev/analyze-recording.ts",
     "make-ref-clips": "node --experimental-strip-types src/dev/make-ref-clips.ts",
-    "make-clips": "node --experimental-strip-types src/dev/make-clips.ts",
     "make-tone-averages": "node --experimental-strip-types src/dev/make-tone-averages.ts",
     "import-words": "node --experimental-strip-types src/dev/import-words.ts",
-    "pull-recordings": "node --experimental-strip-types src/dev/pull-recordings.ts",
     "make-icons": "node --experimental-strip-types src/dev/make-icons.ts",
     "update-demo": "node --experimental-strip-types src/dev/update-demo.ts",
     "seed-words": "node --experimental-strip-types src/dev/seed-words.ts",
     "export-fallback": "node --experimental-strip-types src/dev/export-fallback.ts",
-    "upload-clips": "node --experimental-strip-types src/dev/upload-clips.ts",
-    "migrate-raw": "node --experimental-strip-types src/dev/migrate-raw.ts",
     "verify-clips": "node --experimental-strip-types src/dev/verify-clips.ts",
     "process-clips": "node --experimental-strip-types src/dev/process-clips.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",
-    "@vercel/blob": "^2.6.1",
     "chart.js": "^4.5.1",
     "posthog-js": "^1.413.3",
     "react": "^19.2.8",

@@ -17,7 +17,7 @@
  * date rather than trusted outright.
  */
 import { createClient } from "@supabase/supabase-js";
-import { json } from "./_passcode.js";
+import { json } from "./_json.js";
 
 // Mirrors `TIER_LIMITS` in `src/game/tiers.ts`. Importing that module here
 // would pull the game's build graph into a Vercel function; duplicating two

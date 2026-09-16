@@ -18,7 +18,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { timingSafeEqual, createHmac } from "node:crypto";
-import { json } from "./_passcode.js";
+import { json } from "./_json.js";
 
 // Vercel functions written with this Web-Fetch `(request: Request)` shape
 // (same as score.ts/run.ts) are never JSON-body-parsed for you — that

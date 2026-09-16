@@ -98,9 +98,10 @@ export interface RunConfig {
    */
   releaseMicForCue?: boolean;
   /**
-   * The clip inventory, from `public/ref/manifest.json`. Omitted or empty, the
-   * run builds gates from the tuning defaults and cues them synthetically —
-   * which is what a failed manifest fetch degrades to, deliberately.
+   * The clip inventory, from the `words` catalog table (or its bundled
+   * `wordsFallback.json` snapshot). Omitted or empty, the run builds gates
+   * from the tuning defaults and cues them synthetically — which is what a
+   * failed catalog fetch degrades to, deliberately.
    */
   words?: Word[];
   /**

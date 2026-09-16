@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   availableTones,
-  loadWords,
   pickWord,
   wordsForTier,
   wordsFromCatalog,
@@ -268,47 +267,6 @@ describe("marking a word pro still gates it (the lever)", () => {
     for (let i = 0; i < 10; i += 1) {
       expect(pickWord(pool, 1, [], () => i / 10)?.id).toBe("open1");
     }
-  });
-});
-
-describe("loadWords (manifest adapter, kept for the Lab until Task 13)", () => {
-  function clip(over: Record<string, unknown> = {}): Record<string, unknown> {
-    return {
-      id: "ba1",
-      hanzi: "八",
-      pinyin: "bā",
-      english: "eight",
-      tone: 1,
-      file: "ba1.wav",
-      durationS: 1.178,
-      polyline: [
-        [0, 4.5],
-        [1, 4.5],
-      ],
-      ...over,
-    };
-  }
-
-  it("reads a well-formed manifest", () => {
-    const words = loadWords({ clips: [clip(), clip({ id: "ma2", tone: 2 })] });
-    expect(words.map((w) => w.id)).toEqual(["ba1", "ma2"]);
-    expect(words[0].durationS).toBeCloseTo(1.178);
-    expect(words[0].clipKey).toBe("ba1.wav");
-  });
-
-  it.each([
-    ["no clips array", { clips: "nope" }],
-    ["not an object", 42],
-    ["null", null],
-  ])("returns nothing for %s rather than throwing", (_name, manifest) => {
-    expect(loadWords(manifest)).toEqual([]);
-  });
-
-  it("drops an entry with a missing file", () => {
-    expect(loadWords({ clips: [clip({ file: undefined })] })).toEqual([]);
-    expect(loadWords({ clips: [clip({ file: undefined }), clip({ id: "ok" })] }).map((w) => w.id)).toEqual([
-      "ok",
-    ]);
   });
 });
 
