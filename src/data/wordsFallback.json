@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": "2026-09-15T05:48:23.746Z",
+  "exportedAt": "2026-09-16T10:49:07.959Z",
   "rows": [
     {
       "clip_key": "ma1b.wav",
@@ -36,7 +36,7 @@
       "syllables": 1,
       "tone": 1,
       "tones": [],
-      "updated_at": "2026-09-15T04:56:27.856869+00:00"
+      "updated_at": "2026-09-16T00:50:12.946873+00:00"
     },
     {
       "clip_key": "ba1.wav",
