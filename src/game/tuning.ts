@@ -379,6 +379,17 @@ export interface Tuning {
   gateDurationS: Record<Tone, number>;
   /** Per-tone corridor centreline. See DEFAULT_POLYLINES. */
   polylines: Record<Tone, Polyline>;
+
+  /**
+   * The f0 centre, in Hz, below which a player is matched to a male speaker.
+   *
+   * A threshold on a continuum: adult female centres cluster near 190-220Hz
+   * and male near 100-130Hz, so 160 separates them with room either side. What
+   * is being matched is pitch RANGE, not gender — a low-voiced woman matched
+   * to the male recordings is the right outcome for the game, and the Settings
+   * switch exists for everyone the guess suits badly.
+   */
+  voiceMatchF0Hz: number;
 }
 
 export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
@@ -425,6 +436,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   reachToToneSpaceDown: 1,
   gateDurationS: Object.freeze({ 1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6 }),
   polylines: DEFAULT_POLYLINES,
+  voiceMatchF0Hz: 160,
 }) as Readonly<Tuning>;
 
 function clonePolylines(p: Record<Tone, Polyline>): Record<Tone, Polyline> {
