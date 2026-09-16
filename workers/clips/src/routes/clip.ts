@@ -1,9 +1,11 @@
 /**
  * `GET /clip/:speaker/:id?v=<word_clips.updated_at>` — the gated,
- * edge-cached clip read. `GET /clip/:id` still resolves to the default
- * speaker, for exactly one release (an old, content-hashed bundle is still
- * live in some player's tab, and without it every cue it asks for 404s at
- * once); it is removed in the contract task.
+ * edge-cached clip read. The single-segment `/clip/:id` back-compat route
+ * (resolving to the default speaker) has been removed: no real player has
+ * ever run this architecture (live flappytone.com still serves the
+ * pre-migration Vercel Blob build), and the only place that constructs a
+ * clip URL (`src/audio/reference.ts`) already builds the two-segment form.
+ * A path with no `/speaker/id` shape now 400s.
  *
  * Four things are load-bearing here:
  *
@@ -57,7 +59,6 @@ interface WordRow {
  */
 interface Inventory {
   words: Map<string, WordRow>;
-  defaultSpeaker: string;
 }
 
 let wordCache: { at: number; inventory: Inventory } | null = null;
@@ -71,14 +72,11 @@ export function __resetWordCacheForTests(): void {
 
 async function loadWords(env: Env): Promise<Inventory> {
   const db = serviceDb(env);
-  const [clips, speakers] = await Promise.all([
-    db
-      .from("word_clips")
-      .select("word_id,speaker_id,clip_key,words!inner(min_tier)")
-      .eq("status", "published"),
-    db.from("speakers").select("id,is_default"),
-  ]);
-  if (clips.error || !clips.data || speakers.error || !speakers.data) {
+  const clips = await db
+    .from("word_clips")
+    .select("word_id,speaker_id,clip_key,words!inner(min_tier)")
+    .eq("status", "published");
+  if (clips.error || !clips.data) {
     throw new Error("words query failed");
   }
   const map = new Map<string, WordRow>();
@@ -95,9 +93,7 @@ async function loadWords(env: Env): Promise<Inventory> {
       minTier: row.words.min_tier,
     });
   }
-  const def = (speakers.data as Array<{ id: string; is_default: boolean }>).find((s) => s.is_default)?.id;
-  if (!def) throw new Error("no default speaker");
-  return { words: map, defaultSpeaker: def };
+  return { words: map };
 }
 
 async function words(env: Env, now: number): Promise<Inventory> {
@@ -139,6 +135,10 @@ export async function handleClip(req: Request, env: Env, ctx: ExecutionContext):
   const ticket = match ? await verifyTicket(match[1], env.CLIP_TOKEN_SECRET, callerIp(req)) : null;
   if (!ticket) return Response.json({ error: "Missing or invalid token." }, { status: 401 });
 
+  if (slash === -1) {
+    return Response.json({ error: "Bad clip id." }, { status: 400 });
+  }
+
   let inventory: Inventory;
   try {
     inventory = await words(env, Date.now());
@@ -146,11 +146,8 @@ export async function handleClip(req: Request, env: Env, ctx: ExecutionContext):
     return Response.json({ error: "Clips are temporarily unavailable." }, { status: 503 });
   }
 
-  // Back-compat for exactly one release: an old, content-hashed bundle is
-  // still in some player's tab, and without this every cue it asks for 404s
-  // at once. Remove in the contract task.
-  const speaker = slash === -1 ? inventory.defaultSpeaker : rest.slice(0, slash);
-  const id = slash === -1 ? rest : rest.slice(slash + 1);
+  const speaker = rest.slice(0, slash);
+  const id = rest.slice(slash + 1);
 
   if (!SPEAKER_RE.test(speaker)) return Response.json({ error: "Bad speaker." }, { status: 400 });
   if (!ID_RE.test(id)) return Response.json({ error: "Bad clip id." }, { status: 400 });

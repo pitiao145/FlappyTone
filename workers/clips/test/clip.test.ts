@@ -19,27 +19,19 @@ const wordsQuery = vi.hoisted(() => ({
     clip_key: string | null;
     words: { min_tier: string };
   }[],
-  speakers: [] as { id: string; is_default: boolean }[],
   error: null as unknown,
 }));
 
 vi.mock("../src/db.ts", () => ({
   serviceDb: () => ({
-    from: (table: string) => {
-      if (table === "speakers") {
-        return {
-          select: async () => ({ data: wordsQuery.speakers, error: wordsQuery.error }),
-        };
-      }
-      return {
-        select: () => ({
-          eq: async () => {
-            wordsQuery.calls++;
-            return { data: wordsQuery.rows, error: wordsQuery.error };
-          },
-        }),
-      };
-    },
+    from: () => ({
+      select: () => ({
+        eq: async () => {
+          wordsQuery.calls++;
+          return { data: wordsQuery.rows, error: wordsQuery.error };
+        },
+      }),
+    }),
   }),
 }));
 
@@ -79,54 +71,54 @@ beforeEach(() => {
     { word_id: "ba1", speaker_id: "mark", clip_key: "ba1-mark.wav", words: { min_tier: "free" } },
     { word_id: "pw1", speaker_id: "mark", clip_key: "pw1-mark.wav", words: { min_tier: "pro" } },
   ];
-  wordsQuery.speakers = [
-    { id: "jane", is_default: true },
-    { id: "mark", is_default: false },
-  ];
   __resetWordCacheForTests();
 });
 
-describe("GET /clip/:id", () => {
-  it("401s without a ticket", async () => {
+describe("GET /clip/:id (back-compat route removed)", () => {
+  it("400s a single-segment path, even with a valid ticket", async () => {
+    expect((await get("/clip/ba1?v=1", await ticketFor("free"), env)).status).toBe(400);
+  });
+
+  it("401s a single-segment path with no ticket (ticket check still runs first)", async () => {
     expect((await get("/clip/ba1")).status).toBe(401);
   });
 
   it("401s on a ticket signed with another secret", async () => {
     const forged = await signTicket({ tier: "pro", ip: TEST_IP }, "not-our-secret");
-    expect((await get("/clip/pw1?v=1", forged, env)).status).toBe(401);
+    expect((await get("/clip/jane/pw1?v=1", forged, env)).status).toBe(401);
   });
 
   it("401s on a ticket presented from a different IP", async () => {
     const other = await signTicket({ tier: "pro", ip: "198.51.100.9" }, TEST_SECRET);
-    expect((await get("/clip/pw1?v=1", other, env)).status).toBe(401);
+    expect((await get("/clip/jane/pw1?v=1", other, env)).status).toBe(401);
   });
 
   it("400s a malformed id, before touching R2", async () => {
     const t = await ticketFor("free");
     for (const bad of ["..%2Fx", "BA1", "ba_1", "a".repeat(33), "", "%ff", "%e0%80%80", "%"]) {
-      const res = await get(`/clip/${bad}?v=1`, t, env);
+      const res = await get(`/clip/jane/${bad}?v=1`, t, env);
       expect(res.status).toBe(400);
     }
     expect(clips.getCalls).toBe(0);
   });
 
   it("404s an unknown id without touching R2", async () => {
-    const res = await get("/clip/nope?v=1", await ticketFor("free"), env);
+    const res = await get("/clip/jane/nope?v=1", await ticketFor("free"), env);
     expect(res.status).toBe(404);
     expect(clips.getCalls).toBe(0);
   });
 
   it("404s a published word with no clip_key", async () => {
-    expect((await get("/clip/noclip?v=1", await ticketFor("free"), env)).status).toBe(404);
+    expect((await get("/clip/jane/noclip?v=1", await ticketFor("free"), env)).status).toBe(404);
   });
 
   it("404s when the object is missing from R2", async () => {
     clips.objects.delete("ba1.wav");
-    expect((await get("/clip/ba1?v=1", await ticketFor("free"), env)).status).toBe(404);
+    expect((await get("/clip/jane/ba1?v=1", await ticketFor("free"), env)).status).toBe(404);
   });
 
   it("serves a free word to a free ticket with a private cache-control", async () => {
-    const res = await get("/clip/ba1?v=1", await ticketFor("free"), env);
+    const res = await get("/clip/jane/ba1?v=1", await ticketFor("free"), env);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("audio/wav");
     expect(res.headers.get("cache-control")).toBe("private, max-age=604800, immutable");
@@ -134,23 +126,23 @@ describe("GET /clip/:id", () => {
   });
 
   it("serves a free word to a guest ticket", async () => {
-    expect((await get("/clip/ba1?v=1", await ticketFor("guest"), env)).status).toBe(200);
+    expect((await get("/clip/jane/ba1?v=1", await ticketFor("guest"), env)).status).toBe(200);
   });
 
   it("403s a pro word for a guest or free ticket, without touching R2", async () => {
-    expect((await get("/clip/pw1?v=1", await ticketFor("guest"), env)).status).toBe(403);
-    expect((await get("/clip/pw1?v=1", await ticketFor("free"), env)).status).toBe(403);
+    expect((await get("/clip/jane/pw1?v=1", await ticketFor("guest"), env)).status).toBe(403);
+    expect((await get("/clip/jane/pw1?v=1", await ticketFor("free"), env)).status).toBe(403);
     expect(clips.getCalls).toBe(0);
   });
 
   it("serves a pro word to a pro ticket", async () => {
-    const res = await get("/clip/pw1?v=1", await ticketFor("pro"), env);
+    const res = await get("/clip/jane/pw1?v=1", await ticketFor("pro"), env);
     expect(res.status).toBe(200);
     expect(await res.text()).toBe("RIFFfake-pro");
   });
 
   it("stores the shared copy as public and returns the client a private copy", async () => {
-    await get("/clip/ba1?v=7", await ticketFor("free"), env);
+    await get("/clip/jane/ba1?v=7", await ticketFor("free"), env);
     const stored = cache.store.get("https://clips.flappytone.com/clip/jane/ba1?v=7");
     expect(stored).toBeDefined();
     expect(stored?.headers.get("cache-control")).toBe("public, max-age=604800, immutable");
@@ -158,9 +150,9 @@ describe("GET /clip/:id", () => {
 
   it("serves a second request for the same id+v from the edge cache, not R2", async () => {
     const t = await ticketFor("free");
-    await get("/clip/ba1?v=1", t, env);
+    await get("/clip/jane/ba1?v=1", t, env);
     expect(clips.getCalls).toBe(1);
-    const res = await get("/clip/ba1?v=1", t, env);
+    const res = await get("/clip/jane/ba1?v=1", t, env);
     expect(res.status).toBe(200);
     expect(clips.getCalls).toBe(1);
     expect(res.headers.get("cache-control")).toBe("private, max-age=604800, immutable");
@@ -169,23 +161,23 @@ describe("GET /clip/:id", () => {
 
   it("misses the cache when ?v= changes", async () => {
     const t = await ticketFor("free");
-    await get("/clip/ba1?v=1", t, env);
-    await get("/clip/ba1?v=2", t, env);
+    await get("/clip/jane/ba1?v=1", t, env);
+    await get("/clip/jane/ba1?v=2", t, env);
     expect(clips.getCalls).toBe(2);
   });
 
   it("runs one words query per isolate, not one per request", async () => {
     const t = await ticketFor("free");
-    await get("/clip/ba1?v=1", t, env);
-    await get("/clip/ba1?v=2", t, env);
-    await get("/clip/pw1?v=1", t, env);
+    await get("/clip/jane/ba1?v=1", t, env);
+    await get("/clip/jane/ba1?v=2", t, env);
+    await get("/clip/jane/pw1?v=1", t, env);
     expect(wordsQuery.calls).toBe(1);
   });
 
   it("503s rather than failing open when the words query errors", async () => {
     wordsQuery.rows = [];
     wordsQuery.error = { message: "boom" };
-    expect((await get("/clip/ba1?v=1", await ticketFor("free"), env)).status).toBe(503);
+    expect((await get("/clip/jane/ba1?v=1", await ticketFor("free"), env)).status).toBe(503);
   });
 });
 
@@ -234,20 +226,13 @@ describe("GET /clip/:speaker/:id", () => {
     expect((await get("/clip/mark/pw1?v=1", await ticketFor("pro"), env)).status).toBe(200);
   });
 
-  it("keeps /clip/:id working, on the default speaker", async () => {
+  it("400s a single-segment /clip/:id path instead of resolving a default speaker", async () => {
     const res = await get("/clip/ba1?v=1", await ticketFor("free"), env);
-    expect(res.status).toBe(200);
-    expect(await res.text()).toBe("RIFFfake-free");
-    expect([...cache.store.keys()][0]).toContain("/clip/jane/");
+    expect(res.status).toBe(400);
   });
 
-  it("503s rather than serving an empty inventory when the speakers query errors", async () => {
+  it("503s rather than serving an empty inventory when the words query errors", async () => {
     wordsQuery.error = { message: "boom" };
     expect((await get("/clip/jane/ba1?v=1", await ticketFor("free"), env)).status).toBe(503);
-  });
-
-  it("503s when no speaker is marked default", async () => {
-    wordsQuery.speakers = [{ id: "mark", is_default: false }];
-    expect((await get("/clip/ba1?v=1", await ticketFor("free"), env)).status).toBe(503);
   });
 });

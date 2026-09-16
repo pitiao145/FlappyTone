@@ -508,7 +508,7 @@ export function Calibration({
   // word were ever marked `pro`, a guest would still warm a real clip here
   // but the flight's own Run (tier-filtered) would fall back to `pickWord`
   // for that gate, so the warm would go to waste — a wasted fetch, not a
-  // wrong tone or a lost gate, since `/clip/:id`'s 403 already degrades to
+  // wrong tone or a lost gate, since `/clip/:speaker/:id`'s 403 already degrades to
   // the synthetic sweep either way.
   useEffect(() => {
     if (step !== "done") return;

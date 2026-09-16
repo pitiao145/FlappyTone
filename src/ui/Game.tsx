@@ -448,7 +448,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // defaults with synthetic cues.
       //
       // `min_tier` is the *game* gate — the same value the Worker enforces at
-      // `/clip/:id` — so the pool has to agree with it or a gated word flies
+      // `/clip/:speaker/:id` — so the pool has to agree with it or a gated word flies
       // with a synthetic sweep instead of its recording. (The visualiser's
       // `wordsPerTone` is a separate, count-based practice limit; it must
       // never reach this pool, or a guest's 0-word cap would starve the game.)
