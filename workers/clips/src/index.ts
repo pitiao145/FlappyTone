@@ -1,7 +1,7 @@
 /**
  * Router skeleton for the clips API. Only the cross-cutting concerns live
  * here: CORS, the OPTIONS preflight, and dispatch. The actual routes —
- * `/token`, `/clip/:id`, `/auth`, `/raw` and `/booth/words` — live in
+ * `/token`, `/clip/:speaker/:id`, `/auth`, `/raw` and `/booth/words` — live in
  * `./routes/`.
  *
  * Every response, success or error, goes out through `corsHeaders` — a
@@ -45,8 +45,10 @@ export default {
     const cors = (res: Response) => withCors(res, origin, env.ALLOWED_ORIGINS);
     const key = `${req.method} ${url.pathname}`;
 
-    // `/clip/:id` is the one path-parameterised route; the handler reads the
-    // id off the pathname itself and validates it.
+    // `/clip/:speaker/:id` is the one path-parameterised route; the handler
+    // owns the parsing and validates both segments itself. A single-segment
+    // `/clip/:id` still resolves to the default speaker, for exactly one
+    // release — old bundles in open tabs still ask for it.
     if (req.method === "GET" && url.pathname.startsWith("/clip/")) {
       return cors(await handleClip(req, env, ctx));
     }

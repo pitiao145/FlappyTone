@@ -1,7 +1,11 @@
 /**
- * `GET /clip/:id?v=<updated_at>` — the gated, edge-cached clip read.
+ * `GET /clip/:speaker/:id?v=<word_clips.updated_at>` — the gated,
+ * edge-cached clip read. `GET /clip/:id` still resolves to the default
+ * speaker, for exactly one release (an old, content-hashed bundle is still
+ * live in some player's tab, and without it every cue it asks for 404s at
+ * once); it is removed in the contract task.
  *
- * Three things are load-bearing here:
+ * Four things are load-bearing here:
  *
  * 1. **The ticket is the whole authorization.** `verifyTicket` checks the
  *    HS256 signature, the 30-minute expiry AND the caller's IP, so a forged,
@@ -16,10 +20,18 @@
  * 3. **The shared edge cache stores `public`, the client gets `private`**
  *    (Decision 6). Cloudflare's Cache API refuses to store a `private`
  *    response, so the cached copy must be `public` — and it is safe to be,
- *    because the cache key carries only `id` and `v`, never anything about
- *    the caller, and the pro gate runs before the cache is consulted. The
- *    copy handed to the browser is rewritten to `private` so no intermediary
- *    holds a per-player response.
+ *    because the cache key carries only `speaker`, `id` and `v`, never
+ *    anything about the caller, and the pro gate runs before the cache is
+ *    consulted. The copy handed to the browser is rewritten to `private` so
+ *    no intermediary holds a per-player response.
+ *
+ * 4. **The speaker is in the cache key, and it is a path segment.** If it
+ *    were dropped, one speaker's response would be served from a key another
+ *    speaker also computes — the WRONG VOICE to every player at once, with
+ *    no error anywhere. A path segment cannot be silently dropped by a
+ *    refactor the way a query parameter can. The speaker is NOT in the play
+ *    ticket: voice is not an entitlement, and `min_tier` (read from `words`,
+ *    not `word_clips`) gates every voice identically.
  */
 import { serviceDb } from "../db.ts";
 import { verifyTicket } from "../tickets.ts";
@@ -29,6 +41,9 @@ import type { Env } from "../index.ts";
 /** Validate, never sanitise: a bad id is rejected, not stripped into a good one. */
 const ID_RE = /^[a-z0-9]{1,32}$/;
 
+/** Same alphabet as the DB check constraint. Validate, never sanitise. */
+const SPEAKER_RE = /^[a-z0-9]{1,16}$/;
+
 const WORDS_TTL_MS = 5 * 60 * 1000;
 
 interface WordRow {
@@ -36,33 +51,62 @@ interface WordRow {
   minTier: string;
 }
 
-let wordCache: { at: number; words: Map<string, WordRow> } | null = null;
+/**
+ * Keyed "speaker:id", not id. A map keyed on id alone would resolve a male
+ * request to whatever row happened to load last.
+ */
+interface Inventory {
+  words: Map<string, WordRow>;
+  defaultSpeaker: string;
+}
+
+let wordCache: { at: number; inventory: Inventory } | null = null;
 /** Concurrent misses in one isolate share a single query rather than racing. */
-let inFlight: Promise<Map<string, WordRow>> | null = null;
+let inFlight: Promise<Inventory> | null = null;
 
 export function __resetWordCacheForTests(): void {
   wordCache = null;
   inFlight = null;
 }
 
-async function loadWords(env: Env): Promise<Map<string, WordRow>> {
-  const { data, error } = await serviceDb(env)
-    .from("words")
-    .select("id,clip_key,min_tier")
-    .eq("status", "published");
-  if (error || !data) throw new Error("words query failed");
+async function loadWords(env: Env): Promise<Inventory> {
+  const db = serviceDb(env);
+  const [clips, speakers] = await Promise.all([
+    db
+      .from("word_clips")
+      .select("word_id,speaker_id,clip_key,words!inner(min_tier)")
+      .eq("status", "published"),
+    db.from("speakers").select("id,is_default"),
+  ]);
+  if (clips.error || !clips.data || speakers.error || !speakers.data) {
+    throw new Error("words query failed");
+  }
   const map = new Map<string, WordRow>();
-  for (const row of data) map.set(row.id, { clipKey: row.clip_key, minTier: row.min_tier });
-  return map;
+  for (const row of clips.data as unknown as Array<{
+    word_id: string;
+    speaker_id: string;
+    clip_key: string | null;
+    words: { min_tier: string };
+  }>) {
+    // `min_tier` lives on `words`, not `word_clips`: it is game access, the
+    // same for every voice of the same word.
+    map.set(`${row.speaker_id}:${row.word_id}`, {
+      clipKey: row.clip_key,
+      minTier: row.words.min_tier,
+    });
+  }
+  const def = (speakers.data as Array<{ id: string; is_default: boolean }>).find((s) => s.is_default)?.id;
+  if (!def) throw new Error("no default speaker");
+  return { words: map, defaultSpeaker: def };
 }
 
-async function words(env: Env, now: number): Promise<Map<string, WordRow>> {
-  if (wordCache && now - wordCache.at < WORDS_TTL_MS) return wordCache.words;
+async function words(env: Env, now: number): Promise<Inventory> {
+  if (wordCache && now - wordCache.at < WORDS_TTL_MS) return wordCache.inventory;
   if (!inFlight) {
     inFlight = loadWords(env)
-      .then((map) => {
-        wordCache = { at: Date.now(), words: map };
-        return map;
+      .then((inventory) => {
+        wordCache = { at: Date.now(), inventory };
+        return inventory;
       })
       .finally(() => {
         inFlight = null;
@@ -86,22 +130,32 @@ export async function handleClip(req: Request, env: Env, ctx: ExecutionContext):
   // a malformed or invalid-UTF-8 escape (`%ff`, `%e0%80%80`) — which, running
   // before the ticket check, turned an unauthenticated probe into a 500
   // instead of the contracted 400. `ID_RE` rejects any escape as-is.
-  const id = url.pathname.slice("/clip/".length);
+  const rest = url.pathname.slice("/clip/".length);
+  const slash = rest.indexOf("/");
 
+  // Ticket first, then the slug regexes: an unauthenticated probe with a bad
+  // speaker or id must get 401, not 400 (and never a 500 — see above).
   const match = /^Bearer (.+)$/.exec(req.headers.get("authorization") ?? "");
   const ticket = match ? await verifyTicket(match[1], env.CLIP_TOKEN_SECRET, callerIp(req)) : null;
   if (!ticket) return Response.json({ error: "Missing or invalid token." }, { status: 401 });
 
-  if (!ID_RE.test(id)) return Response.json({ error: "Bad clip id." }, { status: 400 });
-
-  let inventory: Map<string, WordRow>;
+  let inventory: Inventory;
   try {
     inventory = await words(env, Date.now());
   } catch {
     return Response.json({ error: "Clips are temporarily unavailable." }, { status: 503 });
   }
 
-  const word = inventory.get(id);
+  // Back-compat for exactly one release: an old, content-hashed bundle is
+  // still in some player's tab, and without this every cue it asks for 404s
+  // at once. Remove in the contract task.
+  const speaker = slash === -1 ? inventory.defaultSpeaker : rest.slice(0, slash);
+  const id = slash === -1 ? rest : rest.slice(slash + 1);
+
+  if (!SPEAKER_RE.test(speaker)) return Response.json({ error: "Bad speaker." }, { status: 400 });
+  if (!ID_RE.test(id)) return Response.json({ error: "Bad clip id." }, { status: 400 });
+
+  const word = inventory.words.get(`${speaker}:${id}`);
   if (!word || !word.clipKey) return Response.json({ error: "Not found." }, { status: 404 });
   // Default-deny: anything that is not exactly "free" needs a pro ticket, so
   // a third tier added to `words.min_tier` later fails closed rather than open.
@@ -110,7 +164,7 @@ export async function handleClip(req: Request, env: Env, ctx: ExecutionContext):
   }
 
   const v = url.searchParams.get("v") ?? "";
-  const cacheKey = new Request(`${CACHE_HOST}/clip/${id}?v=${encodeURIComponent(v)}`);
+  const cacheKey = new Request(`${CACHE_HOST}/clip/${speaker}/${id}?v=${encodeURIComponent(v)}`);
   const cache = (caches as unknown as { default: Cache }).default;
 
   const hit = await cache.match(cacheKey);
