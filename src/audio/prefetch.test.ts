@@ -324,14 +324,12 @@ describe("the calibration flight's own plan", () => {
     expect(plan.map((w) => w.id)).toEqual(queued.filter(Boolean).map((w) => w!.id));
   });
 
-  it("fetch-once: a word already loading is not requested twice across calls", async () => {
+  it("de-dupes a word the Run has queued twice, so it is planned once", () => {
+    // The half of fetch-once this module owns. `loadClip`'s own per-id `loads`
+    // map is the other half and is exercised for real in reference.clip.test.ts
+    // — it cannot be asserted here, where loadClip is mocked away.
     const w = byId("t1w0");
-    prefetchPool([w]);
-    prefetchPool([w, w]);
-    await new Promise((r) => setTimeout(r, 0));
-    // prefetchPool de-dupes within a plan via planPrefetch, and loadClip is
-    // idempotent per id — the seam this asserts is that nothing here bypasses
-    // that by constructing its own request.
-    expect(loadClip.mock.calls.every((c) => c[0] === w)).toBe(true);
+    const plan = planPrefetch({ mode: "tutorial", queued: [w, w], pool: POOL, perTone: 8 });
+    expect(plan.map((x) => x.id)).toEqual([w.id]);
   });
 });

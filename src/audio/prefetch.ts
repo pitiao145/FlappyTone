@@ -66,10 +66,12 @@ export interface PrefetchPlanInput {
  * The ordered, de-duplicated list of words to request: exact tier first, then
  * the mode's speculative slice. Pure — the caller does the fetching.
  *
- * Mode scoping: `game` and `learn` speculate over all four tones; `drill` over
- * its own tone only; `single` and `tutorial` (which includes the calibration
- * flight, `tutorialTones: CALIBRATION_TONES`) speculate over nothing — they
- * fly a fixed, tiny set of gates, and the exact tier already covers it.
+ * Mode scoping: `game` speculates over all four tones; `drill` over its own
+ * tone only; `single` and `tutorial` (which includes the calibration flight,
+ * `tutorialTones: CALIBRATION_TONES`) speculate over nothing — they fly a
+ * fixed, tiny set of gates, and the exact tier already covers it. `learn`
+ * never reaches the switch at all: it cues synthetically, so `cuesUseClips`
+ * is false and the whole plan is empty, exact tier included.
  */
 export function planPrefetch(input: PrefetchPlanInput): Word[] {
   if (input.cuesUseClips === false) return [];
