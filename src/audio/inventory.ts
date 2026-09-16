@@ -63,9 +63,18 @@ export function inventorySpeaker(): string {
  * knows which speaker to use (the calibration screen) has to read that
  * speaker's catalog anyway to check its four flight clips are published.
  * Fetching again here would pay for the same round trip twice.
+ *
+ * The recorded speaker comes from the words themselves, not from `id` — a
+ * catalog fetch for `id` can degrade to another speaker's rows (e.g. the
+ * bundled fallback snapshot when nothing is cached for `id`), and `id` alone
+ * would then mislabel what was actually adopted. `inventorySpeaker()` is the
+ * sole source of the `run_end.voice` analytics property, so this must report
+ * what was really flown, not what was asked for. `id` is kept as the
+ * fallback for the empty-words case, where there is nothing else to read it
+ * from.
  */
 export function adoptInventory(id: string, words: Word[]): void {
-  speaker = id;
+  speaker = words[0]?.speakerId ?? id;
   cache = Promise.resolve(words);
   publish(words);
 }

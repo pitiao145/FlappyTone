@@ -48,6 +48,16 @@ describe("adoptInventory", () => {
     await expect(inv.loadInventory()).resolves.toEqual(mark);
     expect(fetchCatalog).not.toHaveBeenCalled();
   });
+
+  it("reports the speaker the words actually came from, not the requested id", async () => {
+    const inv = await freshInventory();
+    // A fetch for "mark" degrading to the bundled fallback (or any other
+    // stand-in) returns Jane-stamped rows. The recorded speaker must follow
+    // the words, not the id that was asked for.
+    const janeRows = [word("ma1", "jane")];
+    inv.adoptInventory("mark", janeRows);
+    expect(inv.inventorySpeaker()).toBe("jane");
+  });
 });
 
 describe("subscribeInventory", () => {

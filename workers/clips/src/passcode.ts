@@ -16,11 +16,22 @@ export const PASSCODE_HEADER = "x-record-passcode";
 /** Mirrors `speakers.id`'s CHECK constraint — a value the DB could not hold is a misconfigured secret. */
 const SPEAKER_RE = /^[a-z0-9]{1,16}$/;
 
+/**
+ * Longer than any real passcode is ever going to be, so the comparison loop
+ * below always runs this many iterations regardless of either string's
+ * length — no early exit on a length mismatch, so timing does not leak a
+ * configured code's length either.
+ */
+const COMPARE_LEN = 256;
+
 /** Constant-time compare, so the endpoint is not a character-by-character oracle. */
 function equals(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < COMPARE_LEN; i++) {
+    const ca = i < a.length ? a.charCodeAt(i) : 0;
+    const cb = i < b.length ? b.charCodeAt(i) : 0;
+    diff |= ca ^ cb;
+  }
   return diff === 0;
 }
 

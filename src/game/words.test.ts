@@ -211,7 +211,7 @@ describe("wordsForTier", () => {
 
 /**
  * `min_tier` is the GAME gate, and it is what the clips Worker enforces at
- * `/clip/:id`. The run's pool is filtered by it (Game.tsx), so the two must
+ * `/clip/:speaker/:id`. The run's pool is filtered by it (Game.tsx), so the two must
  * agree: a word a tier's run can fly is a word whose clip that tier can fetch.
  *
  * The shipped catalog marks everything `free` today, so every tier flies all

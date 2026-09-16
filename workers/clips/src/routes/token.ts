@@ -9,7 +9,7 @@
  * a permanent (email) one, the same line `src/data/tier.ts` draws.
  *
  * The tier decision is made once, here, and carried in the ticket — so
- * `/clip/:id` never touches Supabase per request.
+ * `/clip/:speaker/:id` never touches Supabase per request.
  */
 import { serviceDb } from "../db.ts";
 import { verifySupabaseJwt } from "../supabaseJwt.ts";

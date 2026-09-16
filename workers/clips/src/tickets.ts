@@ -1,7 +1,7 @@
 /**
  * Play tickets: our own short-lived HS256 JWT, distinct from a Supabase
  * session JWT (which is ES256 and verified separately in `supabaseJwt.ts`).
- * A ticket is what `/clip/:id` (Task 6) actually checks — it carries the
+ * A ticket is what `/clip/:speaker/:id` (Task 6) actually checks — it carries the
  * tier decision and the caller's IP, made once at `/token` time, so the clip
  * route never has to re-derive tier or re-touch Supabase per request.
  *
