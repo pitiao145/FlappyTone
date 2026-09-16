@@ -3,11 +3,17 @@ import { fetchBoothWords, type BoothWord } from "./boothWords.ts";
 
 const pending: BoothWord[] = [{ id: "ce4", hanzi: "測", pinyin: "cè", tone: 4, status: "pending" }];
 const recorded: BoothWord[] = [{ id: "ma1b", hanzi: "媽", pinyin: "mā", tone: 1, status: "recorded" }];
+const speaker = { id: "jane", name: "Jane" };
+
+const ok = (body: unknown) =>
+  vi.fn(() =>
+    Promise.resolve(new Response(JSON.stringify(body), { status: 200 })),
+  ) as unknown as typeof fetch;
 
 describe("fetchBoothWords", () => {
   it("parses a 200 into pending/recorded", async () => {
     const fetchImpl = vi.fn(() =>
-      Promise.resolve(new Response(JSON.stringify({ pending, recorded }), { status: 200 })),
+      Promise.resolve(new Response(JSON.stringify({ speaker, pending, recorded }), { status: 200 })),
     ) as unknown as typeof fetch;
     const result = await fetchBoothWords("open", fetchImpl);
     expect(result.pending).toEqual(pending);
@@ -16,12 +22,26 @@ describe("fetchBoothWords", () => {
 
   it("sends the passcode header", async () => {
     const fetchImpl = vi.fn(() =>
-      Promise.resolve(new Response(JSON.stringify({ pending: [], recorded: [] }), { status: 200 })),
+      Promise.resolve(
+        new Response(JSON.stringify({ speaker, pending: [], recorded: [] }), { status: 200 }),
+      ),
     ) as unknown as typeof fetch;
     await fetchBoothWords("secret", fetchImpl);
     const [url, init] = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(String(url)).toContain("/booth/words");
     expect((init as RequestInit).headers).toMatchObject({ "x-record-passcode": "secret" });
+  });
+
+  it("carries the speaker the server resolved, not one the client chose", async () => {
+    const res = await fetchBoothWords("aaa", ok({ speaker, pending: [], recorded: [] }));
+    expect(res.speaker).toEqual({ id: "jane", name: "Jane" });
+  });
+
+  it("throws when the server sends no speaker", async () => {
+    await expect(fetchBoothWords("aaa", ok({ pending: [], recorded: [] }))).rejects.toThrow();
+    await expect(
+      fetchBoothWords("aaa", ok({ speaker: { id: "jane" }, pending: [], recorded: [] })),
+    ).rejects.toThrow();
   });
 
   it("throws 'Wrong code.' on 401", async () => {

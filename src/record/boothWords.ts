@@ -9,18 +9,6 @@
  * the throw and shows an error with a Retry button instead.
  */
 
-/**
- * Whose voice this booth session is recording.
- *
- * One value today. It is a named constant rather than copy baked into the
- * overview screen because the same 120 words are going to be recorded a
- * second time by a male speaker, and `words.status` is one row per word — a
- * second voice makes that a one-to-many and needs its own spec (schema, R2
- * key layout, `process-clips`). This constant is the single place the booth
- * will have to read a real answer from when that lands.
- */
-export const BOOTH_VOICE = "Jane";
-
 export type Tone = 1 | 2 | 3 | 4;
 export type BoothWordStatus = "pending" | "recorded" | "published";
 
@@ -56,7 +44,21 @@ export function requireRecordBaseUrl(): string {
   return RECORD_BASE_URL;
 }
 
-interface BoothWordsResponse {
+/**
+ * Whose voice this booth session is recording.
+ *
+ * Resolved by the Worker from the passcode — there is no way for the booth to
+ * ask to be someone else, and no local constant to drift out of date. This
+ * replaces the old hardcoded `BOOTH_VOICE`, which was correct only while there
+ * was exactly one recorder.
+ */
+export interface BoothSpeaker {
+  id: string;
+  name: string;
+}
+
+export interface BoothWordsResponse {
+  speaker: BoothSpeaker;
   pending: BoothWord[];
   recorded: BoothWord[];
 }
@@ -94,8 +96,18 @@ export async function fetchBoothWords(
   }
 
   const body = (await res.json()) as Partial<BoothWordsResponse>;
-  if (!Array.isArray(body.pending) || !Array.isArray(body.recorded)) {
+  const speaker = body.speaker;
+  // A missing speaker throws like any other unexpected shape. Recording a
+  // whole session as the wrong voice is worse than an error screen, and the
+  // booth is not a player surface — it can afford to stop.
+  if (
+    !speaker ||
+    typeof speaker.id !== "string" ||
+    typeof speaker.name !== "string" ||
+    !Array.isArray(body.pending) ||
+    !Array.isArray(body.recorded)
+  ) {
     throw new Error("The server sent back something unexpected.");
   }
-  return { pending: body.pending, recorded: body.recorded };
+  return { speaker, pending: body.pending, recorded: body.recorded };
 }
