@@ -14,7 +14,7 @@ import {
   loadClip,
   playToneCue,
 } from "../audio/reference.ts";
-import { inventoryNow, loadInventory } from "../audio/inventory.ts";
+import { inventoryNow, loadInventory, subscribeInventory } from "../audio/inventory.ts";
 import { planPrefetch, prefetchPool } from "../audio/prefetch.ts";
 import { isChromeIOS, isIOS } from "../audio/platform.ts";
 import { MicStatusBanner } from "./MicStatus.tsx";
@@ -878,6 +878,21 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     const now = inventoryNow();
     if (now) run.setWords(wordsForTier(now, tier));
   }, [tier, runGen]);
+
+  /**
+   * The same repair, for the other thing that can move the pool under a live
+   * run: the resolved speaker. Switching voice in Settings replaces the
+   * catalog, and that has to reach a run that is still alive behind this
+   * screen — through `setWords`, for exactly the reasons above, never by
+   * rebuilding the Run.
+   */
+  useEffect(
+    () =>
+      subscribeInventory((words) => {
+        runRef.current?.setWords(wordsForTier(words, getTier()));
+      }),
+    [],
+  );
 
   // Show the *active* gate's tone while flying it — showing the next gate's
   // tone mid-gate would teach the wrong contour (this matters most in the

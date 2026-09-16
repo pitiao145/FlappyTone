@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { track } from "../analytics/client.ts";
-import { inventoryNow, loadInventory } from "../audio/inventory.ts";
+import {
+  adoptInventory,
+  inventoryNow,
+  inventorySpeaker,
+  loadInventory,
+} from "../audio/inventory.ts";
 import { prefetchPool } from "../audio/prefetch.ts";
 import { ensurePlaybackCtx } from "../audio/reference.ts";
 import { getMicSession, setFrameSink } from "../audio/session.ts";
@@ -13,10 +18,15 @@ import {
 } from "../game/loop.ts";
 import { CALIBRATION_WORD_IDS } from "../game/run.ts";
 import {
+  loadSettings,
   resetRecalTracking,
   saveSettings,
   type CalibrationSettings,
 } from "../game/settings.ts";
+import { guessGender, resolveSpeaker, type VoicePref } from "../game/voice.ts";
+import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
+import { loadRoster } from "../data/speakers.ts";
+import { fetchCatalog } from "../data/words.ts";
 import type { Word } from "../game/words.ts";
 import {
   RANGE_DOWN_SEMITONES_MIN,
@@ -209,6 +219,22 @@ export function Calibration({
     existing?.f0Center ?? null,
   );
   /**
+   * Which recorded voice this player flies against.
+   *
+   * Seeded from whatever is already stored, and guessed from the measured
+   * centre only when nothing is. An explicit choice in Settings is never
+   * re-guessed, including on a re-calibration — the guess is a starting point
+   * for someone who has never made the choice, not a correction to someone
+   * who has.
+   *
+   * It matches **pitch range, not gender.** A low-voiced woman resolved to the
+   * male recordings is the correct outcome here: the corridors she flies are
+   * then the ones her own voice actually reaches.
+   */
+  const [voice, setVoice] = useState<VoicePref | undefined>(
+    () => existing?.voice ?? loadSettings()?.voice ?? undefined,
+  );
+  /**
    * The two halves of the board. Separate, because a speaking voice sits near
    * the bottom of its own range — see `semitonesToChao`.
    */
@@ -358,6 +384,11 @@ export function Calibration({
         }
         setHint(null);
         setF0Center(centre);
+        // The auto-pick, from the centre just measured. Written as
+        // `cur ?? ...` rather than a read of `voice`: it can never overwrite a
+        // stored preference, and it does not depend on this effect's closure
+        // holding a fresh copy of one.
+        setVoice((cur) => cur ?? { gender: guessGender(centre) });
         // The high/low reach sweeps are gone: the grid's up/down halves are no
         // longer measured here but from the calibration tutorial's real T1/T3
         // gates (see run.ts `measuredRange`, seeded in GameApp). This step now
@@ -455,6 +486,7 @@ export function Calibration({
           noiseFloor,
           rangeSemitones: range.up,
           rangeDownSemitones: range.down,
+          ...(voice ? { voice } : {}),
         };
 
   const save = () => {
@@ -492,7 +524,7 @@ export function Calibration({
     }
     // settingsNow closes over the three values in the deps below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, f0Center, noiseFloor, range]);
+  }, [step, f0Center, noiseFloor, range, voice]);
 
   // Warm the calibration flight's four fixed clips (task 8e) the moment this
   // screen appears, not on "Let's go" — the whole point is to spend the
@@ -510,19 +542,50 @@ export function Calibration({
   // for that gate, so the warm would go to waste — a wasted fetch, not a
   // wrong tone or a lost gate, since `/clip/:speaker/:id`'s 403 already degrades to
   // the synthetic sweep either way.
+  //
+  // This is also where the resolved speaker is settled for the rest of the
+  // session, one screen before the flight that is the first thing to need it.
+  // If any of the four calibration words is not published for that speaker,
+  // the default's catalog is adopted instead and the flight is flown on it —
+  // the same partial-inventory rule the run's own pool follows, one screen
+  // earlier.
   useEffect(() => {
     if (step !== "done") return;
-    const warm = (words: Word[]) => {
+    let live = true;
+    const flightClips = (words: Word[]): Word[] => {
       const byId = new Map(words.map((w) => [w.id, w]));
-      const found = CALIBRATION_WORD_IDS.map((id) => byId.get(id)).filter(
+      return CALIBRATION_WORD_IDS.map((id) => byId.get(id)).filter(
         (w): w is Word => !!w,
       );
-      if (found.length > 0) prefetchPool(found);
     };
-    const cached = inventoryNow();
-    if (cached) warm(cached);
-    else void loadInventory().then(warm, () => undefined);
-  }, [step]);
+    const wordsFor = async (id: string): Promise<Word[]> =>
+      id === inventorySpeaker()
+        ? (inventoryNow() ?? (await loadInventory()))
+        : fetchCatalog({ speaker: id });
+    void (async () => {
+      const picked =
+        resolveSpeaker(await loadRoster(), voice ?? null)?.id ?? DEFAULT_SPEAKER_ID;
+      let id = picked;
+      let words = await wordsFor(id);
+      if (
+        flightClips(words).length < CALIBRATION_WORD_IDS.length &&
+        id !== DEFAULT_SPEAKER_ID
+      ) {
+        id = DEFAULT_SPEAKER_ID;
+        words = await wordsFor(id);
+      }
+      if (!live) return;
+      // `adoptInventory` rather than a second fetch: this speaker's catalog is
+      // already in hand, and anything holding a live run picks the new pool up
+      // through `Run.setWords` instead of being rebuilt.
+      if (id !== inventorySpeaker()) adoptInventory(id, words);
+      const found = flightClips(words);
+      if (found.length > 0) prefetchPool(found);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [step, voice]);
 
   /**
    * The slider stays one control over a board with two halves: it moves the

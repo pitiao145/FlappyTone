@@ -24,6 +24,53 @@ import { type Word } from "../game/words.ts";
 let cache: Promise<Word[]> | null = null;
 
 /**
+ * The speaker whose catalog is loaded. Starts at the default and moves only
+ * when a resolved preference says so (`adoptInventory`), so a build with a
+ * one-voice roster behaves exactly as it did before voices existed.
+ */
+let speaker = DEFAULT_SPEAKER_ID;
+
+type Listener = (words: Word[]) => void;
+const listeners = new Set<Listener>();
+
+/**
+ * Called whenever the inventory changes under a caller's feet — a late fetch,
+ * or a switch to another speaker's catalog. This is what lets a *live* run
+ * pick up a new word pool through `Run.setWords` instead of being torn down
+ * and rebuilt, the same seam the late-tier answer already uses.
+ */
+export function subscribeInventory(fn: Listener): () => void {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+
+function publish(words: Word[]): void {
+  resolved = words;
+  for (const fn of listeners) fn(words);
+}
+
+/** The speaker whose words `inventoryNow()` is currently answering with. */
+export function inventorySpeaker(): string {
+  return speaker;
+}
+
+/**
+ * Point the inventory at a speaker whose catalog is already in hand.
+ *
+ * Takes the words rather than fetching them, because the only caller that
+ * knows which speaker to use (the calibration screen) has to read that
+ * speaker's catalog anyway to check its four flight clips are published.
+ * Fetching again here would pay for the same round trip twice.
+ */
+export function adoptInventory(id: string, words: Word[]): void {
+  speaker = id;
+  cache = Promise.resolve(words);
+  publish(words);
+}
+
+/**
  * Seeded from the cached catalog at module load, so `inventoryNow()` answers
  * on the first frame of a returning visit rather than after a round trip.
  * Replaced by the live list the moment `loadInventory()` resolves.
@@ -47,10 +94,14 @@ export function inventoryNow(): Word[] | null {
 }
 
 export function loadInventory(): Promise<Word[]> {
-  cache ??= fetchCatalog({ speaker: DEFAULT_SPEAKER_ID }).then((words) => {
+  const forSpeaker = speaker;
+  cache ??= fetchCatalog({ speaker: forSpeaker }).then((words) => {
     // `fetchCatalog` never rejects and never returns an empty list unless the
     // bundled export is itself empty, so there is nothing left to catch here.
-    resolved = words;
+    // The speaker is captured above and re-checked here: a fetch started for
+    // the previous voice must not overwrite a catalog that has since been
+    // adopted for another one.
+    if (speaker === forSpeaker) publish(words);
     return words;
   });
   return cache;

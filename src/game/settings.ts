@@ -15,6 +15,7 @@ import {
   type RecalTrackingState,
 } from "./recalibration.ts";
 import { CUE_STYLES, type CueStyle } from "./run.ts";
+import { type VoicePref } from "./voice.ts";
 
 export interface CalibrationSettings {
   /** Baseline f0 in Hz, typically ~100–150 for most speakers. Used to map voice pitch to Chao 1–5. */
@@ -28,6 +29,17 @@ export interface CalibrationSettings {
    * because a speaking voice is not the middle of its range — see
    * `semitonesToChao`. Records written before this field mirror the up half. */
   rangeDownSemitones: number;
+  /**
+   * Which recorded voice this player flies against, as an *axis* (a gender)
+   * rather than a speaker id: a stored id breaks the moment the roster holds
+   * two speakers of the same kind. Absent means "never chosen and never
+   * guessed", which resolves to the default speaker.
+   *
+   * Optional, and added additively: the key below stays `v3`. Bumping it to
+   * gain one field would wipe every existing player's noise floor, f0 centre
+   * and both range halves — the trade `runHistory.ts` already refused.
+   */
+  voice?: VoicePref;
 }
 
 /**
@@ -62,6 +74,11 @@ const KEY = "toneflap.settings.v3";
  * throw away a working calibration and force everyone through the flow again.
  * Absent or out-of-range mirrors the up half, which is exactly the board that
  * record was calibrated on.
+ *
+ * `voice` follows the same precedent one step further: absent or malformed, it
+ * is dropped and the rest of the record is kept. A player whose stored
+ * preference is unreadable should fly the default voice, not be sent back
+ * through calibration.
  */
 export function loadSettings(): CalibrationSettings | null {
   try {
@@ -80,12 +97,24 @@ export function loadSettings(): CalibrationSettings | null {
     ) {
       return null;
     }
+    const voice =
+      s.voice !== null &&
+      typeof s.voice === "object" &&
+      (s.voice.gender === "male" || s.voice.gender === "female")
+        ? { gender: s.voice.gender }
+        : undefined;
     const down = s.rangeDownSemitones;
     const downValid =
       typeof down === "number" &&
       down >= RANGE_DOWN_SEMITONES_MIN &&
       down <= RANGE_SEMITONES_MAX;
-    return { ...s, rangeDownSemitones: downValid ? down : s.rangeSemitones };
+    const loaded: CalibrationSettings = {
+      ...s,
+      rangeDownSemitones: downValid ? down : s.rangeSemitones,
+    };
+    if (voice) loaded.voice = voice;
+    else delete loaded.voice;
+    return loaded;
   } catch {
     return null;
   }

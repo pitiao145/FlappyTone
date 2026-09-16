@@ -1,13 +1,16 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { initAnalytics, track, trackCalibration } from "../analytics/client";
 import { capturePostHogEvent, initPostHog } from "../analytics/posthog.ts";
-import { loadInventory } from "../audio/inventory";
+import { adoptInventory, inventorySpeaker, loadInventory } from "../audio/inventory";
 import { getPlayTicket, invalidatePlayTicket } from "../audio/clipToken";
 import { MicError } from "../audio/mic";
 import { ensurePlaybackCtx } from "../audio/reference";
 import { ensureMic, getMicSession, MicCancelled, stopMic } from "../audio/session";
 import { incrementDailyRuns, loadDailyRuns, refreshServerDailyRuns } from "../game/dailyLimit.ts";
 import { getAccount, localAggregates, pushAggregates, syncAccount } from "../data/account.ts";
+import { loadRoster } from "../data/speakers.ts";
+import { fetchCatalog } from "../data/words.ts";
+import { resolveSpeaker } from "../game/voice.ts";
 import { AUTH_TOAST_TEXT, subscribeAuthToast, type AuthToastKind } from "../data/authToast.ts";
 import { consumePendingJoin } from "../data/joinIntent.ts";
 import { getBoard, joinBoard, submitScore } from "../data/leaderboard.ts";
@@ -864,6 +867,18 @@ export default function GameApp() {
     // first gates spawn. A failure resolves to an empty inventory and the game
     // falls back to the tuning defaults; nothing here can block a run.
     void loadInventory();
+    // ...and, in parallel, resolve the stored voice preference to a speaker.
+    // Deliberately *not* awaited before the fetch above: with a one-voice
+    // roster the answer is always the default, so making every cold start wait
+    // on a roster round trip would cost the first gate its clip to change
+    // nothing. When it does resolve to another voice, that catalog replaces
+    // this one through `adoptInventory`, which anything already holding a run
+    // picks up through `Run.setWords`.
+    void loadRoster().then((roster) => {
+      const id = resolveSpeaker(roster, saved?.voice ?? null)?.id;
+      if (!id || id === inventorySpeaker()) return;
+      void fetchCatalog({ speaker: id }).then((words) => adoptInventory(id, words));
+    });
     // The play ticket the clips Worker wants, minted alongside the inventory so
     // the first gate's clip fetch does not also pay for a /token round trip.
     // A plain fetch — it touches no AudioContext, so it is safe outside a user
