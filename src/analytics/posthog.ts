@@ -131,6 +131,13 @@ const GEO_ALLOW = new Set(["$geoip_country_name", "$geoip_country_code"]);
  * through, since the `AnalyticsEvent`/`SessionCalibration` type unions are
  * already the guard on those. Pure and exported so it is testable without
  * mocking the SDK.
+ *
+ * So a field added to the union — `run_end`'s `voice`, the roster speaker id a
+ * run was flown with — reaches PostHog by passing through here, and
+ * `session.test.ts` asserts that rather than assuming it. Adding a field to
+ * the union is therefore the whole decision: there is no second list to
+ * update, and equally no second gate to catch a field that should not have
+ * been added. Nothing the player typed may enter either union.
  */
 export function sanitizeGameProperties(
   properties: Record<string, unknown>,

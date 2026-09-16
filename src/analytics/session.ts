@@ -116,6 +116,18 @@ export type AnalyticsEvent =
       score: number;
       bestMult: number;
       missedEarly: number;
+      /**
+       * The voice the run was flown with — a speaker id from the roster
+       * (`inventorySpeaker()`), never anything the player typed, so this
+       * module's standing promise is intact.
+       *
+       * Here rather than on `run_start` because `run_end` is the event every
+       * outcome number already lives on: with the voice beside them, "do runs
+       * with the male voice score worse, or quit earlier?" is a breakdown
+       * rather than a join. Optional so a run reported before a speaker
+       * resolves is still a run, not a dropped event.
+       */
+      voice?: string;
     }
   /**
    * The native clip wasn't loaded yet when its cue was due, so the synthetic

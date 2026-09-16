@@ -14,7 +14,7 @@ import {
   loadClip,
   playToneCue,
 } from "../audio/reference.ts";
-import { inventoryNow, loadInventory, subscribeInventory } from "../audio/inventory.ts";
+import { inventoryNow, inventorySpeaker, loadInventory, subscribeInventory } from "../audio/inventory.ts";
 import { planPrefetch, prefetchPool } from "../audio/prefetch.ts";
 import { isChromeIOS, isIOS } from "../audio/platform.ts";
 import { MicStatusBanner } from "./MicStatus.tsx";
@@ -364,6 +364,10 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         score: snap.stats.score,
         bestMult: snap.stats.bestMultiplier,
         missedEarly: snap.missedUtterances,
+        // Read at report time, not at run start: switching voice mid-run
+        // replaces the pool through `setWords`, so the speaker the run
+        // actually finished on is the honest answer.
+        voice: inventorySpeaker(),
       });
     },
     [reportGates],
