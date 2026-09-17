@@ -316,6 +316,14 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   const warmGenRef = useRef(0);
   /** Mirrors `warming` for the effect's own closures, which don't re-run. */
   const warmingRef = useRef(false);
+  /**
+   * Set only when a pause interrupted the warm-up hold itself, so resume knows
+   * to re-enter it. Resuming an already-started run must go straight back to
+   * `start()`: `beginWhenWarm` waits on `gates[0]`, which mid-run is the
+   * current front gate and already decoded, so the wait would resolve at once
+   * and the floor alone would put a loading screen in front of every unpause.
+   */
+  const pausedWarmingRef = useRef(false);
 
   useImperativeHandle(ref, () => ({
     pause: () => pauseRef.current(false),
@@ -749,6 +757,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       if (warmingRef.current) {
         warmGenRef.current += 1;
         warmingRef.current = false;
+        pausedWarmingRef.current = true;
         setWarming(false);
         // The loop has not started, so there is no rAF or HUD timer to stop —
         // but the mic's AudioContext is already live (the caller opened it
@@ -818,7 +827,16 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // `onFrame`'s comment above. A no-op if nothing else claimed it.
       setFrameSink(onFrame);
       setPaused(false);
-      if (!finished) beginWhenWarm();
+      if (finished) return;
+      // Only a pause that interrupted the hold resumes back into it. An
+      // ordinary mid-run pause goes straight back to the loop — see
+      // `pausedWarmingRef`.
+      if (pausedWarmingRef.current) {
+        pausedWarmingRef.current = false;
+        beginWhenWarm();
+      } else {
+        start();
+      }
     };
 
     const onVisibility = () => {
