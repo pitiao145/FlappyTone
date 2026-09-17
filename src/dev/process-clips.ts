@@ -1,10 +1,20 @@
 /**
  * Turns recorded takes into published clips: R2 in, R2 + the catalog out.
  *
- *   npm run process-clips                      # every status='recorded' word
- *   npm run process-clips -- --session 2026-09-01-ab12cd
- *   npm run process-clips -- --all             # re-cut the published ones too
- *   npm run process-clips -- --all --dry-run   # cut everything, write nothing
+ *   npm run process-clips -- --speaker jane                 # her recorded words
+ *   npm run process-clips -- --speaker jane --session 2026-09-01-ab12cd
+ *   npm run process-clips -- --speaker jane --all           # re-cut published too
+ *   npm run process-clips -- --speaker jane --all --dry-run # cut, write nothing
+ *
+ * ## `--speaker` is required, and unknown ids exit non-zero
+ *
+ * Since the voice roster there is no such thing as "the" recording of a word:
+ * `word_clips` is keyed `(word_id, speaker_id)` and every measurement below —
+ * the pitch seed, the session reference, the cohort chao map, the review's
+ * duration medians — is a property of ONE voice. Defaulting the flag would
+ * mean a forgotten argument silently normalises a male cohort against Jane's
+ * map and writes the result over her rows. So it is required, and validated
+ * against the `speakers` table rather than taken on trust.
  *
  * Replaces `pull-recordings` + `make-clips`. The measurement in the middle is
  * the same code, unchanged: `cutClip` reads the take, `clipNormalize` places
@@ -48,13 +58,19 @@
  * to read — a wrong flag costs a glance, a suppressed clip costs a recording
  * session.
  *
- * ## The pitch reference is measured per session
+ * ## The pitch reference is measured per session; the SEED is per speaker
  *
  * Never read from `speakers.json`: pitch drifts between sittings, and a centre
  * measured a session earlier pins half a cohort flat against chao 5. A session
  * with fewer than `MIN_REFERENCE_FRAMES` voiced frames has nothing to measure
- * from, so it borrows the reference of the most recently published word and
- * says so loudly in the report.
+ * from, so it borrows the reference of this speaker's most recently published
+ * word and says so loudly in the report.
+ *
+ * The search SEED is the other thing, and it is per speaker: `speakers.f0_seed`
+ * through `resolveSeed`. Jane's row holds the literal 168 the pipeline has
+ * always used, so her measurements are unmoved; a male speaker gets a band
+ * centred on his own register instead of nearly an octave above it. See
+ * `clipPipeline.ts`.
  */
 
 import { execFileSync } from "node:child_process";
@@ -77,20 +93,22 @@ import {
   pinnedFractionOf,
   polylineSpan,
 } from "./clipNormalize.ts";
-import { MIN_REFERENCE_FRAMES, SEED_F0_CENTER } from "./clipPipeline.ts";
+import { MIN_REFERENCE_FRAMES, resolveSeed } from "./clipPipeline.ts";
 import { median, reviewClip } from "./clipReview.ts";
 import { DEFAULT_POLYLINES } from "../game/tuning.ts";
 import type { Tone } from "../game/gates.ts";
 import { decodeWav, encodeWav } from "./wav.ts";
 import { r2Get, r2Put } from "./r2.ts";
 import { serviceClient } from "./serviceClient.ts";
+import type { Json } from "../data/database.types.ts";
 
 /**
- * `SEED_F0_CENTER` and `MIN_REFERENCE_FRAMES` live in `clipPipeline.ts`, not
- * here: this script opens a Supabase client and awaits at top level, so no
- * test can import it, and the seed is the one value in this pipeline that
- * silently moves every shipped corridor when it changes. See
- * `clipPipeline.test.ts`, which pins the number AND the cut it produces.
+ * `resolveSeed`, `SEED_F0_CENTER` and `MIN_REFERENCE_FRAMES` live in
+ * `clipPipeline.ts`, not here: this script opens a Supabase client and awaits
+ * at top level, so no test can import it, and the seed is the one value in
+ * this pipeline that silently moves every shipped corridor when it changes.
+ * See `clipPipeline.test.ts`, which pins the number, the resolution AND the
+ * cut it produces.
  */
 
 const root = new URL("../../", import.meta.url).pathname;
@@ -112,23 +130,105 @@ if (sessionIdx !== -1 && (!args[sessionIdx + 1] || args[sessionIdx + 1].startsWi
 }
 const onlySession = sessionIdx !== -1 ? args[sessionIdx + 1] : null;
 
+const speakerIdx = args.indexOf("--speaker");
+if (speakerIdx === -1 || !args[speakerIdx + 1] || args[speakerIdx + 1].startsWith("--")) {
+  console.error(
+    "--speaker <id> is required. Every measurement this script makes belongs to\n" +
+      "one voice, so there is no safe default — see the header.\n\n" +
+      "  npm run process-clips -- --speaker jane --dry-run",
+  );
+  process.exit(1);
+}
+const speakerId = args[speakerIdx + 1];
+
 const supabase = serviceClient();
+
+/**
+ * Validated against the roster, never taken on trust: a typo'd id must exit
+ * non-zero, not fall back to the default speaker and overwrite her rows.
+ */
+const { data: speakerRow, error: speakerError } = await supabase
+  .from("speakers")
+  .select("id,name,f0_seed,is_default")
+  .eq("id", speakerId)
+  .maybeSingle();
+if (speakerError) throw new Error(`speakers select failed: ${speakerError.message}`);
+if (!speakerRow) {
+  const { data: roster } = await supabase.from("speakers").select("id").order("id");
+  console.error(
+    `Unknown speaker "${speakerId}". Known: ${(roster ?? []).map((r) => r.id).join(", ") || "(none)"}.`,
+  );
+  process.exit(1);
+}
+
+// Bound to a non-null const: the guard above narrows `speakerRow` here, but
+// not inside the closures further down.
+const speaker = speakerRow;
+
+/**
+ * Refused, not defaulted. `resolveSeed`'s fallback is for a caller with no
+ * speaker at all; this one has a validated roster row, so a seed that is not a
+ * finite number means the column was renamed, dropped, or holds something
+ * `numeric` should never have held. Cutting as Jane instead would hand back a
+ * full inventory of plausible polylines measured off the wrong search band —
+ * the exact failure `--speaker` was made mandatory to prevent.
+ */
+const rawSeed = Number(speaker.f0_seed);
+if (!Number.isFinite(rawSeed)) {
+  console.error(
+    `Speaker "${speaker.id}" has no usable f0_seed (read ${JSON.stringify(speaker.f0_seed)}).\n` +
+      "That column is `not null numeric` in migration 0015, so this means the schema moved.\n" +
+      "Refusing to cut: a wrong seed does not fail loudly, it ships wrong corridors.",
+  );
+  process.exit(1);
+}
+const seedF0 = resolveSeed(rawSeed);
+console.log(`Speaker ${speaker.id} (${speaker.name}) — pitch-search seed ${seedF0}Hz.`);
 
 interface Row {
   id: string;
   tone: number;
+  position: number;
   status: string;
+  clip_key: string | null;
   raw_key: string | null;
   recorded_session: string | null;
 }
 
+/**
+ * `word_clips` leads the query now, not `words`: `status`, `raw_key` and
+ * `recorded_session` are properties of a recording, and asking `words` for
+ * them would read the pre-roster columns that migration 0015 deliberately
+ * left in place — every one of them Jane's, whichever `--speaker` was passed.
+ * `words!inner` supplies only what is true of the word itself.
+ */
 const { data: allRows, error: rowsError } = await supabase
-  .from("words")
-  .select("id,tone,status,raw_key,recorded_session")
-  .order("position", { ascending: true });
-if (rowsError) throw new Error(`words select failed: ${rowsError.message}`);
+  .from("word_clips")
+  .select("word_id,status,clip_key,raw_key,recorded_session,words!inner(tone,position)")
+  .eq("speaker_id", speakerId);
+if (rowsError) throw new Error(`word_clips select failed: ${rowsError.message}`);
 
-const catalog = (allRows ?? []) as Row[];
+// Ordered here rather than in the query: `position` lives on the embedded
+// side, and a sort PostgREST silently declines to apply would reorder nothing
+// and say nothing.
+const catalog = ((allRows ?? []) as unknown as {
+  word_id: string;
+  status: string;
+  clip_key: string | null;
+  raw_key: string | null;
+  recorded_session: string | null;
+  words: { tone: number; position: number };
+}[])
+  .map((r): Row => ({
+    id: r.word_id,
+    tone: r.words.tone,
+    position: r.words.position,
+    status: r.status,
+    clip_key: r.clip_key,
+    raw_key: r.raw_key,
+    recorded_session: r.recorded_session,
+  }))
+  .sort((a, b) => a.position - b.position);
 
 /** Everything with audio in the raw bucket, whatever its status. */
 function hasTake(row: Row): boolean {
@@ -163,8 +263,19 @@ const cohortOnly = toCut.length - selected.length;
 
 // ------------------------------------------------------------- the audio
 
+/**
+ * Where a take is cached locally. Speaker-scoped for anything pulled from now
+ * on, because two voices recording the same word must not collide on one path.
+ *
+ * The un-scoped path is still honoured when it already exists: Jane's 120
+ * takes were cached under `{session}/{id}.wav` before the roster, and moving
+ * them would mean re-pulling a gigabyte from R2 to gain nothing. A session id
+ * is minted per booth sitting, so the two layouts cannot shadow each other.
+ */
 function localPath(row: Row): string {
-  return `${recordingsDir}/${row.recorded_session}/${row.id}.wav`;
+  const legacy = `${recordingsDir}/${row.recorded_session}/${row.id}.wav`;
+  if (existsSync(legacy)) return legacy;
+  return `${recordingsDir}/${speakerId}/${row.recorded_session}/${row.id}.wav`;
 }
 
 const missing = toCut.filter((r) => !existsSync(localPath(r)));
@@ -180,7 +291,7 @@ for (const row of missing) {
   // fixtures/recordings/ is the local evidence cache, gitignored and
   // re-pullable: the raw take is what you go back to when a clip comes out
   // wrong, so it stays on disk rather than being streamed and forgotten.
-  mkdirSync(`${recordingsDir}/${row.recorded_session}`, { recursive: true });
+  mkdirSync(`${recordingsDir}/${speakerId}/${row.recorded_session}`, { recursive: true });
   console.log(`pulling ${row.raw_key}`);
   r2Get("flappytone-raw", row.raw_key!, localPath(row));
 }
@@ -223,22 +334,48 @@ for (const row of toCut) {
  * where the tracker's bare default is wrong by whoever's voice it was tuned
  * for. Looked up lazily so a healthy run never pays for it.
  */
+interface StoredReference {
+  f0Center?: unknown;
+  rangeSemitones?: unknown;
+}
+
+interface WordMeta {
+  /** Per speaker, since a reference describes a voice. */
+  references?: Record<string, StoredReference>;
+  /** The pre-roster shape: the default speaker's, and only hers. */
+  reference?: StoredReference;
+}
+
+function asReference(ref: StoredReference | undefined): PitchReference | null {
+  if (typeof ref?.f0Center !== "number" || typeof ref?.rangeSemitones !== "number") return null;
+  return { f0Center: ref.f0Center, rangeSemitones: ref.rangeSemitones, frames: 0 };
+}
+
 let borrowedReference: PitchReference | null | undefined;
 async function referenceOfLastPublished(): Promise<PitchReference | null> {
   if (borrowedReference !== undefined) return borrowedReference;
+  // This speaker's own published words, never the catalog's. Borrowing across
+  // voices is the failure this whole task exists to prevent: it is a drift
+  // correction, and one speaker's centre is not a drifted version of another's.
   const { data, error } = await supabase
-    .from("words")
-    .select("id,meta,updated_at")
+    .from("word_clips")
+    .select("word_id,updated_at,words!inner(meta)")
+    .eq("speaker_id", speakerId)
     .eq("status", "published")
     .order("updated_at", { ascending: false })
     .limit(50);
-  if (error) throw new Error(`words meta select failed: ${error.message}`);
+  if (error) throw new Error(`word_clips meta select failed: ${error.message}`);
   borrowedReference = null;
-  for (const row of data ?? []) {
-    const meta = row.meta as { reference?: { f0Center?: unknown; rangeSemitones?: unknown } } | null;
-    const ref = meta?.reference;
-    if (typeof ref?.f0Center === "number" && typeof ref?.rangeSemitones === "number") {
-      borrowedReference = { f0Center: ref.f0Center, rangeSemitones: ref.rangeSemitones, frames: 0 };
+  for (const row of (data ?? []) as unknown as { words: { meta: WordMeta | null } }[]) {
+    const meta = row.words?.meta ?? null;
+    const ref =
+      asReference(meta?.references?.[speakerId]) ??
+      // Rows published before the roster carry only `meta.reference`, which was
+      // always the default speaker's. Reading it for anyone else would borrow
+      // across voices by accident.
+      (speaker.is_default ? asReference(meta?.reference) : null);
+    if (ref) {
+      borrowedReference = ref;
       break;
     }
   }
@@ -254,7 +391,7 @@ const referenceBySession = new Map<string, SessionReference>();
 const referenceNotes: string[] = [];
 
 for (const [session, takes] of takesBySession) {
-  const measured = measurePitchReference(takes, SEED_F0_CENTER);
+  const measured = measurePitchReference(takes, seedF0);
 
   if (measured && measured.frames >= MIN_REFERENCE_FRAMES) {
     referenceBySession.set(session, { ...measured, borrowedFrom: null });
@@ -269,16 +406,16 @@ for (const [session, takes] of takesBySession) {
   if (!borrowed) {
     throw new Error(
       `${session}: only ${measured?.frames ?? 0} voiced frame(s), under the ` +
-        `${MIN_REFERENCE_FRAMES}-frame minimum, and no published word has a stored ` +
+        `${MIN_REFERENCE_FRAMES}-frame minimum, and no published ${speakerId} word has a stored ` +
         `reference to borrow. Record more of this session before processing it.`,
     );
   }
-  referenceBySession.set(session, { ...borrowed, borrowedFrom: "the last published word" });
+  referenceBySession.set(session, { ...borrowed, borrowedFrom: `the last published ${speakerId} word` });
   const note =
     `${session}: only ${measured?.frames ?? 0} voiced frame(s), under the ` +
     `${MIN_REFERENCE_FRAMES}-frame minimum — borrowed f0Center ` +
     `${borrowed.f0Center.toFixed(1)}Hz / ±${borrowed.rangeSemitones} st from the last ` +
-    `published word instead of measuring this session (Decision 9).`;
+    `published ${speakerId} word instead of measuring this session (Decision 9).`;
   referenceNotes.push(note);
   console.log(`\n⚠ ${note}`);
 }
@@ -357,10 +494,44 @@ for (const tone of [1, 2, 3, 4] as Tone[]) {
   );
 }
 
-// Cohort medians, for the review's duration outlier check.
+// ---- Cohort medians, for the review's duration outlier check.
+//
+// This speaker's own published clips, never the catalog's. The medians are a
+// claim about how long THIS voice holds a tone, and Jane's tone-2 median of
+// ~1050ms told a male speaker's 276ms take it was an outlier when the only
+// thing wrong was whose cohort it was measured against — the same report also
+// guessed "f0Center is probably wrong for this speaker", which was true, and
+// for the same reason.
+//
+// The run's own cuts are the fallback, and are the answer for a speaker's
+// first session, when there is nothing published to compare against yet.
+const { data: publishedDurations, error: durationsError } = await supabase
+  .from("word_clips")
+  .select("duration_s,words!inner(tone)")
+  .eq("speaker_id", speakerId)
+  .eq("status", "published")
+  .not("duration_s", "is", null);
+if (durationsError) throw new Error(`word_clips duration select failed: ${durationsError.message}`);
+
+const publishedMsByTone = new Map<number, number[]>();
+for (const row of (publishedDurations ?? []) as unknown as {
+  duration_s: number | string;
+  words: { tone: number };
+}[]) {
+  const tone = row.words.tone;
+  if (!publishedMsByTone.has(tone)) publishedMsByTone.set(tone, []);
+  publishedMsByTone.get(tone)!.push(Number(row.duration_s) * 1000);
+}
+
 const medianByTone = new Map<number, number>();
 for (const tone of [1, 2, 3, 4]) {
-  medianByTone.set(tone, median(cuts.filter((c) => c.tone === tone).map((c) => c.durationMs)));
+  const published = publishedMsByTone.get(tone) ?? [];
+  medianByTone.set(
+    tone,
+    published.length > 0
+      ? median(published)
+      : median(cuts.filter((c) => c.tone === tone).map((c) => c.durationMs)),
+  );
 }
 
 // ------------------------------------------------------------- publish
@@ -377,7 +548,7 @@ interface Published {
   file: string;
 }
 
-if (!dryRun) mkdirSync(clipsDir, { recursive: true });
+if (!dryRun) mkdirSync(`${clipsDir}/${speakerId}`, { recursive: true });
 
 const toPublish: Published[] = [];
 let flaggedCount = 0;
@@ -392,6 +563,7 @@ for (const cut of [...cuts].sort((a, b) => a.row.id.localeCompare(b.row.id))) {
     contour: cut.contour,
     pinnedFraction: cut.pinnedFraction,
     cohortMedianMs: medianByTone.get(cut.tone) ?? 0,
+    speaker: speaker.name,
   });
 
   const mark = flags.length ? "⚠" : " ";
@@ -408,12 +580,17 @@ for (const cut of [...cuts].sort((a, b) => a.row.id.localeCompare(b.row.id))) {
   // A flagged clip is still published — clipReview flags, it never blocks.
   if (!selectedHere) continue;
 
-  const file = `${clipsDir}/${cut.row.id}.wav`;
+  const file = `${clipsDir}/${speakerId}/${cut.row.id}.wav`;
   if (!dryRun) writeFileSync(file, encodeWav(cut.samples, cut.sampleRate));
 
   toPublish.push({
     id: cut.row.id,
-    clipKey: `${cut.row.id}.wav`,
+    // Speaker-scoped for anything this script mints. An existing key is kept
+    // verbatim instead: `clip_key` is an explicit column, not a convention, so
+    // Jane's pre-roster `ma1b.wav` objects stay exactly where they are and a
+    // re-cut never turns into a bulk R2 move (and never leaves the old object
+    // orphaned behind a rewritten row).
+    clipKey: cut.row.clip_key ?? `clips/${speakerId}/${cut.row.id}.wav`,
     // The tone window. The gate lasts exactly this long.
     durationS: Number((cut.durationMs / 1000).toFixed(4)),
     // File start → tone start.
@@ -483,14 +660,15 @@ if (metaError) throw new Error(`words meta select failed: ${metaError.message}`)
 const metaById = new Map((metaRows ?? []).map((r) => [r.id, r.meta]));
 
 for (const clip of toPublish) {
-  // A narrow UPDATE, never an upsert: `min_tier`, `position`, `raw_key` and
-  // everything a human typed stay exactly as they are. `min_tier` in
-  // particular defaults open ('free') at import and is not recomputed here —
-  // it is the GAME gate, not the visualiser's practice depth. See
-  // docs/DECISIONS.md.
-  const { error } = await supabase
-    .from("words")
-    .update({
+  // The measurements go to `word_clips`, keyed (word_id, speaker_id), so a
+  // second voice's numbers land beside the first's rather than over them. An
+  // upsert on that key because the booth may never have created the row (a
+  // take pulled in by hand, a re-cut of a retired word); the conflict target
+  // is the composite key, never `word_id` alone.
+  const { error } = await supabase.from("word_clips").upsert(
+    {
+      word_id: clip.id,
+      speaker_id: speakerId,
       clip_key: clip.clipKey,
       duration_s: clip.durationS,
       onset_s: clip.onsetS,
@@ -498,13 +676,34 @@ for (const clip of toPublish) {
       polyline: clip.polyline,
       contour: clip.contour,
       status: "published",
+    },
+    { onConflict: "word_id,speaker_id" },
+  );
+  if (error) throw new Error(`word_clips upsert failed for ${clip.id}: ${error.message}`);
+
+  // A narrow UPDATE of `words`, never an upsert, and now narrower still: the
+  // only word-level column this writes is `meta`. `min_tier`, `position`,
+  // `status` and everything a human typed stay exactly as they are.
+  // `min_tier` in particular defaults open ('free') at import and is not
+  // recomputed here — it is the GAME gate, not the visualiser's practice
+  // depth, and it is identical for every voice. See docs/DECISIONS.md.
+  const existing = ((metaById.get(clip.id) as WordMeta | null) ?? {}) as WordMeta &
+    Record<string, unknown>;
+  const { error: metaWriteError } = await supabase
+    .from("words")
+    .update({
       meta: {
-        ...((metaById.get(clip.id) as Record<string, unknown> | null) ?? {}),
-        reference: clip.reference,
-      },
+        ...existing,
+        // Per speaker: a reference describes a voice, and a shared key would
+        // have the second speaker processed silently overwrite the first's.
+        references: { ...(existing.references ?? {}), [speakerId]: clip.reference },
+        // The pre-roster key, still written for the default speaker only, so
+        // anything reading the old shape keeps reading the right voice.
+        ...(speaker.is_default ? { reference: clip.reference } : {}),
+      } as unknown as Json,
     })
     .eq("id", clip.id);
-  if (error) throw new Error(`words update failed for ${clip.id}: ${error.message}`);
+  if (metaWriteError) throw new Error(`words meta update failed for ${clip.id}: ${metaWriteError.message}`);
 }
 
 console.log(`\nPublished ${toPublish.length} clip(s) to flappytone-clips and the catalog.`);
@@ -515,8 +714,17 @@ console.log(`\nPublished ${toPublish.length} clip(s) to flappytone-clips and the
 // Run as a child process, not imported: `export-fallback.ts` is a script with
 // top-level effects and its own `process.exit(1)` on an empty result, and an
 // import would either swallow that or take this process down mid-sentence.
-execFileSync("node", ["--experimental-strip-types", `${root}src/dev/export-fallback.ts`], {
-  cwd: root,
-  stdio: "inherit",
-});
-console.log("\nNow commit src/data/wordsFallback.json");
+// Only the default speaker's rows are bundled (see `export-fallback.ts`), so
+// processing anyone else cannot change the snapshot and re-running it would
+// only churn its timestamp.
+if (speaker.is_default) {
+  execFileSync("node", ["--experimental-strip-types", `${root}src/dev/export-fallback.ts`], {
+    cwd: root,
+    stdio: "inherit",
+  });
+  console.log("\nNow commit src/data/wordsFallback.json");
+} else {
+  console.log(
+    `\n${speaker.id} is not the default speaker, so the bundled fallback is unchanged.`,
+  );
+}

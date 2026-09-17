@@ -14,6 +14,9 @@ const getPlayTicket = vi.fn<() => Promise<string | null>>();
 const invalidatePlayTicket = vi.fn();
 let baseUrl: string | null = "https://clips.example.com";
 
+vi.mock("./platform.ts", () => ({ isChromeIOS: () => false }));
+vi.mock("./session.ts", () => ({ getMicSession: () => null }));
+
 vi.mock("./clipToken.ts", () => ({
   get CLIPS_BASE_URL() {
     return baseUrl;
@@ -22,11 +25,12 @@ vi.mock("./clipToken.ts", () => ({
   invalidatePlayTicket: () => invalidatePlayTicket(),
 }));
 
-function word(id: string): Word {
+function word(id: string, speakerId = "jane"): Word {
   return {
     id,
     hanzi: "媽",
     pinyin: "mā",
+    speakerId,
     english: "mother",
     tone: 1,
     tones: [1],
@@ -65,7 +69,7 @@ describe("loadClip", () => {
     const { loadClip } = await load();
     await loadClip(word("ma1"));
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://clips.example.com/clip/ma1?v=2026-09-15T00%3A00%3A00Z");
+    expect(url).toBe("https://clips.example.com/clip/jane/ma1?v=2026-09-15T00%3A00%3A00Z");
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-1");
   });
 
@@ -99,6 +103,18 @@ describe("loadClip", () => {
     // stuck on a stale-ticket failure for the rest of the session.
     await loadClip(word("ma1"));
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keys the in-flight map by speaker, so one voice cannot serve another", async () => {
+    // Same word id, two speakers: two fetches, not one cache hit serving the
+    // wrong voice.
+    fetchMock.mockResolvedValue({ ok: false, status: 404 } as unknown as Response);
+    const { loadClip } = await load();
+    await Promise.all([loadClip(word("ma1b")), loadClip(word("ma1b", "mark"))]);
+    expect(fetchMock.mock.calls.map((c) => String(c[0]))).toEqual([
+      expect.stringContaining("/clip/jane/ma1b"),
+      expect.stringContaining("/clip/mark/ma1b"),
+    ]);
   });
 
   it("never fetches when there is no clips base URL", async () => {
@@ -136,5 +152,81 @@ describe("prefetchPool", () => {
     for (let i = 0; i < 200; i++) await Promise.resolve();
     expect(fetchMock).toHaveBeenCalledTimes(12);
     expect(peak).toBeLessThanOrEqual(4);
+  });
+});
+
+/**
+ * The `clips` map — the decoded buffers — keyed by speaker as well as id.
+ *
+ * This is the half that decides which audio a player actually *hears*, so it
+ * is the one that must not be keyed on `id` alone. `loads` only decides
+ * whether a fetch repeats; a bare-`id` `clips` key plays one voice's recording
+ * under another's name with no error anywhere.
+ *
+ * Both tests below fail if `playToneCue`/`cueDurationMsFor` look the word up
+ * by `word.id`: jane's clip is the only one ever decoded, so a bare-id lookup
+ * finds it for `mark` too.
+ */
+describe("clips are keyed by speaker, not by word id alone", () => {
+  /** Jane's ma1b, decoded and in the map. Nothing is decoded for mark. */
+  async function loadJaneClip() {
+    const decoded = { duration: 0.8 } as unknown as AudioBuffer;
+    const played: AudioBuffer[] = [];
+    const node = () => ({
+      connect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+      frequency: { setValueCurveAtTime: vi.fn() },
+      gain: {
+        setValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+      },
+      set buffer(b: AudioBuffer) {
+        played.push(b);
+      },
+    });
+    vi.stubGlobal(
+      "AudioContext",
+      class {
+        state = "running";
+        currentTime = 0;
+        destination = {};
+        decodeAudioData = () => Promise.resolve(decoded);
+        createBufferSource = node;
+        createOscillator = node;
+        createGain = node;
+        resume = () => Promise.resolve();
+      },
+    );
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+    } as unknown as Response);
+    const mod = await load();
+    await mod.loadClip(word("ma1b"));
+    return { ...mod, decoded, played };
+  }
+
+  it("does not play jane's buffer for mark's same-id word", async () => {
+    const { playToneCue, decoded, played } = await loadJaneClip();
+
+    // Jane's own word finds its clip: the fixture is live, not inert.
+    expect(playToneCue(1, 200, 6, word("ma1b"))).toBe(true);
+    expect(played).toEqual([decoded]);
+
+    // Mark's has none, so the cue must fall back to the synthetic sweep.
+    expect(playToneCue(1, 200, 6, word("ma1b", "mark"))).toBe(false);
+    expect(played).toEqual([decoded]);
+  });
+
+  it("does not report jane's clip length for mark's same-id word", async () => {
+    const { cueDurationMsFor } = await loadJaneClip();
+    // Jane's loaded clip answers with the decoded clipS; mark's falls back to
+    // the word's own catalog length. Same number here (both 0.8s), so assert
+    // the distinguishing case: a mark word whose catalog clipS differs.
+    const mark = { ...word("ma1b", "mark"), clipS: 2 };
+    expect(cueDurationMsFor(word("ma1b"), 1)).toBe(800);
+    expect(cueDurationMsFor(mark, 1)).toBe(2000);
   });
 });

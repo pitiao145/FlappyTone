@@ -8,6 +8,7 @@ import {
   type Word,
 } from "./words.ts";
 import fallback from "../data/wordsFallback.json";
+import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
 import { corridorChaoAt, makeGate, newDifficulty, shapeForTone, shapeForWord } from "./gates.ts";
 
 /** A well-formed `words` table row, as `wordsFromCatalog` sees it. */
@@ -23,6 +24,7 @@ function row(over: Record<string, unknown> = {}): Record<string, unknown> {
     position: 0,
     status: "published",
     min_tier: "free",
+    speaker_id: "jane",
     clip_key: "ba1.wav",
     duration_s: 1.178,
     onset_s: null,
@@ -209,7 +211,7 @@ describe("wordsForTier", () => {
 
 /**
  * `min_tier` is the GAME gate, and it is what the clips Worker enforces at
- * `/clip/:id`. The run's pool is filtered by it (Game.tsx), so the two must
+ * `/clip/:speaker/:id`. The run's pool is filtered by it (Game.tsx), so the two must
  * agree: a word a tier's run can fly is a word whose clip that tier can fetch.
  *
  * The shipped catalog marks everything `free` today, so every tier flies all
@@ -218,7 +220,9 @@ describe("wordsForTier", () => {
  * a COUNT, `TIER_LIMITS.wordsPerTone`, and must never reach this pool).
  */
 describe("the shipped catalog is open to every tier's game", () => {
-  const catalog = wordsFromCatalog(fallback.rows);
+  const catalog = wordsFromCatalog(
+    (fallback.rows as Record<string, unknown>[]).map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID })),
+  );
 
   it("ships 120 published words", () => {
     expect(catalog).toHaveLength(120);

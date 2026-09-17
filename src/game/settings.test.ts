@@ -301,3 +301,64 @@ describe("Reduce-motion preference", () => {
     expect(loadReduceMotion()).toBeNull();
   });
 });
+
+describe("Voice preference", () => {
+  let storageMap: Record<string, string>;
+
+  beforeEach(() => {
+    storageMap = {};
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => storageMap[key] ?? null,
+      setItem: (key: string, value: string) => {
+        storageMap[key] = value;
+      },
+      removeItem: (key: string) => {
+        delete storageMap[key];
+      },
+    } as Storage);
+  });
+
+  it("keeps a v3 record without a voice field", () => {
+    // Added additively. Bumping the settings key would wipe every player's
+    // calibration to gain one field — the trade runHistory.ts already refused.
+    localStorage.setItem(
+      "toneflap.settings.v3",
+      JSON.stringify({
+        f0Center: 200,
+        noiseFloor: 0.01,
+        rangeSemitones: 6,
+        rangeDownSemitones: 6,
+      }),
+    );
+    const s = loadSettings();
+    expect(s?.f0Center).toBe(200);
+    expect(s?.voice).toBeUndefined();
+  });
+
+  it("round-trips a stored voice preference", () => {
+    saveSettings({
+      f0Center: 115,
+      noiseFloor: 0.01,
+      rangeSemitones: 6,
+      rangeDownSemitones: 6,
+      voice: { gender: "male" },
+    });
+    expect(loadSettings()?.voice).toEqual({ gender: "male" });
+  });
+
+  it("drops a malformed voice rather than failing the whole record", () => {
+    localStorage.setItem(
+      "toneflap.settings.v3",
+      JSON.stringify({
+        f0Center: 200,
+        noiseFloor: 0.01,
+        rangeSemitones: 6,
+        rangeDownSemitones: 6,
+        voice: { gender: "banana" },
+      }),
+    );
+    const s = loadSettings();
+    expect(s?.f0Center).toBe(200);
+    expect(s?.voice).toBeUndefined();
+  });
+});

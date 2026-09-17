@@ -19,8 +19,16 @@
  *    (`allowOverwrite`-equivalent: R2 `put` always overwrites), so the
  *    booth's uploader retrying is safe and correct, not a duplicate-upload
  *    risk.
+ *
+ * Since the voice roster, both the key and the row are scoped by the
+ * speaker the passcode resolved to (`raw/{speaker}/{session}/{id}.wav`, and
+ * an upsert onto `word_clips` with an explicit `(word_id, speaker_id)`
+ * conflict target). There is no `?speaker=`: the route cannot be asked to
+ * write as someone else. `session` and `id` are both bounded to characters
+ * that contain neither `/` nor `.`, so even a hostile client cannot escape
+ * its own prefix.
  */
-import { checkPasscode } from "../passcode.ts";
+import { isDenied, resolveSpeaker } from "../passcode.ts";
 import { serviceDb } from "../db.ts";
 import type { Env } from "../index.ts";
 
@@ -32,8 +40,9 @@ const SESSION = /^[a-z0-9-]{1,40}$/;
 const MAX_BYTES = 4 * 1024 * 1024;
 
 export async function handleRaw(req: Request, env: Env): Promise<Response> {
-  const denied = checkPasscode(req, env.RECORD_PASSCODE);
-  if (denied) return denied;
+  const resolved = resolveSpeaker(req, env);
+  if (isDenied(resolved)) return resolved;
+  const { speaker } = resolved;
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id") ?? "";
@@ -45,7 +54,7 @@ export async function handleRaw(req: Request, env: Env): Promise<Response> {
   if (body.byteLength === 0) return Response.json({ error: "Empty upload." }, { status: 400 });
   if (body.byteLength > MAX_BYTES) return Response.json({ error: "Too large." }, { status: 413 });
 
-  const key = `raw/${session}/${id}.wav`;
+  const key = `raw/${speaker}/${session}/${id}.wav`;
   const db = serviceDb(env);
 
   // Checked before touching R2: Jane must not be able to upload a take for
@@ -67,15 +76,22 @@ export async function handleRaw(req: Request, env: Env): Promise<Response> {
 
   const recordedAt = new Date().toISOString();
   const { error } = await db
-    .from("words")
-    .update({
-      status: "recorded",
-      raw_key: key,
-      recorded_session: session,
-      recorded_at: recordedAt,
-    })
-    .eq("id", id)
-    .select("id")
+    .from("word_clips")
+    .upsert(
+      {
+        word_id: id,
+        speaker_id: speaker,
+        status: "recorded",
+        raw_key: key,
+        recorded_session: session,
+        recorded_at: recordedAt,
+      },
+      // Explicit, never an update keyed on `word_id` alone: the row this take
+      // belongs to is (word, speaker), and a conflict target that forgot the
+      // speaker would overwrite another voice's measurements.
+      { onConflict: "word_id,speaker_id" },
+    )
+    .select("word_id")
     .maybeSingle();
 
   if (error) {

@@ -44,8 +44,12 @@ step is only needed if the deploy itself couldn't create it.
 
 Four secrets, set with `wrangler secret put <NAME>` from `workers/clips/`
 (needs `npx wrangler login` once): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
-(same values `api/score.ts` uses on Vercel), `RECORD_PASSCODE` (same as the
-booth's Vercel value), `CLIP_TOKEN_SECRET` (a fresh value —
+(same values `api/score.ts` uses on Vercel), `RECORD_PASSCODES` (a JSON
+object mapping each booth passcode to a `speakers.id`, e.g.
+`{"<jane's code>":"jane","<mark's code>":"mark"}` — this replaced the single
+`RECORD_PASSCODE`, since the booth now derives *whose* rows a session may
+write from the code itself; adding a recorder is a secret update, not a
+deploy), `CLIP_TOKEN_SECRET` (a fresh value —
 `openssl rand -base64 48` — this is the HS256 secret the Worker signs play
 tickets with; it is unrelated to Supabase's own ES256 session-JWT key, which
 the Worker verifies against Supabase's public JWKS instead of holding a
@@ -68,6 +72,13 @@ Security → WAF → Rate limiting rules → Create:
   `(http.host eq "clips.flappytone.com" and starts_with(http.request.uri.path, "/clip/"))`;
   characteristics IP; period 1 minute; requests 60; action Block for 1 minute.
 - A second rule for `/token`: same shape, 20 requests/minute per IP.
+- A third for the booth: `/auth` and `/booth/*`, and tighter — there are two
+  legitimate users in the world, so 10 requests/minute per IP is generous.
+  `/auth` in particular is the booth passcode's front door and **has no rate
+  limit at all today** — the compare is constant-time and the codes are not
+  guessable by hand, but nothing slows an automated sweep. This is an
+  inherited gap, not one the voice-roster work introduced; it predates the
+  passcode→speaker change and is unaffected by it.
 
 This is the last layer of the defence-in-depth list CLAUDE.md describes
 (private buckets, no listing, one clip per request, short-lived IP-bound

@@ -23,7 +23,7 @@ import { ensureMic } from "../audio/session.ts";
 import { MicError } from "../audio/mic.ts";
 import { Recorder } from "./Recorder.tsx";
 import { ConfirmRedo } from "./ConfirmRedo.tsx";
-import { fetchBoothWords, BOOTH_VOICE, type BoothWord } from "./boothWords.ts";
+import { fetchBoothWords, type BoothSpeaker, type BoothWord } from "./boothWords.ts";
 import { loadProgress, saveProgress } from "./progress.ts";
 import { needsRedoConfirm, type BoothEntry } from "./boothArming.ts";
 import { Uploader, type UploadState } from "./upload.ts";
@@ -107,11 +107,17 @@ export function Overview({ passcode }: Props) {
       }),
   );
 
+  // Server-resolved from the passcode, never chosen here. Rendered above the
+  // word list, before anything is armed, so someone handed the wrong code sees
+  // it on the first screen rather than after a session's work.
+  const [speaker, setSpeaker] = useState<BoothSpeaker | null>(null);
+
   const load = useCallback(async () => {
     setLoadState("loading");
     setLoadError(null);
     try {
       const fetched = await fetchBoothWords(passcode);
+      setSpeaker(fetched.speaker);
       setWords({ pending: fetched.pending, recorded: fetched.recorded });
       setLoadState("ready");
     } catch (err) {
@@ -192,7 +198,7 @@ export function Overview({ passcode }: Props) {
       <header className="rec-head">
         <h1 className="rec-title">Recording booth</h1>
         <p className="rec-sub">
-          Voice: {BOOTH_VOICE} · {recorded.length} of {total} recorded
+          Recording as: {speaker?.name ?? "—"} · {recorded.length} of {total} recorded
         </p>
       </header>
 

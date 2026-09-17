@@ -7,10 +7,21 @@
  * thing we can measure about a tone recording is whether its contour does what
  * its tone number says it does.
  *
- * Advisory, never fatal. `make-clips` writes the clip anyway and prints the
+ * Advisory, never fatal. `process-clips` writes the clip anyway and prints the
  * flag; a wrong flag costs a glance, a suppressed clip costs a re-recording.
  * The thresholds are loose on purpose — this catches "she read the wrong line",
  * not "her Tone 2 could be crisper".
+ *
+ * ## Every comparison here is within one voice
+ *
+ * The duration check and the pinned check both describe a speaker, not a word.
+ * Measured against the wrong cohort they produce complaints that are each
+ * individually true and jointly useless: a male take was once flagged "276ms
+ * against a tone-2 median of 1050ms" and "f0Center is probably wrong for this
+ * speaker", both correct, both because the numbers came from Jane. So
+ * `cohortMedianMs` is the caller's promise that the median is THIS speaker's
+ * own (`process-clips` computes it from their published `word_clips` rows),
+ * and `speaker` is carried only so the report says whose cohort it is.
  */
 
 import type { ContourPoint } from "./clipCut.ts";
@@ -21,8 +32,14 @@ export interface ReviewInput {
   durationMs: number;
   contour: ContourPoint[];
   pinnedFraction: number;
-  /** Median duration of every clip sharing this tone, for the outlier check. */
+  /**
+   * Median duration of every clip sharing this tone AND this speaker, for the
+   * outlier check. Cross-speaker medians are the bug this field's contract
+   * exists to prevent — see the header.
+   */
   cohortMedianMs: number;
+  /** Whose cohort the median above came from. Report text only. */
+  speaker?: string;
 }
 
 export type FlagKind = "sparse" | "pinned" | "duration" | "shape";
@@ -143,7 +160,7 @@ export function reviewClip(input: ReviewInput): Flag[] {
   if (squashed) {
     flags.push({
       kind: "pinned",
-      message: `${Math.round(input.pinnedFraction * 100)}% of the pitch is pinned at an edge and it only travels ${span.toFixed(1)} chao — f0Center is probably wrong for this speaker, so the shape is squashed`,
+      message: `${Math.round(input.pinnedFraction * 100)}% of the pitch is pinned at an edge and it only travels ${span.toFixed(1)} chao — f0Center is probably wrong for ${input.speaker ?? "this speaker"}, so the shape is squashed`,
     });
   }
 
@@ -151,7 +168,7 @@ export function reviewClip(input: ReviewInput): Flag[] {
   if (input.cohortMedianMs > 0 && (ratio < DURATION_LOW || ratio > DURATION_HIGH)) {
     flags.push({
       kind: "duration",
-      message: `${input.durationMs.toFixed(0)}ms against a tone-${input.tone} median of ${input.cohortMedianMs.toFixed(0)}ms`,
+      message: `${input.durationMs.toFixed(0)}ms against ${input.speaker ? `${input.speaker}'s` : "a"} tone-${input.tone} median of ${input.cohortMedianMs.toFixed(0)}ms`,
     });
   }
 

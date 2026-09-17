@@ -288,6 +288,111 @@ neither has an honest cross-device answer.
 
 ## Clip pipeline
 
+### A speaker, not a voice enum (16 Sep 2026)
+
+The game needed a second recorded voice, and the cheap version of that is a
+`voice` column on the clip: `'female' | 'male'`. It was rejected before it was
+written, because one column would have carried three unrelated facts — who
+recorded the take, what range it reads as to a player, and what accent they
+speak. The moment a Beijing recording exists, a `voice` enum either grows a
+second dimension or starts lying.
+
+So a voice is a **row** (`speakers`) with attributes — `gender`, `accent`,
+`is_default`, `active` — and a recording is a row in `word_clips`, keyed
+`(word_id, speaker_id)`. A third speaker is an `INSERT`, not a migration. If
+adding a voice ever needs a schema change, the shape is wrong.
+
+**The player's setting stores an axis, never a speaker id.**
+`CalibrationSettings.voice` is `{ gender }` and nothing else. A stored id
+breaks the day the roster holds two male Taiwanese speakers — which one did
+they mean? — and it breaks worse when that speaker goes inactive, since a
+preference then names a voice that cannot be played. `resolveSpeaker` answers
+the id fresh each session from whatever is active, and deliberately falls back
+to the default when the axis matches more than one active speaker: picking
+arbitrarily would make the voice a player hears depend on row order.
+
+**Each voice flies its own measurements.** `word_clips` holds `polyline`,
+`onset_s`, `clip_s` and `duration_s` per recording, not per word. That is not
+thoroughness, it is the call-and-response contract: the corridor has to be
+measured from the clip the player just heard, or the demo teaches one timing
+and the gate scores another — the exact invariant PRD §6 exists to hold ("demo
+length == gate length == polyline timeline"), which one shared polyline across
+two voices would break for whichever voice did not record it. It is also
+cheap, because polylines are in Chao space, normalised per speaker: the two
+voices' contours are already directly comparable, so nothing downstream has to
+learn about speakers to read them.
+
+**`AVERAGED_TONE_SHAPE` and `toneClassifier.ts` stay voice-independent, on
+purpose.** This will look like an oversight to whoever reads the roster work
+next, and it is not. The averaged shape is a tone *shape* reference in Chao
+space, which is already normalised per speaker — a man's Tone 2 and a woman's
+Tone 2 are the same curve there, in different Hz. Turning it into a
+per-speaker table would change the classifier's reading, and therefore
+scoring, for every player who has ever played, to gain nothing a second voice
+actually needs. The generator (`src/dev/make-tone-averages.ts`) says so in the
+header it emits, so a regeneration cannot quietly drop the warning.
+
+**The back-compat `/clip/:id` route was removed early**, rather than carried to
+a later contract step as the plan had it. Back-compat exists for users running
+the old thing; nobody is — live flappytone.com still serves the pre-migration
+Blob build, so the single-segment route had no caller anywhere in the world.
+Keeping it would have meant a route that guesses a speaker, which is precisely
+the failure mode the speaker-scoped cache key exists to prevent.
+
+**The pitch-search seed became a roster column, which is the one thing the
+earlier entry below says not to do — and it is not the same move.** "Clip
+catalog: DB + R2 migration" pinned `SEED_F0_CENTER = 168` precisely because
+*deriving* it, from the last published word's own measured reference, moved 90
+of the 120 shipped polylines in their third decimal: silent, and not
+re-derivable afterwards without knowing the exact prior seed. That hazard is
+recomputation, not per-speaker-ness. `speakers.f0_seed` is a stored, reviewed
+number that changes only when someone edits a row, and Jane's holds exactly
+`168`, so her corridors resolve to the same value by a different route —
+verified byte-for-byte: `--speaker jane --all --dry-run` produced output
+identical to the pre-change run, and all 120 `wordsFallback.json` rows were
+unchanged.
+
+What forced it is that 168 is not a neutral default for anyone but her. It is
+roughly a female Taiwanese speaker's conversational centre; against a ~110Hz
+male voice it centres the search band nearly an octave high, which is exactly
+the condition octave correction exists to survive and sometimes does not. The
+failure is not loud — the cutter does not refuse, it returns a plausible
+polyline measured off the wrong harmonic, and the corridor ships. So the seed
+had to be a property of the speaker, and `process-clips` had to stop accepting
+a run with no speaker named: `--speaker` is required, validated against the
+roster, and an unknown id exits non-zero rather than falling back to the
+default and writing over her rows.
+
+`clipPipeline.test.ts` now pins the resolution as well as the number, and adds
+the test the golden was missing: it re-cuts all four anchors at a male seed and
+asserts the measurement *moves*. A golden that cannot be broken by the input it
+guards is decoration.
+
+**The review's medians had to follow for the same reason, and this one was
+observed rather than reasoned about.** A male take was flagged "276ms against a
+tone-2 median of 1050ms" and, separately, "f0Center is probably wrong for this
+speaker". Both statements were true. Both were artefacts of comparing him to
+Jane — the duration median was her cohort's, and the pinning was the wrong seed
+squashing his contour against a rail. Two correct-sounding flags, one cause,
+and neither pointing at it. `clipReview` still only flags and never blocks, but
+`cohortMedianMs` is now contractually this speaker's own (computed from their
+published `word_clips` rows, falling back to the run's own cuts for a first
+session), and the messages name the voice so a misattributed median is visible
+in the report instead of being inferred from it.
+
+**`export-fallback` bundles the default speaker only**, and stopped writing
+`exportedAt`. The first is not a shortcut to revisit: the bundle is the
+dead-network path, and a dead network means the clips Worker is unreachable
+too, so no clip audio plays whichever voice the player picked — a second
+voice's rows would be weight on the landing page's critical path describing
+geometry nobody can hear. The second is smaller and worth recording anyway,
+because the timestamp looked like provenance and functioned as noise: this
+file's job is to be diffable, an empty `git diff` after a re-export is the
+proof that a pipeline change moved no measurement, and a line that changes
+every run trains you to read past exactly that signal. Nothing ever read the
+value.
+
+
 ### The booth arms the mic on purpose now, not by arriving (16 Sep 2026)
 
 The recording booth used to go passcode → "Tap to start" → a live

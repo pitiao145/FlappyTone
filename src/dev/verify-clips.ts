@@ -5,9 +5,15 @@
  * listing, proves nothing about content — only a re-download and a hash
  * comparison does.
  *
- *   npm run verify-clips             # every words.clip_key vs public/ref/
- *   npm run verify-clips -- --raw    # every words.raw_key vs fixtures/recordings/
- *   npm run verify-clips -- --only ma1
+ *   npm run verify-clips                        # every ACTIVE speaker, in turn
+ *   npm run verify-clips -- --speaker jane      # just hers
+ *   npm run verify-clips -- --raw               # raw_key instead of clip_key
+ *   npm run verify-clips -- --speaker jane --only ma1
+ *
+ * Keys come from `word_clips`, so a speaker is always part of the question.
+ * With no `--speaker` it walks every `speakers.active` row and reports per
+ * speaker — a single pooled total would hide one voice's failures inside
+ * another's passes.
  *
  * Downloads land in `fixtures/clips/verify/` (gitignored scratch space),
  * never touching `public/ref/` or `fixtures/recordings/` themselves.
@@ -32,10 +38,17 @@ import { r2Get } from "./r2.ts";
 const root = new URL("../../", import.meta.url).pathname;
 const scratchDir = `${root}fixtures/clips/verify`;
 
-const isRaw = process.argv.includes("--raw");
-const onlyIdx = process.argv.indexOf("--only");
-if (onlyIdx !== -1 && !process.argv[onlyIdx + 1]) throw new Error("--only needs an id");
-const only = onlyIdx !== -1 ? process.argv[onlyIdx + 1] : null;
+const argv = process.argv.slice(2);
+const isRaw = argv.includes("--raw");
+const onlyIdx = argv.indexOf("--only");
+if (onlyIdx !== -1 && (!argv[onlyIdx + 1] || argv[onlyIdx + 1].startsWith("--")))
+  throw new Error("--only needs an id");
+const only = onlyIdx !== -1 ? argv[onlyIdx + 1] : null;
+
+const speakerIdx = argv.indexOf("--speaker");
+if (speakerIdx !== -1 && (!argv[speakerIdx + 1] || argv[speakerIdx + 1].startsWith("--")))
+  throw new Error("--speaker needs an id");
+const onlySpeaker = speakerIdx !== -1 ? argv[speakerIdx + 1] : null;
 
 mkdirSync(scratchDir, { recursive: true });
 
@@ -51,78 +64,107 @@ interface Row {
 
 const supabase = serviceClient();
 
-let rows: Row[];
-if (isRaw) {
-  const { data, error } = await supabase.from("words").select("id,raw_key,recorded_session").order("id");
-  if (error) throw new Error(`words query failed: ${error.message}`);
-  rows = data
-    .filter((r) => r.raw_key && r.recorded_session)
-    .filter((r) => !only || r.id === only)
-    .map((r) => ({
-      id: r.id,
-      bucketKey: r.raw_key!,
-      localFile: `${root}fixtures/recordings/${r.recorded_session}/${r.id}.wav`,
-    }));
-} else {
-  const { data, error } = await supabase.from("words").select("id,clip_key").order("id");
-  if (error) throw new Error(`words query failed: ${error.message}`);
-  rows = data
-    .filter((r) => r.clip_key)
-    .filter((r) => !only || r.id === only)
-    .map((r) => ({ id: r.id, bucketKey: r.clip_key!, localFile: `${root}public/ref/${r.id}.wav` }));
+const { data: roster, error: rosterError } = await supabase
+  .from("speakers")
+  .select("id,active")
+  .order("id");
+if (rosterError) throw new Error(`speakers query failed: ${rosterError.message}`);
+
+const speakers = (roster ?? [])
+  .filter((s) => (onlySpeaker ? s.id === onlySpeaker : s.active))
+  .map((s) => s.id);
+if (speakers.length === 0) {
+  throw new Error(
+    onlySpeaker ? `--speaker ${onlySpeaker}: no such speaker` : "No active speakers to verify",
+  );
 }
 
-if (rows.length === 0) throw new Error(only ? `--only ${only}: no matching row` : "No rows to verify");
+async function rowsFor(speaker: string): Promise<Row[]> {
+  const { data, error } = await supabase
+    .from("word_clips")
+    .select("word_id,clip_key,raw_key,recorded_session")
+    .eq("speaker_id", speaker)
+    .order("word_id");
+  if (error) throw new Error(`word_clips query failed: ${error.message}`);
+  return (data ?? [])
+    .filter((r) => (isRaw ? r.raw_key && r.recorded_session : r.clip_key))
+    .filter((r) => !only || r.word_id === only)
+    .map((r) => ({
+      id: r.word_id,
+      bucketKey: (isRaw ? r.raw_key : r.clip_key)!,
+      // The local source of truth for a take is the recordings cache;
+      // `public/ref/` is Jane's pre-migration clip directory, untracked and
+      // present only on the machine that ran the original migration.
+      localFile: isRaw
+        ? localTake(speaker, r.recorded_session!, r.word_id)
+        : `${root}public/ref/${r.word_id}.wav`,
+    }));
+}
+
+/** Both cache layouts — see `process-clips.ts`'s `localPath` for why. */
+function localTake(speaker: string, session: string, id: string): string {
+  const legacy = `${root}fixtures/recordings/${session}/${id}.wav`;
+  return existsSync(legacy) ? legacy : `${root}fixtures/recordings/${speaker}/${session}/${id}.wav`;
+}
 
 const bucket = isRaw ? "flappytone-raw" : "flappytone-clips";
 
-let mismatches = 0;
-const results: { id: string; ok: boolean; detail: string }[] = [];
+let totalMismatches = 0;
 
-for (const row of rows) {
-  if (!existsSync(row.localFile)) {
-    results.push({ id: row.id, ok: false, detail: `local file missing: ${row.localFile}` });
-    mismatches++;
-    continue;
+for (const speaker of speakers) {
+  const rows = await rowsFor(speaker);
+  let mismatches = 0;
+  const results: { id: string; ok: boolean; detail: string }[] = [];
+
+  for (const row of rows) {
+    if (!existsSync(row.localFile)) {
+      results.push({ id: row.id, ok: false, detail: `local file missing: ${row.localFile}` });
+      mismatches++;
+      continue;
+    }
+
+    const downloaded = `${scratchDir}/${speaker}-${row.id}.wav`;
+    rmSync(downloaded, { force: true });
+    try {
+      r2Get(bucket, row.bucketKey, downloaded);
+    } catch (e) {
+      results.push({ id: row.id, ok: false, detail: `r2 get failed: ${(e as Error).message}` });
+      mismatches++;
+      continue;
+    }
+
+    if (!existsSync(downloaded)) {
+      results.push({ id: row.id, ok: false, detail: `download produced no file` });
+      mismatches++;
+      continue;
+    }
+
+    const localSize = statSync(row.localFile).size;
+    const remoteSize = statSync(downloaded).size;
+    if (localSize !== remoteSize) {
+      results.push({ id: row.id, ok: false, detail: `size mismatch: local=${localSize} remote=${remoteSize}` });
+      mismatches++;
+      continue;
+    }
+
+    const localHash = sha256(row.localFile);
+    const remoteHash = sha256(downloaded);
+    if (localHash !== remoteHash) {
+      results.push({ id: row.id, ok: false, detail: `sha256 mismatch: local=${localHash} remote=${remoteHash}` });
+      mismatches++;
+      continue;
+    }
+
+    results.push({ id: row.id, ok: true, detail: `${localSize}B, sha256 ${localHash.slice(0, 12)}...` });
   }
 
-  const downloaded = `${scratchDir}/${row.id}.wav`;
-  rmSync(downloaded, { force: true });
-  try {
-    r2Get(bucket, row.bucketKey, downloaded);
-  } catch (e) {
-    results.push({ id: row.id, ok: false, detail: `r2 get failed: ${(e as Error).message}` });
-    mismatches++;
-    continue;
-  }
-
-  if (!existsSync(downloaded)) {
-    results.push({ id: row.id, ok: false, detail: `download produced no file` });
-    mismatches++;
-    continue;
-  }
-
-  const localSize = statSync(row.localFile).size;
-  const remoteSize = statSync(downloaded).size;
-  if (localSize !== remoteSize) {
-    results.push({ id: row.id, ok: false, detail: `size mismatch: local=${localSize} remote=${remoteSize}` });
-    mismatches++;
-    continue;
-  }
-
-  const localHash = sha256(row.localFile);
-  const remoteHash = sha256(downloaded);
-  if (localHash !== remoteHash) {
-    results.push({ id: row.id, ok: false, detail: `sha256 mismatch: local=${localHash} remote=${remoteHash}` });
-    mismatches++;
-    continue;
-  }
-
-  results.push({ id: row.id, ok: true, detail: `${localSize}B, sha256 ${localHash.slice(0, 12)}...` });
+  console.log(`\nVerify ${speaker} (${isRaw ? "raw" : "clips"}) — ${results.length} object(s):\n`);
+  if (results.length === 0) console.log("  (nothing recorded for this speaker yet)");
+  for (const r of results) console.log(`  ${r.ok ? "OK  " : "FAIL"}  ${r.id.padEnd(10)} ${r.detail}`);
+  // Per speaker, never pooled: one voice's failures must not disappear into
+  // another's passes.
+  console.log(`  ${results.length - mismatches}/${results.length} matched, ${mismatches} mismatch(es).`);
+  totalMismatches += mismatches;
 }
 
-console.log(`\nVerify (${isRaw ? "raw" : "clips"}) — ${results.length} object(s):\n`);
-for (const r of results) console.log(`  ${r.ok ? "OK  " : "FAIL"}  ${r.id.padEnd(10)} ${r.detail}`);
-
-console.log(`\n${results.length - mismatches}/${results.length} matched, ${mismatches} mismatch(es).`);
-if (mismatches > 0) process.exit(1);
+if (totalMismatches > 0) process.exit(1);

@@ -8,7 +8,9 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CATALOG_KEY, catalogFromCache, fetchCatalog } from "./words.ts";
+import { CATALOG_KEY_PREFIX, catalogFromCache, fetchCatalog } from "./words.ts";
+
+const CATALOG_KEY = `${CATALOG_KEY_PREFIX}jane`;
 import * as supabaseModule from "./supabase.ts";
 
 vi.mock("./supabase.ts", async (importOriginal) => {
@@ -29,6 +31,7 @@ function row(over: Record<string, unknown> = {}) {
     position: 0,
     status: "published",
     min_tier: "free",
+    speaker_id: "jane",
     clip_key: "ma1.wav",
     duration_s: 0.8,
     onset_s: 0.1,
@@ -39,6 +42,31 @@ function row(over: Record<string, unknown> = {}) {
     ],
     updated_at: "2026-09-01T00:00:00.000Z",
     ...over,
+  };
+}
+
+/**
+ * The same row as it comes off the wire: the measurements nested under the
+ * `word_clips!inner(...)` embed, which `fetchCatalog` has to flatten before it
+ * parses or caches anything.
+ */
+function embedRow(over: Record<string, unknown> = {}) {
+  const {
+    speaker_id,
+    status,
+    clip_key,
+    duration_s,
+    onset_s,
+    clip_s,
+    polyline,
+    updated_at,
+    ...word
+  } = row(over);
+  return {
+    ...word,
+    word_clips: [
+      { speaker_id, status, clip_key, duration_s, onset_s, clip_s, polyline, updated_at },
+    ],
   };
 }
 
@@ -87,14 +115,15 @@ beforeEach(() => {
 
 describe("fetchCatalog", () => {
   it("returns the live rows and caches them", async () => {
-    const c = client({ data: [row()], error: null });
+    const c = client({ data: [embedRow()], error: null });
     vi.mocked(supabaseModule.getSupabase).mockReturnValue(c.supabase);
 
-    const words = await fetchCatalog();
+    const words = await fetchCatalog({ speaker: "jane" });
 
     expect(words.map((w) => w.id)).toEqual(["ma1"]);
     expect(c.from).toHaveBeenCalledWith("words");
-    expect(c.eq).toHaveBeenCalledWith("status", "published");
+    expect(c.eq).toHaveBeenCalledWith("word_clips.speaker_id", "jane");
+    expect(c.eq).toHaveBeenCalledWith("word_clips.status", "published");
 
     const cached = JSON.parse(localStorage.getItem(CATALOG_KEY)!) as {
       savedAt: number;
@@ -102,6 +131,11 @@ describe("fetchCatalog", () => {
     };
     expect(typeof cached.savedAt).toBe("number");
     expect(cached.rows).toHaveLength(1);
+    // Flattened, not the raw embed: a cache of embed rows would parse to zero
+    // words on every later cold start and silently fall through to the bundle.
+    expect(cached.rows[0]).toMatchObject({ speaker_id: "jane", clip_key: "ma1.wav" });
+    expect(cached.rows[0]).not.toHaveProperty("word_clips");
+    expect(catalogFromCache("jane")?.map((w) => w.id)).toEqual(["ma1"]);
   });
 
   it("falls back to the cache when the live query throws", async () => {
@@ -111,7 +145,7 @@ describe("fetchCatalog", () => {
     );
     vi.mocked(supabaseModule.getSupabase).mockReturnValue(client(new Error("offline")).supabase);
 
-    const words = await fetchCatalog();
+    const words = await fetchCatalog({ speaker: "jane" });
 
     expect(words.map((w) => w.id)).toEqual(["cached"]);
   });
@@ -124,14 +158,14 @@ describe("fetchCatalog", () => {
     const c = client({ data: null, error: { message: "permission denied" } });
     vi.mocked(supabaseModule.getSupabase).mockReturnValue(c.supabase);
 
-    expect((await fetchCatalog()).map((w) => w.id)).toEqual(["cached"]);
+    expect((await fetchCatalog({ speaker: "jane" })).map((w) => w.id)).toEqual(["cached"]);
     expect(supabaseModule.warn).toHaveBeenCalled();
   });
 
   it("falls back to the bundled export with no client and no cache", async () => {
     vi.mocked(supabaseModule.getSupabase).mockReturnValue(null);
 
-    const words = await fetchCatalog();
+    const words = await fetchCatalog({ speaker: "jane" });
 
     // The shipped inventory, not an empty list: a first-time visitor on a dead
     // network gets a real game, not the tuning defaults.
@@ -144,8 +178,8 @@ describe("fetchCatalog", () => {
     vi.mocked(supabaseModule.getSupabase).mockReturnValue(null);
 
     // The corrupt value is skipped, not parsed: the bundled export answers.
-    await expect(fetchCatalog()).resolves.not.toHaveLength(0);
-    expect(catalogFromCache()).toBeNull();
+    await expect(fetchCatalog({ speaker: "jane" })).resolves.not.toHaveLength(0);
+    expect(catalogFromCache("jane")).toBeNull();
   });
 
   it("survives a localStorage that throws on every access", () => {
@@ -160,21 +194,73 @@ describe("fetchCatalog", () => {
       setItem: blocked,
       removeItem: blocked,
     } as unknown as Storage);
-    const c = client({ data: [row()], error: null });
+    const c = client({ data: [embedRow()], error: null });
     vi.mocked(supabaseModule.getSupabase).mockReturnValue(c.supabase);
 
-    expect(catalogFromCache()).toBeNull();
-    return expect(fetchCatalog()).resolves.not.toHaveLength(0);
+    expect(catalogFromCache("jane")).toBeNull();
+    return expect(fetchCatalog({ speaker: "jane" })).resolves.not.toHaveLength(0);
   });
 
   it("filters through word_lists when a listId is given", async () => {
-    const c = client({ data: [row()], error: null });
+    const c = client({ data: [embedRow()], error: null });
     vi.mocked(supabaseModule.getSupabase).mockReturnValue(c.supabase);
 
-    await fetchCatalog({ listId: "core" });
+    await fetchCatalog({ speaker: "jane", listId: "core" });
 
     expect(c.select.mock.calls[0][0]).toContain("word_lists!inner(list_id)");
     expect(c.eq).toHaveBeenCalledWith("word_lists.list_id", "core");
+  });
+
+  it("caches per speaker, so a switch cannot serve the other voice", async () => {
+    const c = client({ data: [embedRow()], error: null });
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(c.supabase);
+
+    await fetchCatalog({ speaker: "jane" });
+
+    expect(localStorage.getItem(`${CATALOG_KEY_PREFIX}jane`)).toBeTruthy();
+    expect(localStorage.getItem(`${CATALOG_KEY_PREFIX}mark`)).toBeNull();
+    expect(catalogFromCache("mark")).toBeNull();
+  });
+
+  it("falls back to the bundled snapshot for a speaker it has never cached", async () => {
+    // The bundle is the default speaker's. A non-default speaker offline gets
+    // the default's corridors and a synthetic sweep — no audio plays offline
+    // either way, so this is the honest degradation, not a wrong-voice bug.
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(null);
+    localStorage.setItem(
+      `${CATALOG_KEY_PREFIX}jane`,
+      JSON.stringify({ savedAt: Date.now(), rows: [row({ id: "cached" })] }),
+    );
+
+    const words = await fetchCatalog({ speaker: "mark" });
+
+    expect(words.length).toBeGreaterThan(0);
+    expect(words.map((w) => w.id)).not.toContain("cached");
+  });
+
+  it("keeps the cache when a live read parses to zero words", async () => {
+    // A live read that parses to nothing is a misconfiguration — a renamed
+    // column, a reshaped embed — not an empty catalog. Caching the emptiness
+    // would turn one bad deploy into a permanently blank word list on every
+    // device that touched it, and it would look exactly like the game working.
+    localStorage.setItem(
+      CATALOG_KEY,
+      JSON.stringify({ savedAt: 1, rows: [row({ id: "cached" })] }),
+    );
+    // Shaped like the current wire rows but unparseable: the embed is there
+    // and the word survives flattening, yet `polyline` is gone.
+    const c = client({ data: [embedRow({ polyline: null })], error: null });
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(c.supabase);
+
+    const words = await fetchCatalog({ speaker: "jane" });
+
+    expect(words.map((w) => w.id)).toEqual(["cached"]);
+    // Untouched — not overwritten with the empty read, and not even re-stamped.
+    expect(JSON.parse(localStorage.getItem(CATALOG_KEY)!)).toEqual({
+      savedAt: 1,
+      rows: [row({ id: "cached" })],
+    });
+    expect(supabaseModule.warn).toHaveBeenCalled();
   });
 
   it("never rejects, even when the client itself explodes", async () => {
@@ -182,13 +268,13 @@ describe("fetchCatalog", () => {
       throw new Error("boom");
     });
 
-    await expect(fetchCatalog()).resolves.toBeInstanceOf(Array);
+    await expect(fetchCatalog({ speaker: "jane" })).resolves.toBeInstanceOf(Array);
   });
 });
 
 describe("catalogFromCache", () => {
   it("returns null with nothing stored", () => {
-    expect(catalogFromCache()).toBeNull();
+    expect(catalogFromCache("jane")).toBeNull();
   });
 
   it("returns the cached words", () => {
@@ -196,11 +282,11 @@ describe("catalogFromCache", () => {
       CATALOG_KEY,
       JSON.stringify({ savedAt: Date.now(), rows: [row({ id: "cached" })] }),
     );
-    expect(catalogFromCache()?.map((w) => w.id)).toEqual(["cached"]);
+    expect(catalogFromCache("jane")?.map((w) => w.id)).toEqual(["cached"]);
   });
 
   it("returns null when the cache holds no usable rows", () => {
     localStorage.setItem(CATALOG_KEY, JSON.stringify({ savedAt: Date.now(), rows: [] }));
-    expect(catalogFromCache()).toBeNull();
+    expect(catalogFromCache("jane")).toBeNull();
   });
 });

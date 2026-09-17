@@ -25,7 +25,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
 import { MEASURE_RANGE_SEMITONES, cutClip, templateContour } from "./clipCut.ts";
-import { MIN_REFERENCE_FRAMES, SEED_F0_CENTER } from "./clipPipeline.ts";
+import { MIN_REFERENCE_FRAMES, SEED_F0_CENTER, resolveSeed } from "./clipPipeline.ts";
 import { decodeWav } from "./wav.ts";
 import speakers from "../../fixtures/captures/speakers.json" with { type: "json" };
 
@@ -39,6 +39,41 @@ describe("SEED_F0_CENTER", () => {
     // corridor moves.
     expect(SEED_F0_CENTER).toBe(168);
     expect((speakers as Record<string, number>).jane).toBe(SEED_F0_CENTER);
+  });
+});
+
+describe("resolveSeed", () => {
+  it("takes the speaker's own seed when the roster has one", () => {
+    // A ~110Hz male voice searched from 168 is a search band centred nearly an
+    // octave off his own register — the exact condition octave correction is
+    // there to survive and sometimes does not.
+    expect(resolveSeed(110)).toBe(110);
+  });
+
+  it("falls back to Jane's pinned seed when the roster has none", () => {
+    // `f0_seed` is `not null` in the schema, so this is the shape of a caller
+    // that has no speaker row at all, not of a blank column.
+    expect(resolveSeed(null)).toBe(SEED_F0_CENTER);
+    expect(resolveSeed(undefined)).toBe(SEED_F0_CENTER);
+  });
+
+  it("is what Jane's row resolves to, unchanged", () => {
+    expect(resolveSeed(168)).toBe(SEED_F0_CENTER);
+  });
+
+  it("does not mistake NaN for a seed", () => {
+    // `Number(undefined)` is NaN and `typeof NaN === "number"`, so the obvious
+    // guard would pass NaN straight through as a search band. It does not
+    // throw downstream — it cuts the whole inventory off garbage.
+    expect(resolveSeed(Number(undefined))).toBe(SEED_F0_CENTER);
+    expect(resolveSeed(NaN)).toBe(SEED_F0_CENTER);
+    expect(resolveSeed(Infinity)).toBe(SEED_F0_CENTER);
+  });
+
+  it("still passes a real seed through untouched, including one below Jane's", () => {
+    // The default must not swallow a legitimately low male seed on its way in.
+    expect(resolveSeed(110)).toBe(110);
+    expect(resolveSeed(0.5)).toBe(0.5);
   });
 });
 
@@ -71,7 +106,10 @@ describe("the anchors, cut at the seed", () => {
       const { samples, sampleRate } = decodeWav(
         new Uint8Array(readFileSync(`${root}fixtures/anchors/ma${tone}.wav`)),
       );
-      const cut = cutClip(samples, sampleRate, SEED_F0_CENTER, MEASURE_RANGE_SEMITONES, tone);
+      // Jane's seed, now reached the way `process-clips` reaches it — through
+      // `resolveSeed` off her `speakers.f0_seed` — rather than as a bare
+      // constant. The number is identical; the route is what changed.
+      const cut = cutClip(samples, sampleRate, resolveSeed(168), MEASURE_RANGE_SEMITONES, tone);
       const golden = GOLDEN[tone];
 
       expect(cut.durationMs).toBeCloseTo(golden.durationMs, 3);
@@ -84,6 +122,24 @@ describe("the anchors, cut at the seed", () => {
       expect(templateContour(tone, cut.contour)).toEqual(golden.poly);
     });
   }
+
+  /**
+   * The golden above is only worth having if the seed can break it. Now that
+   * the seed is a per-speaker parameter rather than one pinned constant, a
+   * future `--speaker` is one typo away from re-cutting Jane's inventory under
+   * somebody else's number — so prove the assertion still bites by feeding it
+   * a plausible male seed and watching the measurement move.
+   */
+  it("would NOT be stable at another speaker's seed — proving the golden bites", () => {
+    const moved = ([1, 2, 3, 4] as const).some((tone) => {
+      const { samples, sampleRate } = decodeWav(
+        new Uint8Array(readFileSync(`${root}fixtures/anchors/ma${tone}.wav`)),
+      );
+      const cut = cutClip(samples, sampleRate, resolveSeed(110), MEASURE_RANGE_SEMITONES, tone);
+      return JSON.stringify(templateContour(tone, cut.contour)) !== JSON.stringify(GOLDEN[tone].poly);
+    });
+    expect(moved).toBe(true);
+  });
 
   it("keeps the three clocks apart on the anchors themselves", () => {
     for (const tone of [2, 3, 4] as const) {

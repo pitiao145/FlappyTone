@@ -14,9 +14,10 @@ import {
   loadClip,
   playToneCue,
 } from "../audio/reference.ts";
-import { inventoryNow, loadInventory } from "../audio/inventory.ts";
+import { inventoryNow, inventorySpeaker, loadInventory, subscribeInventory } from "../audio/inventory.ts";
 import { planPrefetch, prefetchPool } from "../audio/prefetch.ts";
 import { isChromeIOS, isIOS } from "../audio/platform.ts";
+import { warmupWait } from "../audio/warmup.ts";
 import { MicStatusBanner } from "./MicStatus.tsx";
 import {
   acquireMicStream,
@@ -40,6 +41,7 @@ import {
   loadCorridorWidth,
   loadCueStyle,
   loadNoticeSeen,
+  loadReduceMotion,
   loadShowTranslation,
   saveNoticeSeen,
   type CalibrationSettings,
@@ -297,6 +299,31 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   const runRef = useRef<Run | null>(null);
   /** Set by the effect so the tutorial card's button can begin the run. */
   const startRef = useRef<() => void>(() => {});
+  /**
+   * True while the run is held on the warming screen, waiting for the first
+   * gate's own clip (see `beginWhenWarm` in the run-owning effect). The very
+   * first cue of a session used to land before its clip had fetched and
+   * decoded, so it played the synthetic sweep — the one cue a player has no
+   * prior recording to compare against.
+   */
+  const [warming, setWarming] = useState(false);
+  /**
+   * Generation counter for the warm-up wait, the same shape as GameApp's
+   * `navRef`: an in-flight warm-up compares it after awaiting, so a player who
+   * pauses, quits, or navigates away during the hold can never have the run
+   * start behind them. Bumped on teardown and on pause.
+   */
+  const warmGenRef = useRef(0);
+  /** Mirrors `warming` for the effect's own closures, which don't re-run. */
+  const warmingRef = useRef(false);
+  /**
+   * Set only when a pause interrupted the warm-up hold itself, so resume knows
+   * to re-enter it. Resuming an already-started run must go straight back to
+   * `start()`: `beginWhenWarm` waits on `gates[0]`, which mid-run is the
+   * current front gate and already decoded, so the wait would resolve at once
+   * and the floor alone would put a loading screen in front of every unpause.
+   */
+  const pausedWarmingRef = useRef(false);
 
   useImperativeHandle(ref, () => ({
     pause: () => pauseRef.current(false),
@@ -364,6 +391,10 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         score: snap.stats.score,
         bestMult: snap.stats.bestMultiplier,
         missedEarly: snap.missedUtterances,
+        // Read at report time, not at run start: switching voice mid-run
+        // replaces the pool through `setWords`, so the speaker the run
+        // actually finished on is the honest answer.
+        voice: inventorySpeaker(),
       });
     },
     [reportGates],
@@ -448,7 +479,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // defaults with synthetic cues.
       //
       // `min_tier` is the *game* gate — the same value the Worker enforces at
-      // `/clip/:id` — so the pool has to agree with it or a gated word flies
+      // `/clip/:speaker/:id` — so the pool has to agree with it or a gated word flies
       // with a synthetic sweep instead of its recording. (The visualiser's
       // `wordsPerTone` is a separate, count-based practice limit; it must
       // never reach this pool, or a guest's 0-word cap would starve the game.)
@@ -720,6 +751,23 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // while the tab-hidden pause is showing should open the options, not
       // silently do nothing.
       setOptionsOpen(withOptions);
+      // A pause (or a nav away, which calls this) during the warm-up hold has
+      // to cancel it, or the run would start under whatever the player went
+      // to look at once the clip landed. Resume re-enters `beginWhenWarm`.
+      if (warmingRef.current) {
+        warmGenRef.current += 1;
+        warmingRef.current = false;
+        pausedWarmingRef.current = true;
+        setWarming(false);
+        // The loop has not started, so there is no rAF or HUD timer to stop —
+        // but the mic's AudioContext is already live (the caller opened it
+        // inside its gesture), and this is also the `visibilitychange`
+        // handler. Backgrounding the tab mid-hold must suspend it, same as
+        // backgrounding a running one (PRD §10). Resume wakes it again.
+        void getMicSession()?.ctx.suspend();
+        setPaused(true);
+        return;
+      }
       if (!running) return;
       running = false;
       cancelAnimationFrame(rafId);
@@ -730,6 +778,46 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     };
     pauseRef.current = pause;
 
+    /**
+     * Start the run — but not before the first gate's clip has landed.
+     *
+     * The gates are queued when the `Run` is constructed above, so the word
+     * the first cue will play is known synchronously here, and
+     * `audio/prefetch.ts` has already been told to fetch it first and alone.
+     * All this does is decline to start the world until that fetch has
+     * finished, floored and capped by `tuning().warmupMinMs`/`warmupMaxMs`.
+     *
+     * Deliberately NOT a gesture boundary: every caller (the Play button's
+     * handler, the notice card, the tutorial's Start) has already opened the
+     * mic and resumed the AudioContext synchronously inside its own click,
+     * before anything here is awaited (hard rule 4).
+     *
+     * `learn` cues synthetically by design (`cuesUseClips`), so there is
+     * nothing to wait for and the screen would be pure dead time.
+     */
+    const beginWhenWarm = (): void => {
+      const lead = cuesUseClips ? (run.snapshot().gates[0]?.word ?? null) : null;
+      if (!lead) {
+        start();
+        return;
+      }
+      const gen = ++warmGenRef.current;
+      warmingRef.current = true;
+      setWarming(true);
+      const t = tuning();
+      // `warmupWait` never rejects, and `loadClip` swallows its own failures —
+      // the worst case here is that we start on the cap with a synthetic cue.
+      void warmupWait(() => loadClip(lead), {
+        minMs: t.warmupMinMs,
+        maxMs: t.warmupMaxMs,
+      }).then(() => {
+        if (gen !== warmGenRef.current) return; // paused, quit, or torn down
+        warmingRef.current = false;
+        setWarming(false);
+        start();
+      });
+    };
+
     resumeRef.current = () => {
       const audio = getMicSession()?.ctx;
       // resume() is called from the overlay's click handler — iOS needs that.
@@ -739,7 +827,16 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // `onFrame`'s comment above. A no-op if nothing else claimed it.
       setFrameSink(onFrame);
       setPaused(false);
-      if (!finished) start();
+      if (finished) return;
+      // Only a pause that interrupted the hold resumes back into it. An
+      // ordinary mid-run pause goes straight back to the loop — see
+      // `pausedWarmingRef`.
+      if (pausedWarmingRef.current) {
+        pausedWarmingRef.current = false;
+        beginWhenWarm();
+      } else {
+        start();
+      }
     };
 
     const onVisibility = () => {
@@ -751,8 +848,10 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // The tutorial holds until the player taps Start; a game run begins now.
     startRef.current = () => {
       const audio = getMicSession()?.ctx;
+      // Resumed synchronously, inside the caller's click — iOS grants this
+      // nowhere else, and `beginWhenWarm` below awaits (hard rule 4).
       if (audio && audio.state === "suspended") void audio.resume();
-      start();
+      beginWhenWarm();
     };
     // A deliberately started tutorial holds behind its walkthrough's "intro"
     // card — see WalkthroughStep. A first real run holds behind the testing
@@ -760,10 +859,13 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // as before the walkthrough existed: it's a range-measuring flight, not
     // a teaching moment, and its gesture already happened on the
     // calibration screen's "Let's go".
-    if ((mode !== "tutorial" || autoStart) && !noticeRef.current) start();
+    if ((mode !== "tutorial" || autoStart) && !noticeRef.current) beginWhenWarm();
 
     return () => {
       running = false;
+      // Cancels an in-flight warm-up: a run torn down mid-hold must not start.
+      warmGenRef.current += 1;
+      warmingRef.current = false;
       cancelAnimationFrame(rafId);
       clearInterval(hudTimer);
       cueTimers.forEach((id) => clearTimeout(id));
@@ -879,6 +981,21 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     if (now) run.setWords(wordsForTier(now, tier));
   }, [tier, runGen]);
 
+  /**
+   * The same repair, for the other thing that can move the pool under a live
+   * run: the resolved speaker. Switching voice in Settings replaces the
+   * catalog, and that has to reach a run that is still alive behind this
+   * screen — through `setWords`, for exactly the reasons above, never by
+   * rebuilding the Run.
+   */
+  useEffect(
+    () =>
+      subscribeInventory((words) => {
+        runRef.current?.setWords(wordsForTier(words, getTier()));
+      }),
+    [],
+  );
+
   // Show the *active* gate's tone while flying it — showing the next gate's
   // tone mid-gate would teach the wrong contour (this matters most in the
   // tutorial, where the cue text is the lesson).
@@ -966,7 +1083,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
             {/* In the row rather than absolutely positioned over it: floated
                 top-right it sat on top of the hearts, which are also
                 right-aligned. */}
-            {walkthroughStep === null && !notice && !paused && (
+            {walkthroughStep === null && !notice && !paused && !warming && (
               <div className="hud-controls">
                 <button
                   className="hud-button"
@@ -1075,6 +1192,23 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
             already on, and the button only makes the card stop coming back.
             Its click is also a user gesture, which is the iOS-safe place to
             resume the AudioContext — the same reason the tutorial card works. */}
+        {/* The warm-up hold. Honest about what it is waiting for, and short:
+            `tuning().warmupMinMs` on a warm cache, `warmupMaxMs` at worst.
+            No button — there is nothing for the player to decide, and the
+            run starts itself. See `beginWhenWarm`. */}
+        {warming && (
+          <div
+            className={`overlay warming${loadReduceMotion() ? " warming--still" : ""}`}
+          >
+            <p>Getting the audio ready…</p>
+            <div className="warming-dots" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+        )}
+
         {notice && (
           <div className="overlay tutorial-card">
             <h3>Still in testing</h3>

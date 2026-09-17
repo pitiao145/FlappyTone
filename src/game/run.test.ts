@@ -42,6 +42,7 @@ function wordsFrom(
       position,
       status: "published",
       min_tier: "free",
+      speaker_id: "jane",
       clip_key: c.file,
       duration_s: c.durationS,
       onset_s: c.onsetS ?? null,

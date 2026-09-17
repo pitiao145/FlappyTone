@@ -3,6 +3,7 @@ import { deviceBucket, gateEvent, roundCalibration } from "./session.ts";
 import type { GateLogEntry } from "../game/run.ts";
 import type { AnalyticsEvent, MicFailureReason } from "./session.ts";
 import type { MicErrorKind } from "../audio/mic.ts";
+import { sanitizeGameProperties } from "./posthog.ts";
 
 /**
  * `session.ts` restates `MicErrorKind` rather than importing it, so that the
@@ -153,5 +154,44 @@ describe("deviceBucket", () => {
     }
     const uas = [...cases.map(([ua]) => ua), "garbage", "Opera/9.80", "curl/8.4"];
     for (const ua of uas) expect(allowed.has(deviceBucket(ua))).toBe(true);
+  });
+});
+
+describe("run_end", () => {
+  /**
+   * The voice a run was flown with. A speaker id from the roster — never
+   * anything the player typed, so `session.ts`'s standing promise is intact —
+   * and the one property that makes every other gameplay number breakable by
+   * voice ("do male-voiced runs score worse?", which is unanswerable without
+   * it).
+   */
+  it("carries the voice", () => {
+    const ev: AnalyticsEvent = {
+      type: "run_end",
+      reason: "out_of_hearts",
+      gates: 7,
+      score: 1200,
+      bestMult: 2,
+      missedEarly: 1,
+      voice: "mark",
+    };
+    expect(ev.type === "run_end" && ev.voice).toBe("mark");
+  });
+
+  it("survives the transport boundary, where a property the allowlist misses is dropped", () => {
+    // `voice` reaching the union is only half of it: `before_send` re-reduces
+    // every *sent* property, so a field added to the type and not carried
+    // through here would be built and then thrown away.
+    const sent = sanitizeGameProperties({
+      voice: "mark",
+      score: 1200,
+      $geoip_country_code: "TW",
+      $host: "flappytone.com",
+      $current_url: "https://flappytone.com/app",
+    });
+    expect(sent.voice).toBe("mark");
+    expect(sent).not.toHaveProperty("$host");
+    expect(sent).not.toHaveProperty("$current_url");
+    expect(sent.$geoip_country_code).toBe("TW");
   });
 });

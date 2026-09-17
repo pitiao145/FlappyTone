@@ -9,14 +9,34 @@ import { setSharingEnabled } from "../analytics/client.ts";
 import { setPostHogConsent } from "../analytics/posthog.ts";
 import {
   clearSettings,
+  loadSettings,
   loadShareData,
+  saveSettings,
   saveShareData,
   type CalibrationSettings,
 } from "../game/settings.ts";
+import { resolveSpeaker, type Gender, type Speaker } from "../game/voice.ts";
+import { adoptInventory, inventorySpeaker } from "../audio/inventory.ts";
+import { loadRoster } from "../data/speakers.ts";
+import { fetchCatalog } from "../data/words.ts";
 import { Choice } from "./Choice.tsx";
 import { MicrophoneIcon } from "./toneIcons.tsx";
 
 const SHARING = ["on", "off"] as const;
+
+const VOICES = ["female", "male"] as const satisfies readonly Gender[];
+/**
+ * The switch is labelled by gender because that is what reads to a player, but
+ * what it actually matches is **pitch range**. A low-voiced woman flying the
+ * man's recordings is the correct outcome, not a mistake to correct: the
+ * corridors she is asked to fly are then the ones her own voice reaches. The
+ * guess is made from her measured centre, and this control exists for everyone
+ * the guess suits badly.
+ */
+const VOICE_LABEL: Record<Gender, string> = {
+  female: "Woman's voice",
+  male: "Man's voice",
+};
 
 function SettingIcon({ children }: { children: React.ReactNode }) {
   return (
@@ -116,6 +136,29 @@ export function Settings({
     loadShareData() ? "on" : "off",
   );
   const [account, setAccount] = useState<Account | null>(null);
+  /**
+   * The roster, for deciding whether the switch is worth showing at all. Null
+   * while it is still being read — the control renders nothing until then, and
+   * nothing at all while fewer than two speakers are active, because with one
+   * voice there is nothing to switch to.
+   */
+  const [roster, setRoster] = useState<Speaker[] | null>(null);
+  /**
+   * The player's *stored* preference, and only that — `?? null`, the same read
+   * the app-load resolver makes, never a guess.
+   *
+   * Seeding this from `guessGender(settings.f0Center)` was wrong and shipped
+   * briefly: a legacy player with no stored preference would fly the default
+   * speaker at app load and then silently swap to the guessed one mid-session
+   * the first time they merely opened this screen, with nothing persisted.
+   * Opening a settings screen must not change which voice you are flying.
+   *
+   * Persisting the guess here was the other option and is worse: a guess is not
+   * an explicit choice, and writing one would make it permanent under the rule
+   * that an explicit choice is never re-guessed. Calibration is where the guess
+   * belongs, because that is where the measurement it is made from happens.
+   */
+  const [voice, setVoice] = useState<Gender | null>(settings?.voice?.gender ?? null);
 
   useEffect(() => {
     let live = true;
@@ -126,6 +169,53 @@ export function Settings({
       live = false;
     };
   }, []);
+
+  useEffect(() => {
+    let live = true;
+    void loadRoster().then((r) => {
+      if (live) setRoster(r);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  /**
+   * Fetch the chosen voice's catalog, in its own effect.
+   *
+   * Deliberately separate from the click handler, and deliberately routed
+   * through `adoptInventory` rather than anything that rebuilds a run: a run
+   * can still be alive behind this screen, and it picks the new pool up
+   * through `Run.setWords` — the seam the late-tier answer already uses.
+   * Gates already spawned keep the word and corridor they were built with;
+   * nothing is torn down.
+   */
+  useEffect(() => {
+    if (!roster || !voice) return;
+    // `voice` is null until the player taps, so a screen visit alone adopts
+    // nothing.
+    const id = resolveSpeaker(roster, { gender: voice })?.id;
+    if (!id || id === inventorySpeaker()) return;
+    let live = true;
+    void fetchCatalog({ speaker: id }).then((words) => {
+      // A switch that landed after the player moved on is still the right
+      // catalog for the preference they saved, but another effect may have
+      // adopted since — so re-check rather than clobber.
+      if (live && id !== inventorySpeaker()) adoptInventory(id, words);
+    });
+    return () => {
+      live = false;
+    };
+  }, [roster, voice]);
+
+  /**
+   * What the control shows: the stored preference when there is one, otherwise
+   * the gender of the speaker the player is *actually* flying right now. Never
+   * a guess — the control reports the current state, and only a tap changes it.
+   */
+  const flying: Gender | null =
+    voice ??
+    (roster ? (resolveSpeaker(roster, null)?.gender ?? null) : null);
 
   // Both of these lead to screens that listen. iOS Safari grants getUserMedia
   // only inside the gesture, so the mic opens here rather than in the
@@ -202,6 +292,27 @@ export function Settings({
               </button>
             ))}
         </div>
+        {settings && flying && (roster?.filter((s) => s.active).length ?? 0) > 1 && (
+          <>
+            <Choice
+              options={VOICES}
+              value={flying}
+              label={(v) => VOICE_LABEL[v]}
+              onChange={(v) => {
+                setVoice(v);
+                // Read back rather than spreading the `settings` prop, which is
+                // not refreshed after a save — spreading it would resurrect the
+                // rest of a stale record alongside the new preference.
+                saveSettings({ ...(loadSettings() ?? settings), voice: { gender: v } });
+              }}
+            />
+            <p className="param-help">
+              Which recording you hear, and whose corridors you fly. This is
+              about pitch range, not about you: pick whichever sits closer to
+              your own voice.
+            </p>
+          </>
+        )}
         <p className="param-help">
           Re-calibrate if you've changed microphone or room. Fine-tune opens the
           live dot and a sensitivity slider, if the board feels too big or too
