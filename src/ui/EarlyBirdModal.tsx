@@ -232,11 +232,17 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
             <a
               className="primary modal-pay"
               href={checkoutUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
+              onClick={(e) => {
+                // Same-tab, deliberately: Lemon Squeezy's own redirect back to
+                // `?purchased=1` (see purchaseReturn.ts) only reaches whoever
+                // it sends the browser to. A `target="_blank"` here used to
+                // strand the confirmation in a tab the player would close,
+                // leaving this tab still reading "free" and asking to pay
+                // again even though the webhook had already granted access.
+                e.preventDefault();
                 capturePostHogEvent("earlybird_pay_click", { surface, feature });
                 capturePostHogEvent("earlybird_checkout_opened", { surface, feature });
+                window.location.assign(checkoutUrl);
               }}
             >
               Pay {PRO_PRICE} — get EarlyBird access
