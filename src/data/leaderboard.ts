@@ -27,6 +27,7 @@ export interface BoardRow {
   userId: string;
   name: string;
   score: number;
+  pro: boolean;
 }
 
 export interface Board {
@@ -239,7 +240,7 @@ const EMPTY: Board = { weekId: "", rows: [], myRank: null, total: 0 };
 
 /** The shape `public.board()` returns. Mirrors the json_build_object in 0002. */
 interface BoardPayload {
-  rows: { user_id: string; display_name: string; best_score: number }[];
+  rows: { user_id: string; display_name: string; best_score: number; pro: boolean }[];
   total: number;
   my_rank: number | null;
 }
@@ -271,6 +272,7 @@ export async function getBoard(limit = 20): Promise<Board> {
       userId: r.user_id,
       name: r.display_name,
       score: r.best_score,
+      pro: r.pro,
     }));
     return {
       weekId,
@@ -312,6 +314,7 @@ export async function getBoardPeriod(period: Period, limit = 20): Promise<Board>
       userId: r.user_id,
       name: r.display_name,
       score: r.best_score,
+      pro: r.pro,
     }));
     return {
       weekId: "",

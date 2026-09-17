@@ -46,6 +46,16 @@ const PERIOD_EMPTY: Record<Period, string> = {
   all: "No scores yet — be the first.",
 };
 
+/** Small Pip bird + "Pro" pill, shown next to a Pro player's name. */
+function ProBadge() {
+  return (
+    <span className="leaderboard-pro-badge-group">
+      <img src="/Bird-hor-no-halo.png" alt="" className="leaderboard-pro-badge-bird" />
+      <span className="leaderboard-pro-badge">Pro</span>
+    </span>
+  );
+}
+
 function rankLabel(rank: number): string {
   if (rank === 1) return "🥇";
   if (rank === 2) return "🥈";
@@ -173,7 +183,10 @@ export function Leaderboard({ limit = 20, onClose, projectedScore, tabs = false,
       rowEls.push(
         <div key={row.userId} className={isYou ? "leaderboard-row leaderboard-you" : "leaderboard-row"}>
           <span className="leaderboard-rank">{rankLabel(rank)}</span>
-          <span className="leaderboard-name">{row.name}</span>
+          <span className="leaderboard-name">
+            {row.name}
+            {row.pro && <ProBadge />}
+          </span>
           <span className="leaderboard-score">{row.score.toLocaleString()}</span>
         </div>,
       );
@@ -198,6 +211,7 @@ export function Leaderboard({ limit = 20, onClose, projectedScore, tabs = false,
               <span className="leaderboard-rank">{board.myRank}</span>
               <span className="leaderboard-name">
                 {myRow?.name ?? "You"} · you
+                {myRow?.pro && <ProBadge />}
               </span>
               {myRow != null && (
                 <span className="leaderboard-score">{myRow.score.toLocaleString()}</span>

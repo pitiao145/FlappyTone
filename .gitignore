@@ -24,6 +24,7 @@ fixtures/recordings/
 # people's play data, and a public repo is not where it belongs. Blob is the
 # system of record; these are a local working copy.
 fixtures/analytics/
+fixtures/captures/
 
 # Editor directories and files
 .vscode/*

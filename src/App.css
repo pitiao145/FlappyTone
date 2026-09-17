@@ -5986,6 +5986,44 @@ section.hero-cards {
 
 .leaderboard-name {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  justify-content: center;
+}
+
+.leaderboard-pro-badge-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: -31px;
+}
+
+.leaderboard-name:has(.leaderboard-pro-badge-group) {
+  margin-left: 31px;
+}
+
+.leaderboard-pro-badge {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--beak);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: var(--text-xs);
+}
+
+.leaderboard-pro-badge-bird {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: contain;
+  padding: 2px;
+  position: relative;
+  left: 21px;
+  top: -8px;
+  transform: rotate(337deg);
 }
 
 .leaderboard-score {
