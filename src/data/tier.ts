@@ -97,3 +97,21 @@ if (supabase) {
     bumpSessionVersion();
   });
 }
+
+/**
+ * Re-check entitlements whenever the tab/app regains focus.
+ *
+ * Covers the case `?purchased=1` can't: a payment finished somewhere that
+ * never navigates this page at all. On iOS, an installed home-screen PWA
+ * can't load Lemon Squeezy's checkout in its own webview — the OS pops it
+ * into a separate Safari overlay, completes the purchase and the redirect
+ * back to `?purchased=1` entirely inside that overlay, and dismissing it
+ * returns to this page exactly as it was, URL unchanged. Without this, the
+ * player would see "free" until they happened to fully reload the app.
+ * Guarded on `resolved` so it never races the very first resolution.
+ */
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (resolved && document.visibilityState === "visible") void refreshTier();
+  });
+}
