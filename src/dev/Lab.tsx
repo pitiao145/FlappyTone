@@ -19,7 +19,7 @@ import {
   handleFrame,
   startLoop,
 } from "../game/loop.ts";
-import { birdXFrac, type RunSnapshot } from "../game/run.ts";
+import { birdXFrac, type RunMode, type RunSnapshot } from "../game/run.ts";
 import {
   loadCorridorWidth,
   loadCueStyle,
@@ -29,7 +29,9 @@ import {
 } from "../game/settings.ts";
 import { classifyTone } from "../game/toneClassifier.ts";
 import { tuning } from "../game/tuning.ts";
-import { wordsFromCatalog, type Word } from "../game/words.ts";
+import { wordsFromCatalog, multiWords, type Word } from "../game/words.ts";
+import { FIXTURE_WORDS } from "./fixtureWords.ts";
+import { adoptInventory, inventorySpeaker } from "../audio/inventory.ts";
 import { DEFAULT_CONFIG } from "../pitch/PitchTracker.ts";
 import { BACKDROP, chaoToY, drawChaoGrid, drawPip } from "../render/scene.ts";
 import { drawGate } from "../render/world.ts";
@@ -105,6 +107,14 @@ export function Lab({ onBack }: Props) {
     try {
       // Inside the click handler — iOS grants getUserMedia only during a gesture.
       await ensureMic();
+      // Game.tsx sources a run's word pool from the live inventory
+      // (inventoryNow()), not from a prop — so a "pairs" test run has to
+      // adopt the fixture/multi pool through the same seam a catalog switch
+      // uses. Switching back to "game" re-adopts the ordinary bundled words.
+      adoptInventory(
+        runMode === "pairs" ? "lab-pairs" : inventorySpeaker(),
+        runMode === "pairs" ? pairsWords : words,
+      );
       setLast(null);
       setRunKey((k) => k + 1);
       setRunning(true);
@@ -125,6 +135,19 @@ export function Lab({ onBack }: Props) {
    * Lab runs incomparable. Regenerate with `npm run export-fallback`.
    */
   const words = useMemo(() => wordsFromCatalog(fallback.rows), []);
+  /**
+   * The full-run pairs pool: the bundled catalog's own multi-syllable words
+   * when it has any, else (dev builds only) the four fixture words from
+   * Task 1.5 — so `multiMergeGapMs`/`multiGateChance` can be flown before any
+   * pair is actually published. Never reaches a production build: the
+   * fallback branch is gated on `import.meta.env.DEV`, same as the rest of
+   * this file.
+   */
+  const pairsWords = useMemo(() => {
+    const real = multiWords(words);
+    return real.length > 0 ? real : import.meta.env.DEV ? FIXTURE_WORDS : [];
+  }, [words]);
+  const [runMode, setRunMode] = useState<RunMode>("game");
   const [toneFilter, setToneFilter] = useState<Tone | "all">("all");
   const [selectedWord, setSelectedWord] = useState<Word | null>(() => words[0] ?? null);
   const [gateKey, setGateKey] = useState(0);
@@ -311,7 +334,7 @@ export function Lab({ onBack }: Props) {
               {running ? (
                 <Game
                   key={runKey}
-                  mode="game"
+                  mode={runMode}
                   settings={settings}
                   canvasWidth={360}
                   canvasHeight={640}
@@ -323,12 +346,30 @@ export function Lab({ onBack }: Props) {
                 />
               ) : (
                 <div className="lab-idle">
+                  <div className="game-settings-row">
+                    <span className="param-name">mode</span>
+                    <Choice
+                      options={["game", "pairs"] as const}
+                      value={runMode as "game" | "pairs"}
+                      onChange={setRunMode}
+                    />
+                  </div>
+                  {runMode === "pairs" && pairsWords.length === 0 && (
+                    <p className="param-help">
+                      No pairs available — neither the catalog nor the fixture
+                      inventory has one.
+                    </p>
+                  )}
                   <p className="param-help">
                     Runs on {loadCorridorWidth()} tunnel ·{" "}
                     demo {loadCueStyle() === "off" ? "off" : "on"}, and on your saved calibration
                     {loadSettings() === null ? " (none — using defaults)" : ""}.
                   </p>
-                  <button className="primary" onClick={() => void restart()}>
+                  <button
+                    className="primary"
+                    disabled={runMode === "pairs" && pairsWords.length === 0}
+                    onClick={() => void restart()}
+                  >
                     {last ? "run again" : "start a run"}
                   </button>
                   {last && (

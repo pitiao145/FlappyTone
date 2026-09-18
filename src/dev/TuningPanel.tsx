@@ -127,6 +127,16 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
     ],
   },
   {
+    title: "pairs",
+    note: "multi-syllable ('pairs') gates — see docs/superpowers/plans/2026-09-18-tone-pairs-v1.md.",
+    knobs: [
+      { key: "multiMergeGapMs", label: "multi merge gap", min: 100, max: 800, step: 10,
+        help: "Silence between two syllables that still counts as one utterance. Too low splits a real pause-between-syllables attempt into two; too high risks merging a genuinely unheard second syllable into the first." },
+      { key: "multiGateChance", label: "mix roll", min: 0, max: 1, step: 0.05,
+        help: "Classic game, wordMix \"all\" only: chance a given gate draws a pair instead of a single syllable." },
+    ],
+  },
+  {
     title: "calibration",
     note: "how much of a sweep's reach becomes the board's half-width. Needs live retuning against real calibrations, not derived.",
     knobs: [
