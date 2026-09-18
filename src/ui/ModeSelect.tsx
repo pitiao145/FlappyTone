@@ -4,7 +4,7 @@ import { MicError } from "../audio/mic.ts";
 import { ensurePlaybackCtx } from "../audio/reference.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
 import type { Tone } from "../game/gates.ts";
-import { availableTones, wordsForTier } from "../game/words.ts";
+import { availableTones, availableToneCombos, toneComboKey, wordsForTier } from "../game/words.ts";
 import type { PlayIntent } from "./PlayHome.tsx";
 import { micErrorCopy } from "./micErrors.ts";
 import { useTier } from "../data/tier.ts";
@@ -16,7 +16,10 @@ interface Props {
   /** An error raised elsewhere (e.g. a failed Retry) — shown alongside any error of this screen's own. */
   error: string | null;
   /** Called once the mic is open, exactly like PlayHome's onStart. */
-  onStart: (intent: PlayIntent, opts?: { drillTone?: Tone }) => void;
+  onStart: (
+    intent: PlayIntent,
+    opts?: { drillTone?: Tone; pairCombo?: Tone[] | null },
+  ) => void;
   onBack: () => void;
   canvasWidth: number;
   canvasHeight: number;
@@ -35,7 +38,7 @@ interface Props {
  */
 export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth, canvasHeight }: Props) {
   const tier = useTier();
-  const [step, setStep] = useState<"mode" | "tone" | "learn">("mode");
+  const [step, setStep] = useState<"mode" | "tone" | "learn" | "pairs">("mode");
   const [ownError, setOwnError] = useState<string | null>(null);
   const [pending, setPending] = useState<PlayIntent | null>(null);
   const busy = pending !== null;
@@ -53,15 +56,22 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
   // today — every tone has at least one free word — but the coupling to
   // wordsForTier is deliberate, not incidental.
   const tones = tierWords && tierWords.length ? availableTones(tierWords) : ALL_TONES;
+  // Same idea for pairs: only combos this tier's own words can build a gate
+  // for. Unlike single tones, there is no "offer all" fallback — an empty
+  // list means the Tone pairs card itself is hidden (see below).
+  const combos = tierWords ? availableToneCombos(tierWords) : [];
 
-  const go = (intent: PlayIntent, drillTone?: Tone) => async () => {
+  const go = (
+    intent: PlayIntent,
+    opts?: { drillTone?: Tone; pairCombo?: Tone[] | null },
+  ) => async () => {
     if (busy) return;
     setPending(intent);
     setOwnError(null);
     try {
       void ensurePlaybackCtx(); // resume cue-playback ctx in-gesture (reference.ts)
       await ensureMic();
-      onStart(intent, drillTone !== undefined ? { drillTone } : undefined);
+      onStart(intent, opts);
     } catch (err) {
       if (!(err instanceof MicCancelled)) {
         setOwnError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
@@ -119,6 +129,19 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
                     Hum along with the demo's shape, great for learning the tones.
                   </span>
                 </button>
+                {combos.length > 0 && (
+                  <button
+                    type="button"
+                    className="mode-card mode-card-pairs"
+                    disabled={busy}
+                    onClick={() => setStep("pairs")}
+                  >
+                    <span className="mode-card-title">Tone pairs</span>
+                    <span className="mode-card-desc">
+                      Two-syllable words — fly both tones back to back.
+                    </span>
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -134,7 +157,7 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
                       key={tone}
                       className="choice-option"
                       disabled={disabled}
-                      onClick={go("drill", tone)}
+                      onClick={go("drill", { drillTone: tone })}
                     >
                       {pending === "drill" ? (
                         "…"
@@ -147,6 +170,41 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
                     </button>
                   );
                 })}
+              </div>
+              <button type="button" className="link" disabled={busy} onClick={() => setStep("mode")}>
+                ← Back
+              </button>
+            </>
+          )}
+
+          {step === "pairs" && (
+            <>
+              <p className="note">Shuffle across every pair, or drill one combo.</p>
+              <div className="choice">
+                <button
+                  key="shuffle"
+                  className="choice-option"
+                  disabled={busy}
+                  onClick={go("pairs", { pairCombo: null })}
+                >
+                  {pending === "pairs" ? "…" : "Shuffle"}
+                </button>
+                {combos.map((combo) => (
+                  <button
+                    key={toneComboKey(combo)}
+                    className="choice-option"
+                    disabled={busy}
+                    onClick={go("pairs", { pairCombo: combo })}
+                  >
+                    {pending === "pairs" ? (
+                      "…"
+                    ) : (
+                      combo.map((tone, i) => (
+                        <ToneMarkIcon key={i} tone={tone} className="tone-mark-icon" />
+                      ))
+                    )}
+                  </button>
+                ))}
               </div>
               <button type="button" className="link" disabled={busy} onClick={() => setStep("mode")}>
                 ← Back

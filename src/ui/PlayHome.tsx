@@ -6,10 +6,10 @@ import { micErrorCopy } from "./micErrors.ts";
 import { SITE_HREF } from "./appLink.ts";
 import { brand } from "../brand.ts";
 
-/** "drill" and "learn" are only ever started from ModeSelect, never from a
- * button here — kept in this union anyway since GameApp's startPlay/lastModeRef
- * treat all five uniformly. */
-export type PlayIntent = "game" | "tutorial" | "lab" | "drill" | "learn";
+/** "drill", "learn" and "pairs" are only ever started from ModeSelect, never
+ * from a button here — kept in this union anyway since GameApp's
+ * startPlay/lastModeRef treat all six uniformly. */
+export type PlayIntent = "game" | "tutorial" | "lab" | "drill" | "learn" | "pairs";
 
 interface Props {
   calibrated: boolean;

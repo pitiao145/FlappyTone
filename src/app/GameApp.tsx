@@ -31,6 +31,7 @@ import {
   loadRecalTracking,
   loadSettings,
   loadShareData,
+  loadWordMix,
   saveRecalTracking,
   saveSettings,
   type CalibrationSettings,
@@ -70,6 +71,7 @@ type Screen =
   | "game"
   | "drill"
   | "learn"
+  | "pairs"
   | "gameover"
   | "settings"
   | "visualiser"
@@ -501,9 +503,11 @@ export default function GameApp() {
    */
   const [autoStartTutorial, setAutoStartTutorial] = useState(false);
   /** The mode of the run that just ended — drives Retry. */
-  const lastModeRef = useRef<"game" | "tutorial" | "drill" | "learn">("game");
+  const lastModeRef = useRef<"game" | "tutorial" | "drill" | "learn" | "pairs">("game");
   /** The tone a "drill" run is pinned to. Set by ModeSelect, read by <Game>. */
   const drillToneRef = useRef<Tone | null>(null);
+  /** The combo a "pairs" run is pinned to, or null to shuffle. Set by ModeSelect, read by <Game>. */
+  const pairComboRef = useRef<Tone[] | null>(null);
   const gameRef = useRef<GameHandle>(null);
   /**
    * True from the moment a "game"/"tutorial" run actually starts until it
@@ -556,7 +560,12 @@ export default function GameApp() {
    * recorded nor counted, same as tutorial.
    */
   const onRunQuit = useCallback((snap: RunSnapshot | null) => {
-    if (snap && (lastModeRef.current === "game" || lastModeRef.current === "drill")) {
+    if (
+      snap &&
+      (lastModeRef.current === "game" ||
+        lastModeRef.current === "drill" ||
+        lastModeRef.current === "pairs")
+    ) {
       recordRun(snap, "quit");
     }
     goHome();
@@ -565,16 +574,20 @@ export default function GameApp() {
   /**
    * The caller has already opened the mic inside its click handler.
    * `opts.drillTone` is only meaningful (and required) for `intent ===
-   * "drill"` — set by ModeSelect before this fires.
+   * "drill"`; `opts.pairCombo` only for `intent === "pairs"` — both set by
+   * ModeSelect before this fires.
    */
   const startPlay = useCallback(
-    (intent: StartIntent, opts?: { drillTone?: Tone }) => {
+    (intent: StartIntent, opts?: { drillTone?: Tone; pairCombo?: Tone[] | null }) => {
       // The caller (PlayHome/ModeSelect) already opened the mic for this
       // gesture before calling us — bail out and release it rather than
-      // starting a run the player isn't allowed to have. Drill is real,
-      // scored practice like Classic, so it's gated the same way; Learn
-      // isn't (see the plan: it doesn't cost a daily run).
-      if ((intent === "game" || intent === "drill") && dailyLimitReached()) {
+      // starting a run the player isn't allowed to have. Drill and Pairs are
+      // real, scored practice like Classic, so they're gated the same way;
+      // Learn isn't (see the plan: it doesn't cost a daily run).
+      if (
+        (intent === "game" || intent === "drill" || intent === "pairs") &&
+        dailyLimitReached()
+      ) {
         stopMic();
         capturePostHogEvent("daily_limit_earlybird_shown", { trigger: "start" });
         openEarlyBird("daily-limit", "daily-limit");
@@ -593,7 +606,8 @@ export default function GameApp() {
       }
       if (intent !== "visualiser") lastModeRef.current = intent;
       drillToneRef.current = opts?.drillTone ?? null;
-      if (intent === "game" || intent === "drill" || intent === "learn") {
+      pairComboRef.current = opts?.pairCombo ?? null;
+      if (intent === "game" || intent === "drill" || intent === "learn" || intent === "pairs") {
         gameRunNumberRef.current += 1;
       }
       // Playing without calibration would map the player's voice through a
@@ -603,7 +617,13 @@ export default function GameApp() {
         setScreen("calibrate");
         return;
       }
-      if (intent === "game" || intent === "tutorial" || intent === "drill" || intent === "learn") {
+      if (
+        intent === "game" ||
+        intent === "tutorial" ||
+        intent === "drill" ||
+        intent === "learn" ||
+        intent === "pairs"
+      ) {
         setGameAlive(true);
       }
       setScreen(intent);
@@ -721,12 +741,16 @@ export default function GameApp() {
         beaten: snap.stats.score >= challengeScoreState,
       });
     }
-    // Drill is real, scored practice — counts the same as Classic. Learn is
-    // deliberately excluded from all three (history, daily limit, streak):
-    // it's unscored-pressure recognition practice, not a run the Progress
-    // tab's per-tone accuracy or the free-tier counter should read as real
-    // pronunciation performance.
-    if (lastModeRef.current === "game" || lastModeRef.current === "drill") {
+    // Drill and Pairs are real, scored practice — count the same as Classic.
+    // Learn is deliberately excluded from all three (history, daily limit,
+    // streak): it's unscored-pressure recognition practice, not a run the
+    // Progress tab's per-tone accuracy or the free-tier counter should read
+    // as real pronunciation performance.
+    if (
+      lastModeRef.current === "game" ||
+      lastModeRef.current === "drill" ||
+      lastModeRef.current === "pairs"
+    ) {
       recordRun(snap, snap.stats.hearts <= 0 ? "out_of_hearts" : "finished");
       // Only a completed run (finished or out of hearts) counts against the
       // free tier — a quit shouldn't cost the player one of their 5 daily
@@ -768,7 +792,9 @@ export default function GameApp() {
 
   const retry = useCallback(async () => {
     if (
-      (lastModeRef.current === "game" || lastModeRef.current === "drill") &&
+      (lastModeRef.current === "game" ||
+        lastModeRef.current === "drill" ||
+        lastModeRef.current === "pairs") &&
       dailyLimitReached()
     ) {
       capturePostHogEvent("daily_limit_earlybird_shown", { trigger: "retry" });
@@ -786,11 +812,13 @@ export default function GameApp() {
       if (
         lastModeRef.current === "game" ||
         lastModeRef.current === "drill" ||
-        lastModeRef.current === "learn"
+        lastModeRef.current === "learn" ||
+        lastModeRef.current === "pairs"
       ) {
         gameRunNumberRef.current += 1;
       }
-      // drillToneRef is untouched — a Drill retry flies the same tone.
+      // drillToneRef/pairComboRef are untouched — a Drill/Pairs retry flies
+      // the same tone/combo.
       setGameAlive(true);
       setScreen(lastModeRef.current);
     } catch (err) {
@@ -1170,11 +1198,14 @@ export default function GameApp() {
                 screen === "game" ||
                 screen === "tutorial" ||
                 screen === "drill" ||
-                screen === "learn"
+                screen === "learn" ||
+                screen === "pairs"
               )
             }
             mode={lastModeRef.current}
             drillTone={drillToneRef.current ?? undefined}
+            pairCombo={pairComboRef.current}
+            wordMix={lastModeRef.current === "game" ? loadWordMix() : undefined}
             autoStart={autoStartTutorial}
             settings={settings}
             canvasWidth={CANVAS_W}

@@ -33,7 +33,7 @@ import { getTier, useTier } from "../data/tier.ts";
 import { wordsForTier } from "../game/words.ts";
 import { TONE_INFO, type Tone } from "../game/gates.ts";
 import { tuning } from "../game/tuning.ts";
-import { CALIBRATION_TONES, Run, type RunMode, type RunSnapshot } from "../game/run.ts";
+import { CALIBRATION_TONES, Run, type RunMode, type RunSnapshot, type WordMix } from "../game/run.ts";
 import type { Word } from "../game/words.ts";
 import type { GateOutcome, UnheardHint } from "../game/scoring.ts";
 import type { ClassifiedTone } from "../game/toneClassifier.ts";
@@ -139,6 +139,10 @@ interface Props {
   singleWord?: Word;
   /** The fixed tone `mode: "drill"` flies every gate from. Ignored otherwise. */
   drillTone?: Tone;
+  /** `mode: "pairs"` drill: exact combo, or null/undefined shuffles across every combo. Ignored otherwise. */
+  pairCombo?: Tone[] | null;
+  /** Classic `mode: "game"` word pool preference. Ignored otherwise. */
+  wordMix?: WordMix;
   /**
    * Set when this tutorial run is the calibration flight (GameApp routes to
    * it straight from the calibration screen). Flies only the grid-anchoring
@@ -185,14 +189,16 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   onQuit,
   singleWord,
   drillTone,
+  pairCombo,
+  wordMix,
   runNumber,
   autoStart = false,
   hidden,
 }: Props, ref) {
-  // "game", "drill" and "learn" all fly full hearts/score/combo, unlike
-  // "tutorial" and "single" — the HUD elements gated on this once read
+  // "game", "drill", "learn" and "pairs" all fly full hearts/score/combo,
+  // unlike "tutorial" and "single" — the HUD elements gated on this once read
   // `mode === "game"` alone, back when "game" was the only scored mode.
-  const scored = mode === "game" || mode === "drill" || mode === "learn";
+  const scored = mode === "game" || mode === "drill" || mode === "learn" || mode === "pairs";
   // Learn mode always takes playToneCue's synth branch (see the cue below), so
   // a clip fetched for it would never be heard. Every other mode cues a clip
   // when it has one.
@@ -495,6 +501,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       words: wordsForTier(inventoryNow() ?? [], getTier()),
       singleWord,
       drillTone,
+      pairCombo,
+      wordMix,
       // The calibration flight (autoStart) flies only the grid-anchoring tones;
       // a normal tutorial teaches all four.
       tutorialTones: autoStart ? CALIBRATION_TONES : undefined,
@@ -946,6 +954,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         planPrefetch({
           mode,
           drillTone,
+          pairCombo,
+          wordMix,
           queued,
           pool: wordsForTier(all, tier),
           perTone: tuning().prefetchWordsPerTone,
@@ -955,7 +965,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     const now = inventoryNow();
     if (now) start(now);
     else void loadInventory().then(start, () => undefined);
-  }, [cuesUseClips, mode, drillTone, tier, runGen]);
+  }, [cuesUseClips, mode, drillTone, pairCombo, wordMix, tier, runGen]);
 
   /**
    * Re-narrow a live run's word pool once the tier answer lands.
