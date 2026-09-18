@@ -560,6 +560,7 @@ function GatePreview({
             height,
             {
               tone: word.tone,
+              tones: word.tones,
               word,
               shape,
               x0,

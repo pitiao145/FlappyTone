@@ -26,8 +26,8 @@
  *    one request that actually matters — the next gate's.
  */
 import type { Tone } from "../game/gates.ts";
-import type { RunMode } from "../game/run.ts";
-import { wordsOfTone, type Word } from "../game/words.ts";
+import type { RunMode, WordMix } from "../game/run.ts";
+import { multiWords, wordsOfCombo, wordsOfTone, type Word } from "../game/words.ts";
 import { loadClip } from "./reference.ts";
 
 /** Parallel clip fetches. Enough to use the connection, few enough to leave
@@ -40,6 +40,10 @@ export interface PrefetchPlanInput {
   mode: RunMode;
   /** The tone every `drill` gate is drawn from. Ignored in other modes. */
   drillTone?: Tone | null;
+  /** The exact combo a `pairs` drill is pinned to, or null to shuffle across every combo. Ignored outside `pairs`. */
+  pairCombo?: Tone[] | null;
+  /** Classic `game` mode's word pool setting — `"all"`/`"multi"` add a multi-syllable slice. Ignored outside `game`. */
+  wordMix?: WordMix;
   /**
    * The words of the gates already queued by the Run — the exact tier.
    *
@@ -98,8 +102,20 @@ function speculativeWords(input: PrefetchPlanInput): Word[] {
       return [];
     case "drill":
       return input.drillTone ? wordsOfTone(input.pool, input.drillTone, cap) : [];
-    case "game":
-      return ALL_TONES.flatMap((t) => wordsOfTone(input.pool, t, cap));
+    case "pairs":
+      return input.pairCombo
+        ? wordsOfCombo(input.pool, input.pairCombo).slice(0, cap)
+        : multiWords(input.pool).slice(0, cap);
+    case "game": {
+      const single = ALL_TONES.flatMap((t) => wordsOfTone(input.pool, t, cap));
+      // "single" (default) never spawns a multi gate, so speculating on one
+      // would warm clips the run can't draw. "all"/"multi" can, so they add
+      // the same capped slice `pairs` uses when shuffling.
+      if (input.wordMix === "all" || input.wordMix === "multi") {
+        return [...single, ...multiWords(input.pool).slice(0, cap)];
+      }
+      return single;
+    }
   }
 }
 

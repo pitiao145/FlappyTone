@@ -23,7 +23,7 @@ import {
   type GateShape,
   type Tone,
 } from "./gates.ts";
-import { pickWord, type Word } from "./words.ts";
+import { pickMultiWord, pickWord, type Word } from "./words.ts";
 import {
   applyClassifierBoost,
   applyGate,
@@ -49,7 +49,10 @@ import {
 import type { Contour } from "./contours.ts";
 import { classifyTone, type ClassifiedTone } from "./toneClassifier.ts";
 
-export type RunMode = "game" | "tutorial" | "single" | "drill" | "learn";
+export type RunMode = "game" | "tutorial" | "single" | "drill" | "learn" | "pairs";
+
+/** Classic `game` mode's word pool setting — see `RunConfig.wordMix`. */
+export type WordMix = "single" | "multi" | "all";
 
 export interface RunConfig {
   mode: RunMode;
@@ -122,6 +125,19 @@ export interface RunConfig {
    * when `mode === "drill"`, ignored otherwise.
    */
   drillTone?: Tone;
+  /**
+   * `mode === "pairs"` drill: the exact tone combo to draw every gate from
+   * (`wordsOfCombo`). `null` or omitted shuffles across every combo the
+   * inventory has (`multiWords`). Ignored outside `pairs`.
+   */
+  pairCombo?: Tone[] | null;
+  /**
+   * Classic `game` mode's word pool: `"single"` (default) never spawns a
+   * multi-syllable gate — the guard Phase 0 shipped. `"multi"` always spawns
+   * one. `"all"` rolls `tuning().multiGateChance` per gate. Ignored outside
+   * `game`.
+   */
+  wordMix?: WordMix;
 }
 
 export type CueStyle = "pause" | "off";
@@ -166,6 +182,8 @@ interface TrailPoint {
 
 export interface GateView {
   tone: Tone;
+  /** Every syllable's tone, in order. `[tone]` for a single-syllable gate. */
+  tones: Tone[];
   /** The word this gate cues and labels. Null when the gate is a bare tone. */
   word: Word | null;
   /** The corridor being drawn. Not always the word's own — see `shapeForWord`. */
@@ -186,6 +204,7 @@ export interface GateView {
 
 export interface ActiveGateView {
   tone: Tone;
+  tones: Tone[];
   word: Word | null;
   /** Normalized progress through the gate, 0→1. */
   t: number;
@@ -202,6 +221,7 @@ export interface ActiveGateView {
  */
 export interface CueView {
   tone: Tone;
+  tones: Tone[];
   /** The clip to play. Null falls back to the tone's synthetic sweep. */
   word: Word | null;
   /** The corridor the demo dot traces — the same one the gate will draw. */
@@ -243,6 +263,7 @@ export type RunPhase = "listen" | "active" | null;
 export interface LastOutcome {
   outcome: GateOutcome;
   tone: Tone;
+  tones: Tone[];
   atMs: number;
   /** 0–1 corridor fit, as scored. Drives how hot the ignition burns. */
   accuracy: number;
@@ -294,7 +315,7 @@ export interface RunSnapshot {
   trail: TrailSample[];
   gates: GateView[];
   activeGate: ActiveGateView | null;
-  upcoming: { tone: Tone; word: Word | null; msUntil: number } | null;
+  upcoming: { tone: Tone; tones: Tone[]; word: Word | null; msUntil: number } | null;
   cue: CueView | null;
   phase: RunPhase;
   /** True while the world is frozen for a "pause"-style demo — the renderer dims the scene. */
@@ -464,6 +485,7 @@ interface LastOutcomeState extends Omit<LastOutcome, "path"> {
 /** Per-gate diagnostics — dev instrumentation, not gameplay (spec A2). */
 export interface GateLogEntry {
   tone: Tone;
+  tones: Tone[];
   outcome: GateOutcome;
   /**
    * The gate's accuracy as `scoreGate` computed it, 0–1.
@@ -519,6 +541,8 @@ export class Run {
   private spawnedTones: Tone[] = [];
   /** Words already spawned — feeds pickWord's don't-repeat-yourself window. */
   private spawnedWords: Word[] = [];
+  /** `mode === "pairs"` only: true once the drilled combo (or the whole multi pool) has run dry. */
+  private poolExhausted = false;
   /** The clip inventory this run draws from. Empty is a valid run. */
   private words: Word[];
   /** The one word a "single" mode run flies. Unused otherwise. */
@@ -540,6 +564,10 @@ export class Run {
   private readonly isCalibrationFlight: boolean;
   /** The fixed tone for `mode === "drill"`. Unused otherwise. */
   private readonly drillTone: Tone | null;
+  /** `mode === "pairs"` drill combo, or null to shuffle across every combo. */
+  private readonly pairCombo: Tone[] | null;
+  /** Classic `game` mode's word pool setting. Unused outside `game`. */
+  private readonly wordMix: WordMix;
   private active: ActiveGateState | null = null;
 
   /** Gates resolved, whatever the outcome. Ends the tutorial. */
@@ -614,6 +642,8 @@ export class Run {
     this.isCalibrationFlight = isCalibrationTones(cfg.tutorialTones);
     this.tutorialTones = cfg.tutorialTones ?? TUTORIAL_TONES;
     this.drillTone = cfg.drillTone ?? null;
+    this.pairCombo = cfg.pairCombo ?? null;
+    this.wordMix = cfg.wordMix ?? "single";
     this.difficulty = this.difficultyFor(0);
     this.stats = newRunStats(3);
     this.fillQueue();
@@ -801,6 +831,7 @@ export class Run {
       this.lastCuedXStart = next.xStart;
       this.cue = {
         tone: next.tone,
+        tones: next.tones,
         word: next.word,
         shape: next.shape,
         xStart: next.xStart,
@@ -875,6 +906,7 @@ export class Run {
       trail: this.trail.map((s) => this.projectTrail(s)),
       gates: this.gates.map((g) => ({
         tone: g.tone,
+        tones: g.tones,
         word: g.word,
         shape: g.shape,
         x0: this.screenX(g.xStart),
@@ -885,6 +917,7 @@ export class Run {
       activeGate: active
         ? {
             tone: active.gate.tone,
+            tones: active.gate.tones,
             word: active.gate.word,
             t: this.progressIn(active.gate),
             tolChao: corridorToleranceAt(active.gate.shape,
@@ -902,6 +935,7 @@ export class Run {
       upcoming: upcoming
         ? {
             tone: upcoming.tone,
+            tones: upcoming.tones,
             word: upcoming.word,
             msUntil:
               ((upcoming.xStart - this.worldX) / this.difficulty.scrollSpeed) *
@@ -933,22 +967,34 @@ export class Run {
   private isOver(): boolean {
     if (this.mode === "tutorial") return this.gatesFinished >= this.tutorialTones.length;
     if (this.mode === "single") return this.gatesFinished >= 1;
+    // A pairs run with an exhausted pool (a drilled combo with no more fresh
+    // words, or a fixture/dev inventory this small) ends cleanly once every
+    // spawned gate has resolved, rather than falling back to a bare tone.
+    if (
+      this.mode === "pairs" &&
+      this.poolExhausted &&
+      this.gates.length === 0 &&
+      this.active === null
+    ) {
+      return true;
+    }
     return this.stats.hearts <= 0;
   }
 
   private inGrace(nowMs: number): boolean {
     const graceMs =
-      this.active?.gate.tone === 3 ? tuning().t3GraceMs : tuning().graceMs;
+      this.active?.gate.tones.includes(3) ? tuning().t3GraceMs : tuning().graceMs;
     return nowMs - this.lastVoicedAt <= graceMs;
   }
 
   /**
    * PRD §5.3: hold for the grace period, then drift to centre. Inside a T3
-   * gate we hold indefinitely rather than drifting — creak is not a mistake.
+   * gate — or a multi-syllable gate with a T3 syllable — we hold
+   * indefinitely rather than drifting — creak is not a mistake.
    */
   private applyUnvoicedDynamics(dtMs: number, nowMs: number): void {
     if (this.voiced) return;
-    if (this.active?.gate.tone === 3) return;
+    if (this.active?.gate.tones.includes(3)) return;
     if (this.inGrace(nowMs)) return;
 
     const step = (tuning().driftChaoPerSec * dtMs) / 1000;
@@ -1092,11 +1138,18 @@ export class Run {
   }
 
   private finishGate(state: ActiveGateState): void {
+    // A multi-syllable gate's own pause between syllables is a different
+    // signal from a within-syllable creak gap and needs a wider merge window,
+    // or a real two-syllable attempt with a pause reads as two short
+    // utterances instead of one (see `tuning().multiMergeGapMs`).
+    const mergeGapMs =
+      state.gate.syllables > 1 ? tuning().multiMergeGapMs : tuning().mergeGapMs;
+
     // "When the app isn't sure, it says so rather than scoring you wrong"
     // (PRD §6). A mostly-unvoiced gate reports "couldn't hear that" even if a
     // held-through-grace frame clipped a wall — signal loss must never cost a
     // heart. This is why the collision flag is dropped here, not in scoreGate.
-    const heard = heardUtterance(state.samples);
+    const heard = heardUtterance(state.samples, mergeGapMs);
     const collided = heard ? state.collided : false;
 
     // Only the stretch flown inside the gate — see `lastOutcome.path` below
@@ -1108,7 +1161,11 @@ export class Run {
     let mismatchedAs: ClassifiedTone | null = null;
     let mismatchedConfidence: number | null = null;
     let forcedCollision = false;
-    if (heard) {
+    // The classifier is trained and tuned on single-syllable shapes only —
+    // running it against a two-syllable contour would misread every gate, so
+    // both the mismatch-collision and the correct-tone boost are off for
+    // multi-syllable gates (plan's own decision).
+    if (heard && state.gate.syllables === 1) {
       // The classifier judges shape alone, so it must see the *whole*
       // utterance, not just whatever fell after the gate opened. A player
       // who starts a hair early has the front of their tone seeded from
@@ -1144,10 +1201,12 @@ export class Run {
     let { outcome, accuracy } = scoreGate(
       state.samples,
       collided || forcedCollision,
+      mergeGapMs,
     );
 
     if (
       heard &&
+      state.gate.syllables === 1 &&
       !forcedCollision &&
       // A confident read of the *correct* tone can raise accuracy/outcome,
       // not just lower it — corridor tracking punishes timing/precision the
@@ -1167,13 +1226,14 @@ export class Run {
     const voicedCount = state.samples.filter((s) => s.voiced).length;
     this.gateLog.push({
       tone: state.gate.tone,
+      tones: state.gate.tones,
       outcome,
       accuracy,
       samples: state.samples.length,
       voiced: voicedCount,
       voicedFraction:
         state.samples.length === 0 ? 0 : voicedCount / state.samples.length,
-      utteranceMs: longestUtteranceMs(state.samples),
+      utteranceMs: longestUtteranceMs(state.samples, mergeGapMs),
       seeded: state.seeded,
       worstExcursionMs: state.worstExcursionMs,
       atMs: this.nowMs,
@@ -1184,13 +1244,18 @@ export class Run {
       this.gatesCleared += 1;
     }
     // The tutorial (and "single", the Lab's one-gate flight) teaches: no
-    // score, no hearts, no stats to fail against. "game", "drill" and
-    // "learn" all fly full stats.
+    // score, no hearts, no stats to fail against. "game", "drill", "learn"
+    // and "pairs" all fly full stats.
     const scoreBefore = this.stats.score;
-    if (this.mode === "game" || this.mode === "drill" || this.mode === "learn") {
+    if (
+      this.mode === "game" ||
+      this.mode === "drill" ||
+      this.mode === "learn" ||
+      this.mode === "pairs"
+    ) {
       this.stats = applyGate(
         this.stats,
-        state.gate.tone,
+        state.gate.tones,
         outcome,
         accuracy,
         mismatchedAs,
@@ -1200,6 +1265,7 @@ export class Run {
     this.lastOutcome = {
       outcome,
       tone: state.gate.tone,
+      tones: state.gate.tones,
       atMs: this.nowMs,
       accuracy,
       points: this.stats.score - scoreBefore,
@@ -1259,6 +1325,25 @@ export class Run {
       this.gates.filter((g) => this.gateEnd(g) >= this.worldX).length <
       QUEUE_AHEAD
     ) {
+      if (this.mode === "pairs") {
+        if (!this.fillPairsGate()) return;
+        continue;
+      }
+
+      // Classic "game" word mix: "single" (default) never rolls a multi
+      // gate — the Phase 0 guard. "multi" always does. "all" rolls the
+      // tuning chance per gate. A multi draw that comes up empty (no
+      // multi-syllable words in the inventory) falls through to the
+      // ordinary single draw below rather than stalling the queue.
+      if (this.mode === "game" && this.wantsMultiGate()) {
+        const multi = pickMultiWord(this.words, null, this.spawnedWords, this.rand);
+        if (multi) {
+          this.gates.push(makeGate(multi, this.nextSpawnX(), this.difficulty));
+          this.spawnedWords.push(multi);
+          continue;
+        }
+      }
+
       const tone = this.pickTone();
       if (tone === null) return;
       // A word if the inventory has one for this tone, the bare tone if not.
@@ -1276,6 +1361,32 @@ export class Run {
       this.spawnedTones.push(tone);
       if (word) this.spawnedWords.push(word);
     }
+  }
+
+  /** Classic "game" mode's per-gate roll for whether this gate should be multi-syllable. */
+  private wantsMultiGate(): boolean {
+    if (this.wordMix === "multi") return true;
+    if (this.wordMix === "all") return this.rand() < tuning().multiGateChance;
+    return false;
+  }
+
+  /**
+   * `mode === "pairs"`: draws one multi-syllable gate from the drilled combo
+   * (or the whole multi pool, shuffled, when `pairCombo` is null). Returns
+   * false — and marks the pool exhausted, ending the run once the queue
+   * drains (see `isOver`) — when nothing is left to draw, rather than
+   * falling back to a bare tone the way the single-syllable pools do.
+   */
+  private fillPairsGate(): boolean {
+    if (this.poolExhausted) return false;
+    const word = pickMultiWord(this.words, this.pairCombo, this.spawnedWords, this.rand);
+    if (!word) {
+      this.poolExhausted = true;
+      return false;
+    }
+    this.gates.push(makeGate(word, this.nextSpawnX(), this.difficulty));
+    this.spawnedWords.push(word);
+    return true;
   }
 
   /**

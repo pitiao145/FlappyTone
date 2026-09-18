@@ -34,10 +34,10 @@ beforeEach(() => {
 
 describe("recordRun / lifetimePerTone", () => {
   it("accumulates lifetime per-tone stats across multiple runs", () => {
-    const snap1 = fakeSnapshot(300, ["w1"], (s) => applyGate(s, 1, "perfect", 1));
+    const snap1 = fakeSnapshot(300, ["w1"], (s) => applyGate(s, [1], "perfect", 1));
     recordRun(snap1, "finished");
 
-    const snap2 = fakeSnapshot(150, ["w2"], (s) => applyGate(s, 1, "good", 0.7));
+    const snap2 = fakeSnapshot(150, ["w2"], (s) => applyGate(s, [1], "good", 0.7));
     const store = recordRun(snap2, "finished");
 
     const t1 = lifetimeToneStats(store).find((t) => t.tone === 1)!;
@@ -48,7 +48,7 @@ describe("recordRun / lifetimePerTone", () => {
   });
 
   it("does not count unheard gates toward attempts/accSum but tracks them separately", () => {
-    const snap = fakeSnapshot(0, [], (s) => applyGate(s, 2, "unheard", 0));
+    const snap = fakeSnapshot(0, [], (s) => applyGate(s, [2], "unheard", 0));
     const store = recordRun(snap, "finished");
     const t2 = lifetimeToneStats(store).find((t) => t.tone === 2)!;
     expect(t2.attempts).toBe(0);
@@ -111,9 +111,9 @@ describe("recordRun / lifetimePerTone", () => {
 
 describe("lifetimeToneAccuracy", () => {
   it("computes accSum / attempts per tone", () => {
-    const snap1 = fakeSnapshot(300, ["w1"], (s) => applyGate(s, 1, "perfect", 1));
+    const snap1 = fakeSnapshot(300, ["w1"], (s) => applyGate(s, [1], "perfect", 1));
     recordRun(snap1, "finished");
-    const snap2 = fakeSnapshot(150, ["w2"], (s) => applyGate(s, 1, "good", 0.7));
+    const snap2 = fakeSnapshot(150, ["w2"], (s) => applyGate(s, [1], "good", 0.7));
     const store = recordRun(snap2, "finished");
 
     const t1 = lifetimeToneAccuracy(store).find((t) => t.tone === 1)!;
@@ -122,7 +122,7 @@ describe("lifetimeToneAccuracy", () => {
   });
 
   it("excludes unheard gates from the accuracy figure", () => {
-    const snap = fakeSnapshot(0, [], (s) => applyGate(s, 2, "unheard", 0));
+    const snap = fakeSnapshot(0, [], (s) => applyGate(s, [2], "unheard", 0));
     const store = recordRun(snap, "finished");
     const t2 = lifetimeToneAccuracy(store).find((t) => t.tone === 2)!;
     expect(t2.gates).toBe(0);

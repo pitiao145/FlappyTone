@@ -40,6 +40,7 @@ describe("roundCalibration", () => {
 describe("gateEvent", () => {
   const entry: GateLogEntry = {
     tone: 3,
+    tones: [3],
     outcome: "unheard",
     accuracy: 0,
     samples: 38,
@@ -57,6 +58,7 @@ describe("gateEvent", () => {
       type: "gate",
       i: 7,
       tone: 3,
+      tones: [3],
       outcome: "unheard",
       acc: 0,
       uttMs: 143,
@@ -70,6 +72,8 @@ describe("gateEvent", () => {
     // The privacy rule that matters: nothing in the payload can reconstruct
     // the player's pitch trace. `samples` is a count in the log; it must not
     // become an array here, and `atMs` (wall position) is not needed.
+    // `tones` is the one legitimate array — a gate's small, fixed tone
+    // sequence (max a handful of syllables), not per-frame pitch data.
     const ev = gateEvent(entry, 0);
     const keys = Object.keys(ev).sort();
     expect(keys).toEqual([
@@ -79,11 +83,13 @@ describe("gateEvent", () => {
       "outcome",
       "seeded",
       "tone",
+      "tones",
       "type",
       "uttMs",
       "voicedFrac",
     ]);
-    for (const value of Object.values(ev)) {
+    for (const [key, value] of Object.entries(ev)) {
+      if (key === "tones") continue;
       expect(Array.isArray(value)).toBe(false);
     }
   });

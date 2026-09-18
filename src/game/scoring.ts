@@ -36,19 +36,28 @@ const GOOD_ACCURACY = 0.6;
 
 /**
  * Length of the longest voiced run in `samples`, merging unvoiced gaps shorter
- * than MERGE_GAP_MS. Mirrors the segmentation in src/dev/report.ts.
+ * than `mergeGapMs` (default `tuning().mergeGapMs`). Mirrors the segmentation
+ * in src/dev/report.ts.
  *
  * A run's length is the span between its first and last voiced frame, so a
  * lone frame measures 0 — one frame is not a duration.
+ *
+ * `mergeGapMs` is a parameter, not always `tuning().mergeGapMs`, because a
+ * multi-syllable gate's own pause between syllables is a different signal
+ * from a within-syllable creak gap and needs a wider merge window
+ * (`tuning().multiMergeGapMs`) to read as one utterance rather than two.
  */
-export function longestUtteranceMs(samples: GateSample[]): number {
+export function longestUtteranceMs(
+  samples: GateSample[],
+  mergeGapMs: number = tuning().mergeGapMs,
+): number {
   let best = 0;
   let start: number | null = null;
   let lastVoicedAt = 0;
 
   for (const s of samples) {
     if (!s.voiced) continue;
-    if (start === null || s.atMs - lastVoicedAt > tuning().mergeGapMs) {
+    if (start === null || s.atMs - lastVoicedAt > mergeGapMs) {
       start = s.atMs;
     }
     lastVoicedAt = s.atMs;
@@ -58,8 +67,11 @@ export function longestUtteranceMs(samples: GateSample[]): number {
 }
 
 /** Did the player produce anything long enough to score? */
-export function heardUtterance(samples: GateSample[]): boolean {
-  return longestUtteranceMs(samples) >= tuning().minUtteranceMs;
+export function heardUtterance(
+  samples: GateSample[],
+  mergeGapMs: number = tuning().mergeGapMs,
+): boolean {
+  return longestUtteranceMs(samples, mergeGapMs) >= tuning().minUtteranceMs;
 }
 
 /**
@@ -99,6 +111,7 @@ export function unheardHint(samples: GateSample[]): UnheardHint {
 export function scoreGate(
   samples: GateSample[],
   collided: boolean,
+  mergeGapMs: number = tuning().mergeGapMs,
 ): { outcome: GateOutcome; accuracy: number } {
   if (collided) {
     return { outcome: "collision", accuracy: 0 };
@@ -106,7 +119,7 @@ export function scoreGate(
 
   const voicedSamples = samples.filter((s) => s.voiced);
 
-  if (!heardUtterance(samples)) {
+  if (!heardUtterance(samples, mergeGapMs)) {
     return { outcome: "unheard", accuracy: 0 };
   }
 
@@ -259,10 +272,18 @@ export function newRunStats(hearts = 3): RunStats {
  * `stats` is left untouched. Collisions cost a heart; unheard gates cost
  * nothing and don't reset the combo, but are tallied per-tone separately
  * from scored (voiced) gates.
+ *
+ * `tones` is the gate's full tone sequence — `[tone]` for a single-syllable
+ * gate. Score/hearts/combo update for every gate; `perTone`/`lifetimePerTone`
+ * are a single-tone concept (which tone does this accuracy belong to?) that
+ * has no honest answer for a pair, so a multi-syllable gate (`tones.length >
+ * 1`) skips the per-tone update entirely rather than crediting or blaming
+ * either syllable's tone alone (plan's own decision — per-pair stats are a
+ * later feature, not a silent approximation now).
  */
 export function applyGate(
   stats: RunStats,
-  tone: Tone,
+  tones: Tone[],
   outcome: GateOutcome,
   accuracy: number,
   /** Set when this gate's outcome was forced to a collision by a drastic classifier mismatch. */
@@ -272,6 +293,18 @@ export function applyGate(
   const multiplier = multiplierFor(priorCombo);
   const points = Math.round(BASE_POINTS[outcome] * multiplier);
   const combo = comboAfter(outcome, priorCombo);
+
+  const base = {
+    score: stats.score + points,
+    hearts: outcome === "collision" ? stats.hearts - 1 : stats.hearts,
+    bestMultiplier: Math.max(stats.bestMultiplier, multiplierFor(combo)),
+    combo,
+  };
+
+  if (tones.length !== 1) {
+    return { ...base, perTone: stats.perTone };
+  }
+  const tone = tones[0];
 
   const prevTone = stats.perTone[tone];
   const withOutcome =
@@ -296,11 +329,8 @@ export function applyGate(
       : withOutcome;
 
   return {
-    score: stats.score + points,
-    hearts: outcome === "collision" ? stats.hearts - 1 : stats.hearts,
-    bestMultiplier: Math.max(stats.bestMultiplier, multiplierFor(combo)),
+    ...base,
     perTone: { ...stats.perTone, [tone]: nextTone },
-    combo,
   };
 }
 

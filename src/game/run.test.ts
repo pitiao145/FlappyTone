@@ -53,6 +53,41 @@ function wordsFrom(
   );
 }
 
+/** A multi-syllable catalog row, through the same `wordsFromCatalog` adapter as `wordsFrom`. */
+function multiWordsFrom(
+  clips: Array<{
+    id: string;
+    hanzi: string;
+    pinyin: string;
+    tones: number[];
+    file: string;
+    durationS: number;
+    polyline: unknown;
+  }>,
+): Word[] {
+  return wordsFromCatalog(
+    clips.map((c, position) => ({
+      id: c.id,
+      hanzi: c.hanzi,
+      pinyin: c.pinyin,
+      english: "",
+      tone: c.tones[0],
+      tones: c.tones,
+      syllables: c.tones.length,
+      position,
+      status: "published",
+      min_tier: "free",
+      speaker_id: "jane",
+      clip_key: c.file,
+      duration_s: c.durationS,
+      onset_s: null,
+      clip_s: null,
+      polyline: c.polyline,
+      updated_at: "",
+    })),
+  );
+}
+
 /** A voiced PitchState sitting at a given chao, or an unvoiced one when chao is null. */
 function pitch(chao: number | null, held = 3): PitchState {
   if (chao === null) {
@@ -1463,5 +1498,126 @@ describe("Run — calibration flight", () => {
     expect(measured).not.toBeNull();
     expect(measured!.up).toBe(3);
     expect(measured!.down).toBe(4);
+  });
+});
+
+describe("Run — pairs mode and word mix", () => {
+  afterEach(() => resetTuning());
+
+  const flatPolyline = [
+    [0, 3],
+    [1, 3],
+  ];
+
+  const multiInventory: Word[] = multiWordsFrom([
+    { id: "haowan", hanzi: "好玩", pinyin: "hǎowán", tones: [3, 2], file: "fixture:hao_wan", durationS: 1.1, polyline: flatPolyline },
+    { id: "meiguo", hanzi: "美國", pinyin: "měiguó", tones: [3, 2], file: "fixture:mei_guo", durationS: 1.1, polyline: flatPolyline },
+  ]);
+
+  const mixedInventory: Word[] = [
+    ...wordsFrom([
+      { id: "ma1", hanzi: "媽", pinyin: "mā", tone: 1, file: "ma1.wav", durationS: 0.55, polyline: [[0, 4.584], [1, 4.584]] },
+      { id: "ma2", hanzi: "麻", pinyin: "má", tone: 2, file: "ma2.wav", durationS: 0.6, polyline: [[0, 3], [1, 5]] },
+      { id: "ma3", hanzi: "馬", pinyin: "mǎ", tone: 3, file: "ma3.wav", durationS: 0.6, polyline: [[0, 2], [1, 1]] },
+      { id: "ma4", hanzi: "罵", pinyin: "mà", tone: 4, file: "ma4.wav", durationS: 0.5, polyline: [[0, 5], [1, 1]] },
+    ]),
+    ...multiInventory,
+  ];
+
+  it("a pairs run spawns only multi-syllable gates", () => {
+    const run = new Run({ mode: "pairs", width: W, words: mixedInventory });
+    const { snapshots } = simulate(run, 500, trackCorridor);
+    const seenWordIds = new Set<string>();
+    for (const s of snapshots) for (const g of s.gates) if (g.word) seenWordIds.add(g.word.id);
+    expect(seenWordIds.size).toBeGreaterThan(0);
+    for (const id of seenWordIds) {
+      expect(multiInventory.some((w) => w.id === id)).toBe(true);
+    }
+  });
+
+  it("classic game mode never spawns a multi-syllable gate by default (wordMix omitted)", () => {
+    const run = new Run({ mode: "game", width: W, words: mixedInventory });
+    const { snapshots } = simulate(run, 2000, trackCorridor);
+    for (const s of snapshots) {
+      for (const g of s.gates) {
+        expect(g.word ? g.word.syllables : 1).toBe(1);
+      }
+    }
+  });
+
+  it("wordMix 'multi' always spawns multi-syllable gates in classic mode", () => {
+    const run = new Run({ mode: "game", width: W, words: mixedInventory, wordMix: "multi" });
+    const { snapshots } = simulate(run, 500, trackCorridor);
+    const seenWordIds = new Set<string>();
+    for (const s of snapshots) for (const g of s.gates) if (g.word) seenWordIds.add(g.word.id);
+    expect(seenWordIds.size).toBeGreaterThan(0);
+    for (const id of seenWordIds) {
+      expect(multiInventory.some((w) => w.id === id)).toBe(true);
+    }
+  });
+
+  it("wordMix 'all' consults the tuning roll, not a fixed choice", () => {
+    // Deterministic instead of statistical: force the roll to always pick
+    // multi, run a stretch, then force it to always pick single, run more —
+    // proves `wordMix: "all"` actually reads `multiGateChance` per gate
+    // rather than picking one pool for the whole run.
+    setTuning({ multiGateChance: 1 });
+    const run = new Run({ mode: "game", width: W, words: mixedInventory, wordMix: "all" });
+    const { snapshots: multiPhase } = simulate(run, 800, trackCorridor);
+    setTuning({ multiGateChance: 0 });
+    const { snapshots: singlePhase } = simulate(run, 1600, trackCorridor);
+
+    const wordsIn = (snaps: RunSnapshot[]): Word[] =>
+      snaps.flatMap((s) => s.gates.flatMap((g) => (g.word ? [g.word] : [])));
+
+    expect(wordsIn(multiPhase).some((w) => w.syllables > 1)).toBe(true);
+    expect(wordsIn(multiPhase).every((w) => w.syllables > 1)).toBe(true);
+    expect(wordsIn(singlePhase).some((w) => w.syllables === 1)).toBe(true);
+  });
+
+  it("a multi-syllable gate updates score/hearts but leaves perTone untouched", () => {
+    const run = new Run({ mode: "pairs", width: W, words: multiInventory });
+    simulate(run, 500, trackCorridor);
+    // `gateLog` is a live, shared array reference across every snapshot — read
+    // the run's own current state after simulating, not a stale snapshot.
+    const final = run.snapshot();
+    expect(final.gateLog.length).toBeGreaterThan(0);
+    for (const tone of [1, 2, 3, 4] as const) {
+      expect(final.stats.perTone[tone].gates).toBe(0);
+      expect(final.stats.perTone[tone].unheard).toBe(0);
+    }
+    expect(final.score).toBeGreaterThan(0);
+  });
+
+  it("a pause inside a multi gate's mergeGap window (300ms) still reads as one heard utterance", () => {
+    const run = new Run({ mode: "pairs", width: W, words: multiInventory });
+    let now = 0;
+    // Voice the first ~200ms, go silent for 300ms (bridges the single-syllable
+    // 150ms mergeGap but fits inside the 400ms multiMergeGapMs), then voice
+    // the rest of the gate.
+    for (let i = 0; i < 3000 && !run.snapshot().over; i++) {
+      const g = run.snapshot().activeGate;
+      const inPause = g !== null && now % 1000 < 500 && now % 1000 >= 200 && now % 1000 < 500;
+      const p = g ? (inPause ? pitch(null) : pitch(g.corridorChao)) : pitch(null);
+      run.tickAudio(p, now);
+      run.tickFrame(DT, now);
+      now += DT;
+    }
+    // At least one gate resolved to something other than "unheard" despite
+    // the mid-gate pause.
+    const log = run.snapshot().gateLog;
+    expect(log.length).toBeGreaterThan(0);
+    expect(log.some((g) => g.outcome !== "unheard")).toBe(true);
+  });
+
+  it("a pairs drill on a combo the inventory has none of ends the run cleanly, not by running out of hearts", () => {
+    // The inventory only has 3+2 words; drilling 4+4 has an empty pool from
+    // gate zero — no bare-tone fallback, the run just ends.
+    const run = new Run({ mode: "pairs", width: W, words: multiInventory, pairCombo: [4, 4] });
+    const { snapshots } = simulate(run, 200, trackCorridor);
+    const last = snapshots[snapshots.length - 1];
+    expect(last.over).toBe(true);
+    expect(last.hearts).toBe(3);
+    expect(last.gates.length).toBe(0);
   });
 });

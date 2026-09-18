@@ -43,7 +43,7 @@
  */
 
 import type { CorridorWidth, Tone } from "../game/gates.ts";
-import type { CueStyle, GateLogEntry, RunMode } from "../game/run.ts";
+import type { CueStyle, GateLogEntry, RunMode, WordMix } from "../game/run.ts";
 import type { GateOutcome } from "../game/scoring.ts";
 
 /** Why a run stopped. `quit` and `restart` both come from the pause menu, which otherwise leaves no trace. */
@@ -102,6 +102,8 @@ export type AnalyticsEvent =
       /** Index within the run, so drop-off can be read as "quit after gate 4". */
       i: number;
       tone: Tone;
+      /** Every syllable's tone, in order — `[tone]` for a single-syllable gate. Carries a `pairs`/mixed run's combo without a schema bump. */
+      tones: number[];
       outcome: GateOutcome;
       acc: number;
       uttMs: number;
@@ -134,6 +136,8 @@ export type AnalyticsEvent =
        * so in practice the property is always present.
        */
       voice?: string;
+      /** Classic `game` mode's word pool setting for this run. Absent for every other mode. */
+      wordMix?: WordMix;
     }
   /**
    * The native clip wasn't loaded yet when its cue was due, so the synthetic
@@ -203,6 +207,7 @@ export function gateEvent(entry: GateLogEntry, index: number): AnalyticsEvent {
     type: "gate",
     i: index,
     tone: entry.tone,
+    tones: entry.tones,
     outcome: entry.outcome,
     acc: round(entry.accuracy, 3),
     uttMs: Math.round(entry.utteranceMs),
