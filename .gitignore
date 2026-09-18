@@ -25,6 +25,9 @@ fixtures/recordings/
 # system of record; these are a local working copy.
 fixtures/analytics/
 fixtures/captures/
+fixtures/tonepairs/
+
+docs/tonepairs/
 
 # Editor directories and files
 .vscode/*

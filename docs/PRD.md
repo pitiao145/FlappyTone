@@ -324,7 +324,6 @@ Reference audio plays before the gate arrives (call-and-response): hear it, then
 ## 12. Open questions
 
 - Does the trail read better as a solid line, dots-per-frame, or a fading ribbon? (Unresolved — not re-verified since the original v1 build; check current `render/` before assuming either way.)
-- Should T1/T3's gate duration be restored to match their clip length, and if so, how is T1's regressed scoring (the reason it was shortened) addressed instead?
-- The Progress/Profile/daily-limit feature (§3, §8) is a real retention/monetisation-adjacent surface the v1 non-goals didn't anticipate. Is a paid tier actually on the roadmap, or does `dailyLimit.ts` stay a soft nudge indefinitely?
-- Taiwan vs Beijing reference audio: resolved in practice (Jane's own voice is the whole inventory now), but the original open question about *which* register to default new content to, if the inventory is ever extended with another speaker, is still open.
-- Does anyone play it twice? Read this from PostHog now, not a local report script.
+- Which register (Taiwan vs Beijing) should new content default to if the inventory is ever extended past Jane's voice with a speaker from a different region? Still open — today's second-voice work only adds gender variation, not region.
+- Does anyone play it twice? Read this from PostHog, not a local report script.
+- Tone pairs (two-syllable words): exploration only, not a committed feature. See CLAUDE.md's "Tone pairs" section and `docs/tonepairs/tone-pairs-implementation-review.md` for what's confirmed reusable and what's still a real gap before this could ship.
