@@ -204,7 +204,7 @@ function frameRms(samples: Float32Array, start: number, length: number): number 
  * Self-limiting by construction: on a take with real silence before the vowel
  * (`ba1`) the very first frame back is at the floor and the walk stops at once.
  */
-function onsetStart(
+export function onsetStart(
   samples: Float32Array,
   sampleRate: number,
   voicedStart: number,

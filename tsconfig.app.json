@@ -45,6 +45,8 @@
     "src/dev/serviceClient.ts",
     "src/dev/export-fallback.ts",
     "src/dev/clipCut.test.ts",
+    "src/dev/clipCutMulti.ts",
+    "src/dev/clipCutMulti.test.ts",
     "src/dev/manifest.test.ts",
     "src/render/palette.test.ts",
     "src/dev/r2.ts",
