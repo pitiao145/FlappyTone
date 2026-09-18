@@ -18,7 +18,13 @@
  */
 
 import { PitchTracker } from "../pitch/PitchTracker.ts";
-import { HOP, MERGE_GAP_MS, WIN } from "./clipCut.ts";
+import {
+  EXTREMUM_TRIM_FRAC,
+  HOP,
+  MERGE_GAP_MS,
+  WIN,
+  type ContourPoint,
+} from "./clipCut.ts";
 
 /**
  * How long a silence inside one *word* may be before it is an edge rather
@@ -194,4 +200,180 @@ export function multiSyllableSpan(
   }
 
   return { ...span, runs, underSegmented, overSegmented };
+}
+
+/**
+ * Below this a bend is measurement wobble, not a node worth a corridor wall.
+ *
+ * Measured against the straight line from the syllable's start to its end, so
+ * it asks "does this extremum take the contour anywhere the line already
+ * goes?" — a monotone fall has a min at its end which the line reaches
+ * anyway, and giving it a node would only add a redundant vertex (and, via
+ * `corridorToleranceAt`, a tolerance bump the shape does not deserve).
+ */
+export const MIN_EXCURSION_CHAO = 0.15;
+
+/** Straight-line chao between two nodes, at `t`. */
+function lineAt(a: ContourPoint, b: ContourPoint, t: number): number {
+  const span = b[0] - a[0];
+  return span === 0 ? a[1] : a[1] + ((t - a[0]) / span) * (b[1] - a[1]);
+}
+
+/** Lowest ("min") or highest ("max") point of a contour slice. */
+function extremum(points: ContourPoint[], kind: "min" | "max"): ContourPoint {
+  let best = points[0];
+  for (const p of points) {
+    if (kind === "min" ? p[1] < best[1] : p[1] > best[1]) best = p;
+  }
+  return best;
+}
+
+/**
+ * The furthest chao reached after `fromT`, in `kind`'s direction — the
+ * "complete the tone, then hold" value `templateContour` uses for a single
+ * syllable's final node, applied per syllable here.
+ *
+ * Same reason as there: pitch often releases once the vowel is done, and PRD
+ * §6 is explicit that the release is not part of the tone. A syllable that
+ * ended wherever voicing trailed off would ask the player to follow it.
+ */
+function holdAfter(points: ContourPoint[], fromT: number, kind: "min" | "max"): number {
+  const tail = points.filter((p) => p[0] >= fromT);
+  return extremum(tail.length > 0 ? tail : points, kind)[1];
+}
+
+/** How many measured bends one syllable may keep, between its start and end. */
+const INTERIOR_NODES_PER_SYLLABLE = 2;
+
+/**
+ * The interior point furthest from the chord `a`–`b`, and how far.
+ *
+ * Distance from the chord rather than "lowest" or "highest", because those
+ * are not the same question and only this one is about shape. `wán` in
+ * `hǎowán` holds level for 150ms and then climbs: its interior minimum sits
+ * right on the straight line from its start to its end and carries no
+ * information, while the plateau that the line misses by 0.56 chao is neither
+ * a minimum nor a maximum. Selecting extrema dropped both nodes and drew a
+ * ramp through a shape that does not ramp — off-centre by three quarters of
+ * the base corridor tolerance, for a player producing the recording exactly.
+ *
+ * This is still extremum-preserving for the shapes that have one: where a
+ * syllable really does turn, the turning point *is* the furthest point from
+ * its chord, so a dip or a peak is picked first and by its own value.
+ */
+function furthestFromChord(
+  points: ContourPoint[],
+  a: ContourPoint,
+  b: ContourPoint,
+): { point: ContourPoint; deviation: number } | null {
+  let best: ContourPoint | null = null;
+  let bestDeviation = 0;
+  for (const p of points) {
+    const d = Math.abs(p[1] - lineAt(a, b, p[0]));
+    if (d > bestDeviation) {
+      bestDeviation = d;
+      best = p;
+    }
+  }
+  return best ? { point: best, deviation: bestDeviation } : null;
+}
+
+/**
+ * One syllable's nodes: start, up to two measured bends in time order, and a
+ * held end.
+ *
+ * Deliberately shape-agnostic — no per-tone node template, unlike
+ * `templateContour`. Sandhi means the realised shape of a tone depends on
+ * what follows it: a 3+2 first syllable never reaches chao 5, and a 3+3 first
+ * syllable rises like a Tone 2. A corridor built from the citation template
+ * would teach a contour the speaker did not produce, which is the one thing
+ * the call-and-response contract cannot survive.
+ */
+function syllableNodes(
+  slice: ContourPoint[],
+  startT: number,
+  endT: number,
+): ContourPoint[] {
+  const start: ContourPoint = [startT, slice[0][1]];
+  const last: ContourPoint = [endT, slice[slice.length - 1][1]];
+
+  const from = slice[0][0];
+  const to = slice[slice.length - 1][0];
+  const lo = from + (to - from) * EXTREMUM_TRIM_FRAC;
+  const hi = to - (to - from) * EXTREMUM_TRIM_FRAC;
+  const interior = slice.filter((p) => p[0] >= lo && p[0] <= hi);
+
+  // Douglas–Peucker, budget `INTERIOR_NODES_PER_SYLLABLE`: split at the point
+  // furthest from the current chord, then recheck both halves against their
+  // own chords, so a second node lands where the first one left the worst
+  // error rather than next to it.
+  const bends: ContourPoint[] = [];
+  for (let n = 0; n < INTERIOR_NODES_PER_SYLLABLE; n++) {
+    const chords = [start, ...bends, last];
+    let pick: { point: ContourPoint; deviation: number } | null = null;
+    for (let i = 0; i < chords.length - 1; i++) {
+      const segment = interior.filter(
+        (p) => p[0] > chords[i][0] && p[0] < chords[i + 1][0],
+      );
+      const candidate = furthestFromChord(segment, chords[i], chords[i + 1]);
+      if (candidate && (!pick || candidate.deviation > pick.deviation)) pick = candidate;
+    }
+    if (!pick || pick.deviation < MIN_EXCURSION_CHAO) break;
+    bends.push(pick.point);
+    bends.sort((a, b) => a[0] - b[0]);
+  }
+
+  // The tone's final direction of travel is set by its last bend: away from a
+  // trough is a rise, away from a peak is a fall, read off which side of the
+  // chord the bend sits on. With no bend the syllable is monotone and its last
+  // measured value is already the end.
+  const lastBend = bends[bends.length - 1];
+  const end: ContourPoint = lastBend
+    ? [
+        endT,
+        holdAfter(
+          slice,
+          lastBend[0],
+          lastBend[1] < lineAt(start, last, lastBend[0]) ? "max" : "min",
+        ),
+      ]
+    : last;
+
+  return [start, ...bends, end];
+}
+
+/**
+ * A corridor polyline for a multi-syllable word: each syllable simplified
+ * independently, concatenated, with nothing in the gap between them.
+ *
+ * No node is placed across the inter-syllable pause on purpose. There is no
+ * measured pitch there, and the monotone spline already bridges it without
+ * overshoot — inventing a value would be the same mistake `resampleContour`
+ * exists to avoid, drawn as a wall.
+ *
+ * `spans` are the syllable boundaries on the contour's own 0..1 timeline.
+ * The first syllable's start is pulled out to t=0 and the last syllable's end
+ * pushed to t=1, exactly as `templateContour` does: voicing starts after the
+ * clip does, and a corridor that simply stopped would have no wall there.
+ */
+export function multiSyllablePolyline(
+  contour: ContourPoint[],
+  spans: Array<[number, number]>,
+): ContourPoint[] {
+  if (contour.length === 0 || spans.length === 0) return [];
+
+  const nodes: ContourPoint[] = [];
+  spans.forEach(([t0, t1], i) => {
+    const slice = contour.filter((p) => p[0] >= t0 && p[0] <= t1);
+    if (slice.length === 0) return;
+    nodes.push(
+      ...syllableNodes(slice, i === 0 ? 0 : t0, i === spans.length - 1 ? 1 : t1),
+    );
+  });
+
+  // Strictly increasing t, or the spline's secants divide by zero.
+  const ordered = nodes.sort((a, b) => a[0] - b[0]);
+  return ordered
+    .filter((p, i) => i === 0 || p[0] > ordered[i - 1][0])
+    .map((p) => [Number(p[0].toFixed(4)), Number(p[1].toFixed(3))] as ContourPoint);
 }
