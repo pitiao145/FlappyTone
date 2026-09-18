@@ -14,7 +14,7 @@ import {
   INITIAL_TRACKING_WINDOW,
   type RecalTrackingState,
 } from "./recalibration.ts";
-import { CUE_STYLES, type CueStyle } from "./run.ts";
+import { CUE_STYLES, WORD_MIXES, type CueStyle, type WordMix } from "./run.ts";
 import { type VoicePref } from "./voice.ts";
 
 export interface CalibrationSettings {
@@ -245,6 +245,28 @@ export function loadCueStyle(): CueStyle {
 
 export function saveCueStyle(style: CueStyle): void {
   localStorage.setItem(CUE_STYLE_KEY, style);
+}
+
+// ------------------------------------------------------------- word mix
+
+const WORD_MIX_KEY = "toneflap.wordmix.v1";
+const DEFAULT_WORD_MIX: WordMix = "single";
+
+/**
+ * Classic `game` mode's word pool: single-syllable only (default), pairs
+ * only, or a roll per gate (`tuning().multiGateChance`). Only meaningful
+ * once the inventory has multi-syllable words — see `Settings.tsx`'s
+ * `multiWords(words).length === 0` visibility gate.
+ */
+export function loadWordMix(): WordMix {
+  const raw = localStorage.getItem(WORD_MIX_KEY);
+  return raw !== null && (WORD_MIXES as string[]).includes(raw)
+    ? (raw as WordMix)
+    : DEFAULT_WORD_MIX;
+}
+
+export function saveWordMix(mix: WordMix): void {
+  localStorage.setItem(WORD_MIX_KEY, mix);
 }
 
 // -------------------------------------------------------------- reduce motion

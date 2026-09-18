@@ -16,9 +16,17 @@ import {
   type CalibrationSettings,
 } from "../game/settings.ts";
 import { resolveSpeaker, type Gender, type Speaker } from "../game/voice.ts";
-import { adoptInventory, inventorySpeaker } from "../audio/inventory.ts";
+import {
+  adoptInventory,
+  inventoryNow,
+  inventorySpeaker,
+  subscribeInventory,
+} from "../audio/inventory.ts";
 import { loadRoster } from "../data/speakers.ts";
 import { fetchCatalog } from "../data/words.ts";
+import { multiWords, type Word } from "../game/words.ts";
+import { WORD_MIXES, type WordMix } from "../game/run.ts";
+import { loadWordMix, saveWordMix } from "../game/settings.ts";
 import { Choice } from "./Choice.tsx";
 import { MicrophoneIcon } from "./toneIcons.tsx";
 
@@ -36,6 +44,12 @@ const VOICES = ["female", "male"] as const satisfies readonly Gender[];
 const VOICE_LABEL: Record<Gender, string> = {
   female: "Woman's voice",
   male: "Man's voice",
+};
+
+const WORD_MIX_LABEL: Record<WordMix, string> = {
+  single: "Single syllables",
+  multi: "Tone pairs only",
+  all: "Mix of both",
 };
 
 function SettingIcon({ children }: { children: React.ReactNode }) {
@@ -159,6 +173,17 @@ export function Settings({
    * belongs, because that is where the measurement it is made from happens.
    */
   const [voice, setVoice] = useState<Gender | null>(settings?.voice?.gender ?? null);
+  /**
+   * The current inventory, only to decide whether the word-mix choice is
+   * worth showing — same "nothing to switch to" gate as the voice switch.
+   * Read from the live inventory module (`inventoryNow`/`subscribeInventory`)
+   * rather than fetched here, since a catalog fetch is already in flight
+   * elsewhere by the time a player reaches Settings.
+   */
+  const [words, setWords] = useState<Word[] | null>(() => inventoryNow());
+  const [wordMix, setWordMix] = useState<WordMix>(() => loadWordMix());
+
+  useEffect(() => subscribeInventory(setWords), []);
 
   useEffect(() => {
     let live = true;
@@ -310,6 +335,23 @@ export function Settings({
               Which recording you hear, and whose corridors you fly. This is
               about pitch range, not about you: pick whichever sits closer to
               your own voice.
+            </p>
+          </>
+        )}
+        {settings && multiWords(words ?? []).length > 0 && (
+          <>
+            <Choice
+              options={WORD_MIXES}
+              value={wordMix}
+              label={(v) => WORD_MIX_LABEL[v]}
+              onChange={(v) => {
+                setWordMix(v);
+                saveWordMix(v);
+              }}
+            />
+            <p className="param-help">
+              What the classic run flies: single syllables, tone pairs, or a
+              mix of both. Tone pairs have their own mode too, under Play.
             </p>
           </>
         )}

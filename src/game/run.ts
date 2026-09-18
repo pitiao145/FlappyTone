@@ -53,6 +53,7 @@ export type RunMode = "game" | "tutorial" | "single" | "drill" | "learn" | "pair
 
 /** Classic `game` mode's word pool setting — see `RunConfig.wordMix`. */
 export type WordMix = "single" | "multi" | "all";
+export const WORD_MIXES: WordMix[] = ["single", "multi", "all"];
 
 export interface RunConfig {
   mode: RunMode;
