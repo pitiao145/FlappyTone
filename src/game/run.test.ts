@@ -1372,6 +1372,35 @@ describe("Run — calibration flight uses fixed words, not random ones", () => {
     expect(seen.length).toBeGreaterThan(0);
   });
 
+  it("never picks a multi-syllable word for a calibration gate, even when it's the only fallback candidate of that tone", () => {
+    const mixedPool: Word[] = [
+      ...wordsFrom([
+        { id: "t1only", hanzi: "八", pinyin: "bā", tone: 1, file: "t1only.wav", durationS: 0.5,
+          polyline: [[0, 4.5], [1, 4.5]] },
+        { id: "t3only", hanzi: "我", pinyin: "wǒ", tone: 3, file: "t3only.wav", durationS: 0.5,
+          polyline: [[0, 2.2], [1, 5]] },
+      ]),
+      ...wordsFromCatalog([
+        {
+          id: "pair1", hanzi: "好玩", pinyin: "hǎowán", english: "", tone: 1, tones: [1, 2],
+          syllables: 2, position: 99, status: "published", min_tier: "free", speaker_id: "jane",
+          clip_key: "pair1.wav", duration_s: 1, onset_s: null, clip_s: null,
+          polyline: [[0, 4.5], [1, 3]], updated_at: "",
+        },
+      ]),
+    ];
+    const run = calibrationRun(() => 0, mixedPool);
+    const { snapshots } = simulate(run, 3000, () => pitch(1));
+    const seen: string[] = [];
+    for (const s of snapshots) {
+      for (const g of s.gates) {
+        if (g.word && !seen.includes(g.word.id)) seen.push(g.word.id);
+      }
+    }
+    expect(seen).not.toContain("pair1");
+    for (const id of seen) expect(["t1only", "t3only"]).toContain(id);
+  });
+
   it("still flies all four tone-only gates with an empty inventory, exactly as today", () => {
     const run = calibrationRun(() => 0, []);
     const { snapshots } = simulate(run, 3000, () => pitch(1));

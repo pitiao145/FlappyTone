@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  availableToneCombos,
   availableTones,
+  isMulti,
+  isSingle,
+  multiWords,
+  pickMultiWord,
   pickWord,
+  toneComboKey,
   wordsForTier,
   wordsFromCatalog,
+  wordsOfCombo,
   wordsOfTone,
   type Word,
 } from "./words.ts";
@@ -339,6 +346,92 @@ describe("availableTones", () => {
     expect(availableTones([word({ tone: 1 }), word({ id: "b", tone: 4, tones: [4], position: 1 })])).toEqual([
       1, 4,
     ]);
+  });
+
+  it("ignores a multi-syllable word's tone entirely", () => {
+    const single = word({ tone: 1 });
+    const multi = word({ id: "pair1", tone: 3, tones: [3, 2], syllables: 2, position: 1 });
+    expect(availableTones([single, multi])).toEqual([1]);
+  });
+});
+
+describe("the single/multi pool split", () => {
+  const single = word({ id: "single1", tone: 1, tones: [1], syllables: 1 });
+  const pair = word({ id: "pair1", tone: 3, tones: [3, 2], syllables: 2, position: 1 });
+  const neutralPair = word({ id: "neutral1", tone: 3, tones: [3, 0], syllables: 2, position: 2 });
+
+  it("isSingle/isMulti classify by syllable count, and multi excludes neutral tone", () => {
+    expect(isSingle(single)).toBe(true);
+    expect(isSingle(pair)).toBe(false);
+    expect(isMulti(single)).toBe(false);
+    expect(isMulti(pair)).toBe(true);
+    expect(isMulti(neutralPair)).toBe(false);
+  });
+
+  it("wordsOfTone never returns a multi-syllable word, even when its first tone matches", () => {
+    const pool = [single, pair];
+    expect(wordsOfTone(pool, 3)).toEqual([]);
+    expect(wordsOfTone(pool, 1)).toEqual([single]);
+  });
+
+  it("pickWord never returns a multi-syllable word", () => {
+    const pool = [single, pair];
+    expect(pickWord(pool, 3, [], () => 0)).toBeNull();
+    expect(pickWord(pool, 1, [], () => 0)?.id).toBe("single1");
+  });
+
+  it("multiWords excludes single-syllable and neutral-tone rows", () => {
+    expect(multiWords([single, pair, neutralPair]).map((w) => w.id)).toEqual(["pair1"]);
+  });
+
+  it("availableToneCombos derives sorted, deduped combos from the inventory", () => {
+    const pair2 = word({ id: "pair2", tone: 3, tones: [3, 2], syllables: 2, position: 3 });
+    const pair3 = word({ id: "pair3", tone: 4, tones: [4, 4], syllables: 2, position: 4 });
+    expect(availableToneCombos([single, pair, pair2, pair3, neutralPair])).toEqual([
+      [3, 2],
+      [4, 4],
+    ]);
+  });
+
+  it("toneComboKey renders a stable, readable key", () => {
+    expect(toneComboKey([3, 2])).toBe("3-2");
+    expect(toneComboKey([4])).toBe("4");
+  });
+
+  it("wordsOfCombo matches the exact tone sequence only", () => {
+    const pair32 = word({ id: "pair32", tone: 3, tones: [3, 2], syllables: 2, position: 1 });
+    const pair23 = word({ id: "pair23", tone: 2, tones: [2, 3], syllables: 2, position: 2 });
+    expect(wordsOfCombo([single, pair32, pair23], [3, 2]).map((w) => w.id)).toEqual(["pair32"]);
+  });
+
+  describe("pickMultiWord", () => {
+    const pairA = word({ id: "pairA", tone: 3, tones: [3, 2], syllables: 2, position: 1 });
+    const pairB = word({ id: "pairB", tone: 3, tones: [3, 2], syllables: 2, position: 2 });
+    const pairC = word({ id: "pairC", tone: 4, tones: [4, 4], syllables: 2, position: 3 });
+    const inventory = [single, pairA, pairB, pairC];
+
+    it("shuffles across every combo when combo is null", () => {
+      expect(pickMultiWord(inventory, null, [], () => 0)?.id).toBe("pairA");
+    });
+
+    it("narrows to an exact combo when one is given", () => {
+      const w = pickMultiWord(inventory, [4, 4], [], () => 0);
+      expect(w?.id).toBe("pairC");
+    });
+
+    it("avoids recently played words, like pickWord", () => {
+      expect(pickMultiWord(inventory, [3, 2], [pairA], () => 0)?.id).toBe("pairB");
+    });
+
+    it("returns null when the inventory has nothing for that combo", () => {
+      expect(pickMultiWord(inventory, [1, 1], [], () => 0)).toBeNull();
+    });
+
+    it("never returns a single-syllable word", () => {
+      for (let i = 0; i < 10; i += 1) {
+        expect(pickMultiWord(inventory, null, [], () => i / 10)?.syllables).toBeGreaterThan(1);
+      }
+    });
   });
 });
 

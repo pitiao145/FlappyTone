@@ -172,8 +172,12 @@ export function wordsFromCatalog(rows: unknown): Word[] {
     const clipS = readClipS(r.clip_s, r.duration_s);
     const onsetS = readOnsetS(r.onset_s, clipS ?? r.duration_s);
     const tone = r.tone as Tone;
+    // 0 (neutral tone) is kept here even though it's never a valid `tone`
+    // value above — `isMulti` reads it off `tones` to exclude a neutral-tone
+    // word from the multi-syllable pool, so filtering it out here would hide
+    // the exact word that gate exists to catch.
     const tones = Array.isArray(r.tones)
-      ? (r.tones.filter((t): t is Tone => [1, 2, 3, 4].includes(t as number)) as Tone[])
+      ? (r.tones.filter((t): t is Tone => [0, 1, 2, 3, 4].includes(t as number)) as Tone[])
       : [tone];
     const position = typeof r.position === "number" && Number.isFinite(r.position) ? r.position : 0;
     entries.push({
@@ -227,7 +231,7 @@ export function wordsForTier(words: Word[], tier: Tier): Word[] {
  * Visualiser's per-tone word list) passes a tier's `wordsPerTone` limit.
  */
 export function wordsOfTone(words: Word[], tone: Tone, limit: number = Infinity): Word[] {
-  const pool = words.filter((w) => w.tone === tone);
+  const pool = words.filter((w) => isSingle(w) && w.tone === tone);
   return Number.isFinite(limit) ? pool.slice(0, Math.max(0, limit)) : pool;
 }
 
@@ -258,5 +262,66 @@ export function pickWord(
 
 /** Every tone the inventory can actually build a gate for. */
 export function availableTones(words: Word[]): Tone[] {
-  return ([1, 2, 3, 4] as Tone[]).filter((t) => words.some((w) => w.tone === t));
+  return ([1, 2, 3, 4] as Tone[]).filter((t) => words.some((w) => isSingle(w) && w.tone === t));
+}
+
+/** A word the classic single-syllable pool may draw from. */
+export function isSingle(w: Word): boolean {
+  return w.syllables === 1;
+}
+
+/**
+ * A word the multi-syllable ("pairs") pool may draw from.
+ *
+ * Neutral tone (0) is excluded from every pool, even though the importer
+ * accepts it — v1 has no neutral-tone handling anywhere downstream.
+ */
+export function isMulti(w: Word): boolean {
+  return w.syllables > 1 && !w.tones.includes(0 as Tone);
+}
+
+/** Every multi-syllable word in the inventory. */
+export function multiWords(words: Word[]): Word[] {
+  return words.filter(isMulti);
+}
+
+/** A stable, human-legible key for a tone combo, e.g. `"3-2"`. */
+export function toneComboKey(tones: Tone[]): string {
+  return tones.join("-");
+}
+
+/** Every distinct tone combo the multi-syllable inventory can build a gate for, sorted. */
+export function availableToneCombos(words: Word[]): Tone[][] {
+  const seen = new Map<string, Tone[]>();
+  for (const w of multiWords(words)) {
+    const key = toneComboKey(w.tones);
+    if (!seen.has(key)) seen.set(key, w.tones);
+  }
+  return [...seen.values()].sort((a, b) => toneComboKey(a).localeCompare(toneComboKey(b)));
+}
+
+/** The multi-syllable words matching one exact tone combo, in inventory order. */
+export function wordsOfCombo(words: Word[], tones: Tone[]): Word[] {
+  const key = toneComboKey(tones);
+  return multiWords(words).filter((w) => toneComboKey(w.tones) === key);
+}
+
+/**
+ * Picks a multi-syllable word, avoiding the ones most recently played.
+ *
+ * Mirrors `pickWord`'s recent-window logic. `combo === null` shuffles across
+ * every combo the inventory has; a combo narrows to an exact match (drill).
+ */
+export function pickMultiWord(
+  words: Word[],
+  combo: Tone[] | null,
+  recent: Word[],
+  rand: () => number,
+): Word | null {
+  const pool = combo ? wordsOfCombo(words, combo) : multiWords(words);
+  if (pool.length === 0) return null;
+  const avoid = new Set(recent.slice(-RECENT_WINDOW).map((w) => w.id));
+  const fresh = pool.filter((w) => !avoid.has(w.id));
+  const from = fresh.length > 0 ? fresh : pool;
+  return from[Math.min(from.length - 1, Math.floor(rand() * from.length))];
 }
