@@ -2393,6 +2393,10 @@
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
+.lab-screen .tone-average-grid {
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+}
+
 .tone-average-card canvas {
   width: 100%;
   height: auto;

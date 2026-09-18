@@ -40,6 +40,7 @@ import { Capture } from "./Capture.tsx";
 import { DevPanel } from "./DevPanel.tsx";
 import { GateLogPanel } from "./GateLogPanel.tsx";
 import { ToneAverages } from "./ToneAverages.tsx";
+import { TonePairs } from "./TonePairs.tsx";
 import { TuningPanel } from "./TuningPanel.tsx";
 import { WordGates } from "./WordGates.tsx";
 
@@ -50,7 +51,8 @@ type Tab =
   | "pitch"
   | "gates"
   | "capture"
-  | "visualiser";
+  | "visualiser"
+  | "tonepairs";
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "play", label: "play" },
@@ -60,6 +62,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "gates", label: "gates" },
   { id: "capture", label: "capture" },
   { id: "visualiser", label: "visualiser" },
+  { id: "tonepairs", label: "tone pairs" },
 ];
 
 /**
@@ -365,6 +368,8 @@ worst excursion ${Math.round(Math.max(0, ...last.gateLog.map((g) => g.worstExcur
       )}
 
       {tab === "capture" && <Capture onBack={() => setTab("play")} />}
+
+      {tab === "tonepairs" && <TonePairs />}
 
       {/* Same component the title screen's "visualiser" opens — a second,
           disposable instance living in the Lab so a tone-recognition

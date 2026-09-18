@@ -42,8 +42,13 @@ import {
   TONE_SHORT_LABEL,
 } from "./toneIcons.tsx";
 
-/** How much time the panel spans. Long enough for a citation syllable and a breath. */
-const SPAN_MS = 1600;
+/**
+ * How much time the panel spans. Long enough for a citation syllable and a
+ * breath. Exported for the dev Lab's tone-pair exploration
+ * (`src/dev/TonePairs.tsx`), which reuses `drawVisualiser` directly to render
+ * a tone-pair fixture on identical axes for comparison.
+ */
+export const SPAN_MS = 1600;
 
 /** How long the "wrong tone" toast stays up — matches .mismatch-toast's own fade (App.css). */
 const WRONG_TOAST_MS = 1200;
