@@ -54,7 +54,8 @@ type Tab =
   | "gates"
   | "capture"
   | "visualiser"
-  | "tonepairs";
+  | "tonepairs"
+  | "pairgates";
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "play", label: "play" },
@@ -65,6 +66,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "capture", label: "capture" },
   { id: "visualiser", label: "visualiser" },
   { id: "tonepairs", label: "tone pairs" },
+  { id: "pairgates", label: "pair gates" },
 ];
 
 /**
@@ -412,6 +414,8 @@ worst excursion ${Math.round(Math.max(0, ...last.gateLog.map((g) => g.worstExcur
 
       {tab === "tonepairs" && <TonePairs />}
 
+      {tab === "pairgates" && <PairGatesTab words={pairsWords} settings={settings} />}
+
       {/* Same component the title screen's "visualiser" opens — a second,
           disposable instance living in the Lab so a tone-recognition
           algorithm can be tested against live attempts without a full run
@@ -562,6 +566,131 @@ tolerance in chao   ${TONE_LIST.map((t) => `T${t} ${toleranceChao(t, d.tolerance
  * `makeGate`/a real run reads — this is a paused canvas-only overlay,
  * gameplay is untouched either way.
  */
+/**
+ * The actual production gate — `shapeForWord`'s shape-agnostic multi-syllable
+ * corridor (Phase 1) through `GatePreview`/`Game`'s ordinary "single" flight —
+ * for the four `fixtures/tonepairs/wav/*.wav` recordings, alone on their own
+ * tab. A dedicated tab rather than a spot in "play"'s picker: that picker
+ * reads `src/data/wordsFallback.json`, which is empty on a machine whose
+ * local Supabase catalog was never re-exported after the DB migration, and
+ * a four-item list doesn't need a tone filter or the rest of "play"'s
+ * single-gate chrome crowding it out.
+ */
+function PairGatesTab({
+  words,
+  settings,
+}: {
+  words: Word[];
+  settings: CalibrationSettings;
+}) {
+  const [selected, setSelected] = useState<Word | null>(words[0] ?? null);
+  const [corridorWidth, setCorridorWidth] = useState<CorridorWidth>(loadCorridorWidth);
+  const [gateKey, setGateKey] = useState(0);
+  const [flying, setFlying] = useState(false);
+  const [result, setResult] = useState<RunSnapshot | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const test = async () => {
+    setError(null);
+    try {
+      await ensureMic();
+      setResult(null);
+      setGateKey((k) => k + 1);
+      setFlying(true);
+    } catch (err) {
+      setFlying(false);
+      setError(err instanceof Error ? err.message : "mic failed");
+    }
+  };
+
+  const stop = () => {
+    setFlying(false);
+    stopMic();
+  };
+
+  if (words.length === 0) {
+    return (
+      <div className="lab-controls">
+        <p className="param-help">
+          No pair fixtures found. Run `npm run tonepairs:fixtures` to
+          (re)generate `src/dev/fixtureWords.json` from
+          `fixtures/tonepairs/wav/*.wav`.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="lab-play-grid">
+      <div className="lab-picker">
+        <div className="gate-picker-list">
+          {words.map((w) => (
+            <button
+              key={w.id}
+              className={w.id === selected?.id ? "gate-picker-item active" : "gate-picker-item"}
+              onClick={() => {
+                setSelected(w);
+                setResult(null);
+              }}
+            >
+              {w.pinyin} {w.hanzi}{" "}
+              <span className="param-help">
+                · T{w.tones.join("·T")} · {w.id}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="lab-stage">
+        {flying && selected ? (
+          <Game
+            key={gateKey}
+            mode="single"
+            singleWord={selected}
+            settings={settings}
+            canvasWidth={360}
+            canvasHeight={640}
+            onOver={(snap) => {
+              setResult(snap);
+              setFlying(false);
+            }}
+            onQuit={stop}
+          />
+        ) : (
+          <div className="lab-idle">
+            <GatePreview word={selected} corridorWidth={corridorWidth} showCitation={false} />
+            {error && <p className="error">{error}</p>}
+            <button className="primary" disabled={!selected} onClick={() => void test()}>
+              test
+            </button>
+            {result?.gateLog[0] && (
+              <p className="param-help">
+                {result.gateLog[0].outcome} · accuracy{" "}
+                {Math.round(result.gateLog[0].accuracy * 100)}%
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="lab-idle game-settings game-settings-compact">
+          <div className="game-settings-row">
+            <span className="param-name">tunnel width</span>
+            <Choice
+              options={CORRIDOR_WIDTHS}
+              value={corridorWidth}
+              onChange={(w) => {
+                setCorridorWidth(w);
+                saveCorridorWidth(w);
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function GatePreview({
   word,
   corridorWidth,
@@ -585,7 +714,7 @@ function GatePreview({
         ctx.fillRect(0, 0, width, height);
         drawChaoGrid(ctx, width, height);
         if (word) {
-          const baseTol = toleranceChao(word.tone, tuning().baseToleranceH);
+          const baseTol = toleranceChao(word.tones, tuning().baseToleranceH);
           const d = applyCorridorWidth(
             { scrollSpeed: tuning().baseScrollSpeed, toleranceH: baseTol, restMs: 0 },
             corridorWidth,
