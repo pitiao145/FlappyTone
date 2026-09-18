@@ -164,10 +164,25 @@ export function loadClip(word: Word): Promise<void> {
     // The clips live in R2 behind the Worker, which serves nothing without a
     // short-lived play ticket. No base URL or no ticket is not an error worth
     // reporting to the player — it degrades to the synthetic sweep below.
-    const ticket = await getPlayTicket();
-    if (!CLIPS_BASE_URL || !ticket) throw new Error("no clips source");
-    const url = `${CLIPS_BASE_URL}/clip/${word.speakerId}/${word.id}?v=${encodeURIComponent(word.updatedAt)}`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${ticket}` } });
+    //
+    // A dev fixture word is audio on disk under `public/dev-fixtures/`, not an
+    // object in R2, so it takes neither a ticket nor the Worker. This is what
+    // lets multi-syllable gates be flown and tuned before any pair word exists
+    // in the catalog. `import.meta.env.DEV` is checked first so the whole
+    // branch is dead code a production build drops — a published row's
+    // `clip_key` is an R2 object path and cannot begin with `fixture:`
+    // anyway, but hard rule 7 is about the bundle, not about reachability.
+    const fixture =
+      import.meta.env.DEV && word.clipKey.startsWith("fixture:")
+        ? word.clipKey.slice("fixture:".length)
+        : null;
+
+    const ticket = fixture ? null : await getPlayTicket();
+    if (!fixture && (!CLIPS_BASE_URL || !ticket)) throw new Error("no clips source");
+    const url = fixture
+      ? `/dev-fixtures/tonepairs/${fixture}.wav`
+      : `${CLIPS_BASE_URL}/clip/${word.speakerId}/${word.id}?v=${encodeURIComponent(word.updatedAt)}`;
+    const res = await fetch(url, ticket ? { headers: { Authorization: `Bearer ${ticket}` } } : undefined);
     if (res.status === 401) {
       // The ticket expired, or the player's IP moved. Drop it so the next
       // gate mints a fresh one — and drop this load from `loads` below, or

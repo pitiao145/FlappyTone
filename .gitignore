@@ -60,3 +60,7 @@ fixtures/clips/
 # disk locally as a safety net — not re-pullable from anywhere else, so don't
 # delete your own copy.
 public/ref/*.wav
+
+# Dev-only tone-pair fixture audio, written by `npm run tonepairs:fixtures`.
+# Regenerable from fixtures/tonepairs/wav/, and never part of a prod build.
+public/dev-fixtures/

@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import basicSsl from '@vitejs/plugin-basic-ssl'
 import { prerenderLanding } from './src/dev/prerender.ts'
 import { prettyUrls } from './src/dev/prettyUrls.ts'
+import { dropDevFixtures } from './src/dev/dropDevFixtures.ts'
 
 // https://vite.dev/config/
 // basic-ssl serves the dev server over HTTPS (self-signed cert) so
@@ -28,6 +29,7 @@ export default defineConfig({
     ...(underVercelDev ? [] : [basicSsl()]),
     prerenderLanding(),
     prettyUrls(),
+    dropDevFixtures(),
   ],
   // Reachable from the phone on the LAN, for on-device testing.
   server: { host: true },

@@ -46,6 +46,8 @@
     "src/dev/export-fallback.ts",
     "src/dev/clipCut.test.ts",
     "src/dev/clipCutMulti.ts",
+    "src/dev/dropDevFixtures.ts",
+    "src/dev/generate-fixture-words.ts",
     "src/dev/clipCutMulti.test.ts",
     "src/dev/manifest.test.ts",
     "src/render/palette.test.ts",

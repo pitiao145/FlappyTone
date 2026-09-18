@@ -18,6 +18,7 @@
     "test": "vitest run",
     "typecheck": "tsc -b",
     "analyze": "node --experimental-strip-types src/dev/analyze.ts",
+    "tonepairs:fixtures": "node --experimental-strip-types src/dev/generate-fixture-words.ts",
     "tonepairs:generate": "node --experimental-strip-types src/dev/generate-tonepair-polylines.ts",
     "make-tones": "node --experimental-strip-types src/dev/make-tones.ts",
     "tune": "node --experimental-strip-types src/dev/tune.ts",

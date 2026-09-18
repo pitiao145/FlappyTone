@@ -2,18 +2,15 @@
 // recordings and writes their raw pitch contours to
 // `src/dev/tonePairPolylines.json`, for the Lab's "tonepairs" tab to draw.
 //
-// Not part of the shipped pipeline. `clipCut.ts`'s `longestVoicedRun` finds
-// the single longest voiced run in a clip — exactly wrong for a two-syllable
-// recording, where the whole point is to keep BOTH runs and the pause
-// between them. So this script re-implements the crop step with a wider,
-// configurable merge gap that bridges the inter-syllable pause without
-// reaching into `clipCut.ts` and risking the single-syllable pipeline's own
-// golden tests.
+// The span comes from `clipCutMulti.ts` now — the same `multiSyllableSpan`
+// the real pipeline uses — rather than the bespoke copy this file used to
+// carry. There is one multi-syllable measurement, and this is a reader of
+// it, not a second implementation of it.
 //
 // Usage: node --experimental-strip-types src/dev/generate-tonepair-polylines.ts
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { PitchTracker } from "../pitch/PitchTracker.ts";
+import { multiSyllableSpan } from "./clipCutMulti.ts";
 import {
   MEASURE_RANGE_SEMITONES,
   measureContour,
@@ -34,10 +31,6 @@ import { decodeWav, encodeWav } from "./wav.ts";
  * aggressively than the shipped single-syllable corridors ever are.
  */
 
-const WIN = 2048;
-const HOP = 1024;
-/** Wide enough to bridge the pause between two syllables, not just a creak dropout. */
-const INTER_SYLLABLE_MERGE_GAP_MS = 400;
 const PAD_MS = 80;
 const POLYLINE_POINTS = 48;
 
@@ -56,52 +49,6 @@ const FIXTURES: Fixture[] = [
   { id: "xiaoshi", file: "xiao_shi.wav", hanzi: "小時", pinyin: "xiǎoshí", tones: [3, 2] },
   { id: "yiqian", file: "yi_qian.wav", hanzi: "以前", pinyin: "yǐqián", tones: [3, 2] },
 ];
-
-/** All voiced frame center-sample indices, using a first-pass f0Center guess. */
-function voicedCenters(samples: Float32Array, sampleRate: number, f0Center: number): number[] {
-  const tracker = new PitchTracker({ sampleRate, f0Center });
-  const centers: number[] = [];
-  for (let s = 0; s + WIN <= samples.length; s += HOP) {
-    if (tracker.push(samples.subarray(s, s + WIN)).voiced) centers.push(s + WIN / 2);
-  }
-  return centers;
-}
-
-/**
- * The whole-word span: from first voiced frame to last, merging gaps under
- * `INTER_SYLLABLE_MERGE_GAP_MS` — unlike `longestVoicedRun`, this keeps every
- * run rather than picking the longest one, because a tone pair's second
- * syllable is exactly as real as its first.
- */
-function wordSpan(
-  samples: Float32Array,
-  sampleRate: number,
-  f0Center: number,
-): { start: number; end: number } | null {
-  const centers = voicedCenters(samples, sampleRate, f0Center);
-  if (centers.length === 0) return null;
-  const gap = (INTER_SYLLABLE_MERGE_GAP_MS / 1000) * sampleRate;
-  // Trim leading/trailing runs that are isolated by more than the gap from
-  // the rest — stray room noise far from the two syllables — but keep every
-  // run in between, including the pause across the two words.
-  let start = centers[0];
-  let end = centers[centers.length - 1];
-  for (let i = 1; i < centers.length; i++) {
-    if (centers[i] - centers[i - 1] > gap * 2) {
-      // A break wider than 2x the merge gap likely separates real speech
-      // from an unrelated stray voiced frame; keep whichever side is longer.
-      const before = centers.slice(0, i);
-      const after = centers.slice(i);
-      if (after.length > before.length) {
-        start = after[0];
-      } else {
-        end = before[before.length - 1];
-        break;
-      }
-    }
-  }
-  return { start, end };
-}
 
 function processFixture(fixture: Fixture): {
   id: string;
@@ -125,7 +72,7 @@ function processFixture(fixture: Fixture): {
   const reference = measurePitchReference([{ samples, sampleRate }], SEED_F0_CENTER);
   const f0Center = reference?.f0Center ?? SEED_F0_CENTER;
 
-  const span = wordSpan(samples, sampleRate, f0Center);
+  const span = multiSyllableSpan(samples, sampleRate, f0Center, fixture.tones.length);
   if (!span) throw new Error(`${fixture.file}: no voiced frames`);
 
   const pad = (PAD_MS / 1000) * sampleRate;

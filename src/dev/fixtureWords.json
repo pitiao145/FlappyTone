@@ -1,0 +1,216 @@
+{
+  "words": [
+    {
+      "id": "haowan",
+      "hanzi": "好玩",
+      "pinyin": "hǎowán",
+      "english": "fun",
+      "speakerId": "jane",
+      "tone": 3,
+      "tones": [
+        3,
+        2
+      ],
+      "syllables": 2,
+      "clipKey": "fixture:haowan",
+      "durationS": 1.5194,
+      "onsetS": 1.022,
+      "clipS": 3.4333,
+      "polyline": [
+        [
+          0,
+          3.121
+        ],
+        [
+          0.0842,
+          3.071
+        ],
+        [
+          0.3089,
+          1.744
+        ],
+        [
+          0.4368,
+          1.744
+        ],
+        [
+          0.4508,
+          1.781
+        ],
+        [
+          0.7442,
+          2.654
+        ],
+        [
+          0.9127,
+          4.861
+        ],
+        [
+          1,
+          4.861
+        ]
+      ],
+      "minTier": "free",
+      "updatedAt": "2026-09-18T00:00:00.000Z"
+    },
+    {
+      "id": "meiguo",
+      "hanzi": "美國",
+      "pinyin": "měiguó",
+      "english": "America",
+      "speakerId": "jane",
+      "tone": 3,
+      "tones": [
+        3,
+        2
+      ],
+      "syllables": 2,
+      "clipKey": "fixture:meiguo",
+      "durationS": 1.5834,
+      "onsetS": 0.638,
+      "clipS": 3.092,
+      "polyline": [
+        [
+          0,
+          2.55
+        ],
+        [
+          0.1347,
+          3.337
+        ],
+        [
+          0.3638,
+          1.649
+        ],
+        [
+          0.473,
+          1.649
+        ],
+        [
+          0.4865,
+          1.379
+        ],
+        [
+          0.5659,
+          2.297
+        ],
+        [
+          0.8219,
+          2.589
+        ],
+        [
+          1,
+          4.396
+        ]
+      ],
+      "minTier": "free",
+      "updatedAt": "2026-09-18T00:00:00.000Z"
+    },
+    {
+      "id": "xiaoshi",
+      "hanzi": "小時",
+      "pinyin": "xiǎoshí",
+      "english": "hour",
+      "speakerId": "jane",
+      "tone": 3,
+      "tones": [
+        3,
+        2
+      ],
+      "syllables": 2,
+      "clipKey": "fixture:xiaoshi",
+      "durationS": 1.5407,
+      "onsetS": 1.043,
+      "clipS": 3.348,
+      "polyline": [
+        [
+          0,
+          2.905
+        ],
+        [
+          0.0831,
+          2.772
+        ],
+        [
+          0.2215,
+          1.338
+        ],
+        [
+          0.3615,
+          1.368
+        ],
+        [
+          0.5138,
+          2.4
+        ],
+        [
+          0.7062,
+          2.429
+        ],
+        [
+          0.9277,
+          4.983
+        ],
+        [
+          1,
+          4.74
+        ]
+      ],
+      "minTier": "free",
+      "updatedAt": "2026-09-18T00:00:00.000Z"
+    },
+    {
+      "id": "yiqian",
+      "hanzi": "以前",
+      "pinyin": "yǐqián",
+      "english": "before",
+      "speakerId": "jane",
+      "tone": 3,
+      "tones": [
+        3,
+        2
+      ],
+      "syllables": 2,
+      "clipKey": "fixture:yiqian",
+      "durationS": 1.5194,
+      "onsetS": 1.064,
+      "clipS": 3.092,
+      "polyline": [
+        [
+          0,
+          3.251
+        ],
+        [
+          0.1685,
+          2.753
+        ],
+        [
+          0.2106,
+          2.221
+        ],
+        [
+          0.3526,
+          1.276
+        ],
+        [
+          0.507,
+          2.573
+        ],
+        [
+          0.7723,
+          2.288
+        ],
+        [
+          0.9127,
+          4.646
+        ],
+        [
+          1,
+          4.646
+        ]
+      ],
+      "minTier": "free",
+      "updatedAt": "2026-09-18T00:00:00.000Z"
+    }
+  ]
+}
