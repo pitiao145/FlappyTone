@@ -88,6 +88,15 @@ describe("toleranceChao", () => {
     expect(toleranceChao(2, 0.12)).toBeCloseTo(0.8 * 1.15);
     expect(toleranceChao(3, 0.12)).toBeCloseTo(0.8 * 1.3);
   });
+
+  it("a tones array takes the widest syllable's factor for the whole gate", () => {
+    // The plan's own rule: max(TOLERANCE_FACTOR[t] for t in tones). A 3+2
+    // pair gets T3's 1.3, not T2's 1.15 and not an average of the two.
+    expect(toleranceChao([3, 2], 0.12)).toBeCloseTo(toleranceChao(3, 0.12));
+    expect(toleranceChao([1, 4], 0.12)).toBeCloseTo(toleranceChao(1, 0.12));
+    // A single-element array behaves exactly like the bare tone it wraps.
+    expect(toleranceChao([2], 0.12)).toBeCloseTo(toleranceChao(2, 0.12));
+  });
 });
 
 describe("newDifficulty", () => {
@@ -183,6 +192,41 @@ describe("makeGate", () => {
     expect(g.xStart).toBe(500);
     expect(g.widthPx).toBeCloseTo(DEFAULT_TUNING.baseScrollSpeed * GATE_DURATION_S[1]);
     expect(g.tolChao).toBeCloseTo(toleranceChao(1, DEFAULT_TUNING.baseToleranceH));
+  });
+
+  it("a bare-tone gate carries tones=[tone] and syllables=1", () => {
+    const g = makeGate(2, 0, newDifficulty());
+    expect(g.tones).toEqual([2]);
+    expect(g.syllables).toBe(1);
+  });
+
+  it("a word's gate carries the word's own tones/syllables, and widens tolerance across them", () => {
+    const d = newDifficulty();
+    const word = {
+      id: "test-pair",
+      hanzi: "測試",
+      pinyin: "cèshì",
+      speakerId: "jane",
+      english: "",
+      tone: 3 as Tone,
+      tones: [3, 2] as Tone[],
+      syllables: 2,
+      clipKey: "fixture:test",
+      durationS: 1.2,
+      onsetS: 0,
+      clipS: 1.2,
+      polyline: [
+        [0, 3],
+        [1, 3],
+      ] as [number, number][],
+      minTier: "free" as const,
+      updatedAt: "",
+    };
+    const g = makeGate(word, 0, d);
+    expect(g.tone).toBe(3);
+    expect(g.tones).toEqual([3, 2]);
+    expect(g.syllables).toBe(2);
+    expect(g.tolChao).toBeCloseTo(toleranceChao([3, 2], d.toleranceH));
   });
 
   it("gate width follows the tone's own measured duration", () => {

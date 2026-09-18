@@ -178,6 +178,23 @@ export interface Tuning {
   minUtteranceMs: number;
   /** Voiced runs separated by less than this are one utterance. */
   mergeGapMs: number;
+  /**
+   * `mergeGapMs`'s multi-syllable counterpart — the gap a two-syllable
+   * attempt's own pause between syllables must fit inside to still read as
+   * one utterance. Wider than the single-syllable default on purpose: a
+   * deliberate pause between two syllables is not the same signal as a
+   * within-syllable creak gap, and a single-syllable-tuned value would split
+   * a perfectly good pair attempt into two "couldn't hear that" runs.
+   */
+  multiMergeGapMs: number;
+  /**
+   * Classic `game` mode's `wordMix: "all"` setting: the chance, per gate,
+   * that the queue draws a multi-syllable word instead of a single one. Only
+   * consulted when `wordMix === "all"` — `"single"`/`"multi"` bypass the
+   * roll entirely. 0.5 is an even mix, not a measured value; retune from the
+   * Lab once pairs have been flown in the classic mode.
+   */
+  multiGateChance: number;
 
   // ---- tone classifier
   /**
@@ -433,6 +450,8 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   preGateBufferMs: 400,
   minUtteranceMs: 160,
   mergeGapMs: 150,
+  multiMergeGapMs: 400,
+  multiGateChance: 0.5,
   toneClassifierMinConfidence: 0.5,
   toneClassifierOnsetTrimFraction: 0.05,
   toneClassifierFlatnessScaleChao: 1.25,

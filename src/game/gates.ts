@@ -189,9 +189,17 @@ const TOLERANCE_FACTOR: Record<Tone, number> = { 1: 1, 2: 1.15, 3: 1.3, 4: 1 };
 /**
  * Converts a corridor tolerance in screen-height fraction to chao units.
  * 0.60H spans 4 chao, so tolChao = baseTolH / 0.60 * 4.
+ *
+ * Takes either a single tone (every existing single-syllable call site) or a
+ * multi-syllable gate's full `tones` list, in which case the widest of the
+ * syllables' factors applies to the whole gate — the plan's own rule
+ * (`max(TOLERANCE_FACTOR[t] for t in tones)`), so a pair with one T3 syllable
+ * gets T3's forgiveness for the whole corridor rather than averaging it away.
  */
-export function toleranceChao(tone: Tone, baseTolH: number): number {
-  return (baseTolH / 0.6) * 4 * TOLERANCE_FACTOR[tone];
+export function toleranceChao(tone: Tone | Tone[], baseTolH: number): number {
+  const tones = Array.isArray(tone) ? tone : [tone];
+  const factor = Math.max(...tones.map((t) => TOLERANCE_FACTOR[t]));
+  return (baseTolH / 0.6) * 4 * factor;
 }
 
 /**
@@ -313,7 +321,12 @@ export function corridorToleranceAt(
 }
 
 export interface Gate {
+  /** First tone — every single-syllable reader keeps using this unchanged. */
   tone: Tone;
+  /** Every syllable's tone, in order. `[tone]` for a single-syllable gate. */
+  tones: Tone[];
+  /** How many syllables this gate's word has. 1 for a bare-tone gate. */
+  syllables: number;
   /** The word being cued and labelled. Null in tests that build a bare gate. */
   word: Word | null;
   /** The corridor. Not always the word's own — see `shapeForWord`. */
@@ -428,13 +441,17 @@ export function nextTone(prev: Tone[], rand: () => number): Tone {
 export function makeGate(source: Word | Tone, xStart: number, d: Difficulty): Gate {
   const word = typeof source === "number" ? null : source;
   const tone = typeof source === "number" ? source : source.tone;
+  const tones = word ? word.tones : [tone];
+  const syllables = word ? word.syllables : 1;
   const shape = word ? shapeForWord(word) : shapeForTone(tone);
   return {
     tone,
+    tones,
+    syllables,
     word,
     shape,
     widthPx: d.scrollSpeed * shape.durationS,
     xStart,
-    tolChao: toleranceChao(tone, d.toleranceH),
+    tolChao: toleranceChao(tones, d.toleranceH),
   };
 }
