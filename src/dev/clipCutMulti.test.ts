@@ -10,6 +10,7 @@ import {
 } from "./clipCut.ts";
 import { SEED_F0_CENTER } from "./clipPipeline.ts";
 import { multiSyllablePolyline, multiSyllableSpan } from "./clipCutMulti.ts";
+import { cutClip } from "./clipCut.ts";
 import { corridorChaoAt, shapeForWord } from "../game/gates.ts";
 import reference from "./tonePairPolylines.json" with { type: "json" };
 
@@ -179,5 +180,42 @@ describe("multiSyllablePolyline", () => {
 
   it("returns nothing for an empty contour", () => {
     expect(multiSyllablePolyline([], [[0, 1]])).toEqual([]);
+  });
+});
+
+describe("cutClip's syllables branch", () => {
+  for (const f of FIXTURES) {
+    it(`${f.id} (${f.hanzi}) comes back measured, with its own polyline`, () => {
+      const { samples, sampleRate, f0Center } = fixture(f.file);
+      const cut = cutClip(samples, sampleRate, f0Center, MEASURE_RANGE_SEMITONES, 3, 2);
+      // The three clocks, still three: the clip carries lead-in the tone
+      // window does not, and neither is the source's length.
+      expect(cut.durationMs).toBeGreaterThan(1400);
+      expect(cut.samples.length / sampleRate * 1000).toBeGreaterThanOrEqual(cut.durationMs - 1);
+      expect(cut.sourceMs).toBeGreaterThan(cut.durationMs);
+      expect(cut.polyline!.length).toBeGreaterThanOrEqual(4);
+      expect(cut.polyline![0][0]).toBe(0);
+      expect(cut.polyline![cut.polyline!.length - 1][0]).toBe(1);
+      expect(cut.underSegmented).toBe(f.runs < 2);
+      expect(cut.overSegmented).toBe(false);
+
+      const at = corridor(cut.polyline!);
+      let worst = 0;
+      for (const [t, chao] of cut.contour) worst = Math.max(worst, Math.abs(at(t) - chao));
+      expect(worst).toBeLessThan(MAX_CORRIDOR_ERROR_CHAO);
+    });
+  }
+
+  it("leaves the single-syllable path alone", () => {
+    const { samples, sampleRate, f0Center } = fixture("xiao_shi.wav");
+    const one = cutClip(samples, sampleRate, f0Center, MEASURE_RANGE_SEMITONES, 2);
+    // No polyline and no segmentation flags: the single path is untouched and
+    // its caller still builds the shape with `templateContour`.
+    expect(one.polyline).toBeUndefined();
+    expect(one.underSegmented).toBeUndefined();
+    // And it measures one syllable, not the word: `longestVoicedRun` keeps
+    // the longer side of 小時's 235ms pause and discards the other.
+    const two = cutClip(samples, sampleRate, f0Center, MEASURE_RANGE_SEMITONES, 2, 2);
+    expect(one.durationMs).toBeLessThan(two.durationMs * 0.6);
   });
 });

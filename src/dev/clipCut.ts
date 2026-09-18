@@ -20,6 +20,11 @@ import { computeF0Center, computeRangeSemitones } from "../pitch/calibration.ts"
 import { hzToSemitones } from "../pitch/math.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import type { Tone } from "../game/gates.ts";
+import {
+  multiSyllablePolyline,
+  multiSyllableSpan,
+  type MultiSpan,
+} from "./clipCutMulti.ts";
 
 export const WIN = 2048;
 export const HOP = 1024;
@@ -90,6 +95,20 @@ export interface CutClip {
   contour: ContourPoint[];
   /** Fraction of voiced frames pinned against chao 1 or 5 — see `pinnedWarning`. */
   pinnedFraction: number;
+  /**
+   * The corridor centreline — set only for a multi-syllable cut.
+   *
+   * A single-syllable caller still builds its own with `templateContour`,
+   * which needs the tone to know how many nodes the shape has and what each
+   * one means. A multi-syllable shape has no such template (sandhi), so the
+   * polyline is measured here, where the syllable boundaries are, rather than
+   * asking every caller to carry them.
+   */
+  polyline?: ContourPoint[];
+  /** Multi-syllable only: voicing gave fewer runs than syllables. */
+  underSegmented?: boolean;
+  /** Multi-syllable only: voicing gave more runs than syllables. */
+  overSegmented?: boolean;
 }
 
 /**
@@ -277,8 +296,17 @@ export function cutClip(
   f0Center: number,
   rangeSemitones?: number,
   tone?: Tone,
+  syllables = 1,
 ): CutClip {
-  const run = longestVoicedRun(samples, sampleRate, f0Center, tone);
+  // A word of more than one syllable is measured by `clipCutMulti.ts`, whose
+  // span keeps every voiced run instead of the longest. Everything downstream
+  // of the span — pads, onset backoff, fades, contour — is the code below,
+  // shared, so the two paths cannot drift on the three clocks PRD §6 pins
+  // together. `syllables === 1` reaches none of this.
+  const run =
+    syllables > 1
+      ? multiSyllableSpan(samples, sampleRate, f0Center, syllables)
+      : longestVoicedRun(samples, sampleRate, f0Center, tone);
   if (!run) throw new Error("no voiced frames");
 
   const pad = (PAD_MS / 1000) * sampleRate;
@@ -309,7 +337,36 @@ export function cutClip(
     toneSamples[i] *= i / fade;
     toneSamples[toneSamples.length - 1 - i] *= i / fade;
   }
-  const { contour, pinnedFraction } = measureContour(toneSamples, sampleRate, f0Center, rangeSemitones, tone);
+  // No `tone` on the multi path: `TONE_3_RESCUE` widens the voicing rescue
+  // for an isolated Tone 3's creaky trough, and a word carries several tones
+  // — "the tone" of a 3+2 is not a fact about its second syllable. The
+  // fixtures measure their T3 trough without it.
+  const { contour, pinnedFraction } = measureContour(
+    toneSamples,
+    sampleRate,
+    f0Center,
+    rangeSemitones,
+    syllables > 1 ? undefined : tone,
+  );
+
+  const span = syllables > 1 ? (run as MultiSpan) : null;
+  const multi =
+    span
+      ? {
+          polyline: multiSyllablePolyline(
+            contour,
+            span.runs.map(
+              (r) =>
+                [(r.start - a) / toneSamples.length, (r.end - a) / toneSamples.length] as [
+                  number,
+                  number,
+                ],
+            ),
+          ),
+          underSegmented: span.underSegmented,
+          overSegmented: span.overSegmented,
+        }
+      : {};
 
   return {
     samples: cut,
@@ -320,6 +377,7 @@ export function cutClip(
     sourceMs: (samples.length / sampleRate) * 1000,
     contour,
     pinnedFraction,
+    ...multi,
   };
 }
 
