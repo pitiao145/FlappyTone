@@ -137,3 +137,69 @@ describe("median", () => {
     expect(median([])).toBe(0);
   });
 });
+
+describe("multi-syllable review", () => {
+  const flat = (from: number, to: number, n = 12): ContourPoint[] =>
+    Array.from({ length: n }, (_, i) => [i / (n - 1), from + ((to - from) * i) / (n - 1)] as ContourPoint);
+
+  function review(tones: number[], first: ContourPoint[], second: ContourPoint[]) {
+    // Two syllables laid on one 0..1 timeline with a gap between them.
+    const contour: ContourPoint[] = [
+      ...first.map(([t, c]) => [t * 0.4, c] as ContourPoint),
+      ...second.map(([t, c]) => [0.55 + t * 0.45, c] as ContourPoint),
+    ];
+    return reviewClip({
+      id: "x",
+      tone: tones[0],
+      tones,
+      durationMs: 1500,
+      cohortMedianMs: 1500,
+      pinnedFraction: 0,
+      contour,
+      syllableSpans: [
+        [0, 0.4],
+        [0.55, 1],
+      ],
+    });
+  }
+
+  it("passes a 3+2 whose first syllable stays down", () => {
+    expect(review([3, 2], flat(3.3, 2.6), flat(2.7, 4.4))).toEqual([]);
+  });
+
+  it("flags a 3+2 whose first syllable recovers like a citation third", () => {
+    const dipAndRise: ContourPoint[] = [
+      [0, 3.3], [0.2, 2.4], [0.4, 1.4], [0.6, 1.5], [0.8, 3.0], [1, 4.2],
+    ];
+    expect(review([3, 2], dipAndRise, flat(2.7, 4.4)).map((f) => f.kind)).toContain("shape");
+  });
+
+  it("flags a 3+3 whose first syllable does not rise", () => {
+    expect(review([3, 3], flat(3.3, 2.0), flat(3.0, 4.5)).map((f) => f.kind)).toContain("shape");
+    expect(review([3, 3], flat(2.5, 4.0), flat(3.0, 4.5))).toEqual([]);
+  });
+
+  it("flags a 4+4 that does not fall twice", () => {
+    expect(review([4, 4], flat(4.8, 1.5), flat(4.6, 1.4))).toEqual([]);
+    expect(review([4, 4], flat(4.8, 1.5), flat(2.0, 4.6)).map((f) => f.kind)).toContain("shape");
+  });
+
+  it("says nothing about a combination the reference does not pin down", () => {
+    expect(review([2, 1], flat(2.5, 4.8), flat(4.4, 4.4))).toEqual([]);
+  });
+
+  it("reports how the syllable boundaries were found", () => {
+    const flags = reviewClip({
+      id: "x",
+      tone: 3,
+      tones: [3, 2],
+      durationMs: 1500,
+      cohortMedianMs: 1500,
+      pinnedFraction: 0,
+      contour: flat(3.3, 4.4, 20),
+      syllableSpans: [[0, 0.4], [0.55, 1]],
+      underSegmented: true,
+    });
+    expect(flags.map((f) => f.kind)).toContain("segmentation");
+  });
+});

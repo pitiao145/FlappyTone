@@ -105,6 +105,17 @@ export interface CutClip {
    * asking every caller to carry them.
    */
   polyline?: ContourPoint[];
+  /**
+   * Multi-syllable only: each syllable's extent on `contour`'s own 0..1
+   * timeline.
+   *
+   * Exposed because `polyline` above is fitted to the contour as measured,
+   * and `process-clips` rescales that contour onto canonical chao heights
+   * before it publishes anything. It has to refit, and refitting needs the
+   * boundaries — which are a property of the audio, so they survive the
+   * rescale unchanged while the polyline does not.
+   */
+  syllableSpans?: Array<[number, number]>;
   /** Multi-syllable only: voicing gave fewer runs than syllables. */
   underSegmented?: boolean;
   /** Multi-syllable only: voicing gave more runs than syllables. */
@@ -350,19 +361,15 @@ export function cutClip(
   );
 
   const span = syllables > 1 ? (run as MultiSpan) : null;
+  const syllableSpans = span?.runs.map(
+    (r) =>
+      [(r.start - a) / toneSamples.length, (r.end - a) / toneSamples.length] as [number, number],
+  );
   const multi =
-    span
+    span && syllableSpans
       ? {
-          polyline: multiSyllablePolyline(
-            contour,
-            span.runs.map(
-              (r) =>
-                [(r.start - a) / toneSamples.length, (r.end - a) / toneSamples.length] as [
-                  number,
-                  number,
-                ],
-            ),
-          ),
+          polyline: multiSyllablePolyline(contour, syllableSpans),
+          syllableSpans,
           underSegmented: span.underSegmented,
           overSegmented: span.overSegmented,
         }

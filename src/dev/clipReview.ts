@@ -40,9 +40,19 @@ export interface ReviewInput {
   cohortMedianMs: number;
   /** Whose cohort the median above came from. Report text only. */
   speaker?: string;
+  /**
+   * Every tone of the word, in order. Single-syllable words pass `[tone]`, or
+   * omit it and get the same thing.
+   */
+  tones?: number[];
+  /** Each syllable's extent on the contour's 0..1 timeline. Multi only. */
+  syllableSpans?: Array<[number, number]>;
+  /** From `multiSyllableSpan` — see `MultiSpan`. */
+  underSegmented?: boolean;
+  overSegmented?: boolean;
 }
 
-export type FlagKind = "sparse" | "pinned" | "duration" | "shape";
+export type FlagKind = "sparse" | "pinned" | "duration" | "shape" | "segmentation";
 
 export interface Flag {
   kind: FlagKind;
@@ -140,6 +150,54 @@ function shapeFlag(tone: number, contour: ContourPoint[]): Flag | null {
   }
 }
 
+/**
+ * What a tone pair's first syllable should do, as the technical reference
+ * (`docs/tonepairs/mandarin_tone_pairs_technical_reference.md`) describes it.
+ *
+ * Flags only, exactly like `shapeFlag`, and for the same reason it reads
+ * turning points rather than endpoints. Note what is NOT here: these
+ * expectations never reach a corridor. A real speaker produces the
+ * sandhi-adjusted shape, not the citation form, so the measured polyline is
+ * always the authority — this only catches "she read the wrong line".
+ *
+ * Deliberately narrow. Only the three cases the reference states as
+ * categorical are checked; every other combination passes, because a flag
+ * nobody can act on is worse than no flag.
+ */
+function multiShapeFlag(tones: number[], syllables: ContourPoint[][]): Flag | null {
+  const shape = { kind: "shape" as const };
+  const net = (c: ContourPoint[]) => c[c.length - 1][1] - c[0][1];
+  const combo = tones.join("-");
+
+  if (tones.length !== 2 || syllables.length !== 2) return null;
+  const [first, second] = syllables;
+  if (first.length < 3 || second.length < 3) return null;
+
+  // 3+3: the first third becomes a rising tone. If it still falls and stays
+  // down, the take is two citation thirds, not the word.
+  if (combo === "3-3") {
+    return net(first) > MOVE
+      ? null
+      : { ...shape, message: `3+3's first syllable should rise (sandhi), but it moves ${net(first).toFixed(1)} chao` };
+  }
+  // 3+anything-else: a half-third — it falls and stays down. What marks a
+  // citation third instead is the recovery, so that is what is measured:
+  // how far the syllable climbs back above its own floor before it ends.
+  if (tones[0] === 3) {
+    const recovery = first[first.length - 1][1] - Math.min(...first.map((p) => p[1]));
+    return recovery <= MOVE
+      ? null
+      : { ...shape, message: `${combo}'s first syllable should be a half-third (fall, no recovery), but it climbs ${recovery.toFixed(1)} chao back off its floor` };
+  }
+  // 4+4: both fall, the first one less far.
+  if (combo === "4-4") {
+    return net(first) < -MOVE && net(second) < -MOVE
+      ? null
+      : { ...shape, message: `4+4 should fall twice (${net(first).toFixed(1)}, ${net(second).toFixed(1)} chao)` };
+  }
+  return null;
+}
+
 export function reviewClip(input: ReviewInput): Flag[] {
   const flags: Flag[] = [];
 
@@ -172,10 +230,33 @@ export function reviewClip(input: ReviewInput): Flag[] {
     });
   }
 
+  const tones = input.tones ?? [input.tone];
+
+  if (input.underSegmented) {
+    flags.push({
+      kind: "segmentation",
+      message: `voicing never broke between the ${tones.length} syllables — boundaries taken from the amplitude trough instead`,
+    });
+  }
+  if (input.overSegmented) {
+    flags.push({
+      kind: "segmentation",
+      message: `more voiced runs than the word has syllables — the ${tones.length} longest were kept`,
+    });
+  }
+
   // A squashed contour's shape would be judged against a distortion we have
   // just reported — one cause, one flag.
   if (!squashed) {
-    const shape = shapeFlag(input.tone, input.contour);
+    const shape =
+      tones.length > 1
+        ? multiShapeFlag(
+            tones,
+            (input.syllableSpans ?? []).map(([t0, t1]) =>
+              input.contour.filter((p) => p[0] >= t0 && p[0] <= t1),
+            ),
+          )
+        : shapeFlag(input.tone, input.contour);
     if (shape) flags.push(shape);
   }
 

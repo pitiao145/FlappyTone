@@ -95,6 +95,7 @@ import {
 } from "./clipNormalize.ts";
 import { MIN_REFERENCE_FRAMES, resolveSeed } from "./clipPipeline.ts";
 import { median, reviewClip } from "./clipReview.ts";
+import { multiSyllablePolyline } from "./clipCutMulti.ts";
 import { DEFAULT_POLYLINES } from "../game/tuning.ts";
 import type { Tone } from "../game/gates.ts";
 import { decodeWav, encodeWav } from "./wav.ts";
@@ -188,6 +189,9 @@ console.log(`Speaker ${speaker.id} (${speaker.name}) — pitch-search seed ${see
 interface Row {
   id: string;
   tone: number;
+  /** Every tone of the word, in order. `[tone]` for a single syllable. */
+  tones: Tone[];
+  syllables: number;
   position: number;
   status: string;
   clip_key: string | null;
@@ -204,7 +208,7 @@ interface Row {
  */
 const { data: allRows, error: rowsError } = await supabase
   .from("word_clips")
-  .select("word_id,status,clip_key,raw_key,recorded_session,words!inner(tone,position)")
+  .select("word_id,status,clip_key,raw_key,recorded_session,words!inner(tone,tones,syllables,position)")
   .eq("speaker_id", speakerId);
 if (rowsError) throw new Error(`word_clips select failed: ${rowsError.message}`);
 
@@ -217,11 +221,16 @@ const catalog = ((allRows ?? []) as unknown as {
   clip_key: string | null;
   raw_key: string | null;
   recorded_session: string | null;
-  words: { tone: number; position: number };
+  words: { tone: number; tones: number[] | null; syllables: number | null; position: number };
 }[])
   .map((r): Row => ({
     id: r.word_id,
     tone: r.words.tone,
+    // `tones`/`syllables` have defaults in the schema, but a row written
+    // before 0013 can still read null. A word with neither is single by
+    // definition, which is also what every pre-0013 row is.
+    tones: (r.words.tones?.length ? r.words.tones : [r.words.tone]) as Tone[],
+    syllables: r.words.syllables ?? 1,
     position: r.words.position,
     status: r.status,
     clip_key: r.clip_key,
@@ -252,12 +261,26 @@ if (selected.length === 0) {
   process.exit(0);
 }
 
+/**
+ * What a word is normalised and compared against.
+ *
+ * A single syllable's cohort is its tone, exactly as before. A word of more
+ * than one is its tone COMBINATION — "3-2", never "3" — because sandhi makes
+ * a 3+2's first syllable a different shape and a different length from an
+ * isolated third. Folding the two together would normalise her citation
+ * thirds against half-thirds and flag every one of them for duration.
+ */
+function cohortKey(row: Row): string {
+  return row.syllables > 1 ? row.tones.join("-") : `${row.tone}`;
+}
+
 const selectedIds = new Set(selected.map((r) => r.id));
-const tonesTouched = new Set(selected.map((r) => r.tone));
-// See the header: the chao map belongs to the cohort, so the whole tone is cut
-// even when only part of it is written.
+const cohortsTouched = new Set(selected.map(cohortKey));
+// See the header: the chao map belongs to the cohort, so the whole cohort is
+// cut even when only part of it is written.
 const toCut = catalog.filter(
-  (r) => hasTake(r) && tonesTouched.has(r.tone) && ["recorded", "published"].includes(r.status),
+  (r) =>
+    hasTake(r) && cohortsTouched.has(cohortKey(r)) && ["recorded", "published"].includes(r.status),
 );
 const cohortOnly = toCut.length - selected.length;
 
@@ -425,6 +448,9 @@ for (const [session, takes] of takesBySession) {
 interface Cut {
   row: Row;
   tone: Tone;
+  syllableSpans?: Array<[number, number]>;
+  underSegmented?: boolean;
+  overSegmented?: boolean;
   session: string;
   reference: SessionReference;
   durationMs: number;
@@ -444,10 +470,20 @@ for (const [session, takes] of takesBySession) {
   for (const { row, samples, sampleRate } of takes) {
     const tone = row.tone as Tone;
     try {
-      const clip = cutClip(samples, sampleRate, reference.f0Center, MEASURE_RANGE_SEMITONES, tone);
+      const clip = cutClip(
+        samples,
+        sampleRate,
+        reference.f0Center,
+        MEASURE_RANGE_SEMITONES,
+        tone,
+        row.syllables,
+      );
       cuts.push({
         row,
         tone,
+        syllableSpans: clip.syllableSpans,
+        underSegmented: clip.underSegmented,
+        overSegmented: clip.overSegmented,
         session,
         reference,
         durationMs: clip.durationMs,
@@ -477,18 +513,38 @@ if (cuts.length === 0) {
 // not measured: hers puts a "high level" T1 at chao 3.3. One map per tone, so
 // the differences between a tone's words survive; only the cohort as a whole
 // moves.
-for (const tone of [1, 2, 3, 4] as Tone[]) {
-  const cohort = cuts.filter((c) => c.tone === tone);
-  if (cohort.length === 0) continue;
+//
+// A multi-syllable cohort has no citation polyline of its own to aim at, and
+// must not borrow one: DEFAULT_POLYLINES[3] is an isolated third, which a
+// 3+2's first syllable is precisely not. Its target is the union of the spans
+// its own tones reach — a height calibration for the whole word, leaving the
+// measured shape untouched, which is all this step ever does for a single
+// syllable either.
+//
+// NOTE: not specified by the tone-pairs plan. Nothing multi-syllable is in
+// the catalog yet, so this decides nothing retroactively, but it decides what
+// every future pair corridor is scaled to. Worth a look before Phase 4
+// content lands.
+const cohorts = new Map<string, Cut[]>();
+for (const cut of cuts) {
+  const key = cohortKey(cut.row);
+  if (!cohorts.has(key)) cohorts.set(key, []);
+  cohorts.get(key)!.push(cut);
+}
+for (const [key, cohort] of [...cohorts].sort(([a], [b]) => a.localeCompare(b))) {
   const span = cohortSpan(cohort.map((c) => c.contour));
-  const target = polylineSpan(DEFAULT_POLYLINES[tone]);
+  const targets = cohort[0].row.tones.map((t) => polylineSpan(DEFAULT_POLYLINES[t]));
+  const target = {
+    low: Math.min(...targets.map((t) => t.low)),
+    high: Math.max(...targets.map((t) => t.high)),
+  };
   const map = chaoMapFor(span, target);
   for (const cut of cohort) {
     cut.contour = applyChaoMap(cut.contour, map);
     cut.pinnedFraction = pinnedFractionOf(cut.contour);
   }
   console.log(
-    `T${tone}: measured ${span.low.toFixed(2)}–${span.high.toFixed(2)} chao -> ` +
+    `T${key}: measured ${span.low.toFixed(2)}–${span.high.toFixed(2)} chao -> ` +
       `${target.low.toFixed(2)}–${target.high.toFixed(2)}  (×${map.a.toFixed(2)} ${map.b >= 0 ? "+" : ""}${map.b.toFixed(2)})  ` +
       `from ${cohort.length} take(s)`,
   );
@@ -507,30 +563,35 @@ for (const tone of [1, 2, 3, 4] as Tone[]) {
 // first session, when there is nothing published to compare against yet.
 const { data: publishedDurations, error: durationsError } = await supabase
   .from("word_clips")
-  .select("duration_s,words!inner(tone)")
+  .select("duration_s,words!inner(tone,tones,syllables)")
   .eq("speaker_id", speakerId)
   .eq("status", "published")
   .not("duration_s", "is", null);
 if (durationsError) throw new Error(`word_clips duration select failed: ${durationsError.message}`);
 
-const publishedMsByTone = new Map<number, number[]>();
+const publishedMsByCohort = new Map<string, number[]>();
 for (const row of (publishedDurations ?? []) as unknown as {
   duration_s: number | string;
-  words: { tone: number };
+  words: { tone: number; tones: number[] | null; syllables: number | null };
 }[]) {
-  const tone = row.words.tone;
-  if (!publishedMsByTone.has(tone)) publishedMsByTone.set(tone, []);
-  publishedMsByTone.get(tone)!.push(Number(row.duration_s) * 1000);
+  const key =
+    (row.words.syllables ?? 1) > 1 && row.words.tones?.length
+      ? row.words.tones.join("-")
+      : `${row.words.tone}`;
+  if (!publishedMsByCohort.has(key)) publishedMsByCohort.set(key, []);
+  publishedMsByCohort.get(key)!.push(Number(row.duration_s) * 1000);
 }
 
-const medianByTone = new Map<number, number>();
-for (const tone of [1, 2, 3, 4]) {
-  const published = publishedMsByTone.get(tone) ?? [];
-  medianByTone.set(
-    tone,
+// Every cohort this run touches, plus the four single tones so a single-tone
+// run keeps reporting exactly what it did before.
+const medianByCohort = new Map<string, number>();
+for (const key of new Set([...cohorts.keys(), "1", "2", "3", "4"])) {
+  const published = publishedMsByCohort.get(key) ?? [];
+  medianByCohort.set(
+    key,
     published.length > 0
       ? median(published)
-      : median(cuts.filter((c) => c.tone === tone).map((c) => c.durationMs)),
+      : median(cuts.filter((c) => cohortKey(c.row) === key).map((c) => c.durationMs)),
   );
 }
 
@@ -559,16 +620,20 @@ for (const cut of [...cuts].sort((a, b) => a.row.id.localeCompare(b.row.id))) {
   const flags = reviewClip({
     id: cut.row.id,
     tone: cut.tone,
+    tones: cut.row.tones,
+    syllableSpans: cut.syllableSpans,
+    underSegmented: cut.underSegmented,
+    overSegmented: cut.overSegmented,
     durationMs: cut.durationMs,
     contour: cut.contour,
     pinnedFraction: cut.pinnedFraction,
-    cohortMedianMs: medianByTone.get(cut.tone) ?? 0,
+    cohortMedianMs: medianByCohort.get(cohortKey(cut.row)) ?? 0,
     speaker: speaker.name,
   });
 
   const mark = flags.length ? "⚠" : " ";
   console.log(
-    `${mark} ${selectedHere ? " " : "·"}${cut.row.id.padEnd(10)} T${cut.tone}  ` +
+    `${mark} ${selectedHere ? " " : "·"}${cut.row.id.padEnd(10)} T${cohortKey(cut.row).padEnd(3)} ` +
       `${cut.durationMs.toFixed(0).padStart(5)}ms tone / ` +
       `${cut.clipMs.toFixed(0).padStart(5)}ms clip  ` +
       `${String(cut.contour.length).padStart(3)} frames  (${cut.session})`,
@@ -600,7 +665,14 @@ for (const cut of [...cuts].sort((a, b) => a.row.id.localeCompare(b.row.id))) {
     // Corridor vertices, in the same [t, chao] form as `tuning().polylines`,
     // so a measured word and a hand-tuned tone default are the same kind of
     // object downstream.
-    polyline: templateContour(cut.tone, cut.contour),
+    // Refitted here, not taken from `cutClip`: the contour was rescaled onto
+    // canonical chao heights above, and the polyline has to describe the
+    // contour that actually ships. The syllable boundaries are a property of
+    // the audio, so they survive that rescale and the refit is exact.
+    polyline:
+      cut.row.syllables > 1 && cut.syllableSpans
+        ? multiSyllablePolyline(cut.contour, cut.syllableSpans)
+        : templateContour(cut.tone, cut.contour),
     // Every measured voiced frame — the evidence the polyline was fitted to,
     // kept so a better fit can be derived later without re-cutting.
     contour: cut.contour.map(([t, chao]) => [Number(t.toFixed(4)), Number(chao.toFixed(3))]),
