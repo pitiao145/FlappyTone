@@ -32,6 +32,7 @@ import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { getTier, useTier } from "../data/tier.ts";
 import { wordsForTier } from "../game/words.ts";
 import { TONE_INFO, type Tone } from "../game/gates.ts";
+import { TONE_LINE_COLOR } from "./toneColors.ts";
 import { tuning } from "../game/tuning.ts";
 import { CALIBRATION_TONES, Run, type RunMode, type RunSnapshot, type WordMix } from "../game/run.ts";
 import type { Word } from "../game/words.ts";
@@ -1010,6 +1011,15 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   // tone mid-gate would teach the wrong contour (this matters most in the
   // tutorial, where the cue text is the lesson).
   const displayTone = hud?.activeGate?.tone ?? hud?.upcoming?.tone ?? null;
+  // Every syllable's tone, for a multi-syllable gate's label — falls back to
+  // the single displayTone so a bare-tone gate (no `tones` on its view) still
+  // renders. `TONE_INFO`/the tutorial cue below stay keyed on the single
+  // `displayTone`, since neither the classifier nor per-tone cue text is
+  // multi-syllable aware (see run.ts's `finishGate`).
+  const displayTones =
+    hud?.activeGate?.tones ??
+    hud?.upcoming?.tones ??
+    (displayTone !== null ? [displayTone] : []);
   // The word being flown, when there is one. Its own pinyin and hanzi — the
   // tone's stand-in `ma` is only what a gate without a clip can say.
   const displayWord = hud?.activeGate?.word ?? hud?.upcoming?.word ?? null;
@@ -1118,7 +1128,20 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
               )}
               <span className="syllable">{displayWord?.pinyin ?? info.pinyin}</span>
               <span className="hanzi">{displayWord?.hanzi ?? info.hanzi}</span>
-              <span className="tone-num">({displayTone})</span>
+              {displayTones.length > 1 ? (
+                <span className="tone-num">
+                  (
+                  {displayTones.map((t, i) => (
+                    <span key={i} style={{ color: TONE_LINE_COLOR[t] }}>
+                      {i > 0 ? "·" : ""}
+                      T{t}
+                    </span>
+                  ))}
+                  )
+                </span>
+              ) : (
+                <span className="tone-num">({displayTone})</span>
+              )}
             </div>
           )}
 

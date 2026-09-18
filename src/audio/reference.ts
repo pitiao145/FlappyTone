@@ -13,7 +13,7 @@
 // the v1 synthetic sweep: the tone's corridor polyline swept through the
 // player's own calibrated pitch range.
 import { corridorChaoAt,
-  shapeForTone, GATE_DURATION_S, type Tone } from "../game/gates.ts";
+  shapeForTone, shapeForWord, GATE_DURATION_S, type Tone } from "../game/gates.ts";
 import { RANGE_SEMITONES } from "../pitch/math.ts";
 import type { Word } from "../game/words.ts";
 import { CLIPS_BASE_URL, getPlayTicket, invalidatePlayTicket } from "./clipToken.ts";
@@ -312,14 +312,22 @@ export function playToneCue(
   osc.connect(gain);
   gain.connect(ctx.destination);
 
+  // A multi-syllable word with no clip sweeps its own measured polyline (the
+  // shape-agnostic corridor `shapeForWord` already builds for scoring) rather
+  // than a single tone's corridor — `shapeForTone` only knows one tone and
+  // would sweep just the word's first syllable. A single-syllable gate still
+  // uses the tone's own corridor, unchanged.
+  const shape =
+    word && word.syllables > 1 ? shapeForWord(word) : shapeForTone(tone);
   const now = ctx.currentTime;
-  const durationS = synthCueMsFor(tone) / 1000;
+  const durationS =
+    word && word.syllables > 1 ? word.durationS : synthCueMsFor(tone) / 1000;
   const fadeS = FADE_MS / 1000;
 
   const curve = new Float32Array(CURVE_POINTS);
   for (let i = 0; i < CURVE_POINTS; i++) {
     const t = i / (CURVE_POINTS - 1);
-    const chao = corridorChaoAt(shapeForTone(tone), t);
+    const chao = corridorChaoAt(shape, t);
     curve[i] = chaoToHz(chao, f0Center, rangeSemitones, rangeDownSemitones);
   }
   osc.frequency.setValueCurveAtTime(curve, now, durationS);
