@@ -187,3 +187,32 @@ describe("bounds", () => {
     );
   });
 });
+
+/**
+ * The booth needs no change for two-syllable words: the inter-syllable pause
+ * in real speech (~300ms — see `multiMergeGapMs` in tuning.ts) is well under
+ * `silenceMs` (500ms), which is what actually ends a take. `mergeGapMs` only
+ * affects the reported `utteranceMs` (the longest single run), never where
+ * the recording stops — so a pause between syllables never truncates the take
+ * at the first one. Pinned here so a future change to either constant cannot
+ * silently reintroduce the "recorded half a word" failure mode.
+ */
+describe("two-syllable words (tone pairs)", () => {
+  const FIXTURES = ["hao_wan", "mei_guo", "xiao_shi", "yi_qian"];
+
+  for (const file of FIXTURES) {
+    it(`${file}: accepts one take spanning both syllables`, () => {
+      const { samples, sampleRate } = decodeWav(readFileSync(`fixtures/tonepairs/wav/${file}.wav`));
+      const events = run(samples, sampleRate, JANE_F0_CENTER);
+      expect(events.filter((e) => e.type === "rejected")).toEqual([]);
+      const accepted = events.filter((e) => e.type === "accepted");
+      expect(accepted).toHaveLength(1);
+
+      const take = accepted[0];
+      if (take.type !== "accepted") throw new Error("no take");
+      // Both syllables plus the pause between them: comfortably longer than
+      // any single-syllable clip, and it must not have cut off at the first.
+      expect(take.endMs - take.startMs).toBeGreaterThan(1200);
+    });
+  }
+});
