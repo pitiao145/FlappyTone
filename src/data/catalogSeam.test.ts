@@ -246,7 +246,19 @@ describe("the shipped fallback", () => {
   });
 
   it("points every word at a clip key", () => {
-    for (const w of words) expect(w.clipKey, w.id).toBe(`${w.id}.wav`);
+    // The Worker's GET /clip/:speaker/:id reads `clip_key` as a literal R2
+    // object key (workers/clips/src/routes/clip.ts), so it must match
+    // wherever that word's audio actually was uploaded — and two layouts
+    // coexist legitimately: words processed before the "speaker, not a voice
+    // enum" migration (16 Sep 2026, DECISIONS.md) still sit at the old flat
+    // `{id}.wav` key, since they've never been reprocessed; anything cut by
+    // `process-clips` since then uploads to the speaker-scoped
+    // `clips/{speaker}/{id}.wav` (CLAUDE.md's "clip catalog" section). Both
+    // forms are correct for the row that carries them — this only pins that
+    // every row has ONE of the two, not that the whole catalog agrees.
+    for (const w of words) {
+      expect([`${w.id}.wav`, `clips/jane/${w.id}.wav`], w.id).toContain(w.clipKey);
+    }
   });
 
   it("carries an English gloss for every word", () => {

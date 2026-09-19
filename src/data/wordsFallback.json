@@ -4800,6 +4800,282 @@
       "tone": 4,
       "tones": [],
       "updated_at": "2026-09-15T05:38:14.776997+00:00"
+    },
+    {
+      "clip_key": "clips/jane/haowan32.wav",
+      "clip_s": 1.7968,
+      "created_at": "2026-09-19T00:20:13.464258+00:00",
+      "duration_s": 1.4368,
+      "english": "fun",
+      "hanzi": "好玩",
+      "id": "haowan32",
+      "meta": {
+        "reference": {
+          "session": "2026-09-19-1m1ozb",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        },
+        "references": {
+          "jane": {
+            "session": "2026-09-19-1m1ozb",
+            "f0Center": 201.4,
+            "rangeSemitones": 7.5
+          }
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.234,
+      "pinyin": "hǎo wán",
+      "polyline": [
+        [
+          0,
+          2.69
+        ],
+        [
+          0.097,
+          2.406
+        ],
+        [
+          0.3071,
+          1.283
+        ],
+        [
+          0.403,
+          1.283
+        ],
+        [
+          0.4192,
+          1.175
+        ],
+        [
+          0.501,
+          1.764
+        ],
+        [
+          0.7757,
+          2.362
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "position": 120,
+      "recorded_at": "2026-09-19T00:57:21.86+00:00",
+      "status": "published",
+      "syllables": 2,
+      "tone": 3,
+      "tones": [
+        3,
+        2
+      ],
+      "updated_at": "2026-09-19T00:58:46.312781+00:00"
+    },
+    {
+      "clip_key": "clips/jane/meiguo32.wav",
+      "clip_s": 2.0057,
+      "created_at": "2026-09-19T00:20:13.464258+00:00",
+      "duration_s": 1.6225,
+      "english": "America",
+      "hanzi": "美國",
+      "id": "meiguo32",
+      "meta": {
+        "reference": {
+          "session": "2026-09-19-1m1ozb",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        },
+        "references": {
+          "jane": {
+            "session": "2026-09-19-1m1ozb",
+            "f0Center": 201.4,
+            "rangeSemitones": 7.5
+          }
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.257,
+      "pinyin": "měi guó",
+      "polyline": [
+        [
+          0,
+          2.447
+        ],
+        [
+          0.0859,
+          2.466
+        ],
+        [
+          0.1431,
+          2.879
+        ],
+        [
+          0.3998,
+          1.559
+        ],
+        [
+          0.5143,
+          2.185
+        ],
+        [
+          0.7871,
+          2.078
+        ],
+        [
+          0.873,
+          2.66
+        ],
+        [
+          1,
+          4.084
+        ]
+      ],
+      "position": 121,
+      "recorded_at": "2026-09-19T00:57:25.425+00:00",
+      "status": "published",
+      "syllables": 2,
+      "tone": 3,
+      "tones": [
+        3,
+        2
+      ],
+      "updated_at": "2026-09-19T00:58:46.614938+00:00"
+    },
+    {
+      "clip_key": "clips/jane/xiaoshi32.wav",
+      "clip_s": 2.0754,
+      "created_at": "2026-09-19T00:20:13.464258+00:00",
+      "duration_s": 1.7154,
+      "english": "hour",
+      "hanzi": "小時",
+      "id": "xiaoshi32",
+      "meta": {
+        "reference": {
+          "session": "2026-09-19-1m1ozb",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        },
+        "references": {
+          "jane": {
+            "session": "2026-09-19-1m1ozb",
+            "f0Center": 201.4,
+            "rangeSemitones": 7.5
+          }
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.234,
+      "pinyin": "xiǎo shí",
+      "polyline": [
+        [
+          0,
+          3.162
+        ],
+        [
+          0.0812,
+          2.916
+        ],
+        [
+          0.1895,
+          1.87
+        ],
+        [
+          0.324,
+          1.87
+        ],
+        [
+          0.5,
+          2.226
+        ],
+        [
+          0.7309,
+          2.294
+        ],
+        [
+          0.9204,
+          4.6
+        ],
+        [
+          1,
+          4.6
+        ]
+      ],
+      "position": 122,
+      "recorded_at": "2026-09-19T00:57:30.077+00:00",
+      "status": "published",
+      "syllables": 2,
+      "tone": 3,
+      "tones": [
+        3,
+        2
+      ],
+      "updated_at": "2026-09-19T00:58:46.942835+00:00"
+    },
+    {
+      "clip_key": "clips/jane/yiqian32.wav",
+      "clip_s": 2.0754,
+      "created_at": "2026-09-19T00:20:13.464258+00:00",
+      "duration_s": 1.7154,
+      "english": "before",
+      "hanzi": "以前",
+      "id": "yiqian32",
+      "meta": {
+        "reference": {
+          "session": "2026-09-19-1m1ozb",
+          "f0Center": 201.4,
+          "rangeSemitones": 7.5
+        },
+        "references": {
+          "jane": {
+            "session": "2026-09-19-1m1ozb",
+            "f0Center": 201.4,
+            "rangeSemitones": 7.5
+          }
+        }
+      },
+      "min_tier": "free",
+      "onset_s": 0.234,
+      "pinyin": "yǐ qián",
+      "polyline": [
+        [
+          0,
+          3.306
+        ],
+        [
+          0.1354,
+          2.925
+        ],
+        [
+          0.3105,
+          1.563
+        ],
+        [
+          0.4729,
+          2.442
+        ],
+        [
+          0.5956,
+          1.949
+        ],
+        [
+          0.7309,
+          2.086
+        ],
+        [
+          1,
+          4.721
+        ]
+      ],
+      "position": 123,
+      "recorded_at": "2026-09-19T00:57:33.979+00:00",
+      "status": "published",
+      "syllables": 2,
+      "tone": 3,
+      "tones": [
+        3,
+        2
+      ],
+      "updated_at": "2026-09-19T00:58:47.178439+00:00"
     }
   ]
 }

@@ -222,23 +222,28 @@ describe("wordsForTier", () => {
  * agree: a word a tier's run can fly is a word whose clip that tier can fetch.
  *
  * The shipped catalog marks everything `free` today, so every tier flies all
- * 120 words — exactly what production always did. A run pool of 20 for a guest
+ * of it — exactly what production always did. A run pool of 20 for a guest
  * is the regression this guards (the visualiser's 5-per-tone practice depth is
  * a COUNT, `TIER_LIMITS.wordsPerTone`, and must never reach this pool).
+ *
+ * 124, not 120, since the tone-pairs-v1 batch (Phase 4): `wordsFromCatalog`
+ * and `wordsForTier` don't know about syllable count at all — the classic
+ * run pool is single-syllable by construction because `Game.tsx` filters on
+ * it separately (see docs/DECISIONS.md), not because either of these do.
  */
 describe("the shipped catalog is open to every tier's game", () => {
   const catalog = wordsFromCatalog(
     (fallback.rows as Record<string, unknown>[]).map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID })),
   );
 
-  it("ships 120 published words", () => {
-    expect(catalog).toHaveLength(120);
+  it("ships 124 published words", () => {
+    expect(catalog).toHaveLength(124);
   });
 
   it("gives a guest's run pool every word, not a per-tone slice", () => {
-    expect(wordsForTier(catalog, "guest")).toHaveLength(120);
-    expect(wordsForTier(catalog, "free")).toHaveLength(120);
-    expect(wordsForTier(catalog, "pro")).toHaveLength(120);
+    expect(wordsForTier(catalog, "guest")).toHaveLength(124);
+    expect(wordsForTier(catalog, "free")).toHaveLength(124);
+    expect(wordsForTier(catalog, "pro")).toHaveLength(124);
   });
 
   it("has no pro-gated word left in the catalog", () => {
