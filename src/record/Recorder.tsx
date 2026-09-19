@@ -243,9 +243,30 @@ export function Recorder({
     };
   }, [markCaptured, uploader]);
 
-  // Leaving this screen turns the microphone off for real — the overview is
-  // not a place where anything can be recorded.
-  useEffect(() => () => stopMic(), []);
+  /**
+   * Leaving this screen turns the microphone off for real — the overview is
+   * not a place where anything can be recorded.
+   *
+   * This used to be `useEffect(() => () => stopMic(), [])`. That is exactly
+   * the React StrictMode pitfall the docs warn about: in dev, StrictMode
+   * mounts every component, immediately fires its effects' cleanup as a
+   * diagnostic, then mounts again — connect/disconnect effects are supposed
+   * to reconnect on that second setup, but this one only ever disconnected.
+   * Since `ensureMic()` already resolved (in Overview's click handler)
+   * *before* Recorder ever mounts, the synthetic cleanup killed an
+   * already-live mic session moments after she started speaking: Chrome's
+   * tab indicator would flash on then off, the level bar never moved, and
+   * nothing re-acquired the stream because nothing else was watching for it.
+   * Production never double-invokes effects, so this never showed up there —
+   * only in `npm run dev`, which is exactly the setup that surfaced it.
+   *
+   * Fixed by tying `stopMic()` to the actual "leave" gesture (every path back
+   * to the list goes through this) instead of a mount/unmount lifecycle.
+   */
+  const exitAndStopMic = useCallback(() => {
+    stopMic();
+    onExit();
+  }, [onExit]);
 
   const goTo = useCallback(
     (word: BoothWord) => {
@@ -265,7 +286,7 @@ export function Recorder({
     return (
       <div className="rec rec-gate">
         <p className="rec-warn">Lost track of the current word.</p>
-        <button className="rec-btn rec-btn-primary" onClick={onExit}>
+        <button className="rec-btn rec-btn-primary" onClick={exitAndStopMic}>
           Back to list
         </button>
       </div>
@@ -290,7 +311,7 @@ export function Recorder({
             </button>
           </>
         )}
-        <button className="rec-btn rec-btn-primary" onClick={onExit}>
+        <button className="rec-btn rec-btn-primary" onClick={exitAndStopMic}>
           Back to list
         </button>
       </div>
@@ -389,7 +410,7 @@ export function Recorder({
       )}
 
       <div className="rec-footer">
-        <button className="rec-btn" onClick={onExit}>
+        <button className="rec-btn" onClick={exitAndStopMic}>
           Back to list
         </button>
         {uploads.failed > 0 && (
