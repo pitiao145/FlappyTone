@@ -145,16 +145,30 @@ Rules that hold the pipeline together — see DECISIONS.md for the incidents beh
 
 **The prefetch (`src/audio/prefetch.ts`) is two ordered tiers** — the queued gates' exact words first, then a mode-scoped slice capped at `tuning().prefetchWordsPerTone`, never the whole catalog at once. It does not clone the run's RNG to predict `pickWord`'s draw (that would change the run); only the exact tier is guaranteed correct. `learn` mode fetches nothing (always cues synthetically).
 
-## Tone pairs — exploration only, not shipped
+## Tone pairs — shipped
 
-`src/dev/TonePairs.tsx` is a **Lab-only, dev-gated tab** (not wired into any gameplay path) for evaluating whether the single-syllable gate pipeline generalizes to two-syllable words. `npm run tonepairs:generate` (`src/dev/generate-tonepair-polylines.ts`) measures real tone-pair recordings from `fixtures/tonepairs/` into `src/dev/tonePairPolylines.json`; `tonePairTheory.ts` renders the *textbook* citation+sandhi shape (per `docs/tonepairs/mandarin_tone_pairs_technical_reference.md`) as a comparison overlay only — it does not and should not feed any production path, since a real speaker naturally produces the sandhi-adjusted shape, not the citation form (confirmed against all four measured fixtures).
+Two-syllable words are a real, player-reachable mode now, not exploration. Both gates below read the live inventory and only appear once it holds a multi-syllable word — currently `multiWords(inventory).length > 0` is true (the `tonepairs-v1` batch, four words: 好玩/美國/小時/以前), so they are **live for every player today**, not dev-gated:
 
-**Findings, in `docs/tonepairs/tone-pairs-implementation-review.md`:** gate geometry/scoring/rendering (`shapeForWord`, `corridorChaoAt`, `corridorToleranceAt`, `drawVisualiser`) is reusable unchanged — confirmed by rendering real recordings through the production renderer. Two real gaps before this could ship:
+- **Modes → "Tone pairs"** (`src/ui/ModeSelect.tsx`): shuffle across every combo the tier's own words can build a gate from, or drill one tone combo.
+- **Settings → word mix** (`src/ui/Settings.tsx`): the classic `game` mode can fly single syllables, pairs, or a shuffled mix of both (`WordMix`, `wordMix` setting). `tuning().multiGateChance` (default 0.5) is the per-gate draw odds when mix is `"all"` — not a measured value, retune from the Lab once pairs have actually been flown in classic mode.
 
-1. **Clip measurement isn't reusable as-is.** `clipCut.ts`'s `longestVoicedRun` finds one voiced run and discards the rest — wrong for a pair, where both syllables and the pause between them matter. `generate-tonepair-polylines.ts` works around this with bespoke merge-gap span-finding; production needs a real multi-syllable-aware counterpart to `longestVoicedRun`/`templateContour`, not a call-site patch.
-2. **`tone: Tone` is assumed single-valued** in `TOLERANCE_FACTOR`, the tone-mismatch classifier, HUD labeling, and `pickWord`'s repeat-avoidance sequencing. Each needs an explicit per-gate-with-two-tones decision before shipping — none of it is a silent `Tone[]` swap.
+**Engine:** `RunMode` gained `"pairs"` (`src/game/run.ts`). A pair gate holds through its inter-syllable pause rather than drifting toward centre — `tuning().multiMergeGapMs` (default 400ms, wider than the single-syllable `mergeGapMs`'s 150ms on purpose: a deliberate pause between syllables is not the same signal as a within-syllable creak gap) is the window a pause must fit inside to still read as one utterance. See DECISIONS.md's "pair gates hold through the pause, not drift" for the incident this fixed.
 
-If you're extending this: read the implementation review first, and don't wire `tonePairTheory.ts`'s citation shapes into anything a player sees — they're a validation tool against measured audio, not a contour source.
+**Corridor geometry is unchanged and reused as-is** (`shapeForWord`, `corridorChaoAt`, `corridorToleranceAt`, `drawVisualiser`) — the implementation review's finding that these are shape-agnostic held. `corridorToleranceAt` widens for a pair by taking `max(TOLERANCE_FACTOR[t] for t in tones)` across every syllable's tone, not just the first.
+
+**The three things the implementation review flagged as real gaps are now explicit, resolved decisions, not silent single-tone assumptions:**
+
+1. **Clip measurement**: `src/dev/clipCutMulti.ts` is the real, production multi-syllable-aware counterpart to `clipCut.ts`'s `longestVoicedRun`/`templateContour` — used by `process-clips.ts` for any word with `syllables > 1`, not a dev-only workaround. Deliberately **shape-agnostic**, no per-tone node template: sandhi means a tone's realised shape depends on what follows it (a 3+2 first syllable never reaches chao 5; a 3+3 first syllable rises like a Tone 2), so a corridor built from citation templates would teach a shape the speaker did not produce. See DECISIONS.md.
+2. **`tone: Tone` assumed single-valued**: resolved per call site, not genericized —
+   - `TOLERANCE_FACTOR` takes a max across the gate's `tones` array (above).
+   - The tone-mismatch classifier (`isDrasticToneMismatch`) and the correct-tone accuracy boost (`applyClassifierBoost`) are both **off for `syllables > 1` gates**, on purpose (`src/game/run.ts`) — the classifier is trained and tuned on single-syllable shapes only, and running it against a two-syllable contour would misread every gate.
+   - Lifetime per-tone stats (`RunStats.perTone`) skip multi-syllable gates entirely rather than attributing them to the first tone (`applyGate` in `src/game/scoring.ts`) — see DECISIONS.md's "classic pool is single-syllable by construction."
+   - HUD labeling renders each syllable's tone separately, colored per tone.
+   - `pickMultiWord` (`src/game/words.ts`) is `pickWord`'s own counterpart for the multi pool — same recent-window repeat-avoidance logic, keyed on `toneComboKey`.
+
+**`src/dev/TonePairs.tsx` stays a separate, still-dev-only Lab tab** — not the shipped mode above, a tool for evaluating measured fixtures against the *textbook* citation+sandhi shape (per `docs/tonepairs/mandarin_tone_pairs_technical_reference.md`). `tonePairTheory.ts`'s citation shapes still must never feed anything a player sees — they're a validation tool against measured audio, not a contour source. `npm run tonepairs:generate` (`src/dev/generate-tonepair-polylines.ts`) still measures `fixtures/tonepairs/` into `src/dev/tonePairPolylines.json` for that comparison; it does not feed the shipped pipeline (that's `clipCutMulti.ts`, above, run through the real `process-clips`).
+
+**Content pipeline is the same as single-syllable words**, syllable count aside: `npm run import-words` already parsed multi-syllable pinyin (space or numeric); the booth (`/record`) needed no change — `TakeDetector`'s `silenceMs` (500ms) is what ends a take, not `mergeGapMs`, and a real inter-syllable pause (~300ms) is comfortably under it, so a two-syllable take is captured whole without truncating at the first syllable. `process-clips -- --speaker <id>` and `export-fallback` both just work on `syllables > 1` rows already.
 
 ## Play analytics
 
@@ -188,7 +202,7 @@ Ground truth is `fixtures/captures/jane_*.wav` (native Taiwanese speaker, direct
 
 ## Out of scope
 
-Speech recognition or syllable verification (beyond the standalone tone-shape classifier) · tone sandhi / multi-syllable words / sentences as a shipped feature (see "Tone pairs" above — exploration only) · native app builds · listening/perception drills · payments/billing of our own (Lemon Squeezy is merchant of record; `api/webhook-ls.ts` only reacts to its webhook) · voice-clip storage beyond the current R2/Worker pipeline.
+Speech recognition or syllable verification (beyond the standalone tone-shape classifier) · tone sandhi as an explicit, taught concept (a pair's corridor is measured shape-agnostic from the speaker's own contour — see "Tone pairs" above — but nothing surfaces the *rule* to a player) · connected speech / sentences / anything past two syllables · native app builds · listening/perception drills · payments/billing of our own (Lemon Squeezy is merchant of record; `api/webhook-ls.ts` only reacts to its webhook) · voice-clip storage beyond the current R2/Worker pipeline.
 
 ## Before accounts go live — Supabase settings, not code
 

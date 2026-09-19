@@ -286,6 +286,95 @@ everything. `lastRuns` and `lastPlayedDate` stay local: one is a display cache
 of *this* device, the other decides whether today continues the streak, and
 neither has an honest cross-device answer.
 
+## Tone pairs
+
+### The booth silently killed the mic on a fresh `npm run dev`, only surfaced by recording pairs (19 Sep 2026)
+
+Recording the `tonepairs-v1` batch was the first time this session's local
+booth flow had actually been exercised end to end against `npm run dev` —
+Jane's original 120 words were recorded some other way. It exposed a real,
+unrelated bug that had nothing to do with multi-syllable words themselves:
+`Recorder.tsx` tied `stopMic()` to a bare `useEffect(() => () => stopMic(),
+[])`. React StrictMode (dev only) mounts every component, fires its effects'
+cleanup once as a diagnostic, then mounts again — an effect that connects is
+expected to reconnect on that second setup; this one only ever disconnected,
+since the actual `ensureMic()` happens earlier, in `Overview.tsx`'s click
+handler, before `Recorder` ever mounts. So every entry into the booth in dev
+killed an already-live mic session moments after arming: Chrome's tab
+indicator flashed on then off, macOS's own input indicator never got the
+chance to settle, the level meter never moved, and nothing re-acquired the
+stream because nothing was watching for that *kind* of loss — it's a clean
+`stopMic()`, not a track `ended`/`mute` event, so `onMicLost`'s recovery path
+(below) never even fired; mic status went straight to `"idle"`.
+
+Fixed by tying `stopMic()` to the actual "leave the booth" click (every path
+back to the list already funnelled through one place) instead of the mount
+lifecycle. Production never double-invokes effects, so this was invisible
+there the whole time — only local dev testing, which is what actually
+changed in this session, not the branch's own code.
+
+Separately, and worth keeping even though it wasn't the root cause here: the
+booth never surfaced `subscribeMicStatus()` (`src/audio/session.ts`) at all,
+unlike the game's `MicStatusBanner`. A genuine OS-level track loss
+(`ended`/`mute` — a Bluetooth mic switching profile is the common real-world
+trigger) left Jane with no signal and no way to recover, since the booth's
+Pause/Resume button only toggles the take detector, never the real
+`MediaStream` (deliberately, so pausing doesn't drop the pre-roll buffer).
+`Recorder.tsx` now shows a banner while mic status isn't `"live"`/`"idle"`,
+plus a manual "Reconnect mic" button for when `recoverMic()`'s own retry has
+already given up.
+
+### Shape-agnostic corridor for multi-syllable words, because sandhi (18–19 Sep 2026)
+
+A pair's corridor is measured from that recording's own contour
+(`src/dev/clipCutMulti.ts`), not built from the single-syllable per-tone node
+templates `templateContour` uses. Sandhi is why: a tone's realised shape
+depends on what follows it — a 3+2 first syllable never reaches chao 5, a 3+3
+first syllable rises like a Tone 2 — so a corridor built from citation
+templates would teach a shape the speaker did not produce, which is the one
+thing the call-and-response contract (demo, then fly what you just heard)
+cannot survive. This mirrors `AVERAGED_TONE_SHAPE`/`toneClassifier.ts`
+staying voice-independent for a parallel reason (see "A speaker, not a voice
+enum" below): both are cases where genericizing would teach the wrong thing
+to every player, not just save a line of code.
+
+Confirmed by rendering real tone-pair recordings through the production
+renderer (`shapeForWord`, `corridorChaoAt`, `corridorToleranceAt`,
+`drawVisualiser`) unchanged — the implementation review's finding that gate
+geometry needs no multi-syllable-specific code held all the way to shipping.
+The one geometry change was `corridorToleranceAt`'s width factor: a pair
+takes `max(TOLERANCE_FACTOR[t] for t in tones)` across every syllable's tone,
+not just the first, so a pair with one Tone 3 syllable gets Tone 3's wider
+tolerance even if the other syllable is a Tone 1.
+
+### Classic pool is single-syllable by construction (18–19 Sep 2026)
+
+`min_tier` (game access) and syllable count are different gates, same as
+`min_tier` and `TIER_LIMITS.wordsPerTone` are different gates (see "Two tier
+gates, two meanings" below) — conflating either pair was already a documented
+incident once, so this one was built as an explicit filter from day one
+rather than left to fall out of whatever `pickWord` happened to touch.
+`isSingle(w)`/`wordsOfTone` restrict the classic run's own pool to
+`syllables === 1`; the multi pool (`multiWords`/`pickMultiWord`) is a
+parallel, separate draw, not a superset filtered at score time. Three
+downstream places that would otherwise have silently assumed one tone per
+gate instead say so explicitly:
+
+- The tone-mismatch classifier (`isDrasticToneMismatch`) and its accuracy
+  boost (`applyClassifierBoost`) are both off for `syllables > 1` gates
+  (`src/game/run.ts`) — the classifier is trained and tuned on
+  single-syllable shapes only, and running it against a two-syllable contour
+  would misread every gate, not just decline to help.
+- Lifetime per-tone stats (`RunStats.perTone`, `applyGate` in
+  `src/game/scoring.ts`) skip multi-syllable gates entirely rather than
+  crediting them to the first tone — a pair's outcome is real, but it isn't
+  a fact about that one tone.
+- `wordsFromCatalog`/`wordsForTier` (`src/game/words.ts`) don't filter by
+  syllable count at all — the catalog test asserting "120 published words"
+  had to grow to 124 once the pair batch published, precisely because that
+  test exercises the raw catalog, not `Game.tsx`'s own separate syllable
+  filter. The two must not be conflated when reading test counts either.
+
 ## Clip pipeline
 
 ### A speaker, not a voice enum (16 Sep 2026)

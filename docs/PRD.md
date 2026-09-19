@@ -21,9 +21,18 @@ The four Mandarin tone marks (ˉ ˊ ˇ ˋ) are literally pitch-contour diagrams.
 ## 3. Non-goals
 
 - Speech recognition / syllable verification (ASR)
-- Tone sandhi, connected speech, multi-syllable words, sentences
+- Tone sandhi as an explicit, taught concept; connected speech past two syllables; sentences
 - Native/mobile app build
 - Tone perception (listening) drills
+
+**Two-syllable words ("tone pairs") shipped and are player-reachable** (no
+longer a non-goal, no longer Lab-only exploration): a `pairs` run mode from
+Modes, and a `wordMix` setting letting the classic run fly single syllables,
+pairs, or a shuffle of both — see §8 and CLAUDE.md's "Tone pairs" section.
+The corridor for a pair is measured shape-agnostic from the speaker's own
+contour, not a per-tone template (sandhi means the realised shape of a tone
+depends on what follows it), so nothing here teaches the *rule* of sandhi —
+it just doesn't fight the speaker for producing it naturally.
 
 **Accounts, a backend and monetisation are roadmapped, no longer non-goals**
 (that deliberate decision is logged in `docs/DECISIONS.md`): accounts + auth +
@@ -276,15 +285,16 @@ settings, not code, and they now affect real signups.
 
 Actual screen set (`src/app/GameApp.tsx`'s `Screen` type): `play` (title/home), `modes`, `howto`, `calibrate`, `finetune`, `tutorial`, `seeding`, `tutorialdone`, `game`, `drill`, `learn`, `gameover`, `settings`, `visualiser`, `progress`, `profile`, `lab` (dev only), `devlogin` (dev only).
 
-**Run modes** (`RunMode` in `src/game/run.ts`): `game` (the real run), `tutorial`, `single`, `drill` (practice one tone repeatedly), `learn`. Chosen from the `modes` screen.
+**Run modes** (`RunMode` in `src/game/run.ts`): `game` (the real run), `tutorial`, `single`, `drill` (practice one tone repeatedly), `learn`, `pairs` (two-syllable words, shuffled across every combo the tier's inventory can build or drilled on one combo). Chosen from the `modes` screen.
 
 - **Title/Play home** — Play, Modes, Calibrate, Settings, How to play, and tabs into Progress/Profile.
 - **Calibration** — as in §5.4, plus a re-calibrate/forget path from Settings.
-- **Settings** — voice (calibration read-back, re-calibrate, forget), tunnel width, motion preference, link into the visualiser. The voice section also carries the **recorded-voice switch**: which speaker's recordings the player hears and whose corridors they fly. It is auto-picked from their measured f0 centre during calibration and never re-guessed once chosen, and it is hidden entirely while fewer than two speakers are active — so with today's one-voice roster it does not render. It matches pitch range, not the player: a low-voiced woman flying the man's recordings is the intended outcome.
+- **Settings** — voice (calibration read-back, re-calibrate, forget), tunnel width, motion preference, link into the visualiser. The voice section also carries the **recorded-voice switch**: which speaker's recordings the player hears and whose corridors they fly. It is auto-picked from their measured f0 centre during calibration and never re-guessed once chosen, and it is hidden entirely while fewer than two speakers are active — so with today's one-voice roster it does not render. It matches pitch range, not the player: a low-voiced woman flying the man's recordings is the intended outcome. Settings also carries a **word mix** control (single / pairs / a shuffled mix) for the classic `game` mode, hidden the same way while the inventory holds no multi-syllable word.
 - **Tone visualiser** — no gates, no scrolling, no score; x is time-since-utterance-began so repeated attempts overlay each other and the target contour, and the standalone tone classifier gives a live read of which tone a shape most resembles.
 - **Tutorial run** — fixed short sequence, one tone type at a time, double tolerance, no hearts, no scoring, text cue per gate.
 - **Drill** — repeated single-tone practice, picked from `modes`.
 - **Game** — the scored run: hearts, combo, difficulty ramp.
+- **Tone pairs** — the `pairs` run mode: shuffle across every two-syllable combo the tier's own words can build a gate from, or drill one combo. The corridor is measured from the speaker's own two-syllable contour, not built from per-tone templates (§6 and CLAUDE.md's "Tone pairs" section have the detail). The tone-mismatch classifier and its accuracy boost (§7) are both off for these gates; lifetime per-tone stats don't count them either — both explicit, not silent single-tone shortcuts.
 - **Game over** — total score, best combo, per-tone accuracy breakdown, one-line takeaway (§7).
 - **Progress** — lifetime run/gate/word counts and the last 5 runs' per-tone accuracy, from `runHistory.ts` (device-local), plus the live weekly leaderboard (§7.1), which is the one section here reading from a server.
 - **Profile** — real account UI now (`src/ui/AccountCard.tsx`): signup/login/rename for a player with an account, backed by the same local-first stats. Shows the daily run count against the player's actual tier limit (`dailyLimit.ts`/`TIER_LIMITS`) and their board name, generated or chosen (Pro only), so they can find their own row.
@@ -316,7 +326,7 @@ Reference audio plays before the gate arrives (call-and-response): hear it, then
 ## 11. Known limitations — state these in the product, not just here
 
 1. **Humming beats it, partially.** No syllable verification, but the tone-mismatch classifier (§7) now catches some of the worst cross-tone cases — not a full fix, and it has its own documented gaps (DECISIONS.md).
-2. **Isolated syllables only.** No connected speech, no sandhi.
+2. **Two syllables at most, no connected speech.** Tone pairs (§8) fly real two-syllable words with a shape-agnostic corridor, so a player's natural sandhi is not fought — but nothing teaches sandhi as a rule, and nothing past two syllables is supported.
 3. **Tones aren't only pitch.** Duration and amplitude carry real cues the game doesn't measure.
 4. **T1/T3 gate duration no longer matches their reference clip's length** (§6) — a known scoring/demo mismatch, not yet resolved.
 5. **Vocal fatigue.** Runs are kept short by design.
@@ -326,4 +336,4 @@ Reference audio plays before the gate arrives (call-and-response): hear it, then
 - Does the trail read better as a solid line, dots-per-frame, or a fading ribbon? (Unresolved — not re-verified since the original v1 build; check current `render/` before assuming either way.)
 - Which register (Taiwan vs Beijing) should new content default to if the inventory is ever extended past Jane's voice with a speaker from a different region? Still open — today's second-voice work only adds gender variation, not region.
 - Does anyone play it twice? Read this from PostHog, not a local report script.
-- Tone pairs (two-syllable words): exploration only, not a committed feature. See CLAUDE.md's "Tone pairs" section and `docs/tonepairs/tone-pairs-implementation-review.md` for what's confirmed reusable and what's still a real gap before this could ship.
+- Tone pairs shipped (four words, `tonepairs-v1`). Should the next content batch grow that same list, or start a second one? And is `multiGateChance` (0.5, unmeasured) the right default mix once there's enough pair inventory to actually feel a difficulty curve? See CLAUDE.md's "Tone pairs" section.
