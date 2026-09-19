@@ -982,9 +982,22 @@ export class Run {
     return this.stats.hearts <= 0;
   }
 
+  /**
+   * A multi-syllable gate's inter-syllable pause gets `multiMergeGapMs`
+   * (same threshold `heardUtterance` uses to treat both syllables as one
+   * attempt) instead of the single-syllable default — the gap is expected
+   * silence, not a dropout, and the ordinary 120ms grace let the bird start
+   * drifting to centre mid-pause, flying through whatever the bridging
+   * spline was doing there instead of holding. T3 still wins over both: any
+   * T3 syllable holds indefinitely regardless of syllable count.
+   */
   private inGrace(nowMs: number): boolean {
-    const graceMs =
-      this.active?.gate.tones.includes(3) ? tuning().t3GraceMs : tuning().graceMs;
+    const tones = this.active?.gate.tones;
+    const graceMs = tones?.includes(3)
+      ? tuning().t3GraceMs
+      : tones && tones.length > 1
+        ? tuning().multiMergeGapMs
+        : tuning().graceMs;
     return nowMs - this.lastVoicedAt <= graceMs;
   }
 

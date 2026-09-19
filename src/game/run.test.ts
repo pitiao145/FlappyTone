@@ -1610,6 +1610,102 @@ describe("Run — pairs mode and word mix", () => {
     expect(log.some((g) => g.outcome !== "unheard")).toBe(true);
   });
 
+  it("holds position (no drift) through a 300ms inter-syllable pause on a non-T3 pair", () => {
+    // Same shape as the T3 hold test above, but for a combo with no T3
+    // syllable — the pause between the two syllables must not be treated as
+    // a dropout on its own default (120ms) grace.
+    setTuning({ toneMismatchCollisionEnabled: false });
+    const run = new Run({
+      mode: "pairs",
+      width: W,
+      words: multiWordsFrom([
+        {
+          id: "yiqian",
+          hanzi: "以前",
+          pinyin: "yǐqián",
+          tones: [1, 2],
+          file: "fixture:yi_qian",
+          durationS: 1.1,
+          polyline: [
+            [0, 4.5],
+            [1, 4.5],
+          ],
+        },
+      ]),
+    });
+    let silenceStart: number | null = null;
+    let chaoAtSilence = 0;
+    const chaosDuringSilence: number[] = [];
+
+    simulate(run, 400, (s, i) => {
+      const inGate = s.activeGate !== null;
+      if (inGate && s.activeGate!.t > 0.3 && silenceStart === null) {
+        silenceStart = i;
+        chaoAtSilence = s.birdChao;
+      }
+      const silent =
+        silenceStart !== null && i - silenceStart < Math.round(300 / DT);
+      if (silent) {
+        chaosDuringSilence.push(s.birdChao);
+        return pitch(null, s.birdChao);
+      }
+      return trackCorridor(s);
+    });
+
+    expect(silenceStart).not.toBeNull();
+    // 300ms fits inside multiMergeGapMs (400ms default); 300ms of drift
+    // toward chao 3 would move the dot by ~1.6 chao (5.33 chao/s).
+    const driftIn300ms = (5.33 * 300) / 1000;
+    for (const c of chaosDuringSilence) {
+      expect(Math.abs(c - chaoAtSilence)).toBeLessThan(driftIn300ms / 4);
+    }
+    resetTuning();
+  });
+
+  it("drifts toward centre once a non-T3 pair's pause exceeds multiMergeGapMs", () => {
+    // Confirms the grace extension is bounded, not accidentally infinite —
+    // only T3 gates hold forever.
+    setTuning({ toneMismatchCollisionEnabled: false });
+    const run = new Run({
+      mode: "pairs",
+      width: W,
+      words: multiWordsFrom([
+        {
+          id: "yiqian",
+          hanzi: "以前",
+          pinyin: "yǐqián",
+          tones: [1, 2],
+          file: "fixture:yi_qian",
+          durationS: 1.1,
+          polyline: [
+            [0, 4.5],
+            [1, 4.5],
+          ],
+        },
+      ]),
+    });
+    let silenceStart: number | null = null;
+    let chaoAtSilence = 0;
+
+    const { snapshots } = simulate(run, 400, (s, i) => {
+      const inGate = s.activeGate !== null;
+      if (inGate && s.activeGate!.t > 0.3 && silenceStart === null) {
+        silenceStart = i;
+        chaoAtSilence = s.birdChao;
+      }
+      if (silenceStart !== null) return pitch(null, s.birdChao);
+      return trackCorridor(s);
+    });
+
+    expect(silenceStart).not.toBeNull();
+    const last = snapshots[snapshots.length - 1];
+    // Left silent for the whole rest of the simulation (well past the 400ms
+    // multiMergeGapMs grace), the dot must have moved measurably toward
+    // REST_CHAO (3) rather than staying held at the gate's own chao (4.5).
+    expect(Math.abs(last.birdChao - chaoAtSilence)).toBeGreaterThan(0.5);
+    resetTuning();
+  });
+
   it("a pairs drill on a combo the inventory has none of ends the run cleanly, not by running out of hearts", () => {
     // The inventory only has 3+2 words; drilling 4+4 has an empty pool from
     // gate zero — no bare-tone fallback, the run just ends.
