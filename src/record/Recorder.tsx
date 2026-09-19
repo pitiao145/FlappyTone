@@ -20,7 +20,8 @@
  * readout.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { setFrameSink, stopMic } from "../audio/session.ts";
+import { recoverMic, setFrameSink, stopMic } from "../audio/session.ts";
+import { useMicStatus } from "../ui/MicStatus.tsx";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { encodeWav } from "../dev/wav.ts";
 import { TakeBuffer } from "./takeBuffer.ts";
@@ -87,6 +88,21 @@ export function Recorder({
     initialArmed(entry) ? { kind: "idle" } : { kind: "paused" },
   );
   const [level, setLevel] = useState(0);
+  /**
+   * The game's `MicStatusBanner` is a passive display — a dead-end reads
+   * "reopen the app" because a player mid-run has nowhere better to go. The
+   * booth is not that: Pause/Resume never touches the real stream (see the
+   * frame-sink effect below), so once a track dies (an OS interruption —
+   * observed with a Bluetooth mic a few seconds into a take) there is nothing
+   * in this screen that can bring it back on its own if `recoverMic()`'s own
+   * retry fails. A manual reconnect button is the only way out of that state.
+   */
+  const micStatus = useMicStatus();
+  const [reconnecting, setReconnecting] = useState(false);
+  const handleReconnect = useCallback(() => {
+    setReconnecting(true);
+    void recoverMic().finally(() => setReconnecting(false));
+  }, []);
   const [showRecorded, setShowRecorded] = useState(false);
   const [confirming, setConfirming] = useState<BoothWord | null>(null);
 
@@ -285,6 +301,21 @@ export function Recorder({
 
   return (
     <div className={"rec" + (armed ? "" : " rec-paused")}>
+      {micStatus !== "live" && micStatus !== "idle" && (
+        <div className="rec-mic-banner" role="status" aria-live="polite">
+          <span>
+            {micStatus === "recovering"
+              ? "Reconnecting the mic…"
+              : "Mic lost — nothing is being recorded."}
+          </span>
+          {micStatus === "lost" && (
+            <button className="rec-btn" disabled={reconnecting} onClick={handleReconnect}>
+              {reconnecting ? "Reconnecting…" : "Reconnect mic"}
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="rec-level" aria-hidden>
         <div className="rec-level-fill" style={{ width: `${Math.min(100, level * 140)}%` }} />
       </div>

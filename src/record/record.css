@@ -61,6 +61,26 @@ body {
   line-height: 1.5;
 }
 
+.rec-mic-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255, 176, 32, 0.12);
+  border: 1px solid var(--rec-warn-c);
+  color: var(--rec-warn-c);
+  font-size: 0.9rem;
+}
+
+.rec-mic-banner .rec-btn {
+  width: auto;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+}
+
 .rec-input {
   display: block;
   width: 100%;
