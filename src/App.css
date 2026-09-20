@@ -5734,6 +5734,11 @@ section.hero-cards {
   border-color: var(--good-dim);
 }
 
+.screen button.mode-card-pairs{
+  background: var(--ink);
+  border-color: var(--accent-bright);
+}
+
 /* ------------------------------------------------------ progress & profile */
 
 .badge {
