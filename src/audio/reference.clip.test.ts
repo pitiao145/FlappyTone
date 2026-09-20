@@ -44,6 +44,7 @@ function word(id: string, speakerId = "jane"): Word {
       [1, 4.5],
     ],
     minTier: "free",
+    listIds: [],
     updatedAt: "2026-09-15T00:00:00Z",
   };
 }

@@ -14,7 +14,7 @@
  */
 import { getSupabase } from "../data/supabase.ts";
 import { getTier } from "../data/tier.ts";
-import { TIER_LIMITS } from "./tiers.ts";
+import { tierLimits } from "./tiers.ts";
 
 const KEY = "toneflap.daily.v1";
 const SERVER_COUNT_KEY = "toneflap.daily.server.v1";
@@ -105,7 +105,7 @@ export interface DailyRuns {
 }
 
 function currentLimit(): number {
-  return TIER_LIMITS[getTier()].runsPerDay;
+  return tierLimits()[getTier()].runsPerDay;
 }
 
 export function loadDailyRuns(): DailyRuns {

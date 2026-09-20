@@ -15,6 +15,9 @@ import {
   type RecalTrackingState,
 } from "./recalibration.ts";
 import { CUE_STYLES, WORD_MIXES, type CueStyle, type WordMix } from "./run.ts";
+import type { Proficiency } from "./tiers.ts";
+import type { LevelChoice } from "./words.ts";
+export type { LevelChoice } from "./words.ts";
 import { type VoicePref } from "./voice.ts";
 
 export interface CalibrationSettings {
@@ -350,4 +353,67 @@ export function saveNoticeSeen(): void {
   } catch {
     // ignore
   }
+}
+
+// -------------------------------------------------------- proficiency
+
+const PROFICIENCY_KEY = "toneflap.proficiency.v1";
+const DEFAULT_PROFICIENCY: Proficiency = "beginner";
+
+/**
+ * Beginner (single syllable) or Intermediate (two syllable) — a Settings
+ * choice, not a per-run one (unlike the TOCFL level, chosen fresh every
+ * play on the pre-game screen). Defaults to Beginner for a new player.
+ */
+export function loadProficiency(): Proficiency {
+  const raw = localStorage.getItem(PROFICIENCY_KEY);
+  return raw === "beginner" || raw === "intermediate" ? raw : DEFAULT_PROFICIENCY;
+}
+
+export function saveProficiency(p: Proficiency): void {
+  localStorage.setItem(PROFICIENCY_KEY, p);
+}
+
+// ------------------------------------------------------- TOCFL level choice
+
+const LAST_LEVEL_KEY = "toneflap.lastlevel.v1";
+
+/**
+ * The last TOCFL level (or Mix) chosen on the pre-game picker, kept
+ * separately per proficiency since free's own access differs between them
+ * (Beginner: 1/2/Mix; Intermediate: 1 only). Re-picked every play — this is
+ * only the screen's pre-selected default, not an access grant on its own;
+ * `tierLimits()` is still checked fresh each time in case the tier changed.
+ */
+interface LastLevelState {
+  beginner?: LevelChoice;
+  intermediate?: LevelChoice;
+}
+
+function isLevelChoice(v: unknown): v is LevelChoice {
+  return v === "mix" || v === 1 || v === 2 || v === 3;
+}
+
+export function loadLastLevel(proficiency: Proficiency): LevelChoice | null {
+  try {
+    const raw = localStorage.getItem(LAST_LEVEL_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as LastLevelState;
+    const v = s[proficiency];
+    return isLevelChoice(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveLastLevel(proficiency: Proficiency, level: LevelChoice): void {
+  let state: LastLevelState = {};
+  try {
+    const raw = localStorage.getItem(LAST_LEVEL_KEY);
+    if (raw) state = JSON.parse(raw) as LastLevelState;
+  } catch {
+    state = {};
+  }
+  state[proficiency] = level;
+  localStorage.setItem(LAST_LEVEL_KEY, JSON.stringify(state));
 }

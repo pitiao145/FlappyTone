@@ -39,6 +39,8 @@ export interface CatalogRow {
   polyline: unknown;
   contour?: unknown;
   updated_at: string;
+  /** TOCFL/HSK/sampler list ids this word belongs to (`lists.id`), via `word_lists`. */
+  lists?: string[];
 }
 
 /**
@@ -63,7 +65,7 @@ const CLIP_COLUMNS = [
  * only as long as nobody later "fixes" the parser to be lenient.
  */
 export const CATALOG_SELECT =
-  `id,hanzi,pinyin,english,tone,tones,syllables,position,min_tier,word_clips!inner(${CLIP_COLUMNS.join(",")})`;
+  `id,hanzi,pinyin,english,tone,tones,syllables,position,min_tier,word_clips!inner(${CLIP_COLUMNS.join(",")}),word_lists(list_id)`;
 
 /**
  * Lifts the embedded clip onto the word, producing the flat shape
@@ -83,8 +85,13 @@ export function flattenCatalogRows(rows: unknown[]): unknown[] {
     if (!Array.isArray(clips) || clips.length !== 1) continue;
     const clip = clips[0];
     if (!clip || typeof clip !== "object") continue;
-    const { word_clips: _drop, ...word } = rec;
-    out.push({ ...word, ...(clip as Record<string, unknown>) });
+    const { word_clips: _drop, word_lists, ...word } = rec;
+    const lists = Array.isArray(word_lists)
+      ? word_lists
+          .map((l) => (l && typeof l === "object" ? (l as Record<string, unknown>).list_id : null))
+          .filter((id): id is string => typeof id === "string")
+      : [];
+    out.push({ ...word, ...(clip as Record<string, unknown>), lists });
   }
   return out;
 }
@@ -122,3 +129,10 @@ export const FALLBACK_COLUMNS = [
   "created_at",
   "updated_at",
 ] as const;
+
+/**
+ * Not part of `FALLBACK_COLUMNS` (that's a `words` table select list) — the
+ * fallback exporter joins this separately and stamps it on as `lists`, the
+ * same shape `flattenCatalogRows` produces for a live fetch.
+ */
+export const FALLBACK_LISTS_SELECT = "word_lists(list_id)";

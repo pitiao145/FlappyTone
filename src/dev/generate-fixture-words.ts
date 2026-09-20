@@ -142,6 +142,7 @@ const words = cuts.map(({ fixture, samples, sampleRate, clip }) => {
     clipS: Number((clip.sourceMs / 1000).toFixed(4)),
     polyline: polyline as ContourPoint[],
     minTier: "free" as const,
+    listIds: [],
     // Fixed, not `new Date()`: this is the clip cache's version key, and a
     // value that changes every run would make a no-op regeneration a diff —
     // the same reason `export-fallback` dropped its `exportedAt`.

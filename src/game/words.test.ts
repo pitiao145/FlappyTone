@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   availableToneCombos,
   availableTones,
+  capWordsPerCombo,
   isMulti,
   isSingle,
   multiWords,
   pickMultiWord,
   pickWord,
   toneComboKey,
+  wordsForList,
   wordsForTier,
   wordsFromCatalog,
   wordsOfCombo,
@@ -216,6 +218,30 @@ describe("wordsForTier", () => {
   });
 });
 
+describe("wordsForList", () => {
+  const t1 = word({ id: "t1", position: 0, lists: ["tocfl1"] });
+  const t2 = word({ id: "t2", position: 1, lists: ["tocfl2"] });
+  const t3 = word({ id: "t3", position: 2, lists: ["tocfl3"] });
+  const samplerB = word({ id: "sb", position: 3, lists: ["sampler-beginner"] });
+  const samplerI = word({ id: "si", position: 4, syllables: 2, tones: [1, 2], lists: ["sampler-intermediate"] });
+  const words = [t1, t2, t3, samplerB, samplerI];
+
+  it("filters to the given levels, union across multiple", () => {
+    expect(wordsForList(words, [1], "beginner").map((w) => w.id)).toEqual(["t1"]);
+    expect(wordsForList(words, [1, 2], "beginner").map((w) => w.id)).toEqual(["t1", "t2"]);
+    expect(wordsForList(words, [1, 2, 3], "beginner").map((w) => w.id)).toEqual(["t1", "t2", "t3"]);
+  });
+
+  it("levels: null resolves to the proficiency's fixed sampler list, ignoring TOCFL tags", () => {
+    expect(wordsForList(words, null, "beginner").map((w) => w.id)).toEqual(["sb"]);
+    expect(wordsForList(words, null, "intermediate").map((w) => w.id)).toEqual(["si"]);
+  });
+
+  it("a word in no requested list is excluded", () => {
+    expect(wordsForList(words, [2], "beginner").map((w) => w.id)).toEqual(["t2"]);
+  });
+});
+
 /**
  * `min_tier` is the GAME gate, and it is what the clips Worker enforces at
  * `/clip/:speaker/:id`. The run's pool is filtered by it (Game.tsx), so the two must
@@ -414,6 +440,28 @@ describe("the single/multi pool split", () => {
     const pair32 = word({ id: "pair32", tone: 3, tones: [3, 2], syllables: 2, position: 1 });
     const pair23 = word({ id: "pair23", tone: 2, tones: [2, 3], syllables: 2, position: 2 });
     expect(wordsOfCombo([single, pair32, pair23], [3, 2]).map((w) => w.id)).toEqual(["pair32"]);
+  });
+
+  it("wordsOfCombo's limit slices to the first N of that combo, in inventory order", () => {
+    const a = word({ id: "a", tone: 3, tones: [3, 2], syllables: 2, position: 1 });
+    const b = word({ id: "b", tone: 3, tones: [3, 2], syllables: 2, position: 2 });
+    const c = word({ id: "c", tone: 3, tones: [3, 2], syllables: 2, position: 3 });
+    expect(wordsOfCombo([a, b, c], [3, 2], 2).map((w) => w.id)).toEqual(["a", "b"]);
+    expect(wordsOfCombo([a, b, c], [3, 2]).map((w) => w.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("capWordsPerCombo caps every combo independently, leaving singles untouched", () => {
+    const a1 = word({ id: "a1", tone: 3, tones: [3, 2], syllables: 2, position: 1 });
+    const a2 = word({ id: "a2", tone: 3, tones: [3, 2], syllables: 2, position: 2 });
+    const a3 = word({ id: "a3", tone: 3, tones: [3, 2], syllables: 2, position: 3 });
+    const b1 = word({ id: "b1", tone: 4, tones: [4, 4], syllables: 2, position: 4 });
+    const capped = capWordsPerCombo([single, a1, a2, a3, b1], 2);
+    expect(capped.map((w) => w.id)).toEqual(["single1", "a1", "a2", "b1"]);
+  });
+
+  it("capWordsPerCombo(words, Infinity) is a no-op", () => {
+    const a1 = word({ id: "a1", tone: 3, tones: [3, 2], syllables: 2, position: 1 });
+    expect(capWordsPerCombo([single, a1], Infinity)).toEqual([single, a1]);
   });
 
   describe("pickMultiWord", () => {

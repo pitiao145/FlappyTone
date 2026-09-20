@@ -9,7 +9,7 @@
  * 0/5/unlimited). Anything else that reads a number out of `TIER_LIMITS`
  * belongs here too.
  */
-import { TIER_LIMITS, type Tier } from "../game/tiers.ts";
+import { tierLimits, type Tier } from "../game/tiers.ts";
 
 export const PRO_PRICE = "$19";
 
@@ -20,12 +20,12 @@ export interface PlanFeature {
 }
 
 function runsLabel(tier: Tier): string {
-  const n = TIER_LIMITS[tier].runsPerDay;
+  const n = tierLimits()[tier].runsPerDay;
   return Number.isFinite(n) ? `${n} runs a day` : "Unlimited runs";
 }
 
 function wordsLabel(tier: Tier): string {
-  const n = TIER_LIMITS[tier].wordsPerTone;
+  const n = tierLimits()[tier].wordsPerTone;
   if (n === 0) return "Free-explore visualiser only, no per-tone word practice";
   if (!Number.isFinite(n)) return "Practise every word, every tone";
   return `Per-tone visualiser practice, ${n} words per tone`;
@@ -66,7 +66,7 @@ export const PRO_FEATURES: string[] = [
 ];
 
 /** One-line Free summary for compact spots (the Profile plan card). */
-export const FREE_SUMMARY = `${runsLabel("free")} · ${TIER_LIMITS.free.wordsPerTone} words per tone · synced progress · a real leaderboard row`;
+export const FREE_SUMMARY = `${runsLabel("free")} · ${tierLimits().free.wordsPerTone} words per tone · synced progress · a real leaderboard row`;
 
 /** One-line Guest summary, for the same compact spots. */
 export const GUEST_SUMMARY = `${runsLabel("guest")} · full game · local progress only`;

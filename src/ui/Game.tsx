@@ -30,7 +30,9 @@ import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { getTier, useTier } from "../data/tier.ts";
-import { wordsForTier } from "../game/words.ts";
+import { resolvedPool } from "../game/words.ts";
+import type { Proficiency } from "../game/tiers.ts";
+import type { LevelChoice } from "../game/settings.ts";
 import { TONE_INFO, type Tone } from "../game/gates.ts";
 import { TONE_LINE_COLOR } from "./toneColors.ts";
 import { tuning } from "../game/tuning.ts";
@@ -145,6 +147,14 @@ interface Props {
   /** Classic `mode: "game"` word pool preference. Ignored otherwise. */
   wordMix?: WordMix;
   /**
+   * The Settings-level proficiency (single vs. two syllable) and this play's
+   * TOCFL level/Mix choice from the pre-game picker. Read by `resolvedPool`
+   * for `"game"`/`"pairs"` modes only; `null`/undefined level defaults to
+   * this tier's full allowed set (see `resolveLevels`).
+   */
+  proficiency?: Proficiency;
+  levelChoice?: LevelChoice | null;
+  /**
    * Set when this tutorial run is the calibration flight (GameApp routes to
    * it straight from the calibration screen). Flies only the grid-anchoring
    * tones (`CALIBRATION_TONES`) instead of the full teaching set — see the
@@ -192,6 +202,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   drillTone,
   pairCombo,
   wordMix,
+  proficiency = "beginner",
+  levelChoice = null,
   runNumber,
   autoStart = false,
   hidden,
@@ -499,7 +511,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // stale case — the very first run after a cold load, where the store
       // still holds its "guest" default — is repaired in place by the
       // tier-pool effect below, via `setWords`, with no teardown.
-      words: wordsForTier(inventoryNow() ?? [], getTier()),
+      words: resolvedPool(inventoryNow() ?? [], getTier(), mode, proficiency, levelChoice),
       singleWord,
       drillTone,
       pairCombo,
@@ -517,7 +529,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // If the manifest had not landed when the Run was built, catch it up.
     // `getTier()` is read again here rather than captured above: the tier may
     // well have resolved while the fetch was in flight.
-    if (!inventoryNow()) void loadInventory().then((w) => run.setWords(wordsForTier(w, getTier())));
+    if (!inventoryNow()) {
+      void loadInventory().then((w) => run.setWords(resolvedPool(w, getTier(), mode, proficiency, levelChoice)));
+    }
     let tracker: PitchTracker | null = null;
     let rafId = 0;
     let running = true;
@@ -958,7 +972,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           pairCombo,
           wordMix,
           queued,
-          pool: wordsForTier(all, tier),
+          pool: resolvedPool(all, tier, mode, proficiency, levelChoice),
           perTone: tuning().prefetchWordsPerTone,
         }),
       );
@@ -989,8 +1003,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     const run = runRef.current;
     if (!run) return;
     const now = inventoryNow();
-    if (now) run.setWords(wordsForTier(now, tier));
-  }, [tier, runGen]);
+    if (now) run.setWords(resolvedPool(now, tier, mode, proficiency, levelChoice));
+  }, [tier, runGen, mode, proficiency, levelChoice]);
 
   /**
    * The same repair, for the other thing that can move the pool under a live
@@ -1002,9 +1016,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   useEffect(
     () =>
       subscribeInventory((words) => {
-        runRef.current?.setWords(wordsForTier(words, getTier()));
+        runRef.current?.setWords(resolvedPool(words, getTier(), mode, proficiency, levelChoice));
       }),
-    [],
+    [mode, proficiency, levelChoice],
   );
 
   // Show the *active* gate's tone while flying it — showing the next gate's

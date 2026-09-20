@@ -20,7 +20,16 @@
 
 import type { Polyline } from "./tuning.ts";
 import type { Tone } from "./gates.ts";
-import type { Tier } from "./tiers.ts";
+import { tierLimits, type Proficiency, type Tier, type TocflLevel } from "./tiers.ts";
+import type { RunMode } from "./run.ts";
+
+/**
+ * A TOCFL level, or "mix" (every level this tier/proficiency allows). Mirrors
+ * `src/game/settings.ts`'s `LevelChoice` — redefined rather than imported, to
+ * avoid a value-level import cycle (`settings.ts` imports from `run.ts`,
+ * which imports this file).
+ */
+export type LevelChoice = TocflLevel | "mix";
 
 export interface Word {
   /** The catalog row's id, and the key everything else is looked up by. */
@@ -78,6 +87,12 @@ export interface Word {
    */
   minTier: "free" | "pro";
   updatedAt: string;
+  /**
+   * TOCFL/HSK/sampler `lists.id` membership (e.g. `"tocfl1"`, `"sampler-beginner"`),
+   * via `word_lists`. Empty for a row from before this field existed — never a
+   * reason to drop the word, only to exclude it from any list-scoped pool.
+   */
+  listIds: string[];
 }
 
 /** Longest a clip may be and still be a gate, in seconds. */
@@ -198,6 +213,7 @@ export function wordsFromCatalog(rows: unknown): Word[] {
         polyline: r.polyline,
         minTier: r.min_tier,
         updatedAt: typeof r.updated_at === "string" ? r.updated_at : "",
+        listIds: Array.isArray(r.lists) ? r.lists.filter((l): l is string => typeof l === "string") : [],
       },
     });
   }
@@ -218,6 +234,81 @@ export function wordsFromCatalog(rows: unknown): Word[] {
  */
 export function wordsForTier(words: Word[], tier: Tier): Word[] {
   return tier === "pro" ? words : words.filter((w) => w.minTier === "free");
+}
+
+/**
+ * Narrows a (tier-filtered) pool to one or more TOCFL levels, or to the
+ * fixed guest sampler.
+ *
+ * `levels: null` means "no level access" — resolves to the sampler list for
+ * the given proficiency instead of an empty pool, since a guest's pre-game
+ * screen never offers a level choice at all (see `tiers.ts`'s
+ * `ProficiencyAccess`). Apply this AFTER `wordsForTier`, same composition
+ * order `ModeSelect.tsx` already uses for `wordsForTier` → tone/combo
+ * derivation.
+ */
+export function wordsForList(
+  words: Word[],
+  levels: (1 | 2 | 3)[] | null,
+  proficiency: "beginner" | "intermediate",
+): Word[] {
+  if (levels === null) {
+    const samplerListId = proficiency === "beginner" ? "sampler-beginner" : "sampler-intermediate";
+    return words.filter((w) => w.listIds.includes(samplerListId));
+  }
+  const listIds = new Set(levels.map((level) => `tocfl${level}`));
+  return words.filter((w) => w.listIds.some((id) => listIds.has(id)));
+}
+
+/**
+ * Turns the pre-game screen's choice into the concrete level set to filter
+ * on. `null` (this tier/proficiency has no level choice — guest) always wins,
+ * regardless of `choice`: the picker is never shown, so there is nothing to
+ * honour. `"mix"`/`null` choice means every level this tier/proficiency
+ * allows; a specific level outside that set (a stale saved choice after a
+ * downgrade, or a tampered value) falls back to the full allowed set rather
+ * than an empty pool.
+ */
+export function resolveLevels(
+  tier: Tier,
+  proficiency: Proficiency,
+  choice: LevelChoice | null,
+): TocflLevel[] | null {
+  const allowed = tierLimits()[tier][proficiency].levels;
+  if (allowed === null) return null;
+  if (choice === null || choice === "mix") return allowed;
+  return allowed.includes(choice) ? [choice] : allowed;
+}
+
+/**
+ * The full pool a `Run` of `mode` should draw from: tier → TOCFL
+ * level/sampler → tone-pairs-per-combo cap, in that order.
+ *
+ * Only `"game"` and `"pairs"` read `proficiency`/`levelChoice` — `"drill"`,
+ * `"learn"` and `"tutorial"` pick by tone/fixed set already and are
+ * unaffected by the level picker (there is no picker screen for them yet).
+ * `"game"` gets the level filter because that's the mode the pre-game screen
+ * gates; `"pairs"` skips it (no picker for pure Tone Pairs yet) but still
+ * gets the per-combo cap, since that's a content-quantity rule independent
+ * of which screen led there.
+ */
+export function resolvedPool(
+  words: Word[],
+  tier: Tier,
+  mode: RunMode,
+  proficiency: Proficiency,
+  levelChoice: LevelChoice | null,
+): Word[] {
+  const tiered = wordsForTier(words, tier);
+  if (mode === "game") {
+    const levels = resolveLevels(tier, proficiency, levelChoice);
+    const listed = wordsForList(tiered, levels, proficiency);
+    return capWordsPerCombo(listed, tierLimits()[tier].pairWordsPerCombo);
+  }
+  if (mode === "pairs") {
+    return capWordsPerCombo(tiered, tierLimits()[tier].pairWordsPerCombo);
+  }
+  return tiered;
 }
 
 /**
@@ -310,10 +401,36 @@ export function availableToneCombos(words: Word[]): Tone[][] {
   return [...seen.values()].sort((a, b) => toneComboKey(a).localeCompare(toneComboKey(b)));
 }
 
-/** The multi-syllable words matching one exact tone combo, in inventory order. */
-export function wordsOfCombo(words: Word[], tones: Tone[]): Word[] {
+/**
+ * The multi-syllable words matching one exact tone combo, in inventory order.
+ *
+ * `limit` slices to the first `limit` words of THIS combo — mirrors
+ * `wordsOfTone`'s per-tone limit, but per-combo, for the free tier's
+ * tone-pairs cap (`tierLimits().free.pairWordsPerCombo`). Unlike
+ * `wordsOfTone`'s limit (visualiser depth only, gameplay never passes it),
+ * this one IS meant to reach gameplay — Tone Pairs mode is real, scored play
+ * for every tier that can reach it, so the cap has to apply where the
+ * combo's pool is actually drawn from, not just a practice surface. Callers
+ * compose this the same way `Game.tsx` already composes `wordsForTier`
+ * before `run.setWords`.
+ */
+export function wordsOfCombo(words: Word[], tones: Tone[], limit: number = Infinity): Word[] {
   const key = toneComboKey(tones);
-  return multiWords(words).filter((w) => toneComboKey(w.tones) === key);
+  const pool = multiWords(words).filter((w) => toneComboKey(w.tones) === key);
+  return Number.isFinite(limit) ? pool.slice(0, Math.max(0, limit)) : pool;
+}
+
+/**
+ * Caps EVERY combo in the inventory to `limit` words each, in one pass —
+ * the shape `Game.tsx` needs when assembling a tier-capped pairs pool
+ * up front (rather than per-draw), since `pickMultiWord`'s `combo: null`
+ * shuffle draws across every combo from a single flat pool.
+ */
+export function capWordsPerCombo(words: Word[], limit: number): Word[] {
+  if (!Number.isFinite(limit)) return words;
+  const singles = words.filter((w) => !isMulti(w));
+  const capped = availableToneCombos(words).flatMap((combo) => wordsOfCombo(words, combo, limit));
+  return [...singles, ...capped];
 }
 
 /**

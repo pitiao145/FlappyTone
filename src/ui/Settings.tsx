@@ -25,8 +25,9 @@ import {
 import { loadRoster } from "../data/speakers.ts";
 import { fetchCatalog } from "../data/words.ts";
 import { multiWords, type Word } from "../game/words.ts";
-import { WORD_MIXES, type WordMix } from "../game/run.ts";
-import { loadWordMix, saveWordMix } from "../game/settings.ts";
+import { saveWordMix } from "../game/settings.ts";
+import { loadProficiency, saveProficiency } from "../game/settings.ts";
+import type { Proficiency } from "../game/tiers.ts";
 import { Choice } from "./Choice.tsx";
 import { MicrophoneIcon } from "./toneIcons.tsx";
 
@@ -46,10 +47,11 @@ const VOICE_LABEL: Record<Gender, string> = {
   male: "Man's voice",
 };
 
-const WORD_MIX_LABEL: Record<WordMix, string> = {
-  single: "Single syllables",
-  multi: "Tone pairs only",
-  all: "Mix of both",
+const PROFICIENCIES = ["beginner", "intermediate"] as const satisfies readonly Proficiency[];
+
+const PROFICIENCY_LABEL: Record<Proficiency, string> = {
+  beginner: "Beginner (single syllables)",
+  intermediate: "Intermediate (two syllables)",
 };
 
 function SettingIcon({ children }: { children: React.ReactNode }) {
@@ -181,7 +183,7 @@ export function Settings({
    * elsewhere by the time a player reaches Settings.
    */
   const [words, setWords] = useState<Word[] | null>(() => inventoryNow());
-  const [wordMix, setWordMix] = useState<WordMix>(() => loadWordMix());
+  const [proficiency, setProficiency] = useState<Proficiency>(() => loadProficiency());
 
   useEffect(() => subscribeInventory(setWords), []);
 
@@ -341,17 +343,24 @@ export function Settings({
         {settings && multiWords(words ?? []).length > 0 && (
           <>
             <Choice
-              options={WORD_MIXES}
-              value={wordMix}
-              label={(v) => WORD_MIX_LABEL[v]}
+              options={PROFICIENCIES}
+              value={proficiency}
+              label={(v) => PROFICIENCY_LABEL[v]}
               onChange={(v) => {
-                setWordMix(v);
-                saveWordMix(v);
+                setProficiency(v);
+                saveProficiency(v);
+                // Drives the classic run's existing single/multi draw
+                // (`run.ts`'s `WordMix`) — Beginner and Intermediate are
+                // exactly its "single"/"multi" values under a friendlier
+                // name; "all" (a random mix per gate) is no longer a
+                // player-facing choice (docs/Tiers.csv: proficiency is
+                // Beginner or Intermediate only, never a mix).
+                saveWordMix(v === "beginner" ? "single" : "multi");
               }}
             />
             <p className="param-help">
-              What the classic run flies: single syllables, tone pairs, or a
-              mix of both. Tone pairs have their own mode too, under Play.
+              What the classic run flies: single syllables, or two-syllable
+              tone pairs. Tone pairs also have their own mode, under Play.
             </p>
           </>
         )}

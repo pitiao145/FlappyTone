@@ -28,14 +28,20 @@ import type { RunSnapshot } from "../game/run";
 import { recordRun } from "../game/runHistory.ts";
 import { recordPlay } from "../game/streak.ts";
 import {
+  loadLastLevel,
+  loadProficiency,
   loadRecalTracking,
   loadSettings,
   loadShareData,
   loadWordMix,
+  saveLastLevel,
+  saveProficiency,
   saveRecalTracking,
   saveSettings,
   type CalibrationSettings,
+  type LevelChoice,
 } from "../game/settings";
+import type { Proficiency } from "../game/tiers.ts";
 import type { RangeHalves } from "../pitch/calibration.ts";
 import type { RunStats } from "../game/scoring";
 import { BrowserHint } from "../ui/BrowserHint";
@@ -46,6 +52,7 @@ import { EarlyBirdModal, type EarlyBirdSurface } from "../ui/EarlyBirdModal.tsx"
 import { CheckoutSignup } from "../ui/CheckoutSignup.tsx";
 import { HowTo } from "../ui/HowTo";
 import { Loading } from "../ui/Loading";
+import { LevelSelect } from "../ui/LevelSelect.tsx";
 import { ModeSelect } from "../ui/ModeSelect.tsx";
 import { PlayHome, type PlayIntent } from "../ui/PlayHome";
 import type { Tone } from "../game/gates.ts";
@@ -65,6 +72,7 @@ type Screen =
   | "howto"
   | "calibrate"
   | "finetune"
+  | "levelSelect"
   | "tutorial"
   | "seeding"
   | "tutorialdone"
@@ -508,6 +516,16 @@ export default function GameApp() {
   const drillToneRef = useRef<Tone | null>(null);
   /** The combo a "pairs" run is pinned to, or null to shuffle. Set by ModeSelect, read by <Game>. */
   const pairComboRef = useRef<Tone[] | null>(null);
+  /**
+   * The "game" intent `startPlay` is routing through `levelSelect` for, or
+   * null once resolved. Kept separate from `pendingRef` (the calibration
+   * gate's own "where next") since both gates can fire in the same call —
+   * calibration first, then this one — and each needs its own memory of
+   * "what was I about to start".
+   */
+  const pendingLevelIntentRef = useRef<StartIntent | null>(null);
+  /** This play's chosen TOCFL level/Mix, from `LevelSelect`. Read by <Game>. */
+  const levelChoiceRef = useRef<LevelChoice | null>(null);
   const gameRef = useRef<GameHandle>(null);
   /**
    * True from the moment a "game"/"tutorial" run actually starts until it
@@ -617,8 +635,17 @@ export default function GameApp() {
         setScreen("calibrate");
         return;
       }
+      // "game" alone routes through the TOCFL/proficiency picker — Drill and
+      // Pairs already have their own tone/combo sub-pickers in ModeSelect,
+      // and Learn/Tutorial aren't level-scoped. Re-shown every play (unlike
+      // calibration's once-only gate): proficiency is remembered, but the
+      // level is a fresh choice each time, per Pierre's brainstorm.
+      if (intent === "game") {
+        pendingLevelIntentRef.current = intent;
+        setScreen("levelSelect");
+        return;
+      }
       if (
-        intent === "game" ||
         intent === "tutorial" ||
         intent === "drill" ||
         intent === "learn" ||
@@ -630,6 +657,26 @@ export default function GameApp() {
     },
     [settings, dailyLimitReached, openEarlyBird],
   );
+
+  /**
+   * `LevelSelect`'s confirm: saves the (possibly changed) proficiency to
+   * Settings, remembers this level choice for next time (per proficiency —
+   * see `saveLastLevel`), stashes the choice for `<Game>` to read, and
+   * continues exactly where `startPlay` left off for a non-gated intent.
+   */
+  const onLevelChosen = useCallback((proficiency: Proficiency, level: LevelChoice | null) => {
+    saveProficiency(proficiency);
+    if (level !== null) saveLastLevel(proficiency, level);
+    levelChoiceRef.current = level;
+    const intent = pendingLevelIntentRef.current;
+    pendingLevelIntentRef.current = null;
+    if (!intent) {
+      setScreen("play");
+      return;
+    }
+    setGameAlive(true);
+    setScreen(intent);
+  }, []);
 
   /**
    * TutorialDone's buttons, across all variants that lead into another run
@@ -1043,6 +1090,18 @@ export default function GameApp() {
             />
           )}
 
+        {screen === "levelSelect" && (
+          <LevelSelect
+            initialProficiency={loadProficiency()}
+            initialLevel={loadLastLevel(loadProficiency())}
+            onConfirm={onLevelChosen}
+            onBack={() => {
+              pendingLevelIntentRef.current = null;
+              setScreen("play");
+            }}
+          />
+        )}
+
         {screen === "seeding" && (
           <Loading label="We're personalising your grid for you…" />
         )}
@@ -1206,6 +1265,8 @@ export default function GameApp() {
             drillTone={drillToneRef.current ?? undefined}
             pairCombo={pairComboRef.current}
             wordMix={lastModeRef.current === "game" ? loadWordMix() : undefined}
+            proficiency={loadProficiency()}
+            levelChoice={levelChoiceRef.current}
             autoStart={autoStartTutorial}
             settings={settings}
             canvasWidth={CANVAS_W}

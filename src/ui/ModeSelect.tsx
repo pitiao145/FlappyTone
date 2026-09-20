@@ -58,8 +58,10 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
   const tones = tierWords && tierWords.length ? availableTones(tierWords) : ALL_TONES;
   // Same idea for pairs: only combos this tier's own words can build a gate
   // for. Unlike single tones, there is no "offer all" fallback — an empty
-  // list means the Tone pairs card itself is hidden (see below).
-  const combos = tierWords ? availableToneCombos(tierWords) : [];
+  // list means the Tone pairs card itself is hidden (see below). Guest never
+  // sees the card at all, regardless of combos — docs/Tiers.csv's "Available
+  // modes" row: guest gets Tone drill/Learn only, Tone pairs starts at free.
+  const combos = tier !== "guest" && tierWords ? availableToneCombos(tierWords) : [];
 
   const go = (
     intent: PlayIntent,

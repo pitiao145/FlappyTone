@@ -112,18 +112,21 @@ export type Database = {
         Row: {
           id: string
           meta: Json
+          min_tier: string
           name: string
           source: string | null
         }
         Insert: {
           id: string
           meta?: Json
+          min_tier?: string
           name: string
           source?: string | null
         }
         Update: {
           id?: string
           meta?: Json
+          min_tier?: string
           name?: string
           source?: string | null
         }

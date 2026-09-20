@@ -24,11 +24,11 @@ import { ContourRecorder } from "../game/contours.ts";
 import { shapeForWord, type Tone } from "../game/gates.ts";
 import type { CalibrationSettings } from "../game/settings.ts";
 import { classifyTone, type ToneClassification } from "../game/toneClassifier.ts";
-import { TIER_LIMITS } from "../game/tiers.ts";
+import { tierLimits, type TocflLevel } from "../game/tiers.ts";
 import { tuning } from "../game/tuning.ts";
 import { visualAccuracy } from "../game/visualAccuracy.ts";
 import type { Word } from "../game/words.ts";
-import { wordsOfTone } from "../game/words.ts";
+import { wordsForList, wordsOfTone } from "../game/words.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawVisualiser } from "../render/visualiser.ts";
@@ -106,7 +106,7 @@ interface Props {
  */
 export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Props) {
   const tier = useTier();
-  const limits = TIER_LIMITS[tier];
+  const limits = tierLimits()[tier];
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   /**
@@ -126,6 +126,15 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   /** Mobile only — the collapsed tone-mark icon opens this to pick a tone. */
   const [tonePopoverOpen, setTonePopoverOpen] = useState(false);
   const [popoverTab, setPopoverTab] = useState<"tone" | "wordlists">("tone");
+  /**
+   * The visualiser only ever practices single-syllable words, so it reads
+   * `beginner`'s access — a guest's is always `null` (no picker; the
+   * existing `wordsPerTone: 0` cap already empties the practice list, this
+   * just avoids offering a choice that changes nothing for guest). `null`
+   * here (as opposed to `tierLimits`'s own `null`) also means "no level
+   * chosen yet" for free/pro until the player taps one.
+   */
+  const [selectedLevel, setSelectedLevel] = useState<TocflLevel | null>(null);
   /**
    * Mirrors `wordStatsRef` into React state so the accuracy readout — now a
    * real DOM element, not canvas-drawn — can render it. Only set once per
@@ -240,12 +249,25 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     void loadInventory().then(setWords);
   }, [words.length]);
 
+  /**
+   * The active TOCFL level narrows the practice pool BEFORE the per-tone
+   * count cap — a separate gate from `wordsPerTone` (below), same
+   * relationship `min_tier`/`wordsPerTone` already have: this decides which
+   * words are even in play, the count decides how many of them. Guest's
+   * `beginner.levels` is always `null` (no list scoping — its `wordsPerTone:
+   * 0` already empties the list regardless), so this is a no-op for guest.
+   */
+  const listWords =
+    limits.beginner.levels === null
+      ? words
+      : wordsForList(words, selectedLevel ? [selectedLevel] : limits.beginner.levels, "beginner");
+
   // Preload only the selected tone's clips (not all 120) so a tap plays
   // instantly without fetching every word up front.
   useEffect(() => {
     if (tone === null) return;
-    for (const w of wordsOfTone(words, tone, limits.wordsPerTone)) void loadClip(w);
-  }, [tone, words, limits.wordsPerTone]);
+    for (const w of wordsOfTone(listWords, tone, limits.wordsPerTone)) void loadClip(w);
+  }, [tone, listWords, limits.wordsPerTone]);
 
   /**
    * The practice list is limited by COUNT, not by `min_tier`.
@@ -257,9 +279,9 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
    * keeps a guest's practice list empty (`wordsPerTone: 0`) and a free
    * account's at five, in `position` order.
    */
-  const wordsForTone = tone === null ? [] : wordsOfTone(words, tone, limits.wordsPerTone);
+  const wordsForTone = tone === null ? [] : wordsOfTone(listWords, tone, limits.wordsPerTone);
   /** The rest of that tone's inventory, shown as locked chips for free players. */
-  const lockedWordsForTone = tone === null ? [] : wordsOfTone(words, tone).slice(wordsForTone.length);
+  const lockedWordsForTone = tone === null ? [] : wordsOfTone(listWords, tone).slice(wordsForTone.length);
 
   // CSS (App.css) now stretches `.stage` to fill the real space it has —
   // full height on mobile, the 420px-capped column on desktop — instead of
@@ -622,19 +644,45 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     </div>
   );
 
+  const LEVEL_LABEL: Record<TocflLevel, string> = { 1: "TOCFL 1", 2: "TOCFL 2", 3: "TOCFL 3" };
+
   const tonePickerWordlists = (
     <div className="tone-popover-wordlists">
       <p className="tone-popover-desc">
-        Practice by curated word lists — HSK levels, your saved words, and more.
+        Practice by curated word lists — TOCFL levels, and more to come.
       </p>
-      <div className="word-list-row">
-        <span>HSK 1</span>
-        <span className="word-list-soon">soon</span>
-      </div>
-      <div className="word-list-row">
-        <span>My words</span>
-        <span className="word-list-soon">soon</span>
-      </div>
+      {limits.beginner.levels === null ? (
+        <div className="word-list-row">
+          <span>TOCFL levels</span>
+          <span className="word-list-soon">sign up free</span>
+        </div>
+      ) : (
+        ([1, 2, 3] as const).map((n) => {
+          const unlocked = limits.beginner.levels!.includes(n);
+          return (
+            <button
+              key={n}
+              type="button"
+              className={`word-list-row${selectedLevel === n ? " active" : ""}${unlocked ? "" : " is-locked"}`}
+              disabled={!unlocked}
+              onClick={() => {
+                if (!unlocked) {
+                  onLocked?.("visualiser-word-list");
+                  return;
+                }
+                setSelectedLevel((cur) => (cur === n ? null : n));
+              }}
+            >
+              <span>{LEVEL_LABEL[n]}</span>
+              {unlocked ? (
+                selectedLevel === n && <span>✓</span>
+              ) : (
+                <span className="word-chip-lock">🔒</span>
+              )}
+            </button>
+          );
+        })
+      )}
     </div>
   );
 

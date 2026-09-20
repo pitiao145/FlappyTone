@@ -46,7 +46,12 @@ import { wordsFromCatalog } from "../game/words.ts";
 function parseCatalogSelect(select: string): { wordTokens: string[]; embedTokens: string[] } {
   const embedStart = select.indexOf("word_clips!inner(");
   const wordPart = select.slice(0, embedStart).replace(/,$/, "");
-  const embedBody = select.slice(embedStart + "word_clips!inner(".length, select.lastIndexOf(")"));
+  const embedOpen = embedStart + "word_clips!inner(".length;
+  // The clip embed's own closing paren — the first one after it opens, not
+  // `lastIndexOf`, since a trailing `word_lists(list_id)` join now follows
+  // this embed and has a closing paren of its own.
+  const embedEnd = select.indexOf(")", embedOpen);
+  const embedBody = select.slice(embedOpen, embedEnd);
   return {
     wordTokens: wordPart.split(",").filter(Boolean),
     embedTokens: embedBody.split(",").filter(Boolean),
@@ -118,6 +123,14 @@ describe("the catalog row shape", () => {
 
   it("embeds word_clips as an inner join, so a word with no clip for this speaker never arrives", () => {
     expect(CATALOG_SELECT).toContain("word_clips!inner(");
+  });
+
+  it("embeds word_lists as an OUTER join, so a word with no list membership still arrives", () => {
+    // Not `!inner` — TOCFL/HSK list membership is metadata, unlike a clip
+    // (which a word cannot be played without). A word in no list yet must
+    // still reach the game; it just resolves to an empty `listIds`.
+    expect(CATALOG_SELECT).toContain("word_lists(list_id)");
+    expect(CATALOG_SELECT).not.toContain("word_lists!inner(");
   });
 
   it("asks for the measurements from the clip, not the word", () => {
@@ -221,6 +234,18 @@ describe("flattenCatalogRows", () => {
 
   it("survives junk without throwing", () => {
     expect(flattenCatalogRows([null, 3, "x", {}])).toEqual([]);
+  });
+
+  it("collects word_lists into a lists array, empty when absent", () => {
+    const withLists = { ...embeddedRow, word_lists: [{ list_id: "tocfl1" }, { list_id: "sampler-beginner" }] };
+    const [flat] = flattenCatalogRows([withLists]) as Record<string, unknown>[];
+    expect(flat.lists).toEqual(["tocfl1", "sampler-beginner"]);
+
+    const [flatNoLists] = flattenCatalogRows([embeddedRow]) as Record<string, unknown>[];
+    expect(flatNoLists.lists).toEqual([]);
+
+    const words = wordsFromCatalog(flattenCatalogRows([withLists]));
+    expect(words[0].listIds).toEqual(["tocfl1", "sampler-beginner"]);
   });
 });
 
