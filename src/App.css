@@ -2654,7 +2654,8 @@
   color: var(--accent-bright);
 }
 
-.settings-screen .choice-option.active {
+.settings-screen .choice-option.active,
+.level-select-screen .choice-option.active {
   border-color: var(--accent-bright);
   background: var(--accent-bright);
   color: var(--accent-ink);

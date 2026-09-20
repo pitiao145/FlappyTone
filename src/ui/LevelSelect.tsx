@@ -42,7 +42,7 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
   }
 
   return (
-    <div className="stage game-stage playhome-stage">
+    <div className="stage game-stage playhome-stage level-select-screen">
       <div className="screen playhome-overlay">
         <h1>Choose your level</h1>
 
@@ -50,14 +50,14 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
         <div className="choice">
           <button
             type="button"
-            className={`choice-option${proficiency === "beginner" ? " selected" : ""}`}
+            className={`choice-option${proficiency === "beginner" ? " active" : ""}`}
             onClick={() => chooseProficiency("beginner")}
           >
             Beginner
           </button>
           <button
             type="button"
-            className={`choice-option${proficiency === "intermediate" ? " selected" : ""}`}
+            className={`choice-option${proficiency === "intermediate" ? " active" : ""}`}
             onClick={() => chooseProficiency("intermediate")}
           >
             Intermediate
@@ -74,7 +74,7 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
                   <button
                     type="button"
                     key={n}
-                    className={`choice-option${level === n ? " selected" : ""}${unlocked ? "" : " is-locked"}`}
+                    className={`choice-option${level === n ? " active" : ""}${unlocked ? "" : " is-locked"}`}
                     disabled={!unlocked}
                     aria-label={`${LEVEL_LABEL[n]}${unlocked ? "" : ", locked, Pro"}`}
                     onClick={() => setLevel(n)}
@@ -87,7 +87,7 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
               {access.allowMix && (
                 <button
                   type="button"
-                  className={`choice-option${level === "mix" ? " selected" : ""}`}
+                  className={`choice-option${level === "mix" ? " active" : ""}`}
                   onClick={() => setLevel("mix")}
                 >
                   Mix
