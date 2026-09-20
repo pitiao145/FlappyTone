@@ -25,7 +25,6 @@ import {
 import { loadRoster } from "../data/speakers.ts";
 import { fetchCatalog } from "../data/words.ts";
 import { multiWords, type Word } from "../game/words.ts";
-import { saveWordMix } from "../game/settings.ts";
 import { loadProficiency, saveProficiency } from "../game/settings.ts";
 import type { Proficiency } from "../game/tiers.ts";
 import { Choice } from "./Choice.tsx";
@@ -348,14 +347,9 @@ export function Settings({
               label={(v) => PROFICIENCY_LABEL[v]}
               onChange={(v) => {
                 setProficiency(v);
+                // Also writes wordMix (run.ts's single/multi draw) — see
+                // saveProficiency's own comment for why that's bundled in.
                 saveProficiency(v);
-                // Drives the classic run's existing single/multi draw
-                // (`run.ts`'s `WordMix`) — Beginner and Intermediate are
-                // exactly its "single"/"multi" values under a friendlier
-                // name; "all" (a random mix per gate) is no longer a
-                // player-facing choice (docs/Tiers.csv: proficiency is
-                // Beginner or Intermediate only, never a mix).
-                saveWordMix(v === "beginner" ? "single" : "multi");
               }}
             />
             <p className="param-help">

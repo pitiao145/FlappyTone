@@ -3,9 +3,12 @@ import {
   type CalibrationSettings,
   clearSettings,
   loadCorridorWidth,
+  loadProficiency,
   loadReduceMotion,
+  loadWordMix,
   saveCorridorWidth,
   loadSettings,
+  saveProficiency,
   saveReduceMotion,
   saveSettings,
 } from "./settings.ts";
@@ -360,5 +363,41 @@ describe("Voice preference", () => {
     const s = loadSettings();
     expect(s?.f0Center).toBe(200);
     expect(s?.voice).toBeUndefined();
+  });
+});
+
+describe("Proficiency, and its coupled wordMix write", () => {
+  let storageMap: Record<string, string>;
+
+  beforeEach(() => {
+    storageMap = {};
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => storageMap[key] ?? null,
+      setItem: (key: string, value: string) => {
+        storageMap[key] = value;
+      },
+      removeItem: (key: string) => {
+        delete storageMap[key];
+      },
+    } as Storage);
+  });
+
+  it("defaults to beginner", () => {
+    expect(loadProficiency()).toBe("beginner");
+  });
+
+  it("saveProficiency ALSO writes wordMix — this pairing is load-bearing", () => {
+    // Regression test for a real bug: the pre-game LevelSelect screen only
+    // ever called `saveProficiency`. Before this pairing was collapsed into
+    // one function, a player who chose Intermediate there (without also
+    // opening Settings, whose own control used to be the only writer of
+    // wordMix) still had wordMix stuck at "single" — run.ts's
+    // `wantsMultiGate()` never fired, so the run drew no multi-syllable
+    // words and every gate silently fell back to the generic per-tone
+    // placeholder, indistinguishable from "no words exist".
+    saveProficiency("intermediate");
+    expect(loadWordMix()).toBe("multi");
+    saveProficiency("beginner");
+    expect(loadWordMix()).toBe("single");
   });
 });

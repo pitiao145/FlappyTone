@@ -370,8 +370,22 @@ export function loadProficiency(): Proficiency {
   return raw === "beginner" || raw === "intermediate" ? raw : DEFAULT_PROFICIENCY;
 }
 
+/**
+ * Also writes `wordMix` — the classic run's actual single/multi draw
+ * (`run.ts`'s `wantsMultiGate`) is driven by `loadWordMix()`, not by
+ * `loadProficiency()` directly, so a caller that saved proficiency without
+ * this would leave the run flying the OLD mix. This was a real bug: the
+ * pre-game `LevelSelect` screen only ever called `saveProficiency`, so a
+ * player who chose Intermediate there (and never separately opened Settings,
+ * whose own control used to be the only place `saveWordMix` was called)
+ * still had `wordMix === "single"` — the run drew no multi-syllable words at
+ * all, silently falling back to the generic per-tone placeholder for every
+ * gate. Collapsing both writes into one call makes that pairing impossible
+ * to break again from a second call site.
+ */
 export function saveProficiency(p: Proficiency): void {
   localStorage.setItem(PROFICIENCY_KEY, p);
+  saveWordMix(p === "beginner" ? "single" : "multi");
 }
 
 // ------------------------------------------------------- TOCFL level choice

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   availableToneCombos,
   availableTones,
@@ -8,6 +8,8 @@ import {
   multiWords,
   pickMultiWord,
   pickWord,
+  resolveLevels,
+  resolvedPool,
   toneComboKey,
   wordsForList,
   wordsForTier,
@@ -16,6 +18,7 @@ import {
   wordsOfTone,
   type Word,
 } from "./words.ts";
+import { resetTierLimits, setTierLimits } from "./tiers.ts";
 import fallback from "../data/wordsFallback.json";
 import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
 import { corridorChaoAt, makeGate, newDifficulty, shapeForTone, shapeForWord } from "./gates.ts";
@@ -239,6 +242,105 @@ describe("wordsForList", () => {
 
   it("a word in no requested list is excluded", () => {
     expect(wordsForList(words, [2], "beginner").map((w) => w.id)).toEqual(["t2"]);
+  });
+});
+
+describe("resolveLevels", () => {
+  afterEach(() => resetTierLimits());
+
+  it("guest (no level access) always resolves to null, regardless of choice", () => {
+    expect(resolveLevels("guest", "beginner", null)).toBeNull();
+    expect(resolveLevels("guest", "beginner", "mix")).toBeNull();
+    expect(resolveLevels("guest", "beginner", 2)).toBeNull();
+  });
+
+  it("null/mix choice resolves to the full allowed set", () => {
+    expect(resolveLevels("free", "beginner", null)).toEqual([1, 2]);
+    expect(resolveLevels("free", "beginner", "mix")).toEqual([1, 2]);
+  });
+
+  it("a specific in-range choice narrows to just that level", () => {
+    expect(resolveLevels("free", "beginner", 1)).toEqual([1]);
+  });
+
+  it("a choice outside the allowed set falls back to the full allowed set", () => {
+    // free.intermediate only ever allows [1] — a stale choice of 2 (from a
+    // downgrade, or a tampered value) must not resolve to an empty pool.
+    expect(resolveLevels("free", "intermediate", 2)).toEqual([1]);
+  });
+});
+
+describe("resolvedPool", () => {
+  afterEach(() => resetTierLimits());
+
+  const singleT1 = word({ id: "s1", tone: 1, tones: [1], syllables: 1, position: 0, lists: ["tocfl1"] });
+  const pairT1 = word({
+    id: "p1",
+    tone: 3,
+    tones: [3, 2],
+    syllables: 2,
+    position: 1,
+    lists: ["tocfl1"],
+  });
+  const samplerSingle = word({
+    id: "sb1",
+    tone: 2,
+    tones: [2],
+    syllables: 1,
+    position: 2,
+    lists: ["sampler-beginner"],
+  });
+  const samplerPair = word({
+    id: "si1",
+    tone: 4,
+    tones: [4, 1],
+    syllables: 2,
+    position: 3,
+    lists: ["sampler-intermediate"],
+  });
+  const inventory = [singleT1, pairT1, samplerSingle, samplerPair];
+
+  it("guest + intermediate resolves to the sampler-intermediate pool — not empty (the real regression)", () => {
+    // This is the exact bug found in play: guest picks Intermediate, the
+    // pool must contain the real recorded pair word(s), never come back
+    // empty (which silently falls back to the generic per-tone placeholder
+    // and a synthetic cue for every gate, indistinguishable from "no words
+    // exist" to the player).
+    const pool = resolvedPool(inventory, "guest", "game", "intermediate", null);
+    expect(pool.map((w) => w.id)).toEqual(["si1"]);
+  });
+
+  it("guest + beginner resolves to the sampler-beginner pool", () => {
+    const pool = resolvedPool(inventory, "guest", "game", "beginner", null);
+    expect(pool.map((w) => w.id)).toEqual(["sb1"]);
+  });
+
+  it("a tier's own pairWordsPerCombo never empties classic 'game' mode's pool — only 'pairs' mode reads it", () => {
+    setTierLimits("guest", { pairWordsPerCombo: 0 });
+    const gamePool = resolvedPool(inventory, "guest", "game", "intermediate", null);
+    expect(gamePool.map((w) => w.id)).toEqual(["si1"]);
+  });
+
+  it("'pairs' mode DOES apply the per-combo cap", () => {
+    const manyPairs = [
+      pairT1,
+      word({ id: "p2", tone: 3, tones: [3, 2], syllables: 2, position: 5 }),
+      word({ id: "p3", tone: 3, tones: [3, 2], syllables: 2, position: 6 }),
+    ];
+    setTierLimits("free", { pairWordsPerCombo: 1 });
+    expect(resolvedPool(manyPairs, "free", "pairs", "beginner", null).map((w) => w.id)).toEqual(["p1"]);
+  });
+
+  it("free + beginner + level 1 resolves via TOCFL tags, not the sampler", () => {
+    const pool = resolvedPool(inventory, "free", "game", "beginner", 1);
+    expect(pool.map((w) => w.id)).toEqual(["s1"]);
+  });
+
+  it("drill/learn/tutorial modes are unaffected by level/proficiency — full tier pool", () => {
+    for (const mode of ["drill", "learn", "tutorial"] as const) {
+      const pool = resolvedPool(inventory, "guest", mode, "intermediate", null);
+      expect(pool.map((w) => w.id).sort()).toEqual(["p1", "s1", "sb1", "si1"]);
+    }
   });
 });
 

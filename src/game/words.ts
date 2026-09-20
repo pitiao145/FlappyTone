@@ -301,9 +301,17 @@ export function resolvedPool(
 ): Word[] {
   const tiered = wordsForTier(words, tier);
   if (mode === "game") {
+    // No `capWordsPerCombo` here: `pairWordsPerCombo` is the TONE PAIRS MODE's
+    // own cap (docs/Tiers.csv row 9, "Modes limits"), not a classic-mode
+    // Intermediate-proficiency restriction — every tier, guest included, may
+    // choose Intermediate and fly whatever its TOCFL level/sampler list
+    // allows. Applying the cap here once zeroed guest's entire
+    // sampler-intermediate pool (guest.pairWordsPerCombo === 0, meaning "no
+    // Tone Pairs mode access"), which silently emptied every Intermediate
+    // gate to the generic per-tone placeholder instead of the real recorded
+    // pair words guest is supposed to see. Found via a live playtest.
     const levels = resolveLevels(tier, proficiency, levelChoice);
-    const listed = wordsForList(tiered, levels, proficiency);
-    return capWordsPerCombo(listed, tierLimits()[tier].pairWordsPerCombo);
+    return wordsForList(tiered, levels, proficiency);
   }
   if (mode === "pairs") {
     return capWordsPerCombo(tiered, tierLimits()[tier].pairWordsPerCombo);
