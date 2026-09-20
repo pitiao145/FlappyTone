@@ -90,13 +90,12 @@ import {
   applyChaoMap,
   chaoMapFor,
   cohortSpan,
+  cohortTargetSpan,
   pinnedFractionOf,
-  polylineSpan,
 } from "./clipNormalize.ts";
 import { MIN_REFERENCE_FRAMES, resolveSeed } from "./clipPipeline.ts";
 import { median, reviewClip } from "./clipReview.ts";
 import { multiSyllablePolyline } from "./clipCutMulti.ts";
-import { DEFAULT_POLYLINES } from "../game/tuning.ts";
 import type { Tone } from "../game/gates.ts";
 import { decodeWav, encodeWav } from "./wav.ts";
 import { r2Get, r2Put } from "./r2.ts";
@@ -533,11 +532,15 @@ for (const cut of cuts) {
 }
 for (const [key, cohort] of [...cohorts].sort(([a], [b]) => a.localeCompare(b))) {
   const span = cohortSpan(cohort.map((c) => c.contour));
-  const targets = cohort[0].row.tones.map((t) => polylineSpan(DEFAULT_POLYLINES[t]));
-  const target = {
-    low: Math.min(...targets.map((t) => t.low)),
-    high: Math.max(...targets.map((t) => t.high)),
-  };
+  const target = cohortTargetSpan(cohort[0].row.tones);
+  const hasCitationTone = cohort[0].row.tones.some((tone) => tone >= 1 && tone <= 4);
+  if (!hasCitationTone) {
+    console.log(
+      `T${key}: neutral-only cohort — skipping citation-span normalization; ` +
+        `${cohort.length} take(s) kept at measured contour.`,
+    );
+    continue;
+  }
   const map = chaoMapFor(span, target);
   for (const cut of cohort) {
     cut.contour = applyChaoMap(cut.contour, map);
