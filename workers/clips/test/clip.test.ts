@@ -17,7 +17,7 @@ const wordsQuery = vi.hoisted(() => ({
     word_id: string;
     speaker_id: string;
     clip_key: string | null;
-    words: { min_tier: string };
+    words: { min_tier: string; word_lists?: Array<{ list_id: string }> };
   }[],
   error: null as unknown,
 }));
@@ -60,6 +60,9 @@ beforeEach(() => {
     "pw1.wav": "RIFFfake-pro",
     "ba1-mark.wav": "RIFFfake-free-mark",
     "pw1-mark.wav": "RIFFfake-pro-mark",
+    "t2word.wav": "RIFFfake-t2",
+    "t3word.wav": "RIFFfake-t3",
+    "sampler.wav": "RIFFfake-sampler",
   });
   env = fakeEnv({ CLIPS: clips as unknown as R2Bucket });
   wordsQuery.calls = 0;
@@ -70,6 +73,24 @@ beforeEach(() => {
     { word_id: "noclip", speaker_id: "jane", clip_key: null, words: { min_tier: "free" } },
     { word_id: "ba1", speaker_id: "mark", clip_key: "ba1-mark.wav", words: { min_tier: "free" } },
     { word_id: "pw1", speaker_id: "mark", clip_key: "pw1-mark.wav", words: { min_tier: "pro" } },
+    {
+      word_id: "t2word",
+      speaker_id: "jane",
+      clip_key: "t2word.wav",
+      words: { min_tier: "free", word_lists: [{ list_id: "tocfl2" }] },
+    },
+    {
+      word_id: "t3word",
+      speaker_id: "jane",
+      clip_key: "t3word.wav",
+      words: { min_tier: "free", word_lists: [{ list_id: "tocfl3" }] },
+    },
+    {
+      word_id: "sampler",
+      speaker_id: "jane",
+      clip_key: "sampler.wav",
+      words: { min_tier: "free", word_lists: [{ list_id: "sampler-beginner" }] },
+    },
   ];
   __resetWordCacheForTests();
 });
@@ -234,5 +255,34 @@ describe("GET /clip/:speaker/:id", () => {
   it("503s rather than serving an empty inventory when the words query errors", async () => {
     wordsQuery.error = { message: "boom" };
     expect((await get("/clip/jane/ba1?v=1", await ticketFor("free"), env)).status).toBe(503);
+  });
+});
+
+describe("TOCFL level gate (coarse — the ticket carries only tier, not the run's picked level)", () => {
+  it("guest and free both reach a tocfl2 word; pro too — free's union spans 1 and 2", async () => {
+    expect((await get("/clip/jane/t2word?v=1", await ticketFor("guest"), env)).status).toBe(403);
+    expect((await get("/clip/jane/t2word?v=1", await ticketFor("free"), env)).status).toBe(200);
+    expect((await get("/clip/jane/t2word?v=1", await ticketFor("pro"), env)).status).toBe(200);
+  });
+
+  it("only pro reaches a tocfl3 word", async () => {
+    expect((await get("/clip/jane/t3word?v=1", await ticketFor("guest"), env)).status).toBe(403);
+    expect((await get("/clip/jane/t3word?v=1", await ticketFor("free"), env)).status).toBe(403);
+    expect((await get("/clip/jane/t3word?v=1", await ticketFor("pro"), env)).status).toBe(200);
+  });
+
+  it("a sampler-tagged word is reachable by every tier, regardless of TOCFL level union", async () => {
+    expect((await get("/clip/jane/sampler?v=1", await ticketFor("guest"), env)).status).toBe(200);
+    expect((await get("/clip/jane/sampler?v=1", await ticketFor("free"), env)).status).toBe(200);
+    expect((await get("/clip/jane/sampler?v=1", await ticketFor("pro"), env)).status).toBe(200);
+  });
+
+  it("a word in no tocfl list at all (e.g. ba1) is never level-gated, only min_tier-gated", async () => {
+    expect((await get("/clip/jane/ba1?v=1", await ticketFor("guest"), env)).status).toBe(200);
+  });
+
+  it("does not touch R2 on a 403 from the level gate", async () => {
+    expect((await get("/clip/jane/t3word?v=1", await ticketFor("free"), env)).status).toBe(403);
+    expect(clips.getCalls).toBe(0);
   });
 });

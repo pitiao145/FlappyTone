@@ -48,9 +48,57 @@ const SPEAKER_RE = /^[a-z0-9]{1,16}$/;
 
 const WORDS_TTL_MS = 5 * 60 * 1000;
 
+/**
+ * Duplicated from `src/game/tiers.ts`'s `DEFAULT_TIER_LIMITS` — the Worker is
+ * a separate deploy target/toolchain (CLAUDE.md), and this codebase already
+ * accepts this kind of duplication (`api/run.ts` mirrors `runsPerDay` the
+ * same way) rather than sharing a module across the Vite/Vercel/Workers
+ * boundary. The UNION here is deliberately coarser than what the game's own
+ * `tierLimits()` expresses: a play ticket carries only a tier, never which
+ * proficiency/level the player picked this run, so this can only ever answer
+ * "does this tier EVER reach this level, under either proficiency" — never
+ * "did they pick this level just now". That finer choice is a client-side
+ * pool filter, same trust level `wordMix` already had. Keep this in sync by
+ * hand if `tiers.ts`'s access table changes.
+ */
+const TIER_LEVEL_UNION: Record<string, ReadonlySet<number>> = {
+  guest: new Set(),
+  free: new Set([1, 2]),
+  pro: new Set([1, 2, 3]),
+};
+
+/** Sampler words are always playable, whatever the ticket's tier — guest needs them. */
+const SAMPLER_LIST_IDS = new Set(["sampler-beginner", "sampler-intermediate"]);
+
 interface WordRow {
   clipKey: string | null;
   minTier: string;
+  /** This word's `lists.id` memberships, e.g. `["tocfl1"]`. */
+  listIds: string[];
+}
+
+/** A `tocfl1`/`tocfl2`/`tocfl3` list id's level number, or null for anything else (hsk*, core-120, sampler-*). */
+function tocflLevel(listId: string): number | null {
+  const m = /^tocfl([123])$/.exec(listId);
+  return m ? Number(m[1]) : null;
+}
+
+/**
+ * Whether `ticket.tier` may ever fetch a word with these list memberships.
+ * A word in no `tocfl*` list at all (not yet catalogued into a level, or a
+ * sampler-only/hsk/core-120 word) is never level-gated here — `min_tier` is
+ * still checked separately, same as always.
+ */
+function levelAllowed(listIds: string[], tier: string): boolean {
+  const levels = listIds.map(tocflLevel).filter((l): l is number => l !== null);
+  if (levels.length === 0) return true;
+  if (listIds.some((id) => SAMPLER_LIST_IDS.has(id))) return true;
+  // `some`, not `every`: mirrors `wordsForList`'s membership check on the
+  // client (a word is in-pool if it matches ANY requested level), for the
+  // same reason a word could in principle be tagged into more than one
+  // TOCFL list.
+  const allowed = TIER_LEVEL_UNION[tier] ?? new Set();
+  return levels.some((l) => allowed.has(l));
 }
 
 /**
@@ -74,7 +122,7 @@ async function loadWords(env: Env): Promise<Inventory> {
   const db = serviceDb(env);
   const clips = await db
     .from("word_clips")
-    .select("word_id,speaker_id,clip_key,words!inner(min_tier)")
+    .select("word_id,speaker_id,clip_key,words!inner(min_tier,word_lists(list_id))")
     .eq("status", "published");
   if (clips.error || !clips.data) {
     throw new Error("words query failed");
@@ -84,13 +132,14 @@ async function loadWords(env: Env): Promise<Inventory> {
     word_id: string;
     speaker_id: string;
     clip_key: string | null;
-    words: { min_tier: string };
+    words: { min_tier: string; word_lists: Array<{ list_id: string }> | null };
   }>) {
-    // `min_tier` lives on `words`, not `word_clips`: it is game access, the
-    // same for every voice of the same word.
+    // `min_tier` and list membership both live on `words`, not `word_clips`:
+    // game access and TOCFL level are the same for every voice of the word.
     map.set(`${row.speaker_id}:${row.word_id}`, {
       clipKey: row.clip_key,
       minTier: row.words.min_tier,
+      listIds: (row.words.word_lists ?? []).map((l) => l.list_id),
     });
   }
   return { words: map };
@@ -158,6 +207,12 @@ export async function handleClip(req: Request, env: Env, ctx: ExecutionContext):
   // a third tier added to `words.min_tier` later fails closed rather than open.
   if (word.minTier !== "free" && ticket.tier !== "pro") {
     return Response.json({ error: "This clip needs Pro." }, { status: 403 });
+  }
+  // TOCFL level gate — coarse (see TIER_LEVEL_UNION's comment): only checks
+  // whether this tier could EVER reach this word's level, not which level
+  // was chosen this run.
+  if (!levelAllowed(word.listIds, ticket.tier)) {
+    return Response.json({ error: "This clip needs a higher TOCFL level." }, { status: 403 });
   }
 
   const v = url.searchParams.get("v") ?? "";
