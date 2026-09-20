@@ -288,6 +288,66 @@ neither has an honest cross-device answer.
 
 ## Tone pairs
 
+### Neutral tone gets a sentinel, not a new concept; pairs cap at exactly two syllables (19 Sep 2026)
+
+Importing HSK/TOCFL word lists surfaced two gaps `tonepairs-v1`'s four
+hand-picked words never hit: fully neutral-tone single syllables (的, 了,
+...) and real two-syllable words where one syllable is neutral (a
+grammatical particle following a toned one). Both needed a decision.
+
+**A neutral single syllable is stored as `tone: 0`, not a new sentinel.**
+`tones[]` already used `0` for a neutral syllable inside a multi-syllable
+word (see `wordsFromCatalog`'s comment in `words.ts`, predating this
+change). Reusing that value for the singular `tone` field instead of
+inventing e.g. `5` means no second neutral-tone concept for this file or
+CLAUDE.md to explain. `import-words.ts` now accepts a single all-neutral
+syllable (previously refused outright) and writes `tone: 0`;
+`words_tone_check` was widened from `1-4` to `0-4` to allow it
+(`supabase/migrations/0017_neutral_tone.sql`). A *multi*-syllable word with
+no toned syllable at all is still refused — there would be no tone for a
+label or a corridor lookup to key off, single or multi.
+
+**This costs nothing downstream, because `wordsFromCatalog` already
+excluded `tone: 0` from the live inventory before this change** — its
+validation only ever accepted `tone ∈ {1,2,3,4}` for the singular field.
+Pierre's decision was "don't show single neutral-tone syllables in the
+game" and that was already true, for a completely unrelated reason (the
+validation predates this task). No code changed to achieve it.
+
+**`isMulti()` moved from "any `syllables > 1`, no neutral anywhere" to
+"exactly `syllables === 2`", full stop.** Two changes bundled into one
+function:
+- The neutral exclusion is gone. A real two-syllable word's natural
+  neutral syllable (its corridor measured from the speaker's own
+  recording, never a tone-keyed lookup — the same "shape-agnostic corridor"
+  argument as the "Shape-agnostic corridor for multi-syllable words"
+  entry above) has no reason to be excluded from the live pairs pool. The
+  one guard that looked necessary — a word where *every* syllable is
+  neutral — turned out to be unreachable: `wordsFromCatalog` guarantees
+  `tone` is a real 1-4 value, and that value always comes from one of
+  `tones`' own entries, so a `Word` with no real tone anywhere cannot exist
+  in practice. The guard was written, then deleted once a test fixture for
+  it turned out impossible to construct.
+- The upper bound changed from "any count > 1" to "exactly 2". The word
+  lists this task imported include 3+-syllable words that should land in
+  the catalog (recordable later) without silently reaching the live
+  "pairs" mode the moment they're published — `isMulti`'s old unbounded
+  upper limit would have let that happen with zero code change, which is
+  exactly the kind of silent scope creep CLAUDE.md's tier-gate incidents
+  warn about.
+
+Two tone-keyed lookups needed a `0` entry to survive a neutral syllable
+reaching them: `TOLERANCE_FACTOR` in `gates.ts` (`toleranceChao`'s
+`Math.max(...tones.map(t => TOLERANCE_FACTOR[t]))` would otherwise hit
+`undefined` → `NaN` the moment a pair's `tones` held a `0`) and
+`TONE_LINE_COLOR` in `toneColors.ts` (the HUD's per-syllable tone colour).
+Both got `0: 1` / a neutral grey respectively, rather than special-casing
+the caller. `DEFAULT_POLYLINES`/`shapeForTone`/`GATE_DURATION_S` — the
+other tone-keyed lookups in `gates.ts` — are never reached by a pairs gate
+at all (`makeGate` builds a word's corridor from `shapeForWord`, which
+reads the word's own measured `polyline`/`durationS` directly), so they
+needed no change.
+
 ### The booth silently killed the mic on a fresh `npm run dev`, only surfaced by recording pairs (19 Sep 2026)
 
 Recording the `tonepairs-v1` batch was the first time this session's local

@@ -2,17 +2,26 @@
  * `GET /booth/words` — tells the recording booth what's left to record and
  * what's already in, **for the speaker its passcode resolved to**.
  *
- * The scoping is in the query, not a client-side filter: a list that is not
- * yours is a list you can act on by mistake, and the booth's whole isolation
- * guarantee is that another speaker's rows are never in the room.
+ * SPEAKER scoping is in the query, not a client-side filter: a list that is
+ * not yours is a list you can act on by mistake, and the booth's whole
+ * isolation guarantee is that another speaker's rows are never in the room.
+ *
+ * LIST scoping (which curated word list — `hsk1`, `tocfl2`, `core-120`, …—
+ * a word belongs to) is deliberately the opposite: every word's full list
+ * membership rides along on every response, unfiltered, and `Overview.tsx`
+ * decides what to show or grey out. Recording priority (e.g. "TOCFL only
+ * this week") changes far more often than who may write whose rows, so it
+ * belongs in a UI a recorder can see change, not a server-side allowlist
+ * only Pierre can edit.
  *
  * A word with no `word_clips` row for this speaker counts as `pending` — a
  * second voice starts with 120 words to record, not an empty booth.
  *
- * Response shape is deliberately narrow: `{id, hanzi, pinyin, tone, status}`
- * only, plus the speaker's id and display name. The booth needs to show who
- * is recording and what to say next, not the clip pipeline's internal
- * bookkeeping (`raw_key`, `recorded_session`, `contour`, `polyline`, …).
+ * Response shape is deliberately narrow: `{id, hanzi, pinyin, tone, status,
+ * lists}` only, plus the speaker's id and display name. The booth needs to
+ * show who is recording, what to say next, and which lists it belongs to —
+ * not the clip pipeline's internal bookkeeping (`raw_key`,
+ * `recorded_session`, `contour`, `polyline`, …).
  */
 import { isDenied, resolveSpeaker } from "../passcode.ts";
 import { serviceDb } from "../db.ts";
@@ -24,6 +33,9 @@ interface BoothWord {
   pinyin: string;
   tone: number;
   status: string;
+  /** This word's list memberships (`hsk1`, `tocfl2`, `core-120`, …) — lets the
+   * booth show/grey lists client-side without the server picking for it. */
+  lists: string[];
 }
 
 interface WordRow {
@@ -33,6 +45,7 @@ interface WordRow {
   tone: number;
   position: number;
   word_clips: { status: string }[] | { status: string } | null;
+  word_lists: { list_id: string }[] | null;
 }
 
 function clipStatus(row: WordRow): string {
@@ -62,10 +75,12 @@ export async function handleBoothWords(req: Request, env: Env): Promise<Response
   }
 
   // Left join, scoped to this speaker inside the join filter so a word with no
-  // row for them still comes back (and reads as `pending`).
+  // row for them still comes back (and reads as `pending`). `word_lists` is a
+  // second, unscoped left join — every word's list membership, regardless of
+  // speaker — so the booth can group/greylist by list client-side.
   const { data, error } = await db
     .from("words")
-    .select("id,hanzi,pinyin,tone,position,word_clips(status)")
+    .select("id,hanzi,pinyin,tone,position,word_clips(status),word_lists(list_id)")
     .eq("word_clips.speaker_id", speaker)
     .order("position", { ascending: true });
 
@@ -85,6 +100,7 @@ export async function handleBoothWords(req: Request, env: Env): Promise<Response
       pinyin: row.pinyin,
       tone: row.tone,
       status,
+      lists: (row.word_lists ?? []).map((l) => l.list_id),
     };
     if (status === "pending") pending.push(word);
     else if (status === "recorded" || status === "published") recorded.push(word);

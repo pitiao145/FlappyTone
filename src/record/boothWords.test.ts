@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchBoothWords, type BoothWord } from "./boothWords.ts";
 
-const pending: BoothWord[] = [{ id: "ce4", hanzi: "測", pinyin: "cè", tone: 4, status: "pending" }];
-const recorded: BoothWord[] = [{ id: "ma1b", hanzi: "媽", pinyin: "mā", tone: 1, status: "recorded" }];
+const pending: BoothWord[] = [
+  { id: "ce4", hanzi: "測", pinyin: "cè", tone: 4, status: "pending", lists: ["tocfl1"] },
+];
+const recorded: BoothWord[] = [
+  { id: "ma1b", hanzi: "媽", pinyin: "mā", tone: 1, status: "recorded", lists: ["core-120"] },
+];
 const speaker = { id: "jane", name: "Jane" };
 
 const ok = (body: unknown) =>

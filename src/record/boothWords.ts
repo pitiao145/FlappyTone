@@ -18,6 +18,13 @@ export interface BoothWord {
   pinyin: string;
   tone: Tone;
   status: BoothWordStatus;
+  /**
+   * This word's list memberships (`hsk1`, `tocfl2`, `core-120`, …) — lets
+   * `Overview.tsx` group/grey by list without a second round trip. Optional:
+   * a deployed Worker predating this field, or a rollout where the client
+   * updates first, must degrade to "no picker," never crash the booth.
+   */
+  lists?: string[];
 }
 
 /**

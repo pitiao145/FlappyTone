@@ -1589,6 +1589,27 @@ describe("Run — pairs mode and word mix", () => {
     expect(final.score).toBeGreaterThan(0);
   });
 
+  it("a neutral-tone syllable in a pair plays through without a NaN corridor or a mismatch/perTone update", () => {
+    // isMulti() no longer excludes a pair with one neutral syllable (see
+    // words.ts) — this is that word actually flying, not just passing the
+    // pool filter. tone (first syllable) must be real 1-4 or wordsFromCatalog
+    // drops the row entirely, so the neutral syllable is second here.
+    const neutralInventory = multiWordsFrom([
+      { id: "haoma", hanzi: "好嗎", pinyin: "hǎoma", tones: [3, 0], file: "fixture:hao_ma", durationS: 1.1, polyline: flatPolyline },
+    ]);
+    const run = new Run({ mode: "pairs", width: W, words: neutralInventory });
+    const { snapshots } = simulate(run, 500, trackCorridor);
+    const corridorValues = snapshots.flatMap((s) => (s.activeGate ? [s.activeGate.corridorChao] : []));
+    expect(corridorValues.length).toBeGreaterThan(0);
+    expect(corridorValues.every((v) => !Number.isNaN(v))).toBe(true);
+
+    const final = run.snapshot();
+    expect(final.gateLog.length).toBeGreaterThan(0);
+    for (const tone of [1, 2, 3, 4] as const) {
+      expect(final.stats.perTone[tone].gates).toBe(0);
+    }
+  });
+
   it("a pause inside a multi gate's mergeGap window (300ms) still reads as one heard utterance", () => {
     const run = new Run({ mode: "pairs", width: W, words: multiInventory });
     let now = 0;

@@ -183,8 +183,13 @@ export function corridorChaoAt(shape: GateShape, t: number): number {
  * and T2's rise is the longest sustained slew of any tone. It shows up in play
  * as the lowest voiced fraction of the four — 22–50% across six T2 gates
  * against 51–80% on T1 in the same run.
+ *
+ * `0` (neutral, inside a two-syllable pairs gate — see `isMulti` in
+ * words.ts) gets no widening: the creak/slew arguments above are about pitch
+ * *tracking* reliability on a held tone, which doesn't apply to a syllable
+ * that carries no target pitch at all.
  */
-const TOLERANCE_FACTOR: Record<Tone, number> = { 1: 1, 2: 1.15, 3: 1.3, 4: 1 };
+const TOLERANCE_FACTOR: Record<Tone | 0, number> = { 0: 1, 1: 1, 2: 1.15, 3: 1.3, 4: 1 };
 
 /**
  * Converts a corridor tolerance in screen-height fraction to chao units.
@@ -195,8 +200,9 @@ const TOLERANCE_FACTOR: Record<Tone, number> = { 1: 1, 2: 1.15, 3: 1.3, 4: 1 };
  * syllables' factors applies to the whole gate — the plan's own rule
  * (`max(TOLERANCE_FACTOR[t] for t in tones)`), so a pair with one T3 syllable
  * gets T3's forgiveness for the whole corridor rather than averaging it away.
+ * `tones` may contain `0` (neutral) for a pairs gate — see `TOLERANCE_FACTOR`.
  */
-export function toleranceChao(tone: Tone | Tone[], baseTolH: number): number {
+export function toleranceChao(tone: Tone | 0 | (Tone | 0)[], baseTolH: number): number {
   const tones = Array.isArray(tone) ? tone : [tone];
   const factor = Math.max(...tones.map((t) => TOLERANCE_FACTOR[t]));
   return (baseTolH / 0.6) * 4 * factor;

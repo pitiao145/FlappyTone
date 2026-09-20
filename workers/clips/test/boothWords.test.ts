@@ -9,6 +9,8 @@ interface Row {
   position: number;
   /** speaker id → that speaker's clip status; absent means no `word_clips` row. */
   clips: Record<string, string>;
+  /** this word's list memberships — unscoped by speaker, unlike `clips`. */
+  lists?: string[];
 }
 
 const state = vi.hoisted(() => ({
@@ -19,6 +21,7 @@ const state = vi.hoisted(() => ({
     tone: number;
     position: number;
     clips: Record<string, string>;
+    lists?: string[];
   }[],
   speakers: {} as Record<string, string>,
   error: null as unknown,
@@ -59,6 +62,8 @@ vi.mock("../src/db.ts", () => ({
                     position: r.position,
                     // A left join scoped to one speaker: no row for them ⇒ [].
                     word_clips: r.clips[speaker] ? [{ status: r.clips[speaker] }] : [],
+                    // Unscoped by speaker, unlike word_clips above.
+                    word_lists: (r.lists ?? []).map((list_id) => ({ list_id })),
                   }));
                 return { data, error: null };
               },
@@ -80,8 +85,16 @@ async function get(passcode: string | null = "hunter2", env = fakeEnv()) {
 }
 
 const rows: Row[] = [
-  { id: "ma1", hanzi: "媽", pinyin: "mā", tone: 1, position: 2, clips: {} },
-  { id: "ma2", hanzi: "麻", pinyin: "má", tone: 2, position: 1, clips: { jane: "pending" } },
+  { id: "ma1", hanzi: "媽", pinyin: "mā", tone: 1, position: 2, clips: {}, lists: ["core-120"] },
+  {
+    id: "ma2",
+    hanzi: "麻",
+    pinyin: "má",
+    tone: 2,
+    position: 1,
+    clips: { jane: "pending" },
+    lists: ["core-120", "tocfl1"],
+  },
   { id: "ma3", hanzi: "馬", pinyin: "mǎ", tone: 3, position: 1, clips: { jane: "recorded" } },
   {
     id: "ma4",
@@ -149,10 +162,20 @@ describe("GET /booth/words", () => {
     expect(body.pending.map((w) => w.id)).toEqual(["ma2", "ma3", "ma1", "ma5"]);
   });
 
-  it("shapes each word as {id, hanzi, pinyin, tone, status} only", async () => {
+  it("shapes each word as {id, hanzi, pinyin, tone, status, lists} only", async () => {
     const res = await get();
     const body = (await res.json()) as { pending: Record<string, unknown>[] };
-    expect(Object.keys(body.pending[0]).sort()).toEqual(["hanzi", "id", "pinyin", "status", "tone"]);
+    expect(Object.keys(body.pending[0]).sort()).toEqual(["hanzi", "id", "lists", "pinyin", "status", "tone"]);
+  });
+
+  it("carries every word's list membership, unscoped by speaker", async () => {
+    const res = await get("mark-code");
+    const body = (await res.json()) as { pending: { id: string; lists: string[] }[] };
+    const byId = Object.fromEntries(body.pending.map((w) => [w.id, w.lists]));
+    expect(byId.ma2).toEqual(["core-120", "tocfl1"]);
+    // ma3 has no word_lists row at all — the response carries an empty
+    // array, never undefined, so the client never has to null-check it.
+    expect(byId.ma3).toEqual([]);
   });
 
   it("503s when the words query fails", async () => {

@@ -204,6 +204,35 @@ body {
   color: var(--rec-fg);
 }
 
+.rec-list-picker {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  flex: none;
+}
+
+.rec-pill {
+  flex: none;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid #2a3442;
+  background: #0e141c;
+  color: var(--rec-dim);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.rec-pill-active {
+  border-color: var(--rec-accent);
+  color: var(--rec-fg);
+}
+
+.rec-pill:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .rec-footer {
   display: flex;
   align-items: center;

@@ -97,6 +97,15 @@ describe("toleranceChao", () => {
     // A single-element array behaves exactly like the bare tone it wraps.
     expect(toleranceChao([2], 0.12)).toBeCloseTo(toleranceChao(2, 0.12));
   });
+
+  it("a neutral syllable (0) in a pairs gate never widens past its toned partner, and never NaNs", () => {
+    // A real word's neutral syllable (isMulti no longer excludes these) must
+    // not corrupt tolerance — TOLERANCE_FACTOR[0] === 1, no widening of its
+    // own, so the toned syllable's factor still wins.
+    expect(toleranceChao([3, 0], 0.12)).toBeCloseTo(toleranceChao(3, 0.12));
+    expect(toleranceChao([0, 1], 0.12)).toBeCloseTo(toleranceChao(1, 0.12));
+    expect(Number.isNaN(toleranceChao([3, 0], 0.12))).toBe(false);
+  });
 });
 
 describe("newDifficulty", () => {

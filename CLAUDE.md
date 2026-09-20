@@ -156,6 +156,8 @@ Two-syllable words are a real, player-reachable mode now, not exploration. Both 
 
 **Corridor geometry is unchanged and reused as-is** (`shapeForWord`, `corridorChaoAt`, `corridorToleranceAt`, `drawVisualiser`) — the implementation review's finding that these are shape-agnostic held. `corridorToleranceAt` widens for a pair by taking `max(TOLERANCE_FACTOR[t] for t in tones)` across every syllable's tone, not just the first.
 
+**`isMulti` (`src/game/words.ts`) caps the live pairs pool at exactly `syllables === 2`** and allows a neutral (0) syllable within the pair — a 3+-syllable word can be catalogued (recordable) without reaching this mode, and a real word's natural neutral syllable is no longer excluded (`TOLERANCE_FACTOR`/`TONE_LINE_COLOR` both carry a `0` entry for this). See DECISIONS.md's "Neutral tone gets a sentinel, not a new concept" entry.
+
 **The three things the implementation review flagged as real gaps are now explicit, resolved decisions, not silent single-tone assumptions:**
 
 1. **Clip measurement**: `src/dev/clipCutMulti.ts` is the real, production multi-syllable-aware counterpart to `clipCut.ts`'s `longestVoicedRun`/`templateContour` — used by `process-clips.ts` for any word with `syllables > 1`, not a dev-only workaround. Deliberately **shape-agnostic**, no per-tone node template: sandhi means a tone's realised shape depends on what follows it (a 3+2 first syllable never reaches chao 5; a 3+3 first syllable rises like a Tone 2), so a corridor built from citation templates would teach a shape the speaker did not produce. See DECISIONS.md.

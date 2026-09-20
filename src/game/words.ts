@@ -273,11 +273,21 @@ export function isSingle(w: Word): boolean {
 /**
  * A word the multi-syllable ("pairs") pool may draw from.
  *
- * Neutral tone (0) is excluded from every pool, even though the importer
- * accepts it — v1 has no neutral-tone handling anywhere downstream.
+ * Exactly two syllables — not "more than one" — because the catalog can now
+ * hold 3+-syllable words (imported for later, not built for yet): capping
+ * here keeps them inert in the DB until a mode is built for them, rather
+ * than silently reaching the live pairs pool the moment `min_tier` allows
+ * it. A neutral tone (0) inside the pair is allowed, unlike before: the
+ * corridor is measured from the speaker's own recording (`shapeForWord`,
+ * never a tone-keyed lookup), so a real word's natural neutral syllable
+ * doesn't need excluding. No guard against "both syllables neutral" is
+ * needed here — `wordsFromCatalog` already only ever produces a `Word`
+ * whose `tone` is a real 1-4 value, and that value always comes from one of
+ * `tones`' own entries, so a `Word` with no real tone anywhere cannot exist.
+ * See docs/DECISIONS.md.
  */
 export function isMulti(w: Word): boolean {
-  return w.syllables > 1 && !w.tones.includes(0 as Tone);
+  return w.syllables === 2;
 }
 
 /** Every multi-syllable word in the inventory. */

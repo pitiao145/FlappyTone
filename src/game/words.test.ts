@@ -364,13 +364,19 @@ describe("the single/multi pool split", () => {
   const single = word({ id: "single1", tone: 1, tones: [1], syllables: 1 });
   const pair = word({ id: "pair1", tone: 3, tones: [3, 2], syllables: 2, position: 1 });
   const neutralPair = word({ id: "neutral1", tone: 3, tones: [3, 0], syllables: 2, position: 2 });
+  const triple = word({ id: "triple1", tone: 1, tones: [1, 2, 3], syllables: 3, position: 4 });
 
-  it("isSingle/isMulti classify by syllable count, and multi excludes neutral tone", () => {
+  it("isSingle/isMulti classify by syllable count; multi allows a real word's neutral syllable", () => {
     expect(isSingle(single)).toBe(true);
     expect(isSingle(pair)).toBe(false);
     expect(isMulti(single)).toBe(false);
     expect(isMulti(pair)).toBe(true);
-    expect(isMulti(neutralPair)).toBe(false);
+    // A neutral syllable inside an otherwise-toned pair is a real, playable
+    // word — the corridor is measured from the recording, not a tone-keyed
+    // lookup, so there's nothing to exclude it for (see docs/DECISIONS.md).
+    expect(isMulti(neutralPair)).toBe(true);
+    // 3+ syllables: catalogued, but capped out of the live pairs pool.
+    expect(isMulti(triple)).toBe(false);
   });
 
   it("wordsOfTone never returns a multi-syllable word, even when its first tone matches", () => {
@@ -385,14 +391,15 @@ describe("the single/multi pool split", () => {
     expect(pickWord(pool, 1, [], () => 0)?.id).toBe("single1");
   });
 
-  it("multiWords excludes single-syllable and neutral-tone rows", () => {
-    expect(multiWords([single, pair, neutralPair]).map((w) => w.id)).toEqual(["pair1"]);
+  it("multiWords includes a real neutral-tone pair, excludes single-syllable and 3+-syllable rows", () => {
+    expect(multiWords([single, pair, neutralPair, triple]).map((w) => w.id)).toEqual(["pair1", "neutral1"]);
   });
 
-  it("availableToneCombos derives sorted, deduped combos from the inventory", () => {
-    const pair2 = word({ id: "pair2", tone: 3, tones: [3, 2], syllables: 2, position: 3 });
-    const pair3 = word({ id: "pair3", tone: 4, tones: [4, 4], syllables: 2, position: 4 });
-    expect(availableToneCombos([single, pair, pair2, pair3, neutralPair])).toEqual([
+  it("availableToneCombos derives sorted, deduped combos from the inventory, including a neutral-tone combo", () => {
+    const pair2 = word({ id: "pair2", tone: 3, tones: [3, 2], syllables: 2, position: 5 });
+    const pair3 = word({ id: "pair3", tone: 4, tones: [4, 4], syllables: 2, position: 6 });
+    expect(availableToneCombos([single, pair, pair2, pair3, neutralPair, triple])).toEqual([
+      [3, 0],
       [3, 2],
       [4, 4],
     ]);

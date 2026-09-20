@@ -35,9 +35,17 @@
  * relabels audio that is already recorded. See `wordIds.ts`.
  *
  * **Refuses the whole file** on any parse error, any Simplified character
- * (hard rule 9 — see `simplified.ts`), or the same word twice in one file.
- * A word list is entered once and recorded against for weeks: a bad row caught
- * here costs a retype, and caught later costs a recording session.
+ * (hard rule 9 — see `simplified.ts`), the same word twice in one file, or a
+ * MULTI-syllable word with no tone mark on any syllable (nothing for a
+ * corridor to be shaped from). A word list is entered once and recorded
+ * against for weeks: a bad row caught here costs a retype, and caught later
+ * costs a recording session.
+ *
+ * **A fully-neutral SINGLE syllable** (的, 了, ...) is accepted, not refused —
+ * stored with `tone: 0`, the same sentinel `tones[]` already uses for a
+ * neutral syllable inside a multi-syllable word. `wordsFromCatalog` already
+ * excludes `tone: 0` from every gameplay pool, so these are recordable and
+ * catalogued but never shown in the game (see docs/DECISIONS.md).
  *
  * **What an existing row keeps.** Only `hanzi`, `pinyin`, `english`, `tone`,
  * `tones`, `syllables` and its list memberships are refreshed. `status`,
@@ -162,6 +170,7 @@ interface Parsed {
 
 const errors: string[] = [];
 const parsed: Parsed[] = [];
+let numNeutral = 0;
 /** `hanzi\tpinyin` — the same identity `assignIds` uses. */
 const seen = new Map<string, number>();
 
@@ -196,11 +205,21 @@ for (const { line, text } of lines.slice(1)) {
   try {
     const syllables = parseWord(pinyin);
     const toned = syllables.filter((s) => s.tone !== 0);
-    if (toned.length === 0) {
-      // Every syllable neutral: nothing for a corridor to be shaped from.
-      errors.push(`line ${line}: "${pinyin}" has no tone mark — neutral tone only`);
+    if (toned.length === 0 && syllables.length > 1) {
+      // Every syllable neutral on a MULTI-syllable word: no tone anywhere to
+      // key a corridor or a label off, single or multi. A single neutral
+      // syllable is handled below instead (tone: 0) — see docs/DECISIONS.md.
+      errors.push(
+        `line ${line}: "${pinyin}" has no tone mark on any syllable — nothing for a corridor to be shaped from`,
+      );
       continue;
     }
+    // A genuinely neutral single syllable (的, 了, ...): stored with tone 0,
+    // the same sentinel `tones[]` already uses for a neutral syllable inside
+    // a multi-syllable word. `wordsFromCatalog` already excludes tone 0 from
+    // every gameplay pool, so this is "recordable, never shown" for free.
+    const tone = toned.length > 0 ? toned[0].tone : 0;
+    numNeutral += toned.length === 0 ? 1 : 0;
     parsed.push({
       line,
       hanzi,
@@ -210,7 +229,7 @@ for (const { line, text } of lines.slice(1)) {
         .split(";")
         .map((s) => s.trim())
         .filter(Boolean),
-      tone: toned[0].tone,
+      tone,
       tones: syllables.map((s) => s.tone),
       syllables: syllables.length,
     });
@@ -341,7 +360,9 @@ const byTone = [1, 2, 3, 4].map((t) => `T${t} ${parsed.filter((p) => p.tone === 
 const multi = parsed.filter((p) => p.syllables > 1);
 
 console.log(`${parsed.length} word(s) read from ${input}`);
-console.log(`  by first tone: ${byTone.join("  ")}`);
+console.log(
+  `  by first tone: ${byTone.join("  ")}` + (numNeutral ? `  neutral(0) ${numNeutral}` : ""),
+);
 console.log(
   `  ${unchanged + updates.length} already in the catalog ` +
     `(${updates.length} refreshed, ${unchanged} identical; ids, status and measurements untouched)`,

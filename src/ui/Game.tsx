@@ -1134,7 +1134,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
                   {displayTones.map((t, i) => (
                     <span key={i} style={{ color: TONE_LINE_COLOR[t] }}>
                       {i > 0 ? "·" : ""}
-                      T{t}
+                      {/* `t` is typed `Tone` but a pairs gate's tones can hold
+                          a runtime 0 (neutral) — see words.ts's `isMulti`. */}
+                      {(t as number) === 0 ? "neutral" : `T${t}`}
                     </span>
                   ))}
                   )
