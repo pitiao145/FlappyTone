@@ -358,7 +358,6 @@
         "core-120",
         "hsk1",
         "hsk3",
-        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -401,8 +400,7 @@
       "id": "che1",
       "lists": [
         "core-120",
-        "hsk1",
-        "sampler-beginner"
+        "hsk1"
       ],
       "meta": {
         "reference": {
@@ -444,7 +442,6 @@
       "id": "shuo1",
       "lists": [
         "core-120",
-        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -487,7 +484,6 @@
       "id": "chi1",
       "lists": [
         "core-120",
-        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -531,7 +527,6 @@
       "lists": [
         "core-120",
         "hsk1",
-        "sampler-beginner",
         "tocfl2"
       ],
       "meta": {
@@ -575,7 +570,6 @@
       "lists": [
         "core-120",
         "hsk3",
-        "sampler-beginner",
         "tocfl2"
       ],
       "meta": {
@@ -617,8 +611,7 @@
       "hanzi": "心",
       "id": "xin1",
       "lists": [
-        "core-120",
-        "sampler-beginner"
+        "core-120"
       ],
       "meta": {
         "reference": {
@@ -658,8 +651,7 @@
       "id": "kai1",
       "lists": [
         "core-120",
-        "hsk1",
-        "sampler-beginner"
+        "hsk1"
       ],
       "meta": {
         "reference": {
@@ -702,7 +694,6 @@
       "lists": [
         "core-120",
         "hsk1",
-        "sampler-beginner",
         "tocfl3"
       ],
       "meta": {
@@ -744,8 +735,7 @@
       "hanzi": "春",
       "id": "chun1",
       "lists": [
-        "core-120",
-        "sampler-beginner"
+        "core-120"
       ],
       "meta": {
         "reference": {
@@ -785,8 +775,7 @@
       "id": "gao1",
       "lists": [
         "core-120",
-        "hsk2",
-        "sampler-beginner"
+        "hsk2"
       ],
       "meta": {
         "reference": {
@@ -828,8 +817,7 @@
       "id": "zhong1",
       "lists": [
         "core-120",
-        "hsk3",
-        "sampler-beginner"
+        "hsk3"
       ],
       "meta": {
         "reference": {
@@ -872,8 +860,7 @@
       "lists": [
         "core-120",
         "hsk1",
-        "hsk2",
-        "sampler-beginner"
+        "hsk2"
       ],
       "meta": {
         "reference": {
@@ -916,7 +903,6 @@
       "lists": [
         "core-120",
         "hsk3",
-        "sampler-beginner",
         "tocfl3"
       ],
       "meta": {
@@ -959,7 +945,6 @@
       "id": "tang1",
       "lists": [
         "core-120",
-        "sampler-beginner",
         "tocfl3"
       ],
       "meta": {
@@ -1002,8 +987,7 @@
       "id": "bao1",
       "lists": [
         "core-120",
-        "hsk2",
-        "sampler-beginner"
+        "hsk2"
       ],
       "meta": {
         "reference": {
@@ -1045,7 +1029,6 @@
       "id": "bei1",
       "lists": [
         "core-120",
-        "sampler-beginner",
         "tocfl2"
       ],
       "meta": {
@@ -1088,8 +1071,7 @@
       "id": "fei1",
       "lists": [
         "core-120",
-        "hsk2",
-        "sampler-beginner"
+        "hsk2"
       ],
       "meta": {
         "reference": {
@@ -1130,8 +1112,7 @@
       "hanzi": "星",
       "id": "xing1",
       "lists": [
-        "core-120",
-        "sampler-beginner"
+        "core-120"
       ],
       "meta": {
         "reference": {
@@ -1170,8 +1151,7 @@
       "hanzi": "香",
       "id": "xiang1",
       "lists": [
-        "core-120",
-        "sampler-beginner"
+        "core-120"
       ],
       "meta": {
         "reference": {
@@ -1210,8 +1190,7 @@
       "hanzi": "冰",
       "id": "bing1",
       "lists": [
-        "core-120",
-        "sampler-beginner"
+        "core-120"
       ],
       "meta": {
         "reference": {
@@ -1252,7 +1231,6 @@
       "lists": [
         "core-120",
         "hsk1",
-        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -1294,7 +1272,8 @@
       "hanzi": "麻",
       "id": "ma2",
       "lists": [
-        "core-120"
+        "core-120",
+        "sampler-beginner"
       ],
       "meta": {
         "reference": {
@@ -1337,7 +1316,8 @@
       "hanzi": "拔",
       "id": "ba2",
       "lists": [
-        "core-120"
+        "core-120",
+        "sampler-beginner"
       ],
       "meta": {
         "reference": {
@@ -1382,6 +1362,7 @@
       "lists": [
         "core-120",
         "hsk1",
+        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -1429,6 +1410,7 @@
       "lists": [
         "core-120",
         "hsk1",
+        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -1476,6 +1458,7 @@
       "lists": [
         "core-120",
         "hsk1",
+        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -1524,6 +1507,7 @@
         "core-120",
         "hsk2",
         "hsk3",
+        "sampler-beginner",
         "tocfl3"
       ],
       "meta": {
@@ -1571,6 +1555,7 @@
       "lists": [
         "core-120",
         "hsk1",
+        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -1616,7 +1601,8 @@
       "hanzi": "房",
       "id": "fang2",
       "lists": [
-        "core-120"
+        "core-120",
+        "sampler-beginner"
       ],
       "meta": {
         "reference": {
@@ -2654,6 +2640,7 @@
       "lists": [
         "core-120",
         "hsk3",
+        "sampler-beginner",
         "tocfl3"
       ],
       "meta": {
@@ -2704,7 +2691,8 @@
       "id": "ba3",
       "lists": [
         "core-120",
-        "hsk3"
+        "hsk3",
+        "sampler-beginner"
       ],
       "meta": {
         "reference": {
@@ -2755,6 +2743,7 @@
       "lists": [
         "core-120",
         "hsk1",
+        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -2806,6 +2795,7 @@
       "lists": [
         "core-120",
         "hsk1",
+        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -2857,6 +2847,7 @@
       "lists": [
         "core-120",
         "hsk1",
+        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -2907,6 +2898,7 @@
       "id": "ni3",
       "lists": [
         "core-120",
+        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -2959,6 +2951,7 @@
         "core-120",
         "hsk1",
         "hsk2",
+        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -4162,7 +4155,8 @@
       "hanzi": "罵",
       "id": "ma4b",
       "lists": [
-        "core-120"
+        "core-120",
+        "sampler-beginner"
       ],
       "meta": {
         "reference": {
@@ -4205,7 +4199,8 @@
       "hanzi": "爸",
       "id": "ba4",
       "lists": [
-        "core-120"
+        "core-120",
+        "sampler-beginner"
       ],
       "meta": {
         "reference": {
@@ -4250,6 +4245,7 @@
       "lists": [
         "core-120",
         "hsk1",
+        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -4297,6 +4293,7 @@
       "lists": [
         "core-120",
         "hsk1",
+        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -4344,6 +4341,7 @@
       "lists": [
         "core-120",
         "hsk1",
+        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -4390,7 +4388,8 @@
       "id": "da4",
       "lists": [
         "core-120",
-        "hsk1"
+        "hsk1",
+        "sampler-beginner"
       ],
       "meta": {
         "reference": {
@@ -4436,6 +4435,7 @@
       "id": "shi4",
       "lists": [
         "core-120",
+        "sampler-beginner",
         "tocfl1"
       ],
       "meta": {
@@ -5696,7 +5696,6 @@
       "id": "xiaoshi32",
       "lists": [
         "hsk1",
-        "sampler-intermediate",
         "tocfl3",
         "tonepairs-v1"
       ],
@@ -5772,7 +5771,6 @@
       "id": "yiqian32",
       "lists": [
         "hsk3",
-        "sampler-intermediate",
         "tocfl1",
         "tonepairs-v1"
       ],
@@ -5892,7 +5890,8 @@
       "hanzi": "一下",
       "id": "yixia24",
       "lists": [
-        "hsk1"
+        "hsk1",
+        "sampler-intermediate"
       ],
       "meta": {
         "reference": {
@@ -5966,6 +5965,7 @@
       "id": "yixie11",
       "lists": [
         "hsk1",
+        "sampler-intermediate",
         "tocfl2"
       ],
       "meta": {
@@ -6105,6 +6105,7 @@
       "id": "yiban14",
       "lists": [
         "hsk1",
+        "sampler-intermediate",
         "tocfl3"
       ],
       "meta": {
@@ -6326,7 +6327,8 @@
       "hanzi": "一直",
       "id": "yizhi42",
       "lists": [
-        "hsk3"
+        "hsk3",
+        "sampler-intermediate"
       ],
       "meta": {
         "reference": {
@@ -6399,7 +6401,8 @@
       "hanzi": "一般",
       "id": "yiban41",
       "lists": [
-        "hsk3"
+        "hsk3",
+        "sampler-intermediate"
       ],
       "meta": {
         "reference": {
@@ -6465,6 +6468,7 @@
       "id": "yiqi13",
       "lists": [
         "hsk2",
+        "sampler-intermediate",
         "tocfl2"
       ],
       "meta": {
@@ -6684,7 +6688,8 @@
       "hanzi": "丈夫",
       "id": "zhangfu40",
       "lists": [
-        "hsk2"
+        "hsk2",
+        "sampler-intermediate"
       ],
       "meta": {
         "reference": {
@@ -6750,6 +6755,7 @@
       "id": "shangwu43",
       "lists": [
         "hsk1",
+        "sampler-intermediate",
         "tocfl1"
       ],
       "meta": {
@@ -6972,6 +6978,7 @@
       "id": "shangwang43",
       "lists": [
         "hsk2",
+        "sampler-intermediate",
         "tocfl3"
       ],
       "meta": {
@@ -7046,6 +7053,7 @@
       "id": "shangke44",
       "lists": [
         "hsk1",
+        "sampler-intermediate",
         "tocfl1"
       ],
       "meta": {
@@ -7634,6 +7642,7 @@
       "id": "zhongguo12",
       "lists": [
         "hsk1",
+        "sampler-intermediate",
         "tocfl1"
       ],
       "meta": {
@@ -8002,6 +8011,7 @@
       "id": "shenme20",
       "lists": [
         "hsk1",
+        "sampler-intermediate",
         "tocfl1"
       ],
       "meta": {
@@ -8335,6 +8345,7 @@
       "id": "tamen10",
       "lists": [
         "hsk1",
+        "sampler-intermediate",
         "tocfl1"
       ],
       "meta": {
@@ -8405,6 +8416,7 @@
       "id": "yihou34",
       "lists": [
         "hsk3",
+        "sampler-intermediate",
         "tocfl1"
       ],
       "meta": {
@@ -8725,6 +8737,7 @@
       "id": "nimen30",
       "lists": [
         "hsk1",
+        "sampler-intermediate",
         "tocfl1"
       ],
       "meta": {
@@ -8799,6 +8812,7 @@
       "id": "pianyi20",
       "lists": [
         "hsk1",
+        "sampler-intermediate",
         "tocfl1"
       ],
       "meta": {
@@ -9821,6 +9835,7 @@
       "hanzi": "冷氣",
       "id": "lengqi34",
       "lists": [
+        "sampler-intermediate",
         "tocfl3"
       ],
       "meta": {
@@ -10191,6 +10206,7 @@
       "id": "baozi10",
       "lists": [
         "hsk1",
+        "sampler-intermediate",
         "tocfl3"
       ],
       "meta": {
@@ -10715,6 +10731,7 @@
       "id": "juzi40",
       "lists": [
         "hsk3",
+        "sampler-intermediate",
         "tocfl3"
       ],
       "meta": {
@@ -10889,6 +10906,7 @@
       "id": "keyi33",
       "lists": [
         "hsk1",
+        "sampler-intermediate",
         "tocfl1"
       ],
       "meta": {
@@ -11172,6 +11190,7 @@
       "hanzi": "台灣",
       "id": "taiwan21",
       "lists": [
+        "sampler-intermediate",
         "tocfl1"
       ],
       "meta": {
@@ -11804,6 +11823,7 @@
       "id": "nali33",
       "lists": [
         "hsk1",
+        "sampler-intermediate",
         "tocfl2"
       ],
       "meta": {
@@ -12192,6 +12212,7 @@
       "id": "xihuan31",
       "lists": [
         "hsk1",
+        "sampler-intermediate",
         "tocfl1"
       ],
       "meta": {
@@ -12375,6 +12396,7 @@
       "id": "huida22",
       "lists": [
         "hsk3",
+        "sampler-intermediate",
         "tocfl3"
       ],
       "meta": {
@@ -12523,6 +12545,7 @@
       "id": "guojia21",
       "lists": [
         "hsk3",
+        "sampler-intermediate",
         "tocfl3"
       ],
       "meta": {
@@ -13845,6 +13868,7 @@
       "id": "nvsheng31",
       "lists": [
         "hsk3",
+        "sampler-intermediate",
         "tocfl3"
       ],
       "meta": {
@@ -14120,6 +14144,7 @@
       "hanzi": "姊姊",
       "id": "jiejie30",
       "lists": [
+        "sampler-intermediate",
         "tocfl1"
       ],
       "meta": {
@@ -19648,6 +19673,7 @@
       "id": "pengyou23",
       "lists": [
         "hsk1",
+        "sampler-intermediate",
         "tocfl1"
       ],
       "meta": {
