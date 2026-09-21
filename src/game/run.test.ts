@@ -1738,3 +1738,43 @@ describe("Run — pairs mode and word mix", () => {
     expect(last.gates.length).toBe(0);
   });
 });
+
+describe("deferFill / primeQueue (cold-start pool sequencing)", () => {
+  it("spawns no gate when constructed with deferFill, even with an empty inventory", () => {
+    const run = new Run({ mode: "game", width: W, deferFill: true });
+    expect(run.snapshot().gates.length).toBe(0);
+  });
+
+  it("primeQueue after a deferred setWords draws gate 1 from the resolved pool, not the pool at construction time", () => {
+    const guestWords: Word[] = [];
+    const freeWords = wordsFrom([
+      {
+        id: "a1",
+        hanzi: "妈",
+        pinyin: "mā",
+        tone: 1,
+        file: "a1.wav",
+        durationS: 0.5,
+        polyline: [
+          [0, 4.5],
+          [1, 4.5],
+        ],
+      },
+    ]);
+    const run = new Run({
+      mode: "game",
+      width: W,
+      words: guestWords, // what the constructor sees before tier/inventory resolve
+      deferFill: true,
+      rand: () => 0,
+    });
+    expect(run.snapshot().gates.length).toBe(0);
+
+    run.setWords(freeWords);
+    run.primeQueue();
+
+    const gates = run.snapshot().gates;
+    expect(gates.length).toBeGreaterThan(0);
+    expect(gates[0].word?.id).toBe("a1");
+  });
+});

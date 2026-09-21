@@ -29,7 +29,7 @@ import {
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
-import { getTier, useTier } from "../data/tier.ts";
+import { getTier, tierReady, useTier } from "../data/tier.ts";
 import { resolvedPool } from "../game/words.ts";
 import type { Proficiency } from "../game/tiers.ts";
 import type { LevelChoice } from "../game/settings.ts";
@@ -507,10 +507,15 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // from `useTier()`: `tier` resolves asynchronously, and putting it in
       // this effect's dependency array would tear down and rebuild a live Run
       // the moment the answer landed. The store answers synchronously and, in
-      // a session where the tier has already resolved once, correctly. The one
-      // stale case — the very first run after a cold load, where the store
-      // still holds its "guest" default — is repaired in place by the
-      // tier-pool effect below, via `setWords`, with no teardown.
+      // a session where the tier has already resolved once, correctly.
+      //
+      // On a cold load neither the store nor the inventory may be ready yet,
+      // so the pool below can be wrong (guest's sampler, or empty). Rather
+      // than fill gate 1 from it now and repair in place afterwards — which
+      // cannot revisit a gate already drawn — the queue is left unfilled
+      // (`deferFill`) and `beginWhenWarm` finalizes the real pool and primes
+      // the queue itself, behind the same hold it already uses for the first
+      // clip fetch.
       words: resolvedPool(inventoryNow() ?? [], getTier(), mode, proficiency, levelChoice),
       singleWord,
       drillTone,
@@ -519,6 +524,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // The calibration flight (autoStart) flies only the grid-anchoring tones;
       // a normal tutorial teaches all four.
       tutorialTones: autoStart ? CALIBRATION_TONES : undefined,
+      deferFill: true,
     });
     runRef.current = run;
     reportedGatesRef.current = 0;
@@ -526,12 +532,6 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // widens the corridor mid-session would otherwise have their easier run
     // read against the harder one's settings.
     track({ type: "run_start", mode, corridor, cue: cueStyle });
-    // If the manifest had not landed when the Run was built, catch it up.
-    // `getTier()` is read again here rather than captured above: the tier may
-    // well have resolved while the fetch was in flight.
-    if (!inventoryNow()) {
-      void loadInventory().then((w) => run.setWords(resolvedPool(w, getTier(), mode, proficiency, levelChoice)));
-    }
     let tracker: PitchTracker | null = null;
     let rafId = 0;
     let running = true;
@@ -819,25 +819,41 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
      * nothing to wait for and the screen would be pure dead time.
      */
     const beginWhenWarm = (): void => {
-      const lead = cuesUseClips ? (run.snapshot().gates[0]?.word ?? null) : null;
-      if (!lead) {
-        start();
-        return;
-      }
       const gen = ++warmGenRef.current;
       warmingRef.current = true;
       setWarming(true);
       const t = tuning();
-      // `warmupWait` never rejects, and `loadClip` swallows its own failures —
-      // the worst case here is that we start on the cap with a synthetic cue.
-      void warmupWait(() => loadClip(lead), {
-        minMs: t.warmupMinMs,
+      // Finalize the word pool before gate 1 is ever drawn: wait for both the
+      // catalog and the tier store's first resolution, bounded by the same
+      // cap the clip fetch below uses, so a dead network can't trap the
+      // player here either — falling through with whatever's on hand (the
+      // guest default, or an empty inventory) is today's existing worst case.
+      void warmupWait(() => Promise.all([loadInventory(), tierReady()]), {
+        minMs: 0,
         maxMs: t.warmupMaxMs,
       }).then(() => {
         if (gen !== warmGenRef.current) return; // paused, quit, or torn down
-        warmingRef.current = false;
-        setWarming(false);
-        start();
+        run.setWords(resolvedPool(inventoryNow() ?? [], getTier(), mode, proficiency, levelChoice));
+        run.primeQueue();
+
+        const lead = cuesUseClips ? (run.snapshot().gates[0]?.word ?? null) : null;
+        if (!lead) {
+          warmingRef.current = false;
+          setWarming(false);
+          start();
+          return;
+        }
+        // `warmupWait` never rejects, and `loadClip` swallows its own failures —
+        // the worst case here is that we start on the cap with a synthetic cue.
+        void warmupWait(() => loadClip(lead), {
+          minMs: t.warmupMinMs,
+          maxMs: t.warmupMaxMs,
+        }).then(() => {
+          if (gen !== warmGenRef.current) return; // paused, quit, or torn down
+          warmingRef.current = false;
+          setWarming(false);
+          start();
+        });
       });
     };
 

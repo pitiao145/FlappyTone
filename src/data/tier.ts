@@ -47,18 +47,39 @@ function getSnapshot(): TierState {
   return state;
 }
 
+let inFlight: Promise<void> | null = null;
+
 export async function refreshTier(): Promise<void> {
-  setState({ tier: state.tier, loading: true });
-  let tier: Tier = "guest";
+  const p = (async () => {
+    setState({ tier: state.tier, loading: true });
+    let tier: Tier = "guest";
+    try {
+      const [account, hasAccess] = await Promise.all([getAccount(), fetchHasAccess()]);
+      tier = resolveTier(account.status, hasAccess);
+    } catch {
+      tier = "guest";
+    }
+    tier = applyDevOverride(tier);
+    resolved = true;
+    setState({ tier, loading: false });
+  })();
+  inFlight = p;
   try {
-    const [account, hasAccess] = await Promise.all([getAccount(), fetchHasAccess()]);
-    tier = resolveTier(account.status, hasAccess);
-  } catch {
-    tier = "guest";
+    await p;
+  } finally {
+    if (inFlight === p) inFlight = null;
   }
-  tier = applyDevOverride(tier);
-  resolved = true;
-  setState({ tier, loading: false });
+}
+
+/**
+ * Resolves once `getTier()` answers with the player's real tier rather than
+ * the store's `"guest"` default — kicking off `refreshTier()` if nothing has
+ * yet, or piggybacking on one already in flight (e.g. from `useTier()`).
+ * The seam `Game.tsx` awaits, bounded, before building a run's word pool.
+ */
+export function tierReady(): Promise<void> {
+  if (resolved) return Promise.resolve();
+  return inFlight ?? refreshTier();
 }
 
 /** Dev-only tier override, read directly (not via `src/dev/`) so this stays
