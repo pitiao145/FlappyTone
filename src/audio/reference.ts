@@ -146,6 +146,40 @@ class TicketError extends Error {
   }
 }
 
+// ----- Concurrent fetch limiting (prevent rate-limit hammering) -----
+
+/** Limit concurrent /clip/* requests to this many. */
+const MAX_CONCURRENT_FETCHES = 2;
+let activeFetches = 0;
+const fetchQueue: Array<() => Promise<void>> = [];
+
+async function enqueueFetch<T>(fn: () => Promise<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const task = async () => {
+      try {
+        const result = await fn();
+        resolve(result);
+      } catch (err) {
+        reject(err);
+      } finally {
+        activeFetches--;
+        const next = fetchQueue.shift();
+        if (next) {
+          activeFetches++;
+          void next();
+        }
+      }
+    };
+
+    if (activeFetches < MAX_CONCURRENT_FETCHES) {
+      activeFetches++;
+      void task();
+    } else {
+      fetchQueue.push(task);
+    }
+  });
+}
+
 /**
  * Fetches and decodes one word's clip (idempotent per id). Failures are silent
  * by design — a missing clip must never block a run; the cue falls back to the
@@ -182,7 +216,9 @@ export function loadClip(word: Word): Promise<void> {
     const url = fixture
       ? `/dev-fixtures/tonepairs/${fixture}.wav`
       : `${CLIPS_BASE_URL}/clip/${word.speakerId}/${word.id}?v=${encodeURIComponent(word.updatedAt)}`;
-    const res = await fetch(url, ticket ? { headers: { Authorization: `Bearer ${ticket}` } } : undefined);
+    const res = await enqueueFetch(() =>
+      fetch(url, ticket ? { headers: { Authorization: `Bearer ${ticket}` } } : undefined)
+    );
     if (res.status === 401) {
       // The ticket expired, or the player's IP moved. Drop it so the next
       // gate mints a fresh one — and drop this load from `loads` below, or

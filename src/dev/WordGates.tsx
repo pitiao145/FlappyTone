@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import fallback from "../data/wordsFallback.json";
+import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
 import { ensurePlaybackCtx, loadClip, playToneCue } from "../audio/reference.ts";
 import {
   corridorChaoAt,
@@ -10,7 +11,7 @@ import {
 } from "../game/gates.ts";
 import { loadSettings } from "../game/settings.ts";
 import { tuning } from "../game/tuning.ts";
-import { wordsFromCatalog, type Word } from "../game/words.ts";
+import { wordsFromCatalog, multiWords, type Word } from "../game/words.ts";
 import { DEFAULT_CONFIG } from "../pitch/PitchTracker.ts";
 import { corridorEdges } from "../render/world.ts";
 import { traceSmoothPath } from "../render/scene.ts";
@@ -216,8 +217,11 @@ export function WordGates() {
    * shape because the database did mid-session. `npm run export-fallback`
    * refreshes it.
    */
-  const words = useMemo(() => wordsFromCatalog(fallback.rows), []);
-  const [tone, setTone] = useState<Tone | "all">("all");
+  const words = useMemo(
+    () => wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID }))),
+    [],
+  );
+  const [filter, setFilter] = useState<Tone | "all" | "pairs">("all");
 
   const tolH = tuning().baseToleranceH;
   // Every card on one scale, measured across the whole inventory rather than
@@ -240,19 +244,24 @@ export function WordGates() {
     );
   }
 
-  const shown = tone === "all" ? words : words.filter((w) => w.tone === tone);
+  const shown =
+    filter === "all"
+      ? words.filter((w) => w.syllables === 1)
+      : filter === "pairs"
+        ? multiWords(words)
+        : words.filter((w) => w.syllables === 1 && w.tone === filter);
 
   return (
     <div className="word-gates">
       <div className="lab-controls">
         <nav className="lab-tabs">
-          {(["all", 1, 2, 3, 4] as const).map((k) => (
+          {(["all", "pairs", 1, 2, 3, 4] as const).map((k) => (
             <button
               key={k}
-              className={k === tone ? "tab active" : "tab"}
-              onClick={() => setTone(k)}
+              className={k === filter ? "tab active" : "tab"}
+              onClick={() => setFilter(k)}
             >
-              {k === "all" ? "all" : `T${k}`}
+              {k === "all" ? "all" : k === "pairs" ? "pairs" : `T${k}`}
             </button>
           ))}
         </nav>
@@ -261,7 +270,8 @@ export function WordGates() {
           the current tuning — the tunnel-width and slack knobs on the play tab
           move these too. Click a card to hear its clip. T3 is the citation
           shape rather than the measured one (see shapeForWord), so those four
-          rows say what the game flies, not what she said.
+          rows say what the game flies, not what she said. "pairs" shows
+          multi-syllable words.
         </p>
       </div>
       <div className="word-grid">
