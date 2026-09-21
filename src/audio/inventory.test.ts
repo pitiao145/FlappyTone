@@ -106,6 +106,8 @@ describe("loadInventory's stale-publish guard", () => {
 
     expect(inv.inventorySpeaker()).toBe("mark");
     expect(inv.inventoryNow()).toEqual(mark);
-    expect(seen).toEqual([]);
+    // Subscribers mount after the adopt: they should receive the adopted
+    // catalog immediately so a late-mounted run picks up the current pool.
+    expect(seen).toEqual([mark]);
   });
 });

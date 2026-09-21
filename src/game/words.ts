@@ -177,7 +177,7 @@ export function wordsFromCatalog(rows: unknown): Word[] {
       r.duration_s <= 0 ||
       r.duration_s > MAX_DURATION_S ||
       typeof r.tone !== "number" ||
-      ![1, 2, 3, 4].includes(r.tone) ||
+      ![0, 1, 2, 3, 4].includes(r.tone) ||
       !isPolyline(r.polyline) ||
       seen.has(r.id)
     ) {
@@ -238,7 +238,17 @@ export function wordsForTier(words: Word[], tier: Tier): Word[] {
 
 /**
  * Narrows a (tier-filtered) pool to one or more TOCFL levels, or to the
- * fixed guest sampler.
+ * fixed guest sampler — AND to the proficiency's own syllable count.
+ *
+ * The syllable filter is unconditional, not just a property the sampler
+ * lists happen to have. A real bug shipped from skipping this: the concrete-
+ * level branch only filtered by TOCFL tag, so "Intermediate + TOCFL 1" could
+ * leak single-syllable tocfl1 words into a pool meant to be two-syllable
+ * only (and vice versa) — invisible today only because almost no recorded
+ * pair currently carries a `tocfl*` tag, not because the filter was correct.
+ * `isSingle`/`isMulti` apply the same way regardless of whether `levels` is
+ * a concrete set or `null` (the sampler case), so this stays correct as more
+ * multi-syllable content gets tagged into real TOCFL levels.
  *
  * `levels: null` means "no level access" — resolves to the sampler list for
  * the given proficiency instead of an empty pool, since a guest's pre-game
@@ -252,12 +262,13 @@ export function wordsForList(
   levels: (1 | 2 | 3)[] | null,
   proficiency: "beginner" | "intermediate",
 ): Word[] {
+  const bySyllables = words.filter((w) => (proficiency === "beginner" ? isSingle(w) : isMulti(w)));
   if (levels === null) {
     const samplerListId = proficiency === "beginner" ? "sampler-beginner" : "sampler-intermediate";
-    return words.filter((w) => w.listIds.includes(samplerListId));
+    return bySyllables.filter((w) => w.listIds.includes(samplerListId));
   }
   const listIds = new Set(levels.map((level) => `tocfl${level}`));
-  return words.filter((w) => w.listIds.some((id) => listIds.has(id)));
+  return bySyllables.filter((w) => w.listIds.some((id) => listIds.has(id)));
 }
 
 /**
@@ -311,6 +322,9 @@ export function resolvedPool(
     // gate to the generic per-tone placeholder instead of the real recorded
     // pair words guest is supposed to see. Found via a live playtest.
     const levels = resolveLevels(tier, proficiency, levelChoice);
+    // wordsForList itself enforces the proficiency's syllable count now
+    // (both the sampler branch and the concrete-level branch), so no
+    // extra filtering is needed here.
     return wordsForList(tiered, levels, proficiency);
   }
   if (mode === "pairs") {

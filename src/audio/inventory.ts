@@ -33,14 +33,15 @@ let speaker = DEFAULT_SPEAKER_ID;
 type Listener = (words: Word[]) => void;
 const listeners = new Set<Listener>();
 
-/**
- * Called whenever the inventory changes under a caller's feet — a late fetch,
- * or a switch to another speaker's catalog. This is what lets a *live* run
- * pick up a new word pool through `Run.setWords` instead of being torn down
- * and rebuilt, the same seam the late-tier answer already uses.
- */
+let resolved: Word[] | null = catalogFromCache(DEFAULT_SPEAKER_ID);
+
 export function subscribeInventory(fn: Listener): () => void {
   listeners.add(fn);
+  // Immediately notify the new subscriber with the current resolved
+  // inventory, if any. This ensures components that mount after an
+  // `adoptInventory` still receive the current catalog and avoids the
+  // race where a late subscriber would otherwise miss an earlier publish.
+  if (resolved) fn(resolved);
   return () => {
     listeners.delete(fn);
   };
@@ -78,16 +79,6 @@ export function adoptInventory(id: string, words: Word[]): void {
   cache = Promise.resolve(words);
   publish(words);
 }
-
-/**
- * Seeded from the cached catalog at module load, so `inventoryNow()` answers
- * on the first frame of a returning visit rather than after a round trip.
- * Replaced by the live list the moment `loadInventory()` resolves.
- */
-// The speaker is passed explicitly rather than defaulted inside
-// `fetchCatalog`, so the task that introduces a resolved speaker cannot miss a
-// call site by leaving one silently on Jane.
-let resolved: Word[] | null = catalogFromCache(DEFAULT_SPEAKER_ID);
 
 /**
  * The inventory if it has already landed, else null.
