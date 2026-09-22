@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { inventoryNow, loadInventory } from "../audio/inventory.ts";
+import { inventoryNow, loadInventory, subscribeInventory } from "../audio/inventory.ts";
 import { MicError } from "../audio/mic.ts";
 import {
   ensurePlaybackCtx,
@@ -244,10 +244,22 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     setRecognized(null);
   };
 
+  /**
+   * Follow the live inventory, rather than fetching once if it happens to be
+   * empty.
+   *
+   * `inventoryNow()` is now seeded synchronously from the bundled fallback
+   * (see `audio/inventory.ts`), so it is never empty — and the old
+   * `if (words.length > 0) return` guard would therefore have stopped this
+   * screen from ever picking up the live catalog. Subscribing is the shape
+   * `Settings.tsx` already uses, and it also means a mid-session voice switch
+   * reaches the word rail.
+   */
   useEffect(() => {
-    if (words.length > 0) return;
-    void loadInventory().then(setWords);
-  }, [words.length]);
+    const off = subscribeInventory(setWords);
+    void loadInventory();
+    return off;
+  }, []);
 
   /**
    * The active TOCFL level narrows the practice pool BEFORE the per-tone

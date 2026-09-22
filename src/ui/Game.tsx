@@ -832,9 +832,24 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       void warmupWait(() => Promise.all([loadInventory(), tierReady()]), {
         minMs: 0,
         maxMs: t.warmupMaxMs,
-      }).then(() => {
+      }).then(async () => {
         if (gen !== warmGenRef.current) return; // paused, quit, or torn down
-        run.setWords(resolvedPool(inventoryNow() ?? [], getTier(), mode, proficiency, levelChoice));
+        // The wait above is CAPPED, and its outcome used to be discarded —
+        // which is how a slow catalog fetch primed the queue from an empty
+        // pool and built gates 1-2 from a bare tone (placeholder "ma", and a
+        // synthetic cue with no clip to fetch; see audio/inventory.ts). The
+        // bundled seed should make an empty pool unreachable now, so this is
+        // the assertion of that rather than a second guess at the timing:
+        // if there is still nothing to fly, spend the rest of the budget
+        // waiting rather than spawning a gate that cannot be repaired
+        // afterwards (setWords only reaches gates not yet spawned).
+        let pool = resolvedPool(inventoryNow() ?? [], getTier(), mode, proficiency, levelChoice);
+        if (pool.length === 0) {
+          await warmupWait(() => loadInventory(), { minMs: 0, maxMs: t.warmupMaxMs });
+          if (gen !== warmGenRef.current) return;
+          pool = resolvedPool(inventoryNow() ?? [], getTier(), mode, proficiency, levelChoice);
+        }
+        run.setWords(pool);
         run.primeQueue();
 
         const lead = cuesUseClips ? (run.snapshot().gates[0]?.word ?? null) : null;
