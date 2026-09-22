@@ -9,7 +9,7 @@ import {
   type RunOutcome,
 } from "../game/runHistory.ts";
 import { loadStreak } from "../game/streak.ts";
-import type { Word } from "../game/words.ts";
+import { wordsOfTone, type Word } from "../game/words.ts";
 import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
 import { Leaderboard } from "./Leaderboard.tsx";
@@ -97,7 +97,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
   }, []);
   const wordsByTone = useMemo(() => {
     const map = new Map<Tone, Word[]>();
-    for (const t of TONES) map.set(t, (words ?? []).filter((w) => w.tone === t));
+    for (const t of TONES) map.set(t, wordsOfTone(words ?? [], t));
     return map;
   }, [words]);
 

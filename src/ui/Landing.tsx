@@ -1,7 +1,8 @@
 import { useId, useMemo, useState } from "react";
 import { brand } from "../brand.ts";
 import type { Tone } from "../game/gates.ts";
-import { wordsFromCatalog, type Word } from "../game/words.ts";
+import { wordsFromCatalog, wordsOfTone, type Word } from "../game/words.ts";
+import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
 import fallback from "../data/wordsFallback.json";
 import { capturePostHogEvent } from "../analytics/posthog.ts";
 import { ComingSoon } from "./ComingSoon.tsx";
@@ -67,12 +68,15 @@ export function Landing({ onPlay, onVisualiser }: Props) {
    * are illustration, not inventory — a catalog edit reaching them on the next
    * deploy is fine.
    */
-  const words = useMemo(() => wordsFromCatalog(fallback.rows), []);
+  const words = useMemo(
+    () => wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID }))),
+    [],
+  );
 
   const wordsByTone = useMemo(() => {
     const map = new Map<Tone, Word[]>();
     for (const t of TONES) {
-      map.set(t, words.filter((w) => w.tone === t));
+      map.set(t, wordsOfTone(words, t));
     }
     return map;
   }, [words]);
