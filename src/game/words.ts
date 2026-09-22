@@ -311,13 +311,15 @@ export function resolveLevels(
  * The full pool a `Run` of `mode` should draw from: tier → TOCFL
  * level/sampler → tone-pairs-per-combo cap, in that order.
  *
- * Only `"game"` and `"pairs"` read `proficiency`/`levelChoice` — `"drill"`,
- * `"learn"` and `"tutorial"` pick by tone/fixed set already and are
- * unaffected by the level picker (there is no picker screen for them yet).
- * `"game"` gets the level filter because that's the mode the pre-game screen
- * gates; `"pairs"` skips it (no picker for pure Tone Pairs yet) but still
- * gets the per-combo cap, since that's a content-quantity rule independent
- * of which screen led there.
+ * Only `"game"` and `"pairs"` read `proficiency`/`levelChoice` — `"learn"`
+ * and `"tutorial"` pick by tone/fixed set already and are unaffected by the
+ * level picker (there is no picker screen for them yet). `"game"` gets the
+ * level filter because that's the mode the pre-game screen gates; `"pairs"`
+ * skips it (no picker for pure Tone Pairs yet) but still gets the per-combo
+ * cap, since that's a content-quantity rule independent of which screen led
+ * there. `"drill"` is single-tone, single-syllable by nature, so it always
+ * reads as Beginner proficiency at "mix" (every TOCFL level the tier's
+ * Beginner access allows — sampler for guest, docs/Tiers.csv's own table).
  */
 export function resolvedPool(
   words: Word[],
@@ -327,6 +329,9 @@ export function resolvedPool(
   levelChoice: LevelChoice | null,
 ): Word[] {
   const tiered = wordsForTier(words, tier);
+  if (mode === "drill") {
+    return wordsForList(tiered, resolveLevels(tier, "beginner", "mix"), "beginner");
+  }
   if (mode === "game") {
     // No `capWordsPerCombo` here: `pairWordsPerCombo` is the TONE PAIRS MODE's
     // own cap (docs/Tiers.csv row 9, "Modes limits"), not a classic-mode

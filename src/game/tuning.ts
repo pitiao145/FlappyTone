@@ -473,7 +473,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   driftChaoPerSec: 5.33,
   trailSeconds: 1.0,
   prefetchWordsPerTone: 6,
-  warmupMaxMs: 2500,
+  warmupMaxMs: 3500,
   warmupMinMs: 400,
   reachToToneSpaceUp: 1,
   reachToToneSpaceDown: 1,

@@ -362,11 +362,17 @@ describe("resolvedPool", () => {
     expect(pool.map((w) => w.id).sort()).toEqual(["p1", "s1"]);
   });
 
-  it("drill/learn/tutorial modes are unaffected by level/proficiency — full tier pool", () => {
-    for (const mode of ["drill", "learn", "tutorial"] as const) {
+  it("learn/tutorial modes are unaffected by level/proficiency — full tier pool", () => {
+    for (const mode of ["learn", "tutorial"] as const) {
       const pool = resolvedPool(inventory, "guest", mode, "intermediate", null);
       expect(pool.map((w) => w.id).sort()).toEqual(["p1", "s1", "sb1", "si1"]);
     }
+  });
+
+  it("drill mode always reads Beginner-at-mix, ignoring the passed proficiency/level", () => {
+    // Guest resolves to the sampler-beginner list regardless of what's passed in.
+    const pool = resolvedPool(inventory, "guest", "drill", "intermediate", 2);
+    expect(pool.map((w) => w.id).sort()).toEqual(["sb1"]);
   });
 });
 

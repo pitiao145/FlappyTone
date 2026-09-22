@@ -4,11 +4,11 @@ import { MicError } from "../audio/mic.ts";
 import { ensurePlaybackCtx } from "../audio/reference.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
 import type { Tone } from "../game/gates.ts";
-import { availableTones, availableToneCombos, toneComboKey, wordsForTier } from "../game/words.ts";
+import { availableTones, availableToneCombos, resolvedPool, toneComboKey, wordsForTier } from "../game/words.ts";
 import type { PlayIntent } from "./PlayHome.tsx";
 import { micErrorCopy } from "./micErrors.ts";
 import { useTier } from "../data/tier.ts";
-import { ToneMarkIcon } from "./toneIcons.tsx";
+import { ToneMarkIcon, type ToneOrNeutral } from "./toneIcons.tsx";
 
 const ALL_TONES: Tone[] = [1, 2, 3, 4];
 
@@ -50,12 +50,12 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
   // greying every tile.
   const words = inventoryNow();
   const tierWords = words ? wordsForTier(words, tier) : null;
-  // availableTones(tierWords), not availableTones(words): this mirrors the
-  // run's own tier-filtered pool, so a tone whose words are all `pro` is not
-  // offered to a tier that could never actually fly it. No behavior change
-  // today — every tone has at least one free word — but the coupling to
-  // wordsForTier is deliberate, not incidental.
-  const tones = tierWords && tierWords.length ? availableTones(tierWords) : ALL_TONES;
+  // Tone Drill reads the same tier/level-restricted pool `resolvedPool`
+  // builds for mode "drill" (sampler for guest, TOCFL1+2 for free, everything
+  // for pro) — not the raw tier pool — so a tone offered here is a tone the
+  // run can actually draw from once it starts.
+  const drillWords = words ? resolvedPool(words, tier, "drill", "beginner", null) : null;
+  const tones = drillWords && drillWords.length ? availableTones(drillWords) : ALL_TONES;
   // Same idea for pairs: only combos this tier's own words can build a gate
   // for. Unlike single tones, there is no "offer all" fallback — an empty
   // list means the Tone pairs card itself is hidden (see below). Guest never
@@ -202,7 +202,7 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
                       "…"
                     ) : (
                       combo.map((tone, i) => (
-                        <ToneMarkIcon key={i} tone={tone} className="tone-mark-icon" />
+                        <ToneMarkIcon key={i} tone={tone as ToneOrNeutral} className="tone-mark-icon" />
                       ))
                     )}
                   </button>
