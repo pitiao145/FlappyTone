@@ -395,8 +395,15 @@ describe("Proficiency, and its coupled wordMix write", () => {
     // `wantsMultiGate()` never fired, so the run drew no multi-syllable
     // words and every gate silently fell back to the generic per-tone
     // placeholder, indistinguishable from "no words exist".
+    //
+    // Intermediate writes "all", not "multi": Intermediate's own pool is
+    // additive (single OR two-syllable — see words.ts's wordsForList), so
+    // the draw must actually reach both halves. "multi" forces every gate
+    // into a pair (wantsMultiGate() unconditionally true), which was a
+    // second real bug found in play — a player never saw a single-syllable
+    // gate under Intermediate despite the pool containing plenty.
     saveProficiency("intermediate");
-    expect(loadWordMix()).toBe("multi");
+    expect(loadWordMix()).toBe("all");
     saveProficiency("beginner");
     expect(loadWordMix()).toBe("single");
   });

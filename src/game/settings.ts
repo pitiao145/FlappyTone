@@ -382,10 +382,19 @@ export function loadProficiency(): Proficiency {
  * all, silently falling back to the generic per-tone placeholder for every
  * gate. Collapsing both writes into one call makes that pairing impossible
  * to break again from a second call site.
+ *
+ * Intermediate maps to `"all"`, not `"multi"` — Intermediate's own pool
+ * (`wordsForList` in `words.ts`) is additive (single OR two-syllable), so
+ * the draw has to actually reach both halves of it. `"multi"` would force
+ * every gate into a pair (`wantsMultiGate()` returning unconditionally
+ * true), which is the same bug as the one this function exists to prevent,
+ * just flipped: instead of a mix that never draws a pair, a "mix" that only
+ * ever draws pairs and never the single-syllable half of the pool it just
+ * grew to include.
  */
 export function saveProficiency(p: Proficiency): void {
   localStorage.setItem(PROFICIENCY_KEY, p);
-  saveWordMix(p === "beginner" ? "single" : "multi");
+  saveWordMix(p === "beginner" ? "single" : "all");
 }
 
 // ------------------------------------------------------- TOCFL level choice
