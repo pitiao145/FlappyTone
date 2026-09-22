@@ -349,16 +349,58 @@ export function wordsOfTone(words: Word[], tone: Tone, limit: number = Infinity)
 }
 
 /**
- * Picks a word of `tone`, avoiding the ones most recently played.
+ * Narrows `pool` to the words not yet drawn since the last time this group
+ * cycled through fully, resetting (falling back to the whole group) once
+ * every word in it has been drawn. `groupKey` scopes both the pool split and
+ * the "already drawn" check — for a single-tone pool it is constant (every
+ * word shares one group); for a shuffled multi-combo pool it is each word's
+ * own combo, so one small combo emptying out doesn't force a reset on every
+ * other combo's still-fresh words.
  *
- * The avoidance is a soft window rather than a shuffle bag: a run is short and
- * the pool is 30 deep, so what matters is not hearing the same syllable twice in
- * a minute, and a bag would add ordering state for no audible gain. Falls back
- * to the whole pool when the window has eaten it, which is what happens in the
- * tutorial and in tests with a small injected inventory.
+ * The avoid-set is the group's own last `size - 1` plays (from `recent`,
+ * which is never trimmed across a run) rather than the group's *entire*
+ * history — history alone would forever contain the whole group after its
+ * first cycle, permanently short-circuiting to "everything avoided, reset to
+ * the whole pool" on every later draw and picking with replacement from
+ * then on, never actually completing a second cycle. Sizing the window to
+ * `groupSize - 1` and scoping it per group is what turns this into a real
+ * shuffle-bag guarantee — a word repeats only after every other word in its
+ * group has been drawn since its own last turn — where the previous
+ * approach here (one fixed-size window shared across every tone/combo)
+ * diluted across them and let a small pool, like the guest sampler's ~7-8
+ * words per tone against a window sized for a 30-deep pool, repeat a word
+ * well before the rest of its own pool had been heard.
  */
-const RECENT_WINDOW = 6;
+function freshPool(pool: Word[], recent: Word[], groupKey: (w: Word) => string): Word[] {
+  const groups = new Map<string, Word[]>();
+  for (const w of pool) {
+    const k = groupKey(w);
+    const g = groups.get(k);
+    if (g) g.push(w);
+    else groups.set(k, [w]);
+  }
+  const fresh: Word[] = [];
+  for (const [k, groupWords] of groups) {
+    const windowSize = groupWords.length - 1;
+    // A single-word group can never avoid anything — `.slice(-0)` would
+    // otherwise return the whole array (JS treats `-0` as `0`), permanently
+    // "avoiding" the group's only word.
+    const avoid =
+      windowSize > 0
+        ? new Set(
+            recent
+              .filter((w) => groupKey(w) === k)
+              .slice(-windowSize)
+              .map((w) => w.id),
+          )
+        : new Set<string>();
+    const groupFresh = groupWords.filter((w) => !avoid.has(w.id));
+    fresh.push(...(groupFresh.length > 0 ? groupFresh : groupWords));
+  }
+  return fresh;
+}
 
+/** Picks a word of `tone`, never repeating one until every word of that tone has played. */
 export function pickWord(
   words: Word[],
   tone: Tone,
@@ -367,9 +409,7 @@ export function pickWord(
 ): Word | null {
   const pool = wordsOfTone(words, tone);
   if (pool.length === 0) return null;
-  const avoid = new Set(recent.slice(-RECENT_WINDOW).map((w) => w.id));
-  const fresh = pool.filter((w) => !avoid.has(w.id));
-  const from = fresh.length > 0 ? fresh : pool;
+  const from = freshPool(pool, recent, () => String(tone));
   return from[Math.min(from.length - 1, Math.floor(rand() * from.length))];
 }
 
@@ -456,10 +496,11 @@ export function capWordsPerCombo(words: Word[], limit: number): Word[] {
 }
 
 /**
- * Picks a multi-syllable word, avoiding the ones most recently played.
- *
- * Mirrors `pickWord`'s recent-window logic. `combo === null` shuffles across
- * every combo the inventory has; a combo narrows to an exact match (drill).
+ * Picks a multi-syllable word, never repeating one until every word of its
+ * combo has played. Mirrors `pickWord`/`freshPool`. `combo === null` shuffles
+ * across every combo the inventory has — grouped per-combo, so one small
+ * combo emptying out doesn't force a reset on every other combo's still-fresh
+ * words; a combo narrows to an exact match (drill), a single group.
  */
 export function pickMultiWord(
   words: Word[],
@@ -469,8 +510,6 @@ export function pickMultiWord(
 ): Word | null {
   const pool = combo ? wordsOfCombo(words, combo) : multiWords(words);
   if (pool.length === 0) return null;
-  const avoid = new Set(recent.slice(-RECENT_WINDOW).map((w) => w.id));
-  const fresh = pool.filter((w) => !avoid.has(w.id));
-  const from = fresh.length > 0 ? fresh : pool;
+  const from = freshPool(pool, recent, (w) => toneComboKey(w.tones));
   return from[Math.min(from.length - 1, Math.floor(rand() * from.length))];
 }

@@ -466,6 +466,48 @@ describe("pickWord", () => {
   it("stays in range at rand() = 0.999…", () => {
     expect(pickWord(inventory, 1, [], () => 0.9999999)).not.toBeUndefined();
   });
+
+  it("never repeats a word of the drawn tone until every word of that tone has been drawn", () => {
+    // 4 tone-1 words, drawn 8 times (two full cycles). Track every id
+    // returned and simulate the caller appending each pick to `recent`.
+    const pool = wordsOfTone(inventory, 1);
+    const recent: typeof inventory = [];
+    const drawn: string[] = [];
+    for (let cycle = 0; cycle < 2; cycle += 1) {
+      const seenThisCycle = new Set<string>();
+      for (let i = 0; i < pool.length; i += 1) {
+        const w = pickWord(inventory, 1, recent, () => 0);
+        expect(w).not.toBeNull();
+        // Not a repeat within this cycle: every id in the pool must appear
+        // exactly once before any of them appears again.
+        expect(seenThisCycle.has(w!.id)).toBe(false);
+        seenThisCycle.add(w!.id);
+        recent.push(w!);
+        drawn.push(w!.id);
+      }
+      expect(seenThisCycle.size).toBe(pool.length);
+    }
+  });
+
+  it("a small tone pool exhausts on its own — unaffected by heavy play of other tones (the sampler bug)", () => {
+    // The bug this guards: an 8-word tone-1 pool interleaved with tones
+    // 2/3/4 used to dilute a fixed-size global recency window, letting a
+    // tone-1 word repeat well before the other 7 had played. Grouping the
+    // avoid-set by tone fixes it: tone-1 draws must still visit all 4
+    // tone-1 words here before any repeats, no matter how much tone
+    // 2/3/4 history sits in `recent` alongside them.
+    const other = [2, 3, 4].flatMap((tone) => wordsOfTone(inventory, tone as 2 | 3 | 4));
+    const recent: typeof inventory = [...other, ...other, ...other]; // lots of noise, no tone-1 words
+    const seen = new Set<string>();
+    for (let i = 0; i < 4; i += 1) {
+      const w = pickWord(inventory, 1, recent, () => 0);
+      expect(w).not.toBeNull();
+      expect(seen.has(w!.id)).toBe(false);
+      seen.add(w!.id);
+      recent.push(w!);
+    }
+    expect(seen.size).toBe(4);
+  });
 });
 
 describe("wordsOfTone tier limit", () => {
@@ -613,6 +655,14 @@ describe("the single/multi pool split", () => {
       for (let i = 0; i < 10; i += 1) {
         expect(pickMultiWord(inventory, null, [], () => i / 10)?.syllables).toBeGreaterThan(1);
       }
+    });
+
+    it("with combo null, one combo exhausting doesn't force a reset on another combo's still-fresh words", () => {
+      // pairC is the only [4,4] word — its own group is exhausted after one
+      // draw and must reset independently, without touching the [3,2] group
+      // (pairA/pairB), which still has an unplayed word.
+      const recent = [pairC];
+      expect(pickMultiWord(inventory, null, recent, () => 0)?.id).toBe("pairA");
     });
   });
 });
