@@ -99,6 +99,19 @@ export function MicrophoneSlashIcon({ className }: { className?: string }) {
   );
 }
 
+/** Tone pairs' shuffle option — traced from `shuffle.svg` (Phosphor-style, matches MicrophoneIcon's weight). */
+export function ShuffleIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 256 256" className={className} aria-hidden="true">
+      <path d="M32,72H55.06a64,64,0,0,1,52.08,26.8l41.72,58.4A64,64,0,0,0,200.94,184H232" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="16" />
+      <polyline points="208 48 232 72 208 96" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="16" />
+      <polyline points="208 160 232 184 208 208" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="16" />
+      <path d="M147.66,100.47l1.2-1.67A64,64,0,0,1,200.94,72H232" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="16" />
+      <path d="M32,184H55.06a64,64,0,0,0,52.08-26.8l1.2-1.67" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="16" />
+    </svg>
+  );
+}
+
 export function ChevronIcon({ open, className }: { open: boolean; className?: string }) {
   return (
     <svg

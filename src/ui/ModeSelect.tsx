@@ -8,7 +8,7 @@ import { availableTones, availableToneCombos, resolvedPool, toneComboKey, wordsF
 import type { PlayIntent } from "./PlayHome.tsx";
 import { micErrorCopy } from "./micErrors.ts";
 import { useTier } from "../data/tier.ts";
-import { ToneMarkIcon, type ToneOrNeutral } from "./toneIcons.tsx";
+import { ShuffleIcon, ToneMarkIcon, type ToneOrNeutral } from "./toneIcons.tsx";
 
 const ALL_TONES: Tone[] = [1, 2, 3, 4];
 
@@ -182,31 +182,34 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
           {step === "pairs" && (
             <>
               <p className="note">Shuffle across every pair, or drill one combo.</p>
-              <div className="choice">
+              <div className="tone-pair-selection">
+                <div className="pair-combo-grid">
+                  {combos.map((combo) => (
+                    <button
+                      key={toneComboKey(combo)}
+                      className="pair-combo-tile"
+                      disabled={busy}
+                      onClick={go("pairs", { pairCombo: combo })}
+                    >
+                      {pending === "pairs" ? (
+                        "…"
+                      ) : (
+                        combo.map((tone, i) => (
+                          <ToneMarkIcon key={i} tone={tone as ToneOrNeutral} className="pair-combo-tone-icon" />
+                        ))
+                      )}
+                    </button>
+                  ))}
+                </div>
                 <button
-                  key="shuffle"
-                  className="choice-option"
+                  type="button"
+                  className="pair-combo-shuffle"
                   disabled={busy}
                   onClick={go("pairs", { pairCombo: null })}
                 >
+                  <ShuffleIcon className="pair-combo-shuffle-icon" />
                   {pending === "pairs" ? "…" : "Shuffle"}
                 </button>
-                {combos.map((combo) => (
-                  <button
-                    key={toneComboKey(combo)}
-                    className="choice-option"
-                    disabled={busy}
-                    onClick={go("pairs", { pairCombo: combo })}
-                  >
-                    {pending === "pairs" ? (
-                      "…"
-                    ) : (
-                      combo.map((tone, i) => (
-                        <ToneMarkIcon key={i} tone={tone as ToneOrNeutral} className="tone-mark-icon" />
-                      ))
-                    )}
-                  </button>
-                ))}
               </div>
               <button type="button" className="link" disabled={busy} onClick={() => setStep("mode")}>
                 ← Back

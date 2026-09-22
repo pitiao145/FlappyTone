@@ -3234,6 +3234,18 @@
   color: var(--ink-dim);
 }
 
+/* Locked list row — the same dashed, muted teaser language `.word-chip.is-locked`
+   uses. It carries the whole locked look now: these rows used to be `disabled`
+   buttons leaning on the UA's greying, which also swallowed the click, so the
+   upsell handler never ran. Tappable on purpose — it surfaces the upgrade
+   path, not a dead end. */
+.word-list-row.is-locked {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--ink) 28%, transparent);
+  background: color-mix(in srgb, var(--surface-panel) 50%, var(--surface));
+  color: var(--ink-dim);
+}
+
 .word-list-soon {
   font-size: 10px;
   font-weight: 700;
@@ -5738,6 +5750,127 @@ section.hero-cards {
 .screen button.mode-card-pairs{
   background: var(--ink);
   border-color: var(--accent-bright);
+}
+
+/* Tone-pair combo picker: every (first tone, second tone) combo the
+   inventory can build, currently a clean 4x5 = 20 (four real tones x five
+   second-syllable options incl. neutral) — a square grid reads better than
+   the generic `.choice` pill row once the icon is the whole point of the
+   tile. `repeat(5, 1fr)` + `aspect-ratio: 1` keeps tiles square at any width
+   the 9:16 stage offers. `min-width: 0` on both the grid (a flex child of
+   `.playhome-overlay`) and each tile (a grid item) is load-bearing: without
+   it the icons' own intrinsic size becomes each column's minimum, which can
+   exceed the 1fr track on a narrow phone and spill the grid past the stage
+   on both sides (caught in review — symmetric overflow from
+   `.playhome-overlay`'s `align-items: center` centering the oversized box). */
+.tone-pair-selection .pair-combo-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  row-gap: var(--space-4);
+  column-gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-bottom: var(--space-4);
+}
+
+/* Same sticker language as `.progress-screen .sticker-card`/the Play
+   button's card language — thick ink border, square-ish corners, no fill —
+   rather than `.mode-card`'s solid-colour tile or the plain `.choice-option`
+   pill. A dedicated class (not `.choice-option`, not `.mode-card`): neither
+   of those is square, and both carry rules (flex:1 1 auto, min-height:108px)
+   that fight a grid of square tiles. */
+/* Same hard-offset "sticker" shadow as `.nav-cta-shady::before`, as a plain
+   `box-shadow` instead of an ink-filled `::before` copy — the pseudo
+   approach put the shadow in front of the tone-mark icons (a negative
+   z-index pseudo inside a `display: flex` container doesn't reliably paint
+   behind the flex-item content in every engine, and didn't here). A
+   `box-shadow` has no stacking order of its own to get wrong: it always
+   paints outside the border, behind the box's own background, so there's no
+   pseudo-element or z-index for the icons to lose to. */
+.tone-pair-selection .pair-combo-tile {
+  display: flex;
+  align-items: center;
+  background-color: var(--accent);
+  justify-content: center;
+  gap: 2px;
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--ink);
+  /* background: transparent; */
+  color: var(--ink);
+  cursor: pointer;
+  box-sizing: border-box;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.tone-pair-selection .pair-combo-tile:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tone-pair-selection .pair-combo-tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tone-pair-selection .pair-combo-tile:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Bigger and more prominent than the filter-pill/tabbed-row use of the same
+   icon (`.tone-mark-icon`, 18x13.5) — the shape is the whole content of the
+   tile here, not a label alongside text. `clamp` keys off viewport width
+   (not the tile's own, which CSS can't size against here) so two icons plus
+   their gap never out-grow a narrow phone's 1fr column; height is left to
+   follow the SVG's own 120x90 intrinsic ratio. */
+.tone-pair-selection .pair-combo-tone-icon {
+  width: clamp(18px, 7vw, 30px);
+  color: currentColor;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* --beak (the Pip's beak colour), not --accent — pulls the CTA out from the
+   jade tiles above it, same role --beak already plays for the Tone Drill
+   mode-card. */
+.tone-pair-selection .pair-combo-shuffle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: var(--space-2) 14px;
+  margin-top: 4px;
+  font-size: var(--text-base);
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--ink);
+  background: var(--beak);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.tone-pair-selection .pair-combo-shuffle:hover:not(:disabled) {
+  filter: brightness(0.94);
+}
+
+.tone-pair-selection .pair-combo-shuffle:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.tone-pair-selection .pair-combo-shuffle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tone-pair-selection .pair-combo-shuffle-icon {
+  width: 20px;
+  height: 20px;
 }
 
 /* ------------------------------------------------------ progress & profile */
