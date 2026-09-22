@@ -87,6 +87,18 @@ function recognizedTier(
   return accuracyTier(recognized.confidence);
 }
 
+/**
+ * The level a tier's picker should land on: TOCFL 1 when that tier has it,
+ * else its lowest allowed level, else `null` for a tier with no level choice
+ * at all (guest). Written as "prefer 1, else the lowest" rather than hardcoding
+ * 1 so a future tier whose access starts higher still gets a sane default
+ * instead of a level it cannot open.
+ */
+function defaultLevel(levels: TocflLevel[] | null): TocflLevel | null {
+  if (levels === null || levels.length === 0) return null;
+  return levels.includes(1) ? 1 : [...levels].sort((a, b) => a - b)[0];
+}
+
 interface Props {
   settings: CalibrationSettings;
   canvasWidth: number;
@@ -130,11 +142,37 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
    * The visualiser only ever practices single-syllable words, so it reads
    * `beginner`'s access — a guest's is always `null` (no picker; the
    * existing `wordsPerTone: 0` cap already empties the practice list, this
-   * just avoids offering a choice that changes nothing for guest). `null`
-   * here (as opposed to `tierLimits`'s own `null`) also means "no level
-   * chosen yet" for free/pro until the player taps one.
+   * just avoids offering a choice that changes nothing for guest).
+   *
+   * Defaults to a real level (TOCFL 1) for any tier that HAS a level choice,
+   * rather than to `null`. `null` means "no list scoping", which resolves to
+   * every level the tier allows at once — a reasonable neutral state, but not
+   * a useful landing state for a practice screen: the player arrives with the
+   * whole catalog shuffled together and nothing indicating the lists exist.
+   * `null` remains reachable by tapping the active row to clear it.
    */
-  const [selectedLevel, setSelectedLevel] = useState<TocflLevel | null>(null);
+  const [selectedLevel, setSelectedLevel] = useState<TocflLevel | null>(
+    () => defaultLevel(tierLimits()[tier].beginner.levels),
+  );
+  /**
+   * Whether the default above has been applied for a tier whose levels were
+   * actually known.
+   *
+   * `tier` resolves asynchronously and the store's default is `"guest"`, whose
+   * `levels` is `null` — so on a cold load the initializer above legitimately
+   * answers `null` and the real answer arrives a moment later. This applies it
+   * once, when levels first exist, and never again, so a player who
+   * deliberately cleared the selection does not have it re-imposed on the next
+   * render or a later tier refresh.
+   */
+  const leveledRef = useRef(false);
+  useEffect(() => {
+    if (leveledRef.current) return;
+    const levels = limits.beginner.levels;
+    if (levels === null) return;
+    leveledRef.current = true;
+    setSelectedLevel(defaultLevel(levels));
+  }, [limits.beginner.levels]);
   /**
    * Mirrors `wordStatsRef` into React state so the accuracy readout — now a
    * real DOM element, not canvas-drawn — can render it. Only set once per
@@ -500,7 +538,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
 
   const chooseTone = (t: Tone | null) => {
     if (t !== null && !limits.visualiserPerTone) {
-      onLocked?.("visualiser-tone-practice");
+      showLocked("visualiser-tone-practice");
       return;
     }
     setTone(t);
@@ -508,6 +546,19 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     resetAttempts();
     setTonePopoverOpen(false);
     setPopoverTab("tone");
+  };
+
+  /**
+   * Hand a locked tap to the host's upsell.
+   *
+   * Closes the tone/word-list popover first: on mobile these rows live inside
+   * it, and leaving it open would put the upsell modal up behind a sheet the
+   * player then has to dismiss separately. `chooseTone` already closes it for
+   * the same reason.
+   */
+  const showLocked = (feature: string) => {
+    setTonePopoverOpen(false);
+    onLocked?.(feature);
   };
 
   const playWord = (word: Word) => {
@@ -659,7 +710,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     <button
       key={w.id}
       className="choice-option word-chip is-locked"
-      onClick={() => onLocked?.("visualiser-word-list")}
+      onClick={() => showLocked("visualiser-word-list")}
       aria-label={`${w.hanzi}, locked, Pro`}
     >
       <span className="word-chip-hanzi">{w.hanzi}</span>
@@ -693,10 +744,19 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         Practice by curated word lists — TOCFL levels, and more to come.
       </p>
       {limits.beginner.levels === null ? (
-        <div className="word-list-row">
+        // Guest: a real button, not a static row. It is locked the same way
+        // the per-level rows below are, so it has to lead to the same upsell
+        // rather than being a dead label that says "sign up free" and does
+        // nothing when tapped.
+        <button
+          type="button"
+          className="word-list-row is-locked"
+          onClick={() => showLocked("visualiser-word-list")}
+          aria-label="TOCFL levels, locked, sign up free"
+        >
           <span>TOCFL levels</span>
           <span className="word-list-soon">sign up free</span>
-        </div>
+        </button>
       ) : (
         ([1, 2, 3] as const).map((n) => {
           const unlocked = limits.beginner.levels!.includes(n);
@@ -705,14 +765,19 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
               key={n}
               type="button"
               className={`word-list-row${selectedLevel === n ? " active" : ""}${unlocked ? "" : " is-locked"}`}
-              disabled={!unlocked}
+              // Deliberately NOT `disabled` when locked: a disabled button
+              // swallows the click, so the `onLocked` branch below was dead
+              // code and a locked level read as broken rather than as an
+              // upsell. `is-locked` carries the styling; the handler carries
+              // the meaning. Same shape `lockedWordChip` already uses.
               onClick={() => {
                 if (!unlocked) {
-                  onLocked?.("visualiser-word-list");
+                  showLocked("visualiser-word-list");
                   return;
                 }
                 setSelectedLevel((cur) => (cur === n ? null : n));
               }}
+              aria-label={unlocked ? LEVEL_LABEL[n] : `${LEVEL_LABEL[n]}, locked, Pro`}
             >
               <span>{LEVEL_LABEL[n]}</span>
               {unlocked ? (
