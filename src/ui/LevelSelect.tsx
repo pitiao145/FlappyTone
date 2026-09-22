@@ -14,8 +14,9 @@ interface Props {
 const LEVEL_LABEL: Record<1 | 2 | 3, string> = { 1: "TOCFL 1", 2: "TOCFL 2", 3: "TOCFL 3" };
 
 /**
- * The pre-game picker: proficiency (Beginner = single syllable, Intermediate
- * = two syllable) and, when this tier/proficiency has a level choice at all,
+ * The pre-game picker: proficiency (Beginner = single syllable only,
+ * Intermediate = single or two-syllable — additive, not a separate pool) and,
+ * when this tier/proficiency has a level choice at all,
  * which TOCFL level (or Mix). Shown every time `startPlay("game")` fires
  * (unlike calibration's once-only gate) — see `GameApp.tsx`'s `startPlay`.
  *
@@ -46,7 +47,7 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
       <div className="screen playhome-overlay">
         <h1>Choose your level</h1>
 
-        <p className="note">Single syllables, or two-syllable words?</p>
+        <p className="note">Single syllables only, or add two-syllable words too?</p>
         <div className="choice">
           <button
             type="button"

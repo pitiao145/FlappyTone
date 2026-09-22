@@ -147,7 +147,8 @@ interface Props {
   /** Classic `mode: "game"` word pool preference. Ignored otherwise. */
   wordMix?: WordMix;
   /**
-   * The Settings-level proficiency (single vs. two syllable) and this play's
+   * The Settings-level proficiency (single-only vs. single-plus-two syllable)
+   * and this play's
    * TOCFL level/Mix choice from the pre-game picker. Read by `resolvedPool`
    * for `"game"`/`"pairs"` modes only; `null`/undefined level defaults to
    * this tier's full allowed set (see `resolveLevels`).

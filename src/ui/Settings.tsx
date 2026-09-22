@@ -50,7 +50,7 @@ const PROFICIENCIES = ["beginner", "intermediate"] as const satisfies readonly P
 
 const PROFICIENCY_LABEL: Record<Proficiency, string> = {
   beginner: "Beginner (single syllables)",
-  intermediate: "Intermediate (two syllables)",
+  intermediate: "Intermediate (single + two syllables)",
 };
 
 function SettingIcon({ children }: { children: React.ReactNode }) {
@@ -353,8 +353,9 @@ export function Settings({
               }}
             />
             <p className="param-help">
-              What the classic run flies: single syllables, or two-syllable
-              tone pairs. Tone pairs also have their own mode, under Play.
+              What the classic run flies: Beginner is single syllables only;
+              Intermediate adds two-syllable tone pairs into the same run.
+              Tone pairs also have their own mode, under Play.
             </p>
           </>
         )}

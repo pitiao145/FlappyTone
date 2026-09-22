@@ -20,8 +20,10 @@ export type Proficiency = "beginner" | "intermediate";
 export type TocflLevel = 1 | 2 | 3;
 
 /**
- * What one proficiency (Beginner = single syllable, Intermediate = two
- * syllable) unlocks for a tier.
+ * What one proficiency unlocks for a tier. Beginner is single-syllable
+ * words only; Intermediate is additive, not a separate pool — single OR
+ * two-syllable (everything Beginner has, plus pairs), never three-plus:
+ * see `wordsForList` in `src/game/words.ts` for why that cap matters.
  *
  * `levels: null` means "no level choice at all" — the pre-game picker is
  * skipped and the pool resolves to that proficiency's fixed sampler list

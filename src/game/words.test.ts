@@ -237,7 +237,9 @@ describe("wordsForList", () => {
 
   it("levels: null resolves to the proficiency's fixed sampler list, ignoring TOCFL tags", () => {
     expect(wordsForList(words, null, "beginner").map((w) => w.id)).toEqual(["sb"]);
-    expect(wordsForList(words, null, "intermediate").map((w) => w.id)).toEqual(["si"]);
+    // Intermediate's sampler is additive — both sampler tags, since
+    // Intermediate is "single or two-syllable," not "two-syllable only".
+    expect(wordsForList(words, null, "intermediate").map((w) => w.id)).toEqual(["sb", "si"]);
   });
 
   it("a word in no requested list is excluded", () => {
@@ -300,14 +302,15 @@ describe("resolvedPool", () => {
   });
   const inventory = [singleT1, pairT1, samplerSingle, samplerPair];
 
-  it("guest + intermediate resolves to the sampler-intermediate pool — not empty (the real regression)", () => {
-    // This is the exact bug found in play: guest picks Intermediate, the
-    // pool must contain the real recorded pair word(s), never come back
-    // empty (which silently falls back to the generic per-tone placeholder
-    // and a synthetic cue for every gate, indistinguishable from "no words
-    // exist" to the player).
+  it("guest + intermediate resolves to the union of both sampler lists — not empty, and not two-syllable-only", () => {
+    // The original regression: guest picks Intermediate, the pool must
+    // contain the real recorded pair word(s), never come back empty (which
+    // silently falls back to the generic per-tone placeholder and a
+    // synthetic cue for every gate). Intermediate is additive, not a
+    // separate two-syllable-only pool — sampler-beginner's single-syllable
+    // word belongs in it too.
     const pool = resolvedPool(inventory, "guest", "game", "intermediate", null);
-    expect(pool.map((w) => w.id)).toEqual(["si1"]);
+    expect(pool.map((w) => w.id).sort()).toEqual(["sb1", "si1"]);
   });
 
   it("guest + beginner resolves to the sampler-beginner pool", () => {
@@ -318,7 +321,7 @@ describe("resolvedPool", () => {
   it("a tier's own pairWordsPerCombo never empties classic 'game' mode's pool — only 'pairs' mode reads it", () => {
     setTierLimits("guest", { pairWordsPerCombo: 0 });
     const gamePool = resolvedPool(inventory, "guest", "game", "intermediate", null);
-    expect(gamePool.map((w) => w.id)).toEqual(["si1"]);
+    expect(gamePool.map((w) => w.id).sort()).toEqual(["sb1", "si1"]);
   });
 
   it("'pairs' mode DOES apply the per-combo cap", () => {
@@ -336,21 +339,27 @@ describe("resolvedPool", () => {
     expect(pool.map((w) => w.id)).toEqual(["s1"]);
   });
 
-  it("free + intermediate + level 1 stays multi-syllable-only, even with a concrete TOCFL level chosen", () => {
-    // The second real bug: the concrete-level branch only filtered by TOCFL
-    // tag, not by proficiency's syllable count, so a single-syllable
-    // tocfl1 word could leak into an Intermediate pool (and vice versa).
-    // Invisible today (almost no recorded pair carries a tocfl* tag yet),
-    // but load-bearing once more pairs get tagged into real levels.
+  it("free + intermediate + level 1 includes both single- and two-syllable tocfl1 words, never three-plus", () => {
+    // The original bug: the concrete-level branch only filtered by TOCFL
+    // tag, not by proficiency's syllable range, so a leak either direction
+    // was invisible (almost no recorded pair carries a tocfl* tag yet).
+    // Intermediate is single-OR-two-syllable — s1 (single) and p1 (pair)
+    // both belong, but nothing past two syllables ever should.
     const pool = resolvedPool(inventory, "free", "game", "intermediate", 1);
-    expect(pool.map((w) => w.id)).toEqual(["p1"]);
+    expect(pool.map((w) => w.id).sort()).toEqual(["p1", "s1"]);
   });
 
-  it("wordsForList itself enforces the syllable split on both branches, not just resolvedPool's composition", () => {
+  it("wordsForList itself enforces the syllable range on both branches, not just resolvedPool's composition", () => {
     expect(wordsForList(inventory, [1], "beginner").map((w) => w.id)).toEqual(["s1"]);
-    expect(wordsForList(inventory, [1], "intermediate").map((w) => w.id)).toEqual(["p1"]);
+    expect(wordsForList(inventory, [1], "intermediate").map((w) => w.id).sort()).toEqual(["p1", "s1"]);
     expect(wordsForList(inventory, null, "beginner").map((w) => w.id)).toEqual(["sb1"]);
-    expect(wordsForList(inventory, null, "intermediate").map((w) => w.id)).toEqual(["si1"]);
+    expect(wordsForList(inventory, null, "intermediate").map((w) => w.id).sort()).toEqual(["sb1", "si1"]);
+  });
+
+  it("intermediate never includes a three-plus-syllable word, even though the syllable filter is no longer exact-two", () => {
+    const triple = word({ id: "triple1", tone: 1, tones: [1, 2, 3], syllables: 3, position: 9, lists: ["tocfl1"] });
+    const pool = wordsForList([...inventory, triple], [1], "intermediate");
+    expect(pool.map((w) => w.id).sort()).toEqual(["p1", "s1"]);
   });
 
   it("drill/learn/tutorial modes are unaffected by level/proficiency — full tier pool", () => {

@@ -238,34 +238,50 @@ export function wordsForTier(words: Word[], tier: Tier): Word[] {
 
 /**
  * Narrows a (tier-filtered) pool to one or more TOCFL levels, or to the
- * fixed guest sampler — AND to the proficiency's own syllable count.
+ * fixed guest sampler — AND to the proficiency's own syllable range.
+ *
+ * Beginner is single-syllable only (`isSingle`); Intermediate is additive,
+ * not a separate pool — single OR two-syllable (`isSingle(w) || isMulti(w)`,
+ * i.e. every word the game currently knows how to fly at all). It is not
+ * "no filter": the catalog already holds 15 three- and 2 four-syllable rows
+ * (imported ahead of a mode for them), and `isMulti` itself is deliberately
+ * `syllables === 2`, not `>= 2` (see its own doc comment) — Intermediate has
+ * to stay in step with that cap rather than reopening it by omission.
  *
  * The syllable filter is unconditional, not just a property the sampler
  * lists happen to have. A real bug shipped from skipping this: the concrete-
  * level branch only filtered by TOCFL tag, so "Intermediate + TOCFL 1" could
- * leak single-syllable tocfl1 words into a pool meant to be two-syllable
- * only (and vice versa) — invisible today only because almost no recorded
- * pair currently carries a `tocfl*` tag, not because the filter was correct.
- * `isSingle`/`isMulti` apply the same way regardless of whether `levels` is
- * a concrete set or `null` (the sampler case), so this stays correct as more
- * multi-syllable content gets tagged into real TOCFL levels.
+ * leak a 3+-syllable tocfl1 word into a pool meant to stop at two — invisible
+ * today only because almost no recorded word past two syllables currently
+ * carries a `tocfl*` tag, not because the filter was correct. `isSingle`/
+ * `isMulti` apply the same way regardless of whether `levels` is a concrete
+ * set or `null` (the sampler case), so this stays correct as more content
+ * gets tagged into real TOCFL levels.
  *
  * `levels: null` means "no level access" — resolves to the sampler list for
  * the given proficiency instead of an empty pool, since a guest's pre-game
  * screen never offers a level choice at all (see `tiers.ts`'s
- * `ProficiencyAccess`). Apply this AFTER `wordsForTier`, same composition
- * order `ModeSelect.tsx` already uses for `wordsForTier` → tone/combo
- * derivation.
+ * `ProficiencyAccess`). Intermediate's sampler is the union of both sampler
+ * tags (`sampler-beginner` + `sampler-intermediate`, 60 words today) rather
+ * than `sampler-intermediate` alone — that tag was curated as "the 30
+ * two-syllable sampler words," which is Beginner's complement, not
+ * Intermediate's whole pool. Apply this AFTER `wordsForTier`, same
+ * composition order `ModeSelect.tsx` already uses for `wordsForTier` →
+ * tone/combo derivation.
  */
 export function wordsForList(
   words: Word[],
   levels: (1 | 2 | 3)[] | null,
   proficiency: "beginner" | "intermediate",
 ): Word[] {
-  const bySyllables = words.filter((w) => (proficiency === "beginner" ? isSingle(w) : isMulti(w)));
+  const bySyllables = words.filter((w) => (proficiency === "beginner" ? isSingle(w) : isSingle(w) || isMulti(w)));
   if (levels === null) {
-    const samplerListId = proficiency === "beginner" ? "sampler-beginner" : "sampler-intermediate";
-    return bySyllables.filter((w) => w.listIds.includes(samplerListId));
+    if (proficiency === "beginner") {
+      return bySyllables.filter((w) => w.listIds.includes("sampler-beginner"));
+    }
+    return bySyllables.filter(
+      (w) => w.listIds.includes("sampler-beginner") || w.listIds.includes("sampler-intermediate"),
+    );
   }
   const listIds = new Set(levels.map((level) => `tocfl${level}`));
   return bySyllables.filter((w) => w.listIds.some((id) => listIds.has(id)));
