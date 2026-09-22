@@ -17,6 +17,13 @@ import { corridorChaoAt,
 import { RANGE_SEMITONES } from "../pitch/math.ts";
 import type { Word } from "../game/words.ts";
 import { CLIPS_BASE_URL, getPlayTicket, invalidatePlayTicket } from "./clipToken.ts";
+import {
+  ClipAborted,
+  noteRateLimited,
+  promoteClipFetch,
+  submitClipFetch,
+  type ClipPriority,
+} from "./clipQueue.ts";
 import { isChromeIOS } from "./platform.ts";
 import { getMicSession } from "./session.ts";
 
@@ -146,38 +153,20 @@ class TicketError extends Error {
   }
 }
 
-// ----- Concurrent fetch limiting (prevent rate-limit hammering) -----
-
-/** Limit concurrent /clip/* requests to this many. */
-const MAX_CONCURRENT_FETCHES = 2;
-let activeFetches = 0;
-const fetchQueue: Array<() => Promise<void>> = [];
-
-async function enqueueFetch<T>(fn: () => Promise<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const task = async () => {
-      try {
-        const result = await fn();
-        resolve(result);
-      } catch (err) {
-        reject(err);
-      } finally {
-        activeFetches--;
-        const next = fetchQueue.shift();
-        if (next) {
-          activeFetches++;
-          void next();
-        }
-      }
-    };
-
-    if (activeFetches < MAX_CONCURRENT_FETCHES) {
-      activeFetches++;
-      void task();
-    } else {
-      fetchQueue.push(task);
-    }
-  });
+/**
+ * A failure that the very next request could succeed at: a 429 from the WAF
+ * rate limit, a 5xx, or a dead network.
+ *
+ * It matters that these are told apart from a 404, because `loads` caches a
+ * settled load forever. Caching a 429 meant one rate-limit hit silently
+ * demoted that word to the synthetic sweep for the rest of the session, long
+ * after the limit window had passed — indistinguishable, from the player's
+ * side, from the clip being missing. See `clipQueue.ts`.
+ */
+class RetryableError extends Error {
+  constructor(what: string) {
+    super(what);
+  }
 }
 
 /**
@@ -190,10 +179,24 @@ async function enqueueFetch<T>(fn: () => Promise<T>): Promise<T> {
  * dozen. The Run asks for a word two gates ahead of the bird, which is seconds
  * of warning for a ~100KB file.
  */
-export function loadClip(word: Word): Promise<void> {
+export function loadClip(
+  word: Word,
+  opts: { priority?: ClipPriority; signal?: AbortSignal } = {},
+): Promise<void> {
   const key = clipKeyFor(word);
   const existing = loads.get(key);
-  if (existing) return existing;
+  if (existing) {
+    // Already in flight or already queued. If it is sitting in the slow lane
+    // and someone now needs it immediately (a tapped word, a gate that came
+    // round sooner than the bet expected), re-file it rather than letting the
+    // caller wait out the trickle ahead of it.
+    if (opts.priority !== "soon") promoteClipFetch(key);
+    return existing;
+  }
+  // Defaults to "now": every historical caller (the HUD look-ahead, the
+  // warm-up hold, a tapped word) wants this clip within seconds. Only the
+  // speculative warmers pass "soon".
+  const priority = opts.priority ?? "now";
   const load = (async () => {
     // The clips live in R2 behind the Worker, which serves nothing without a
     // short-lived play ticket. No base URL or no ticket is not an error worth
@@ -216,9 +219,19 @@ export function loadClip(word: Word): Promise<void> {
     const url = fixture
       ? `/dev-fixtures/tonepairs/${fixture}.wav`
       : `${CLIPS_BASE_URL}/clip/${word.speakerId}/${word.id}?v=${encodeURIComponent(word.updatedAt)}`;
-    const res = await enqueueFetch(() =>
-      fetch(url, ticket ? { headers: { Authorization: `Bearer ${ticket}` } } : undefined)
-    );
+    const res = await submitClipFetch(
+      () => fetch(url, ticket ? { headers: { Authorization: `Bearer ${ticket}` } } : undefined),
+      { key, priority, signal: opts.signal },
+    ).catch((err: unknown) => {
+      // A queue abort (the player left the screen) and a dead network are both
+      // "try again later", never "this clip does not exist".
+      if (err instanceof ClipAborted) throw err;
+      throw new RetryableError(String(err));
+    });
+    if (res.status === 429) {
+      noteRateLimited(res.headers.get("Retry-After"));
+      throw new RetryableError("429");
+    }
     if (res.status === 401) {
       // The ticket expired, or the player's IP moved. Drop it so the next
       // gate mints a fresh one — and drop this load from `loads` below, or
@@ -226,6 +239,7 @@ export function loadClip(word: Word): Promise<void> {
       invalidatePlayTicket();
       throw new TicketError();
     }
+    if (res.status >= 500) throw new RetryableError(`${url}: ${res.status}`);
     if (!res.ok) throw new Error(`${url}: ${res.status}`);
     // Decode on the playback context (AudioBuffers are context-independent and
     // playable on any context, but decoding on the one we play on keeps the
@@ -246,10 +260,13 @@ export function loadClip(word: Word): Promise<void> {
       clipS: word.clipS,
     });
   })().catch((err: unknown) => {
-    // A cached failure is right for every other cause (a 404 for a clip that
-    // isn't in R2 stays a 404 all session) but wrong for a stale ticket, which
-    // the very next request can fix.
-    if (err instanceof TicketError && loads.get(key) === load) loads.delete(key);
+    // A cached failure is right for a 404 (a clip that isn't in R2 stays a 404
+    // all session) and wrong for everything the next request could fix: a
+    // stale ticket, a rate limit, a 5xx, a dead network, or work the player
+    // navigated away from. Those are evicted so a later gate or tap retries.
+    const retryable =
+      err instanceof TicketError || err instanceof RetryableError || err instanceof ClipAborted;
+    if (retryable && loads.get(key) === load) loads.delete(key);
     return undefined;
   });
   loads.set(key, load);

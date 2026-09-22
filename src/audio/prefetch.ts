@@ -22,17 +22,18 @@
  * 1. **Fire-and-forget.** Nothing here returns a promise a caller could await,
  *    because nothing in the game may wait on audio. An unloaded clip is a
  *    synthetic sweep, not a stall.
- * 2. **Bounded concurrency.** 120 parallel fetches on a phone would starve the
- *    one request that actually matters — the next gate's.
+ * 2. **Bounded rate, not just bounded concurrency.** Ordering and a
+ *    concurrency cap were never enough on their own: this module still handed
+ *    ~30 requests to the network as fast as two slots could drain them, which
+ *    is what tripped the clips Worker's WAF rate limit on a run whose actual
+ *    appetite is one clip every 3-5 seconds. `clipQueue.ts` now owns the rate:
+ *    the exact tier goes in at `"now"`, the speculative tier at `"soon"`,
+ *    where it trickles and can be cancelled.
  */
 import type { Tone } from "../game/gates.ts";
 import type { RunMode, WordMix } from "../game/run.ts";
 import { multiWords, wordsOfCombo, wordsOfTone, type Word } from "../game/words.ts";
 import { loadClip } from "./reference.ts";
-
-/** Parallel clip fetches. Enough to use the connection, few enough to leave
- * room for the gate the bird is about to reach. */
-const CONCURRENCY = 4;
 
 const ALL_TONES: Tone[] = [1, 2, 3, 4];
 
@@ -78,8 +79,23 @@ export interface PrefetchPlanInput {
  * is false and the whole plan is empty, exact tier included.
  */
 export function planPrefetch(input: PrefetchPlanInput): Word[] {
-  if (input.cuesUseClips === false) return [];
-  if (input.queued === null) return [];
+  return planPrefetchTiers(input).words;
+}
+
+/**
+ * The same plan, with the boundary between the two tiers still visible.
+ *
+ * `prefetchPool` needs to know where the exact tier ends, because that is
+ * exactly where pacing starts: the queued gates' own clips are due in seconds
+ * and go in at `"now"`, everything after is a bet and is dripped. `planPrefetch`
+ * flattens this for callers (and tests) that only care about the order.
+ */
+export function planPrefetchTiers(input: PrefetchPlanInput): {
+  words: Word[];
+  exactCount: number;
+} {
+  if (input.cuesUseClips === false) return { words: [], exactCount: 0 };
+  if (input.queued === null) return { words: [], exactCount: 0 };
   const ordered: Word[] = [];
   const seen = new Set<string>();
   const push = (w: Word | null | undefined): void => {
@@ -88,8 +104,11 @@ export function planPrefetch(input: PrefetchPlanInput): Word[] {
     ordered.push(w);
   };
   for (const w of input.queued) push(w);
+  // Counted AFTER de-duplication, so a queue holding the same word twice does
+  // not push a speculative word into the "now" lane.
+  const exactCount = ordered.length;
   for (const w of speculativeWords(input)) push(w);
-  return ordered;
+  return { words: ordered, exactCount };
 }
 
 function speculativeWords(input: PrefetchPlanInput): Word[] {
@@ -120,36 +139,53 @@ function speculativeWords(input: PrefetchPlanInput): Word[] {
 }
 
 /**
- * Requests the plan, lead clip first and **alone**.
+ * Requests the plan: the exact tier at `"now"`, the speculative tail paced at
+ * `"soon"`.
  *
- * Ordering alone was not enough. Starting all four workers at once put the
- * first gate's clip on a connection it shared three ways: measured cold, the
- * first four clips took 1.23-1.43s each where every later one took ~180-200ms,
- * same file sizes. The budget before the first gate is `baseRestMs` (2400ms)
- * minus a `/token` round trip (~359ms) minus a CORS preflight — 1.4s plus
- * decode does not reliably fit, and the first cue fell back to the synthetic
- * sweep. So word 0 gets the road to itself, and the speculative workers start
- * only once it has *settled*.
+ * The lead clip still gets the road to itself, and that is still load-bearing.
+ * Measured cold, the first four clips took 1.23-1.43s each where every later
+ * one took ~180-200ms, same file sizes — and the budget before the first gate
+ * (`baseRestMs` 2400ms, minus a `/token` round trip and a CORS preflight) does
+ * not fit 1.4s plus decode. So word 0 is requested alone and the rest wait for
+ * it to *settle* (not resolve — a lead clip that rejected must never wedge the
+ * plan, and that must not rest on a promise contract owned by another module).
  *
- * Settled, not resolved: `loadClip` swallows its own failures today, but a
- * lead clip that rejected must never wedge the rest of the plan forever, and
- * that must not rest on a promise contract owned by another module.
+ * What changed is everything after the lead. The remaining exact-tier words go
+ * in at `"now"`; the speculative tail goes in at `"soon"`, which `clipQueue`
+ * drips rather than dumps. Nothing here loops over a concurrency constant any
+ * more — the queue owns both concurrency and rate, in one testable place.
+ *
+ * `signal` cancels only work that has not started. Pass a run's (or a screen's)
+ * own signal so speculation for a run the player quit does not keep spending
+ * the rate budget the next screen needs.
  *
  * Still fire-and-forget — this returns nothing a caller could await.
  */
-export function prefetchPool(words: Word[]): void {
+export function prefetchPool(
+  words: Word[],
+  opts: { exactCount?: number; signal?: AbortSignal } = {},
+): void {
   const queue = [...words];
+  const lead = queue.shift();
+  if (!lead) return;
+  // How many of `words` are the exact tier (the Run's already-queued gates).
+  // Everything past it is the bet, and is paced.
+  const exactCount = Math.max(1, opts.exactCount ?? 1);
+  let index = 1;
   const next = (): void => {
     const word = queue.shift();
     if (!word) return;
+    const priority = index < exactCount ? "now" : "soon";
+    index++;
     // loadClip never rejects (it swallows its own failures), so `then` is
     // enough to keep the worker going through a 404 as well as a success.
-    void loadClip(word).then(next, next);
+    void loadClip(word, { priority, signal: opts.signal }).then(next, next);
   };
-  const lead = queue.shift();
-  if (!lead) return;
   const rest = (): void => {
-    for (let i = 0; i < CONCURRENCY; i++) next();
+    // Two walkers, matching the queue's own concurrency: the queue is what
+    // actually decides when either one gets to send.
+    next();
+    next();
   };
-  void loadClip(lead).then(rest, rest);
+  void loadClip(lead, { priority: "now", signal: opts.signal }).then(rest, rest);
 }

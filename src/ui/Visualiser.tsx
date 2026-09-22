@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { inventoryNow, loadInventory } from "../audio/inventory.ts";
 import { MicError } from "../audio/mic.ts";
 import {
@@ -257,16 +257,41 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
    * `beginner.levels` is always `null` (no list scoping — its `wordsPerTone:
    * 0` already empties the list regardless), so this is a no-op for guest.
    */
-  const listWords =
-    limits.beginner.levels === null
-      ? words
-      : wordsForList(words, selectedLevel ? [selectedLevel] : limits.beginner.levels, "beginner");
+  // Memoized, not recomputed inline: this array is the preload effect's
+  // dependency, and a fresh identity every render made that effect re-run on
+  // every render — harmless only because `loadClip` dedupes, and actively
+  // wrong once the effect owns an AbortController it would tear down each time.
+  const listWords = useMemo(
+    () =>
+      limits.beginner.levels === null
+        ? words
+        : wordsForList(words, selectedLevel ? [selectedLevel] : limits.beginner.levels, "beginner"),
+    [words, limits.beginner.levels, selectedLevel],
+  );
 
-  // Preload only the selected tone's clips (not all 120) so a tap plays
-  // instantly without fetching every word up front.
+  /**
+   * Warm the selected tone's clips so a tap plays instantly.
+   *
+   * Still the WHOLE tone list, deliberately — on-demand fetching would put a
+   * ~200ms (warm) to ~1.4s (cold) wait in front of a tap, which is the one
+   * thing this screen cannot have. What changed is the rate and the
+   * cancellation, not the coverage: these go in at `"soon"`, so
+   * `audio/clipQueue.ts` trickles them instead of firing one request per word
+   * at once, and the `AbortController` drops the previous tone's outstanding
+   * warm-up when the player switches tabs. Rapidly tabbing through all four
+   * tones used to queue 120+ requests in a few seconds and trip the Worker's
+   * rate limit; now each switch cancels the last.
+   *
+   * A tap still jumps the queue — `playWord` calls `loadClip` at the default
+   * `"now"` priority.
+   */
   useEffect(() => {
     if (tone === null) return;
-    for (const w of wordsOfTone(listWords, tone, limits.wordsPerTone)) void loadClip(w);
+    const controller = new AbortController();
+    for (const w of wordsOfTone(listWords, tone, limits.wordsPerTone)) {
+      void loadClip(w, { priority: "soon", signal: controller.signal });
+    }
+    return () => controller.abort();
   }, [tone, listWords, limits.wordsPerTone]);
 
   /**
@@ -478,6 +503,10 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     // new word — the trail and the running accuracy must survive it.
     if (selectedWord?.id !== word.id) resetAttempts();
     setSelectedWord(word);
+    // Jumps the warm-up queue: the tapped word is needed now, whatever the
+    // background trickle is currently working through. A no-op if it already
+    // landed.
+    void loadClip(word);
     const play = () =>
       // Plays on the dedicated output-only context (reference.ts).
       playToneCue(

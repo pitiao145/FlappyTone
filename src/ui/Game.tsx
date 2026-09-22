@@ -15,7 +15,7 @@ import {
   playToneCue,
 } from "../audio/reference.ts";
 import { inventoryNow, inventorySpeaker, loadInventory, subscribeInventory } from "../audio/inventory.ts";
-import { planPrefetch, prefetchPool } from "../audio/prefetch.ts";
+import { planPrefetchTiers, prefetchPool } from "../audio/prefetch.ts";
 import { isChromeIOS, isIOS } from "../audio/platform.ts";
 import { warmupWait } from "../audio/warmup.ts";
 import { MicStatusBanner } from "./MicStatus.tsx";
@@ -973,6 +973,12 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // tier — `planPrefetch` still returns [] for both modes, so calibration
     // can never acquire a catalog-wide pool.
     if (!cuesUseClips) return;
+    // Cancels this effect's speculation when the run is torn down or the tier
+    // resolves and re-plans. Only work that has NOT started is dropped, so an
+    // in-flight clip still lands in the cache — what this prevents is a quit
+    // run's 20-odd remaining bets spending the rate budget the next screen
+    // needs (see audio/clipQueue.ts).
+    const controller = new AbortController();
     const start = (all: Word[]): void => {
       // The Run is built (and its queue filled) by the run-owning effect
       // above, which React runs first on mount because it is DECLARED first —
@@ -982,21 +988,24 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // *nothing* rather than falling back to the pool, so the worst case is
       // the HUD tick's own look-ahead, never the bulk-first inversion.
       const queued = runRef.current?.snapshot().gates.map((g) => g.word) ?? null;
-      prefetchPool(
-        planPrefetch({
-          mode,
-          drillTone,
-          pairCombo,
-          wordMix,
-          queued,
-          pool: resolvedPool(all, tier, mode, proficiency, levelChoice),
-          perTone: tuning().prefetchWordsPerTone,
-        }),
-      );
+      const plan = planPrefetchTiers({
+        mode,
+        drillTone,
+        pairCombo,
+        wordMix,
+        queued,
+        pool: resolvedPool(all, tier, mode, proficiency, levelChoice),
+        perTone: tuning().prefetchWordsPerTone,
+      });
+      prefetchPool(plan.words, {
+        exactCount: plan.exactCount,
+        signal: controller.signal,
+      });
     };
     const now = inventoryNow();
     if (now) start(now);
     else void loadInventory().then(start, () => undefined);
+    return () => controller.abort();
   }, [cuesUseClips, mode, drillTone, pairCombo, wordMix, tier, runGen]);
 
   /**
