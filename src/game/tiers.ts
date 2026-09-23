@@ -70,7 +70,7 @@ export const DEFAULT_TIER_LIMITS: Readonly<Record<Tier, TierLimits>> = Object.fr
     customization: false,
     beginner: { levels: [1, 2], allowMix: true },
     intermediate: { levels: [1], allowMix: false },
-    pairWordsPerCombo: 5,
+    pairWordsPerCombo: 10,
   },
   pro: {
     runsPerDay: Infinity,
