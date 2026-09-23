@@ -215,7 +215,7 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
               <p className="note">Shuffle across every pair, or drill one combo.</p>
               {tier === "free" && (
                 <p className="note">
-                  {tierLimits().free.wordsPerTone} words available per tone pair. Go Pro for full access!
+                  {tierLimits().free.pairWordsPerCombo} words available per tone pair. Go Pro for full access!
                 </p>
               )}
               <div className="tone-pair-selection">

@@ -207,6 +207,9 @@ export function promoteClipFetch(key: string): void {
   if (i === -1) return;
   const [job] = soonQueue.splice(i, 1);
   job.priority = "now";
+  // The speculative caller's signal no longer speaks for this job: a "now"
+  // caller is waiting on it, so a later abort of the warmer must not drop it.
+  job.signal = undefined;
   nowQueue.push(job);
   pump();
 }

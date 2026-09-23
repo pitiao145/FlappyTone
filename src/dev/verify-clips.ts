@@ -37,6 +37,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 
+import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
 import { serviceClient } from "./serviceClient.ts";
 import { r2Get } from "./r2.ts";
 
@@ -115,8 +116,10 @@ function localTake(speaker: string, session: string, id: string): string {
  * all) in the legacy `public/ref/` directory — see the file header.
  */
 function localClip(speaker: string, id: string): string {
+  // `public/ref/` holds only the default speaker's clips — never compare
+  // another voice against them.
   const legacy = `${root}public/ref/${id}.wav`;
-  return existsSync(legacy) ? legacy : `${root}fixtures/clips/${speaker}/${id}.wav`;
+  return speaker === DEFAULT_SPEAKER_ID && existsSync(legacy) ? legacy : `${root}fixtures/clips/${speaker}/${id}.wav`;
 }
 
 const bucket = isRaw ? "flappytone-raw" : "flappytone-clips";

@@ -851,6 +851,11 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         }
         run.setWords(pool);
         run.primeQueue();
+        // The prefetch effect planned before the queue existed (deferFill), so
+        // its exact tier was empty. Warm the queued gates past the lead here.
+        if (cuesUseClips) {
+          for (const g of run.snapshot().gates.slice(1)) if (g.word) void loadClip(g.word);
+        }
 
         const lead = cuesUseClips ? (run.snapshot().gates[0]?.word ?? null) : null;
         if (!lead) {
@@ -1021,7 +1026,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     if (now) start(now);
     else void loadInventory().then(start, () => undefined);
     return () => controller.abort();
-  }, [cuesUseClips, mode, drillTone, pairCombo, wordMix, tier, runGen]);
+  }, [cuesUseClips, mode, drillTone, pairCombo, wordMix, tier, runGen, proficiency, levelChoice]);
 
   /**
    * Re-narrow a live run's word pool once the tier answer lands.
