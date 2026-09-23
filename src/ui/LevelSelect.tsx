@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTier } from "../data/tier.ts";
 import { tierLimits, type Proficiency } from "../game/tiers.ts";
 import type { LevelChoice } from "../game/settings.ts";
+import { ShuffleIcon } from "./toneIcons.tsx";
 
 interface Props {
   initialProficiency: Proficiency;
@@ -33,6 +34,11 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
 
   const access = tierLimits()[tier][proficiency];
   const locked = access.levels === null;
+  // A level row is offered at all only when this tier/proficiency has one
+  // (see the class doc above) — Play should wait on a choice only then, not
+  // for a guest who has nothing to pick.
+  const needsLevel = !locked && !!access.levels;
+  const canPlay = !needsLevel || level !== null;
 
   function chooseProficiency(p: Proficiency) {
     setProficiency(p);
@@ -48,7 +54,7 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
         <h1>Choose your level</h1>
 
         <p className="note">Single syllables only, or add two-syllable words too?</p>
-        <div className="choice">
+        <div className="choice proficiency-choice">
           <button
             type="button"
             className={`choice-option${proficiency === "beginner" ? " active" : ""}`}
@@ -67,7 +73,7 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
 
         {!locked && access.levels && (
           <>
-            <p className="note">Which TOCFL level?</p>
+            <p className="note level-section-note">Which TOCFL level?</p>
             <div className="choice">
               {([1, 2, 3] as const).map((n) => {
                 const unlocked = access.levels!.includes(n);
@@ -85,15 +91,19 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
                   </button>
                 );
               })}
-              {access.allowMix && (
+                          {access.allowMix && (
+              <div className="choice choice-mix-row">
                 <button
                   type="button"
-                  className={`choice-option${level === "mix" ? " active" : ""}`}
+                  className={`choice-option choice-option-mix${level === "mix" ? " active" : ""}`}
                   onClick={() => setLevel("mix")}
                 >
+                  <ShuffleIcon className="choice-option-mix-icon" />
                   Mix
                 </button>
-              )}
+              </div>
+            )}
+
             </div>
           </>
         )}
@@ -105,7 +115,11 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
         )}
 
         <div className="menu playhome-menu">
-          <button className="primary" onClick={() => onConfirm(proficiency, level)}>
+          <button
+            className="primary"
+            disabled={!canPlay}
+            onClick={() => onConfirm(proficiency, level)}
+          >
             Play
           </button>
         </div>

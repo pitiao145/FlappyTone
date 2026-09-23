@@ -2667,6 +2667,94 @@
   color: var(--accent-bright);
 }
 
+/* Same sticker language as the tone-pair grid (`.pair-combo-tile`/
+   `.pair-combo-shuffle` in ModeSelect) — thick ink border, hard-offset
+   shadow — rather than the thin-line pill `.choice-option` uses elsewhere.
+   Background stays transparent until `.active` fills it in below: a filled
+   background on every option, selected or not, made it hard to tell which
+   one actually was. */
+.level-select-screen .choice-option {
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  background: transparent;
+  color: var(--ink);
+}
+
+.level-select-screen .choice-option:hover:not(:disabled):not(.active) {
+  filter: brightness(0.94);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.level-select-screen .choice-option:disabled {
+  box-shadow: none;
+}
+
+/* Beginner/Intermediate is a binary choice, not an open row — split the
+   available width evenly instead of sizing each pill to its own label. */
+.level-select-screen .proficiency-choice .choice-option {
+  flex: 1 1 0;
+}
+
+/* Mix carries the shuffle icon (same as the tone-pair grid's own Shuffle
+   CTA) but stays a plain selectable option otherwise — a permanent --beak
+   fill here would be one more always-on background fighting `.active` for
+   the player's attention. Its own row, not sharing one with TOCFL 1-3: it
+   isn't a fourth level, it's a different kind of choice. */
+.level-select-screen .choice-mix-row {
+  width: 100%;
+}
+
+.level-select-screen .choice-option-mix {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+.level-select-screen .choice-option-mix-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.level-select-screen .playhome-menu {
+  max-width: none;
+  margin-top: var(--space-6);
+}
+
+/* `.playhome-overlay`'s flex `gap` spaces every child evenly — not enough
+   room between the proficiency row and the level row, which read as one
+   block otherwise. */
+.level-select-screen .level-section-note {
+  margin-top: var(--space-3);
+}
+
+/* LevelSelect has no `.playhome-canvas` wrapper of its own (unlike
+   ModeSelect/PlayHome, which get their canvas-backdrop tone from that div) —
+   `.level-select-screen` sits directly in `.frame`, falling back to the
+   body's `--surface` instead of `--canvas-backdrop`. Restated here, on the
+   stage itself, so this screen reads as the same surface as the rest of the
+   Play family. */
+.level-select-screen {
+  border-radius: var(--radius-md);
+  background: var(--canvas-backdrop);
+  border: 1px solid var(--line);
+}
+
+.level-select-screen .playhome-menu .primary {
+  width: 100%;
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.level-select-screen .playhome-menu .primary:disabled {
+  box-shadow: none;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .settings-screen .choice-option.active,
 .level-select-screen .choice-option.active {
   border-color: var(--accent-bright);
