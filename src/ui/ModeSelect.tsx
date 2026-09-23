@@ -8,7 +8,32 @@ import { availableTones, availableToneCombos, resolvedPool, toneComboKey, wordsF
 import type { PlayIntent } from "./PlayHome.tsx";
 import { micErrorCopy } from "./micErrors.ts";
 import { useTier } from "../data/tier.ts";
+import { tierLimits } from "../game/tiers.ts";
 import { ShuffleIcon, ToneMarkIcon, type ToneOrNeutral } from "./toneIcons.tsx";
+
+function LockIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <rect
+        x="5"
+        y="11"
+        width="14"
+        height="10"
+        rx="2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="M8 11V7a4 4 0 0 1 8 0v4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 const ALL_TONES: Tone[] = [1, 2, 3, 4];
 
@@ -58,9 +83,10 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
   const tones = drillWords && drillWords.length ? availableTones(drillWords) : ALL_TONES;
   // Same idea for pairs: only combos this tier's own words can build a gate
   // for. Unlike single tones, there is no "offer all" fallback — an empty
-  // list means the Tone pairs card itself is hidden (see below). Guest never
-  // sees the card at all, regardless of combos — docs/Tiers.csv's "Available
-  // modes" row: guest gets Tone drill/Learn only, Tone pairs starts at free.
+  // list renders the Tone pairs card locked, not hidden (see below). Guest
+  // always gets an empty list regardless of combos — docs/Tiers.csv's
+  // "Available modes" row: guest gets Tone drill/Learn only, Tone pairs
+  // starts at free.
   const combos = tier !== "guest" && tierWords ? availableToneCombos(tierWords) : [];
 
   const go = (
@@ -131,19 +157,24 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
                     Hum along with the demo's shape, great for learning the tones.
                   </span>
                 </button>
-                {combos.length > 0 && (
-                  <button
-                    type="button"
-                    className="mode-card mode-card-pairs"
-                    disabled={busy}
-                    onClick={() => setStep("pairs")}
-                  >
-                    <span className="mode-card-title">Tone pairs</span>
-                    <span className="mode-card-desc">
-                      Two-syllable words — fly both tones back to back.
-                    </span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="mode-card mode-card-pairs"
+                  disabled={busy || combos.length === 0}
+                  onClick={() => setStep("pairs")}
+                >
+                  <span className="mode-card-title">
+                    Tone pairs
+                    {combos.length === 0 && <LockIcon className="mode-card-lock" />}
+                  </span>
+                  <span className="mode-card-desc">
+                    {combos.length === 0
+                      ? tier === "guest"
+                        ? "Sign up to unlock tone-pair practice."
+                        : "No pairs available yet."
+                      : "Practice tone-pairs here!"}
+                  </span>
+                </button>
               </div>
             </>
           )}
@@ -182,6 +213,11 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
           {step === "pairs" && (
             <>
               <p className="note">Shuffle across every pair, or drill one combo.</p>
+              {tier === "free" && (
+                <p className="note">
+                  {tierLimits().free.wordsPerTone} words available per tone pair. Go Pro for full access!
+                </p>
+              )}
               <div className="tone-pair-selection">
                 <div className="pair-combo-grid">
                   {combos.map((combo) => (
