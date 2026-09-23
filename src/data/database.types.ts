@@ -79,6 +79,39 @@ export type Database = {
           },
         ]
       }
+      feedback: {
+        Row: {
+          created_at: string
+          id: number
+          message: string
+          rating: number | null
+          screen: string | null
+          tier: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          message: string
+          rating?: number | null
+          screen?: string | null
+          tier?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          message?: string
+          rating?: number | null
+          screen?: string | null
+          tier?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       leaderboard_scores: {
         Row: {
           best_score: number

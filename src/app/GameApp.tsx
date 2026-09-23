@@ -49,6 +49,7 @@ import { Calibration } from "../ui/Calibration";
 import { Game, type GameHandle } from "../ui/Game";
 import { GameOver } from "../ui/GameOver";
 import { EarlyBirdModal, type EarlyBirdSurface } from "../ui/EarlyBirdModal.tsx";
+import { FeedbackWidget } from "../ui/FeedbackWidget.tsx";
 import { CheckoutSignup } from "../ui/CheckoutSignup.tsx";
 import { HowTo } from "../ui/HowTo";
 import { Loading } from "../ui/Loading";
@@ -92,6 +93,27 @@ type Screen =
 
 /** What Play/Tutorial (from the Play tab or Settings) route through. */
 type StartIntent = PlayIntent | "visualiser";
+
+/**
+ * Screens that show the Feedback tab. An allow-list, not a deny-list, so a new
+ * screen stays tab-free until someone decides otherwise. Deliberately absent:
+ * every live run (game/tutorial/drill/learn/pairs), the visualiser, and the
+ * calibration flow — all mic-live, where the tab would compete with the
+ * player's voice for attention. `gameover` is in on purpose: it is where a
+ * player notices something went wrong.
+ */
+const FEEDBACK_SCREENS: ReadonlySet<Screen> = new Set<Screen>([
+  "play",
+  "modes",
+  "levelSelect",
+  "howto",
+  "tutorialdone",
+  "gameover",
+  "settings",
+  "progress",
+  "profile",
+  "checkoutSignup",
+]);
 
 /** Which nav item should read as active for a given screen. */
 function navTabFor(screen: Screen): NavTab {
@@ -1327,6 +1349,8 @@ export default function GameApp() {
           {boardJoinToast}
         </div>
       )}
+
+      {FEEDBACK_SCREENS.has(screen) && <FeedbackWidget screen={screen} />}
 
       {earlyBird && (
         <EarlyBirdModal
