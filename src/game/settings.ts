@@ -15,6 +15,9 @@ import {
   type RecalTrackingState,
 } from "./recalibration.ts";
 import { CUE_STYLES, WORD_MIXES, type CueStyle, type WordMix } from "./run.ts";
+import type { Proficiency } from "./tiers.ts";
+import type { LevelChoice } from "./words.ts";
+export type { LevelChoice } from "./words.ts";
 import { type VoicePref } from "./voice.ts";
 
 export interface CalibrationSettings {
@@ -350,4 +353,118 @@ export function saveNoticeSeen(): void {
   } catch {
     // ignore
   }
+}
+
+// --------------------------------------------------- silent-mode warning
+
+const SILENT_BANNER_KEY = "toneflap.silentbanner.seen.v1";
+
+/**
+ * Whether the Play-home "turn off silent mode" banner has been dismissed.
+ *
+ * The game has no way to detect the phone's silent switch (no web API
+ * exposes it) — this is a static warning, not a smart one, so it only needs
+ * to be shown until the player has acknowledged it once. Same
+ * clear-storage-brings-it-back precedent as `loadNoticeSeen`.
+ */
+export function loadSilentBannerSeen(): boolean {
+  try {
+    return localStorage.getItem(SILENT_BANNER_KEY) === "seen";
+  } catch {
+    return false;
+  }
+}
+
+export function saveSilentBannerSeen(): void {
+  try {
+    localStorage.setItem(SILENT_BANNER_KEY, "seen");
+  } catch {
+    // ignore
+  }
+}
+
+// -------------------------------------------------------- proficiency
+
+const PROFICIENCY_KEY = "toneflap.proficiency.v1";
+const DEFAULT_PROFICIENCY: Proficiency = "beginner";
+
+/**
+ * Beginner (single syllable) or Intermediate (two syllable) — a Settings
+ * choice, not a per-run one (unlike the TOCFL level, chosen fresh every
+ * play on the pre-game screen). Defaults to Beginner for a new player.
+ */
+export function loadProficiency(): Proficiency {
+  const raw = localStorage.getItem(PROFICIENCY_KEY);
+  return raw === "beginner" || raw === "intermediate" ? raw : DEFAULT_PROFICIENCY;
+}
+
+/**
+ * Also writes `wordMix` — the classic run's actual single/multi draw
+ * (`run.ts`'s `wantsMultiGate`) is driven by `loadWordMix()`, not by
+ * `loadProficiency()` directly, so a caller that saved proficiency without
+ * this would leave the run flying the OLD mix. This was a real bug: the
+ * pre-game `LevelSelect` screen only ever called `saveProficiency`, so a
+ * player who chose Intermediate there (and never separately opened Settings,
+ * whose own control used to be the only place `saveWordMix` was called)
+ * still had `wordMix === "single"` — the run drew no multi-syllable words at
+ * all, silently falling back to the generic per-tone placeholder for every
+ * gate. Collapsing both writes into one call makes that pairing impossible
+ * to break again from a second call site.
+ *
+ * Intermediate maps to `"all"`, not `"multi"` — Intermediate's own pool
+ * (`wordsForList` in `words.ts`) is additive (single OR two-syllable), so
+ * the draw has to actually reach both halves of it. `"multi"` would force
+ * every gate into a pair (`wantsMultiGate()` returning unconditionally
+ * true), which is the same bug as the one this function exists to prevent,
+ * just flipped: instead of a mix that never draws a pair, a "mix" that only
+ * ever draws pairs and never the single-syllable half of the pool it just
+ * grew to include.
+ */
+export function saveProficiency(p: Proficiency): void {
+  localStorage.setItem(PROFICIENCY_KEY, p);
+  saveWordMix(p === "beginner" ? "single" : "all");
+}
+
+// ------------------------------------------------------- TOCFL level choice
+
+const LAST_LEVEL_KEY = "toneflap.lastlevel.v1";
+
+/**
+ * The last TOCFL level (or Mix) chosen on the pre-game picker, kept
+ * separately per proficiency since free's own access differs between them
+ * (Beginner: 1/2/Mix; Intermediate: 1 only). Re-picked every play — this is
+ * only the screen's pre-selected default, not an access grant on its own;
+ * `tierLimits()` is still checked fresh each time in case the tier changed.
+ */
+interface LastLevelState {
+  beginner?: LevelChoice;
+  intermediate?: LevelChoice;
+}
+
+function isLevelChoice(v: unknown): v is LevelChoice {
+  return v === "mix" || v === 1 || v === 2 || v === 3;
+}
+
+export function loadLastLevel(proficiency: Proficiency): LevelChoice | null {
+  try {
+    const raw = localStorage.getItem(LAST_LEVEL_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as LastLevelState;
+    const v = s[proficiency];
+    return isLevelChoice(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveLastLevel(proficiency: Proficiency, level: LevelChoice): void {
+  let state: LastLevelState = {};
+  try {
+    const raw = localStorage.getItem(LAST_LEVEL_KEY);
+    if (raw) state = JSON.parse(raw) as LastLevelState;
+  } catch {
+    state = {};
+  }
+  state[proficiency] = level;
+  localStorage.setItem(LAST_LEVEL_KEY, JSON.stringify(state));
 }

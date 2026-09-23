@@ -109,6 +109,15 @@ export interface RunConfig {
    */
   words?: Word[];
   /**
+   * Skip the constructor's own `fillQueue()`. For the host's cold-start seam:
+   * the tier store may still read its `"guest"` default and the inventory may
+   * still be unfetched at construction time, so gate 1 would otherwise be
+   * drawn from the wrong pool before either resolves. A deferring caller
+   * must call `primeQueue()` itself once `words`/tier are final — no gate
+   * exists until it does.
+   */
+  deferFill?: boolean;
+  /**
    * The one word a "single" mode run flies — a Lab-only mode that flies
    * exactly one hand-picked gate through the real collision/scoring pipeline,
    * then ends. Required when `mode === "single"`, ignored otherwise.
@@ -647,6 +656,11 @@ export class Run {
     this.wordMix = cfg.wordMix ?? "single";
     this.difficulty = this.difficultyFor(0);
     this.stats = newRunStats(3);
+    if (!cfg.deferFill) this.fillQueue();
+  }
+
+  /** Fills the queue after a `deferFill` construction. No-op if already filled. */
+  primeQueue(): void {
     this.fillQueue();
   }
 

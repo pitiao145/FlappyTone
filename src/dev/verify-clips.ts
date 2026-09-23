@@ -1,9 +1,9 @@
 /**
- * One-time verification script: verifies the R2 upload by reading objects
- * back OUT of R2 and comparing byte length AND SHA-256 against the local
- * source file. This is the gate: an upload's exit code, or an object
- * listing, proves nothing about content — only a re-download and a hash
- * comparison does.
+ * Verifies the R2 upload by reading objects back OUT of R2 and comparing
+ * byte length AND SHA-256 against the local source file. This is the gate:
+ * an upload's exit code, or an object listing, proves nothing about
+ * content — only a re-download and a hash comparison does. This is the
+ * routine post-`process-clips` check, not a one-time migration script.
  *
  *   npm run verify-clips                        # every ACTIVE speaker, in turn
  *   npm run verify-clips -- --speaker jane      # just hers
@@ -16,22 +16,28 @@
  * another's passes.
  *
  * Downloads land in `fixtures/clips/verify/` (gitignored scratch space),
- * never touching `public/ref/` or `fixtures/recordings/` themselves.
+ * never touching `fixtures/clips/<speaker>/` or `fixtures/recordings/`
+ * themselves.
  *
- * Exits 1 on any mismatch or missing object.
+ * Exits 1 on any mismatch or missing local source — a row this machine
+ * cannot compare is reported, not silently skipped, since "nothing to
+ * compare" is not a pass.
  *
- * `public/ref/*.wav` was untracked in Task 13 (Sep 2026) — git history
- * keeps it, but it is no longer checked out. This script only works against
- * a working copy that still has those files on disk (whoever ran the
- * original migration); a fresh clone will NOT have them and non-`--raw`
- * runs will fail to find a local source file to compare against. It has no
- * reason to run again unless R2 content is ever suspected of drifting from
- * the local originals.
+ * The local comparison source for a published clip is
+ * `fixtures/clips/<speaker>/<id>.wav`, written by `process-clips.ts`. For
+ * Jane's 120 pre-roster words, the source is instead the legacy
+ * `public/ref/<id>.wav` — untracked in Task 13 (Sep 2026; git history keeps
+ * it, but it's no longer checked out) — so those rows only verify on a
+ * working copy that still has that directory on disk (whoever ran the
+ * original migration). A fresh clone reports them as missing-local rather
+ * than a mismatch: there is nothing to regenerate them from without a
+ * re-cut.
  */
 
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 
+import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
 import { serviceClient } from "./serviceClient.ts";
 import { r2Get } from "./r2.ts";
 
@@ -92,12 +98,9 @@ async function rowsFor(speaker: string): Promise<Row[]> {
     .map((r) => ({
       id: r.word_id,
       bucketKey: (isRaw ? r.raw_key : r.clip_key)!,
-      // The local source of truth for a take is the recordings cache;
-      // `public/ref/` is Jane's pre-migration clip directory, untracked and
-      // present only on the machine that ran the original migration.
       localFile: isRaw
         ? localTake(speaker, r.recorded_session!, r.word_id)
-        : `${root}public/ref/${r.word_id}.wav`,
+        : localClip(speaker, r.word_id),
     }));
 }
 
@@ -107,6 +110,18 @@ function localTake(speaker: string, session: string, id: string): string {
   return existsSync(legacy) ? legacy : `${root}fixtures/recordings/${speaker}/${session}/${id}.wav`;
 }
 
+/**
+ * `process-clips.ts` writes published clips to `fixtures/clips/<speaker>/`.
+ * Jane's 120 pre-roster words predate that layout and live (if present at
+ * all) in the legacy `public/ref/` directory — see the file header.
+ */
+function localClip(speaker: string, id: string): string {
+  // `public/ref/` holds only the default speaker's clips — never compare
+  // another voice against them.
+  const legacy = `${root}public/ref/${id}.wav`;
+  return speaker === DEFAULT_SPEAKER_ID && existsSync(legacy) ? legacy : `${root}fixtures/clips/${speaker}/${id}.wav`;
+}
+
 const bucket = isRaw ? "flappytone-raw" : "flappytone-clips";
 
 let totalMismatches = 0;
@@ -114,12 +129,17 @@ let totalMismatches = 0;
 for (const speaker of speakers) {
   const rows = await rowsFor(speaker);
   let mismatches = 0;
+  let noLocalSource = 0;
   const results: { id: string; ok: boolean; detail: string }[] = [];
 
   for (const row of rows) {
     if (!existsSync(row.localFile)) {
-      results.push({ id: row.id, ok: false, detail: `local file missing: ${row.localFile}` });
-      mismatches++;
+      results.push({
+        id: row.id,
+        ok: false,
+        detail: `no local source on this machine: ${row.localFile}`,
+      });
+      noLocalSource++;
       continue;
     }
 
@@ -163,8 +183,11 @@ for (const speaker of speakers) {
   for (const r of results) console.log(`  ${r.ok ? "OK  " : "FAIL"}  ${r.id.padEnd(10)} ${r.detail}`);
   // Per speaker, never pooled: one voice's failures must not disappear into
   // another's passes.
-  console.log(`  ${results.length - mismatches}/${results.length} matched, ${mismatches} mismatch(es).`);
-  totalMismatches += mismatches;
+  const ok = results.length - mismatches - noLocalSource;
+  console.log(
+    `  ${ok}/${results.length} matched, ${mismatches} mismatch(es), ${noLocalSource} missing-local.`,
+  );
+  totalMismatches += mismatches + noLocalSource;
 }
 
 if (totalMismatches > 0) process.exit(1);

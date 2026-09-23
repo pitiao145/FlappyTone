@@ -87,6 +87,12 @@ function writeCache(speaker: string, rows: unknown[]): void {
 /**
  * The bundled export, parsed. The last resort, and never empty in practice.
  *
+ * Exported because it is also the *first* resort for `audio/inventory.ts`'s
+ * synchronous seed: it is a static import, so these rows are already in the
+ * app bundle and cost no round trip. A cold load with an empty cache used to
+ * leave `inventoryNow()` null, which spawned gate 1 from an empty pool — see
+ * that module's `resolved`.
+ *
  * `wordsFromCatalog` drops any row without a non-empty `speaker_id`, and the
  * bundle carries none — `export-fallback` writes `is_default` only, not
  * `speaker_id`. Stamping the default speaker id on here (rather than
@@ -94,7 +100,7 @@ function writeCache(speaker: string, rows: unknown[]): void {
  * speaker's catalog by construction, but a *live* row missing `speaker_id`
  * must still be dropped, not silently attributed to Jane.
  */
-function catalogFromFallback(): Word[] {
+export function catalogFromFallback(): Word[] {
   return wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID })));
 }
 

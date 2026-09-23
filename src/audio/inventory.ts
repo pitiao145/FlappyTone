@@ -18,7 +18,7 @@
  */
 
 import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
-import { catalogFromCache, fetchCatalog } from "../data/words.ts";
+import { catalogFromCache, catalogFromFallback, fetchCatalog } from "../data/words.ts";
 import { type Word } from "../game/words.ts";
 
 let cache: Promise<Word[]> | null = null;
@@ -34,13 +34,41 @@ type Listener = (words: Word[]) => void;
 const listeners = new Set<Listener>();
 
 /**
- * Called whenever the inventory changes under a caller's feet — a late fetch,
- * or a switch to another speaker's catalog. This is what lets a *live* run
- * pick up a new word pool through `Run.setWords` instead of being torn down
- * and rebuilt, the same seam the late-tier answer already uses.
+ * The words `inventoryNow()` answers with, seeded synchronously.
+ *
+ * The cache first, then the BUNDLED fallback — never null on a real build.
+ * That second step matters more than it looks: before it, a cold load with an
+ * empty cache left this null until the Supabase fetch landed, and `Game.tsx`'s
+ * warm-up gives that fetch only `warmupMaxMs` (2500ms) before starting the run
+ * anyway. Past the cap it primed the gate queue from an EMPTY pool, so
+ * `pickWord` returned null and gates 1-2 were built from a bare tone: the HUD
+ * showed the generic `TONE_INFO` placeholder (mā/má/mǎ/mà — hence "it's always
+ * ma"), and with no word there was no clip to fetch, so the cue was synthetic
+ * by definition rather than by losing a race. The catalog landing a moment
+ * later reached the run through `setWords`, but a gate already spawned keeps
+ * the word it was built with, so those first gates stayed wrong for the whole
+ * run.
+ *
+ * The fallback is the default speaker's published catalog as of build time and
+ * is a static import, so this costs no round trip and no bundle weight that
+ * `src/data/words.ts` was not already paying. The live fetch still runs and
+ * still publishes over this through `loadInventory`.
  */
+let resolved: Word[] | null = catalogFromCache(DEFAULT_SPEAKER_ID) ?? catalogFromFallback();
+
 export function subscribeInventory(fn: Listener): () => void {
   listeners.add(fn);
+  // Immediately notify the new subscriber with the current resolved
+  // inventory, if any. This ensures components that mount after an
+  // `adoptInventory` still receive the current catalog and avoids the
+  // race where a late subscriber would otherwise miss an earlier publish.
+  // Length-checked, not just non-null: `resolved` is seeded synchronously now
+  // and is only ever EMPTY when there is genuinely nothing to say (no cache,
+  // no bundled rows — tests, or a build with an empty export). Handing a
+  // subscriber an empty array is a no-op that reads like an answer, so this
+  // keeps the pre-seed contract: notify immediately when there is a catalog,
+  // stay quiet when there isn't.
+  if (resolved && resolved.length > 0) fn(resolved);
   return () => {
     listeners.delete(fn);
   };
@@ -78,16 +106,6 @@ export function adoptInventory(id: string, words: Word[]): void {
   cache = Promise.resolve(words);
   publish(words);
 }
-
-/**
- * Seeded from the cached catalog at module load, so `inventoryNow()` answers
- * on the first frame of a returning visit rather than after a round trip.
- * Replaced by the live list the moment `loadInventory()` resolves.
- */
-// The speaker is passed explicitly rather than defaulted inside
-// `fetchCatalog`, so the task that introduces a resolved speaker cannot miss a
-// call site by leaving one silently on Jane.
-let resolved: Word[] | null = catalogFromCache(DEFAULT_SPEAKER_ID);
 
 /**
  * The inventory if it has already landed, else null.

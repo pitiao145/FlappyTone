@@ -15,9 +15,12 @@ const fetchCatalog = vi.fn<(opts: { speaker: string }) => Promise<Word[]>>();
 
 vi.mock("../data/words.ts", () => ({
   fetchCatalog: (opts: { speaker: string }) => fetchCatalog(opts),
-  // No cache in a test environment; `inventoryNow()` starts null, as on a
-  // first-ever visit.
+  // No cache and no bundled rows in these tests, so `inventoryNow()` starts
+  // null — what a first-ever visit looked like before the bundled seed, and
+  // still the right isolation here: these tests are about the speaker
+  // handoff, not about what the seed contains.
   catalogFromCache: () => null,
+  catalogFromFallback: () => [],
 }));
 
 const word = (id: string, speakerId: string): Word =>
@@ -106,6 +109,46 @@ describe("loadInventory's stale-publish guard", () => {
 
     expect(inv.inventorySpeaker()).toBe("mark");
     expect(inv.inventoryNow()).toEqual(mark);
-    expect(seen).toEqual([]);
+    // Subscribers mount after the adopt: they should receive the adopted
+    // catalog immediately so a late-mounted run picks up the current pool.
+    expect(seen).toEqual([mark]);
+  });
+});
+
+/**
+ * The synchronous seed — the fix for "gate 1 is always a placeholder 'ma' and
+ * always synthetic" on a cold load.
+ *
+ * Asserted through a SEPARATE mock, because the suite above deliberately
+ * mocks the bundle away to isolate the speaker handoff. What matters here is
+ * only the order of preference: cache, else bundle, and never null when
+ * either has rows.
+ */
+describe("the synchronous seed", () => {
+  const seeded = async (cacheRows: Word[] | null, bundleRows: Word[]) => {
+    vi.resetModules();
+    vi.doMock("../data/words.ts", () => ({
+      fetchCatalog: () => new Promise<Word[]>(() => {}), // never lands
+      catalogFromCache: () => cacheRows,
+      catalogFromFallback: () => bundleRows,
+    }));
+    return (await import("./inventory.ts")).inventoryNow();
+  };
+
+  it("falls back to the bundled catalog when the cache is empty", async () => {
+    const bundle = [word("ma1b", "jane")];
+    expect(await seeded(null, bundle)).toEqual(bundle);
+  });
+
+  it("prefers the cache, which is this speaker's own and fresher", async () => {
+    const cache = [word("cached", "jane")];
+    expect(await seeded(cache, [word("bundled", "jane")])).toEqual(cache);
+  });
+
+  it("answers before any fetch resolves, which is the whole point", async () => {
+    // `fetchCatalog` above never settles, so a non-null answer here can only
+    // have come from the seed — this is exactly the cold-load case where the
+    // Run is constructed before the network has said anything.
+    expect(await seeded(null, [word("ma1b", "jane")])).not.toBeNull();
   });
 });

@@ -66,3 +66,4 @@ public/ref/*.wav
 # Dev-only tone-pair fixture audio, written by `npm run tonepairs:fixtures`.
 # Regenerable from fixtures/tonepairs/wav/, and never part of a prod build.
 public/dev-fixtures/
+.env*

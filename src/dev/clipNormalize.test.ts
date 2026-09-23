@@ -3,6 +3,7 @@ import {
   applyChaoMap,
   chaoMapFor,
   cohortSpan,
+  cohortTargetSpan,
   pinnedFractionOf,
   polylineSpan,
 } from "./clipNormalize.ts";
@@ -13,6 +14,24 @@ import { DEFAULT_POLYLINES } from "../game/tuning.ts";
 function contourOf(f: (t: number) => number, n = 40): ContourPoint[] {
   return Array.from({ length: n }, (_, i) => [i / (n - 1), f(i / (n - 1))] as ContourPoint);
 }
+
+describe("cohortTargetSpan", () => {
+  it("ignores neutral (0) and matches citation tones alone", () => {
+    expect(cohortTargetSpan([3, 0])).toEqual(cohortTargetSpan([3]));
+    expect(cohortTargetSpan([0, 4])).toEqual(cohortTargetSpan([4]));
+  });
+
+  it("treats a neutral-only cohort as a valid no-target case instead of throwing", () => {
+    expect(() => cohortTargetSpan([0])).not.toThrow();
+    expect(cohortTargetSpan([0])).toEqual({ low: 0, high: 0 });
+  });
+
+  it("unions spans across multiple citation tones", () => {
+    const combo = cohortTargetSpan([3, 2]);
+    expect(combo.low).toBeLessThanOrEqual(polylineSpan(DEFAULT_POLYLINES[2]).low);
+    expect(combo.high).toBeGreaterThanOrEqual(polylineSpan(DEFAULT_POLYLINES[3]).high);
+  });
+});
 
 describe("cohortSpan", () => {
   it("trims the extremes rather than taking min and max", () => {

@@ -24,10 +24,9 @@ import {
   type ContourPoint,
 } from "./clipCut.ts";
 import { multiSyllablePolyline } from "./clipCutMulti.ts";
-import { applyChaoMap, chaoMapFor, cohortSpan, polylineSpan } from "./clipNormalize.ts";
+import { applyChaoMap, chaoMapFor, cohortSpan, cohortTargetSpan } from "./clipNormalize.ts";
 import { SEED_F0_CENTER } from "./clipPipeline.ts";
 import { reviewClip } from "./clipReview.ts";
-import { DEFAULT_POLYLINES } from "../game/tuning.ts";
 import type { Tone } from "../game/gates.ts";
 import { decodeWav, encodeWav } from "./wav.ts";
 
@@ -80,11 +79,7 @@ const cuts = FIXTURES.map((fixture) => {
 // One cohort — every fixture is 3+2 — normalised exactly as `process-clips`
 // does it: measured shape, canonical height, target the union of the spans
 // this combination's own tones reach.
-const targets = FIXTURES[0].tones.map((t) => polylineSpan(DEFAULT_POLYLINES[t]));
-const target = {
-  low: Math.min(...targets.map((t) => t.low)),
-  high: Math.max(...targets.map((t) => t.high)),
-};
+const target = cohortTargetSpan(FIXTURES[0].tones);
 const span = cohortSpan(cuts.map((c) => c.clip.contour));
 const map = chaoMapFor(span, target);
 console.log(
@@ -142,6 +137,7 @@ const words = cuts.map(({ fixture, samples, sampleRate, clip }) => {
     clipS: Number((clip.sourceMs / 1000).toFixed(4)),
     polyline: polyline as ContourPoint[],
     minTier: "free" as const,
+    listIds: [],
     // Fixed, not `new Date()`: this is the clip cache's version key, and a
     // value that changes every run would make a no-op regeneration a diff —
     // the same reason `export-fallback` dropped its `exportedAt`.

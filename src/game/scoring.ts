@@ -211,9 +211,15 @@ const BASE_POINTS: Record<GateOutcome, number> = {
   unheard: 0,
 };
 
-/** Points for a gate outcome, scaled by the combo multiplier in effect. */
-export function pointsFor(outcome: GateOutcome, combo: number): number {
-  return Math.round(BASE_POINTS[outcome] * multiplierFor(combo));
+/**
+ * Points for a gate outcome, scaled by the combo multiplier in effect and,
+ * for a multi-syllable (pairs) gate, `tuning().pairScoreMultiplier` — a pair
+ * is objectively harder to clear (see CLAUDE.md's "Tone pairs") and was
+ * otherwise scored identically to a single syllable.
+ */
+export function pointsFor(outcome: GateOutcome, combo: number, isMulti = false): number {
+  const pairMult = isMulti ? tuning().pairScoreMultiplier : 1;
+  return Math.round(BASE_POINTS[outcome] * multiplierFor(combo) * pairMult);
 }
 
 /** The combo count after a gate outcome. Perfect/good increment; ok/collision reset; unheard is neutral. */
@@ -291,7 +297,8 @@ export function applyGate(
 ): RunStats {
   const priorCombo = stats.combo;
   const multiplier = multiplierFor(priorCombo);
-  const points = Math.round(BASE_POINTS[outcome] * multiplier);
+  const pairMult = tones.length > 1 ? tuning().pairScoreMultiplier : 1;
+  const points = Math.round(BASE_POINTS[outcome] * multiplier * pairMult);
   const combo = comboAfter(outcome, priorCombo);
 
   const base = {

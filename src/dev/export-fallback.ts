@@ -51,7 +51,7 @@
 
 import { writeFileSync } from "node:fs";
 
-import { FALLBACK_COLUMNS } from "../data/catalogRows.ts";
+import { FALLBACK_COLUMNS, FALLBACK_LISTS_SELECT } from "../data/catalogRows.ts";
 import { serviceClient } from "./serviceClient.ts";
 
 const root = new URL("../../", import.meta.url).pathname;
@@ -95,7 +95,7 @@ const clipColumns = FALLBACK_COLUMNS.filter((c) => !WORD_LEVEL.has(c));
 const { data, error } = await supabase
   .from("words")
   // `!inner`, so a word this speaker has not recorded does not arrive at all.
-  .select(`${wordColumns.join(",")},word_clips!inner(${clipColumns.join(",")})`)
+  .select(`${wordColumns.join(",")},word_clips!inner(${clipColumns.join(",")}),${FALLBACK_LISTS_SELECT}`)
   .eq("word_clips.speaker_id", defaultSpeaker.id)
   .eq("word_clips.status", "published")
   .order("position", { ascending: true });
@@ -109,8 +109,13 @@ if (error) {
 const rows = ((data ?? []) as unknown as Record<string, unknown>[]).flatMap((row) => {
   const clips = row.word_clips;
   if (!Array.isArray(clips) || clips.length !== 1) return [];
-  const { word_clips: _drop, ...word } = row;
-  return [{ ...word, ...(clips[0] as Record<string, unknown>) }];
+  const { word_clips: _drop, word_lists, ...word } = row;
+  const lists = Array.isArray(word_lists)
+    ? word_lists
+        .map((l) => (l && typeof l === "object" ? (l as Record<string, unknown>).list_id : null))
+        .filter((id): id is string => typeof id === "string")
+    : [];
+  return [{ ...word, ...(clips[0] as Record<string, unknown>), lists }];
 });
 if (rows.length === 0) {
   // A zero-row export would silently replace a working fallback with an empty

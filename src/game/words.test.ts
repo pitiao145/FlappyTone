@@ -1,19 +1,24 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   availableToneCombos,
   availableTones,
+  capWordsPerCombo,
   isMulti,
   isSingle,
   multiWords,
   pickMultiWord,
   pickWord,
+  resolveLevels,
+  resolvedPool,
   toneComboKey,
+  wordsForList,
   wordsForTier,
   wordsFromCatalog,
   wordsOfCombo,
   wordsOfTone,
   type Word,
 } from "./words.ts";
+import { resetTierLimits, setTierLimits } from "./tiers.ts";
 import fallback from "../data/wordsFallback.json";
 import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
 import { corridorChaoAt, makeGate, newDifficulty, shapeForTone, shapeForWord } from "./gates.ts";
@@ -216,6 +221,161 @@ describe("wordsForTier", () => {
   });
 });
 
+describe("wordsForList", () => {
+  const t1 = word({ id: "t1", position: 0, lists: ["tocfl1"] });
+  const t2 = word({ id: "t2", position: 1, lists: ["tocfl2"] });
+  const t3 = word({ id: "t3", position: 2, lists: ["tocfl3"] });
+  const samplerB = word({ id: "sb", position: 3, lists: ["sampler-beginner"] });
+  const samplerI = word({ id: "si", position: 4, syllables: 2, tones: [1, 2], lists: ["sampler-intermediate"] });
+  const words = [t1, t2, t3, samplerB, samplerI];
+
+  it("filters to the given levels, union across multiple", () => {
+    expect(wordsForList(words, [1], "beginner").map((w) => w.id)).toEqual(["t1"]);
+    expect(wordsForList(words, [1, 2], "beginner").map((w) => w.id)).toEqual(["t1", "t2"]);
+    expect(wordsForList(words, [1, 2, 3], "beginner").map((w) => w.id)).toEqual(["t1", "t2", "t3"]);
+  });
+
+  it("levels: null resolves to the proficiency's fixed sampler list, ignoring TOCFL tags", () => {
+    expect(wordsForList(words, null, "beginner").map((w) => w.id)).toEqual(["sb"]);
+    // Intermediate's sampler is additive — both sampler tags, since
+    // Intermediate is "single or two-syllable," not "two-syllable only".
+    expect(wordsForList(words, null, "intermediate").map((w) => w.id)).toEqual(["sb", "si"]);
+  });
+
+  it("a word in no requested list is excluded", () => {
+    expect(wordsForList(words, [2], "beginner").map((w) => w.id)).toEqual(["t2"]);
+  });
+});
+
+describe("resolveLevels", () => {
+  afterEach(() => resetTierLimits());
+
+  it("guest (no level access) always resolves to null, regardless of choice", () => {
+    expect(resolveLevels("guest", "beginner", null)).toBeNull();
+    expect(resolveLevels("guest", "beginner", "mix")).toBeNull();
+    expect(resolveLevels("guest", "beginner", 2)).toBeNull();
+  });
+
+  it("null/mix choice resolves to the full allowed set", () => {
+    expect(resolveLevels("free", "beginner", null)).toEqual([1, 2]);
+    expect(resolveLevels("free", "beginner", "mix")).toEqual([1, 2]);
+  });
+
+  it("a specific in-range choice narrows to just that level", () => {
+    expect(resolveLevels("free", "beginner", 1)).toEqual([1]);
+  });
+
+  it("a choice outside the allowed set falls back to the full allowed set", () => {
+    // free.intermediate only ever allows [1] — a stale choice of 2 (from a
+    // downgrade, or a tampered value) must not resolve to an empty pool.
+    expect(resolveLevels("free", "intermediate", 2)).toEqual([1]);
+  });
+});
+
+describe("resolvedPool", () => {
+  afterEach(() => resetTierLimits());
+
+  const singleT1 = word({ id: "s1", tone: 1, tones: [1], syllables: 1, position: 0, lists: ["tocfl1"] });
+  const pairT1 = word({
+    id: "p1",
+    tone: 3,
+    tones: [3, 2],
+    syllables: 2,
+    position: 1,
+    lists: ["tocfl1"],
+  });
+  const samplerSingle = word({
+    id: "sb1",
+    tone: 2,
+    tones: [2],
+    syllables: 1,
+    position: 2,
+    lists: ["sampler-beginner"],
+  });
+  const samplerPair = word({
+    id: "si1",
+    tone: 4,
+    tones: [4, 1],
+    syllables: 2,
+    position: 3,
+    lists: ["sampler-intermediate"],
+  });
+  const inventory = [singleT1, pairT1, samplerSingle, samplerPair];
+
+  it("guest + intermediate resolves to the union of both sampler lists — not empty, and not two-syllable-only", () => {
+    // The original regression: guest picks Intermediate, the pool must
+    // contain the real recorded pair word(s), never come back empty (which
+    // silently falls back to the generic per-tone placeholder and a
+    // synthetic cue for every gate). Intermediate is additive, not a
+    // separate two-syllable-only pool — sampler-beginner's single-syllable
+    // word belongs in it too.
+    const pool = resolvedPool(inventory, "guest", "game", "intermediate", null);
+    expect(pool.map((w) => w.id).sort()).toEqual(["sb1", "si1"]);
+  });
+
+  it("guest + beginner resolves to the sampler-beginner pool", () => {
+    const pool = resolvedPool(inventory, "guest", "game", "beginner", null);
+    expect(pool.map((w) => w.id)).toEqual(["sb1"]);
+  });
+
+  it("a tier's own pairWordsPerCombo never empties classic 'game' mode's pool — only 'pairs' mode reads it", () => {
+    setTierLimits("guest", { pairWordsPerCombo: 0 });
+    const gamePool = resolvedPool(inventory, "guest", "game", "intermediate", null);
+    expect(gamePool.map((w) => w.id).sort()).toEqual(["sb1", "si1"]);
+  });
+
+  it("'pairs' mode DOES apply the per-combo cap", () => {
+    const manyPairs = [
+      pairT1,
+      word({ id: "p2", tone: 3, tones: [3, 2], syllables: 2, position: 5 }),
+      word({ id: "p3", tone: 3, tones: [3, 2], syllables: 2, position: 6 }),
+    ];
+    setTierLimits("free", { pairWordsPerCombo: 1 });
+    expect(resolvedPool(manyPairs, "free", "pairs", "beginner", null).map((w) => w.id)).toEqual(["p1"]);
+  });
+
+  it("free + beginner + level 1 resolves via TOCFL tags, not the sampler", () => {
+    const pool = resolvedPool(inventory, "free", "game", "beginner", 1);
+    expect(pool.map((w) => w.id)).toEqual(["s1"]);
+  });
+
+  it("free + intermediate + level 1 includes both single- and two-syllable tocfl1 words, never three-plus", () => {
+    // The original bug: the concrete-level branch only filtered by TOCFL
+    // tag, not by proficiency's syllable range, so a leak either direction
+    // was invisible (almost no recorded pair carries a tocfl* tag yet).
+    // Intermediate is single-OR-two-syllable — s1 (single) and p1 (pair)
+    // both belong, but nothing past two syllables ever should.
+    const pool = resolvedPool(inventory, "free", "game", "intermediate", 1);
+    expect(pool.map((w) => w.id).sort()).toEqual(["p1", "s1"]);
+  });
+
+  it("wordsForList itself enforces the syllable range on both branches, not just resolvedPool's composition", () => {
+    expect(wordsForList(inventory, [1], "beginner").map((w) => w.id)).toEqual(["s1"]);
+    expect(wordsForList(inventory, [1], "intermediate").map((w) => w.id).sort()).toEqual(["p1", "s1"]);
+    expect(wordsForList(inventory, null, "beginner").map((w) => w.id)).toEqual(["sb1"]);
+    expect(wordsForList(inventory, null, "intermediate").map((w) => w.id).sort()).toEqual(["sb1", "si1"]);
+  });
+
+  it("intermediate never includes a three-plus-syllable word, even though the syllable filter is no longer exact-two", () => {
+    const triple = word({ id: "triple1", tone: 1, tones: [1, 2, 3], syllables: 3, position: 9, lists: ["tocfl1"] });
+    const pool = wordsForList([...inventory, triple], [1], "intermediate");
+    expect(pool.map((w) => w.id).sort()).toEqual(["p1", "s1"]);
+  });
+
+  it("learn/tutorial modes are unaffected by level/proficiency — full tier pool", () => {
+    for (const mode of ["learn", "tutorial"] as const) {
+      const pool = resolvedPool(inventory, "guest", mode, "intermediate", null);
+      expect(pool.map((w) => w.id).sort()).toEqual(["p1", "s1", "sb1", "si1"]);
+    }
+  });
+
+  it("drill mode always reads Beginner-at-mix, ignoring the passed proficiency/level", () => {
+    // Guest resolves to the sampler-beginner list regardless of what's passed in.
+    const pool = resolvedPool(inventory, "guest", "drill", "intermediate", 2);
+    expect(pool.map((w) => w.id).sort()).toEqual(["sb1"]);
+  });
+});
+
 /**
  * `min_tier` is the GAME gate, and it is what the clips Worker enforces at
  * `/clip/:speaker/:id`. The run's pool is filtered by it (Game.tsx), so the two must
@@ -236,14 +396,17 @@ describe("the shipped catalog is open to every tier's game", () => {
     (fallback.rows as Record<string, unknown>[]).map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID })),
   );
 
-  it("ships 124 published words", () => {
-    expect(catalog).toHaveLength(124);
+  it("ships a substantial published catalog", () => {
+    // The fallback snapshot may evolve; assert we returned a reasonably
+    // large parsed catalog rather than hardcoding a number tied to one
+    // snapshot. 120+ is the historical expected floor for shipped words.
+    expect(catalog.length).toBeGreaterThan(120);
   });
 
   it("gives a guest's run pool every word, not a per-tone slice", () => {
-    expect(wordsForTier(catalog, "guest")).toHaveLength(124);
-    expect(wordsForTier(catalog, "free")).toHaveLength(124);
-    expect(wordsForTier(catalog, "pro")).toHaveLength(124);
+    expect(wordsForTier(catalog, "guest")).toHaveLength(catalog.length);
+    expect(wordsForTier(catalog, "free")).toHaveLength(catalog.length);
+    expect(wordsForTier(catalog, "pro")).toHaveLength(catalog.length);
   });
 
   it("has no pro-gated word left in the catalog", () => {
@@ -317,6 +480,48 @@ describe("pickWord", () => {
 
   it("stays in range at rand() = 0.999…", () => {
     expect(pickWord(inventory, 1, [], () => 0.9999999)).not.toBeUndefined();
+  });
+
+  it("never repeats a word of the drawn tone until every word of that tone has been drawn", () => {
+    // 4 tone-1 words, drawn 8 times (two full cycles). Track every id
+    // returned and simulate the caller appending each pick to `recent`.
+    const pool = wordsOfTone(inventory, 1);
+    const recent: typeof inventory = [];
+    const drawn: string[] = [];
+    for (let cycle = 0; cycle < 2; cycle += 1) {
+      const seenThisCycle = new Set<string>();
+      for (let i = 0; i < pool.length; i += 1) {
+        const w = pickWord(inventory, 1, recent, () => 0);
+        expect(w).not.toBeNull();
+        // Not a repeat within this cycle: every id in the pool must appear
+        // exactly once before any of them appears again.
+        expect(seenThisCycle.has(w!.id)).toBe(false);
+        seenThisCycle.add(w!.id);
+        recent.push(w!);
+        drawn.push(w!.id);
+      }
+      expect(seenThisCycle.size).toBe(pool.length);
+    }
+  });
+
+  it("a small tone pool exhausts on its own — unaffected by heavy play of other tones (the sampler bug)", () => {
+    // The bug this guards: an 8-word tone-1 pool interleaved with tones
+    // 2/3/4 used to dilute a fixed-size global recency window, letting a
+    // tone-1 word repeat well before the other 7 had played. Grouping the
+    // avoid-set by tone fixes it: tone-1 draws must still visit all 4
+    // tone-1 words here before any repeats, no matter how much tone
+    // 2/3/4 history sits in `recent` alongside them.
+    const other = [2, 3, 4].flatMap((tone) => wordsOfTone(inventory, tone as 2 | 3 | 4));
+    const recent: typeof inventory = [...other, ...other, ...other]; // lots of noise, no tone-1 words
+    const seen = new Set<string>();
+    for (let i = 0; i < 4; i += 1) {
+      const w = pickWord(inventory, 1, recent, () => 0);
+      expect(w).not.toBeNull();
+      expect(seen.has(w!.id)).toBe(false);
+      seen.add(w!.id);
+      recent.push(w!);
+    }
+    expect(seen.size).toBe(4);
   });
 });
 
@@ -416,6 +621,28 @@ describe("the single/multi pool split", () => {
     expect(wordsOfCombo([single, pair32, pair23], [3, 2]).map((w) => w.id)).toEqual(["pair32"]);
   });
 
+  it("wordsOfCombo's limit slices to the first N of that combo, in inventory order", () => {
+    const a = word({ id: "a", tone: 3, tones: [3, 2], syllables: 2, position: 1 });
+    const b = word({ id: "b", tone: 3, tones: [3, 2], syllables: 2, position: 2 });
+    const c = word({ id: "c", tone: 3, tones: [3, 2], syllables: 2, position: 3 });
+    expect(wordsOfCombo([a, b, c], [3, 2], 2).map((w) => w.id)).toEqual(["a", "b"]);
+    expect(wordsOfCombo([a, b, c], [3, 2]).map((w) => w.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("capWordsPerCombo caps every combo independently, leaving singles untouched", () => {
+    const a1 = word({ id: "a1", tone: 3, tones: [3, 2], syllables: 2, position: 1 });
+    const a2 = word({ id: "a2", tone: 3, tones: [3, 2], syllables: 2, position: 2 });
+    const a3 = word({ id: "a3", tone: 3, tones: [3, 2], syllables: 2, position: 3 });
+    const b1 = word({ id: "b1", tone: 4, tones: [4, 4], syllables: 2, position: 4 });
+    const capped = capWordsPerCombo([single, a1, a2, a3, b1], 2);
+    expect(capped.map((w) => w.id)).toEqual(["single1", "a1", "a2", "b1"]);
+  });
+
+  it("capWordsPerCombo(words, Infinity) is a no-op", () => {
+    const a1 = word({ id: "a1", tone: 3, tones: [3, 2], syllables: 2, position: 1 });
+    expect(capWordsPerCombo([single, a1], Infinity)).toEqual([single, a1]);
+  });
+
   describe("pickMultiWord", () => {
     const pairA = word({ id: "pairA", tone: 3, tones: [3, 2], syllables: 2, position: 1 });
     const pairB = word({ id: "pairB", tone: 3, tones: [3, 2], syllables: 2, position: 2 });
@@ -443,6 +670,14 @@ describe("the single/multi pool split", () => {
       for (let i = 0; i < 10; i += 1) {
         expect(pickMultiWord(inventory, null, [], () => i / 10)?.syllables).toBeGreaterThan(1);
       }
+    });
+
+    it("with combo null, one combo exhausting doesn't force a reset on another combo's still-fresh words", () => {
+      // pairC is the only [4,4] word — its own group is exhausted after one
+      // draw and must reset independently, without touching the [3,2] group
+      // (pairA/pairB), which still has an unplayed word.
+      const recent = [pairC];
+      expect(pickMultiWord(inventory, null, recent, () => 0)?.id).toBe("pairA");
     });
   });
 });

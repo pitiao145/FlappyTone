@@ -1130,6 +1130,30 @@
   color: var(--ink);
 }
 
+.silent-mode-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: left;
+}
+
+.silent-mode-banner svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.silent-mode-banner-dismiss {
+  background: none;
+  border: none;
+  padding: 0 0 0 var(--space-2);
+  margin: 0;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  line-height: 1;
+}
+
 /* "Couldn't hear that" is the trust-preserving path (PRD §6): it must read as
    the game shrugging, never as a penalty. Hence no red, no shake, and a fade
    in rather than a snap. */
@@ -2542,6 +2566,15 @@
   gap: 10px;
 }
 
+.settings-screen .setting-card > section {
+  margin-top: var(--space-2);
+}
+
+.settings-screen .setting-card .choice {
+  flex-direction: row;
+}
+
+
 .settings-screen .setting-icon {
   display: flex;
   align-items: center;
@@ -2557,6 +2590,9 @@
   height: 22px;
 }
 
+.settings-screen h4 {
+  margin-bottom: var(--space-2);
+}
 .setting h3 {
   margin: 0;
   font-size: 13px;
@@ -2612,6 +2648,7 @@
   line-height: 1.5;
   color: var(--ink-dim);
   margin: 0;
+  margin-top: var(--space-2);
 }
 
 /* One row, one obvious current value — the old version was three rows of
@@ -2654,7 +2691,96 @@
   color: var(--accent-bright);
 }
 
-.settings-screen .choice-option.active {
+/* Same sticker language as the tone-pair grid (`.pair-combo-tile`/
+   `.pair-combo-shuffle` in ModeSelect) — thick ink border, hard-offset
+   shadow — rather than the thin-line pill `.choice-option` uses elsewhere.
+   Background stays transparent until `.active` fills it in below: a filled
+   background on every option, selected or not, made it hard to tell which
+   one actually was. */
+.level-select-screen .choice-option {
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  background: transparent;
+  color: var(--ink);
+}
+
+.level-select-screen .choice-option:hover:not(:disabled):not(.active) {
+  filter: brightness(0.94);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.level-select-screen .choice-option:disabled {
+  box-shadow: none;
+}
+
+/* Beginner/Intermediate is a binary choice, not an open row — split the
+   available width evenly instead of sizing each pill to its own label. */
+.level-select-screen .proficiency-choice .choice-option {
+  flex: 1 1 0;
+}
+
+/* Mix carries the shuffle icon (same as the tone-pair grid's own Shuffle
+   CTA) but stays a plain selectable option otherwise — a permanent --beak
+   fill here would be one more always-on background fighting `.active` for
+   the player's attention. Its own row, not sharing one with TOCFL 1-3: it
+   isn't a fourth level, it's a different kind of choice. */
+.level-select-screen .choice-mix-row {
+  width: 100%;
+}
+
+.level-select-screen .choice-option-mix {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+.level-select-screen .choice-option-mix-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.level-select-screen .playhome-menu {
+  max-width: none;
+  margin-top: var(--space-6);
+}
+
+/* `.playhome-overlay`'s flex `gap` spaces every child evenly — not enough
+   room between the proficiency row and the level row, which read as one
+   block otherwise. */
+.level-select-screen .level-section-note {
+  margin-top: var(--space-3);
+}
+
+/* LevelSelect has no `.playhome-canvas` wrapper of its own (unlike
+   ModeSelect/PlayHome, which get their canvas-backdrop tone from that div) —
+   `.level-select-screen` sits directly in `.frame`, falling back to the
+   body's `--surface` instead of `--canvas-backdrop`. Restated here, on the
+   stage itself, so this screen reads as the same surface as the rest of the
+   Play family. */
+.level-select-screen {
+  border-radius: var(--radius-md);
+  background: var(--canvas-backdrop);
+  border: 1px solid var(--line);
+}
+
+.level-select-screen .playhome-menu .primary {
+  width: 100%;
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.level-select-screen .playhome-menu .primary:disabled {
+  box-shadow: none;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-screen .choice-option.active,
+.level-select-screen .choice-option.active {
   border-color: var(--accent-bright);
   background: var(--accent-bright);
   color: var(--accent-ink);
@@ -3233,6 +3359,18 @@
   color: var(--ink-dim);
 }
 
+/* Locked list row — the same dashed, muted teaser language `.word-chip.is-locked`
+   uses. It carries the whole locked look now: these rows used to be `disabled`
+   buttons leaning on the UA's greying, which also swallowed the click, so the
+   upsell handler never ran. Tappable on purpose — it surfaces the upgrade
+   path, not a dead end. */
+.word-list-row.is-locked {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--ink) 28%, transparent);
+  background: color-mix(in srgb, var(--surface-panel) 50%, var(--surface));
+  color: var(--ink-dim);
+}
+
 .word-list-soon {
   font-size: 10px;
   font-weight: 700;
@@ -3580,6 +3718,17 @@
 
 .walkthrough-pip {
   display: block;
+  margin: 0 auto;
+}
+
+.walkthrough-silent-icon {
+  color: var(--ink);
+}
+
+.walkthrough-silent-icon svg {
+  display: block;
+  width: 96px;
+  height: 96px;
   margin: 0 auto;
 }
 
@@ -5302,6 +5451,7 @@ section.hero-cards {
 
 .switch-row-disabled {
   cursor: default;
+  opacity: 0.5;
 }
 
 .switch-text {
@@ -5319,7 +5469,15 @@ section.hero-cards {
   color: var(--ink-muted);
 }
 
-.pause-card .switch-track {
+/* `button.switch-track`, not `.switch-track`: both `.screen button` and
+   `.overlay button` (further up the file) style every plain button at
+   (0,1,1) specificity — a bare `.switch-track` (0,1,0) loses that fight in
+   both places (an extra 1px border in Settings, forced padding/background
+   in the pause overlay), which is exactly what made the knob render
+   correctly in only one context at a time. Tying the specificity at (0,1,1)
+   and staying later in the file wins the cascade in every context this
+   switch appears in, instead of patching one context at a time. */
+button.switch-track {
   flex-shrink: 0;
   position: relative;
   width: 44px;
@@ -5340,7 +5498,7 @@ section.hero-cards {
   outline-offset: 2px;
 }
 
-.switch-track.switch-on {
+button.switch-track.switch-on {
   background: var(--accent);
 }
 
@@ -5704,10 +5862,20 @@ section.hero-cards {
 
 .mode-card-title {
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-family: var(--font-display);
   font-size: 1rem;
   font-weight: 600;
   text-align: center;
+}
+
+.mode-card-lock {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 .mode-card-desc {
@@ -5737,6 +5905,127 @@ section.hero-cards {
 .screen button.mode-card-pairs{
   background: var(--ink);
   border-color: var(--accent-bright);
+}
+
+/* Tone-pair combo picker: every (first tone, second tone) combo the
+   inventory can build, currently a clean 4x5 = 20 (four real tones x five
+   second-syllable options incl. neutral) — a square grid reads better than
+   the generic `.choice` pill row once the icon is the whole point of the
+   tile. `repeat(5, 1fr)` + `aspect-ratio: 1` keeps tiles square at any width
+   the 9:16 stage offers. `min-width: 0` on both the grid (a flex child of
+   `.playhome-overlay`) and each tile (a grid item) is load-bearing: without
+   it the icons' own intrinsic size becomes each column's minimum, which can
+   exceed the 1fr track on a narrow phone and spill the grid past the stage
+   on both sides (caught in review — symmetric overflow from
+   `.playhome-overlay`'s `align-items: center` centering the oversized box). */
+.tone-pair-selection .pair-combo-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  row-gap: var(--space-4);
+  column-gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-bottom: var(--space-4);
+}
+
+/* Same sticker language as `.progress-screen .sticker-card`/the Play
+   button's card language — thick ink border, square-ish corners, no fill —
+   rather than `.mode-card`'s solid-colour tile or the plain `.choice-option`
+   pill. A dedicated class (not `.choice-option`, not `.mode-card`): neither
+   of those is square, and both carry rules (flex:1 1 auto, min-height:108px)
+   that fight a grid of square tiles. */
+/* Same hard-offset "sticker" shadow as `.nav-cta-shady::before`, as a plain
+   `box-shadow` instead of an ink-filled `::before` copy — the pseudo
+   approach put the shadow in front of the tone-mark icons (a negative
+   z-index pseudo inside a `display: flex` container doesn't reliably paint
+   behind the flex-item content in every engine, and didn't here). A
+   `box-shadow` has no stacking order of its own to get wrong: it always
+   paints outside the border, behind the box's own background, so there's no
+   pseudo-element or z-index for the icons to lose to. */
+.tone-pair-selection .pair-combo-tile {
+  display: flex;
+  align-items: center;
+  background-color: var(--accent);
+  justify-content: center;
+  gap: 2px;
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--ink);
+  /* background: transparent; */
+  color: var(--ink);
+  cursor: pointer;
+  box-sizing: border-box;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.tone-pair-selection .pair-combo-tile:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tone-pair-selection .pair-combo-tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tone-pair-selection .pair-combo-tile:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Bigger and more prominent than the filter-pill/tabbed-row use of the same
+   icon (`.tone-mark-icon`, 18x13.5) — the shape is the whole content of the
+   tile here, not a label alongside text. `clamp` keys off viewport width
+   (not the tile's own, which CSS can't size against here) so two icons plus
+   their gap never out-grow a narrow phone's 1fr column; height is left to
+   follow the SVG's own 120x90 intrinsic ratio. */
+.tone-pair-selection .pair-combo-tone-icon {
+  width: clamp(18px, 7vw, 30px);
+  color: currentColor;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* --beak (the Pip's beak colour), not --accent — pulls the CTA out from the
+   jade tiles above it, same role --beak already plays for the Tone Drill
+   mode-card. */
+.tone-pair-selection .pair-combo-shuffle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: var(--space-2) 14px;
+  margin-top: 4px;
+  font-size: var(--text-base);
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--ink);
+  background: var(--beak);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.tone-pair-selection .pair-combo-shuffle:hover:not(:disabled) {
+  filter: brightness(0.94);
+}
+
+.tone-pair-selection .pair-combo-shuffle:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.tone-pair-selection .pair-combo-shuffle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tone-pair-selection .pair-combo-shuffle-icon {
+  width: 20px;
+  height: 20px;
 }
 
 /* ------------------------------------------------------ progress & profile */
@@ -7815,5 +8104,171 @@ section.hero-cards {
   .warming-dots span {
     animation: none;
     opacity: 0.6;
+  }
+}
+
+/* In-app feedback: a vertical tab on the right edge (FeedbackWidget.tsx) and
+   the bottom sheet it opens. Portalled to <body>, so no `.screen button`
+   specificity fight here. Sits under modals (100) and toasts (120). */
+.feedback-tab {
+  position: fixed;
+  right: 0;
+  top: 58%;
+  z-index: 90;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  padding: 12px 7px;
+  border: 1px dashed var(--line-strong);
+  border-right: none;
+  /* Rotated 180°, so the rounded side is the visual left: radius the right. */
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--surface);
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: -2px 2px 8px rgba(36, 29, 21, 0.08);
+}
+
+.feedback-tab:hover {
+  color: var(--ink);
+  border-color: var(--ink-soft);
+}
+
+.feedback-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 var(--space-6) var(--space-5) 0;
+}
+
+.feedback-avatar {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  padding: 6px;
+  border-radius: 50%;
+  background: var(--surface-deep);
+  object-fit: contain;
+}
+
+.feedback-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--ink);
+}
+
+.feedback-byline {
+  margin: 2px 0 0;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.feedback-label {
+  display: block;
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.feedback-textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 var(--space-4);
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-panel);
+  color: var(--ink);
+  /* 16px stops iOS Safari zooming the page on focus. */
+  font: inherit;
+  font-size: 16px;
+  resize: vertical;
+}
+
+.feedback-textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.feedback-ratings {
+  display: flex;
+  justify-content: space-between;
+  /* Birds sit on a shared baseline so the size step reads as growth. */
+  align-items: flex-end;
+  margin: 0 0 var(--space-5);
+}
+
+.modal-card .feedback-rating {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  padding: 0 0 5px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  line-height: 0;
+  filter: grayscale(0.7);
+  opacity: 0.6;
+  transition: transform 0.12s, filter 0.12s, opacity 0.12s;
+}
+
+.feedback-rating img {
+  object-fit: contain;
+}
+
+.modal-card .feedback-rating:hover,
+.modal-card .feedback-rating.is-selected {
+  filter: none;
+  opacity: 1;
+}
+
+.modal-card .feedback-rating.is-selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  transform: scale(1.08);
+}
+
+.modal-card .feedback-send {
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: var(--text-base);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.modal-card .feedback-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.feedback-error {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--danger-strong);
+}
+
+.feedback-thanks {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-base);
+  color: var(--ink);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-card .feedback-rating {
+    transition: none;
   }
 }

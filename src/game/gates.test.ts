@@ -229,6 +229,7 @@ describe("makeGate", () => {
         [1, 3],
       ] as [number, number][],
       minTier: "free" as const,
+      listIds: [],
       updatedAt: "",
     };
     const g = makeGate(word, 0, d);

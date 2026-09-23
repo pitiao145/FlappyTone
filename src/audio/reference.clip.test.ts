@@ -44,6 +44,7 @@ function word(id: string, speakerId = "jane"): Word {
       [1, 4.5],
     ],
     minTier: "free",
+    listIds: [],
     updatedAt: "2026-09-15T00:00:00Z",
   };
 }
@@ -134,7 +135,8 @@ describe("loadClip", () => {
 });
 
 describe("prefetchPool", () => {
-  it("fetches every word, at most 4 in flight, and never rejects", async () => {
+  it("fetches the exact tier at once and paces the speculative tail", async () => {
+    vi.useFakeTimers();
     let inFlight = 0;
     let peak = 0;
     fetchMock.mockImplementation(async () => {
@@ -146,12 +148,50 @@ describe("prefetchPool", () => {
     });
     await load(); // same module graph as prefetch's own import
     const { prefetchPool } = await import("./prefetch.ts");
+    const { resetClipQueue } = await import("./clipQueue.ts");
+    resetClipQueue();
     const words = Array.from({ length: 12 }, (_, i) => word(`w${i}`));
-    prefetchPool(words);
-    // Let the queue drain.
-    for (let i = 0; i < 200; i++) await Promise.resolve();
+    // First three are the Run's already-queued gates; the rest is the bet.
+    prefetchPool(words, { exactCount: 3 });
+
+    // The exact tier is not paced — it is due in seconds, so all three go
+    // straight through (lead first and alone, then the other two). The
+    // speculative tail only gets the bucket's saved-up burst on top, and then
+    // has to wait: this is the behaviour that stopped a run start from
+    // tripping the Worker's rate limit.
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(3 + 3);
+
+    // It still completes, given time.
+    await vi.advanceTimersByTimeAsync(10_000);
     expect(fetchMock).toHaveBeenCalledTimes(12);
     expect(peak).toBeLessThanOrEqual(4);
+    resetClipQueue();
+    vi.useRealTimers();
+  });
+
+  it("drops speculation whose signal aborted, without rejecting", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockResolvedValue({ ok: false, status: 404 } as unknown as Response);
+    await load();
+    const { prefetchPool } = await import("./prefetch.ts");
+    const { resetClipQueue } = await import("./clipQueue.ts");
+    resetClipQueue();
+    const controller = new AbortController();
+    prefetchPool(
+      Array.from({ length: 12 }, (_, i) => word(`a${i}`)),
+      { exactCount: 1, signal: controller.signal },
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    controller.abort();
+    await vi.advanceTimersByTimeAsync(10_000);
+    // The lead (and whatever was already on the wire) still went; the rest of
+    // the bet was dropped rather than spending the rate budget of whatever
+    // screen the player moved to.
+    expect(fetchMock.mock.calls.length).toBeLessThan(12);
+    resetClipQueue();
+    vi.useRealTimers();
   });
 });
 

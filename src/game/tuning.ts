@@ -195,6 +195,30 @@ export interface Tuning {
    * Lab once pairs have been flown in the classic mode.
    */
   multiGateChance: number;
+  /**
+   * Points multiplier for a multi-syllable (pairs) gate's outcome, on top of
+   * the ordinary combo multiplier — a pair gate is objectively harder (wider
+   * tolerance across both tones, and the tone-mismatch classifier/boost are
+   * both off for it, see CLAUDE.md's "Tone pairs") but scored the same as a
+   * single syllable until this was added. A flat multiplier on
+   * `BASE_POINTS[outcome]` rather than a fixed bonus: it scales with outcome
+   * quality (a perfect pair earns more extra than an "ok" one) and rewards
+   * flying a pair well rather than flying many of them, which matters since
+   * a free/guest tier's smaller word pool means fewer pair attempts.
+   *
+   * 3.0, echoing the combo ladder's own cap (×3) — not a coincidence: a pair
+   * gate's accuracy is scored purely off corridor tracking (the
+   * classifier's mismatch-collision and accuracy boost are both off for
+   * `syllables > 1`, see CLAUDE.md's "Tone pairs"), and averaging error
+   * across two syllables' worth of frames routinely drags a genuinely clean
+   * attempt down to "ok" rather than "perfect"/"good". A 1.5× first attempt
+   * left an "ok" pair (50 base) at 75 points — still far below a single
+   * "good" (150) — so this compensates for the *tier* a pair tends to land
+   * in, not just for it deserving a bonus at whatever tier it lands in. Not
+   * a measured value, retune from the Lab once pairs have actually been
+   * flown at scale.
+   */
+  pairScoreMultiplier: number;
 
   // ---- tone classifier
   /**
@@ -452,6 +476,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   mergeGapMs: 150,
   multiMergeGapMs: 400,
   multiGateChance: 0.5,
+  pairScoreMultiplier: 5.0,
   toneClassifierMinConfidence: 0.5,
   toneClassifierOnsetTrimFraction: 0.05,
   toneClassifierFlatnessScaleChao: 1.25,
@@ -473,7 +498,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   driftChaoPerSec: 5.33,
   trailSeconds: 1.0,
   prefetchWordsPerTone: 6,
-  warmupMaxMs: 2500,
+  warmupMaxMs: 3500,
   warmupMinMs: 400,
   reachToToneSpaceUp: 1,
   reachToToneSpaceDown: 1,

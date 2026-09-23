@@ -25,6 +25,8 @@
  */
 
 import type { ContourPoint } from "./clipCut.ts";
+import type { Tone } from "../game/gates.ts";
+import { DEFAULT_POLYLINES } from "../game/tuning.ts";
 
 /** Low and high anchor of a cohort or a target shape, in chao. */
 export interface ChaoSpan {
@@ -67,6 +69,29 @@ export function cohortSpan(contours: ContourPoint[][], trimPercent = 2): ChaoSpa
 export function polylineSpan(polyline: ReadonlyArray<readonly [number, number]>): ChaoSpan {
   const chaos = polyline.map((p) => p[1]);
   return { low: Math.min(...chaos), high: Math.max(...chaos) };
+}
+
+/**
+ * Target Chao span for cohort height calibration from a word's tone list.
+ *
+ * Neutral (0) is omitted: there is no citation polyline for it, and multi-
+ * syllable corridors are measured shape-agnostic — only toned syllables supply
+ * the canonical height band (see process-clips.ts).
+ */
+export function cohortTargetSpan(tones: readonly number[]): ChaoSpan {
+  const cited = tones.filter((t): t is Tone => t >= 1 && t <= 4);
+  if (cited.length === 0) {
+    // Neutral-only cohorts are valid catalog rows, but they do not define a
+    // citation-height target. Skip the calibration step for them rather than
+    // throwing: the contour remains measured, and the pipeline only needs a
+    // target span for T1–T4 cohorts.
+    return { low: 0, high: 0 };
+  }
+  const targets = cited.map((t) => polylineSpan(DEFAULT_POLYLINES[t]));
+  return {
+    low: Math.min(...targets.map((s) => s.low)),
+    high: Math.max(...targets.map((s) => s.high)),
+  };
 }
 
 /**

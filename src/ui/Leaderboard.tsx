@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { getBoard, getBoardPeriod, myUserId, type Board, type Period } from "../data/leaderboard.ts";
 import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
-import { TIER_LIMITS } from "../game/tiers.ts";
+import { tierLimits } from "../game/tiers.ts";
 
 /**
  * Rows shown to a tier without `leaderboardFull` (guest/free), on top of
@@ -71,7 +71,7 @@ function rankLabel(rank: number): string {
  */
 export function Leaderboard({ limit = 20, onClose, projectedScore, tabs = false, onViewFull }: Props) {
   const tier = useTier();
-  const full = TIER_LIMITS[tier].leaderboardFull;
+  const full = tierLimits()[tier].leaderboardFull;
   const [period, setPeriod] = useState<Period>("week");
   // Only used when `!tabs` (GameOver's weekly modal / Progress's old inline
   // usage). The `tabs` mode reads from `periodCache` instead — see `board`.

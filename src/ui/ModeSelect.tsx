@@ -4,11 +4,36 @@ import { MicError } from "../audio/mic.ts";
 import { ensurePlaybackCtx } from "../audio/reference.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
 import type { Tone } from "../game/gates.ts";
-import { availableTones, availableToneCombos, toneComboKey, wordsForTier } from "../game/words.ts";
+import { availableTones, availableToneCombos, resolvedPool, toneComboKey, wordsForTier } from "../game/words.ts";
 import type { PlayIntent } from "./PlayHome.tsx";
 import { micErrorCopy } from "./micErrors.ts";
 import { useTier } from "../data/tier.ts";
-import { ToneMarkIcon } from "./toneIcons.tsx";
+import { tierLimits } from "../game/tiers.ts";
+import { ShuffleIcon, ToneMarkIcon, type ToneOrNeutral } from "./toneIcons.tsx";
+
+function LockIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <rect
+        x="5"
+        y="11"
+        width="14"
+        height="10"
+        rx="2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="M8 11V7a4 4 0 0 1 8 0v4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 const ALL_TONES: Tone[] = [1, 2, 3, 4];
 
@@ -50,16 +75,19 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
   // greying every tile.
   const words = inventoryNow();
   const tierWords = words ? wordsForTier(words, tier) : null;
-  // availableTones(tierWords), not availableTones(words): this mirrors the
-  // run's own tier-filtered pool, so a tone whose words are all `pro` is not
-  // offered to a tier that could never actually fly it. No behavior change
-  // today — every tone has at least one free word — but the coupling to
-  // wordsForTier is deliberate, not incidental.
-  const tones = tierWords && tierWords.length ? availableTones(tierWords) : ALL_TONES;
+  // Tone Drill reads the same tier/level-restricted pool `resolvedPool`
+  // builds for mode "drill" (sampler for guest, TOCFL1+2 for free, everything
+  // for pro) — not the raw tier pool — so a tone offered here is a tone the
+  // run can actually draw from once it starts.
+  const drillWords = words ? resolvedPool(words, tier, "drill", "beginner", null) : null;
+  const tones = drillWords && drillWords.length ? availableTones(drillWords) : ALL_TONES;
   // Same idea for pairs: only combos this tier's own words can build a gate
   // for. Unlike single tones, there is no "offer all" fallback — an empty
-  // list means the Tone pairs card itself is hidden (see below).
-  const combos = tierWords ? availableToneCombos(tierWords) : [];
+  // list renders the Tone pairs card locked, not hidden (see below). Guest
+  // always gets an empty list regardless of combos — docs/Tiers.csv's
+  // "Available modes" row: guest gets Tone drill/Learn only, Tone pairs
+  // starts at free.
+  const combos = tier !== "guest" && tierWords ? availableToneCombos(tierWords) : [];
 
   const go = (
     intent: PlayIntent,
@@ -129,19 +157,24 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
                     Hum along with the demo's shape, great for learning the tones.
                   </span>
                 </button>
-                {combos.length > 0 && (
-                  <button
-                    type="button"
-                    className="mode-card mode-card-pairs"
-                    disabled={busy}
-                    onClick={() => setStep("pairs")}
-                  >
-                    <span className="mode-card-title">Tone pairs</span>
-                    <span className="mode-card-desc">
-                      Two-syllable words — fly both tones back to back.
-                    </span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="mode-card mode-card-pairs"
+                  disabled={busy || combos.length === 0}
+                  onClick={() => setStep("pairs")}
+                >
+                  <span className="mode-card-title">
+                    Tone pairs
+                    {combos.length === 0 && <LockIcon className="mode-card-lock" />}
+                  </span>
+                  <span className="mode-card-desc">
+                    {combos.length === 0
+                      ? tier === "guest"
+                        ? "Sign up to unlock tone-pair practice."
+                        : "No pairs available yet."
+                      : "Practice tone-pairs here!"}
+                  </span>
+                </button>
               </div>
             </>
           )}
@@ -180,31 +213,39 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
           {step === "pairs" && (
             <>
               <p className="note">Shuffle across every pair, or drill one combo.</p>
-              <div className="choice">
+              {tier === "free" && (
+                <p className="note">
+                  {tierLimits().free.pairWordsPerCombo} words available per tone pair. Go Pro for full access!
+                </p>
+              )}
+              <div className="tone-pair-selection">
+                <div className="pair-combo-grid">
+                  {combos.map((combo) => (
+                    <button
+                      key={toneComboKey(combo)}
+                      className="pair-combo-tile"
+                      disabled={busy}
+                      onClick={go("pairs", { pairCombo: combo })}
+                    >
+                      {pending === "pairs" ? (
+                        "…"
+                      ) : (
+                        combo.map((tone, i) => (
+                          <ToneMarkIcon key={i} tone={tone as ToneOrNeutral} className="pair-combo-tone-icon" />
+                        ))
+                      )}
+                    </button>
+                  ))}
+                </div>
                 <button
-                  key="shuffle"
-                  className="choice-option"
+                  type="button"
+                  className="pair-combo-shuffle"
                   disabled={busy}
                   onClick={go("pairs", { pairCombo: null })}
                 >
+                  <ShuffleIcon className="pair-combo-shuffle-icon" />
                   {pending === "pairs" ? "…" : "Shuffle"}
                 </button>
-                {combos.map((combo) => (
-                  <button
-                    key={toneComboKey(combo)}
-                    className="choice-option"
-                    disabled={busy}
-                    onClick={go("pairs", { pairCombo: combo })}
-                  >
-                    {pending === "pairs" ? (
-                      "…"
-                    ) : (
-                      combo.map((tone, i) => (
-                        <ToneMarkIcon key={i} tone={tone} className="tone-mark-icon" />
-                      ))
-                    )}
-                  </button>
-                ))}
               </div>
               <button type="button" className="link" disabled={busy} onClick={() => setStep("mode")}>
                 ← Back

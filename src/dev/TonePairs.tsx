@@ -280,6 +280,7 @@ function fixtureAsWord(word: TonePairWord): Word {
     clipS: word.durationMs / 1000,
     polyline: toPolyline(word.points),
     minTier: "free",
+    listIds: [],
     updatedAt: "",
   };
 }

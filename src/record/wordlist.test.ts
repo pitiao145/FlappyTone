@@ -32,7 +32,9 @@ describe("word list (wordsFallback.json rows)", () => {
     // single gate could ever be built from.
     for (const w of rows) {
       const first = parseWord(w.pinyin).find((s) => s.tone !== 0);
-      expect(first?.tone, `${w.hanzi} ${w.pinyin}`).toBe(w.tone);
+      // If the pinyin contains no toned syllable (all neutral), treat the
+      // tone as 0 to match the `tone` field in the fallback rows.
+      expect(first?.tone ?? 0, `${w.hanzi} ${w.pinyin}`).toBe(w.tone);
     }
   });
 

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { inventoryNow, loadInventory } from "../audio/inventory.ts";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { inventoryNow, loadInventory, subscribeInventory } from "../audio/inventory.ts";
 import { MicError } from "../audio/mic.ts";
 import {
   ensurePlaybackCtx,
@@ -24,11 +24,11 @@ import { ContourRecorder } from "../game/contours.ts";
 import { shapeForWord, type Tone } from "../game/gates.ts";
 import type { CalibrationSettings } from "../game/settings.ts";
 import { classifyTone, type ToneClassification } from "../game/toneClassifier.ts";
-import { TIER_LIMITS } from "../game/tiers.ts";
+import { tierLimits, type TocflLevel } from "../game/tiers.ts";
 import { tuning } from "../game/tuning.ts";
 import { visualAccuracy } from "../game/visualAccuracy.ts";
 import type { Word } from "../game/words.ts";
-import { wordsOfTone } from "../game/words.ts";
+import { wordsForList, wordsOfTone } from "../game/words.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawVisualiser } from "../render/visualiser.ts";
@@ -87,6 +87,18 @@ function recognizedTier(
   return accuracyTier(recognized.confidence);
 }
 
+/**
+ * The level a tier's picker should land on: TOCFL 1 when that tier has it,
+ * else its lowest allowed level, else `null` for a tier with no level choice
+ * at all (guest). Written as "prefer 1, else the lowest" rather than hardcoding
+ * 1 so a future tier whose access starts higher still gets a sane default
+ * instead of a level it cannot open.
+ */
+function defaultLevel(levels: TocflLevel[] | null): TocflLevel | null {
+  if (levels === null || levels.length === 0) return null;
+  return levels.includes(1) ? 1 : [...levels].sort((a, b) => a - b)[0];
+}
+
 interface Props {
   settings: CalibrationSettings;
   canvasWidth: number;
@@ -106,7 +118,7 @@ interface Props {
  */
 export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Props) {
   const tier = useTier();
-  const limits = TIER_LIMITS[tier];
+  const limits = tierLimits()[tier];
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   /**
@@ -126,6 +138,41 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   /** Mobile only — the collapsed tone-mark icon opens this to pick a tone. */
   const [tonePopoverOpen, setTonePopoverOpen] = useState(false);
   const [popoverTab, setPopoverTab] = useState<"tone" | "wordlists">("tone");
+  /**
+   * The visualiser only ever practices single-syllable words, so it reads
+   * `beginner`'s access — a guest's is always `null` (no picker; the
+   * existing `wordsPerTone: 0` cap already empties the practice list, this
+   * just avoids offering a choice that changes nothing for guest).
+   *
+   * Defaults to a real level (TOCFL 1) for any tier that HAS a level choice,
+   * rather than to `null`. `null` means "no list scoping", which resolves to
+   * every level the tier allows at once — a reasonable neutral state, but not
+   * a useful landing state for a practice screen: the player arrives with the
+   * whole catalog shuffled together and nothing indicating the lists exist.
+   * `null` remains reachable by tapping the active row to clear it.
+   */
+  const [selectedLevel, setSelectedLevel] = useState<TocflLevel | null>(
+    () => defaultLevel(tierLimits()[tier].beginner.levels),
+  );
+  /**
+   * Whether the default above has been applied for a tier whose levels were
+   * actually known.
+   *
+   * `tier` resolves asynchronously and the store's default is `"guest"`, whose
+   * `levels` is `null` — so on a cold load the initializer above legitimately
+   * answers `null` and the real answer arrives a moment later. This applies it
+   * once, when levels first exist, and never again, so a player who
+   * deliberately cleared the selection does not have it re-imposed on the next
+   * render or a later tier refresh.
+   */
+  const leveledRef = useRef(false);
+  useEffect(() => {
+    if (leveledRef.current) return;
+    const levels = limits.beginner.levels;
+    if (levels === null) return;
+    leveledRef.current = true;
+    setSelectedLevel(defaultLevel(levels));
+  }, [limits.beginner.levels]);
   /**
    * Mirrors `wordStatsRef` into React state so the accuracy readout — now a
    * real DOM element, not canvas-drawn — can render it. Only set once per
@@ -235,17 +282,67 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     setRecognized(null);
   };
 
+  /**
+   * Follow the live inventory, rather than fetching once if it happens to be
+   * empty.
+   *
+   * `inventoryNow()` is now seeded synchronously from the bundled fallback
+   * (see `audio/inventory.ts`), so it is never empty — and the old
+   * `if (words.length > 0) return` guard would therefore have stopped this
+   * screen from ever picking up the live catalog. Subscribing is the shape
+   * `Settings.tsx` already uses, and it also means a mid-session voice switch
+   * reaches the word rail.
+   */
   useEffect(() => {
-    if (words.length > 0) return;
-    void loadInventory().then(setWords);
-  }, [words.length]);
+    const off = subscribeInventory(setWords);
+    void loadInventory();
+    return off;
+  }, []);
 
-  // Preload only the selected tone's clips (not all 120) so a tap plays
-  // instantly without fetching every word up front.
+  /**
+   * The active TOCFL level narrows the practice pool BEFORE the per-tone
+   * count cap — a separate gate from `wordsPerTone` (below), same
+   * relationship `min_tier`/`wordsPerTone` already have: this decides which
+   * words are even in play, the count decides how many of them. Guest's
+   * `beginner.levels` is always `null` (no list scoping — its `wordsPerTone:
+   * 0` already empties the list regardless), so this is a no-op for guest.
+   */
+  // Memoized, not recomputed inline: this array is the preload effect's
+  // dependency, and a fresh identity every render made that effect re-run on
+  // every render — harmless only because `loadClip` dedupes, and actively
+  // wrong once the effect owns an AbortController it would tear down each time.
+  const listWords = useMemo(
+    () =>
+      limits.beginner.levels === null
+        ? words
+        : wordsForList(words, selectedLevel ? [selectedLevel] : limits.beginner.levels, "beginner"),
+    [words, limits.beginner.levels, selectedLevel],
+  );
+
+  /**
+   * Warm the selected tone's clips so a tap plays instantly.
+   *
+   * Still the WHOLE tone list, deliberately — on-demand fetching would put a
+   * ~200ms (warm) to ~1.4s (cold) wait in front of a tap, which is the one
+   * thing this screen cannot have. What changed is the rate and the
+   * cancellation, not the coverage: these go in at `"soon"`, so
+   * `audio/clipQueue.ts` trickles them instead of firing one request per word
+   * at once, and the `AbortController` drops the previous tone's outstanding
+   * warm-up when the player switches tabs. Rapidly tabbing through all four
+   * tones used to queue 120+ requests in a few seconds and trip the Worker's
+   * rate limit; now each switch cancels the last.
+   *
+   * A tap still jumps the queue — `playWord` calls `loadClip` at the default
+   * `"now"` priority.
+   */
   useEffect(() => {
     if (tone === null) return;
-    for (const w of wordsOfTone(words, tone, limits.wordsPerTone)) void loadClip(w);
-  }, [tone, words, limits.wordsPerTone]);
+    const controller = new AbortController();
+    for (const w of wordsOfTone(listWords, tone, limits.wordsPerTone)) {
+      void loadClip(w, { priority: "soon", signal: controller.signal });
+    }
+    return () => controller.abort();
+  }, [tone, listWords, limits.wordsPerTone]);
 
   /**
    * The practice list is limited by COUNT, not by `min_tier`.
@@ -257,9 +354,9 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
    * keeps a guest's practice list empty (`wordsPerTone: 0`) and a free
    * account's at five, in `position` order.
    */
-  const wordsForTone = tone === null ? [] : wordsOfTone(words, tone, limits.wordsPerTone);
+  const wordsForTone = tone === null ? [] : wordsOfTone(listWords, tone, limits.wordsPerTone);
   /** The rest of that tone's inventory, shown as locked chips for free players. */
-  const lockedWordsForTone = tone === null ? [] : wordsOfTone(words, tone).slice(wordsForTone.length);
+  const lockedWordsForTone = tone === null ? [] : wordsOfTone(listWords, tone).slice(wordsForTone.length);
 
   // CSS (App.css) now stretches `.stage` to fill the real space it has —
   // full height on mobile, the 420px-capped column on desktop — instead of
@@ -441,7 +538,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
 
   const chooseTone = (t: Tone | null) => {
     if (t !== null && !limits.visualiserPerTone) {
-      onLocked?.("visualiser-tone-practice");
+      showLocked("visualiser-tone-practice");
       return;
     }
     setTone(t);
@@ -451,11 +548,28 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     setPopoverTab("tone");
   };
 
+  /**
+   * Hand a locked tap to the host's upsell.
+   *
+   * Closes the tone/word-list popover first: on mobile these rows live inside
+   * it, and leaving it open would put the upsell modal up behind a sheet the
+   * player then has to dismiss separately. `chooseTone` already closes it for
+   * the same reason.
+   */
+  const showLocked = (feature: string) => {
+    setTonePopoverOpen(false);
+    onLocked?.(feature);
+  };
+
   const playWord = (word: Word) => {
     // A tap on the already-selected word is a replay, not a new attempt at a
     // new word — the trail and the running accuracy must survive it.
     if (selectedWord?.id !== word.id) resetAttempts();
     setSelectedWord(word);
+    // Jumps the warm-up queue: the tapped word is needed now, whatever the
+    // background trickle is currently working through. A no-op if it already
+    // landed.
+    void loadClip(word);
     const play = () =>
       // Plays on the dedicated output-only context (reference.ts).
       playToneCue(
@@ -596,7 +710,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     <button
       key={w.id}
       className="choice-option word-chip is-locked"
-      onClick={() => onLocked?.("visualiser-word-list")}
+      onClick={() => showLocked("visualiser-word-list")}
       aria-label={`${w.hanzi}, locked, Pro`}
     >
       <span className="word-chip-hanzi">{w.hanzi}</span>
@@ -622,19 +736,59 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     </div>
   );
 
+  const LEVEL_LABEL: Record<TocflLevel, string> = { 1: "TOCFL 1", 2: "TOCFL 2", 3: "TOCFL 3" };
+
   const tonePickerWordlists = (
     <div className="tone-popover-wordlists">
       <p className="tone-popover-desc">
-        Practice by curated word lists — HSK levels, your saved words, and more.
+        Practice by curated word lists — TOCFL levels, and more to come.
       </p>
-      <div className="word-list-row">
-        <span>HSK 1</span>
-        <span className="word-list-soon">soon</span>
-      </div>
-      <div className="word-list-row">
-        <span>My words</span>
-        <span className="word-list-soon">soon</span>
-      </div>
+      {limits.beginner.levels === null ? (
+        // Guest: a real button, not a static row. It is locked the same way
+        // the per-level rows below are, so it has to lead to the same upsell
+        // rather than being a dead label that says "sign up free" and does
+        // nothing when tapped.
+        <button
+          type="button"
+          className="word-list-row is-locked"
+          onClick={() => showLocked("visualiser-word-list")}
+          aria-label="TOCFL levels, locked, sign up free"
+        >
+          <span>TOCFL levels</span>
+          <span className="word-list-soon">sign up free</span>
+        </button>
+      ) : (
+        ([1, 2, 3] as const).map((n) => {
+          const unlocked = limits.beginner.levels!.includes(n);
+          return (
+            <button
+              key={n}
+              type="button"
+              className={`word-list-row${selectedLevel === n ? " active" : ""}${unlocked ? "" : " is-locked"}`}
+              // Deliberately NOT `disabled` when locked: a disabled button
+              // swallows the click, so the `onLocked` branch below was dead
+              // code and a locked level read as broken rather than as an
+              // upsell. `is-locked` carries the styling; the handler carries
+              // the meaning. Same shape `lockedWordChip` already uses.
+              onClick={() => {
+                if (!unlocked) {
+                  showLocked("visualiser-word-list");
+                  return;
+                }
+                setSelectedLevel((cur) => (cur === n ? null : n));
+              }}
+              aria-label={unlocked ? LEVEL_LABEL[n] : `${LEVEL_LABEL[n]}, locked, Pro`}
+            >
+              <span>{LEVEL_LABEL[n]}</span>
+              {unlocked ? (
+                selectedLevel === n && <span>✓</span>
+              ) : (
+                <span className="word-chip-lock">🔒</span>
+              )}
+            </button>
+          );
+        })
+      )}
     </div>
   );
 

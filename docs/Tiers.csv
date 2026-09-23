@@ -1,0 +1,11 @@
+Feature,Guest (Anonymous),Free Account,Pro Tier
+Game Plays,3 per day,10 per day,Unlimited
+Voice Selection,Male or Female,Male or Female,Male or Female
+Proficiency (Syllables),Choose Beginner (1) or Intermediate (<=2),Choose Beginner (1) or Intermediate (<=2),Choose Beginner (1) or Intermediate (<=2)
+TOCFL Level Selection,Locked (Sampler only),"Choose Level 1, Level 2, or Mix","Choose Level 1, 2, 3, or Mix"
+Beginner Mode Vocab(1-Syllable only),30-word Beginner sampler,TOCFL Levels 1 & 2 (1-syllable only),"All Words (TOCFL 1, 2, 3), 1-syllable only"
+Intermediate Mode Vocab(<=2-Syllables),60-word sampler (30 Beginner + 30 Intermediate, additive),TOCFL Level 1 (1- and 2-syllable),"All Words (TOCFL 1, 2, 3), 1- and 2-syllable (3+ syllables not yet playable in any mode)"
+Available modes,"Tone drill, learn","Tone dril, learn, tone pairs",All
+Modes limits,Unlimited for available,"Unlimited drill, learn; limited tone pairs (5 words per tone pair)",Unlimited
+Visualizer,Grid + No ref words,Grid + 5 ref words per tone,Grid + All reference words
+Leaderboard,View theoretical rank,Join with Random Name,Join with Custom Name

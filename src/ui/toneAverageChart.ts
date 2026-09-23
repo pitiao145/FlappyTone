@@ -43,6 +43,13 @@ export function drawToneAverageChart(
    * not an independently-chosen crop.
    */
   gameScale = false,
+  /**
+   * Overrides `TONE_AVERAGE_COLOR[tone]` — for a tone-pair combo, which has no
+   * single tone to key a color off. A CSS color function prefix taking a
+   * trailing alpha, e.g. `"hsla(210, 45%, 45%,"` (closed with `" 0.95)"` etc.,
+   * same convention as `TONE_AVERAGE_COLOR`'s `"rgba(r, g, b,"` strings).
+   */
+  colorOverride?: string,
 ): void {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -55,7 +62,7 @@ export function drawToneAverageChart(
   const y = gameScale
     ? (chao: number) => chaoToY(chao, height)
     : (chao: number) => ((TOP - chao) / (TOP - BOTTOM)) * height;
-  const tint = TONE_AVERAGE_COLOR[tone];
+  const tint = colorOverride ?? TONE_AVERAGE_COLOR[tone];
 
   ctx.strokeStyle = rgba("grid", 0.35);
   ctx.lineWidth = 1;

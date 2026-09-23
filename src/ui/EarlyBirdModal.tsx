@@ -4,7 +4,7 @@ import { getAccount } from "../data/account.ts";
 import { buildCheckoutUrl, redirectToCheckoutForCurrentAccount } from "../data/checkout.ts";
 import { setPendingCheckout } from "../data/checkoutIntent.ts";
 import { useTier } from "../data/tier.ts";
-import { TIER_LIMITS } from "../game/tiers.ts";
+import { tierLimits } from "../game/tiers.ts";
 import { PRO_FEATURES, PRO_PRICE } from "./plan.ts";
 import { useNewsletterSubscribe } from "./useNewsletterSubscribe.ts";
 
@@ -56,7 +56,7 @@ const COPY: Record<
     eyebrow: "★ Daily limit reached",
     title: "You've flown all your free runs today",
     body: "Come back tomorrow, or go EarlyBird now for unlimited play today and every day after — plus everything else as it lands. Full refund anytime.",
-    guestBody: `Come back tomorrow, or create a free account for ${TIER_LIMITS.free.runsPerDay} runs a day instead of ${TIER_LIMITS.guest.runsPerDay}. Want no limit at all? EarlyBird gives unlimited play today and every day after.`,
+    guestBody: `Come back tomorrow, or create a free account for ${tierLimits().free.runsPerDay} runs a day instead of ${tierLimits().guest.runsPerDay}. Want no limit at all? EarlyBird gives unlimited play today and every day after.`,
   },
   leaderboard: {
     eyebrow: "★ Claim your place",

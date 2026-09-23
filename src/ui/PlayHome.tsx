@@ -2,7 +2,9 @@ import { useState } from "react";
 import { MicError } from "../audio/mic.ts";
 import { ensurePlaybackCtx } from "../audio/reference.ts";
 import { ensureMic, MicCancelled } from "../audio/session.ts";
+import { loadSilentBannerSeen, saveSilentBannerSeen } from "../game/settings.ts";
 import { micErrorCopy } from "./micErrors.ts";
+import { BellSlashIcon } from "./icons.tsx";
 import { SITE_HREF } from "./appLink.ts";
 import { brand } from "../brand.ts";
 
@@ -52,6 +54,9 @@ export function PlayHome({
   const [pendingIntent, setPendingIntent] = useState<PlayIntent | null>(null);
   const busy = pendingIntent !== null;
   const error = ownError ?? externalError;
+  // Dismissed permanently — see loadSilentBannerSeen's own comment for why
+  // this is a static warning rather than a detected one.
+  const [silentBannerSeen, setSilentBannerSeen] = useState(loadSilentBannerSeen);
 
   // Opened inside the click handler — iOS Safari only grants getUserMedia
   // during a user gesture, so this can't move to a mount effect.
@@ -76,6 +81,22 @@ export function PlayHome({
 
   return (
     <div className="stage game-stage playhome-stage">
+      {!silentBannerSeen && (
+        <div className="app-toast silent-mode-banner" role="status">
+          <BellSlashIcon />
+          <span>Turn off silent mode. You need sound to play.</span>
+          <button
+            className="silent-mode-banner-dismiss"
+            aria-label="Dismiss"
+            onClick={() => {
+              saveSilentBannerSeen();
+              setSilentBannerSeen(true);
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
       <div
         className="playhome-canvas"
         style={{ width: canvasWidth, height: canvasHeight }}

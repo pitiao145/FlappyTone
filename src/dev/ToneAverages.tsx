@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { loadInventory } from "../audio/inventory.ts";
 import { drawToneAverageChart } from "../ui/toneAverageChart.ts";
+import { availableToneCombos, toneComboKey, wordsOfCombo, wordsOfTone } from "../game/words.ts";
 import type { Tone } from "../game/gates.ts";
 import type { Word } from "../game/words.ts";
 
@@ -31,6 +32,34 @@ function ToneCard({ words, tone }: { words: Word[]; tone: Tone }) {
   );
 }
 
+/**
+ * A tone combo (e.g. `[3, 2]`) has no single `Tone` to key
+ * `TONE_AVERAGE_COLOR` off, so each combo gets a color cycled deterministically
+ * from its position in `availableToneCombos`' sorted order — stable across
+ * reloads (same inventory, same order) without hand-picking a palette entry
+ * per combo as the pairs list grows.
+ */
+function comboColor(index: number): string {
+  const hue = (index * 47) % 360; // 47: coprime-ish step, spreads adjacent combos apart
+  return `hsla(${hue}, 55%, 40%,`;
+}
+
+function PairCard({ words, tones, color }: { words: Word[]; tones: Tone[]; color: string }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (ref.current) drawToneAverageChart(ref.current, words, tones[0], CARD_W, CARD_H, true, color);
+  }, [words, tones, color]);
+
+  return (
+    <div className="word-card tone-average-card">
+      <canvas ref={ref} />
+      <span className="param-name">
+        T{toneComboKey(tones)} — {words.length} clips averaged
+      </span>
+    </div>
+  );
+}
+
 export function ToneAverages() {
   const [words, setWords] = useState<Word[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,10 +74,19 @@ export function ToneAverages() {
   const byTone = useMemo(() => {
     const map = new Map<Tone, Word[]>();
     for (const t of [1, 2, 3, 4] as Tone[]) {
-      map.set(t, (words ?? []).filter((w) => w.tone === t));
+      map.set(t, wordsOfTone(words ?? [], t));
     }
     return map;
   }, [words]);
+
+  const combos = useMemo(() => availableToneCombos(words ?? []), [words]);
+  const byCombo = useMemo(() => {
+    const map = new Map<string, Word[]>();
+    for (const combo of combos) {
+      map.set(toneComboKey(combo), wordsOfCombo(words ?? [], combo));
+    }
+    return map;
+  }, [words, combos]);
 
   if (error) return <p className="error">{error}</p>;
   if (!words) return <p className="param-help">loading the manifest…</p>;
@@ -72,6 +110,28 @@ export function ToneAverages() {
           <ToneCard key={t} words={byTone.get(t) ?? []} tone={t} />
         ))}
       </div>
+
+      {combos.length > 0 && (
+        <>
+          <p className="param-help">
+            Tone pairs, same measurement — each combo's own two-syllable clips
+            averaged as one shape-agnostic contour (sandhi means a pair's
+            realised shape isn't its two citation tones back to back, so this
+            is not, and shouldn't look like, two single-tone cards stitched
+            together).
+          </p>
+          <div className="word-grid tone-average-grid">
+            {combos.map((combo, i) => (
+              <PairCard
+                key={toneComboKey(combo)}
+                words={byCombo.get(toneComboKey(combo)) ?? []}
+                tones={combo}
+                color={comboColor(i)}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

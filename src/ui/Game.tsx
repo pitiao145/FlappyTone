@@ -15,7 +15,7 @@ import {
   playToneCue,
 } from "../audio/reference.ts";
 import { inventoryNow, inventorySpeaker, loadInventory, subscribeInventory } from "../audio/inventory.ts";
-import { planPrefetch, prefetchPool } from "../audio/prefetch.ts";
+import { planPrefetchTiers, prefetchPool } from "../audio/prefetch.ts";
 import { isChromeIOS, isIOS } from "../audio/platform.ts";
 import { warmupWait } from "../audio/warmup.ts";
 import { MicStatusBanner } from "./MicStatus.tsx";
@@ -29,8 +29,10 @@ import {
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
-import { getTier, useTier } from "../data/tier.ts";
-import { wordsForTier } from "../game/words.ts";
+import { getTier, tierReady, useTier } from "../data/tier.ts";
+import { resolvedPool } from "../game/words.ts";
+import type { Proficiency } from "../game/tiers.ts";
+import type { LevelChoice } from "../game/settings.ts";
 import { TONE_INFO, type Tone } from "../game/gates.ts";
 import { TONE_LINE_COLOR } from "./toneColors.ts";
 import { tuning } from "../game/tuning.ts";
@@ -51,7 +53,7 @@ import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawWorld, refreshMotionPreference } from "../render/world.ts";
 import { JumpingPip } from "./bird/index.ts";
-import { HeartIcon, PauseIcon } from "./icons.tsx";
+import { BellSlashIcon, HeartIcon, PauseIcon } from "./icons.tsx";
 import { PauseMenu } from "./PauseMenu.tsx";
 
 /** HUD refresh rate. React never renders per frame — the rAF loop owns the canvas. */
@@ -123,7 +125,7 @@ const GATE_LOG_ON_SCREEN = 4;
  * tutorial, or the player has stepped through it. See the run-owning
  * effect's `tick()` for how each step is detected.
  */
-type WalkthroughStep = "intro" | "listen" | "menu" | null;
+type WalkthroughStep = "silent" | "intro" | "listen" | "menu" | null;
 
 interface Props {
   mode: RunMode;
@@ -144,6 +146,15 @@ interface Props {
   pairCombo?: Tone[] | null;
   /** Classic `mode: "game"` word pool preference. Ignored otherwise. */
   wordMix?: WordMix;
+  /**
+   * The Settings-level proficiency (single-only vs. single-plus-two syllable)
+   * and this play's
+   * TOCFL level/Mix choice from the pre-game picker. Read by `resolvedPool`
+   * for `"game"`/`"pairs"` modes only; `null`/undefined level defaults to
+   * this tier's full allowed set (see `resolveLevels`).
+   */
+  proficiency?: Proficiency;
+  levelChoice?: LevelChoice | null;
   /**
    * Set when this tutorial run is the calibration flight (GameApp routes to
    * it straight from the calibration screen). Flies only the grid-anchoring
@@ -192,6 +203,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   drillTone,
   pairCombo,
   wordMix,
+  proficiency = "beginner",
+  levelChoice = null,
   runNumber,
   autoStart = false,
   hidden,
@@ -249,7 +262,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
    * real (walkthrough-guided) tutorial for players who want one.
    */
   const [walkthroughStep, setWalkthroughStep] = useState<WalkthroughStep>(
-    mode === "tutorial" && !autoStart ? "intro" : null,
+    mode === "tutorial" && !autoStart ? "silent" : null,
   );
   /**
    * True while a mid-run walkthrough card ("listen", "menu" — not "intro",
@@ -462,7 +475,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     frozenRef.current = false;
     frozenAccumMsRef.current = 0;
     freezeStartedAtRef.current = 0;
-    if (mode === "tutorial" && !autoStart) setWalkthroughStep("intro");
+    if (mode === "tutorial" && !autoStart) setWalkthroughStep("silent");
     // iOS forces cue playback to the earpiece while the mic is live; the host
     // releases the mic during each cue so it plays on the loud speaker, then
     // re-acquires it. Off everywhere else — no routing problem, no churn — and
@@ -495,11 +508,16 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // from `useTier()`: `tier` resolves asynchronously, and putting it in
       // this effect's dependency array would tear down and rebuild a live Run
       // the moment the answer landed. The store answers synchronously and, in
-      // a session where the tier has already resolved once, correctly. The one
-      // stale case — the very first run after a cold load, where the store
-      // still holds its "guest" default — is repaired in place by the
-      // tier-pool effect below, via `setWords`, with no teardown.
-      words: wordsForTier(inventoryNow() ?? [], getTier()),
+      // a session where the tier has already resolved once, correctly.
+      //
+      // On a cold load neither the store nor the inventory may be ready yet,
+      // so the pool below can be wrong (guest's sampler, or empty). Rather
+      // than fill gate 1 from it now and repair in place afterwards — which
+      // cannot revisit a gate already drawn — the queue is left unfilled
+      // (`deferFill`) and `beginWhenWarm` finalizes the real pool and primes
+      // the queue itself, behind the same hold it already uses for the first
+      // clip fetch.
+      words: resolvedPool(inventoryNow() ?? [], getTier(), mode, proficiency, levelChoice),
       singleWord,
       drillTone,
       pairCombo,
@@ -507,6 +525,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // The calibration flight (autoStart) flies only the grid-anchoring tones;
       // a normal tutorial teaches all four.
       tutorialTones: autoStart ? CALIBRATION_TONES : undefined,
+      deferFill: true,
     });
     runRef.current = run;
     reportedGatesRef.current = 0;
@@ -514,10 +533,6 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // widens the corridor mid-session would otherwise have their easier run
     // read against the harder one's settings.
     track({ type: "run_start", mode, corridor, cue: cueStyle });
-    // If the manifest had not landed when the Run was built, catch it up.
-    // `getTier()` is read again here rather than captured above: the tier may
-    // well have resolved while the fetch was in flight.
-    if (!inventoryNow()) void loadInventory().then((w) => run.setWords(wordsForTier(w, getTier())));
     let tracker: PitchTracker | null = null;
     let rafId = 0;
     let running = true;
@@ -805,25 +820,65 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
      * nothing to wait for and the screen would be pure dead time.
      */
     const beginWhenWarm = (): void => {
-      const lead = cuesUseClips ? (run.snapshot().gates[0]?.word ?? null) : null;
-      if (!lead) {
-        start();
-        return;
-      }
       const gen = ++warmGenRef.current;
       warmingRef.current = true;
       setWarming(true);
       const t = tuning();
-      // `warmupWait` never rejects, and `loadClip` swallows its own failures —
-      // the worst case here is that we start on the cap with a synthetic cue.
-      void warmupWait(() => loadClip(lead), {
-        minMs: t.warmupMinMs,
+      // Finalize the word pool before gate 1 is ever drawn: wait for both the
+      // catalog and the tier store's first resolution, bounded by the same
+      // cap the clip fetch below uses, so a dead network can't trap the
+      // player here either — falling through with whatever's on hand (the
+      // guest default, or an empty inventory) is today's existing worst case.
+      void warmupWait(() => Promise.all([loadInventory(), tierReady()]), {
+        minMs: 0,
         maxMs: t.warmupMaxMs,
-      }).then(() => {
+      }).then(async () => {
         if (gen !== warmGenRef.current) return; // paused, quit, or torn down
-        warmingRef.current = false;
-        setWarming(false);
-        start();
+        // The wait above is CAPPED, and its outcome used to be discarded —
+        // which is how a slow catalog fetch primed the queue from an empty
+        // pool and built gates 1-2 from a bare tone (placeholder "ma", and a
+        // synthetic cue with no clip to fetch; see audio/inventory.ts). The
+        // bundled seed should make an empty pool unreachable now, so this is
+        // the assertion of that rather than a second guess at the timing:
+        // if there is still nothing to fly, spend the rest of the budget
+        // waiting rather than spawning a gate that cannot be repaired
+        // afterwards (setWords only reaches gates not yet spawned).
+        let pool = resolvedPool(inventoryNow() ?? [], getTier(), mode, proficiency, levelChoice);
+        if (pool.length === 0) {
+          await warmupWait(() => loadInventory(), { minMs: 0, maxMs: t.warmupMaxMs });
+          if (gen !== warmGenRef.current) return;
+          pool = resolvedPool(inventoryNow() ?? [], getTier(), mode, proficiency, levelChoice);
+        }
+        run.setWords(pool);
+        run.primeQueue();
+
+        const lead = cuesUseClips ? (run.snapshot().gates[0]?.word ?? null) : null;
+        if (!lead) {
+          warmingRef.current = false;
+          setWarming(false);
+          start();
+          return;
+        }
+        // Submit the lead's fetch before anything else below, so it claims
+        // the queue's connection first — see prefetch.ts's own "lead gets
+        // the road to itself" comment. `loadClip` is idempotent per word, so
+        // the `warmupWait(() => loadClip(lead), ...)` call further down just
+        // reuses this same in-flight load.
+        void loadClip(lead);
+        // The prefetch effect planned before the queue existed (deferFill), so
+        // its exact tier was empty. Warm the queued gates past the lead here.
+        for (const g of run.snapshot().gates.slice(1)) if (g.word) void loadClip(g.word);
+        // `warmupWait` never rejects, and `loadClip` swallows its own failures —
+        // the worst case here is that we start on the cap with a synthetic cue.
+        void warmupWait(() => loadClip(lead), {
+          minMs: t.warmupMinMs,
+          maxMs: t.warmupMaxMs,
+        }).then(() => {
+          if (gen !== warmGenRef.current) return; // paused, quit, or torn down
+          warmingRef.current = false;
+          setWarming(false);
+          start();
+        });
       });
     };
 
@@ -942,31 +997,47 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // tier — `planPrefetch` still returns [] for both modes, so calibration
     // can never acquire a catalog-wide pool.
     if (!cuesUseClips) return;
+    // Cancels this effect's speculation when the run is torn down or the tier
+    // resolves and re-plans. Only work that has NOT started is dropped, so an
+    // in-flight clip still lands in the cache — what this prevents is a quit
+    // run's 20-odd remaining bets spending the rate budget the next screen
+    // needs (see audio/clipQueue.ts).
+    const controller = new AbortController();
     const start = (all: Word[]): void => {
       // The Run is built (and its queue filled) by the run-owning effect
       // above, which React runs first on mount because it is DECLARED first —
       // that declaration order is load-bearing, and moving this effect above
       // it would put the speculative tier back in front of the first gate.
-      // It is not left resting on that alone: a null here (an empty ref) plans
+      // It is not left resting on that alone: a null here (an empty ref, or a
+      // `deferFill` run whose queue hasn't been primed yet — see run.ts) plans
       // *nothing* rather than falling back to the pool, so the worst case is
-      // the HUD tick's own look-ahead, never the bulk-first inversion.
-      const queued = runRef.current?.snapshot().gates.map((g) => g.word) ?? null;
-      prefetchPool(
-        planPrefetch({
-          mode,
-          drillTone,
-          pairCombo,
-          wordMix,
-          queued,
-          pool: wordsForTier(all, tier),
-          perTone: tuning().prefetchWordsPerTone,
-        }),
-      );
+      // the HUD tick's own look-ahead, never the bulk-first inversion. Treating
+      // an empty gates array as `null` here (rather than as an empty exact
+      // tier) matters: a run built with `deferFill` has no gates yet at the
+      // moment this effect first runs, and computing `exactCount: 0` from that
+      // would silently promote a speculative word into the "now" lane instead
+      // of skipping the plan.
+      const gates = runRef.current?.snapshot().gates ?? [];
+      const queued = gates.length > 0 ? gates.map((g) => g.word) : null;
+      const plan = planPrefetchTiers({
+        mode,
+        drillTone,
+        pairCombo,
+        wordMix,
+        queued,
+        pool: resolvedPool(all, tier, mode, proficiency, levelChoice),
+        perTone: tuning().prefetchWordsPerTone,
+      });
+      prefetchPool(plan.words, {
+        exactCount: plan.exactCount,
+        signal: controller.signal,
+      });
     };
     const now = inventoryNow();
     if (now) start(now);
     else void loadInventory().then(start, () => undefined);
-  }, [cuesUseClips, mode, drillTone, pairCombo, wordMix, tier, runGen]);
+    return () => controller.abort();
+  }, [cuesUseClips, mode, drillTone, pairCombo, wordMix, tier, runGen, proficiency, levelChoice]);
 
   /**
    * Re-narrow a live run's word pool once the tier answer lands.
@@ -989,8 +1060,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     const run = runRef.current;
     if (!run) return;
     const now = inventoryNow();
-    if (now) run.setWords(wordsForTier(now, tier));
-  }, [tier, runGen]);
+    if (now) run.setWords(resolvedPool(now, tier, mode, proficiency, levelChoice));
+  }, [tier, runGen, mode, proficiency, levelChoice]);
 
   /**
    * The same repair, for the other thing that can move the pool under a live
@@ -1002,9 +1073,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   useEffect(
     () =>
       subscribeInventory((words) => {
-        runRef.current?.setWords(wordsForTier(words, getTier()));
+        runRef.current?.setWords(resolvedPool(words, getTier(), mode, proficiency, levelChoice));
       }),
-    [],
+    [mode, proficiency, levelChoice],
   );
 
   // Show the *active* gate's tone while flying it — showing the next gate's
@@ -1266,6 +1337,28 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
               }}
             >
               Got it
+            </button>
+          </div>
+        )}
+
+        {/* The very first thing a deliberately started tutorial shows —
+            before "Meet Flappy", before anything else. The game is
+            call-and-response (hear the cue, then fly it) and has no way to
+            detect the phone's silent switch (no web API exposes it), so a
+            player who never sees this card just hears nothing and assumes
+            the game is broken. */}
+        {walkthroughStep === "silent" && (
+          <div className="overlay tutorial-card">
+            <div className="walkthrough-silent-icon">
+              <BellSlashIcon />
+            </div>
+            <h3>Turn up your volume</h3>
+            <p>
+              This game doesn't work in silent mode. Make sure your phone's
+              silent switch is off and your volume is up.
+            </p>
+            <button className="primary" onClick={() => setWalkthroughStep("intro")}>
+              Continue
             </button>
           </div>
         )}
