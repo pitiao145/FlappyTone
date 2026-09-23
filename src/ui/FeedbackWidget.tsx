@@ -8,11 +8,11 @@ import { getTier } from "../data/tier.ts";
  * drawn a size bigger: a tiny bird is "awful", a big one is "love it".
  */
 const RATINGS = [
-  { size: 18, label: "Awful" },
-  { size: 25, label: "Not great" },
-  { size: 32, label: "Okay" },
-  { size: 39, label: "Good" },
-  { size: 46, label: "Love it" },
+  { size: 32, label: "Awful" },
+  { size: 39, label: "Not great" },
+  { size: 46, label: "Okay" },
+  { size: 53, label: "Good" },
+  { size: 60, label: "Love it" },
 ] as const;
 
 type Status = "idle" | "sending" | "sent" | "failed";
