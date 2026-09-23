@@ -3,13 +3,16 @@ import { createPortal } from "react-dom";
 import { FEEDBACK_MAX_CHARS, submitFeedback } from "../data/feedback.ts";
 import { getTier } from "../data/tier.ts";
 
-/** 1 → 5, worst to best. Index + 1 is the stored `rating`. */
+/**
+ * 1 → 5, worst to best. Index + 1 is the stored `rating`. Each step is Pip
+ * drawn a size bigger: a tiny bird is "awful", a big one is "love it".
+ */
 const RATINGS = [
-  { emoji: "😭", label: "Awful" },
-  { emoji: "😕", label: "Not great" },
-  { emoji: "😐", label: "Okay" },
-  { emoji: "😊", label: "Good" },
-  { emoji: "🤩", label: "Love it" },
+  { size: 18, label: "Awful" },
+  { size: 25, label: "Not great" },
+  { size: 32, label: "Okay" },
+  { size: 39, label: "Good" },
+  { size: 46, label: "Love it" },
 ] as const;
 
 type Status = "idle" | "sending" | "sent" | "failed";
@@ -91,15 +94,15 @@ function FeedbackSheet({ screen, onClose }: { screen: string; onClose: () => voi
           <img src="/Bird-hor-no-halo.png" alt="" className="feedback-avatar" />
           <div>
             <h2 id={titleId} className="feedback-title">
-              Your feedback is crucial ♥
+              Your feedback is crucial 🐥
             </h2>
-            <p className="feedback-byline">—Pierre from FlappyTone</p>
+            <p className="feedback-byline">— Pierre from FlappyTone</p>
           </div>
         </div>
 
         {status === "sent" ? (
           <p className="feedback-thanks" role="status">
-            Thank you! I read every message.
+            Thank you! Keep flapping.
           </p>
         ) : (
           <>
@@ -111,7 +114,7 @@ function FeedbackSheet({ screen, onClose }: { screen: string; onClose: () => voi
               className="feedback-textarea"
               rows={4}
               maxLength={FEEDBACK_MAX_CHARS}
-              placeholder="I tapped here and something broke…"
+              placeholder="My tones became so good I got mistaken for a native speaker.. "
               value={message}
               onChange={(e) => setMessage(e.target.value)}
             />
@@ -128,7 +131,7 @@ function FeedbackSheet({ screen, onClose }: { screen: string; onClose: () => voi
                   className={`feedback-rating${rating === i + 1 ? " is-selected" : ""}`}
                   onClick={() => setRating(rating === i + 1 ? null : i + 1)}
                 >
-                  {r.emoji}
+                  <img src="/Bird-hor-no-halo.png" alt="" width={r.size} height={r.size} />
                 </button>
               ))}
             </div>

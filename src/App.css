@@ -8199,20 +8199,29 @@ button.switch-track.switch-on {
 .feedback-ratings {
   display: flex;
   justify-content: space-between;
+  /* Birds sit on a shared baseline so the size step reads as growth. */
+  align-items: flex-end;
   margin: 0 0 var(--space-5);
 }
 
 .modal-card .feedback-rating {
-  width: 48px;
-  height: 48px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  padding: 0 0 5px;
   border: 2px solid transparent;
-  border-radius: 50%;
+  border-radius: var(--radius-md);
   background: transparent;
-  font-size: 1.9rem;
-  line-height: 1;
-  filter: grayscale(0.6);
-  opacity: 0.75;
+  line-height: 0;
+  filter: grayscale(0.7);
+  opacity: 0.6;
   transition: transform 0.12s, filter 0.12s, opacity 0.12s;
+}
+
+.feedback-rating img {
+  object-fit: contain;
 }
 
 .modal-card .feedback-rating:hover,
@@ -8223,7 +8232,8 @@ button.switch-track.switch-on {
 
 .modal-card .feedback-rating.is-selected {
   border-color: var(--accent);
-  transform: scale(1.12);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  transform: scale(1.08);
 }
 
 .modal-card .feedback-send {
