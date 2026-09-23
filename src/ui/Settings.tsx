@@ -7,12 +7,20 @@ import { fireAuthToast } from "../data/authToast.ts";
 import { micErrorCopy } from "./micErrors.ts";
 import { setSharingEnabled } from "../analytics/client.ts";
 import { setPostHogConsent } from "../analytics/posthog.ts";
+import { CORRIDOR_WIDTHS, type CorridorWidth } from "../game/gates.ts";
+import type { CueStyle } from "../game/run.ts";
 import {
   clearSettings,
+  loadCorridorWidth,
+  loadCueStyle,
   loadSettings,
   loadShareData,
+  loadShowTranslation,
+  saveCorridorWidth,
+  saveCueStyle,
   saveSettings,
   saveShareData,
+  saveShowTranslation,
   type CalibrationSettings,
 } from "../game/settings.ts";
 import { resolveSpeaker, type Gender, type Speaker } from "../game/voice.ts";
@@ -29,6 +37,7 @@ import { loadProficiency, saveProficiency } from "../game/settings.ts";
 import type { Proficiency } from "../game/tiers.ts";
 import { Choice } from "./Choice.tsx";
 import { MicrophoneIcon } from "./toneIcons.tsx";
+import { Switch } from "./Switch.tsx";
 
 const SHARING = ["on", "off"] as const;
 
@@ -49,8 +58,14 @@ const VOICE_LABEL: Record<Gender, string> = {
 const PROFICIENCIES = ["beginner", "intermediate"] as const satisfies readonly Proficiency[];
 
 const PROFICIENCY_LABEL: Record<Proficiency, string> = {
-  beginner: "Beginner (single syllables)",
-  intermediate: "Intermediate (single + two syllables)",
+  beginner: "Beginner (single syllables only)",
+  intermediate: "Intermediate (all words)",
+};
+
+const WIDTH_HELP: Record<CorridorWidth, string> = {
+  narrow: "Demanding. Your pitch has to sit close to the line.",
+  normal: "Moderate difficulty. Good for practice.",
+  wide: "Forgiving on pitch. Good while a tone is still new.",
 };
 
 function SettingIcon({ children }: { children: React.ReactNode }) {
@@ -85,6 +100,21 @@ function SlidersIcon() {
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function LevelIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M4 20v-5M11 20V10M18 20V4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -183,6 +213,14 @@ export function Settings({
    */
   const [words, setWords] = useState<Word[] | null>(() => inventoryNow());
   const [proficiency, setProficiency] = useState<Proficiency>(() => loadProficiency());
+  const [width, setWidth] = useState<CorridorWidth>(loadCorridorWidth);
+  // "off" is disabled below (broken), so a previously-persisted "off" is
+  // coerced back to "pause" rather than silently staying selected.
+  const [cueStyle, setCueStyle] = useState<CueStyle>(() => {
+    const loaded = loadCueStyle();
+    return loaded === "off" ? "pause" : loaded;
+  });
+  const [translation, setTranslation] = useState<boolean>(loadShowTranslation);
 
   useEffect(() => subscribeInventory(setWords), []);
 
@@ -271,16 +309,16 @@ export function Settings({
           <SettingIcon>
             <MicrophoneIcon />
           </SettingIcon>
-          <h3>Your voice</h3>
+          <h3>Your voice (calibration)</h3>
         </div>
         {settings ? (
           <div className="setting-callout">
             Centred on <strong>{Math.round(settings.f0Center)} Hz</strong>, your
             speaking pitch, which sits on line 3. Reaching{" "}
-            <strong>{settings.rangeSemitones} semitones</strong> above it gets
-            you to line 5, and{" "}
-            <strong>{settings.rangeDownSemitones} semitones</strong> below it to
-            line 1.
+            <strong>{settings.rangeSemitones.toFixed(1)} semitones</strong> above it
+            gets you to line 5, and{" "}
+            <strong>{settings.rangeDownSemitones.toFixed(1)} semitones</strong> below
+            it to line 1.
           </div>
         ) : (
           <div className="setting-callout setting-callout-empty">
@@ -339,31 +377,110 @@ export function Settings({
             </p>
           </>
         )}
-        {settings && multiWords(words ?? []).length > 0 && (
-          <>
-            <Choice
-              options={PROFICIENCIES}
-              value={proficiency}
-              label={(v) => PROFICIENCY_LABEL[v]}
-              onChange={(v) => {
-                setProficiency(v);
-                // Also writes wordMix (run.ts's single/multi draw) — see
-                // saveProficiency's own comment for why that's bundled in.
-                saveProficiency(v);
-              }}
-            />
-            <p className="param-help">
-              What the classic run flies: Beginner is single syllables only;
-              Intermediate adds two-syllable tone pairs into the same run.
-              Tone pairs also have their own mode, under Play.
-            </p>
-          </>
-        )}
         <p className="param-help">
           Re-calibrate if you've changed microphone or room. Fine-tune opens the
           live dot and a sensitivity slider, if the board feels too big or too
           small for your voice.
         </p>
+      </section>
+
+
+
+      {settings && multiWords(words ?? []).length > 0 && (
+        <section className="setting setting-card">
+          <div className="setting-card-head">
+            <SettingIcon>
+              <LevelIcon />
+            </SettingIcon>
+            <h3>Proficiency</h3>
+          </div>
+          <Choice
+            options={PROFICIENCIES}
+            value={proficiency}
+            label={(v) => PROFICIENCY_LABEL[v]}
+            onChange={(v) => {
+              setProficiency(v);
+              // Also writes wordMix (run.ts's single/multi draw) — see
+              // saveProficiency's own comment for why that's bundled in.
+              saveProficiency(v);
+            }}
+          />
+          <p className="param-help">
+            Beginner is single syllables only, applies to each game mode.
+            Intermediate adds two-syllable tone pairs into the same run.
+          </p>
+        </section>
+      )}
+
+      <section className="setting setting-card">
+        <div className="setting-card-head">
+          <SettingIcon>
+            <SlidersIcon />
+          </SettingIcon>
+          <h3>Playing</h3>
+        </div>
+        <section>
+          <h4>Tunnel width</h4>
+          <Choice
+            options={CORRIDOR_WIDTHS}
+            value={width}
+            onChange={(w) => {
+              setWidth(w);
+              saveCorridorWidth(w);
+            }}
+          />
+          <p className="param-help">
+            {WIDTH_HELP[width]} Takes effect next run.
+          </p>
+        </section>
+
+        <section>
+          <Switch
+            checked={translation}
+            onChange={(show) => {
+              setTranslation(show);
+              saveShowTranslation(show);
+            }}
+            label="Translation"
+            sublabel="English meaning above the pinyin"
+          />
+        </section>
+
+        <section>
+          <Switch
+            checked={cueStyle === "pause"}
+            disabled
+            onChange={(on) => {
+              if (!on) return;
+              const style: CueStyle = "pause";
+              setCueStyle(style);
+              saveCueStyle(style);
+            }}
+            label="Listen-first example"
+            sublabel="Native speaker says it, then your turn"
+          />
+          <p className="param-help">
+            Turning it off is coming in a future update.
+          </p>
+        </section>
+
+      </section>
+
+      <section className="setting setting-card">
+        <div className="setting-card-head">
+          <SettingIcon>
+            <BookIcon />
+          </SettingIcon>
+          <h3>Learn</h3>
+        </div>
+        <div className="setting-actions">
+          <button disabled={busy} onClick={() => void goListening(onTutorial)()}>
+            Tutorial
+          </button>
+          <button disabled={busy} onClick={onHowTo}>
+            How to play
+          </button>
+        </div>
       </section>
 
       <section className="setting setting-card">
@@ -390,37 +507,6 @@ export function Settings({
             ? "Sends which gates you hit or miss and your calibration numbers, so the game can be tuned against real attempts. No audio, no recordings, no precise location (country only), and nothing that identifies you."
             : "Nothing is sent, and anything already stored on this device has been deleted."}
         </p>
-      </section>
-
-      <section className="setting setting-card">
-        <div className="setting-card-head">
-          <SettingIcon>
-            <SlidersIcon />
-          </SettingIcon>
-          <h3>Playing</h3>
-        </div>
-        <p className="param-help">
-          Tunnel width and the spoken example are in the pause menu, so
-          you can change them while you can feel what they do. Tap Pause during a
-          run.
-        </p>
-      </section>
-
-      <section className="setting setting-card">
-        <div className="setting-card-head">
-          <SettingIcon>
-            <BookIcon />
-          </SettingIcon>
-          <h3>Learn</h3>
-        </div>
-        <div className="setting-actions">
-          <button disabled={busy} onClick={() => void goListening(onTutorial)()}>
-            Tutorial
-          </button>
-          <button disabled={busy} onClick={onHowTo}>
-            How to play
-          </button>
-        </div>
       </section>
 
       {account?.status === "permanent" && (

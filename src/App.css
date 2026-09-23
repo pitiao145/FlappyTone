@@ -2542,6 +2542,15 @@
   gap: 10px;
 }
 
+.settings-screen .setting-card > section {
+  margin-top: var(--space-2);
+}
+
+.settings-screen .setting-card .choice {
+  flex-direction: row;
+}
+
+
 .settings-screen .setting-icon {
   display: flex;
   align-items: center;
@@ -2557,6 +2566,9 @@
   height: 22px;
 }
 
+.settings-screen h4 {
+  margin-bottom: var(--space-2);
+}
 .setting h3 {
   margin: 0;
   font-size: 13px;
@@ -2612,6 +2624,7 @@
   line-height: 1.5;
   color: var(--ink-dim);
   margin: 0;
+  margin-top: var(--space-2);
 }
 
 /* One row, one obvious current value — the old version was three rows of
@@ -5315,6 +5328,7 @@ section.hero-cards {
 
 .switch-row-disabled {
   cursor: default;
+  opacity: 0.5;
 }
 
 .switch-text {
@@ -5332,7 +5346,15 @@ section.hero-cards {
   color: var(--ink-muted);
 }
 
-.pause-card .switch-track {
+/* `button.switch-track`, not `.switch-track`: both `.screen button` and
+   `.overlay button` (further up the file) style every plain button at
+   (0,1,1) specificity — a bare `.switch-track` (0,1,0) loses that fight in
+   both places (an extra 1px border in Settings, forced padding/background
+   in the pause overlay), which is exactly what made the knob render
+   correctly in only one context at a time. Tying the specificity at (0,1,1)
+   and staying later in the file wins the cascade in every context this
+   switch appears in, instead of patching one context at a time. */
+button.switch-track {
   flex-shrink: 0;
   position: relative;
   width: 44px;
@@ -5353,7 +5375,7 @@ section.hero-cards {
   outline-offset: 2px;
 }
 
-.switch-track.switch-on {
+button.switch-track.switch-on {
   background: var(--accent);
 }
 
