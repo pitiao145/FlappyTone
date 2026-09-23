@@ -851,11 +851,6 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         }
         run.setWords(pool);
         run.primeQueue();
-        // The prefetch effect planned before the queue existed (deferFill), so
-        // its exact tier was empty. Warm the queued gates past the lead here.
-        if (cuesUseClips) {
-          for (const g of run.snapshot().gates.slice(1)) if (g.word) void loadClip(g.word);
-        }
 
         const lead = cuesUseClips ? (run.snapshot().gates[0]?.word ?? null) : null;
         if (!lead) {
@@ -864,6 +859,15 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           start();
           return;
         }
+        // Submit the lead's fetch before anything else below, so it claims
+        // the queue's connection first — see prefetch.ts's own "lead gets
+        // the road to itself" comment. `loadClip` is idempotent per word, so
+        // the `warmupWait(() => loadClip(lead), ...)` call further down just
+        // reuses this same in-flight load.
+        void loadClip(lead);
+        // The prefetch effect planned before the queue existed (deferFill), so
+        // its exact tier was empty. Warm the queued gates past the lead here.
+        for (const g of run.snapshot().gates.slice(1)) if (g.word) void loadClip(g.word);
         // `warmupWait` never rejects, and `loadClip` swallows its own failures —
         // the worst case here is that we start on the cap with a synthetic cue.
         void warmupWait(() => loadClip(lead), {
@@ -1004,10 +1008,17 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // above, which React runs first on mount because it is DECLARED first —
       // that declaration order is load-bearing, and moving this effect above
       // it would put the speculative tier back in front of the first gate.
-      // It is not left resting on that alone: a null here (an empty ref) plans
+      // It is not left resting on that alone: a null here (an empty ref, or a
+      // `deferFill` run whose queue hasn't been primed yet — see run.ts) plans
       // *nothing* rather than falling back to the pool, so the worst case is
-      // the HUD tick's own look-ahead, never the bulk-first inversion.
-      const queued = runRef.current?.snapshot().gates.map((g) => g.word) ?? null;
+      // the HUD tick's own look-ahead, never the bulk-first inversion. Treating
+      // an empty gates array as `null` here (rather than as an empty exact
+      // tier) matters: a run built with `deferFill` has no gates yet at the
+      // moment this effect first runs, and computing `exactCount: 0` from that
+      // would silently promote a speculative word into the "now" lane instead
+      // of skipping the plan.
+      const gates = runRef.current?.snapshot().gates ?? [];
+      const queued = gates.length > 0 ? gates.map((g) => g.word) : null;
       const plan = planPrefetchTiers({
         mode,
         drillTone,

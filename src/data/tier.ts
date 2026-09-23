@@ -100,7 +100,11 @@ function applyDevOverride(tier: Tier): Tier {
 export function useTier(): Tier {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot);
   if (!resolved && !snapshot.loading) {
-    resolved = true;
+    // Not `resolved = true` here — refreshTier() itself sets it once the
+    // real tier has landed. Setting it early would let a concurrent
+    // tierReady() caller (Game.tsx) return before the tier actually
+    // resolved. `snapshot.loading` (set synchronously by refreshTier below)
+    // is what prevents this branch from re-firing on every render.
     void refreshTier();
   }
   return snapshot.tier;
