@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
+import { track } from "../analytics/client.ts";
 import { FEEDBACK_MAX_CHARS, submitFeedback } from "../data/feedback.ts";
 import { getTier } from "../data/tier.ts";
 
@@ -72,8 +73,12 @@ function FeedbackSheet({ screen, onClose }: { screen: string; onClose: () => voi
   const send = async () => {
     if (!canSend) return;
     setStatus("sending");
-    const ok = await submitFeedback({ message, rating, screen, tier: getTier() });
+    const tier = getTier();
+    const ok = await submitFeedback({ message, rating, screen, tier });
     setStatus(ok ? "sent" : "failed");
+    // Never carries `message` — the free-text is for the dashboard, not
+    // analytics (session.ts's "nothing the player typed" rule).
+    if (ok) track({ type: "feedback_submitted", screen, rating, tier });
   };
 
   return (

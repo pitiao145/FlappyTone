@@ -170,7 +170,117 @@ export type AnalyticsEvent =
    */
   | { type: "join_board_submitted"; accepted: boolean; joined: boolean; ok: boolean }
   /** A score reached (or failed to reach) `api/score.ts`. */
-  | { type: "score_submitted"; score: number; is_best: boolean; ok: boolean };
+  | { type: "score_submitted"; score: number; is_best: boolean; ok: boolean }
+  /** A mode tapped from ModeSelect.tsx's `go()` — the single choke point every mode button calls. */
+  | { type: "mode_selected"; intent: string; drillTone?: Tone; pairCombo?: number[] }
+  /** A screen became visible — fired from a `[screen]`-keyed effect in GameApp.tsx. Dev-only screens are excluded from `TrackedScreen`. */
+  | { type: "screen_viewed"; screen: TrackedScreen }
+  /** A Settings control changed. `value` is always stringified (booleans as "on"/"off") so the union stays flat primitives. */
+  | { type: "setting_changed"; key: SettingKey; value: string }
+  /** AccountCard.tsx's submit handler, fired at the start of the attempt. */
+  | { type: "signup_started"; mode: "signup" | "login" }
+  /** AccountCard.tsx's submit handler, fired once `result.ok`. */
+  | { type: "signup_completed"; mode: "signup" | "login" }
+  /** The daily run cap blocked a start/retry — replaces the old ad-hoc `daily_limit_earlybird_shown`. */
+  | { type: "daily_limit_reached"; trigger: "start" | "retry" }
+  /** EarlyBirdModal.tsx's mount/surface-change effect. */
+  | { type: "earlybird_modal_shown"; surface: string; feature: string; tier: string }
+  | { type: "earlybird_create_account_click"; surface: string; feature: string }
+  | { type: "earlybird_pay_click"; surface: string; feature: string }
+  | { type: "earlybird_checkout_opened"; surface: string; feature: string }
+  /** Profile.tsx's EarlyBird sticker CTA. */
+  | { type: "profile_earlybird_cta_click" }
+  /** Progress.tsx's locked-feature teaser CTAs (accuracy chart, run history, tone evolution), collapsed into one event with a `card` discriminator instead of a dynamic event name. */
+  | { type: "progress_locked_cta_click"; card: string }
+  /** Progress.tsx's pricing-section "Join EarlyBird" button. */
+  | { type: "progress_earlybird_pricing_click" }
+  /** Leaderboard.tsx's first successful board resolution per mount. */
+  | { type: "visualiser_session"; toneCount: number; wordSelected: boolean; durationMs: number; attempts: number }
+  /** FeedbackWidget.tsx's submit, once it resolves ok. Never carries the free-text message — screen/rating/tier only. */
+  | { type: "feedback_submitted"; screen: string; rating: number | null; tier: string };
+
+/**
+ * A closed set mirroring `GameApp.tsx`'s `Screen` type, restated here rather
+ * than imported so this file stays free of app-level deps (same rule as
+ * `MicFailureReason`). Excludes `"lab"`/`"devlogin"` — dev-only screens that
+ * should never reach a production event stream (CLAUDE.md hard rule 7).
+ * `session.test.ts` pins this against the real `Screen` type both ways.
+ */
+export type TrackedScreen =
+  | "play"
+  | "modes"
+  | "howto"
+  | "calibrate"
+  | "finetune"
+  | "levelSelect"
+  | "tutorial"
+  | "seeding"
+  | "tutorialdone"
+  | "game"
+  | "drill"
+  | "learn"
+  | "pairs"
+  | "gameover"
+  | "settings"
+  | "visualiser"
+  | "progress"
+  | "profile"
+  | "checkoutSignup"
+  | "resetPassword";
+
+/** The Settings controls that emit a `setting_changed` event. */
+export type SettingKey = "voice" | "proficiency" | "tunnel_width" | "translation" | "sharing";
+
+/**
+ * Which consent gate an event answers to. Gameplay events are dropped when
+ * the player has turned off "Anonymous game data" (`setPostHogConsent`);
+ * global events always send in production, gated only by `posthog.ts`'s
+ * `enabled()` check. A new event type must be added here explicitly — the
+ * switch is exhaustive by construction (a missing case is a type error), so
+ * this is the one place tier is decided, never inferred at a call site.
+ */
+export type AnalyticsTier = "gameplay" | "global";
+
+export function eventTier(type: AnalyticsEvent["type"]): AnalyticsTier {
+  switch (type) {
+    case "mic":
+    case "calib_step":
+    case "calib_done":
+    case "calib_abandoned":
+    case "recal_offered":
+    case "recal_resolved":
+    case "run_feedback":
+    case "run_start":
+    case "gate":
+    case "run_end":
+    case "cue_fallback":
+    case "visualiser_session":
+      return "gameplay";
+    case "landed":
+    case "share_clicked":
+    case "challenge_landed":
+    case "challenge_resolved":
+    case "leaderboard_viewed":
+    case "join_board_shown":
+    case "join_board_submitted":
+    case "score_submitted":
+    case "mode_selected":
+    case "screen_viewed":
+    case "setting_changed":
+    case "signup_started":
+    case "signup_completed":
+    case "daily_limit_reached":
+    case "earlybird_modal_shown":
+    case "earlybird_create_account_click":
+    case "earlybird_pay_click":
+    case "earlybird_checkout_opened":
+    case "profile_earlybird_cta_click":
+    case "progress_locked_cta_click":
+    case "progress_earlybird_pricing_click":
+    case "feedback_submitted":
+      return "global";
+  }
+}
 
 export interface SessionCalibration {
   f0Center: number;

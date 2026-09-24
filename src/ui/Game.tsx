@@ -1319,13 +1319,14 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           <div className="overlay tutorial-card">
             <h3>Still in testing</h3>
             <p>
-              I'm sending anonymous data about how the game goes, which gates
-              you hit or miss, and how your voice maps to the screen, so I can
+              I'm sending anonymous data about how a run goes: which gates you
+              hit or miss, and how your voice maps to the screen, so I can
               tune it.
             </p>
             <p className="note">
-              No audio is ever recorded or sent. You can turn this off in
-              Settings at any time.
+              Some anonymous usage data, like which screens you visit, is sent
+              regardless. No audio is ever recorded or sent. You can turn off
+              run data in Settings at any time.
             </p>
             <button
               className="primary"

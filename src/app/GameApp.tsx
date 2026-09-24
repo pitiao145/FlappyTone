@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { initAnalytics, track, trackCalibration } from "../analytics/client";
-import { capturePostHogEvent, initPostHog } from "../analytics/posthog.ts";
+import { initPostHog } from "../analytics/posthog.ts";
+import type { TrackedScreen } from "../analytics/session.ts";
 import { adoptInventory, inventorySpeaker, loadInventory } from "../audio/inventory";
 import { getPlayTicket, invalidatePlayTicket } from "../audio/clipToken";
 import { MicError } from "../audio/mic";
@@ -67,7 +68,7 @@ import { micErrorCopy } from "../ui/micErrors";
 import { GameNav, type NavTab } from "./GameNav.tsx";
 import "../App.css";
 
-type Screen =
+export type Screen =
   | "play"
   | "modes"
   | "howto"
@@ -332,6 +333,15 @@ export default function GameApp() {
   const [screen, setScreen] = useState<Screen>(() =>
     initialIntent() === "visualiser" ? "visualiser" : "play",
   );
+  // Global-tier: fires on every screen change, always sent in production
+  // regardless of the gameplay consent toggle (session.ts's eventTier).
+  // "lab"/"devlogin" are dev-only and excluded from TrackedScreen, so they
+  // are skipped here rather than widening that type for two screens that
+  // never reach a production build (CLAUDE.md hard rule 7).
+  useEffect(() => {
+    if (screen === "lab" || screen === "devlogin") return;
+    track({ type: "screen_viewed", screen: screen as TrackedScreen });
+  }, [screen]);
   /**
    * Whether the mic session backing the Visualiser screen is actually open.
    * Landing here via `onNavigate("visualiser")` (a real click) only ever
@@ -629,7 +639,7 @@ export default function GameApp() {
         dailyLimitReached()
       ) {
         stopMic();
-        capturePostHogEvent("daily_limit_earlybird_shown", { trigger: "start" });
+        track({ type: "daily_limit_reached", trigger: "start" });
         openEarlyBird("daily-limit", "daily-limit");
         return;
       }
@@ -866,7 +876,7 @@ export default function GameApp() {
         lastModeRef.current === "pairs") &&
       dailyLimitReached()
     ) {
-      capturePostHogEvent("daily_limit_earlybird_shown", { trigger: "retry" });
+      track({ type: "daily_limit_reached", trigger: "retry" });
       openEarlyBird("daily-limit", "daily-limit");
       return;
     }

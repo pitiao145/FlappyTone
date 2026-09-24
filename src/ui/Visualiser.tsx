@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { track } from "../analytics/client.ts";
 import { inventoryNow, loadInventory, subscribeInventory } from "../audio/inventory.ts";
 import { MicError } from "../audio/mic.ts";
 import {
@@ -204,6 +205,28 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   const [recognized, setRecognized] = useState<ToneClassification | null>(null);
   /** `startedAtMs` of the last finished attempt already classified. */
   const lastRecognizedAtRef = useRef<number | null>(null);
+  /**
+   * Session-summary accounting for the gameplay-tier `visualiser_session`
+   * event, flushed on unmount (see the mount/unmount effect below). Refs, not
+   * state — nothing here should trigger a re-render.
+   */
+  const sessionStartRef = useRef<number | null>(null);
+  const sessionAttemptsRef = useRef(0);
+  const sessionTonesRef = useRef<Set<Tone>>(new Set());
+  const sessionWordSelectedRef = useRef(false);
+  useEffect(() => {
+    sessionStartRef.current = performance.now();
+    return () => {
+      const started = sessionStartRef.current ?? performance.now();
+      track({
+        type: "visualiser_session",
+        toneCount: sessionTonesRef.current.size,
+        wordSelected: sessionWordSelectedRef.current,
+        durationMs: Math.round(performance.now() - started),
+        attempts: sessionAttemptsRef.current,
+      });
+    };
+  }, []);
   /**
    * Bumped on every wrong-tone attempt — used as the recognized-tone card's
    * `key`, so React remounts it and its CSS shake animation restarts, the
@@ -462,6 +485,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       if (latest && latest.startedAtMs !== lastRecognizedAtRef.current) {
         lastRecognizedAtRef.current = latest.startedAtMs;
         const result = classifyTone(latest);
+        sessionAttemptsRef.current += 1;
         setRecognized(result);
         // Bumps a remount key (see recognizedReadout) rather than a plain
         // boolean — the card has to shake again for a second wrong attempt
@@ -541,6 +565,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       showLocked("visualiser-tone-practice");
       return;
     }
+    if (t !== null) sessionTonesRef.current.add(t);
     setTone(t);
     setSelectedWord(null);
     resetAttempts();
@@ -565,6 +590,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     // A tap on the already-selected word is a replay, not a new attempt at a
     // new word — the trail and the running accuracy must survive it.
     if (selectedWord?.id !== word.id) resetAttempts();
+    sessionWordSelectedRef.current = true;
     setSelectedWord(word);
     // Jumps the warm-up queue: the tapped word is needed now, whatever the
     // background trickle is currently working through. A no-op if it already

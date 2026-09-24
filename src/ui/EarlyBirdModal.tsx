@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { capturePostHogEvent } from "../analytics/posthog.ts";
+import { track } from "../analytics/client.ts";
 import { getAccount } from "../data/account.ts";
 import { buildCheckoutUrl, redirectToCheckoutForCurrentAccount } from "../data/checkout.ts";
 import { setPendingCheckout } from "../data/checkoutIntent.ts";
@@ -124,7 +124,7 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
   // it — the daily-limit surface used to be the only one tracking a "shown"
   // event, tagged separately at each call site.
   useEffect(() => {
-    capturePostHogEvent("earlybird_modal_shown", { surface, feature, tier });
+    track({ type: "earlybird_modal_shown", surface, feature, tier });
     // Only on mount/surface change, not on every tier refresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [surface, feature]);
@@ -208,7 +208,7 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
               type="button"
               className="primary modal-create-account"
               onClick={() => {
-                capturePostHogEvent("earlybird_create_account_click", { surface, feature });
+                track({ type: "earlybird_create_account_click", surface, feature });
                 onCreateAccount?.();
               }}
             >
@@ -240,8 +240,8 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
                 // leaving this tab still reading "free" and asking to pay
                 // again even though the webhook had already granted access.
                 e.preventDefault();
-                capturePostHogEvent("earlybird_pay_click", { surface, feature });
-                capturePostHogEvent("earlybird_checkout_opened", { surface, feature });
+                track({ type: "earlybird_pay_click", surface, feature });
+                track({ type: "earlybird_checkout_opened", surface, feature });
                 window.location.assign(checkoutUrl);
               }}
             >
@@ -253,7 +253,7 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
               className="primary modal-pay"
               onClick={() => {
                 void (async () => {
-                  capturePostHogEvent("earlybird_pay_click", { surface, feature });
+                  track({ type: "earlybird_pay_click", surface, feature });
                   // A signed-in player whose account id hadn't loaded when the
                   // page rendered can still go straight to checkout. A guest
                   // (or anyone we can't check out) detours through account

@@ -1,6 +1,6 @@
 # FlappyTone — Privacy Policy
 
-**Last updated: 8 September 2026**
+**Last updated: 24 September 2026**
 
 This policy explains what personal data FlappyTone ("we", "us") collects, why, and your rights over it. FlappyTone is operated by Pierre Bruyninckx, an independent developer, at [flappytone.com](https://flappytone.com). For any privacy question or request, contact [pierre@pierrebuilds.dev](mailto:pierre@pierrebuilds.dev).
 
@@ -25,13 +25,13 @@ FlappyTone listens to your voice through your device's microphone to drive the g
 - Your purchase is handled by **Lemon Squeezy** as merchant of record. They collect the payment and billing details needed for the transaction and tax. **We do not receive or store your card number.** We receive confirmation that your account has access, and basic order information (such as your email and order reference).
 
 **When you use the site (analytics):**
-- **Usage analytics** via **PostHog** — events such as page views, runs started/finished, and feature interactions, plus technical data like approximate device/browser type. We use this to understand how the game is used and to fix problems. Analytics are used with your consent where required.
+- **Usage analytics** via **PostHog**, in two categories. General usage data, such as which screens you visit, which game mode you pick, and settings or account actions, is collected to understand how the app is used and to fix problems; this does not require a separate opt-in. Gameplay data, such as which gates you hit or miss, your calibration numbers, and Tone Visualiser practice, is only collected if you leave "Anonymous game data" turned on in Settings. Turning it off stops that data immediately; it does not delete the anonymous identifier already used for general usage data.
 
 ## Legal bases for processing
 
 - **Performance of a contract** — running your account, syncing your data, and providing paid access.
-- **Consent** — sending you marketing emails, and analytics/cookies where consent is required. You can withdraw consent at any time.
-- **Legitimate interests** — keeping the service secure, preventing cheating/abuse, and improving the product, balanced against your rights.
+- **Consent** — sending you marketing emails, and gameplay analytics (see above). You can withdraw consent at any time.
+- **Legitimate interests** — keeping the service secure, preventing cheating/abuse, general usage analytics (see above), and improving the product, balanced against your rights.
 
 ## Who we share data with (processors)
 

@@ -1,5 +1,6 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { track } from "../analytics/client.ts";
 import { getBoard, getBoardPeriod, myUserId, type Board, type Period } from "../data/leaderboard.ts";
 import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
@@ -124,6 +125,14 @@ export function Leaderboard({ limit = 20, onClose, projectedScore, tabs = false,
   }, [limit, tabs, version]);
 
   const board = tabs ? (periodCache[period] ?? null) : weeklyBoard;
+
+  /** Fires once per mount, the first time a board actually resolves. */
+  const viewedRef = useRef(false);
+  useEffect(() => {
+    if (viewedRef.current || !board) return;
+    viewedRef.current = true;
+    track({ type: "leaderboard_viewed", rows: board.rows.length, ranked: board.myRank != null });
+  }, [board]);
 
   useEffect(() => {
     if (!onClose) return;

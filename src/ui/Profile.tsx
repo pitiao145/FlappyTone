@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { capturePostHogEvent } from "../analytics/posthog.ts";
+import { track } from "../analytics/client.ts";
 import { getAccount, type Account } from "../data/account.ts";
 import { displayName } from "../data/leaderboard.ts";
 import { useSessionVersion } from "../data/sessionVersion.ts";
@@ -108,7 +108,7 @@ export function Profile({ onEarlyBird, onSignedOut }: Props) {
           type="button"
           className="profile-earlybird-sticker"
           onClick={() => {
-            capturePostHogEvent("profile_earlybird_cta_click", {});
+            track({ type: "profile_earlybird_cta_click" });
             onEarlyBird("plan_card");
           }}
         >

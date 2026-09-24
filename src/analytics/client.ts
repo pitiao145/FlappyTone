@@ -11,9 +11,11 @@
  * names and shapes so every call site — `App.tsx`, `Game.tsx`,
  * `Calibration.tsx`, `src/audio/session.ts` — needed no changes.
  *
- * Consent is still checked before anything is captured: `loadShareData()` is
- * read by `initAnalytics` and threaded through to `initPostHog`, which mints
- * no id at all when the player has opted out.
+ * Consent still gates the gameplay tier: `loadShareData()` is read by
+ * `initAnalytics` and threaded through to `initPostHog`. Global-tier events
+ * (screen views, mode selection, the leaderboard/signup funnel) are not
+ * gated by this at all — see `session.ts`'s `eventTier` and `posthog.ts`'s
+ * Play analytics rule 3 in CLAUDE.md.
  */
 
 import { loadShareData, type CalibrationSettings } from "../game/settings.ts";
@@ -60,8 +62,10 @@ export function trackCalibration(cal: CalibrationSettings): void {
 }
 
 /**
- * Mirrors the "Anonymous game data" toggle. Off erases the stored id and
- * stops capture immediately; on resumes capture under a fresh anonymous id.
+ * Mirrors the "Anonymous game data" toggle — the gameplay tier only. Off
+ * stops gameplay/calibration events immediately; global-tier events (screen
+ * views, mode selection, the leaderboard/signup funnel) are unaffected. See
+ * `posthog.ts`'s `setPostHogConsent`.
  */
 export function setSharingEnabled(enabled: boolean): void {
   try {

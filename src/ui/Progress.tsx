@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { capturePostHogEvent } from "../analytics/posthog.ts";
+import { track } from "../analytics/client.ts";
 import { loadInventory } from "../audio/inventory.ts";
 import type { Tone } from "../game/gates.ts";
 import {
@@ -151,7 +151,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
   ) : (
     <span className="pro-badge">🔒 Pro</span>
   );
-  const soonOrLockCta = (label: string, eventName: string) =>
+  const soonOrLockCta = (label: string, card: string) =>
     isPro ? (
       <p className="note progress-card-cta-soon">Coming soon.</p>
     ) : (
@@ -159,7 +159,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
         type="button"
         className="link progress-card-cta"
         onClick={() => {
-          capturePostHogEvent(eventName, {});
+          track({ type: "progress_locked_cta_click", card });
           scrollToPricing();
         }}
       >
@@ -312,7 +312,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
             </Suspense>
             {soonOrLockCta(
               "🔒 Compare against your own attempts — unlock with Pro",
-              "progress_accuracy_chart_upsell_click",
+              "accuracy_chart",
             )}
           </>
         )}
@@ -355,7 +355,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
         )}
         {soonOrLockCta(
           `🔒 See all ${history.totalRuns} runs & trends — unlock with Pro`,
-          "progress_run_history_upsell_click",
+          "run_history",
         )}
       </section>
 
@@ -377,7 +377,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
         </div>
         {soonOrLockCta(
           "🔒 Compare against your own attempts — unlock with Pro",
-          "progress_tone_evolution_upsell_click",
+          "tone_evolution",
         )}
       </section>
 
@@ -438,7 +438,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
               type="button"
               className="price-cta"
               onClick={() => {
-                capturePostHogEvent("progress_earlybird_pricing_click", {});
+                track({ type: "progress_earlybird_pricing_click" });
                 onEarlyBird("pricing");
               }}
             >

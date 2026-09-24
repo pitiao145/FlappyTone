@@ -8,6 +8,7 @@
  */
 import { useEffect, useState } from "react";
 
+import { track } from "../analytics/client.ts";
 import {
   getAccount,
   renameAccount,
@@ -75,6 +76,7 @@ export function AccountCard({ hideGuestHeader = false, onSignedOut }: Props) {
     e.preventDefault();
     setBusy("submitting");
     setMessage("");
+    track({ type: "signup_started", mode });
     const result =
       mode === "signup"
         ? await signUpWithPassword(email, password, consent)
@@ -83,6 +85,7 @@ export function AccountCard({ hideGuestHeader = false, onSignedOut }: Props) {
     setMessage(result.ok ? "" : result.reason);
     setMessageKind(result.ok ? null : "error");
     if (result.ok) {
+      track({ type: "signup_completed", mode });
       setPassword("");
       fireAuthToast("signed-in");
       // Only consume the flag on success — a failed attempt shouldn't burn the

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { track } from "../analytics/client.ts";
 import { inventoryNow } from "../audio/inventory.ts";
 import { MicError } from "../audio/mic.ts";
 import { ensurePlaybackCtx } from "../audio/reference.ts";
@@ -99,6 +100,12 @@ export function ModeSelect({ error: externalError, onStart, onBack, canvasWidth,
     try {
       void ensurePlaybackCtx(); // resume cue-playback ctx in-gesture (reference.ts)
       await ensureMic();
+      track({
+        type: "mode_selected",
+        intent,
+        drillTone: opts?.drillTone,
+        pairCombo: opts?.pairCombo ?? undefined,
+      });
       onStart(intent, opts);
     } catch (err) {
       if (!(err instanceof MicCancelled)) {

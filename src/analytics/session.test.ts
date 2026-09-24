@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { deviceBucket, gateEvent, roundCalibration } from "./session.ts";
+import { deviceBucket, eventTier, gateEvent, roundCalibration } from "./session.ts";
 import type { GateLogEntry } from "../game/run.ts";
-import type { AnalyticsEvent, MicFailureReason } from "./session.ts";
+import type { AnalyticsEvent, MicFailureReason, TrackedScreen } from "./session.ts";
 import type { MicErrorKind } from "../audio/mic.ts";
-import { sanitizeGameProperties } from "./posthog.ts";
+import type { Screen } from "../app/GameApp.tsx";
+import { APP_EVENTS, sanitizeGameProperties } from "./posthog.ts";
 
 /**
  * `session.ts` restates `MicErrorKind` rather than importing it, so that the
@@ -18,6 +19,18 @@ const _reasonMatchesMic: MicErrorKind = null as unknown as MicFailureReason;
 const _micMatchesReason: MicFailureReason = null as unknown as MicErrorKind;
 void _reasonMatchesMic;
 void _micMatchesReason;
+
+/**
+ * `session.ts` restates `GameApp.tsx`'s `Screen` type (minus the dev-only
+ * "lab"/"devlogin") for the same reason it restates `MicErrorKind` — keeping
+ * this payload module's own graph light. `TrackedScreen` must therefore be
+ * assignable into `Screen`, and every non-dev `Screen` value assignable into
+ * `TrackedScreen`, so the two cannot silently drift apart.
+ */
+const _trackedIsScreen: Screen = null as unknown as TrackedScreen;
+const _screenIsTracked: TrackedScreen = null as unknown as Exclude<Screen, "lab" | "devlogin">;
+void _trackedIsScreen;
+void _screenIsTracked;
 
 describe("roundCalibration", () => {
   it("rounds away meaningless precision", () => {
@@ -198,6 +211,120 @@ describe("run_end", () => {
     expect(sent.voice).toBe("mark");
     expect(sent).not.toHaveProperty("$host");
     expect(sent).not.toHaveProperty("$current_url");
+    expect(sent.$geoip_country_code).toBe("TW");
+  });
+});
+
+describe("eventTier", () => {
+  // Enumerated independently of eventTier's own switch, so this test can
+  // actually catch a miscategorization rather than just re-asserting the
+  // implementation.
+  const GAMEPLAY: AnalyticsEvent["type"][] = [
+    "mic",
+    "calib_step",
+    "calib_done",
+    "calib_abandoned",
+    "recal_offered",
+    "recal_resolved",
+    "run_feedback",
+    "run_start",
+    "gate",
+    "run_end",
+    "cue_fallback",
+    "visualiser_session",
+  ];
+  const GLOBAL: AnalyticsEvent["type"][] = [
+    "landed",
+    "share_clicked",
+    "challenge_landed",
+    "challenge_resolved",
+    "leaderboard_viewed",
+    "join_board_shown",
+    "join_board_submitted",
+    "score_submitted",
+    "mode_selected",
+    "screen_viewed",
+    "setting_changed",
+    "signup_started",
+    "signup_completed",
+    "daily_limit_reached",
+    "earlybird_modal_shown",
+    "earlybird_create_account_click",
+    "earlybird_pay_click",
+    "earlybird_checkout_opened",
+    "profile_earlybird_cta_click",
+    "progress_locked_cta_click",
+    "progress_earlybird_pricing_click",
+    "feedback_submitted",
+  ];
+
+  for (const type of GAMEPLAY) {
+    it(`${type} is gameplay tier`, () => {
+      expect(eventTier(type)).toBe("gameplay");
+    });
+  }
+  for (const type of GLOBAL) {
+    it(`${type} is global tier`, () => {
+      expect(eventTier(type)).toBe("global");
+    });
+  }
+
+  it("covers every AnalyticsEvent type exactly once, split between the two lists above", () => {
+    expect(new Set([...GAMEPLAY, ...GLOBAL]).size).toBe(GAMEPLAY.length + GLOBAL.length);
+  });
+});
+
+describe("APP_EVENTS", () => {
+  it("contains every AnalyticsEvent type, so sanitization can't silently miss one", () => {
+    const allTypes = new Set<AnalyticsEvent["type"]>([
+      "landed",
+      "mic",
+      "calib_step",
+      "calib_done",
+      "calib_abandoned",
+      "recal_offered",
+      "recal_resolved",
+      "run_feedback",
+      "run_start",
+      "gate",
+      "run_end",
+      "cue_fallback",
+      "share_clicked",
+      "challenge_landed",
+      "challenge_resolved",
+      "leaderboard_viewed",
+      "join_board_shown",
+      "join_board_submitted",
+      "score_submitted",
+      "mode_selected",
+      "screen_viewed",
+      "setting_changed",
+      "signup_started",
+      "signup_completed",
+      "daily_limit_reached",
+      "earlybird_modal_shown",
+      "earlybird_create_account_click",
+      "earlybird_pay_click",
+      "earlybird_checkout_opened",
+      "profile_earlybird_cta_click",
+      "progress_locked_cta_click",
+      "progress_earlybird_pricing_click",
+      "visualiser_session",
+      "feedback_submitted",
+    ]);
+    for (const type of allTypes) {
+      expect(APP_EVENTS.has(type), `APP_EVENTS is missing "${type}"`).toBe(true);
+    }
+  });
+
+  it("sanitizes a representative global-tier event exactly like a gameplay one, proving sanitization is tier-independent", () => {
+    const sent = sanitizeGameProperties({
+      screen: "profile",
+      $host: "flappytone.com",
+      $geoip_country_code: "TW",
+    });
+    expect(sent.screen).toBe("profile");
+    expect(sent).not.toHaveProperty("$host");
     expect(sent.$geoip_country_code).toBe("TW");
   });
 });

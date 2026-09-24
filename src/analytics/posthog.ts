@@ -13,7 +13,7 @@
  * `AnalyticsEvent` union is the closed vocabulary for what a gameplay event
  * can contain — and it is the ONLY property-level gate. Be exact about what
  * `before_send` below actually does, because it is easy to read as more: it
- * matches the event NAME against `GAME_EVENTS`, then drops `$`-prefixed keys
+ * matches the event NAME against `APP_EVENTS`, then drops `$`-prefixed keys
  * except the two country-level geo fields, and passes every other property
  * straight through. It filters PostHog's defaults, not ours.
  *
@@ -63,7 +63,12 @@
 
 import type { BeforeSendFn, CaptureResult } from "posthog-js";
 import type posthogType from "posthog-js";
-import { roundCalibration, type AnalyticsEvent, type SessionCalibration } from "./session.ts";
+import {
+  eventTier,
+  roundCalibration,
+  type AnalyticsEvent,
+  type SessionCalibration,
+} from "./session.ts";
 
 let ph: typeof posthogType | null = null;
 
@@ -75,8 +80,15 @@ const API_HOST = "/relay";
 const UI_HOST = "https://us.posthog.com";
 
 let started = false;
-/** A consent change that arrived before the chunk did; `null` means untouched. */
-let wanted: boolean | null = null;
+/**
+ * Whether the "gameplay" tier (calibration, mic, run/gate events, Visualiser
+ * practice — see `session.ts`'s `eventTier`) may send. Global-tier events
+ * (screen views, mode selection, the leaderboard/signup/upgrade funnel) never
+ * check this — they always send once the SDK is `enabled()`, by design (see
+ * CLAUDE.md's Play analytics rule 3). Default `true`, matching
+ * `loadShareData()`'s default.
+ */
+let gameplayConsent = true;
 
 /** Capture calls made before the SDK chunk has loaded, replayed in order once it has. */
 let pending: Array<() => void> = [];
@@ -99,12 +111,17 @@ function enabled(): boolean {
 }
 
 /**
- * Event names `before_send` treats as gameplay data — `session.ts`'s closed
- * union, plus `calib_numbers` (the calibration readout, not part of that
- * union since it isn't a moment-in-time event). Anything else (marketing CTA
- * clicks, `$pageview`, newsletter events) keeps PostHog's normal properties.
+ * Event names `before_send` sanitizes — every event this app itself fires,
+ * regardless of consent tier, plus `calib_numbers` (the calibration readout,
+ * not part of the union since it isn't a moment-in-time event). This is a
+ * property-sanitization allowlist, not a consent gate: it strips PostHog's
+ * own `$`-prefixed defaults from anything named here, whether that event is
+ * gameplay- or global-tier. Anything NOT named here (marketing CTA clicks on
+ * the landing site, `$pageview`, newsletter events) keeps PostHog's normal
+ * properties, since those were never built from `session.ts`'s closed union
+ * in the first place.
  */
-const GAME_EVENTS = new Set<string>([
+export const APP_EVENTS = new Set<string>([
   "landed",
   "mic",
   "calib_step",
@@ -125,6 +142,21 @@ const GAME_EVENTS = new Set<string>([
   "join_board_shown",
   "join_board_submitted",
   "score_submitted",
+  "mode_selected",
+  "screen_viewed",
+  "setting_changed",
+  "signup_started",
+  "signup_completed",
+  "daily_limit_reached",
+  "earlybird_modal_shown",
+  "earlybird_create_account_click",
+  "earlybird_pay_click",
+  "earlybird_checkout_opened",
+  "profile_earlybird_cta_click",
+  "progress_locked_cta_click",
+  "progress_earlybird_pricing_click",
+  "visualiser_session",
+  "feedback_submitted",
 ]);
 
 /** The only `$`-prefixed properties allowed through on a gameplay event. */
@@ -160,7 +192,7 @@ export function sanitizeGameProperties(
 }
 
 const beforeSend: BeforeSendFn = (cr: CaptureResult | null) => {
-  if (!cr || !GAME_EVENTS.has(cr.event)) return cr;
+  if (!cr || !APP_EVENTS.has(cr.event)) return cr;
   return { ...cr, properties: sanitizeGameProperties(cr.properties) };
 };
 
@@ -183,6 +215,7 @@ export function initPostHog(consent: boolean): void {
   try {
     if (started || !enabled() || typeof window === "undefined") return;
     started = true;
+    gameplayConsent = consent;
     void import("posthog-js")
       .then(({ default: posthog }) => {
         ph = posthog;
@@ -199,9 +232,12 @@ export function initPostHog(consent: boolean): void {
           // instead of accumulating for up to the default 3s.
           request_queue_config: { flush_interval_ms: 250 },
           before_send: beforeSend,
-          // Read again rather than closed over: the player may have hit the
-          // toggle in the time the chunk took to arrive.
-          opt_out_capturing_by_default: !(wanted ?? consent),
+          // The SDK's own opt-out is never used (see `captureGameEvent`): a
+          // gameplay/global split needs a per-event decision, which
+          // `opt_out_capturing`/`opt_in_capturing` cannot express (they gate
+          // the whole client). Capturing is always on at the SDK level; this
+          // file gates gameplay events itself, before they ever reach `ph`.
+          opt_out_capturing_by_default: false,
         });
         const queued = pending;
         pending = [];
@@ -241,12 +277,20 @@ export function capturePostHogEvent(
 }
 
 /**
- * Fires a gameplay event straight from `session.ts`'s closed union — `type`
- * becomes the event name, the rest becomes its properties. `run_end` sends
- * instantly rather than joining the (already short) batch window, since it is
- * the single most valuable event to not lose to a same-tab navigation.
+ * Fires an event straight from `session.ts`'s closed union — `type` becomes
+ * the event name, the rest becomes its properties. `run_end` sends instantly
+ * rather than joining the (already short) batch window, since it is the
+ * single most valuable event to not lose to a same-tab navigation.
+ *
+ * This is the ONE place gameplay consent is checked. A gameplay-tier event
+ * (`eventTier(event.type) === "gameplay"`) is dropped, not queued, when
+ * `gameplayConsent` is off — nothing is retried later, matching "opting out
+ * stops capture immediately." A global-tier event always reaches
+ * `capturePostHogEvent`, which itself does no consent check at all — see
+ * CLAUDE.md's Play analytics rule 3.
  */
 export function captureGameEvent(event: AnalyticsEvent): void {
+  if (eventTier(event.type) === "gameplay" && !gameplayConsent) return;
   const { type, ...rest } = event;
   capturePostHogEvent(type, rest as Record<string, string | number | boolean>, {
     instant: type === "run_end",
@@ -261,6 +305,9 @@ export function captureGameEvent(event: AnalyticsEvent): void {
  * a person-property join.
  */
 export function setCalibrationProperties(cal: SessionCalibration): void {
+  // Gameplay-tier data delivered outside `track()`/`captureGameEvent` — same
+  // gate, checked here since nothing else stands between this and `ph`.
+  if (!gameplayConsent) return;
   const props = roundCalibration(cal);
   runOrQueue(() => {
     try {
@@ -288,21 +335,20 @@ export function setDeviceProperty(device: string): void {
 }
 
 /**
- * Mirrors the "Anonymous game data" toggle for both traffic and gameplay
- * events — there is one consent flag, not two. Opting out stops capture and
- * drops the stored distinct id, the same "off means erased" posture the old
- * gameplay queue took.
+ * Mirrors the "Anonymous game data" toggle — the gameplay tier only (mic,
+ * calibration, run/gate events, Visualiser practice; see `session.ts`'s
+ * `eventTier`). Turning it off stops those events immediately, checked at
+ * `captureGameEvent`/`setCalibrationProperties`.
+ *
+ * Deliberately does NOT call `ph.opt_out_capturing()`/`ph.reset()`. The two
+ * tiers share one PostHog client instance and one distinct_id by design —
+ * resetting the id on a gameplay opt-out would also orphan global-tier
+ * history (screen views, the signup funnel) that the player never asked to
+ * erase, and would break any funnel spanning both tiers. So this toggle no
+ * longer erases the on-device anonymous identity, only gameplay content —
+ * see CLAUDE.md's Play analytics rule 3 and the Settings copy for how that's
+ * described to the player.
  */
 export function setPostHogConsent(on: boolean): void {
-  try {
-    wanted = on;
-    if (!ph) return; // still loading — `wanted` is read when it lands
-    if (on) ph.opt_in_capturing();
-    else {
-      ph.opt_out_capturing();
-      ph.reset();
-    }
-  } catch {
-    // Same posture as everywhere else in this file.
-  }
+  gameplayConsent = on;
 }

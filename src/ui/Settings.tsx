@@ -5,8 +5,7 @@ import { ensureMic, MicCancelled } from "../audio/session.ts";
 import { getAccount, signOut, type Account } from "../data/account.ts";
 import { fireAuthToast } from "../data/authToast.ts";
 import { micErrorCopy } from "./micErrors.ts";
-import { setSharingEnabled } from "../analytics/client.ts";
-import { setPostHogConsent } from "../analytics/posthog.ts";
+import { setSharingEnabled, track } from "../analytics/client.ts";
 import { CORRIDOR_WIDTHS, type CorridorWidth } from "../game/gates.ts";
 import type { CueStyle } from "../game/run.ts";
 import {
@@ -368,6 +367,7 @@ export function Settings({
                 // not refreshed after a save — spreading it would resurrect the
                 // rest of a stale record alongside the new preference.
                 saveSettings({ ...(loadSettings() ?? settings), voice: { gender: v } });
+                track({ type: "setting_changed", key: "voice", value: v });
               }}
             />
             <p className="param-help">
@@ -403,6 +403,7 @@ export function Settings({
               // Also writes wordMix (run.ts's single/multi draw) — see
               // saveProficiency's own comment for why that's bundled in.
               saveProficiency(v);
+              track({ type: "setting_changed", key: "proficiency", value: v });
             }}
           />
           <p className="param-help">
@@ -427,6 +428,7 @@ export function Settings({
             onChange={(w) => {
               setWidth(w);
               saveCorridorWidth(w);
+              track({ type: "setting_changed", key: "tunnel_width", value: w });
             }}
           />
           <p className="param-help">
@@ -440,6 +442,7 @@ export function Settings({
             onChange={(show) => {
               setTranslation(show);
               saveShowTranslation(show);
+              track({ type: "setting_changed", key: "translation", value: show ? "on" : "off" });
             }}
             label="Translation"
             sublabel="English meaning above the pinyin"
@@ -496,16 +499,19 @@ export function Settings({
           onChange={(v) => {
             setSharing(v);
             saveShareData(v === "on");
-            // Applied now, not next run: turning this off erases the queue and
-            // the anonymous id straight away rather than after one more game.
+            // Applied now, not next run: turning this off stops gameplay
+            // events immediately rather than after one more game.
             setSharingEnabled(v === "on");
-            setPostHogConsent(v === "on");
+            // A meta-setting change, tracked unconditionally regardless of the
+            // new value — this describes using Settings, not gameplay, so it
+            // is global tier (see session.ts's eventTier).
+            track({ type: "setting_changed", key: "sharing", value: v });
           }}
         />
         <p className="param-help">
           {sharing === "on"
-            ? "Sends which gates you hit or miss and your calibration numbers, so the game can be tuned against real attempts. No audio, no recordings, no precise location (country only), and nothing that identifies you."
-            : "Nothing is sent, and anything already stored on this device has been deleted."}
+            ? "Sends what happens during a run: which gates you hit or miss, your calibration numbers, and your Tone Visualiser practice, so the game can be tuned against real attempts. No audio, no recordings, no precise location (country only), and nothing that identifies you."
+            : "Run and calibration data stops being sent. Anonymous usage data not tied to a specific run, like which screens you visit or what's tapped, still helps track how the app is used overall."}
         </p>
       </section>
 
