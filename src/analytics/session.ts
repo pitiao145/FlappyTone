@@ -229,7 +229,14 @@ export type TrackedScreen =
   | "resetPassword";
 
 /** The Settings controls that emit a `setting_changed` event. */
-export type SettingKey = "voice" | "proficiency" | "tunnel_width" | "translation" | "sharing";
+export type SettingKey =
+  | "voice"
+  | "proficiency"
+  | "tunnel_width"
+  | "translation"
+  | "pinyin"
+  | "tone_marks"
+  | "sharing";
 
 /**
  * Which consent gate an event answers to. Gameplay events are dropped when

@@ -14,11 +14,15 @@ import {
   loadCueStyle,
   loadSettings,
   loadShareData,
+  loadShowPinyin,
+  loadShowToneMarks,
   loadShowTranslation,
   saveCorridorWidth,
   saveCueStyle,
   saveSettings,
   saveShareData,
+  saveShowPinyin,
+  saveShowToneMarks,
   saveShowTranslation,
   type CalibrationSettings,
 } from "../game/settings.ts";
@@ -220,6 +224,8 @@ export function Settings({
     return loaded === "off" ? "pause" : loaded;
   });
   const [translation, setTranslation] = useState<boolean>(loadShowTranslation);
+  const [pinyinShown, setPinyinShown] = useState<boolean>(loadShowPinyin);
+  const [toneMarksShown, setToneMarksShown] = useState<boolean>(loadShowToneMarks);
 
   useEffect(() => subscribeInventory(setWords), []);
 
@@ -446,6 +452,32 @@ export function Settings({
             }}
             label="Translation"
             sublabel="English meaning above the pinyin"
+          />
+        </section>
+
+        <section>
+          <Switch
+            checked={pinyinShown}
+            onChange={(show) => {
+              setPinyinShown(show);
+              saveShowPinyin(show);
+              track({ type: "setting_changed", key: "pinyin", value: show ? "on" : "off" });
+            }}
+            label="Pinyin"
+            sublabel="Romanized spelling under the hanzi"
+          />
+        </section>
+
+        <section>
+          <Switch
+            checked={toneMarksShown}
+            onChange={(show) => {
+              setToneMarksShown(show);
+              saveShowToneMarks(show);
+              track({ type: "setting_changed", key: "tone_marks", value: show ? "on" : "off" });
+            }}
+            label="Tone marks"
+            sublabel="Pitch-contour clue for how to say it"
           />
         </section>
 

@@ -229,6 +229,41 @@ export function saveShowTranslation(show: boolean): void {
   localStorage.setItem(TRANSLATION_KEY, show ? "on" : "off");
 }
 
+// --------------------------------------------------------------- pinyin
+
+const PINYIN_KEY = "toneflap.pinyin.v1";
+
+/**
+ * Show the pinyin line in the HUD syllable card. On by default, same
+ * fail-open precedent as `loadShowTranslation`.
+ */
+export function loadShowPinyin(): boolean {
+  const raw = localStorage.getItem(PINYIN_KEY);
+  return raw !== "off";
+}
+
+export function saveShowPinyin(show: boolean): void {
+  localStorage.setItem(PINYIN_KEY, show ? "on" : "off");
+}
+
+// ----------------------------------------------------------- tone marks
+
+const TONE_MARKS_KEY = "toneflap.tonemarks.v1";
+
+/**
+ * Show the sandhi-adjusted tone-mark row in the HUD syllable card (see
+ * `src/game/sandhi.ts`). On by default, same fail-open precedent as
+ * `loadShowTranslation`.
+ */
+export function loadShowToneMarks(): boolean {
+  const raw = localStorage.getItem(TONE_MARKS_KEY);
+  return raw !== "off";
+}
+
+export function saveShowToneMarks(show: boolean): void {
+  localStorage.setItem(TONE_MARKS_KEY, show ? "on" : "off");
+}
+
 // ------------------------------------------------------------------ demo cue
 
 const CUE_STYLE_KEY = "toneflap.demo.v1";

@@ -22,7 +22,7 @@ export const TONE_PATHS: Record<Tone, string> = {
 };
 
 /** A plain dot, same stroke weight as the tone-mark strokes above — the neutral-tone glyph. */
-const NEUTRAL_TONE_PATH =
+export const NEUTRAL_TONE_PATH =
   "M 60.00,39.00 a 6.00,6.00 0 1,1 -0.01,0 Z";
 
 /** Short, plain-English name for each tone's shape — matches the icon set's own filenames. */

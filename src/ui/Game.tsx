@@ -35,6 +35,8 @@ import type { Proficiency } from "../game/tiers.ts";
 import type { LevelChoice } from "../game/settings.ts";
 import { TONE_INFO, type Tone } from "../game/gates.ts";
 import { TONE_LINE_COLOR } from "./toneColors.ts";
+import { sandhiTones } from "../game/sandhi.ts";
+import { ToneClueSpeakerIcon, ToneMarkIcon } from "./toneMarkIcons.tsx";
 import { tuning } from "../game/tuning.ts";
 import { CALIBRATION_TONES, Run, type RunMode, type RunSnapshot, type WordMix } from "../game/run.ts";
 import type { Word } from "../game/words.ts";
@@ -45,6 +47,8 @@ import {
   loadCueStyle,
   loadNoticeSeen,
   loadReduceMotion,
+  loadShowPinyin,
+  loadShowToneMarks,
   loadShowTranslation,
   saveNoticeSeen,
   type CalibrationSettings,
@@ -245,6 +249,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   // reaches the HUD without a re-run. Unlike speed and width, this changes no
   // geometry, so applying it mid-gate is safe.
   const [showTranslation, setShowTranslation] = useState(loadShowTranslation);
+  const [showPinyin] = useState(loadShowPinyin);
+  const [showToneMarks] = useState(loadShowToneMarks);
   /**
    * The tutorial's guided walkthrough — see `WalkthroughStep`. Starts at
    * "intro" for every *deliberately started* tutorial run (also reset to
@@ -1192,31 +1198,51 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
               gate is incidental (it only supplies the corridor's contour),
               so showing its hanzi/pinyin would cue pronunciation the mode is
               explicitly not asking for. Only the gate itself is shown. */}
-          {mode !== "learn" && info && displayTone !== null && (
-            <div className="hud-syllable">
-              {showTranslation && displayWord?.english && (
-                <span className="english">{displayWord.english}</span>
-              )}
-              <span className="syllable">{displayWord?.pinyin ?? info.pinyin}</span>
-              <span className="hanzi">{displayWord?.hanzi ?? info.hanzi}</span>
-              {displayTones.length > 1 ? (
-                <span className="tone-num">
-                  (
-                  {displayTones.map((t, i) => (
-                    <span key={i} style={{ color: TONE_LINE_COLOR[t] }}>
-                      {i > 0 ? "·" : ""}
-                      {/* `t` is typed `Tone` but a pairs gate's tones can hold
-                          a runtime 0 (neutral) — see words.ts's `isMulti`. */}
-                      {(t as number) === 0 ? "neutral" : `T${t}`}
-                    </span>
-                  ))}
-                  )
-                </span>
-              ) : (
-                <span className="tone-num">({displayTone})</span>
-              )}
-            </div>
-          )}
+          {mode !== "learn" && info && displayTone !== null && (() => {
+            const showEnglishCol = showTranslation && !!displayWord?.english;
+            // Pinyin+hanzi always share one column even when pinyin is
+            // hidden — hanzi has no independent toggle (see settings.ts).
+            const columns = [
+              showEnglishCol && (
+                <div key="english" className="hud-syllable-col hud-syllable-col-translation">
+                  {displayWord!.english}
+                </div>
+              ),
+              <div key="word" className="hud-syllable-col hud-syllable-col-word">
+                {showPinyin && (
+                  <span className="syllable">{displayWord?.pinyin ?? info.pinyin}</span>
+                )}
+                <span className="hanzi">{displayWord?.hanzi ?? info.hanzi}</span>
+              </div>,
+              // Sandhi-adjusted tone clue — what to actually say, not the
+              // citation tone pinyin already shows. See src/game/sandhi.ts;
+              // the speaker icon marks this as a pronunciation cue, not a
+              // restatement of the word.
+              showToneMarks && (
+                <div key="tone" className="hud-syllable-col hud-syllable-col-tone">
+                  <span className="tone-marks-speaker">
+                    <ToneClueSpeakerIcon />
+                  </span>
+                  <span className="tone-marks-row">
+                    {sandhiTones({
+                      tones: displayWord?.tones ?? displayTones,
+                      pinyin: displayWord?.pinyin ?? info.pinyin,
+                      hanzi: displayWord?.hanzi ?? info.hanzi,
+                    }).map((t, i) => (
+                      <span
+                        key={i}
+                        className="tone-mark-glyph"
+                        style={{ color: TONE_LINE_COLOR[t === "half3" ? 3 : t] }}
+                      >
+                        <ToneMarkIcon tone={t} />
+                      </span>
+                    ))}
+                  </span>
+                </div>
+              ),
+            ].filter(Boolean);
+            return <div className="hud-syllable">{columns}</div>;
+          })()}
 
           {/* Tutorial-only cue text ("say it flat and high") — the
               lesson copy that teaches each tone shape. Outside the tutorial
