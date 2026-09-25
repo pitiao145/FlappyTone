@@ -1,4 +1,5 @@
-import { BellSlashIcon } from "./icons.tsx";
+import { loadReduceMotion } from "../game/settings.ts";
+import { BellRingingIcon, SpeakerHighIcon } from "./icons.tsx";
 
 interface Props {
   busy: boolean;
@@ -32,8 +33,9 @@ export function SilentModeGate({ busy, error, onConfirm, canvasWidth, canvasHeig
         style={{ width: canvasWidth, height: canvasHeight }}
       >
         <div className="screen playhome-overlay">
-          <div className="silent-gate-icon">
-            <BellSlashIcon />
+          <div className={`silent-gate-icons${loadReduceMotion() ? " silent-gate-icons--still" : ""}`}>
+            <SpeakerHighIcon />
+            <BellRingingIcon />
           </div>
           <h1>Turn up your volume</h1>
           <p className="note">

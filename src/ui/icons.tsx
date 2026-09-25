@@ -164,19 +164,35 @@ export function GearIcon() {
   );
 }
 
-/** Phosphor `BellSimpleSlash`, Regular — the silent-mode warning glyph. */
-export function BellSlashIcon() {
+/** Bold weight (stroke-width 24, not Regular's 16) — the silent-mode
+ * screen's icons need to read clearly at the large size they're shown at. */
+const STROKE_BOLD = { ...STROKE, strokeWidth: "24" } as const;
+
+/** Phosphor `SpeakerHigh`, Bold — the silent-mode warning's volume glyph. */
+export function SpeakerHighIcon() {
   return (
     <svg {...BOX}>
-      <line x1="48" y1="40" x2="208" y2="216" {...STROKE} />
-      <line x1="96" y1="224" x2="160" y2="224" {...STROKE} />
       <path
-        d="M186.18,192H48a8,8,0,0,1-6.88-12C47.71,168.6,56,139.81,56,104A71.65,71.65,0,0,1,68.85,62.94"
-        {...STROKE}
+        d="M80,168H32a8,8,0,0,1-8-8V96a8,8,0,0,1,8-8H80l72-56V224Z"
+        {...STROKE_BOLD}
       />
+      <line x1="80" y1="88" x2="80" y2="168" {...STROKE_BOLD} />
+      <path d="M192,106.85a32,32,0,0,1,0,42.3" {...STROKE_BOLD} />
+      <path d="M221.67,80a72,72,0,0,1,0,96" {...STROKE_BOLD} />
+    </svg>
+  );
+}
+
+/** Phosphor `BellSimpleRinging`, Bold — the silent-mode warning's ring glyph. */
+export function BellRingingIcon() {
+  return (
+    <svg {...BOX}>
+      <line x1="96" y1="228" x2="160" y2="228" {...STROKE_BOLD} />
+      <path d="M184,24a102.71,102.71,0,0,1,36.29,40" {...STROKE_BOLD} />
+      <path d="M35.71,64A102.71,102.71,0,0,1,72,24" {...STROKE_BOLD} />
       <path
-        d="M92.48,41.36A72,72,0,0,1,200,104c0,29.1,5.48,53.56,11.07,67.8"
-        {...STROKE}
+        d="M52,188a8,8,0,0,1-6.38-12.81C53.85,164.49,63.84,144.6,64,112a64,64,0,0,1,128,0c.16,32.6,10.15,52.49,18.35,63.19A8,8,0,0,1,204,188Z"
+        {...STROKE_BOLD}
       />
     </svg>
   );
