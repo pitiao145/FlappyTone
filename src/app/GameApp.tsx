@@ -162,15 +162,19 @@ const DevLogin = import.meta.env.DEV
  * Only ever a *hint* for the initial tab, never an instruction to start:
  * `ensureMic()` needs a user gesture (iOS Safari grants `getUserMedia` inside
  * the click and nowhere else), and a gesture on the previous page does not
- * survive the navigation. `visualiser` is the only intent worth acting on
- * here, since it's the only one that doesn't require the mic to already be
- * open — it opens onto the Visualiser tab, and the player's first tap there
- * is the gesture.
+ * survive the navigation. `visualiser` is the only intent that needs special
+ * handling for that reason — it opens onto the Visualiser tab, and the
+ * player's first tap there is the gesture (see `visualiserMicReady` below).
+ * `leaderboard`/`pairs`/`pricing` all land on a screen that only reads data —
+ * Progress, Modes, Profile — never opens the mic on arrival, so they can be
+ * honoured directly with no calibration handoff at all.
  */
-function initialIntent(): "visualiser" | null {
+function initialIntent(): "visualiser" | "leaderboard" | "pairs" | "pricing" | null {
   try {
     const intent = new URLSearchParams(window.location.search).get("intent");
-    if (intent === "visualiser") return "visualiser";
+    if (intent === "visualiser" || intent === "leaderboard" || intent === "pairs" || intent === "pricing") {
+      return intent;
+    }
   } catch {
     /* no window (tests) */
   }
@@ -332,9 +336,22 @@ export default function GameApp() {
   // path below (`visualiserMicReady`, `openVisualiser`) gets an uncalibrated
   // first-time arrival there anyway instead of stranding it on Play — a
   // share link has to work on a session that has never opened the mic yet.
-  const [screen, setScreen] = useState<Screen>(() =>
-    initialIntent() === "visualiser" ? "visualiser" : "play",
-  );
+  // `leaderboard`/`pairs`/`pricing` need no such handoff (see `initialIntent`'s
+  // doc comment) — they just pick a different initial screen.
+  const [screen, setScreen] = useState<Screen>(() => {
+    switch (initialIntent()) {
+      case "visualiser":
+        return "visualiser";
+      case "leaderboard":
+        return "progress";
+      case "pairs":
+        return "modes";
+      case "pricing":
+        return "profile";
+      default:
+        return "play";
+    }
+  });
   // Global-tier: fires on every screen change, always sent in production
   // regardless of the gameplay consent toggle (session.ts's eventTier).
   // "lab"/"devlogin" are dev-only and excluded from TrackedScreen, so they
@@ -528,8 +545,13 @@ export default function GameApp() {
   }, []);
   /** Where to go once calibration finishes, when Play/Tutorial routed through it. */
   const pendingRef = useRef<StartIntent | null>(null);
-  /** Set by GameOver's "view full leaderboard" link, read once when Progress mounts. */
-  const progressLeaderboardRef = useRef(false);
+  /**
+   * Set by GameOver's "view full leaderboard" link, read once when Progress
+   * mounts. Also seeded true by `?intent=leaderboard` — the initial `screen`
+   * state above already lands on "progress" for that intent, this is what
+   * gets it scrolled straight to the board section rather than the top.
+   */
+  const progressLeaderboardRef = useRef(initialIntent() === "leaderboard");
   /**
    * True while the tutorial that immediately follows a calibration is running:
    * its measured range seeds the grid (calibration itself only sites the centre

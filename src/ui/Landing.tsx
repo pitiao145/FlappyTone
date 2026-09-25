@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from "react";
 import { brand } from "../brand.ts";
 import type { Tone } from "../game/gates.ts";
+import { tierLimits } from "../game/tiers.ts";
 import { wordsFromCatalog, wordsOfTone, type Word } from "../game/words.ts";
 import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
 import fallback from "../data/wordsFallback.json";
@@ -10,6 +11,8 @@ import { DemoLoop, VisualiserDemoLoop } from "./DemoLoop.tsx";
 import { Footer } from "./Footer.tsx";
 import { DotsThreeVerticalIcon, PlusSquareIcon, ShareIcon } from "./icons.tsx";
 import { Nav } from "./Nav.tsx";
+import { goToApp } from "./appLink.ts";
+import { PRO_PRICE } from "./plan.ts";
 import { ToneAverageCard } from "./ToneAverageCard.tsx";
 import { useNewsletterSubscribe } from "./useNewsletterSubscribe.ts";
 
@@ -122,10 +125,18 @@ export function Landing({ onPlay, onVisualiser }: Props) {
       </div>
 
       <section id="play" className="landing-section hero-cards">
-        <article className="hero-card">
+        <article className="hero-card hero-card-media">
           <p className="section-eyebrow">{brand.heroCards.play.eyebrow}</p>
           <h3>{brand.heroCards.play.title}</h3>
           <p>{brand.heroCards.play.body}</p>
+          <img
+            className="hero-card-thumb"
+            src="/hero-cards/practice.webp"
+            width={420}
+            height={832}
+            alt=""
+            loading="lazy"
+          />
           <button
             className="primary"
             onClick={() => {
@@ -136,10 +147,18 @@ export function Landing({ onPlay, onVisualiser }: Props) {
             {brand.heroCards.play.cta}
           </button>
         </article>
-        <article className="hero-card hero-card-accent">
+        <article className="hero-card hero-card-accent hero-card-media">
           <p className="section-eyebrow">{brand.heroCards.visualise.eyebrow}</p>
           <h3>{brand.heroCards.visualise.title}</h3>
           <p>{brand.heroCards.visualise.body}</p>
+          <img
+            className="hero-card-thumb"
+            src="/hero-cards/understanding.webp"
+            width={500}
+            height={499}
+            alt=""
+            loading="lazy"
+          />
           <button
             className="secondary"
             onClick={() => {
@@ -163,6 +182,20 @@ export function Landing({ onPlay, onVisualiser }: Props) {
             <ToneAverageCard tone={3} words={wordsByTone.get(3) ?? []} />
             <p className="visualiser-caption">{brand.visualiser.imageCaption}</p>
           </div>
+        </div>
+      </section>
+
+      <section id="why-tones-hard" className="landing-section">
+        <div className="quote-row">
+          <div className="quote-row-text">
+            <p className="section-eyebrow">{brand.notTextbook.eyebrow}</p>
+            <h2>{brand.notTextbook.title}</h2>
+            <p>{brand.notTextbook.body}</p>
+          </div>
+          <blockquote className="landing-quote">
+            {brand.notTextbook.quote}
+            <cite>{brand.notTextbook.quoteAttribution}</cite>
+          </blockquote>
         </div>
       </section>
 
@@ -214,7 +247,121 @@ export function Landing({ onPlay, onVisualiser }: Props) {
         </ul>
       </section>
 
+      <section id="tone-pairs" className="landing-section">
+        <div className="quote-row">
+          <div className="quote-row-text">
+            <p className="section-eyebrow">{brand.tonePairs.eyebrow}</p>
+            <h2>{brand.tonePairs.title}</h2>
+            <p>{brand.tonePairs.body}</p>
+            <button
+              className="primary landing-section-cta"
+              onClick={() => {
+                capturePostHogEvent("landing_cta_clicked", { cta: "tone_pairs", location: "tone_pairs" }, INSTANT);
+                goToApp("pairs");
+              }}
+            >
+              {brand.tonePairs.cta}
+            </button>
+          </div>
+          <blockquote className="landing-quote">
+            {brand.tonePairs.quote}
+            <cite>{brand.tonePairs.quoteAttribution}</cite>
+          </blockquote>
+        </div>
+      </section>
+
+      <section id="leaderboard" className="landing-section landing-section-panel">
+        <div className="leaderboard-row">
+          <div className="leaderboard-row-text">
+            <p className="section-eyebrow">{brand.leaderboard.eyebrow}</p>
+            <h2>{brand.leaderboard.title}</h2>
+            <p>{brand.leaderboard.body}</p>
+            <button
+              className="primary landing-section-cta"
+              onClick={() => {
+                capturePostHogEvent("landing_cta_clicked", { cta: "leaderboard", location: "leaderboard" }, INSTANT);
+                goToApp("leaderboard");
+              }}
+            >
+              {brand.leaderboard.cta}
+            </button>
+          </div>
+          <img
+            className="leaderboard-shot"
+            src="/hero-cards/leaderboard.webp"
+            width={1100}
+            height={697}
+            alt="The all-time leaderboard, top players ranked by score"
+            loading="lazy"
+          />
+        </div>
+      </section>
+
       <ComingSoon />
+
+      <section id="pricing" className="landing-section">
+        <div className="quote-row">
+          <div className="quote-row-text">
+            <p className="section-eyebrow">{brand.pricing.eyebrow}</p>
+            <h2>{brand.pricing.title}</h2>
+          </div>
+          <blockquote className="landing-quote">
+            {brand.pricing.quote}
+            <cite>{brand.pricing.quoteAttribution}</cite>
+          </blockquote>
+        </div>
+        <div className="hero-cards">
+          <article className="hero-card">
+            <h3>{brand.pricing.free.label}</h3>
+            <ul className="pricing-feature-list">
+              <li>{tierLimits().free.runsPerDay} runs a day</li>
+              <li>Progress saved and synced to your account</li>
+              <li>A real leaderboard entry, under a generated name</li>
+              <li>{tierLimits().free.wordsPerTone} words per tone in the visualiser</li>
+            </ul>
+            <button
+              className="secondary"
+              onClick={() => {
+                capturePostHogEvent("landing_cta_clicked", { cta: "play", location: "pricing_free" }, INSTANT);
+                onPlay();
+              }}
+            >
+              {brand.pricing.free.cta}
+            </button>
+          </article>
+          <article className="hero-card hero-card-accent">
+            <h3>{brand.pricing.pro.label} — {PRO_PRICE} one-time</h3>
+            <ul className="pricing-feature-list">
+              <li>Unlimited runs</li>
+              <li>Every word, every tone, every TOCFL level</li>
+              <li>Full tone pairs access</li>
+              <li>Leaderboard entry under a name you choose</li>
+            </ul>
+            <button
+              className="primary"
+              onClick={() => {
+                capturePostHogEvent("landing_cta_clicked", { cta: "pricing", location: "pricing_pro" }, INSTANT);
+                goToApp("pricing");
+              }}
+            >
+              {brand.pricing.pro.cta}
+            </button>
+          </article>
+        </div>
+      </section>
+
+      <section id="faq" className="landing-section">
+        <p className="section-eyebrow">FAQ</p>
+        <h2>Questions</h2>
+        <div className="landing-faq">
+          {brand.faq.map((item) => (
+            <details key={item.q} className="landing-faq-item">
+              <summary>{item.q}</summary>
+              <p>{item.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
 
       <section id="mobile" className="landing-section">
 

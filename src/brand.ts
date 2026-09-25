@@ -47,7 +47,7 @@ export const brand = {
   tagline: "Your voice is the controller.",
   /** One sentence, under the h1. Say what it does, not what it feels like. */
   pitch:
-    "Tones can be hard to grasp for non-Mandarin speakers. FlappyTone lets you practice tones intuitively, while having fun!",
+    "Tones are the hardest thing to get a feel for from a textbook. FlappyTone turns them into something you see and fly through, so you build muscle memory without it feeling like studying.",
   /** PRD §8 requires this to be visible before the mic is ever requested. */
   requirement: "Needs a microphone and a quiet room.",
 
@@ -76,8 +76,8 @@ export const brand = {
   /** "Why this works" — text only, no image, sits above the visualiser section. */
   whyThisWorks: {
     eyebrow: "How this works",
-    title: "You know how tones look like on paper.\nThis makes you understand them.",
-    body: "mā, má, mǎ, mà trace four different pitch shapes every time a native speaker says them, that's literally what the tone marks are. Say a tone enough times while watching its shape and you will start recognizing it before you can explain why. You're effectively creating a visual memory of pitch, pretty cool!\n" +
+    title: "Imagine seeing your pitch as you speak it.",
+    body: "mā, má, mǎ, mà trace four different pitch shapes every time a native speaker says them, that's literally what the tone marks are. Once you make that audio-to-visual connection, tones get a lot more approachable. Watching the shape as you speak trains your voice to actually produce the right pitch changes, and it doesn't take long before you start recognizing tones by ear too, without even trying.\n" +
       "This runs on nothing but pitch-detection math in your browser. No model, no upload, no AI.",
   },
 
@@ -85,7 +85,7 @@ export const brand = {
   toneDataTitle: "Trained on the voice of a native Mandarin speaker from Taiwan",
   toneDataEyebrow: "Based on real speech, not the textbook",
   toneDataIntro:
-    "Every corridor is measured from Jane, a native Taiwanese speaker. The gate shapes therefore represent the exact path of her voice at the moment of recording. So if a shape doesn't match a textbook you've used, that's not a bug, it's a real accent. More accents, and eventually other tonal languages, are on the roadmap.",
+    "Every corridor is measured from Jane, a native Taiwanese speaker, across 450+ recorded words. Traditional characters, Taiwan pronunciation. The word list follows TOCFL order, not because this is exam prep, but because it's a solid, native-vetted answer to what's actually worth learning first as a beginner. No random vocab, no rote drills, just real words you practice until your voice makes the shape. And if a shape doesn't match a textbook you've used, that's not a bug, it's a real accent. More accents, and eventually other tonal languages, are on the roadmap.",
 
   /**
    * The four tones, as the landing page names them.
@@ -108,8 +108,79 @@ export const brand = {
   limits: [
     "Not pronunciation scoring",
     "Not a fluency app",
-    "One syllable at a time",
+    "Real speech, not flashcards",
     "No AI, just maths",
+  ],
+
+  /** "Why this isn't textbook practice" — problem framing, sits between
+   *  how-it-works and the visualiser deep-dive. */
+  notTextbook: {
+    eyebrow: "Not another textbook drill",
+    title: "You don't study tones. You feel them.",
+    body: "Most tone practice is a chart and a list of rules: memorize the shape, repeat the syllable, move on. It doesn't stick. Seeing the tone as you speak it, and watching your own voice trace the shape in real time, builds a mental image most people never get from a textbook. It doesn't really feel like practicing, but you're building muscle memory the whole time.",
+    quote: "“Really cool. I have been here for three years and my tones are shit! This is really great.”",
+    quoteAttribution: "— r/taiwan",
+  },
+
+  /** Tone Pairs, live and player-reachable: real two-syllable words. */
+  tonePairs: {
+    eyebrow: "Now live",
+    title: "Real two-syllable words, not just single tones",
+    body: "Most tone trainers stop at one syllable. FlappyTone doesn't. Tone Pairs mode flies real two-syllable words, 好玩, 以前, and 240+ more, with a corridor shaped from the exact recording, sandhi and all. Shuffle across every combo, or drill the one that keeps beating you.",
+    cta: "Try Tone Pairs",
+    quote: "“Tone pairs are what I need most, 3-3 still gets me.”",
+    quoteAttribution: "— an early tester",
+  },
+
+  /** Weekly leaderboard. */
+  leaderboard: {
+    eyebrow: "Compete",
+    title: "A real leaderboard, week, month, or all-time",
+    body: "Sign up free and every run counts toward your rank. See where you stand this week, this month, or against everyone who's ever played, and come back to defend your spot.",
+    cta: "See the board",
+  },
+
+  /** Free vs Pro, pulled from live tier limits so it can't drift. */
+  pricing: {
+    eyebrow: "Free to play",
+    title: "Free to start, one-time to go further",
+    quote: "“I can not continue studying Chinese without this app. I depend on it so much.”",
+    quoteAttribution: "— EarlyBird player, over email",
+    free: {
+      label: "Free",
+      cta: "Start free",
+    },
+    pro: {
+      label: "Pro",
+      cta: "Go Pro",
+    },
+  },
+
+  faq: [
+    {
+      q: "Does this teach me to speak naturally?",
+      a: "No. It's built for muscle memory on the four tones, not fluency. Words are pronounced clearly and a bit exaggerated on purpose, that's what makes the shape learnable.",
+    },
+    {
+      q: "Is this AI?",
+      a: "No generative AI anywhere. Your voice never leaves your device, it's just pitch-detection math running in the browser.",
+    },
+    {
+      q: "Is this exam prep for TOCFL or HSK?",
+      a: "No. Words are picked using the TOCFL beginner lists because they're a good, real answer to what to learn first, not because this trains you for a test. This is about pronunciation, not certification.",
+    },
+    {
+      q: "Why Taiwan pronunciation and not Beijing?",
+      a: "That's the only accent recorded so far. Regional variation in tone contours is real, more accents are on the roadmap.",
+    },
+    {
+      q: "What are tone pairs?",
+      a: "Real two-syllable words, not single syllables drilled in isolation. The corridor shape comes straight from the recording, sandhi included.",
+    },
+    {
+      q: "Do I need an account?",
+      a: "No, you can play as a guest. An account saves your progress across devices and gets you on the leaderboard.",
+    },
   ],
 
   visualiser: {
@@ -117,7 +188,7 @@ export const brand = {
     title: "Understand how to use your voice",
     body: "Say mǎ ten times in a row and watch every attempt stack on the target shape. No score, no pressure, no gate to clear. Helps you understand how to voice each tone properly.",
     cta: "Open the visualiser",
-    imageCaption: "mǎ — three attempts stacked on the target shape",
+    imageCaption: "mǎ, average pronunciation of a native Taiwanese speaker",
   },
 
   mobile: {
@@ -151,11 +222,11 @@ export const brand = {
 
   comingSoon: {
     eyebrow: "Coming next",
-    title: "More tones to fly, coming next",
-    body: "Right now it's 120 one-syllable words and four tones. Good for starters. Next: a bigger word list, tone-pair drills and eventually more accents. Get notified when new words ship.",
+    title: "More voices and more words, always shipping",
+    body: "It's 450+ words across TOCFL 1-3 and two-syllable tone pairs today. Next up: more accents, deeper tone-pair drills, and whatever gets asked for most. Get notified when new words ship.",
     items: [
-      { label: "Next", title: "A bigger word list" },
-      { label: "Then", title: "Tone-pair drills" },
+      { label: "Next", title: "More tone-pair drills" },
+      { label: "Then", title: "A second voice" },
       { label: "Later", title: "More accents & languages" },
     ],
     placeholder: "you@example.com",
@@ -204,6 +275,7 @@ export const brand = {
       navLabel: "How it works",
       inNav: true,
     },
+    { id: "why-tones-hard", title: "You don't study tones. You feel them." },
     {
       id: "visualiser",
       title: "Tone visualiser",
@@ -216,7 +288,21 @@ export const brand = {
       navLabel: "Real speech",
       inNav: true,
     },
+    {
+      id: "tone-pairs",
+      title: "Real two-syllable words, not just single tones",
+      navLabel: "Tone pairs",
+      inNav: true,
+    },
+    {
+      id: "leaderboard",
+      title: "A weekly leaderboard, reset every Monday",
+      navLabel: "Leaderboard",
+      inNav: true,
+    },
     { id: "coming-soon", title: "Get notified" },
+    { id: "pricing", title: "Free to start, one-time to go further", navLabel: "Pricing", inNav: true },
+    { id: "faq", title: "Questions" },
     { id: "mobile", title: "Mobile app", navLabel: "Mobile", inNav: true },
   ] as LandingSection[],
 } as const;

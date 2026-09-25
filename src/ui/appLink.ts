@@ -10,8 +10,18 @@
  */
 export const APP_PATH = "/app";
 
-/** What the game should do on arrival, when the landing page sent you there. */
-export type AppIntent = "visualiser";
+/**
+ * What the game should do on arrival, when the landing page sent you there.
+ *
+ * `visualiser` needs a fresh gesture to open the mic (see GameApp's
+ * `initialIntent` doc comment) and routes through the same calibration
+ * handoff a manual tap would. The other three land on a screen that reads
+ * data but never opens the mic, so they can jump straight there with no
+ * gesture/calibration dance at all: `leaderboard` → Progress, scrolled to
+ * the board; `pairs` → Modes, so Tone Pairs is one tap away; `pricing` →
+ * Profile, where the Pro upgrade lives.
+ */
+export type AppIntent = "visualiser" | "leaderboard" | "pairs" | "pricing";
 
 export function appHref(intent?: AppIntent): string {
   return intent ? `${APP_PATH}?intent=${intent}` : APP_PATH;

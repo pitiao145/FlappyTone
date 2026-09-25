@@ -3848,8 +3848,27 @@
   margin-inline: auto;
   display: flex;
   flex-direction: column;
-  gap: 8rem;
+  gap: 1.5rem;
   text-align: left;
+}
+
+@media (min-width: 901px) {
+  .landing {
+    gap: 2.5rem;
+  }
+}
+
+/* Habit-Garden-style rhythm: every section (bar aside) claims the full
+   viewport below the sticky nav and centres its content in it, so scrolling
+   reads as one section at a time rather than a dense scroll of text. The nav
+   is 88px everywhere else on this page (see `.landing-section`'s own
+   scroll-margin-top) — reused here rather than measured again. A section
+   whose own content is taller than the viewport just grows past `min-height`,
+   nothing clips. */
+.landing > section,
+.landing > .hero-row {
+  min-height: calc(100dvh - 88px);
+  justify-content: center;
 }
 
 /* Two boxes, not one: the bar is full-bleed (background reaches the true
@@ -4307,14 +4326,16 @@
   }
 }
 
-section.hero-cards {
+section.hero-cards,
+div.hero-cards {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-4);
 }
 
 @media (min-width: 640px) {
-  section.hero-cards {
+  section.hero-cards,
+  div.hero-cards {
     grid-template-columns: 1fr 1fr;
   }
 }
@@ -4369,6 +4390,31 @@ section.hero-cards {
 .hero-card:hover button.primary,
 .hero-card:hover button:not(.primary) {
   transform: translateY(-1px);
+}
+
+/* A small, cropped still from the section's own demo — proof, not a hero
+   image. Capped well below the hero video's size so it reads as a detail,
+   not a second hero. */
+/* Give the two demo-clip cards their own centred rhythm — the still is the
+   payoff of reading the card, so it and the CTA below it centre themselves
+   while the eyebrow/heading/body stay left-aligned above. */
+.hero-card-media {
+  flex: 1;
+}
+
+.hero-card-media .hero-card-thumb,
+.hero-card-media > button {
+  align-self: center;
+}
+
+.hero-card-thumb {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 320px;
+  margin-top: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
 }
 
 .hero-card-accent {
@@ -4497,9 +4543,15 @@ section.hero-cards {
    the page with a fill behind it, matching the Figma design's alternating
    rhythm without introducing a second accent colour. */
 .landing-section-panel {
-  padding: var(--space-6);
+  padding: var(--space-7);
   border-radius: var(--radius-md);
   background: var(--surface-panel);
+}
+
+@media (min-width: 901px) {
+  .landing-section-panel {
+    padding: var(--space-8) 64px;
+  }
 }
 
 .landing button.link {
@@ -4519,21 +4571,39 @@ section.hero-cards {
 .landing-section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
   scroll-margin-top: 88px;
 }
 
 .landing-section h2 {
   font-size: var(--text-2xl);
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
 .why-this-works-content {
   display: flex;
-  gap: 4rem;
+  flex-direction: column;
+  gap: var(--space-6);
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
+}
+
+@media (min-width: 901px) {
+  .why-this-works-content {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4rem;
+  }
+
+  .why-this-works-text {
+    flex: 1 1 55%;
+    min-width: 0;
+  }
+
+  .why-this-works-content .visualiser-figure {
+    flex: 1 1 35%;
+    min-width: 0;
+  }
 }
 
 .title-multiline {
@@ -4565,6 +4635,172 @@ section.hero-cards {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+.landing-section-cta {
+  align-self: flex-start;
+}
+
+/* Text claim on the left, proof on the right — mirrors `.real-speech-row`'s
+   split so a quote reads as evidence sitting beside the point, not a
+   decoration under it. Stacks on mobile, quote first (it's the payoff a
+   thumb scrolls to) then the claim it backs up. */
+.quote-row {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-6);
+}
+
+.quote-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+@media (min-width: 901px) {
+  .quote-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 64px;
+  }
+
+  .quote-row-text {
+    flex: 1 1 55%;
+    min-width: 0;
+  }
+
+  .landing-quote {
+    flex: 1 1 40%;
+  }
+}
+
+.landing-quote {
+  margin: 0;
+  padding: var(--space-4) 0 var(--space-4) var(--space-6);
+  border-left: 3px solid var(--accent);
+  color: var(--ink);
+  font-size: var(--text-2xl);
+  font-style: italic;
+  line-height: 1.45;
+  text-wrap: balance;
+}
+
+.landing-quote cite {
+  display: block;
+  margin-top: var(--space-4);
+  font-size: var(--text-sm);
+  font-style: normal;
+  color: var(--ink-dim);
+}
+
+.pricing-feature-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--ink-muted);
+  line-height: 1.6;
+}
+
+.pricing-feature-list li {
+  padding-left: 1.4em;
+  position: relative;
+}
+
+.pricing-feature-list li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+}
+
+.landing-faq {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.landing-faq-item {
+  border-top: 2px solid var(--line-strong);
+  padding: var(--space-4) 0;
+  transition: border-color 0.2s ease;
+}
+
+.landing-faq-item[open] {
+  border-top-color: var(--accent);
+}
+
+.landing-faq-item summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--ink);
+  list-style: none;
+}
+
+.landing-faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.landing-faq-item summary::before {
+  content: "+";
+  display: inline-block;
+  width: 1.2em;
+  color: var(--accent);
+}
+
+.landing-faq-item[open] summary::before {
+  content: "\2212";
+}
+
+.landing-faq-item p {
+  margin: var(--space-2) 0 0 1.2em;
+  color: var(--ink-muted);
+  line-height: 1.6;
+  max-width: 60ch;
+}
+
+.leaderboard-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  align-items: center;
+}
+
+.leaderboard-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.leaderboard-shot {
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+}
+
+@media (min-width: 901px) {
+  .leaderboard-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 56px;
+  }
+
+  .leaderboard-row-text {
+    flex: 1 1 45%;
+    min-width: 0;
+  }
+
+  .leaderboard-shot {
+    flex: 1 1 50%;
+    max-width: 560px;
+  }
 }
 
 .roadmap-header {
