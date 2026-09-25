@@ -249,8 +249,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   // reaches the HUD without a re-run. Unlike speed and width, this changes no
   // geometry, so applying it mid-gate is safe.
   const [showTranslation, setShowTranslation] = useState(loadShowTranslation);
-  const [showPinyin] = useState(loadShowPinyin);
-  const [showToneMarks] = useState(loadShowToneMarks);
+  const [showPinyin, setShowPinyin] = useState(loadShowPinyin);
+  const [showToneMarks, setShowToneMarks] = useState(loadShowToneMarks);
   /**
    * The tutorial's guided walkthrough — see `WalkthroughStep`. Starts at
    * "intro" for every *deliberately started* tutorial run (also reset to
@@ -1479,6 +1479,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
               onQuit={exitRun(onQuit)}
               onCueStyle={(style) => runRef.current?.setCueStyle(style)}
               onShowTranslation={setShowTranslation}
+              onShowPinyin={setShowPinyin}
+              onShowToneMarks={setShowToneMarks}
             />
           </div>
         )}

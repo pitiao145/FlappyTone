@@ -6,9 +6,13 @@ import { toneBreakdown } from "../game/scoring.ts";
 import {
   loadCorridorWidth,
   loadCueStyle,
+  loadShowPinyin,
+  loadShowToneMarks,
   loadShowTranslation,
   saveCorridorWidth,
   saveCueStyle,
+  saveShowPinyin,
+  saveShowToneMarks,
   saveShowTranslation,
 } from "../game/settings.ts";
 import { Choice } from "./Choice.tsx";
@@ -37,6 +41,8 @@ interface Props {
   onQuit: () => void;
   onCueStyle?: (style: CueStyle) => void;
   onShowTranslation?: (show: boolean) => void;
+  onShowPinyin?: (show: boolean) => void;
+  onShowToneMarks?: (show: boolean) => void;
 }
 
 /**
@@ -59,6 +65,8 @@ export function PauseMenu({
   onQuit,
   onCueStyle,
   onShowTranslation,
+  onShowPinyin,
+  onShowToneMarks,
 }: Props) {
   const [width, setWidth] = useState<CorridorWidth>(loadCorridorWidth);
   // "off" is disabled below (broken), so a previously-persisted "off" is
@@ -68,6 +76,8 @@ export function PauseMenu({
     return loaded === "off" ? "pause" : loaded;
   });
   const [translation, setTranslation] = useState<boolean>(loadShowTranslation);
+  const [pinyinShown, setPinyinShown] = useState<boolean>(loadShowPinyin);
+  const [toneMarksShown, setToneMarksShown] = useState<boolean>(loadShowToneMarks);
 
   const breakdown = stats ? toneBreakdown(stats) : null;
 
@@ -164,6 +174,28 @@ export function PauseMenu({
             }}
             label="Translation"
             sublabel="English meaning above the pinyin"
+          />
+
+          <Switch
+            checked={pinyinShown}
+            onChange={(show) => {
+              setPinyinShown(show);
+              saveShowPinyin(show);
+              onShowPinyin?.(show);
+            }}
+            label="Pinyin"
+            sublabel="Romanized spelling under the hanzi"
+          />
+
+          <Switch
+            checked={toneMarksShown}
+            onChange={(show) => {
+              setToneMarksShown(show);
+              saveShowToneMarks(show);
+              onShowToneMarks?.(show);
+            }}
+            label="Tone marks"
+            sublabel="Pitch-contour clue for how to say it"
           />
 
           <div>
