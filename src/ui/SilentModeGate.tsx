@@ -39,8 +39,12 @@ export function SilentModeGate({ busy, error, onConfirm, canvasWidth, canvasHeig
           </div>
           <h1>Turn up your volume</h1>
           <p className="note">
-            This game doesn't work in silent mode — make sure your phone's
+            This game doesn't work in silent mode. Make sure your phone's
             silent switch is off and your volume is up.
+          </p>
+          <br></br>
+          <p className="note">
+            For best results, do not use bluetooth headphones as they may cause lag.
           </p>
           <div className="menu playhome-menu">
             <button className="primary" disabled={busy} onClick={onConfirm}>
