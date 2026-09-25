@@ -58,16 +58,28 @@ ffmpeg -y -i /tmp/og-2x.png -vf "scale=1200:630:flags=lanczos" -pix_fmt rgb24 pu
 
 Rendering at 2× and downscaling is what keeps the type clean.
 
-After changing it, re-scrape the preview — Slack, X and iMessage all cache
-aggressively. A `?v=2` on the `og:image` URL forces a refresh.
+After changing it, bump the `?v=` on the `og:image` URL in **both** `index.html`
+and `app.html` — WhatsApp, Slack, X and iMessage all cache the image by URL for
+weeks, so a replaced file at the same URL keeps showing the old card. WhatsApp
+also caches the preview per *page* URL; to check a change, paste a URL it has
+never seen (e.g. `https://flappytone.com/?x=1`), and use Facebook's Sharing
+Debugger ("Scrape Again") to refresh Meta's server-side copy.
 
 ## The icons
 
-`public/favicon.svg` is the mark: the same Tone 3 contour as the OG image, over
-the Chao grid, with the bird at its head. It is deliberately **not** a bird — at
-16px a bird is a blob, and the trail is what the product is (PRD §8).
+The icons are the OG image's art re-fitted to a square: the Tone 3 corridor,
+the dashed ideal contour, the player's trail and Pip at its head. The trail, not
+the bird, is the subject — the trail is what the product is (PRD §8).
 
-`npm run make-icons` rasterises everything else from it. The PNGs are committed;
+There are two sources, one artwork:
+
+- `src/dev/icon-source.svg` — the detailed version, for every home-screen icon.
+- `public/favicon.svg` — the browser-tab icon, simplified for 16–32px: no dashed
+  contour or wall strokes, a thicker trail, a bigger Pip. At tab size the
+  detailed version's lines fall below a pixel.
+
+`npm run make-icons` rasterises the PNGs from them (`icon-32.png` from the
+favicon, the rest from `icon-source.svg`). The PNGs are committed;
 re-run only when the mark changes.
 
 | Output | Purpose |
@@ -77,25 +89,19 @@ re-run only when the mark changes.
 | `icons/icon-192.png`, `icon-512.png` | manifest, `purpose: any` |
 | `icons/icon-maskable-512.png` | manifest, `purpose: maskable` |
 
-Three constraints on the artwork, all of which the current file satisfies:
+Three constraints on the artwork, all of which the current files satisfy:
 
 - **Opaque, edge to edge.** iOS composites a transparent home-screen icon onto
   black, which would turn the glow into a black notch.
-- **The mark runs close to the edges on purpose** — the bird's glow reaches ~97%
-  of the width. That is a choice in favour of 16px legibility, and it is why
+- **The mark runs close to the edges on purpose** — Pip sits in the top-right
+  corner, where the climb ends. That is a choice in favour of legibility, and it is why
   `maskable` gets its own file rather than sharing `icon-512.png`: the launcher
   crop would cut the bird off. `make-icons` insets the maskable variant to 72%,
   inside the 80% safe circle the spec guarantees.
-- `rasteriseMark()` hard-codes the source's `width="32" height="32"` in a regex
+- `rasteriseMark()` hard-codes each source's `width="32" height="32"` in a regex
   and **throws** if it does not match, so a redrawn mark at another viewBox
   means updating that line.
 
 Chrome renders it, not `sips`: `sips` ignores SVG filters, so the glow the mark
 is built from came out flat.
 
-### Known cosmetic wart
-
-The maskable variant is the rounded-square artwork padded onto the same
-backdrop, so its corner radius leaves a faint arc against the padding. Invisible
-at launcher size; if it ever bothers anyone, render that variant from a copy of
-the mark with the `clipPath` dropped.

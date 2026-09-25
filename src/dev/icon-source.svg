@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 512 512" fill="none">
+  <!-- The FlappyTone mark: the OG image's art (src/dev/og-source.svg),
+       re-fitted to a square. One Tone 3 gate — corridor, dashed ideal
+       contour, the player's own trail — with Pip at the head of the trail.
+       Palette is the light "paper" theme (src/ui/tokens.css, docs/BRAND.md).
+
+       Geometry: the measured T3 polyline (0,3) (0.45,1.2) (0.72,1.2) (1,5)
+       from PRD §6, over x 40→452, with chao c at y = 72 + (5-c)*92. The
+       square is steeper than the 1200x630 card, so the chao spacing is taller;
+       the trail is the OG trail pushed through that same mapping.
+
+       This file is the source `npm run make-icons` rasterises for the
+       home-screen PNGs. Keep it opaque and edge to edge (iOS composites a
+       transparent icon onto black), and keep the width="32" height="32"
+       attributes — make-icons swaps them to scale the vector. -->
+  <defs>
+    <clipPath id="r"><rect width="512" height="512"/></clipPath>
+    <linearGradient id="trailFade" x1="40" y1="0" x2="452" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0"    stop-color="rgb(28,122,99)" stop-opacity="0.25"/>
+      <stop offset="0.35" stop-color="rgb(28,122,99)" stop-opacity="0.8"/>
+      <stop offset="1"    stop-color="rgb(28,122,99)" stop-opacity="1"/>
+    </linearGradient>
+    <radialGradient id="pipHalo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="rgb(28,122,99)" stop-opacity="0.35"/>
+      <stop offset="60%"  stop-color="rgb(28,122,99)" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="rgb(28,122,99)" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <g clip-path="url(#r)">
+    <rect width="512" height="512" fill="#f7f1e3"/>
+
+    <!-- Chao 1–5 guide grid, chao 3 darkest as the rest line (drawChaoGrid). -->
+    <g stroke="rgb(60,52,42)" stroke-width="4">
+      <line x1="0" y1="72"  x2="512" y2="72"  opacity="0.30"/>
+      <line x1="0" y1="164" x2="512" y2="164" opacity="0.20"/>
+      <line x1="0" y1="256" x2="512" y2="256" opacity="0.45"/>
+      <line x1="0" y1="348" x2="512" y2="348" opacity="0.20"/>
+      <line x1="0" y1="440" x2="512" y2="440" opacity="0.30"/>
+    </g>
+
+    <!-- The gate: the centreline offset ±0.6 chao, as on the OG card. -->
+    <path d="M40,201 L225,366.6 L337,366.6 L452,17 L452,127 L337,476.6 L225,476.6 L40,311 Z"
+          fill="rgb(28,122,99)" opacity="0.07"/>
+    <g stroke="rgb(28,122,99)" stroke-width="5" opacity="0.38" stroke-linejoin="round">
+      <path d="M40,201 L225,366.6 L337,366.6 L452,17"/>
+      <path d="M40,311 L225,476.6 L337,476.6 L452,127"/>
+    </g>
+
+    <!-- The ideal contour, dashed. -->
+    <path d="M40,256 L225,421.6 L337,421.6 L452,72"
+          stroke="rgb(168,108,32)" stroke-width="7" stroke-dasharray="18 16"
+          stroke-linecap="round" stroke-linejoin="round" opacity="0.65"/>
+
+    <!-- The player's trail: overshoots the dip, wobbles on the hold, rides
+         late on the climb — the OG trail, same curve. -->
+    <path d="M40,263 C106,300 164,362 228,430
+             C258,440 284,413 314,427
+             C342,440 353,430 371,362
+             C394,274 421,158 450,79"
+          stroke="url(#trailFade)" stroke-width="15" stroke-linecap="round"/>
+
+    <!-- Pip, at the head of the trail. Same local geometry as the OG card
+         (drawPip()'s flying state, beak tip at the origin). -->
+    <g transform="translate(450,79) rotate(-58) scale(4.1)">
+      <circle cx="-17.25" cy="0" r="30" fill="url(#pipHalo)"/>
+      <circle cx="-17.25" cy="0" r="11" fill="rgb(51,135,115)"/>
+      <path d="M -24.07,3.85 A 6.82,6.82 0 0 0 -10.43,3.85 Z"
+            fill="rgb(142,189,177)" opacity="0.5"/>
+      <path d="M -8,-3.5 L 0,0 L -8,3.5 Z" fill="#c98a3c"/>
+      <circle cx="-15.05" cy="-4.4" r="2.6" fill="#f7f1e3"/>
+      <circle cx="-13.85" cy="-4.4" r="1.2" fill="#241d15"/>
+    </g>
+  </g>
+</svg>

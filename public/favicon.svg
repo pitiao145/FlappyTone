@@ -1,43 +1,54 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
-  <!-- The FlappyTone mark: the Tone 3 contour drawn as a corridor centreline
-       over the Chao guide grid, with the bird at the head of the trail.
-       A bird is not the mark, because at 16px a bird is a blob and because the
-       trail is what the product actually is (PRD §8).
-
-       This file is also the source `npm run make-icons` rasterises for the
-       home-screen PNGs, which constrains it in two ways:
-         - it is opaque and edge-to-edge. iOS composites a transparent
-           home-screen icon onto black, which would lose the glow.
-         - the contour keeps a 12.5% horizontal margin, clearing the 10% an
-           Android `maskable` launcher crop can take.
-       Colours are the canvas tokens from src/render/palette.ts — see
-       docs/BRAND.md. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 512 512" fill="none">
+  <!-- The browser-tab favicon: the same art as src/dev/icon-source.svg (the
+       home-screen icons' source, itself the OG card re-fitted to a square),
+       simplified for 16–32px. No dashed contour, no wall strokes, a thicker
+       trail and a bigger Pip — at tab size the detailed version's lines fall
+       below one pixel and the bird shrinks to a dot. -->
   <defs>
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="2" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-    <clipPath id="r"><rect width="32" height="32" rx="7"/></clipPath>
+    <clipPath id="r"><rect width="512" height="512" rx="112"/></clipPath>
+    <linearGradient id="trailFade" x1="40" y1="0" x2="452" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0"    stop-color="rgb(28,122,99)" stop-opacity="0.55"/>
+      <stop offset="0.35" stop-color="rgb(28,122,99)" stop-opacity="0.8"/>
+      <stop offset="1"    stop-color="rgb(28,122,99)" stop-opacity="1"/>
+    </linearGradient>
+    <radialGradient id="pipHalo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="rgb(28,122,99)" stop-opacity="0.35"/>
+      <stop offset="60%"  stop-color="rgb(28,122,99)" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="rgb(28,122,99)" stop-opacity="0"/>
+    </radialGradient>
   </defs>
 
   <g clip-path="url(#r)">
-    <rect width="32" height="32" fill="#141821"/>
+    <rect width="512" height="512" fill="#f7f1e3"/>
 
-    <!-- Chao guide lines 5 / 3 / 1, at y = 0.80H - ((chao-1)/4)*0.60H -->
-    <g stroke="rgb(150,180,215)" stroke-width="1">
-      <line x1="0" y1="6.4"  x2="32" y2="6.4"  opacity="0.13"/>
-      <line x1="0" y1="16"   x2="32" y2="16"   opacity="0.20"/>
-      <line x1="0" y1="25.6" x2="32" y2="25.6" opacity="0.13"/>
+    <!-- Chao 1–5 guide grid, chao 3 darkest as the rest line (drawChaoGrid). -->
+    <g stroke="rgb(60,52,42)" stroke-width="12">
+      <line x1="0" y1="72"  x2="512" y2="72"  opacity="0.18"/>
+      <line x1="0" y1="256" x2="512" y2="256" opacity="0.28"/>
+      <line x1="0" y1="440" x2="512" y2="440" opacity="0.18"/>
     </g>
 
-    <!-- The measured Tone 3 polyline (PRD §6): (0,3) (0.45,1.2) (0.72,1.2) (1,5).
-         It dips to the floor, HOLDS, then climbs. The hold is what makes this
-         read as ˇ rather than as a V, and it is what a real citation T3 does. -->
-    <polyline points="4,16 14.8,24.64 21.28,24.64 28,6.4"
-              fill="none" stroke="rgb(96,205,255)" stroke-width="3.4"
-              stroke-linecap="round" stroke-linejoin="round"
-              filter="url(#glow)"/>
+    <!-- The gate: the centreline offset ±0.6 chao, as on the OG card. -->
+    <path d="M40,201 L225,366.6 L337,366.6 L452,17 L452,127 L337,476.6 L225,476.6 L40,311 Z"
+          fill="rgb(28,122,99)" opacity="0.14"/>
+    <!-- The player's trail: overshoots the dip, wobbles on the hold, rides
+         late on the climb — the OG trail, same curve. -->
+    <path d="M40,263 C106,300 164,362 228,430
+             C258,440 284,413 314,427
+             C342,440 353,430 371,362
+             C390,284 398,230 404,166"
+          stroke="url(#trailFade)" stroke-width="44" stroke-linecap="round"/>
 
-    <circle cx="28" cy="6.4" r="3.1" fill="#eaf7ff" filter="url(#glow)"/>
+    <!-- Pip, at the head of the trail. Same local geometry as the OG card
+         (drawPip()'s flying state, beak tip at the origin). -->
+    <g transform="translate(450,79) rotate(-58) scale(6.2)">
+      <circle cx="-17.25" cy="0" r="24" fill="url(#pipHalo)"/>
+      <circle cx="-17.25" cy="0" r="11" fill="rgb(51,135,115)"/>
+      <path d="M -24.07,3.85 A 6.82,6.82 0 0 0 -10.43,3.85 Z"
+            fill="rgb(142,189,177)" opacity="0.5"/>
+      <path d="M -8,-3.5 L 0,0 L -8,3.5 Z" fill="#c98a3c"/>
+      <circle cx="-15.05" cy="-4.4" r="2.6" fill="#f7f1e3"/>
+      <circle cx="-13.85" cy="-4.4" r="1.2" fill="#241d15"/>
+    </g>
   </g>
 </svg>
