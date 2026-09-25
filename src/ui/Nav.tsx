@@ -87,7 +87,7 @@ export function Nav({ onPlay }: Props) {
     <nav ref={navRef} className={`landing-nav nav-landing${navMenuOpen ? " nav-menu-open" : ""}`}>
       <div className="nav-inner">
         <a className="nav-brand" href="#top">
-          <img className="nav-logo" src="/icons/icon-32.png" alt="" width={28} height={28} />
+          <img className="nav-logo" src="/favicon.svg" alt="" width={40} height={40} />
           <span className="nav-name">FLAPPYTONE</span>
         </a>
 

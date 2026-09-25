@@ -113,7 +113,7 @@ export function GameNav({ active, onNavigate }: Props) {
   return (
     <nav className="game-nav">
       <a className="game-nav-brand" href={SITE_HREF}>
-        <img className="nav-logo" src="/icons/icon-32.png" alt="" width={28} height={28} />
+        <img className="nav-logo" src="/favicon.svg" alt="" width={40} height={40} />
         <span className="nav-name">FlappyTone</span>
       </a>
 
