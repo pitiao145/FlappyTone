@@ -390,34 +390,6 @@ export function saveNoticeSeen(): void {
   }
 }
 
-// --------------------------------------------------- silent-mode warning
-
-const SILENT_BANNER_KEY = "toneflap.silentbanner.seen.v1";
-
-/**
- * Whether the Play-home "turn off silent mode" banner has been dismissed.
- *
- * The game has no way to detect the phone's silent switch (no web API
- * exposes it) — this is a static warning, not a smart one, so it only needs
- * to be shown until the player has acknowledged it once. Same
- * clear-storage-brings-it-back precedent as `loadNoticeSeen`.
- */
-export function loadSilentBannerSeen(): boolean {
-  try {
-    return localStorage.getItem(SILENT_BANNER_KEY) === "seen";
-  } catch {
-    return false;
-  }
-}
-
-export function saveSilentBannerSeen(): void {
-  try {
-    localStorage.setItem(SILENT_BANNER_KEY, "seen");
-  } catch {
-    // ignore
-  }
-}
-
 // -------------------------------------------------------- proficiency
 
 const PROFICIENCY_KEY = "toneflap.proficiency.v1";

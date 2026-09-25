@@ -213,6 +213,7 @@ export type TrackedScreen =
   | "calibrate"
   | "finetune"
   | "levelSelect"
+  | "silentGate"
   | "tutorial"
   | "seeding"
   | "tutorialdone"

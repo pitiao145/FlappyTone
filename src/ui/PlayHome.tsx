@@ -1,10 +1,3 @@
-import { useState } from "react";
-import { MicError } from "../audio/mic.ts";
-import { ensurePlaybackCtx } from "../audio/reference.ts";
-import { ensureMic, MicCancelled } from "../audio/session.ts";
-import { loadSilentBannerSeen, saveSilentBannerSeen } from "../game/settings.ts";
-import { micErrorCopy } from "./micErrors.ts";
-import { BellSlashIcon } from "./icons.tsx";
 import { SITE_HREF } from "./appLink.ts";
 import { brand } from "../brand.ts";
 
@@ -16,9 +9,17 @@ export type PlayIntent = "game" | "tutorial" | "lab" | "drill" | "learn" | "pair
 interface Props {
   calibrated: boolean;
   tutorialDone: boolean;
-  /** An error raised elsewhere (e.g. a failed Retry) — shown alongside any error of PlayHome's own. */
+  /** An error raised elsewhere (e.g. a failed Retry, or a failed mic grant on the silent-mode gate). */
   error: string | null;
-  /** Called once the mic is open. The router decides whether to calibrate first. */
+  /**
+   * Routes the intent onward — GameApp's `startPlay` decides whether it needs
+   * calibration or the silent-mode confirm gate before the mic ever opens.
+   * No mic call happens here any more: opening the mic on this very tap used
+   * to duck the phone's output volume for the rest of the session (iOS
+   * switches audio-session category the instant `getUserMedia` grants), so
+   * the mic now only opens from the silent-mode gate's own "OK" tap — see
+   * GameApp's `requestMicAndThen`.
+   */
   onStart: (intent: PlayIntent) => void;
   /** Opens the Modes picker. No mic needed — only starting a run there does. */
   onModes: () => void;
@@ -50,53 +51,10 @@ export function PlayHome({
   canvasHeight,
   challengeScore,
 }: Props) {
-  const [ownError, setOwnError] = useState<string | null>(null);
-  const [pendingIntent, setPendingIntent] = useState<PlayIntent | null>(null);
-  const busy = pendingIntent !== null;
-  const error = ownError ?? externalError;
-  // Dismissed permanently — see loadSilentBannerSeen's own comment for why
-  // this is a static warning rather than a detected one.
-  const [silentBannerSeen, setSilentBannerSeen] = useState(loadSilentBannerSeen);
-
-  // Opened inside the click handler — iOS Safari only grants getUserMedia
-  // during a user gesture, so this can't move to a mount effect.
-  const go = (intent: PlayIntent) => async () => {
-    if (busy) return;
-    setPendingIntent(intent);
-    setOwnError(null);
-    try {
-      // Resume the cue-playback context in the same gesture (output-only, no
-      // permission prompt) so reference cues can play — see reference.ts.
-      void ensurePlaybackCtx();
-      await ensureMic();
-      onStart(intent);
-    } catch (err) {
-      if (!(err instanceof MicCancelled)) {
-        setOwnError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
-      }
-    } finally {
-      setPendingIntent(null);
-    }
-  };
+  const error = externalError;
 
   return (
     <div className="stage game-stage playhome-stage">
-      {!silentBannerSeen && (
-        <div className="app-toast silent-mode-banner" role="status">
-          <BellSlashIcon />
-          <span>Turn off silent mode. You need sound to play.</span>
-          <button
-            className="silent-mode-banner-dismiss"
-            aria-label="Dismiss"
-            onClick={() => {
-              saveSilentBannerSeen();
-              setSilentBannerSeen(true);
-            }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
       <div
         className="playhome-canvas"
         style={{ width: canvasWidth, height: canvasHeight }}
@@ -128,16 +86,14 @@ export function PlayHome({
             </p>
           )}
           <div className="menu playhome-menu">
-            <button className="primary" disabled={busy} onClick={go("game")}>
-              {pendingIntent === "game" ? "Opening mic…" : "Play"}
+            <button className="primary" onClick={() => onStart("game")}>
+              Play
             </button>
-            <button disabled={busy} onClick={onModes}>
+            <button onClick={onModes}>
               Modes
               <span className="badge badge-new">New</span>
             </button>
-            <button disabled={busy} onClick={go("tutorial")}>
-              {pendingIntent === "tutorial" ? "Opening mic…" : "Tutorial"}
-            </button>
+            <button onClick={() => onStart("tutorial")}>Tutorial</button>
           </div>
           {error && <p className="error">{error}</p>}
 
@@ -145,10 +101,10 @@ export function PlayHome({
               tuning, and it is not part of the product. */}
           {import.meta.env.DEV && (
             <>
-              <button className="dev-toggle" disabled={busy} onClick={go("lab")}>
+              <button className="dev-toggle" onClick={() => onStart("lab")}>
                 lab
               </button>
-              <button className="dev-toggle" disabled={busy} onClick={onDevLogin}>
+              <button className="dev-toggle" onClick={onDevLogin}>
                 login
               </button>
             </>

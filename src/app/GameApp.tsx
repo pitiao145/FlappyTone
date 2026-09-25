@@ -62,6 +62,7 @@ import { Profile } from "../ui/Profile.tsx";
 import { Progress } from "../ui/Progress.tsx";
 import { ResetPassword } from "../ui/ResetPassword.tsx";
 import { Settings } from "../ui/Settings";
+import { SilentModeGate } from "../ui/SilentModeGate.tsx";
 import { TutorialDone } from "../ui/TutorialDone.tsx";
 import { Visualiser } from "../ui/Visualiser";
 import { micErrorCopy } from "../ui/micErrors";
@@ -75,6 +76,7 @@ export type Screen =
   | "calibrate"
   | "finetune"
   | "levelSelect"
+  | "silentGate"
   | "tutorial"
   | "seeding"
   | "tutorialdone"
@@ -390,7 +392,6 @@ export default function GameApp() {
     "tutorial" | "calibration" | "calibrationVisualiser" | "calibrationChallenge"
   >("tutorial");
   const [error, setError] = useState<string | null>(null);
-  const [retryBusy, setRetryBusy] = useState(false);
   const [earlyBird, setEarlyBird] = useState<{
     surface: EarlyBirdSurface;
     feature: string;
@@ -585,11 +586,17 @@ export default function GameApp() {
    * Home can never drop them into a run they left.
    */
   const navRef = useRef(0);
+  /**
+   * What to do once the silent-mode gate's mic grant succeeds — set by
+   * `requestMicAndThen`, consumed and cleared by `confirmSilentGate`.
+   */
+  const micGateResumeRef = useRef<(() => void | Promise<void>) | null>(null);
+  /** Whether the gate's "OK" button is mid-`ensureMic()`. */
+  const [silentGateBusy, setSilentGateBusy] = useState(false);
 
   const goHome = useCallback(() => {
     navRef.current += 1;
     stopMic();
-    setRetryBusy(false);
     setGameAlive(false);
     // Whatever `openVisualiser`/`startPlay` was routing toward calibration
     // for is abandoned the moment we land on Play — otherwise a cancelled
@@ -598,6 +605,48 @@ export default function GameApp() {
     pendingRef.current = null;
     setScreen("play");
   }, []);
+
+  /**
+   * Routes any mic-needing destination through the silent-mode gate first
+   * instead of opening the mic on the spot. `resume` is whatever the caller
+   * used to do right after `ensureMic()` resolved — see `SilentModeGate.tsx`'s
+   * own doc comment for why the mic can no longer open on the player's very
+   * first tap (it ducks iOS output volume in a way the gate's own warning
+   * would then be too late to fix).
+   */
+  const requestMicAndThen = useCallback((resume: () => void | Promise<void>) => {
+    micGateResumeRef.current = resume;
+    setError(null);
+    setScreen("silentGate");
+  }, []);
+
+  /**
+   * `SilentModeGate`'s "OK" button — the one place `ensureMic()` is called
+   * from now. `gen` mirrors `retry`'s old staleness guard: if the player
+   * leaves (`goHome`, which bumps `navRef`) while this is mid-flight, the
+   * stale resolution is dropped rather than dropping the player into a
+   * screen they already left.
+   */
+  const confirmSilentGate = useCallback(async () => {
+    setSilentGateBusy(true);
+    const gen = ++navRef.current;
+    try {
+      void ensurePlaybackCtx(); // resume cue-playback ctx in-gesture (reference.ts)
+      await ensureMic();
+      if (gen !== navRef.current) return;
+      const resume = micGateResumeRef.current;
+      micGateResumeRef.current = null;
+      await resume?.();
+    } catch (err) {
+      if (gen !== navRef.current) return;
+      if (!(err instanceof MicCancelled)) {
+        setError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
+      }
+      goHome();
+    } finally {
+      setSilentGateBusy(false);
+    }
+  }, [goHome]);
 
   /**
    * The pause menu's "quit" exit from a "game" run. Recorded (with a
@@ -622,23 +671,19 @@ export default function GameApp() {
   }, [goHome]);
 
   /**
-   * The caller has already opened the mic inside its click handler.
-   * `opts.drillTone` is only meaningful (and required) for `intent ===
-   * "drill"`; `opts.pairCombo` only for `intent === "pairs"` — both set by
-   * ModeSelect before this fires.
+   * No mic call here any more — see `SilentModeGate.tsx`. `opts.drillTone` is
+   * only meaningful (and required) for `intent === "drill"`; `opts.pairCombo`
+   * only for `intent === "pairs"` — both set by ModeSelect before this fires.
    */
   const startPlay = useCallback(
     (intent: StartIntent, opts?: { drillTone?: Tone; pairCombo?: Tone[] | null }) => {
-      // The caller (PlayHome/ModeSelect) already opened the mic for this
-      // gesture before calling us — bail out and release it rather than
-      // starting a run the player isn't allowed to have. Drill and Pairs are
-      // real, scored practice like Classic, so they're gated the same way;
-      // Learn isn't (see the plan: it doesn't cost a daily run).
+      // Drill and Pairs are real, scored practice like Classic, so they're
+      // gated the same way; Learn isn't (see the plan: it doesn't cost a
+      // daily run).
       if (
         (intent === "game" || intent === "drill" || intent === "pairs") &&
         dailyLimitReached()
       ) {
-        stopMic();
         track({ type: "daily_limit_reached", trigger: "start" });
         openEarlyBird("daily-limit", "daily-limit");
         return;
@@ -661,40 +706,39 @@ export default function GameApp() {
         gameRunNumberRef.current += 1;
       }
       // Playing without calibration would map the player's voice through a
-      // stranger's f0 centre. Calibrate first, then continue to the run.
+      // stranger's f0 centre. Calibrate first, then continue to the run —
+      // and calibration needs the mic too, so it goes through the gate.
       if (!settings) {
         pendingRef.current = intent;
-        setScreen("calibrate");
+        requestMicAndThen(() => setScreen("calibrate"));
         return;
       }
-      // "game" alone routes through the TOCFL/proficiency picker — Drill and
-      // Pairs already have their own tone/combo sub-pickers in ModeSelect,
-      // and Learn/Tutorial aren't level-scoped. Re-shown every play (unlike
-      // calibration's once-only gate): proficiency is remembered, but the
-      // level is a fresh choice each time, per Pierre's brainstorm.
+      // "game" alone routes through the TOCFL/proficiency picker first — Drill
+      // and Pairs already have their own tone/combo sub-pickers in
+      // ModeSelect, and Learn/Tutorial aren't level-scoped. Re-shown every
+      // play (unlike calibration's once-only gate): proficiency is
+      // remembered, but the level is a fresh choice each time, per Pierre's
+      // brainstorm. The silent-mode gate sits *after* this picker for "game"
+      // (see `onLevelChosen`) — right before the run actually starts.
       if (intent === "game") {
         pendingLevelIntentRef.current = intent;
         setScreen("levelSelect");
         return;
       }
-      if (
-        intent === "tutorial" ||
-        intent === "drill" ||
-        intent === "learn" ||
-        intent === "pairs"
-      ) {
+      requestMicAndThen(() => {
         setGameAlive(true);
-      }
-      setScreen(intent);
+        setScreen(intent);
+      });
     },
-    [settings, dailyLimitReached, openEarlyBird],
+    [settings, dailyLimitReached, openEarlyBird, requestMicAndThen],
   );
 
   /**
    * `LevelSelect`'s confirm: saves the (possibly changed) proficiency to
    * Settings, remembers this level choice for next time (per proficiency —
-   * see `saveLastLevel`), stashes the choice for `<Game>` to read, and
-   * continues exactly where `startPlay` left off for a non-gated intent.
+   * see `saveLastLevel`), stashes the choice for `<Game>` to read, and — for
+   * "game" this is the point right before the run itself, so the silent-mode
+   * gate (and the mic it opens) sits here rather than earlier on PlayHome's tap.
    */
   const onLevelChosen = useCallback((proficiency: Proficiency, level: LevelChoice | null) => {
     saveProficiency(proficiency);
@@ -706,9 +750,11 @@ export default function GameApp() {
       setScreen("play");
       return;
     }
-    setGameAlive(true);
-    setScreen(intent);
-  }, []);
+    requestMicAndThen(() => {
+      setGameAlive(true);
+      setScreen(intent);
+    });
+  }, [requestMicAndThen]);
 
   /**
    * TutorialDone's buttons, across all variants that lead into another run
@@ -718,25 +764,15 @@ export default function GameApp() {
    * tutorial first. The plain "tutorial" variant's "Let's play" — reached
    * both from that guided tutorial and from a standalone tutorial run
    * (Settings replay, ModeSelect) — also goes straight into a game rather
-   * than landing on the Play home screen. Either way `startPlay` expects the
-   * mic already open (see its own comment); Game.tsx's tick() already called
-   * `stopMic()` when the previous run ended, so this reopens it itself,
-   * inside this tap's gesture — same pattern as PlayHome's `go()`.
+   * than landing on the Play home screen. No mic call here any more —
+   * `startPlay` routes through the silent-mode gate itself for both intents
+   * (via `requestMicAndThen`, or via `onLevelChosen` for "game").
    */
   const startFromTutorialDone = useCallback(
-    async (intent: "game" | "tutorial") => {
-      try {
-        void ensurePlaybackCtx(); // resume cue-playback ctx in-gesture (reference.ts)
-        await ensureMic();
-        startPlay(intent);
-      } catch (err) {
-        if (!(err instanceof MicCancelled)) {
-          setError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
-        }
-        goHome();
-      }
+    (intent: "game" | "tutorial") => {
+      startPlay(intent);
     },
-    [startPlay, goHome],
+    [startPlay],
   );
 
   const onCalibrated = useCallback((s: CalibrationSettings) => {
@@ -869,7 +905,7 @@ export default function GameApp() {
     setScreen("gameover");
   }, [settings, challengeScoreState]);
 
-  const retry = useCallback(async () => {
+  const retry = useCallback(() => {
     if (
       (lastModeRef.current === "game" ||
         lastModeRef.current === "drill" ||
@@ -880,14 +916,7 @@ export default function GameApp() {
       openEarlyBird("daily-limit", "daily-limit");
       return;
     }
-    setError(null);
-    setRetryBusy(true);
-    const gen = ++navRef.current;
-    try {
-      // Retry is a click, so this reopens the mic inside a user gesture.
-      void ensurePlaybackCtx(); // resume cue-playback ctx in-gesture (reference.ts)
-      await ensureMic();
-      if (gen !== navRef.current) return; // player left while we were waiting
+    requestMicAndThen(() => {
       if (
         lastModeRef.current === "game" ||
         lastModeRef.current === "drill" ||
@@ -900,14 +929,8 @@ export default function GameApp() {
       // the same tone/combo.
       setGameAlive(true);
       setScreen(lastModeRef.current);
-    } catch (err) {
-      if (gen !== navRef.current) return;
-      setError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
-      setScreen("play");
-    } finally {
-      setRetryBusy(false);
-    }
-  }, [dailyLimitReached, openEarlyBird]);
+    });
+  }, [dailyLimitReached, openEarlyBird, requestMicAndThen]);
 
   /**
    * Starts the analytics client and drains anything an earlier visit failed to
@@ -1032,33 +1055,22 @@ export default function GameApp() {
    * a fresh one themselves, inside their own click handler.
    */
   /**
-   * Opens (or reuses) the mic session and lands on the Visualiser screen —
-   * shared by the nav bar's own click and the intent-arrival tap gate below,
-   * so there is exactly one place that knows how to get there.
+   * Routes through the silent-mode gate, then opens (or reuses) the mic
+   * session and lands on the Visualiser screen — shared by the nav bar's own
+   * click and the intent-arrival tap gate below, so there is exactly one
+   * place that knows how to get there. On a failed grant, `confirmSilentGate`
+   * calls `goHome()`, which already clears `pendingRef`.
    */
   const openVisualiser = useCallback(() => {
-    setError(null);
     if (gameAlive) gameRef.current?.pause();
     if (!settings) pendingRef.current = "visualiser";
-    void ensurePlaybackCtx(); // resume cue-playback ctx in-gesture (reference.ts)
-    void ensureMic()
-      .then(async () => {
-        const audio = getMicSession()?.ctx;
-        if (audio && audio.state === "suspended") await audio.resume();
-        setVisualiserMicReady(true);
-        setScreen(settings ? "visualiser" : "calibrate");
-      })
-      .catch((err) => {
-        pendingRef.current = null;
-        if (!(err instanceof MicCancelled)) {
-          // The error banner only has a slot on the Play tab, so land
-          // there to show it rather than failing silently wherever the
-          // player asked for Visualiser from.
-          setScreen("play");
-          setError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
-        }
-      });
-  }, [settings, gameAlive]);
+    requestMicAndThen(async () => {
+      const audio = getMicSession()?.ctx;
+      if (audio && audio.state === "suspended") await audio.resume();
+      setVisualiserMicReady(true);
+      setScreen(settings ? "visualiser" : "calibrate");
+    });
+  }, [settings, gameAlive, requestMicAndThen]);
 
   /**
    * `TutorialDone`'s "calibrationVisualiser" variant — a `?intent=visualiser`
@@ -1134,6 +1146,16 @@ export default function GameApp() {
           />
         )}
 
+        {screen === "silentGate" && (
+          <SilentModeGate
+            busy={silentGateBusy}
+            error={error}
+            onConfirm={() => void confirmSilentGate()}
+            canvasWidth={CANVAS_W}
+            canvasHeight={GAME_CANVAS_H}
+          />
+        )}
+
         {screen === "seeding" && (
           <Loading label="We're personalising your grid for you…" />
         )}
@@ -1144,11 +1166,11 @@ export default function GameApp() {
             onDone={
               doneVariant === "calibrationVisualiser"
                 ? finishCalibrationForVisualiser
-                : () => void startFromTutorialDone("game")
+                : () => startFromTutorialDone("game")
             }
             onSecondary={
               doneVariant === "calibration"
-                ? () => void startFromTutorialDone("tutorial")
+                ? () => startFromTutorialDone("tutorial")
                 : undefined
             }
             canvasWidth={CANVAS_W}
@@ -1312,8 +1334,8 @@ export default function GameApp() {
         {screen === "gameover" && stats && (
           <GameOver
             stats={stats}
-            busy={retryBusy}
-            onRetry={() => void retry()}
+            busy={false}
+            onRetry={retry}
             onFineTune={() => setScreen("finetune")}
             onVisualiser={() => onNavigate("visualiser")}
             settings={settings}

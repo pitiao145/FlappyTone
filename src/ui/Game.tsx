@@ -57,7 +57,7 @@ import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawWorld, refreshMotionPreference } from "../render/world.ts";
 import { JumpingPip } from "./bird/index.ts";
-import { BellSlashIcon, HeartIcon, PauseIcon } from "./icons.tsx";
+import { HeartIcon, PauseIcon } from "./icons.tsx";
 import { PauseMenu } from "./PauseMenu.tsx";
 
 /** HUD refresh rate. React never renders per frame — the rAF loop owns the canvas. */
@@ -129,7 +129,7 @@ const GATE_LOG_ON_SCREEN = 4;
  * tutorial, or the player has stepped through it. See the run-owning
  * effect's `tick()` for how each step is detected.
  */
-type WalkthroughStep = "silent" | "intro" | "listen" | "menu" | null;
+type WalkthroughStep = "intro" | "listen" | "menu" | null;
 
 interface Props {
   mode: RunMode;
@@ -268,7 +268,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
    * real (walkthrough-guided) tutorial for players who want one.
    */
   const [walkthroughStep, setWalkthroughStep] = useState<WalkthroughStep>(
-    mode === "tutorial" && !autoStart ? "silent" : null,
+    mode === "tutorial" && !autoStart ? "intro" : null,
   );
   /**
    * True while a mid-run walkthrough card ("listen", "menu" — not "intro",
@@ -481,7 +481,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     frozenRef.current = false;
     frozenAccumMsRef.current = 0;
     freezeStartedAtRef.current = 0;
-    if (mode === "tutorial" && !autoStart) setWalkthroughStep("silent");
+    if (mode === "tutorial" && !autoStart) setWalkthroughStep("intro");
     // iOS forces cue playback to the earpiece while the mic is live; the host
     // releases the mic during each cue so it plays on the loud speaker, then
     // re-acquires it. Off everywhere else — no routing problem, no churn — and
@@ -1364,28 +1364,6 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
               }}
             >
               Got it
-            </button>
-          </div>
-        )}
-
-        {/* The very first thing a deliberately started tutorial shows —
-            before "Meet Flappy", before anything else. The game is
-            call-and-response (hear the cue, then fly it) and has no way to
-            detect the phone's silent switch (no web API exposes it), so a
-            player who never sees this card just hears nothing and assumes
-            the game is broken. */}
-        {walkthroughStep === "silent" && (
-          <div className="overlay tutorial-card">
-            <div className="walkthrough-silent-icon">
-              <BellSlashIcon />
-            </div>
-            <h3>Turn up your volume</h3>
-            <p>
-              This game doesn't work in silent mode. Make sure your phone's
-              silent switch is off and your volume is up.
-            </p>
-            <button className="primary" onClick={() => setWalkthroughStep("intro")}>
-              Continue
             </button>
           </div>
         )}
