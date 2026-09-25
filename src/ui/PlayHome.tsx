@@ -62,7 +62,7 @@ export function PlayHome({
         {/* Mobile only (CSS): the game nav has no brand link on the bottom
             bar, so this is the way back out to the marketing site. */}
         <a className="playhome-home-link" href={SITE_HREF} aria-label="Back to FlappyTone.com">
-          <img src="/favicon.svg" alt="" width={40} height={40} />
+          <img src="/favicon.svg" alt="" width={60} height={60} />
         </a>
         <div className="screen playhome-overlay">
           <img
