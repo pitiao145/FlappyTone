@@ -11,7 +11,7 @@
  * decided the earlier take was wrong, and uploading both would race over the
  * same key.
  */
-import { RECORD_BASE_URL } from "./boothWords.ts";
+import { RECORD_BASE_URL, type BoothStyle } from "./boothWords.ts";
 
 export type UploadStatus = "queued" | "uploading" | "done" | "failed";
 
@@ -24,6 +24,7 @@ export interface UploadState {
 
 interface Job {
   id: string;
+  style: BoothStyle;
   blob: Blob;
   attempts: number;
 }
@@ -75,10 +76,10 @@ export class Uploader {
   }
 
   /** Queues a take. Returns immediately; the upload happens behind her. */
-  enqueue(id: string, blob: Blob): void {
+  enqueue(id: string, style: BoothStyle, blob: Blob): void {
     this.queue = this.queue.filter((j) => j.id !== id);
     this.failedJobs.delete(id);
-    this.queue.push({ id, blob, attempts: 0 });
+    this.queue.push({ id, style, blob, attempts: 0 });
     this.byId[id] = "queued";
     this.emit();
     void this.drain();
@@ -160,7 +161,7 @@ export class Uploader {
       return false;
     }
     try {
-      const params = new URLSearchParams({ id: job.id, session: this.options.sessionId });
+      const params = new URLSearchParams({ id: job.id, session: this.options.sessionId, style: job.style });
       const res = await this.fetchImpl(`${RECORD_BASE_URL}/raw?${params}`, {
         method: "POST",
         headers: {

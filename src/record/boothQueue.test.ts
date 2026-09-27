@@ -3,7 +3,7 @@ import { nextPendingId } from "./boothQueue.ts";
 import type { BoothWord } from "./boothWords.ts";
 
 function word(id: string): BoothWord {
-  return { id, hanzi: "測", pinyin: id, tone: 4, status: "pending", lists: [] };
+  return { id, hanzi: "測", pinyin: id, tone: 4, textbook: "pending", natural: "pending", lists: [] };
 }
 
 describe("nextPendingId", () => {

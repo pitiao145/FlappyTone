@@ -1,20 +1,23 @@
 /**
  * Turns recorded takes into published clips: R2 in, R2 + the catalog out.
  *
- *   npm run process-clips -- --speaker jane                 # her recorded words
- *   npm run process-clips -- --speaker jane --session 2026-09-01-ab12cd
- *   npm run process-clips -- --speaker jane --all           # re-cut published too
- *   npm run process-clips -- --speaker jane --all --dry-run # cut, write nothing
+ *   npm run process-clips -- --speaker jane --style textbook
+ *   npm run process-clips -- --speaker jane --style textbook --session 2026-09-01-ab12cd
+ *   npm run process-clips -- --speaker jane --style textbook --all           # re-cut published too
+ *   npm run process-clips -- --speaker jane --style textbook --all --dry-run # cut, write nothing
  *
- * ## `--speaker` is required, and unknown ids exit non-zero
+ * ## `--speaker` and `--style` are both required, and unknown values exit non-zero
  *
  * Since the voice roster there is no such thing as "the" recording of a word:
- * `word_clips` is keyed `(word_id, speaker_id)` and every measurement below —
- * the pitch seed, the session reference, the cohort chao map, the review's
- * duration medians — is a property of ONE voice. Defaulting the flag would
- * mean a forgotten argument silently normalises a male cohort against Jane's
- * map and writes the result over her rows. So it is required, and validated
- * against the `speakers` table rather than taken on trust.
+ * `word_clips` is keyed `(word_id, speaker_id, style)` and every measurement
+ * below — the pitch seed, the session reference, the cohort chao map, the
+ * review's duration medians — is a property of ONE voice AND, since migration
+ * 0024, one pronunciation style (`docs/DECISIONS.md`, "style is a recording
+ * attribute, not a speaker or word property"). Defaulting either flag would
+ * mean a forgotten argument silently normalises a natural cohort against a
+ * textbook map, or vice versa, and writes the result over the other style's
+ * rows. So both are required, and `--style` is validated against the same
+ * `('textbook','natural')` set the DB check constraint enforces.
  *
  * Replaces `pull-recordings` + `make-clips`. The measurement in the middle is
  * the same code, unchanged: `cutClip` reads the take, `clipNormalize` places
@@ -141,6 +144,18 @@ if (speakerIdx === -1 || !args[speakerIdx + 1] || args[speakerIdx + 1].startsWit
 }
 const speakerId = args[speakerIdx + 1];
 
+const STYLES = new Set(["textbook", "natural"]);
+const styleIdx = args.indexOf("--style");
+if (styleIdx === -1 || !STYLES.has(args[styleIdx + 1])) {
+  console.error(
+    "--style <textbook|natural> is required. A recording's style is not a\n" +
+      "safe default — see the header.\n\n" +
+      "  npm run process-clips -- --speaker jane --style textbook --dry-run",
+  );
+  process.exit(1);
+}
+const style = args[styleIdx + 1] as "textbook" | "natural";
+
 const supabase = serviceClient();
 
 /**
@@ -183,7 +198,7 @@ if (!Number.isFinite(rawSeed)) {
   process.exit(1);
 }
 const seedF0 = resolveSeed(rawSeed);
-console.log(`Speaker ${speaker.id} (${speaker.name}) — pitch-search seed ${seedF0}Hz.`);
+console.log(`Speaker ${speaker.id} (${speaker.name}), style ${style} — pitch-search seed ${seedF0}Hz.`);
 
 interface Row {
   id: string;
@@ -208,7 +223,8 @@ interface Row {
 const { data: allRows, error: rowsError } = await supabase
   .from("word_clips")
   .select("word_id,status,clip_key,raw_key,recorded_session,words!inner(tone,tones,syllables,position)")
-  .eq("speaker_id", speakerId);
+  .eq("speaker_id", speakerId)
+  .eq("style", style);
 if (rowsError) throw new Error(`word_clips select failed: ${rowsError.message}`);
 
 // Ordered here rather than in the query: `position` lives on the embedded
@@ -379,6 +395,9 @@ async function referenceOfLastPublished(): Promise<PitchReference | null> {
   // This speaker's own published words, never the catalog's. Borrowing across
   // voices is the failure this whole task exists to prevent: it is a drift
   // correction, and one speaker's centre is not a drifted version of another's.
+  // Not style-scoped: the pitch reference describes the SPEAKER's voice
+  // (their f0 centre and range), not the recording style, so a textbook run
+  // may borrow from a natural published word and vice versa.
   const { data, error } = await supabase
     .from("word_clips")
     .select("word_id,updated_at,words!inner(meta)")
@@ -568,6 +587,7 @@ const { data: publishedDurations, error: durationsError } = await supabase
   .from("word_clips")
   .select("duration_s,words!inner(tone,tones,syllables)")
   .eq("speaker_id", speakerId)
+  .eq("style", style)
   .eq("status", "published")
   .not("duration_s", "is", null);
 if (durationsError) throw new Error(`word_clips duration select failed: ${durationsError.message}`);
@@ -612,7 +632,12 @@ interface Published {
   file: string;
 }
 
-if (!dryRun) mkdirSync(`${clipsDir}/${speakerId}`, { recursive: true });
+// Style-scoped for `natural` so a re-cut of the same word id in the other
+// style can't overwrite the local evidence copy; `textbook`'s path is
+// unchanged so the anchor regression check (`git diff fixtures/anchors`)
+// keeps comparing the same files it always has.
+const speakerClipsDir = style === "natural" ? `${clipsDir}/${speakerId}/natural` : `${clipsDir}/${speakerId}`;
+if (!dryRun) mkdirSync(speakerClipsDir, { recursive: true });
 
 const toPublish: Published[] = [];
 let flaggedCount = 0;
@@ -648,17 +673,23 @@ for (const cut of [...cuts].sort((a, b) => a.row.id.localeCompare(b.row.id))) {
   // A flagged clip is still published — clipReview flags, it never blocks.
   if (!selectedHere) continue;
 
-  const file = `${clipsDir}/${speakerId}/${cut.row.id}.wav`;
+  const file = `${speakerClipsDir}/${cut.row.id}.wav`;
   if (!dryRun) writeFileSync(file, encodeWav(cut.samples, cut.sampleRate));
 
   toPublish.push({
     id: cut.row.id,
-    // Speaker-scoped for anything this script mints. An existing key is kept
-    // verbatim instead: `clip_key` is an explicit column, not a convention, so
-    // Jane's pre-roster `ma1b.wav` objects stay exactly where they are and a
-    // re-cut never turns into a bulk R2 move (and never leaves the old object
-    // orphaned behind a rewritten row).
-    clipKey: cut.row.clip_key ?? `clips/${speakerId}/${cut.row.id}.wav`,
+    // Speaker-scoped for anything this script mints, and style-scoped for a
+    // new natural clip (`clips/{speaker}/natural/{id}.wav`) so the two styles
+    // never share an R2 key. An existing key is kept verbatim instead:
+    // `clip_key` is an explicit column, not a convention, so Jane's
+    // pre-roster `ma1b.wav` objects and every existing textbook key stay
+    // exactly where they are, and a re-cut never turns into a bulk R2 move
+    // (and never leaves the old object orphaned behind a rewritten row).
+    clipKey:
+      cut.row.clip_key ??
+      (style === "natural"
+        ? `clips/${speakerId}/natural/${cut.row.id}.wav`
+        : `clips/${speakerId}/${cut.row.id}.wav`),
     // The tone window. The gate lasts exactly this long.
     durationS: Number((cut.durationMs / 1000).toFixed(4)),
     // File start → tone start.
@@ -735,15 +766,17 @@ if (metaError) throw new Error(`words meta select failed: ${metaError.message}`)
 const metaById = new Map((metaRows ?? []).map((r) => [r.id, r.meta]));
 
 for (const clip of toPublish) {
-  // The measurements go to `word_clips`, keyed (word_id, speaker_id), so a
-  // second voice's numbers land beside the first's rather than over them. An
-  // upsert on that key because the booth may never have created the row (a
-  // take pulled in by hand, a re-cut of a retired word); the conflict target
-  // is the composite key, never `word_id` alone.
+  // The measurements go to `word_clips`, keyed (word_id, speaker_id, style),
+  // so a second voice's numbers — or a second style's — land beside the
+  // first's rather than over them. An upsert on that key because the booth
+  // may never have created the row (a take pulled in by hand, a re-cut of a
+  // retired word); the conflict target is the composite key, never
+  // `word_id` or `word_id,speaker_id` alone.
   const { error } = await supabase.from("word_clips").upsert(
     {
       word_id: clip.id,
       speaker_id: speakerId,
+      style,
       clip_key: clip.clipKey,
       duration_s: clip.durationS,
       onset_s: clip.onsetS,
@@ -752,7 +785,7 @@ for (const clip of toPublish) {
       contour: clip.contour,
       status: "published",
     },
-    { onConflict: "word_id,speaker_id" },
+    { onConflict: "word_id,speaker_id,style" },
   );
   if (error) throw new Error(`word_clips upsert failed for ${clip.id}: ${error.message}`);
 
@@ -789,17 +822,21 @@ console.log(`\nPublished ${toPublish.length} clip(s) to flappytone-clips and the
 // Run as a child process, not imported: `export-fallback.ts` is a script with
 // top-level effects and its own `process.exit(1)` on an empty result, and an
 // import would either swallow that or take this process down mid-sentence.
-// Only the default speaker's rows are bundled (see `export-fallback.ts`), so
-// processing anyone else cannot change the snapshot and re-running it would
-// only churn its timestamp.
-if (speaker.is_default) {
+// Only the default speaker's TEXTBOOK rows are bundled (see
+// `export-fallback.ts`): the fallback is the dead-network path, and nothing
+// on it should teach a shape a natural corridor hasn't shipped a game slice
+// for yet. Processing anyone else, or a natural run, cannot change the
+// snapshot and re-running it would only churn its timestamp.
+if (speaker.is_default && style === "textbook") {
   execFileSync("node", ["--experimental-strip-types", `${root}src/dev/export-fallback.ts`], {
     cwd: root,
     stdio: "inherit",
   });
   console.log("\nNow commit src/data/wordsFallback.json");
-} else {
+} else if (!speaker.is_default) {
   console.log(
     `\n${speaker.id} is not the default speaker, so the bundled fallback is unchanged.`,
   );
+} else {
+  console.log(`\nStyle ${style} is not exported to the bundled fallback.`);
 }

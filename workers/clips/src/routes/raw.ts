@@ -21,12 +21,16 @@
  *    risk.
  *
  * Since the voice roster, both the key and the row are scoped by the
- * speaker the passcode resolved to (`raw/{speaker}/{session}/{id}.wav`, and
- * an upsert onto `word_clips` with an explicit `(word_id, speaker_id)`
- * conflict target). There is no `?speaker=`: the route cannot be asked to
- * write as someone else. `session` and `id` are both bounded to characters
- * that contain neither `/` nor `.`, so even a hostile client cannot escape
- * its own prefix.
+ * speaker the passcode resolved to (`raw/{speaker}/{style}/{session}/{id}.wav`,
+ * and an upsert onto `word_clips` with an explicit
+ * `(word_id, speaker_id, style)` conflict target — migration 0024). There is
+ * no `?speaker=`: the route cannot be asked to write as someone else.
+ * `?style=` IS accepted, since a style is a property of the take itself and
+ * the booth's active pill decides it per upload; a natural take upserts a
+ * different row and lands under a different R2 key, so it physically cannot
+ * overwrite the textbook one. `session` and `id` are both bounded to
+ * characters that contain neither `/` nor `.`, so even a hostile client
+ * cannot escape its own prefix.
  */
 import { isDenied, resolveSpeaker } from "../passcode.ts";
 import { serviceDb } from "../db.ts";
@@ -35,6 +39,7 @@ import type { Env } from "../index.ts";
 /** Word ids are `[a-z0-9]+` by `wordlist.test.ts`; sessions add dashes. */
 const ID = /^[a-z0-9]{1,32}$/;
 const SESSION = /^[a-z0-9-]{1,40}$/;
+const STYLES = new Set(["textbook", "natural"]);
 
 /** A citation syllable at 48kHz/16-bit is tens of KB. This is pure abuse defence. */
 const MAX_BYTES = 4 * 1024 * 1024;
@@ -47,14 +52,16 @@ export async function handleRaw(req: Request, env: Env): Promise<Response> {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id") ?? "";
   const session = searchParams.get("session") ?? "";
+  const style = searchParams.get("style") ?? "";
   if (!ID.test(id)) return Response.json({ error: "Bad id." }, { status: 400 });
   if (!SESSION.test(session)) return Response.json({ error: "Bad session." }, { status: 400 });
+  if (!STYLES.has(style)) return Response.json({ error: "Bad style." }, { status: 400 });
 
   const body = await req.arrayBuffer();
   if (body.byteLength === 0) return Response.json({ error: "Empty upload." }, { status: 400 });
   if (body.byteLength > MAX_BYTES) return Response.json({ error: "Too large." }, { status: 413 });
 
-  const key = `raw/${speaker}/${session}/${id}.wav`;
+  const key = `raw/${speaker}/${style}/${session}/${id}.wav`;
   const db = serviceDb(env);
 
   // Checked before touching R2: Jane must not be able to upload a take for
@@ -81,15 +88,17 @@ export async function handleRaw(req: Request, env: Env): Promise<Response> {
       {
         word_id: id,
         speaker_id: speaker,
+        style,
         status: "recorded",
         raw_key: key,
         recorded_session: session,
         recorded_at: recordedAt,
       },
-      // Explicit, never an update keyed on `word_id` alone: the row this take
-      // belongs to is (word, speaker), and a conflict target that forgot the
-      // speaker would overwrite another voice's measurements.
-      { onConflict: "word_id,speaker_id" },
+      // Explicit, never an update keyed on `word_id,speaker_id` alone: the row
+      // this take belongs to is (word, speaker, style), and a conflict target
+      // that forgot either would overwrite another voice's — or the other
+      // style's — measurements.
+      { onConflict: "word_id,speaker_id,style" },
     )
     .select("word_id")
     .maybeSingle();

@@ -130,7 +130,15 @@ export async function fetchCatalog(opts: { speaker: string; listId?: string }): 
         .from("words")
         .select(select)
         .eq("word_clips.speaker_id", opts.speaker)
-        .eq("word_clips.status", "published");
+        .eq("word_clips.status", "published")
+        // Textbook only (migration 0024). Style is a per-recording pronunciation
+        // pace, not a game-composition axis yet — the player setting, tier
+        // gating and run composition for `natural` land in a later slice. Until
+        // then a natural row must never reach `wordsFromCatalog`, or the
+        // `word_clips!inner` embed would arrive with two rows per word the
+        // moment one is published and the "exactly one clip" filter in
+        // `flattenCatalogRows` would silently drop it from the run.
+        .eq("word_clips.style", "textbook");
       if (opts.listId) query = query.eq("word_lists.list_id", opts.listId);
       const { data, error } = await query.order("position", { ascending: true });
       if (error) {

@@ -14,14 +14,23 @@
  * belongs in a UI a recorder can see change, not a server-side allowlist
  * only Pierre can edit.
  *
- * A word with no `word_clips` row for this speaker counts as `pending` — a
- * second voice starts with 120 words to record, not an empty booth.
+ * A word with no `word_clips` row for this speaker, in a given style, counts
+ * as `pending` for that style — a second voice (or a first natural take)
+ * starts with 120 words to record, not an empty booth.
  *
- * Response shape is deliberately narrow: `{id, hanzi, pinyin, tone, status,
- * lists}` only, plus the speaker's id and display name. The booth needs to
- * show who is recording, what to say next, and which lists it belongs to —
- * not the clip pipeline's internal bookkeeping (`raw_key`,
- * `recorded_session`, `contour`, `polyline`, …).
+ * Since migration 0024 gave a recording a style, a word can hold up to two
+ * `word_clips` rows for this speaker — one per style — so the embed is no
+ * longer collapsed to one status. Response shape carries BOTH: `{id, hanzi,
+ * pinyin, tone, lists, textbook, natural}`, each style field a status
+ * (`pending`/`recorded`/`published`). One fetch, both styles, no
+ * reconciliation — the list picker's pills are (list × style), and a pill's
+ * green state needs the OTHER style's pending count too (to decide whether
+ * "TOCFL1 natural" is done), so splitting server-side into one style's
+ * pending/recorded lists would force a second request just to render pill
+ * colour. `Overview.tsx` derives its own pending/recorded split for whichever
+ * pill is active. The rest of the response is unchanged: narrow, no clip
+ * pipeline bookkeeping (`raw_key`, `recorded_session`, `contour`,
+ * `polyline`, …).
  */
 import { isDenied, resolveSpeaker } from "../passcode.ts";
 import { serviceDb } from "../db.ts";
@@ -32,7 +41,8 @@ interface BoothWord {
   hanzi: string;
   pinyin: string;
   tone: number;
-  status: string;
+  textbook: string;
+  natural: string;
   /** This word's list memberships (`hsk1`, `tocfl2`, `core-120`, …) — lets the
    * booth show/grey lists client-side without the server picking for it. */
   lists: string[];
@@ -44,15 +54,18 @@ interface WordRow {
   pinyin: string;
   tone: number;
   position: number;
-  word_clips: { status: string }[] | { status: string } | null;
+  word_clips: { style: string; status: string }[] | { style: string; status: string } | null;
   word_lists: { list_id: string }[] | null;
 }
 
-function clipStatus(row: WordRow): string {
+function statusByStyle(row: WordRow): { textbook: string; natural: string } {
   const clips = row.word_clips;
-  if (!clips) return "pending";
-  const one = Array.isArray(clips) ? clips[0] : clips;
-  return one?.status ?? "pending";
+  const list = clips ? (Array.isArray(clips) ? clips : [clips]) : [];
+  const byStyle = new Map(list.map((c) => [c.style, c.status]));
+  return {
+    textbook: byStyle.get("textbook") ?? "pending",
+    natural: byStyle.get("natural") ?? "pending",
+  };
 }
 
 export async function handleBoothWords(req: Request, env: Env): Promise<Response> {
@@ -80,7 +93,7 @@ export async function handleBoothWords(req: Request, env: Env): Promise<Response
   // speaker — so the booth can group/greylist by list client-side.
   const { data, error } = await db
     .from("words")
-    .select("id,hanzi,pinyin,tone,position,word_clips(status),word_lists(list_id)")
+    .select("id,hanzi,pinyin,tone,position,word_clips(style,status),word_lists(list_id)")
     .eq("word_clips.speaker_id", speaker)
     .order("position", { ascending: true });
 
@@ -89,26 +102,17 @@ export async function handleBoothWords(req: Request, env: Env): Promise<Response
   }
 
   const rows = data as unknown as WordRow[];
-  const pending: BoothWord[] = [];
-  const recorded: BoothWord[] = [];
-
-  for (const row of rows) {
-    const status = clipStatus(row);
-    const word: BoothWord = {
-      id: row.id,
-      hanzi: row.hanzi,
-      pinyin: row.pinyin,
-      tone: row.tone,
-      status,
-      lists: (row.word_lists ?? []).map((l) => l.list_id),
-    };
-    if (status === "pending") pending.push(word);
-    else if (status === "recorded" || status === "published") recorded.push(word);
-  }
+  const words: BoothWord[] = rows.map((row) => ({
+    id: row.id,
+    hanzi: row.hanzi,
+    pinyin: row.pinyin,
+    tone: row.tone,
+    ...statusByStyle(row),
+    lists: (row.word_lists ?? []).map((l) => l.list_id),
+  }));
 
   return Response.json({
     speaker: { id: speakerRow.id, name: speakerRow.name },
-    pending,
-    recorded,
+    words,
   });
 }

@@ -295,6 +295,7 @@ export type Database = {
           recorded_session: string | null
           speaker_id: string
           status: string
+          style: string
           updated_at: string
           word_id: string
         }
@@ -311,6 +312,7 @@ export type Database = {
           recorded_session?: string | null
           speaker_id: string
           status?: string
+          style?: string
           updated_at?: string
           word_id: string
         }
@@ -327,6 +329,7 @@ export type Database = {
           recorded_session?: string | null
           speaker_id?: string
           status?: string
+          style?: string
           updated_at?: string
           word_id?: string
         }

@@ -26,9 +26,19 @@ vi.mock("../src/db.ts", () => ({
   serviceDb: () => ({
     from: () => ({
       select: () => ({
-        eq: async () => {
-          wordsQuery.calls++;
-          return { data: wordsQuery.rows, error: wordsQuery.error };
+        // Two chained `.eq()` now (`status` then `style` — migration 0024):
+        // the first returns a thenable that is ALSO chainable, so both
+        // `await query.eq(...)` (one call) and `await query.eq(...).eq(...)`
+        // (two calls) resolve to the same result either way.
+        eq: () => {
+          const chain = {
+            eq: () => chain,
+            then: (resolve: (v: { data: typeof wordsQuery.rows; error: unknown }) => void) => {
+              wordsQuery.calls++;
+              resolve({ data: wordsQuery.rows, error: wordsQuery.error });
+            },
+          };
+          return chain;
         },
       }),
     }),

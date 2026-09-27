@@ -11,13 +11,22 @@
 
 export type Tone = 1 | 2 | 3 | 4;
 export type BoothWordStatus = "pending" | "recorded" | "published";
+export type BoothStyle = "textbook" | "natural";
 
+/**
+ * A word's status, per style. Since migration 0024 a word can hold up to two
+ * `word_clips` rows for this speaker — one per style — so the server sends
+ * both at once (see `workers/clips/src/routes/boothWords.ts`) and the client
+ * picks the field for whichever pill is active, rather than round-tripping
+ * per style.
+ */
 export interface BoothWord {
   id: string;
   hanzi: string;
   pinyin: string;
   tone: Tone;
-  status: BoothWordStatus;
+  textbook: BoothWordStatus;
+  natural: BoothWordStatus;
   /**
    * This word's list memberships (`hsk1`, `tocfl2`, `core-120`, …) — lets
    * `Overview.tsx` group/grey by list without a second round trip. Optional:
@@ -25,6 +34,11 @@ export interface BoothWord {
    * updates first, must degrade to "no picker," never crash the booth.
    */
   lists?: string[];
+}
+
+/** A word's status for one style — what the rest of the booth actually reads. */
+export function statusFor(word: BoothWord, style: BoothStyle): BoothWordStatus {
+  return style === "natural" ? word.natural : word.textbook;
 }
 
 /**
@@ -66,12 +80,16 @@ export interface BoothSpeaker {
 
 export interface BoothWordsResponse {
   speaker: BoothSpeaker;
-  pending: BoothWord[];
-  recorded: BoothWord[];
+  words: BoothWord[];
 }
 
 /**
- * Fetches the pending/recorded split from `GET /booth/words`.
+ * Fetches every word, both styles' status, from `GET /booth/words`.
+ *
+ * One fetch covers both style pills — `Overview.tsx` derives its own
+ * pending/recorded split per style from `words` via `statusFor`, rather than
+ * this module doing it once for whichever style happened to be active when
+ * it was called.
  *
  * Throws on anything short of a clean 200 with the expected shape — a wrong
  * passcode throws with a message the UI can show verbatim, everything else
@@ -111,10 +129,9 @@ export async function fetchBoothWords(
     !speaker ||
     typeof speaker.id !== "string" ||
     typeof speaker.name !== "string" ||
-    !Array.isArray(body.pending) ||
-    !Array.isArray(body.recorded)
+    !Array.isArray(body.words)
   ) {
     throw new Error("The server sent back something unexpected.");
   }
-  return { speaker, pending: body.pending, recorded: body.recorded };
+  return { speaker, words: body.words };
 }
