@@ -98,6 +98,11 @@ const { data, error } = await supabase
   .select(`${wordColumns.join(",")},word_clips!inner(${clipColumns.join(",")}),${FALLBACK_LISTS_SELECT}`)
   .eq("word_clips.speaker_id", defaultSpeaker.id)
   .eq("word_clips.status", "published")
+  // Textbook only (migration 0024). A published natural clip for the same
+  // word would otherwise arrive as a second embedded row and get dropped by
+  // the "exactly one clip" filter below — silently shrinking the bundle
+  // instead of teaching a style the game slice hasn't shipped a corridor for.
+  .eq("word_clips.style", "textbook")
   .order("position", { ascending: true });
 
 if (error) {

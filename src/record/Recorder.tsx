@@ -28,7 +28,7 @@ import { TakeBuffer } from "./takeBuffer.ts";
 import { TakeDetector, type RejectReason } from "./takeDetector.ts";
 import { ConfirmRedo } from "./ConfirmRedo.tsx";
 import type { Uploader, UploadState } from "./upload.ts";
-import type { BoothWord, BoothWordStatus } from "./boothWords.ts";
+import { statusFor, type BoothStyle, type BoothWord, type BoothWordStatus } from "./boothWords.ts";
 import { nextPendingId } from "./boothQueue.ts";
 import { afterTake, initialArmed, needsRedoConfirm, type BoothEntry } from "./boothArming.ts";
 
@@ -53,6 +53,8 @@ const REJECT_COPY: Record<RejectReason, string> = {
 interface Props {
   pending: BoothWord[];
   recorded: BoothWord[];
+  /** The active pill's style — which of a word's two statuses is "the" status here. */
+  style: BoothStyle;
   captured: Set<string>;
   markCaptured: (id: string) => void;
   uploader: Uploader;
@@ -66,6 +68,7 @@ interface Props {
 export function Recorder({
   pending,
   recorded,
+  style,
   captured,
   markCaptured,
   uploader,
@@ -137,7 +140,9 @@ export function Recorder({
    */
   const statusRef = useRef<Map<string, BoothWordStatus>>(new Map());
   useEffect(() => {
-    statusRef.current = new Map([...pending, ...recorded].map((w) => [w.id, w.status] as const));
+    statusRef.current = new Map(
+      [...pending, ...recorded].map((w) => [w.id, statusFor(w, style)] as const),
+    );
   });
 
   const current: BoothWord | undefined =
@@ -214,6 +219,7 @@ export function Recorder({
       const wav = encodeWav(samples, buffer.sampleRate);
       uploader.enqueue(
         id,
+        style,
         new Blob([wav.slice() as Uint8Array<ArrayBuffer>], { type: "audio/wav" }),
       );
       markCaptured(id);
@@ -241,7 +247,7 @@ export function Recorder({
       setFrameSink(null);
       detector.disarm();
     };
-  }, [markCaptured, uploader]);
+  }, [markCaptured, uploader, style]);
 
   /**
    * Leaving this screen turns the microphone off for real — the overview is
@@ -270,14 +276,14 @@ export function Recorder({
 
   const goTo = useCallback(
     (word: BoothWord) => {
-      if (needsRedoConfirm(word.status)) {
+      if (needsRedoConfirm(statusFor(word, style))) {
         setConfirming(word);
         return;
       }
       setCurrentId(word.id);
       setArmed(false);
     },
-    [setArmed],
+    [setArmed, style],
   );
 
   if (!allDone && !current) {

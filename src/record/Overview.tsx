@@ -18,14 +18,15 @@
  * an effect: iOS Safari grants `getUserMedia` only within a user gesture
  * (CLAUDE.md hard rule 4). Awaiting anything before it loses the gesture.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ensureMic } from "../audio/session.ts";
 import { MicError } from "../audio/mic.ts";
 import { Recorder } from "./Recorder.tsx";
 import { ConfirmRedo } from "./ConfirmRedo.tsx";
-import { fetchBoothWords, type BoothSpeaker, type BoothWord } from "./boothWords.ts";
+import { fetchBoothWords, statusFor, type BoothSpeaker, type BoothStyle, type BoothWord } from "./boothWords.ts";
 import { loadProgress, saveProgress } from "./progress.ts";
 import { needsRedoConfirm, type BoothEntry } from "./boothArming.ts";
+import { orderPills } from "./pillOrder.ts";
 import { Uploader, type UploadState } from "./upload.ts";
 
 /**
@@ -50,19 +51,9 @@ const LIST_LABELS: Record<string, string> = {
 };
 const LIST_ORDER = ["core-120", "tonepairs-v1", "tocfl1", "tocfl2", "tocfl3", "hsk1", "hsk2", "hsk3"];
 
-function listLabel(id: string): string {
-  return LIST_LABELS[id] ?? id;
-}
-
-function sortListIds(ids: Iterable<string>): string[] {
-  return [...ids].sort((a, b) => {
-    const ia = LIST_ORDER.indexOf(a);
-    const ib = LIST_ORDER.indexOf(b);
-    if (ia === -1 && ib === -1) return a.localeCompare(b);
-    if (ia === -1) return 1;
-    if (ib === -1) return -1;
-    return ia - ib;
-  });
+/** A style suffix on the list label, since a pill is now (list × style). */
+function listLabel(id: string, style: BoothStyle): string {
+  return `${LIST_LABELS[id] ?? id} ${style}`;
 }
 
 const MIC_COPY: Record<string, string> = {
@@ -94,18 +85,18 @@ export function Overview({ passcode }: Props) {
 
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
-  // pending/recorded live together so a confirmed upload moves a word between
-  // them in one update, rather than one setter calling another from inside
-  // its updater.
-  const [words, setWords] = useState<{ pending: BoothWord[]; recorded: BoothWord[] }>({
-    pending: [],
-    recorded: [],
-  });
+  // Every word, both styles' status carried on each — see boothWords.ts.
+  // A confirmed upload flips one style's field in place, in one update.
+  const [words, setWords] = useState<BoothWord[]>([]);
   const [mode, setMode] = useState<Mode>({ kind: "overview" });
   const [showRecorded, setShowRecorded] = useState(false);
   // `null` = every list. Reset on every fresh load (see `load` below) so a
   // stale filter from a previous passcode/session can't hide words silently.
   const [selectedList, setSelectedList] = useState<string | null>(null);
+  // Which pill's style is active — "textbook" until a pill says otherwise.
+  // Persists across selecting "All" (its scope is "all lists, current
+  // style"), so choosing "All" after a natural pill still shows natural.
+  const [selectedStyle, setSelectedStyle] = useState<BoothStyle>("textbook");
   const [micError, setMicError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<BoothWord | null>(null);
   const [uploads, setUploads] = useState<UploadState>({ byId: {}, pending: 0, failed: 0 });
@@ -116,22 +107,20 @@ export function Overview({ passcode }: Props) {
     setCaptured((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
   }, []);
 
+  // Which style a captured take belongs to — read by `markConfirmed` at
+  // confirmation time via the ref rather than closed-over state, since the
+  // active pill can change between entering the recording screen and the
+  // upload actually confirming.
+  const uploadStyleRef = useRef<BoothStyle>(selectedStyle);
+  uploadStyleRef.current = selectedStyle;
+
   /**
-   * A confirmed upload moves its word from `pending` to `recorded` locally —
-   * no refetch. A redo (the word was already in `recorded`) leaves it there;
-   * this only ever removes from `pending`.
+   * A confirmed upload flips one word's ONE style's status to "recorded" in
+   * place — no refetch, and the other style's status is untouched.
    */
   const markConfirmed = useCallback((id: string) => {
-    setWords((prev) => {
-      const word = prev.pending.find((w) => w.id === id);
-      if (!word) return prev;
-      return {
-        pending: prev.pending.filter((w) => w.id !== id),
-        recorded: prev.recorded.some((w) => w.id === id)
-          ? prev.recorded
-          : [...prev.recorded, { ...word, status: "recorded" }],
-      };
-    });
+    const style = uploadStyleRef.current;
+    setWords((prev) => prev.map((w) => (w.id === id ? { ...w, [style]: "recorded" } : w)));
   }, []);
 
   // Lazy initialiser, not a ref assigned during render: the queue must outlive
@@ -158,7 +147,7 @@ export function Overview({ passcode }: Props) {
     try {
       const fetched = await fetchBoothWords(passcode);
       setSpeaker(fetched.speaker);
-      setWords({ pending: fetched.pending, recorded: fetched.recorded });
+      setWords(fetched.words);
       setSelectedList(null);
       setLoadState("ready");
     } catch (err) {
@@ -171,7 +160,15 @@ export function Overview({ passcode }: Props) {
     void load();
   }, [load]);
 
-  const { pending, recorded } = words;
+  // The active pill's split, derived from every word's per-style status —
+  // "pending"/"recorded" below is a status for `selectedStyle`, not the
+  // other style's.
+  const statusForActive = useCallback((w: BoothWord) => statusFor(w, selectedStyle), [selectedStyle]);
+  const pending = useMemo(() => words.filter((w) => statusForActive(w) === "pending"), [words, statusForActive]);
+  const recorded = useMemo(
+    () => words.filter((w) => statusForActive(w) !== "pending"),
+    [words, statusForActive],
+  );
   const total = pending.length + recorded.length;
 
   const listIds = useMemo(() => {
@@ -180,9 +177,20 @@ export function Overview({ passcode }: Props) {
     // sending it once `/booth/words` shipped this field, and a stale
     // deploy (or an older client mid-rollout) must degrade to "no picker",
     // never crash the whole screen.
-    for (const w of [...pending, ...recorded]) for (const l of w.lists ?? []) ids.add(l);
-    return sortListIds(ids);
-  }, [pending, recorded]);
+    for (const w of words) for (const l of w.lists ?? []) ids.add(l);
+    return ids;
+  }, [words]);
+
+  const pills = useMemo(
+    () =>
+      orderPills(
+        listIds,
+        LIST_ORDER,
+        (listId, style) => words.filter((w) => w.lists?.includes(listId) && statusFor(w, style) === "pending").length,
+        (listId) => listId.startsWith(DISABLED_LIST_PREFIX),
+      ),
+    [listIds, words],
+  );
 
   const visiblePending = useMemo(
     () => (selectedList ? pending.filter((w) => w.lists?.includes(selectedList)) : pending),
@@ -206,7 +214,7 @@ export function Overview({ passcode }: Props) {
   };
 
   const recordOne = (word: BoothWord) => {
-    if (needsRedoConfirm(word.status)) {
+    if (needsRedoConfirm(statusFor(word, selectedStyle))) {
       setConfirming(word);
       return;
     }
@@ -223,6 +231,7 @@ export function Overview({ passcode }: Props) {
       <Recorder
         pending={visiblePending}
         recorded={visibleRecorded}
+        style={selectedStyle}
         captured={captured}
         markCaptured={markCaptured}
         uploader={uploader}
@@ -262,7 +271,7 @@ export function Overview({ passcode }: Props) {
         </p>
       </header>
 
-      {listIds.length > 0 && (
+      {pills.length > 0 && (
         <div className="rec-list-picker">
           <button
             className={`rec-pill${selectedList === null ? " rec-pill-active" : ""}`}
@@ -270,17 +279,29 @@ export function Overview({ passcode }: Props) {
           >
             All
           </button>
-          {listIds.map((id) => {
-            const disabled = id.startsWith(DISABLED_LIST_PREFIX);
+          {pills.map(({ listId, style: pillStyle }) => {
+            const disabled = listId.startsWith(DISABLED_LIST_PREFIX);
+            const done =
+              !disabled &&
+              words.filter((w) => w.lists?.includes(listId) && statusFor(w, pillStyle) === "pending").length === 0;
+            const active = selectedList === listId && selectedStyle === pillStyle;
             return (
               <button
-                key={id}
-                className={`rec-pill${selectedList === id ? " rec-pill-active" : ""}`}
+                key={`${listId}:${pillStyle}`}
+                className={
+                  `rec-pill${active ? " rec-pill-active" : ""}` + (done ? " rec-pill-done" : "")
+                }
                 disabled={disabled}
                 title={disabled ? "Not being recorded right now" : undefined}
-                onClick={() => setSelectedList(id)}
+                onClick={() => {
+                  setSelectedList(listId);
+                  setSelectedStyle(pillStyle);
+                }}
               >
-                {listLabel(id)}
+                <span className="rec-pill-icon" aria-hidden="true">
+                  {done ? "✓" : "○"}
+                </span>{" "}
+                {listLabel(listId, pillStyle)}
               </button>
             );
           })}
@@ -301,7 +322,7 @@ export function Overview({ passcode }: Props) {
       ) : (
         <p className="rec-sub">
           {selectedList
-            ? `Everything in ${listLabel(selectedList)} is recorded — thank you!`
+            ? `Everything in ${listLabel(selectedList, selectedStyle)} is recorded — thank you!`
             : "Everything is recorded — thank you!"}{" "}
           You can still re-record any word below.
         </p>
@@ -324,7 +345,7 @@ export function Overview({ passcode }: Props) {
         <section className="rec-list">
           <h2 className="rec-list-head">To record ({visiblePending.length})</h2>
           {visiblePending.map((w) => (
-            <WordRow key={w.id} word={w} captured={captured.has(w.id)} onPick={recordOne} />
+            <WordRow key={w.id} word={w} style={selectedStyle} captured={captured.has(w.id)} onPick={recordOne} />
           ))}
         </section>
       )}
@@ -340,7 +361,7 @@ export function Overview({ passcode }: Props) {
           </button>
           {showRecorded &&
             visibleRecorded.map((w) => (
-              <WordRow key={w.id} word={w} captured={captured.has(w.id)} onPick={recordOne} />
+              <WordRow key={w.id} word={w} style={selectedStyle} captured={captured.has(w.id)} onPick={recordOne} />
             ))}
         </section>
       )}
@@ -373,21 +394,24 @@ export function Overview({ passcode }: Props) {
 
 function WordRow({
   word,
+  style,
   captured,
   onPick,
 }: {
   word: BoothWord;
+  style: BoothStyle;
   captured: boolean;
   onPick: (w: BoothWord) => void;
 }) {
+  const status = statusFor(word, style);
   return (
     <div className="rec-row">
       <span className="rec-row-word">
         <span className="rec-row-hanzi">{word.hanzi}</span> {word.pinyin}{" "}
         <span className="rec-tone">({word.tone})</span>
       </span>
-      <span className={`rec-badge rec-badge-${captured ? "recorded" : word.status}`}>
-        {captured && word.status === "pending" ? "uploading" : word.status}
+      <span className={`rec-badge rec-badge-${captured ? "recorded" : status}`}>
+        {captured && status === "pending" ? "uploading" : status}
       </span>
       <button className="rec-btn rec-row-btn" onClick={() => onPick(word)}>
         Record this one

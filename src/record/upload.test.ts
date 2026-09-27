@@ -22,21 +22,22 @@ describe("Uploader", () => {
   it("uploads a take and marks it done", async () => {
     const fetchImpl = vi.fn(ok) as unknown as typeof fetch;
     const { uploader } = make(fetchImpl);
-    uploader.enqueue("ma1", blob());
+    uploader.enqueue("ma1", "textbook", blob());
     await uploader.flush();
     expect(uploader.getState().byId.ma1).toBe("done");
     expect(uploader.getState().pending).toBe(0);
   });
 
-  it("sends the id, session and passcode the server checks", async () => {
+  it("sends the id, session, style and passcode the server checks", async () => {
     const fetchImpl = vi.fn(ok) as unknown as typeof fetch;
     const { uploader } = make(fetchImpl);
-    uploader.enqueue("hao3", blob());
+    uploader.enqueue("hao3", "natural", blob());
     await uploader.flush();
     const [url, init] = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toContain("/raw?");
     expect(url).toContain("id=hao3");
     expect(url).toContain("session=s1");
+    expect(url).toContain("style=natural");
     expect((init as RequestInit).headers).toMatchObject({ "x-record-passcode": "open" });
   });
 
@@ -47,7 +48,7 @@ describe("Uploader", () => {
       return calls < 3 ? boom() : ok();
     }) as unknown as typeof fetch;
     const { uploader } = make(fetchImpl);
-    uploader.enqueue("ma1", blob());
+    uploader.enqueue("ma1", "textbook", blob());
     await uploader.flush();
     expect(calls).toBe(3);
     expect(uploader.getState().byId.ma1).toBe("done");
@@ -60,7 +61,7 @@ describe("Uploader", () => {
       return calls < 2 ? Promise.reject(new Error("offline")) : ok();
     }) as unknown as typeof fetch;
     const { uploader } = make(fetchImpl);
-    uploader.enqueue("ma1", blob());
+    uploader.enqueue("ma1", "textbook", blob());
     await uploader.flush();
     expect(uploader.getState().byId.ma1).toBe("done");
   });
@@ -70,7 +71,7 @@ describe("Uploader", () => {
       Promise.resolve(new Response(null, { status: 401 })),
     ) as unknown as typeof fetch;
     const { uploader } = make(fetchImpl);
-    uploader.enqueue("ma1", blob());
+    uploader.enqueue("ma1", "textbook", blob());
     await uploader.flush();
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(uploader.getState().byId.ma1).toBe("failed");
@@ -80,7 +81,7 @@ describe("Uploader", () => {
   it("eventually gives up and surfaces the failure", async () => {
     const fetchImpl = vi.fn(boom) as unknown as typeof fetch;
     const { uploader } = make(fetchImpl);
-    uploader.enqueue("ma1", blob());
+    uploader.enqueue("ma1", "textbook", blob());
     await uploader.flush();
     expect(uploader.getState().byId.ma1).toBe("failed");
   });
@@ -89,7 +90,7 @@ describe("Uploader", () => {
     let fail = true;
     const fetchImpl = vi.fn(() => (fail ? boom() : ok())) as unknown as typeof fetch;
     const { uploader } = make(fetchImpl);
-    uploader.enqueue("ma1", blob());
+    uploader.enqueue("ma1", "textbook", blob());
     await uploader.flush();
     expect(uploader.getState().byId.ma1).toBe("failed");
 
@@ -103,8 +104,8 @@ describe("Uploader", () => {
     const fetchImpl = vi.fn(ok) as unknown as typeof fetch;
     const { uploader } = make(fetchImpl);
     // Re-recording before the queue drains: only the latest take should go.
-    uploader.enqueue("ma1", blob());
-    uploader.enqueue("ma1", blob());
+    uploader.enqueue("ma1", "textbook", blob());
+    uploader.enqueue("ma1", "textbook", blob());
     await uploader.flush();
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
@@ -121,7 +122,7 @@ describe("Uploader", () => {
       fetchImpl: vi.fn(ok) as unknown as typeof fetch,
       sleep: () => Promise.resolve(),
     });
-    uploader.enqueue("ma1", blob());
+    uploader.enqueue("ma1", "textbook", blob());
     expect(confirmed).toEqual([]); // queued, not stored
     await uploader.flush();
     expect(confirmed).toEqual(["ma1"]);
@@ -137,7 +138,7 @@ describe("Uploader", () => {
       fetchImpl: vi.fn(boom) as unknown as typeof fetch,
       sleep: () => Promise.resolve(),
     });
-    uploader.enqueue("ma1", blob());
+    uploader.enqueue("ma1", "textbook", blob());
     await uploader.flush();
     expect(confirmed).toEqual([]);
     expect(uploader.getState().byId.ma1).toBe("failed");
@@ -154,7 +155,7 @@ describe("Uploader", () => {
       fetchImpl: vi.fn(() => (++calls < 3 ? boom() : ok())) as unknown as typeof fetch,
       sleep: () => Promise.resolve(),
     });
-    uploader.enqueue("ma1", blob());
+    uploader.enqueue("ma1", "textbook", blob());
     await uploader.flush();
     expect(confirmed).toEqual(["ma1"]);
   });
@@ -164,8 +165,8 @@ describe("Uploader", () => {
       () => new Promise<Response>(() => {}), // never resolves
     ) as unknown as typeof fetch;
     const { uploader } = make(fetchImpl);
-    uploader.enqueue("ma1", blob());
-    uploader.enqueue("ma2", blob());
+    uploader.enqueue("ma1", "textbook", blob());
+    uploader.enqueue("ma2", "textbook", blob());
     expect(uploader.getState().pending).toBe(2);
   });
 
@@ -188,7 +189,7 @@ describe("Uploader", () => {
         fetchImpl,
         sleep: () => Promise.resolve(),
       });
-      uploader.enqueue("ma1", blob());
+      uploader.enqueue("ma1", "textbook", blob());
       await uploader.flush();
       // Never actually called the network — the guard short-circuits before fetch.
       expect(fetchImpl).not.toHaveBeenCalled();

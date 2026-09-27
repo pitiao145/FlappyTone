@@ -123,7 +123,13 @@ async function loadWords(env: Env): Promise<Inventory> {
   const clips = await db
     .from("word_clips")
     .select("word_id,speaker_id,clip_key,words!inner(min_tier,word_lists(list_id))")
-    .eq("status", "published");
+    .eq("status", "published")
+    // Textbook only (migration 0024). This route has no `?style=` and stays
+    // that way "for now" per the plan this migration ships with — without
+    // this filter, a published natural row would land in the same
+    // `speaker:word_id` map key as its textbook sibling and whichever one
+    // this query happened to return last would silently serve here.
+    .eq("style", "textbook");
   if (clips.error || !clips.data) {
     throw new Error("words query failed");
   }

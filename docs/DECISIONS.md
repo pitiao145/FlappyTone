@@ -437,6 +437,71 @@ gate instead say so explicitly:
 
 ## Clip pipeline
 
+### Style is a recording attribute, not a speaker row or a words column (27 Sep 2026)
+
+Natural-speech pronunciation is coming: alongside today's slow, exaggerated
+"textbook" citation-form takes, speakers will record a second, faster,
+more natural style. Where that property belongs was the actual decision —
+the mechanics (a check-constrained column, a wider PK) followed once the
+placement was settled.
+
+**Not a `speakers` row.** A voice and a pronunciation style are independent
+axes — Jane can record both styles, and a future second speaker will too — so
+folding style into the speaker roster would either force one speaker per
+style (duplicating `f0_seed`, `gender`, `accent` for no reason) or grow
+`speakers` a `style` column that describes zero of its own attributes and all
+of one relationship. This is the same shape argument "A speaker, not a voice
+enum" (below) makes about `word_clips` vs. a `voice` enum on `words`: whichever
+table gets an attribute that isn't true of every row of that table is the
+wrong table.
+
+**Not a `words` column either.** A word's hanzi, pinyin and tone don't change
+between styles — only how it's said does, and "how it's said" is exactly what
+`word_clips` already exists to hold (polyline, duration, onset — all
+per-recording, never per-word). Style joins that list. The alternative —
+`words.style` — would need a word to exist twice, once per style, which
+breaks every `word_id` foreign key and the `min_tier` game-access gate that's
+supposed to be identical for every voice AND every style of one word.
+
+**So: `word_clips.style`, a `check (style in ('textbook','natural'))` column,
+default `'textbook'` so every existing row backfills for free. The primary
+key widens to `(word_id, speaker_id, style)`** — migration `0024`. This is
+the same move `0015` made for speaker (widening `word_clips`'s key rather than
+inventing a side table), for the same reason: a recording is uniquely
+identified by word × speaker × style, and the PK should say that outright
+rather than leaving two rows silently colliding on `(word_id, speaker_id)`
+the moment a natural take is uploaded for a word that already has a textbook
+one.
+
+**The game does not read `natural` yet, on purpose — this migration ships
+infrastructure and the booth, not a game feature.** `src/data/words.ts`'s
+live catalog query and the Worker's `GET /clip/:speaker/:id` both gained an
+explicit `.eq(...,"style","textbook")`/`.eq("style","textbook")` filter,
+rather than relying on "no natural rows exist yet" to keep them out — the
+moment a natural clip is published, an unfiltered `word_clips!inner` embed
+would arrive with two rows per word and the "exactly one clip" guard in
+`flattenCatalogRows` would silently drop that word from the run, which is a
+worse failure than being explicit costs nothing to avoid. `export-fallback`
+bundles textbook only for the same reason the bundle is speaker-scoped to the
+default voice only (see "A speaker, not a voice enum" below): the fallback is
+the dead-network path, and nothing on that path should teach a corridor shape
+the shipped game doesn't score yet.
+
+**The booth is the one place `natural` is live today.** `/booth/words`'
+pending/recorded split is now (list × style) — the list picker's pills pair a
+list with a style, e.g. "TOCFL1 textbook" / "TOCFL1 natural", each with its
+own count and its own "Start recording" pass, because a list can be finished
+in one style and still have work in the other. `process-clips`, `verify-clips`
+and `/raw`'s upsert conflict target all take `--style`/`?style=`, required and
+validated exactly the way `--speaker` already was — for the same reason: the
+pitch-search seed, cohort duration medians and review thresholds are already
+one-voice properties, and now they're one-voice-one-style properties, so a
+forgotten flag would normalise a natural cohort against a textbook map (or
+the reverse) and write the result over the other style's rows. The one
+exception is the pitch-search *seed* itself — `speakers.f0_seed` describes the
+speaker's voice, not the recording style, so a textbook run may still borrow a
+reference measurement from a natural published word and vice versa.
+
 ### A speaker, not a voice enum (16 Sep 2026)
 
 The game needed a second recorded voice, and the cheap version of that is a

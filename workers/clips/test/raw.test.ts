@@ -64,28 +64,50 @@ beforeEach(() => {
 
 describe("POST /raw", () => {
   it("writes only into its own speaker's prefix and row", async () => {
-    const res = await post("/raw?id=xiong2&session=2026-09-16-abc", "RIFFfake-wav", "hunter2", env);
+    const res = await post(
+      "/raw?id=xiong2&session=2026-09-16-abc&style=textbook",
+      "RIFFfake-wav",
+      "hunter2",
+      env,
+    );
     expect(res.status).toBe(200);
     const json = (await res.json()) as { ok: boolean; key: string };
-    expect(json.key).toBe("raw/jane/2026-09-16-abc/xiong2.wav");
-    expect([...raw.objects.keys()]).toEqual(["raw/jane/2026-09-16-abc/xiong2.wav"]);
+    expect(json.key).toBe("raw/jane/textbook/2026-09-16-abc/xiong2.wav");
+    expect([...raw.objects.keys()]).toEqual(["raw/jane/textbook/2026-09-16-abc/xiong2.wav"]);
 
     expect(db.upserts).toHaveLength(1);
     expect(db.upserts[0]).toMatchObject({
       word_id: "xiong2",
       speaker_id: "jane",
+      style: "textbook",
       status: "recorded",
-      raw_key: "raw/jane/2026-09-16-abc/xiong2.wav",
+      raw_key: "raw/jane/textbook/2026-09-16-abc/xiong2.wav",
       recorded_session: "2026-09-16-abc",
     });
-    expect(db.conflictTargets[0]).toBe("word_id,speaker_id");
+    expect(db.conflictTargets[0]).toBe("word_id,speaker_id,style");
+  });
+
+  it("a natural take upserts its own row and key, never the textbook one", async () => {
+    await post("/raw?id=xiong2&session=2026-09-16-abc&style=natural", "RIFFfake-wav", "hunter2", env);
+    expect([...raw.objects.keys()]).toEqual(["raw/jane/natural/2026-09-16-abc/xiong2.wav"]);
+    expect(db.upserts[0]).toMatchObject({ style: "natural" });
+    expect(db.conflictTargets[0]).toBe("word_id,speaker_id,style");
+
+    // A textbook take for the same word/session afterwards lands at its own
+    // key and upserts its own row — the natural object and row are untouched.
+    await post("/raw?id=xiong2&session=2026-09-16-abc&style=textbook", "RIFFfake-wav", "hunter2", env);
+    expect([...raw.objects.keys()].sort()).toEqual(
+      ["raw/jane/natural/2026-09-16-abc/xiong2.wav", "raw/jane/textbook/2026-09-16-abc/xiong2.wav"].sort(),
+    );
+    expect(db.upserts).toHaveLength(2);
+    expect(db.upserts[1]).toMatchObject({ style: "textbook" });
   });
 
   it("takes no speaker from the client", async () => {
     // The request cannot express "write as someone else" — there is no
     // parameter for it, so a stale tab or a typo cannot cross-write.
     const res = await post(
-      "/raw?id=xiong2&session=s1&speaker=mark&speaker_id=mark",
+      "/raw?id=xiong2&session=s1&style=textbook&speaker=mark&speaker_id=mark",
       "RIFFfake-wav",
       "hunter2",
       env,
@@ -96,54 +118,62 @@ describe("POST /raw", () => {
   });
 
   it("gives a second passcode a second speaker's prefix and row", async () => {
-    await post("/raw?id=xiong2&session=s1", "RIFFfake-wav", "mark-code", env);
-    expect([...raw.objects.keys()]).toEqual(["raw/mark/s1/xiong2.wav"]);
+    await post("/raw?id=xiong2&session=s1&style=textbook", "RIFFfake-wav", "mark-code", env);
+    expect([...raw.objects.keys()]).toEqual(["raw/mark/textbook/s1/xiong2.wav"]);
     expect(db.upserts[0]).toMatchObject({ speaker_id: "mark" });
   });
 
   it("500s and leaves the object in RAW when the db write fails", async () => {
     db.error = new Error("db down");
-    const res = await post("/raw?id=ma1&session=jane-01", "RIFFfake-wav", "hunter2", env);
+    const res = await post("/raw?id=ma1&session=jane-01&style=textbook", "RIFFfake-wav", "hunter2", env);
     expect(res.status).toBe(500);
-    expect(raw.objects.has("raw/jane/jane-01/ma1.wav")).toBe(true);
+    expect(raw.objects.has("raw/jane/textbook/jane-01/ma1.wav")).toBe(true);
   });
 
   it("404s when id is not a words row", async () => {
-    const res = await post("/raw?id=nope&session=jane-01", "RIFFfake-wav", "hunter2", env);
+    const res = await post("/raw?id=nope&session=jane-01&style=textbook", "RIFFfake-wav", "hunter2", env);
     expect(res.status).toBe(404);
     expect(raw.objects.size).toBe(0);
   });
 
   it("400s a bad id", async () => {
-    const res = await post("/raw?id=BAD&session=jane-01", "RIFFfake-wav", "hunter2", env);
+    const res = await post("/raw?id=BAD&session=jane-01&style=textbook", "RIFFfake-wav", "hunter2", env);
     expect(res.status).toBe(400);
   });
 
   it("400s a bad session", async () => {
-    const res = await post("/raw?id=ma1&session=Bad_Session!", "RIFFfake-wav", "hunter2", env);
+    const res = await post("/raw?id=ma1&session=Bad_Session!&style=textbook", "RIFFfake-wav", "hunter2", env);
     expect(res.status).toBe(400);
   });
 
+  it("400s a missing or unknown style", async () => {
+    const missing = await post("/raw?id=ma1&session=jane-01", "RIFFfake-wav", "hunter2", env);
+    expect(missing.status).toBe(400);
+    const unknown = await post("/raw?id=ma1&session=jane-01&style=slow", "RIFFfake-wav", "hunter2", env);
+    expect(unknown.status).toBe(400);
+    expect(raw.objects.size).toBe(0);
+  });
+
   it("400s an empty body", async () => {
-    const res = await post("/raw?id=ma1&session=jane-01", "", "hunter2", env);
+    const res = await post("/raw?id=ma1&session=jane-01&style=textbook", "", "hunter2", env);
     expect(res.status).toBe(400);
   });
 
   it("413s a too-large body", async () => {
     const big = new Uint8Array(4 * 1024 * 1024 + 1);
-    const res = await post("/raw?id=ma1&session=jane-01", big, "hunter2", env);
+    const res = await post("/raw?id=ma1&session=jane-01&style=textbook", big, "hunter2", env);
     expect(res.status).toBe(413);
   });
 
   it("401s a wrong passcode", async () => {
-    const res = await post("/raw?id=ma1&session=jane-01", "RIFFfake-wav", "wrong", env);
+    const res = await post("/raw?id=ma1&session=jane-01&style=textbook", "RIFFfake-wav", "wrong", env);
     expect(res.status).toBe(401);
     expect(raw.objects.size).toBe(0);
   });
 
   it("503s when RECORD_PASSCODES is unset", async () => {
     const noPasscode = fakeEnv({ RAW: raw as unknown as R2Bucket, RECORD_PASSCODES: "" });
-    const res = await post("/raw?id=ma1&session=jane-01", "RIFFfake-wav", "hunter2", noPasscode);
+    const res = await post("/raw?id=ma1&session=jane-01&style=textbook", "RIFFfake-wav", "hunter2", noPasscode);
     expect(res.status).toBe(503);
     expect(raw.objects.size).toBe(0);
   });

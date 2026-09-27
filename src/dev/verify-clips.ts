@@ -7,13 +7,16 @@
  *
  *   npm run verify-clips                        # every ACTIVE speaker, in turn
  *   npm run verify-clips -- --speaker jane      # just hers
+ *   npm run verify-clips -- --style natural     # just that style, both speakers
  *   npm run verify-clips -- --raw               # raw_key instead of clip_key
  *   npm run verify-clips -- --speaker jane --only ma1
  *
  * Keys come from `word_clips`, so a speaker is always part of the question.
  * With no `--speaker` it walks every `speakers.active` row and reports per
  * speaker — a single pooled total would hide one voice's failures inside
- * another's passes.
+ * another's passes. `--style` narrows to one style; omitted, it checks both
+ * (a speaker's textbook and natural rows share nothing but the word id, so
+ * pooling them costs nothing the per-speaker split doesn't already cover).
  *
  * Downloads land in `fixtures/clips/verify/` (gitignored scratch space),
  * never touching `fixtures/clips/<speaker>/` or `fixtures/recordings/`
@@ -56,6 +59,11 @@ if (speakerIdx !== -1 && (!argv[speakerIdx + 1] || argv[speakerIdx + 1].startsWi
   throw new Error("--speaker needs an id");
 const onlySpeaker = speakerIdx !== -1 ? argv[speakerIdx + 1] : null;
 
+const styleIdx = argv.indexOf("--style");
+if (styleIdx !== -1 && !["textbook", "natural"].includes(argv[styleIdx + 1]))
+  throw new Error("--style needs textbook or natural");
+const onlyStyle = styleIdx !== -1 ? (argv[styleIdx + 1] as "textbook" | "natural") : null;
+
 mkdirSync(scratchDir, { recursive: true });
 
 function sha256(file: string): string {
@@ -66,6 +74,7 @@ interface Row {
   id: string;
   bucketKey: string;
   localFile: string;
+  style: string;
 }
 
 const supabase = serviceClient();
@@ -86,21 +95,24 @@ if (speakers.length === 0) {
 }
 
 async function rowsFor(speaker: string): Promise<Row[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from("word_clips")
-    .select("word_id,clip_key,raw_key,recorded_session")
+    .select("word_id,clip_key,raw_key,recorded_session,style")
     .eq("speaker_id", speaker)
     .order("word_id");
+  if (onlyStyle) query = query.eq("style", onlyStyle);
+  const { data, error } = await query;
   if (error) throw new Error(`word_clips query failed: ${error.message}`);
   return (data ?? [])
     .filter((r) => (isRaw ? r.raw_key && r.recorded_session : r.clip_key))
     .filter((r) => !only || r.word_id === only)
     .map((r) => ({
       id: r.word_id,
+      style: r.style,
       bucketKey: (isRaw ? r.raw_key : r.clip_key)!,
       localFile: isRaw
         ? localTake(speaker, r.recorded_session!, r.word_id)
-        : localClip(speaker, r.word_id),
+        : localClip(speaker, r.word_id, r.style),
     }));
 }
 
@@ -115,11 +127,14 @@ function localTake(speaker: string, session: string, id: string): string {
  * Jane's 120 pre-roster words predate that layout and live (if present at
  * all) in the legacy `public/ref/` directory — see the file header.
  */
-function localClip(speaker: string, id: string): string {
-  // `public/ref/` holds only the default speaker's clips — never compare
-  // another voice against them.
+function localClip(speaker: string, id: string, style: string): string {
+  // `public/ref/` holds only the default speaker's TEXTBOOK clips — never
+  // compare another voice, or a natural take, against them.
   const legacy = `${root}public/ref/${id}.wav`;
-  return speaker === DEFAULT_SPEAKER_ID && existsSync(legacy) ? legacy : `${root}fixtures/clips/${speaker}/${id}.wav`;
+  if (speaker === DEFAULT_SPEAKER_ID && style === "textbook" && existsSync(legacy)) return legacy;
+  return style === "natural"
+    ? `${root}fixtures/clips/${speaker}/natural/${id}.wav`
+    : `${root}fixtures/clips/${speaker}/${id}.wav`;
 }
 
 const bucket = isRaw ? "flappytone-raw" : "flappytone-clips";
