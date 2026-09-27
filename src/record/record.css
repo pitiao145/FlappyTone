@@ -228,6 +228,22 @@ body {
   color: var(--rec-fg);
 }
 
+/* Fully recorded (0 pending) for this list+style — same green as a
+   recorded/published badge, so "done" reads the same way everywhere. */
+.rec-pill-done {
+  border-color: var(--rec-good);
+  color: var(--rec-good);
+}
+
+.rec-pill-done.rec-pill-active {
+  background: var(--rec-good);
+  color: #0e141c;
+}
+
+.rec-pill-icon {
+  opacity: 0.7;
+}
+
 .rec-pill:disabled {
   opacity: 0.4;
   cursor: not-allowed;

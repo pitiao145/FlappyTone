@@ -298,6 +298,9 @@ export function Overview({ passcode }: Props) {
                   setSelectedStyle(pillStyle);
                 }}
               >
+                <span className="rec-pill-icon" aria-hidden="true">
+                  {done ? "✓" : "○"}
+                </span>{" "}
                 {listLabel(listId, pillStyle)}
               </button>
             );
