@@ -29,8 +29,9 @@ fixtures/tonepairs/
 
 docs/tonepairs/
 
-docs/word_lists_local/
+docs/word_lists_local/notes and feedback.md
 
+docs/
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -48,7 +48,7 @@ export const FREE_FEATURES: PlanFeature[] = [
   { label: "A real entry on the leaderboard, under a generated name" },
   { label: "Basic stats: tone accuracy for your last 5 runs" },
   { label: wordsLabel("free") },
-  { label: "HSK / TOCFL word lists (coming soon)", soon: true },
+  { label: "TOCFL word lists (limited)"},
 ];
 
 /** Pro (EarlyBird) column — what signing up as Pro unlocks. */
@@ -56,11 +56,13 @@ export const PRO_FEATURES: string[] = [
   "Help shape future features",
   runsLabel("pro"),
   wordsLabel("pro"),
+  "Full run history & trends",
+  "Full access to TOCFL lists",
+  "Tone pair practice",
+  "Leaderboard under a name you choose",
+  "Offline play (coming soon)",
   "Accuracy per tone across every run, plus its evolution over time (coming soon)",
   "Your average tone shape, and how it evolves over time (coming soon)",
-  "Full run history & trends",
-  "Tone pair practice (coming soon)",
-  "Leaderboard under a name you choose",
   "Customize your bird & profile (coming soon)",
   "Every future feature, as it ships",
 ];
