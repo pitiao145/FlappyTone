@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyClassifierBoost,
   applyGate,
+  comboBreakdown,
   comboAfter,
   isDrasticToneMismatch,
   longestUtteranceMs,
@@ -229,13 +230,21 @@ describe("applyGate", () => {
     expect(next.perTone[1]).toEqual({ gates: 1, accSum: 1, unheard: 0, mismatched: 0, mismatchedAs: {}, best: 1 });
   });
 
-  it("collision decrements hearts and does not count toward per-tone accuracy", () => {
+  it("collision decrements hearts but its tone is still measured", () => {
+    // Spec A: the score gives a wall hit 0; tone accuracy still asks whether
+    // the voice made the right tone, and a correct shape flown into a wall did.
     const stats = newRunStats();
-    const next = applyGate(stats, [2], "collision", 0);
+    const next = applyGate(stats, [2], "collision", 0.8);
     expect(next.hearts).toBe(2);
     expect(next.combo).toBe(0);
     expect(next.score).toBe(0);
-    expect(next.perTone[2]).toEqual({ gates: 1, accSum: 0, unheard: 0, mismatched: 0, mismatchedAs: {}, best: 0 });
+    expect(next.perTone[2]).toEqual({ gates: 1, accSum: 0.8, unheard: 0, mismatched: 0, mismatchedAs: {}, best: 0.8 });
+  });
+
+  it("adds nothing to per-tone accuracy for a heard gate with no tone accuracy", () => {
+    const next = applyGate(newRunStats(), [2], "good", null);
+    expect(next.perTone[2]).toEqual(newRunStats().perTone[2]);
+    expect(next.score).toBe(150);
   });
 
   it("unheard does not decrement hearts, does not reset combo, and is tallied separately", () => {
@@ -296,14 +305,44 @@ describe("applyGate", () => {
 
   it("a multi-syllable gate updates score/hearts/combo but leaves perTone untouched", () => {
     const stats = newRunStats();
-    const next = applyGate(stats, [3, 2], "perfect", 1);
+    const next = applyGate(stats, [3, 2], "perfect", 0.9);
     expect(next.score).toBeGreaterThan(0);
     expect(next.combo).toBe(1);
     expect(next.perTone).toEqual(stats.perTone);
 
-    const collided = applyGate(stats, [3, 2], "collision", 0);
+    const collided = applyGate(stats, [3, 2], "collision", 0.4);
     expect(collided.hearts).toBe(2);
     expect(collided.perTone).toEqual(stats.perTone);
+  });
+
+  it("tallies a pair gate's tone accuracy per combo", () => {
+    let stats = newRunStats();
+    stats = applyGate(stats, [3, 2], "perfect", 0.9);
+    stats = applyGate(stats, [3, 2], "collision", 0.5);
+    stats = applyGate(stats, [3, 2], "unheard", null);
+    stats = applyGate(stats, [1, 4], "good", 0.7);
+    expect(stats.perCombo["3-2"]).toEqual({ gates: 2, accSum: 1.4, best: 0.9, unheard: 1 });
+    expect(stats.perCombo["1-4"]).toEqual({ gates: 1, accSum: 0.7, best: 0.7, unheard: 0 });
+  });
+
+  it("never stores a combo with a neutral syllable", () => {
+    let stats = newRunStats();
+    stats = applyGate(stats, [4, 0 as Tone], "perfect", null);
+    stats = applyGate(stats, [4, 0 as Tone], "unheard", null);
+    expect(stats.perCombo).toEqual({});
+  });
+});
+
+describe("comboBreakdown", () => {
+  it("lists only combos with a measured gate, weakest first", () => {
+    let stats = newRunStats();
+    stats = applyGate(stats, [1, 4], "perfect", 0.9);
+    stats = applyGate(stats, [3, 2], "good", 0.5);
+    stats = applyGate(stats, [2, 2], "unheard", null);
+    const rows = comboBreakdown(stats.perCombo);
+    expect(rows.map((r) => r.key)).toEqual(["3-2", "1-4"]);
+    expect(rows[0]).toMatchObject({ tones: [3, 2], gates: 1 });
+    expect(rows[0].pct).toBeCloseTo(50);
   });
 });
 

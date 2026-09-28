@@ -1314,7 +1314,8 @@ export class Run {
         this.stats,
         state.gate.tones,
         outcome,
-        accuracy,
+        // Stats keep tone accuracy, never the score's corridor accuracy.
+        gateToneAccuracy,
         mismatchedAs,
       );
     }
