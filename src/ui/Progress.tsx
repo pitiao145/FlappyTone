@@ -16,6 +16,7 @@ import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
 import { Leaderboard } from "./Leaderboard.tsx";
 import { FREE_FEATURES, GUEST_FEATURES, PRO_FEATURES, PRO_PRICE, TIER_LABEL } from "./plan.ts";
+import { PlayerToneEvolution } from "./PlayerToneEvolution.tsx";
 import { ToneAverageCard } from "./ToneAverageCard.tsx";
 import { TONE_LINE_COLOR } from "./toneColors.ts";
 
@@ -418,21 +419,29 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
       <section className="progress-card sticker-card">
         <div className="progress-card-header">
           <h3>See how your tones evolve over time</h3>
-          {soonOrLockBadge}
+          {!isPro && soonOrLockBadge}
         </div>
-        <div className="tone-average-grid">
-          {TONES.map((t) => (
-            <ToneAverageCard
-              key={t}
-              tone={t}
-              words={wordsByTone.get(t) ?? []}
-              showCaption={false}
-            />
-          ))}
-        </div>
-        {soonOrLockCta(
-          "🔒 Compare against your own attempts — unlock with Pro",
-          "tone_evolution",
+        {isPro ? (
+          // Spec B: the player's own average shape over Jane's, per tone
+          // and per combo, with an earlier point to compare against.
+          <PlayerToneEvolution key={version} />
+        ) : (
+          <>
+            <div className="tone-average-grid">
+              {TONES.map((t) => (
+                <ToneAverageCard
+                  key={t}
+                  tone={t}
+                  words={wordsByTone.get(t) ?? []}
+                  showCaption={false}
+                />
+              ))}
+            </div>
+            {soonOrLockCta(
+              "🔒 Compare against your own attempts — unlock with Pro",
+              "tone_evolution",
+            )}
+          </>
         )}
       </section>
 

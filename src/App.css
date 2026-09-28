@@ -8675,3 +8675,32 @@ button.switch-track.switch-on {
     transition: none;
   }
 }
+
+/* ---- Progress: the player's own tone shape (spec B, Pro) */
+.player-shape-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.player-shape-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.player-shape-key {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  border-top: 2.5px solid var(--ink-muted);
+  vertical-align: middle;
+}
+.player-shape-key-now {
+  border-top-color: var(--accent);
+}
+.player-shape-key-then {
+  border-top: 2px dashed var(--accent);
+  opacity: 0.6;
+}
