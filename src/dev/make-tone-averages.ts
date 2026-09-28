@@ -24,12 +24,21 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { wordsFromCatalog, wordsOfTone } from "../game/words.ts";
 import type { Tone } from "../game/gates.ts";
 import { averagePolyline } from "../game/toneAverage.ts";
+import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
 
 const root = new URL("../../", import.meta.url).pathname;
 const fallbackPath = `${root}src/data/wordsFallback.json`;
 
 const raw = readFileSync(fallbackPath, "utf8");
-const words = wordsFromCatalog((JSON.parse(raw) as { rows: unknown[] }).rows);
+// The bundle omits speaker_id (it is the default speaker's catalog by
+// construction), so stamp it the same way src/data/words.ts does at load —
+// without it every row fails wordsFromCatalog's validation.
+const words = wordsFromCatalog(
+  (JSON.parse(raw) as { rows: Record<string, unknown>[] }).rows.map((r) => ({
+    ...r,
+    speaker_id: DEFAULT_SPEAKER_ID,
+  })),
+);
 if (words.length === 0) {
   console.error(`No words parsed from ${fallbackPath}.`);
   process.exit(1);
