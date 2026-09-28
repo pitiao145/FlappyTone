@@ -243,6 +243,44 @@ export type Database = {
         }
         Relationships: []
       }
+      tone_accuracy_stats: {
+        Row: {
+          attempts: number
+          best_accuracy: number
+          sum_accuracy: number
+          target: string
+          unheard: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          best_accuracy?: number
+          sum_accuracy?: number
+          target: string
+          unheard?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          best_accuracy?: number
+          sum_accuracy?: number
+          target?: string
+          unheard?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tone_accuracy_stats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tone_stats: {
         Row: {
           attempts: number

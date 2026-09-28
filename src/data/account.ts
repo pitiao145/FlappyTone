@@ -19,9 +19,13 @@
  * a failed upload must never be able to erase it.
  */
 import { APP_PATH } from "../ui/appLink.ts";
-import { lifetimeToneStats, loadRunHistory, mergeIntoRunHistory } from "../game/runHistory.ts";
+import {
+  lifetimeTargetStats,
+  loadRunHistory,
+  mergeIntoRunHistory,
+  type TargetStats,
+} from "../game/runHistory.ts";
 import { loadStreak, mergeStreak } from "../game/streak.ts";
-import type { Tone } from "../game/gates.ts";
 import { displayName, setLocalDisplayName } from "./leaderboard.ts";
 import { bumpSessionVersion } from "./sessionVersion.ts";
 
@@ -322,7 +326,13 @@ export interface Aggregates {
   totalGates: number;
   streakCurrent: number;
   streakBest: number;
-  perTone: { tone: number; attempts: number; unheard: number; accSum: number; best: number }[];
+  /**
+   * Lifetime tone accuracy, one row per target: a single tone ("1".."4") or a
+   * pair combo ("3-2"). Synced to `tone_accuracy_stats` (migration 0025),
+   * never to the old corridor-accuracy `tone_stats`, so pre-spec-A numbers
+   * cannot merge back into a reset device.
+   */
+  perTarget: TargetStats[];
 }
 
 /**
@@ -341,14 +351,14 @@ export interface Aggregates {
  * about a streak is the harmless direction to be wrong in.
  */
 export function mergeAggregates(a: Aggregates, b: Aggregates): Aggregates {
-  const byTone = new Map<number, Aggregates["perTone"][number]>();
-  for (const t of [...a.perTone, ...b.perTone]) {
-    const prev = byTone.get(t.tone);
-    byTone.set(
-      t.tone,
+  const byTarget = new Map<string, TargetStats>();
+  for (const t of [...a.perTarget, ...b.perTarget]) {
+    const prev = byTarget.get(t.target);
+    byTarget.set(
+      t.target,
       prev
         ? {
-            tone: t.tone,
+            target: t.target,
             attempts: Math.max(prev.attempts, t.attempts),
             unheard: Math.max(prev.unheard, t.unheard),
             accSum: Math.max(prev.accSum, t.accSum),
@@ -363,7 +373,7 @@ export function mergeAggregates(a: Aggregates, b: Aggregates): Aggregates {
     totalGates: Math.max(a.totalGates, b.totalGates),
     streakCurrent: Math.max(a.streakCurrent, b.streakCurrent),
     streakBest: Math.max(a.streakBest, b.streakBest),
-    perTone: [...byTone.values()].sort((x, y) => x.tone - y.tone),
+    perTarget: [...byTarget.values()].sort((x, y) => x.target.localeCompare(y.target)),
   };
 }
 
@@ -373,7 +383,7 @@ export const EMPTY_AGGREGATES: Aggregates = {
   totalGates: 0,
   streakCurrent: 0,
   streakBest: 0,
-  perTone: [],
+  perTarget: [],
 };
 
 /** `fetchAggregates`'s return shape: the numeric aggregates plus the server's
@@ -401,8 +411,8 @@ export async function fetchAggregates(): Promise<RemoteAggregates> {
         .eq("id", account.userId)
         .maybeSingle(),
       supabase
-        .from("tone_stats")
-        .select("tone, attempts, unheard, sum_accuracy, best_accuracy")
+        .from("tone_accuracy_stats")
+        .select("target, attempts, unheard, sum_accuracy, best_accuracy")
         .eq("user_id", account.userId),
     ]);
     if (profile.error) {
@@ -416,8 +426,8 @@ export async function fetchAggregates(): Promise<RemoteAggregates> {
         totalGates: profile.data?.total_gates ?? 0,
         streakCurrent: profile.data?.streak_current ?? 0,
         streakBest: profile.data?.streak_best ?? 0,
-        perTone: (tones.data ?? []).map((t) => ({
-          tone: t.tone,
+        perTarget: (tones.data ?? []).map((t) => ({
+          target: t.target,
           attempts: Number(t.attempts),
           unheard: Number(t.unheard),
           accSum: t.sum_accuracy,
@@ -442,7 +452,7 @@ export function localAggregates(): Aggregates {
     totalGates: history.totalGates,
     streakCurrent: streak.current,
     streakBest: streak.best,
-    perTone: lifetimeToneStats(history),
+    perTarget: lifetimeTargetStats(history),
   };
 }
 
@@ -475,7 +485,7 @@ export async function syncAccount(): Promise<AuthResult> {
     bestScore: merged.bestScore,
     totalRuns: merged.totalRuns,
     totalGates: merged.totalGates,
-    perTone: merged.perTone.map((t) => ({ ...t, tone: t.tone as Tone })),
+    perTarget: merged.perTarget,
   });
   mergeStreak({ current: merged.streakCurrent, best: merged.streakBest });
 
@@ -537,18 +547,18 @@ export async function pushAggregates(merged: Aggregates): Promise<AuthResult> {
       return { ok: false, reason: profileError.message };
     }
 
-    if (merged.perTone.length > 0) {
-      const { error: toneError } = await supabase.from("tone_stats").upsert(
-        merged.perTone.map((t) => ({
+    if (merged.perTarget.length > 0) {
+      const { error: toneError } = await supabase.from("tone_accuracy_stats").upsert(
+        merged.perTarget.map((t) => ({
           user_id: userId,
-          tone: t.tone,
+          target: t.target,
           attempts: t.attempts,
           unheard: t.unheard,
           sum_accuracy: t.accSum,
           best_accuracy: t.best,
           updated_at: new Date().toISOString(),
         })),
-        { onConflict: "user_id,tone" },
+        { onConflict: "user_id,target" },
       );
       if (toneError) {
         warn("account", `could not save tone stats: ${toneError.message}`);

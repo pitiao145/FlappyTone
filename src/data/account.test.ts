@@ -134,7 +134,7 @@ describe("pushAggregates", () => {
     const client = {
       from: vi.fn((table: string) => {
         if (table === "profiles") return { upsert: profileUpsert, update: profileUpdate };
-        if (table === "tone_stats") return { upsert: toneUpsert };
+        if (table === "tone_accuracy_stats") return { upsert: toneUpsert };
         throw new Error(`unexpected table ${table}`);
       }),
     };
@@ -192,24 +192,24 @@ describe("mergeAggregates", () => {
 
   it("unions tones present on only one side", () => {
     const a = aggregates({
-      perTone: [{ tone: 1, attempts: 10, unheard: 1, accSum: 7, best: 0.9 }],
+      perTarget: [{ target: "1", attempts: 10, unheard: 1, accSum: 7, best: 0.9 }],
     });
     const b = aggregates({
-      perTone: [{ tone: 3, attempts: 4, unheard: 0, accSum: 2, best: 0.5 }],
+      perTarget: [{ target: "3", attempts: 4, unheard: 0, accSum: 2, best: 0.5 }],
     });
     const merged = mergeAggregates(a, b);
-    expect(merged.perTone.map((t) => t.tone)).toEqual([1, 3]);
+    expect(merged.perTarget.map((t) => t.target)).toEqual(["1", "3"]);
   });
 
   it("merges a tone held by both, field by field", () => {
     const a = aggregates({
-      perTone: [{ tone: 2, attempts: 20, unheard: 5, accSum: 14, best: 0.6 }],
+      perTarget: [{ target: "2", attempts: 20, unheard: 5, accSum: 14, best: 0.6 }],
     });
     const b = aggregates({
-      perTone: [{ tone: 2, attempts: 8, unheard: 7, accSum: 18, best: 0.95 }],
+      perTarget: [{ target: "2", attempts: 8, unheard: 7, accSum: 18, best: 0.95 }],
     });
-    expect(mergeAggregates(a, b).perTone[0]).toEqual({
-      tone: 2,
+    expect(mergeAggregates(a, b).perTarget[0]).toEqual({
+      target: "2",
       attempts: 20,
       unheard: 7,
       accSum: 18,
@@ -221,22 +221,37 @@ describe("mergeAggregates", () => {
     const a = aggregates({
       bestScore: 500,
       totalRuns: 9,
-      perTone: [{ tone: 4, attempts: 3, unheard: 0, accSum: 2, best: 0.7 }],
+      perTarget: [{ target: "4", attempts: 3, unheard: 0, accSum: 2, best: 0.7 }],
     });
     const merged = mergeAggregates(a, EMPTY_AGGREGATES);
     expect(merged.bestScore).toBeGreaterThanOrEqual(a.bestScore);
     expect(merged.totalRuns).toBeGreaterThanOrEqual(a.totalRuns);
-    expect(merged.perTone[0].best).toBeGreaterThanOrEqual(a.perTone[0].best);
+    expect(merged.perTarget[0].best).toBeGreaterThanOrEqual(a.perTarget[0].best);
   });
 
   it("returns tones in a stable order regardless of input order", () => {
     const a = aggregates({
-      perTone: [
-        { tone: 4, attempts: 1, unheard: 0, accSum: 0, best: 0 },
-        { tone: 1, attempts: 1, unheard: 0, accSum: 0, best: 0 },
+      perTarget: [
+        { target: "4", attempts: 1, unheard: 0, accSum: 0, best: 0 },
+        { target: "1", attempts: 1, unheard: 0, accSum: 0, best: 0 },
       ],
     });
-    expect(mergeAggregates(a, EMPTY_AGGREGATES).perTone.map((t) => t.tone)).toEqual([1, 4]);
+    expect(mergeAggregates(a, EMPTY_AGGREGATES).perTarget.map((t) => t.target)).toEqual(["1", "4"]);
+  });
+
+  it("merges pair combos by target the same way as single tones", () => {
+    const a = aggregates({
+      perTarget: [
+        { target: "3-2", attempts: 6, unheard: 1, accSum: 4.2, best: 0.9 },
+        { target: "2", attempts: 3, unheard: 0, accSum: 2, best: 0.8 },
+      ],
+    });
+    const b = aggregates({
+      perTarget: [{ target: "3-2", attempts: 9, unheard: 0, accSum: 5, best: 0.7 }],
+    });
+    const merged = mergeAggregates(a, b);
+    expect(merged.perTarget.map((t) => t.target)).toEqual(["2", "3-2"]);
+    expect(merged.perTarget[1]).toEqual({ target: "3-2", attempts: 9, unheard: 1, accSum: 5, best: 0.9 });
   });
 });
 
@@ -315,7 +330,7 @@ describe("syncAccount name pull-down", () => {
         if (table === "profiles") {
           return { select: () => profileSelect, upsert: profileUpsert, update: profileUpdate };
         }
-        if (table === "tone_stats") return { select: () => toneSelect, upsert: toneUpsert };
+        if (table === "tone_accuracy_stats") return { select: () => toneSelect, upsert: toneUpsert };
         throw new Error(`unexpected table ${table}`);
       }),
     };
