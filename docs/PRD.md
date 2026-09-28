@@ -58,8 +58,8 @@ Personal gameplay state is local-first, not local-only. The Progress tab's
 run history (`src/game/runHistory.ts`) and the streak (`src/game/streak.ts`)
 stay device-local and unsynced — none of it tamper-proof. The daily run
 limiter (`src/game/dailyLimit.ts`) is local-only for a guest but
-server-authoritative for an account (`api/run.ts`, §7.2). Lifetime per-tone
-stats sync by merge-by-max for an account; an anonymous player's stats never
+server-authoritative for an account (`api/run.ts`, §7.2). Lifetime tone
+accuracy (per tone and per pair combo, §7) syncs by merge-by-max for an account; an anonymous player's stats never
 reach the server at all. The leaderboard score, the run count, and the
 payment entitlement are the three values a signed-in player's browser sends
 to a server it doesn't fully trust itself on.
@@ -190,14 +190,28 @@ accuracy = clamp(1 - mean(err_t), 0, 1)   // over voiced frames only
 
 **Hearts:** 3 per run.
 
-**Tone classifier (`src/game/toneClassifier.ts`), layered on top of corridor scoring, not replacing it:**
+**Tone classifier (`src/game/toneClassifier.ts`), layered on top of corridor scoring, not replacing it.** Two stages: correlation with the averaged tone shapes picks the family (level T1 / dip-rise T2–T3 / fall T4); inside dip-rise, T2 vs T3 is a vote of four cues anchored on the T2 and T3 averages — how far the voice drops before its low point, how low that point is, the drop's share of the whole movement, and the correlation difference.
 
-- `isDrasticToneMismatch` — a confident classifier read of a drastically wrong tone (T1/T4 confused with anything, or a confident T2↔T3 mixup) forces a wall-style collision even if the pitch trace happened to sit inside the wrong corridor. On by default.
+- `isDrasticToneMismatch` — a confident classifier read of a drastically wrong tone (T1/T4 confused with anything, or a confident T2↔T3 mixup) forces a wall-style collision even if the pitch trace happened to sit inside the wrong corridor. On by default. A T2↔T3 read must also be *decisive* — a strong vote, no single cue arguing hard for the other tone, and no voicing gap in the dip (creak) — so a close call can name a tone but never cost a heart.
 - `applyClassifierBoost` — a confident (≥0.9) read of the *correct* tone can raise a gate's accuracy past what corridor tracking alone earned, floored at the "good" threshold. On by default. Never resurrects a collision or an unheard gate.
 
 Known gaps in both are documented in `docs/DECISIONS.md`.
 
-**Game-over takeaway:** picks the worst-accuracy tone with enough scored gates, and prefers a mismatch-based phrasing ("Tone 3 gates are landing like Tone 2") when the classifier's misses on that tone are dominated by one specific wrong read.
+### Tone accuracy — a second number, not the score
+
+Every gate also gets a **tone accuracy** (`src/game/toneAccuracy.ts`), 0–100%: did the voice make the right tone shape? The score above asks "did you fly the tunnel on time"; this asks only "was it the right tone", on the player's own clock. The utterance is cut out and time-normalised, so a correct tone said early or late scores the same, and a wall hit is still measured (score 0, tone accuracy whatever the shape earned). Unheard gates have none.
+
+| | Score | Tone accuracy |
+|---|---|---|
+| Clock | the gate's | the player's own utterance |
+| Wall hit | 0, heart lost | still measured |
+| Feeds | points, combo, hearts, Perfect/Good/OK, leaderboard | per-tone and per-combo stats, pause/game-over/progress breakdowns, visualiser readout |
+
+Reference: the speaker's averaged shape for that tone, or for that exact pair combo (e.g. every 3+2 word). Parts: shape correlation, movement size (too big penalised like too small) and height; T2 and T3 targets also use the classifier's T2/T3 cue; movement and cue only count as far as the shape matches. Tone 1 (and a 1+1 pair) is judged on flatness and height. A near-flat attempt on a tone that moves scores near 0. Pair combos with a neutral syllable are not measured. Perfect/Good/OK stay score-only; tone accuracy shows as a plain percentage, labelled as such, apart from the score.
+
+Measured on the speaker's own published clips, each against an average built without it: the right tone scores a median 0.85–0.95; a tone from another family ~0; a T2 said for a T3 ~0.5, a T3 for a T2 ~0.4; pairs 0.85 against their own combo.
+
+**Game-over takeaway:** picks the worst-tone-accuracy tone with enough scored gates, and prefers a mismatch-based phrasing ("Tone 3 gates are landing like Tone 2") when the classifier's misses on that tone are dominated by one specific wrong read.
 
 ### 7.1 Weekly leaderboard
 
@@ -260,12 +274,14 @@ Gate 2 (free→pro): depth, content and customization, not run quantity.
   is UX gating only, never the security boundary.
 - **Stats sync by merge-by-max**, in both directions, on signup, on a second
   device, after every finished run, and on app load — all but sign-in are
-  fire-and-forget. Lifetime counts, streak and per-tone aggregates are
-  account-owned; the last-5 run list and the streak's last-played date stay
+  fire-and-forget. Lifetime counts, streak and per-tone/per-combo tone
+  accuracy (`tone_accuracy_stats`, one row per target) are account-owned; the last-5 run list and the streak's last-played date stay
   local, having no honest cross-device answer. Local remains authoritative for
   rendering; a dead network degrades to "your stats still work," not an error.
 - **An anonymous player's stats never reach the server.** Row-level security
-  on `tone_stats` enforces that, rather than trusting the client not to ask.
+  on `tone_accuracy_stats` enforces that, rather than trusting the client not
+  to ask. (`tone_stats`, the pre-tone-accuracy table, is deprecated: no longer
+  read or written, kept until no old client can still write it.)
 - **`TIER_LIMITS` (`src/game/tiers.ts`) is enforced.** The run cap
   (`runsPerDay`) is server-authoritative for accounts (`api/run.ts`,
   `daily_runs`) and device-local for guests, who have no durable identity for
@@ -290,13 +306,13 @@ Actual screen set (`src/app/GameApp.tsx`'s `Screen` type): `play` (title/home), 
 - **Title/Play home** — Play, Modes, Calibrate, Settings, How to play, and tabs into Progress/Profile.
 - **Calibration** — as in §5.4, plus a re-calibrate/forget path from Settings.
 - **Settings** — voice (calibration read-back, re-calibrate, forget), tunnel width, motion preference, link into the visualiser. The voice section also carries the **recorded-voice switch**: which speaker's recordings the player hears and whose corridors they fly. It is auto-picked from their measured f0 centre during calibration and never re-guessed once chosen, and it is hidden entirely while fewer than two speakers are active — so with today's one-voice roster it does not render. It matches pitch range, not the player: a low-voiced woman flying the man's recordings is the intended outcome. Settings also carries a **word mix** control (single / pairs / a shuffled mix) for the classic `game` mode, hidden the same way while the inventory holds no multi-syllable word.
-- **Tone visualiser** — no gates, no scrolling, no score; x is time-since-utterance-began so repeated attempts overlay each other and the target contour, and the standalone tone classifier gives a live read of which tone a shape most resembles.
+- **Tone visualiser** — no gates, no scrolling, no score; x is time-since-utterance-began so repeated attempts overlay each other and the target contour. Each attempt shows its tone accuracy (the same measure as the game's, §7), and the standalone tone classifier gives a live read of which tone a shape most resembles.
 - **Tutorial run** — fixed short sequence, one tone type at a time, double tolerance, no hearts, no scoring, text cue per gate.
 - **Drill** — repeated single-tone practice, picked from `modes`.
 - **Game** — the scored run: hearts, combo, difficulty ramp.
-- **Tone pairs** — the `pairs` run mode: shuffle across every two-syllable combo the tier's own words can build a gate from, or drill one combo. The corridor is measured from the speaker's own two-syllable contour, not built from per-tone templates (§6 and CLAUDE.md's "Tone pairs" section have the detail). The tone-mismatch classifier and its accuracy boost (§7) are both off for these gates; lifetime per-tone stats don't count them either — both explicit, not silent single-tone shortcuts.
-- **Game over** — total score, best combo, per-tone accuracy breakdown, one-line takeaway (§7).
-- **Progress** — lifetime run/gate/word counts and the last 5 runs' per-tone accuracy, from `runHistory.ts` (device-local), plus the live weekly leaderboard (§7.1), which is the one section here reading from a server.
+- **Tone pairs** — the `pairs` run mode: shuffle across every two-syllable combo the tier's own words can build a gate from, or drill one combo. The corridor is measured from the speaker's own two-syllable contour, not built from per-tone templates (§6 and CLAUDE.md's "Tone pairs" section have the detail). The tone-mismatch classifier and its accuracy boost (§7) are both off for these gates; per-tone stats don't count them either — their tone accuracy goes to per-combo stats instead. Both explicit, not silent single-tone shortcuts.
+- **Game over** — total score, best combo, a tone-accuracy breakdown of what was played this run (single tones as tiles, pair combos as a list weakest first, capped at 4 with "show all"), one-line takeaway (§7). The pause menu shows the same breakdown mid-run, in every mode with stats.
+- **Progress** — lifetime run/gate/word counts and the last 5 runs' per-tone tone accuracy (plus a "Tone pairs" list once the player has flown pairs), from `runHistory.ts` (device-local), plus the live weekly leaderboard (§7.1), which is the one section here reading from a server.
 - **Profile** — real account UI now (`src/ui/AccountCard.tsx`): signup/login/rename for a player with an account, backed by the same local-first stats. Shows the daily run count against the player's actual tier limit (`dailyLimit.ts`/`TIER_LIMITS`) and their board name, generated or chosen (Pro only), so they can find their own row.
 
 ### HUD (in-game)

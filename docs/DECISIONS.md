@@ -821,6 +821,62 @@ Not fixed — see `tuning.ts`'s `gateDurationS` doc comment. Retune from the
 Lab if this gets revisited; don't just restore the clip length without
 re-checking T1's scores.
 
+## Score and tone accuracy are separate numbers (28 Sep 2026)
+
+One number used to do two jobs. A gate's "accuracy" was the corridor error on
+the gate's own clock (`scoreGate`) — right for a **game score**, where early,
+late or a wall hit should cost points, and wrong for **learning**: a correct
+tone said 150ms early scored low, and a wall hit scored 0 even when the shape
+was right. Pierre's product direction: the product teaches tones, the game is
+a wrapper. So every gate now gets two numbers (spec A,
+`docs/SPECS/flappytone-SPEC-tone-accuracy.md`), and they must not be merged
+back into one:
+
+- **Score** is unchanged: `scoreGate`, the boost, the mismatch collision,
+  Perfect/Good/OK, points, hearts, the leaderboard.
+- **Tone accuracy** (`src/game/toneAccuracy.ts`) is measured on the player's
+  own utterance, time-normalised, against the speaker's per-tone or
+  per-combo average, and feeds every stat a player learns from: per-tone and
+  per-combo stats, the pause/game-over/progress breakdowns, the visualiser.
+  It is measured in every mode and on a wall hit; only an unheard gate has
+  none.
+
+Decisions made while building it, each for a measured reason:
+
+- **T2 and T3 targets use the classifier's T2/T3 cue** (Pierre). The T2 and
+  T3 averages correlate 0.73, so on shape alone a T2 said for a T3 kept most
+  of its accuracy. With the cue (weight 0.8, a starting value from Jane's
+  clips): T2-for-T3 0.55, T3-for-T2 0.40, against 0.87/0.94 for the right
+  tone.
+- **Movement size and the cue are scaled by the shape match.** Without it a
+  T4 fall scored 0.56 as a T3 — the right *amount* of movement and a big
+  drop, in the wrong shape. With it, a tone from another family scores ~0.
+- **Pairs are judged against the exact combo's average**
+  (`AVERAGED_PAIR_SHAPE`, 5–20 clips per combo), simple even stretch, no
+  per-syllable cue. Combos with a neutral syllable return null and are never
+  stored.
+- **Measured on the utterance, not the gate.** `longestUtterance` uses the
+  same merge rule as `heardUtterance`, so a cough before the tone is its own
+  run and does not stretch the alignment. The gate still cuts the voice off
+  at its edges, so in the game an early or late flight is not bit-identical
+  — `run.test.ts` pins that it moves tone accuracy less than the score.
+
+**Old per-tone numbers were reset, not migrated** (Pierre): they meant
+corridor accuracy. Locally a `statsVersion` field (2) zeroes every per-tone
+number once and keeps runs, best score, gates, words and the streak. On the
+server a **new table** (`tone_accuracy_stats`, migration 0025, one row per
+target: `"2"` or `"3-2"`) replaces `tone_stats` rather than clearing it:
+sync is merge-by-max in both directions, so a cleared `tone_stats` would have
+been refilled by the first device (or old open tab) still holding an old
+lifetime total. A separate table makes that impossible by construction;
+`tone_stats` is marked deprecated and can be dropped once no old client
+writes it.
+
+**Open:** the fallback corridors (tutorial, wordless gates) are measured from
+Jane's citation `ma` takes and differ from her word averages — flown
+perfectly they score ~0.72–0.77. The reference choice for those gates is
+Pierre's to make; nothing switches it silently.
+
 ## T2 vs T3 is decided by the dip, not by correlation (28 Sep 2026)
 
 Regenerating `toneAverages.ts` from 120 words to 211 clips (the
