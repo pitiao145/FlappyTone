@@ -88,7 +88,7 @@ Lab and fix or re-baseline those tests with a stated reason. Do not silently
 loosen thresholds to make them pass.
 
 Also pre-existing and unrelated: `tiers.test.ts` fails on `main`
-(`pairWordsPerCombo` is 10, test expects 5). Ask Pierre which is right.
+(`pairWordsPerCombo` is 10, test expects 5). **Decided: 10 is correct** — update the test.
 
 ## 4. Where it runs — every mode
 
@@ -109,10 +109,13 @@ Pierre: every mode is practice, so tone accuracy is measured **everywhere**:
 - Mismatch counts (`mismatched`, `mismatchedAs`) stay as they are.
 - `runHistory.ts`: `lastRuns` entries and `lifetimePerTone` store tone
   accuracy; add per-combo equivalents.
-- **Old data:** the stored numbers change meaning. Decide with Pierre: reset
-  (small player base) or keep old totals under a legacy field. Do not mix old
-  and new into one sum silently. `tone_stats` on the server has the same
-  question — a migration if columns change.
+- **Old data: reset (decided).** The stored numbers change meaning, so
+  per-tone stats start from zero: local `lastRuns` per-tone and
+  `lifetimePerTone` (bump or migrate the store so old values are dropped,
+  not mixed in), and server `tone_stats` (migration that clears the rows, or
+  a versioned reset the sync understands — make sure merge-by-max cannot
+  pull old server values back into a reset device). Run counts, best score,
+  streak and word ids are NOT reset.
 - Analytics: add `toneAcc` to the `gate` event (closed union in
   `session.ts`, rule 1 — review the addition).
 
