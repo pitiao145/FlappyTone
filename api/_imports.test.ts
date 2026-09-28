@@ -46,6 +46,7 @@ describe("api/ deploy surface", () => {
       "newsletter.ts",
       "run.ts",
       "score.ts",
+      "shapes.ts",
       "webhook-ls.ts",
     ]);
   });
