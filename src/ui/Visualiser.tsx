@@ -22,12 +22,12 @@ import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { useTier } from "../data/tier.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { ContourRecorder } from "../game/contours.ts";
-import { shapeForWord, type Tone } from "../game/gates.ts";
+import type { Tone } from "../game/gates.ts";
 import type { CalibrationSettings } from "../game/settings.ts";
 import { classifyTone, type ToneClassification } from "../game/toneClassifier.ts";
 import { tierLimits, type TocflLevel } from "../game/tiers.ts";
 import { tuning } from "../game/tuning.ts";
-import { visualAccuracy } from "../game/visualAccuracy.ts";
+import { toneAccuracy } from "../game/toneAccuracy.ts";
 import type { Word } from "../game/words.ts";
 import { wordsForList, wordsOfTone } from "../game/words.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
@@ -464,7 +464,11 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       const latest = finished.at(-1);
       if (word && latest && latest.startedAtMs !== lastScoredAtRef.current) {
         lastScoredAtRef.current = latest.startedAtMs;
-        const accuracy = visualAccuracy(latest, shapeForWord(word));
+        // Tone accuracy — the same timing-free measure the game logs per gate
+        // and the per-tone stats keep, so practice here and play there read
+        // on one scale. `latest` is already one utterance (the recorder
+        // merges short gaps), time-zeroed.
+        const accuracy = toneAccuracy(latest.points, word.tones);
         if (accuracy !== null) {
           const stats = wordStatsRef.current;
           const next = {
@@ -660,7 +664,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   /** Shared by the mobile top bar and the desktop panel — same readout, two layouts. */
   const accuracyReadout = (
     <div className="vis-accuracy">
-      <span className="vis-accuracy-label">accuracy</span>
+      <span className="vis-accuracy-label">tone accuracy</span>
       {accuracyDisplay ? (
         <>
           <strong className={`vis-accuracy-value tier-${accuracyTier(accuracyDisplay.value)}`}>
