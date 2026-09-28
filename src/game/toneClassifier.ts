@@ -272,7 +272,16 @@ function detectDip(sample: number[]): DipInfo {
  *   comment for why depth alone isn't a reliable discriminator here and
  *   position is what actually separates the two.
  */
-export function classifyTone(contour: Contour): ToneClassification | null {
+export function classifyTone(
+  contour: Contour,
+  /**
+   * The per-tone reference shapes to correlate against. Always the baked
+   * averages in the game; a parameter only so `src/dev/classifier-check.ts`
+   * can compare the committed averages against freshly computed ones in one
+   * run.
+   */
+  templates: Record<Tone, number[]> = AVERAGED_TONE_SHAPE,
+): ToneClassification | null {
   if (contour.points.length < 2) return null;
 
   const trimmed = trimOnset(contour.points, tuning().toneClassifierOnsetTrimFraction);
@@ -290,7 +299,7 @@ export function classifyTone(contour: Contour): ToneClassification | null {
     1 - Math.min(1, Math.max(0, t1Excursion / tuning().toneClassifierFlatnessScaleChao)),
   );
   for (const tone of [2, 3, 4] as Tone[]) {
-    const template = resampleFixed(AVERAGED_TONE_SHAPE[tone], RESAMPLE_POINTS);
+    const template = resampleFixed(templates[tone], RESAMPLE_POINTS);
     const r = correlation(sample, template);
     if (r !== null) scores.set(tone, Math.min(1, Math.max(0, r)));
   }
