@@ -19,9 +19,11 @@ import {
   stopMic,
 } from "../audio/session.ts";
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
-import { useTier } from "../data/tier.ts";
+import { postShapes } from "../data/shapes.ts";
+import { getTier, useTier } from "../data/tier.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { ContourRecorder } from "../game/contours.ts";
+import { ShapeAccumulator } from "../game/playerShape.ts";
 import type { Tone } from "../game/gates.ts";
 import type { CalibrationSettings } from "../game/settings.ts";
 import { classifyTone, type ToneClassification } from "../game/toneClassifier.ts";
@@ -407,6 +409,10 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
 
     const recorder = new ContourRecorder();
     recorderRef.current = recorder;
+    // The player's tone lines this session (spec B, Pro only), sent in one
+    // batch when the session ends or the tab is hidden — whichever is first.
+    const shapes = new ShapeAccumulator();
+    const flushShapes = () => void postShapes(shapes.drain(), { keepalive: true });
     let tracker: PitchTracker | null = null;
     let rafId = 0;
     let running = true;
@@ -470,6 +476,8 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         // merges short gaps), time-zeroed.
         const accuracy = toneAccuracy(latest.points, word.tones);
         if (accuracy !== null) {
+          // Same attempt, same "was it measured" bar as the game's gates.
+          if (getTier() === "pro") shapes.add(word.tones, latest.points);
           const stats = wordStatsRef.current;
           const next = {
             attempts: stats.attempts + 1,
@@ -530,6 +538,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
 
     const onVisibility = () => {
       if (document.visibilityState !== "hidden") return;
+      flushShapes();
       running = false;
       cancelAnimationFrame(rafId);
       void getMicSession()?.ctx.suspend();
@@ -541,6 +550,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     start();
 
     return () => {
+      flushShapes();
       running = false;
       cancelAnimationFrame(rafId);
       document.removeEventListener("visibilitychange", onVisibility);

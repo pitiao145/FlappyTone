@@ -1863,3 +1863,45 @@ describe("Run — tone accuracy beside the score (spec A)", () => {
     }
   });
 });
+
+describe("player tone shapes (spec B)", () => {
+  function shapeRun(capture: () => boolean): Run {
+    return new Run({ mode: "game", width: W, rand: seqRand([0, 0, 0.5, 0.75]), captureShapes: capture });
+  }
+  const measured = (run: Run) => run.snapshot().gateLog.filter((g) => g.toneAccuracy !== null).length;
+  const stored = (run: Run) => run.drainShapes().reduce((n, b) => n + b.count, 0);
+
+  it("keeps nothing without captureShapes, or while it says no", () => {
+    const off = new Run({ mode: "game", width: W, rand: seqRand([0, 0, 0.5, 0.75]) });
+    simulate(off, 900, trackCorridor);
+    expect(off.drainShapes()).toEqual([]);
+    const no = shapeRun(() => false);
+    simulate(no, 900, trackCorridor);
+    expect(no.drainShapes()).toEqual([]);
+  });
+
+  it("keeps one line per heard gate — the same gates tone accuracy measures", () => {
+    const run = shapeRun(() => true);
+    simulate(run, 900, trackCorridor);
+    expect(measured(run)).toBeGreaterThan(2);
+    const buckets = run.drainShapes();
+    expect(buckets.reduce((n, b) => n + b.count, 0)).toBe(measured(run));
+    for (const b of buckets) {
+      expect(b.key).toMatch(/^[1-4]$/);
+      expect(b.sum).toHaveLength(61);
+    }
+    expect(run.drainShapes()).toEqual([]);
+  });
+
+  it("includes wall hits, excludes unheard gates", () => {
+    const walls = shapeRun(() => true);
+    simulate(walls, 1600, (s) => pitch(s.activeGate ? (s.activeGate.corridorChao > 3 ? 1 : 5) : 3));
+    const log = walls.snapshot().gateLog;
+    expect(log.some((g) => g.outcome === "collision" && g.toneAccuracy !== null)).toBe(true);
+    expect(stored(walls)).toBe(measured(walls));
+
+    const silent = shapeRun(() => true);
+    simulate(silent, 900, () => pitch(null));
+    expect(silent.drainShapes()).toEqual([]);
+  });
+});

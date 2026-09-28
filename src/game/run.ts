@@ -49,6 +49,7 @@ import {
 import type { Contour } from "./contours.ts";
 import { classifyTone, type ClassifiedTone } from "./toneClassifier.ts";
 import { longestUtterance, toneAccuracy } from "./toneAccuracy.ts";
+import { ShapeAccumulator, type ShapeBucket } from "./playerShape.ts";
 
 export type RunMode = "game" | "tutorial" | "single" | "drill" | "learn" | "pairs";
 
@@ -118,6 +119,13 @@ export interface RunConfig {
    * exists until it does.
    */
   deferFill?: boolean;
+  /**
+   * Whether to keep this player's tone lines (spec B, Pro only). Asked per
+   * heard gate, not once, so a tier that resolves after the Run is built is
+   * honoured from the next gate. Omitted, nothing is computed or kept. The
+   * host drains `drainShapes()` when the run ends; the Run never posts.
+   */
+  captureShapes?: () => boolean;
   /**
    * The one word a "single" mode run flies — a Lab-only mode that flies
    * exactly one hand-picked gate through the real collision/scoring pipeline,
@@ -652,6 +660,9 @@ export class Run {
   private idleRunStartMs: number | null = null;
   private idleRunLastMs = -Infinity;
   private idleRunCounted = false;
+  /** The player's tone lines this run (spec B); filled only while `captureShapes()` says so. */
+  private readonly shapes = new ShapeAccumulator();
+  private readonly captureShapes: (() => boolean) | null;
 
   constructor(cfg: RunConfig) {
     this.mode = cfg.mode;
@@ -668,9 +679,15 @@ export class Run {
     this.drillTone = cfg.drillTone ?? null;
     this.pairCombo = cfg.pairCombo ?? null;
     this.wordMix = cfg.wordMix ?? "single";
+    this.captureShapes = cfg.captureShapes ?? null;
     this.difficulty = this.difficultyFor(0);
     this.stats = newRunStats(3);
     if (!cfg.deferFill) this.fillQueue();
+  }
+
+  /** The tone lines kept since the last drain (spec B), and empties them. */
+  drainShapes(): ShapeBucket[] {
+    return this.shapes.drain();
   }
 
   /** Fills the queue after a `deferFill` construction. No-op if already filled. */
@@ -1272,7 +1289,10 @@ export class Run {
       const voiced = this.trail
         .filter((p) => p.t >= utteranceStartMs && p.voiced)
         .map((p) => ({ tMs: p.t, chao: p.chao }));
-      gateToneAccuracy = toneAccuracy(longestUtterance(voiced, mergeGapMs), state.gate.tones);
+      const utterance = longestUtterance(voiced, mergeGapMs);
+      gateToneAccuracy = toneAccuracy(utterance, state.gate.tones);
+      // Same utterance, wall hits and mismatches included (spec B §3).
+      if (this.captureShapes?.()) this.shapes.add(state.gate.tones, utterance);
     }
 
     this.gatesFinished += 1;
