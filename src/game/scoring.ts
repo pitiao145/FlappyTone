@@ -186,9 +186,10 @@ export function applyClassifierBoost(
  * set of pairs — every cross-tone confusion is either a {1,4}/{2,3}
  * within-group swap or crosses between the flat/falling tones and the
  * contour tones, and both are drastic by the request's own framing. So the
- * only real gate is confidence: the classifier must clear its own bar
+ * gates are confidence — the classifier must clear its own bar
  * (`toneClassifierMinConfidence`/`toneClassifierMarginThreshold`, enforced
- * inside `classifyTone` itself before it ever returns a non-`"none"` tone).
+ * inside `classifyTone` itself before it ever returns a non-`"none"` tone) —
+ * and, for a T2↔T3 read, `decisive`: a stricter bar than naming the tone.
  *
  * A `"none"` read (low confidence / ambiguous) never counts — that stays the
  * existing neutral "couldn't hear that" territory.
@@ -200,6 +201,10 @@ export function isDrasticToneMismatch(
   if (classification === null) return false;
   const winner = classification.tone;
   if (winner === "none" || winner === target) return false;
+  // A T2↔T3 read close to the midpoint of the two averages, or one whose dip
+  // went unvoiced, can name a tone but cannot take a heart — see
+  // `ToneClassification.decisive`.
+  if (!classification.decisive) return false;
   return classification.confidence >= tuning().toneClassifierMinConfidence;
 }
 

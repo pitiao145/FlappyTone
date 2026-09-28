@@ -821,6 +821,67 @@ Not fixed — see `tuning.ts`'s `gateDurationS` doc comment. Retune from the
 Lab if this gets revisited; don't just restore the clip length without
 re-checking T1's scores.
 
+## T2 vs T3 is decided by the dip, not by correlation (28 Sep 2026)
+
+Regenerating `toneAverages.ts` from 120 words to 211 clips (the
+`make-tone-averages` fix) broke two classifier tests, and checking why against
+Jane's real measured contours (`word_clips.contour`, 211 single-syllable
+textbook clips, `npm run classifier-check`) showed the classifier itself was
+the weak part, not the new averages. It told T2 from T3 by correlating the
+whole shape with each tone's average plus hand-tuned dip/plateau bonuses and a
+0.12 winner-over-runner-up margin. With more clips the T2 and T3 averages
+correlate 0.73 with each other (was 0.66), so real T2s sat inside the margin
+and read "none": 29 of 47 named correctly, down from 34. No retune could fix
+it — right and wrong reads overlapped in margin (能 read as a wrong T3 by
+0.125 while 16 correct T2s won by less), so every setting traded wall hits on
+correct speakers against correct reads, and the dip/plateau bonuses made no
+difference at all.
+
+**The replacement measures what phonetics says separates the two tones.**
+Correlation still picks the family — level (T1), dip-then-rise (T2/T3), fall
+(T4) — where it works well. Inside the dip-rise family, four votes, each placed
+on the line from the T2 average (-1) to the T3 average (+1): the drop before
+the low point (alone 96% on Jane's T2/T3 clips), the low point's height, the
+drop's share of the whole movement (scale-free), and the old correlation
+difference. The turning point's *timing*, the textbook cue, was measured and
+left out: 83% alone, and it made every combination worse — Jane's turning
+point moves more than her drop does. Every anchor is read off the averages,
+so a regeneration moves them with no hand-set chao values.
+
+Three details each came from a specific failure while building it:
+
+- **The low-point vote exists because of the fallback T3 corridor.** It is
+  measured from `jane_ma3` and is the textbook 214: it starts near chao 2 and
+  drops only ~1, right on the drop cue's midpoint, and read as T2. How low the
+  dip goes separates it, and that height is calibrated for this cue by
+  construction — the board's lower half is anchored on the player's own Tone 3
+  floor (PRD §5.4).
+- **The drop is measured on the untrimmed contour**, from the highest point
+  before the dip. The 25 Aug Lab case (a T3 that falls to the floor in its
+  first tenth and holds) lost its whole fall to the 5% onset trim. The onset is
+  protected instead by skipping a leading rise of more than 0.5 chao — neither
+  35 nor 214 begins by climbing, so that is a scoop or a tracker transient.
+- **Naming a tone and taking a heart are separate bars.** A T2/T3 read names
+  the tone outside a ±0.1 dead zone, but only costs a heart
+  (`ToneClassification.decisive`) at ±0.5, when no single cue votes for the
+  other tone by 1 or more, and when the dip has no voicing gap of 100ms+
+  (creak — rule 8). The dissent rule closed the documented "T3 80ms late
+  collides" gap in `run.test.ts`.
+
+Result on the 211 clips: 200 named correctly (was 185), T2 43/47 (was 34),
+T3 52/52 (was 46), boosts 184 (was 171), no wall hits on correct speech
+either way. Across eight simulated-trouble variants (miscalibrated range,
+shifted board, jitter + dropouts, creak gap, onset scoop): 1579 right with 2
+wall hits, against 1459 with 6. Known weak spot: a board that reads the player
+low (range ×1.3, shift −0.6) names only ~25 of 47 T2s — mostly as a
+non-decisive T3, so the boost is lost but no heart is. Test re-baselines, each
+with its reason in the test: the "hold-then-rise 0.4/0.5 must stay T2" cases
+(a 2-chao fall to chao 1 is a T3 by every measure on Jane's clips — none of her
+T2s dips below ~1.8), a shallow-T3 case that is now allowed to read T3
+non-decisively, and the bonus-mechanics tests, which tested code that is gone.
+**This changes live scoring** (the boost and the mismatch collision both read
+the classifier), so it needs flying in the Lab before it ships.
+
 ## Tone-mismatch collision / classifier boost (25–29 Aug 2026)
 
 `src/game/toneClassifier.ts` is a standalone correlation-based tone

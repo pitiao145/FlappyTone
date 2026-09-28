@@ -261,46 +261,39 @@ export interface Tuning {
    */
   toneClassifierMarginThreshold: number;
   /**
-   * How deep (below the sample's own mean) an interior low point must dip
-   * before `classifyTone` nudges tone 3's score up — a direct,
-   * correlation-independent signal for T2-vs-T3, since both are "dip then
-   * rise" and differ mainly in where/how deep the dip sits. Set well above
-   * both tones' own measured average dip depth (T2 ~0.94 chao, T3 ~0.99 —
-   * see `detectDip`'s doc comment) so this stays a rare nudge, not a
-   * default-on effect, until it's tuned against real attempts in the Lab.
+   * T2 vs T3 is decided by four votes, each placed on the line from the T2
+   * average (-1) to the T3 average (+1): how far the voice drops before its
+   * low point, how low that point is, what share of the whole movement the
+   * drop is, and which of the two averaged shapes it correlates with more. See
+   * `t2t3Cue` in `toneClassifier.ts`. A mean vote inside ±this reads "none"
+   * — too close to the midpoint between the two averages to name either.
    */
-  toneClassifierDipThresholdChao: number;
+  toneClassifierT23DeadZone: number;
   /**
-   * How far into the sample (0–1, as a fraction of its own span) an interior
-   * low point must sit before it counts as T3-shaped rather than T2-shaped —
-   * T2's own dip sits at ~31% through, T3's at ~50%, in the shipped
-   * templates. This is the discriminator that actually separates the two;
-   * depth alone (`toneClassifierDipThresholdChao`) barely does, since their
-   * natural dip depths are nearly identical.
+   * A T2↔T3 read only costs a heart (`isDrasticToneMismatch`) when the vote
+   * is at least this far from the midpoint. Deliberately wider than
+   * `toneClassifierT23DeadZone`: naming the tone in the visualiser or
+   * granting the boost can afford a close call, taking a heart cannot.
+   * Measured on Jane's 211 single-syllable textbook clips under simulated
+   * miscalibration, jitter, dropouts and creak (28 Sep 2026): 0.5 held
+   * wrongful wall hits at or below the old classifier's.
    */
-  toneClassifierDipMinPositionFrac: number;
-  /** Added to tone 3's score when both the depth and position dip gates are cleared. */
-  toneClassifierDipBonus: number;
+  toneMismatchMinT23Cue: number;
   /**
-   * How close to the sample's own minimum (as a fraction of the sample's
-   * chao range, max − min) still counts as "on the floor" when measuring the
-   * low plateau — see `detectDip`/`plateauRange` in `toneClassifier.ts`. A
-   * relative, not absolute, band so this stays scale-invariant.
+   * …and only when no single cue votes for the *other* tone by this much or
+   * more. A heart needs the cues to agree, not just to outvote: an 80ms-late
+   * fallback T3 (`run.test.ts`'s timing-slack case) loses the top of its fall,
+   * so drop, drop share and shape all say T2 while its low point says T3 at
+   * full strength — that used to cost a correct speaker a heart.
    */
-  toneClassifierPlateauBandFrac: number;
+  toneMismatchMaxT23Dissent: number;
   /**
-   * How much of the sample (0–1) must sit within that floor band before a
-   * dip counts as a genuine hold rather than a brief V — the direct signal
-   * for a real T3 that sits at the floor before a late, sharp rise, distinct
-   * from *where* the floor ends (`toneClassifierDipMinPositionFrac`).
+   * A T2↔T3 read never costs a heart when the voiced contour has an internal
+   * gap at least this long — creak concentrates in Tone 3's low point and
+   * goes unvoiced, so the one part that separates T3 from T2 is exactly what
+   * is missing. CLAUDE.md rule 8: unclear signal is never scored wrong.
    */
-  toneClassifierPlateauMinFrac: number;
-  /**
-   * Added to tone 3's score when the plateau-fraction gate is cleared,
-   * independently of (and additive with) `toneClassifierDipBonus` — a long
-   * floor-hold and a late-ending floor are two separate tells, not one.
-   */
-  toneClassifierPlateauBonus: number;
+  toneMismatchMaxGapMs: number;
   /**
    * When true, a confident classifier read that is *drastically* wrong —
    * T1/T4 confused with any other tone, or a confident T2↔T3 mixup — forces
@@ -482,12 +475,10 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   toneClassifierFlatnessScaleChao: 1.25,
   toneClassifierT1TailFraction: 0.45,
   toneClassifierMarginThreshold: 0.12,
-  toneClassifierDipThresholdChao: 1.1,
-  toneClassifierDipMinPositionFrac: 0.4,
-  toneClassifierDipBonus: 0.15,
-  toneClassifierPlateauBandFrac: 0.1,
-  toneClassifierPlateauMinFrac: 0.45,
-  toneClassifierPlateauBonus: 0.22,
+  toneClassifierT23DeadZone: 0.1,
+  toneMismatchMinT23Cue: 0.5,
+  toneMismatchMaxT23Dissent: 1,
+  toneMismatchMaxGapMs: 100,
   toneMismatchCollisionEnabled: true,
   toneClassifierBoostEnabled: true,
   toneClassifierBoostMinConfidence: 0.9,

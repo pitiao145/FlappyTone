@@ -7,18 +7,25 @@
  * resemble, independent of any target". A recognizer, not a grader — it
  * never sees or cares which tone the player was aiming for.
  *
- * Wired into the Visualiser (`src/ui/Visualiser.tsx`, both the production
- * `/app` tab and the Lab's copy) as an always-shown "Tone" readout next to
- * accuracy. Still not wired into the game itself — `classifyTone` has no
- * dependency on anything Visualiser-specific, so plugging it into scoring
- * later is a matter of calling it from `run.ts`, not a rewrite.
+ * Two stages, because the four tones are not equally far apart:
  *
- * Templates come from `AVERAGED_TONE_SHAPE` (`src/game/toneAverages.ts`,
- * generated — see `src/dev/make-tone-averages.ts`): each tone's chao value
- * averaged across every one of its recorded words' own measured polyline,
- * not a single citation take. Baked in offline so this stays zero-I/O;
- * rerun the generator and commit the regenerated file when the recording
- * inventory changes.
+ * 1. **Family, by shape.** Level (T1: tail flatness), dip-then-rise (T2 or
+ *    T3: correlation with their averaged shapes) or fall (T4: correlation).
+ *    These three shapes are genuinely different, and correlation against the
+ *    averages separates them well.
+ * 2. **T2 vs T3, by the dip itself.** Both dip then rise, so shape
+ *    correlation alone kept calling close T2s "none" (72% of Jane's real T2
+ *    clips named correctly, 28 Sep 2026). What separates them is how far the
+ *    voice drops and how low it gets (T2 ~0.5 chao down to ~2.3, T3 ~1.5
+ *    down to ~1.6) — the drop alone splits her 99 real T2/T3 clips 96%
+ *    correctly, where the turning point's *timing* only manages 83%. See
+ *    `t2t3Cue`.
+ *
+ * Every reference comes from `AVERAGED_TONE_SHAPE` (`src/game/toneAverages.ts`,
+ * generated — see `src/dev/make-tone-averages.ts`): the correlation templates
+ * and the T2/T3 cue's own anchor points are both read off the averages, so a
+ * regenerated file moves them together with no hand-set chao values to keep
+ * in sync. Check a change with `npm run classifier-check`.
  */
 
 import type { Contour } from "./contours.ts";
@@ -30,11 +37,27 @@ export type ClassifiedTone = Tone | "none";
 
 export interface ToneClassification {
   tone: ClassifiedTone;
-  /** The winning correlation, clamped to [0, 1]. */
+  /**
+   * How well the shape matches its family (level / dip-rise / fall), 0..1.
+   * For a T2 or T3 read this is the family's score, not the T2/T3 decision's
+   * — that is `t2t3Cue`.
+   */
   confidence: number;
+  /**
+   * The T2-vs-T3 vote, -1.5..1.5 (-1 = the T2 average, +1 = the T3 average), or
+   * null when the shape isn't in the dip-rise family.
+   */
+  t2t3Cue: number | null;
+  /**
+   * Whether this read is sure enough to *cost the player* a heart when it
+   * disagrees with the target (`isDrasticToneMismatch`). Always true for a
+   * level/fall read (unchanged from before the T2/T3 cue existed). A T2/T3
+   * read is decisive only when the vote clears `toneMismatchMinT23Cue`, no
+   * single cue argues hard for the other tone (`toneMismatchMaxT23Dissent`),
+   * and the dip wasn't lost to a voicing gap (`toneMismatchMaxGapMs`).
+   */
+  decisive: boolean;
 }
-
-const TONES: Tone[] = [1, 2, 3, 4];
 
 /** Points sampled across each shape's own progress, for comparison. */
 const RESAMPLE_POINTS = 16;
@@ -53,7 +76,7 @@ const RESAMPLE_POINTS = 16;
  * (a very short utterance) — better to classify on the full noisy shape than
  * to have nothing left at all.
  */
-function trimOnset(
+export function trimOnset(
   points: { tMs: number; chao: number }[],
   trimFraction: number,
 ): { tMs: number; chao: number }[] {
@@ -75,7 +98,7 @@ function trimOnset(
  * either way, which is what makes correlation against a fixed-duration
  * template meaningful.
  */
-function resample(points: { tMs: number; chao: number }[], n: number): number[] {
+export function resample(points: { tMs: number; chao: number }[], n: number): number[] {
   const startMs = points[0].tMs;
   const lastMs = points[points.length - 1].tMs;
   const span = lastMs - startMs;
@@ -103,7 +126,7 @@ function resample(points: { tMs: number; chao: number }[], n: number): number[] 
  * resolution (`RESAMPLE_POINTS`) from however many samples the baked file
  * happens to store.
  */
-function resampleFixed(values: number[], n: number): number[] {
+export function resampleFixed(values: number[], n: number): number[] {
   const lastIdx = values.length - 1;
   return Array.from({ length: n }, (_, k) => {
     const idx = (k / (n - 1)) * lastIdx;
@@ -115,7 +138,7 @@ function resampleFixed(values: number[], n: number): number[] {
 }
 
 /** Pearson correlation between two equal-length vectors. Null if either has zero variance. */
-function correlation(a: number[], b: number[]): number | null {
+export function correlation(a: number[], b: number[]): number | null {
   const n = a.length;
   const meanA = a.reduce((s, v) => s + v, 0) / n;
   const meanB = b.reduce((s, v) => s + v, 0) / n;
@@ -134,151 +157,194 @@ function correlation(a: number[], b: number[]): number | null {
   return cov / Math.sqrt(varA * varB);
 }
 
-interface DipInfo {
-  /**
-   * Whether a rise is actually visible after the low plateau — false when
-   * the low region runs all the way to the sample's last point (still
-   * falling/flat, not a dip-then-rise). Deliberately does *not* also
-   * require the plateau to start away from the front edge — a real T3 can
-   * dip almost immediately after onset and hold from there.
-   */
-  isInterior: boolean;
-  /** How far the low point sits below the sample's own mean. */
-  depth: number;
-  /**
-   * Where the low *plateau* ends — i.e. where a sustained climb actually
-   * begins — as a fraction of the sample's own span (0–1). Not the position
-   * of the single lowest sample: a real T3 that holds the floor for a
-   * while before rising has its bare minimum sitting wherever the flat
-   * stretch happens to start (or a tie-break picks the earliest match),
-   * which reads as an *early* dip — T2's signature, not T3's. What actually
-   * distinguishes them is when the floor ends and the rise starts, so that
-   * is what this measures. See `plateauRange`.
-   */
-  positionFrac: number;
-  /**
-   * How much of the sample sits within `toneClassifierPlateauBandFrac` of
-   * the minimum, as a fraction of the sample length (0–1). A narrow V-shaped
-   * dip (T2) scores near 0; a real hold-then-rise T3 scores well above it.
-   * A second, independent signal from `positionFrac` — a long hold pushes
-   * both the plateau-end position late *and* this fraction high, and
-   * `classifyTone` rewards them separately rather than folding one into
-   * the other, so a hold that is long but not yet late-ending (or vice
-   * versa) still gets partial credit.
-   */
-  plateauFrac: number;
+/** Points the T2/T3 cue measures over — finer than the correlation's 16, since it reads a single low point. */
+const CUE_POINTS = 40;
+
+interface DropShape {
+  /** The highest point before the dip, on a 3-point moving average so one noisy frame can't set it. */
+  start: number;
+  /** The low point, searched away from the very edges. */
+  min: number;
+  /** start − min: how far the voice drops before turning. */
+  drop: number;
+  /** drop / (drop + rise): the drop's share of the whole movement, scale-free. */
+  dropShare: number;
 }
 
 /**
- * Walks outward from `minIdx` while the sample stays within `band` of the
- * minimum value, returning the contiguous low-plateau's start/end indices.
- * For a narrow dip (no real plateau) this collapses to `start === end ===
- * minIdx`, so callers that used to read `minIdx` directly see no change.
+ * A rise this large at the very start is an onset artefact, not part of the
+ * tone: neither T2 (35) nor T3 (214) begins by climbing. A scoop up into the
+ * first syllable, or a pitch-tracker onset transient, both look like this.
  */
-function plateauRange(
-  sample: number[],
-  minIdx: number,
-  band: number,
-): { start: number; end: number } {
-  const minVal = sample[minIdx];
-  let start = minIdx;
-  while (start > 0 && sample[start - 1] <= minVal + band) start -= 1;
-  let end = minIdx;
-  while (end < sample.length - 1 && sample[end + 1] <= minVal + band) end += 1;
-  return { start, end };
-}
+const ONSET_RISE_CHAO = 0.5;
+/** …and only within this share of the span. */
+const ONSET_RISE_WITHIN = 0.25;
 
 /**
- * Finds the sample's lowest point and the low *plateau* around it, and
- * reports whether a rise is actually visible after it, how deep it dips
- * below the sample's own mean, where the plateau ends (see `positionFrac` on
- * `DipInfo`), and how much of the sample it covers (`plateauFrac`) — direct,
- * correlation-independent signals for T2/T3 disambiguation.
+ * The drop before the turning point, measured the same way on a player's
+ * contour and on an averaged shape (so the averages can anchor the cue).
  *
- * Correlation alone rewards clean shape-matching, but T2 and T3 are both
- * "dip then rise" — they differ in *where* and *how deep* the dip sits, not
- * just in overall shape, and a correlation contest can miss that. Measured
- * against this project's own averaged templates (`AVERAGED_TONE_SHAPE`,
- * 16-point resample): T2's own dip is 0.94 chao deep at ~31% through, T3's is
- * 0.99 chao deep at ~50% through. Depth alone barely discriminates them —
- * both comfortably clear a naive "0.4-0.5 chao" floor — but *position* does:
- * T2 dips early, T3 dips later, closer to the middle. `classifyTone` gates
- * the bonus on both: deep enough (`toneClassifierDipThresholdChao`, kept
- * conservative since depth alone is weak) *and* late enough
- * (`toneClassifierDipMinPositionFrac`) to look like T3's dip rather than
- * T2's.
+ * Runs on the *untrimmed* contour: a real T3 can fall to the floor within
+ * its first tenth and hold there (the 25 Aug 2026 Lab case pinned in the
+ * tests), so the classifier's shared onset trim would cut away the very drop
+ * this measures. The onset is protected differently — a leading rise larger
+ * than `ONSET_RISE_CHAO` is skipped, see above.
  *
- * `toneClassifierPlateauBandFrac` sizes the band as a fraction of the
- * sample's own chao range (max − min), not an absolute chao value, so this
- * stays scale-invariant the same way the correlation scoring already is.
+ * The low point is searched between 5% and 90% of the span; the last 10% can
+ * hold a final creak or trail-off that is not the tone's turning point.
+ * `start` is the highest point between the onset and the low point, on a
+ * 3-point moving average so one noisy frame can't set it.
  */
-function detectDip(sample: number[]): DipInfo {
-  let minIdx = 0;
-  let maxVal = sample[0];
-  for (let i = 1; i < sample.length; i++) {
-    if (sample[i] < sample[minIdx]) minIdx = i;
-    if (sample[i] > maxVal) maxVal = sample[i];
-  }
+function dropShape(sample: number[]): DropShape {
   const n = sample.length;
-  const range = maxVal - sample[minIdx];
-  const band = range * tuning().toneClassifierPlateauBandFrac;
-  const { start, end } = plateauRange(sample, minIdx, band);
-  // The rise must actually be visible after the plateau — a low region that
-  // runs all the way to the last sample is a still-falling (or still-flat)
-  // shape, not a dip-then-rise, however long its floor is. Unlike the old
-  // argmin-based check, this deliberately does *not* also require the
-  // plateau to start away from the front edge: a real T3 can dip almost
-  // immediately after onset and hold from there, which used to fail that
-  // check outright (see the 25 Aug 2026 session, where every held-floor
-  // attempt had its plateau start within the first couple of samples).
-  const isInterior = end < n - 1;
-  const mean = sample.reduce((s, v) => s + v, 0) / n;
-  return {
-    isInterior,
-    depth: mean - sample[minIdx],
-    positionFrac: end / (n - 1),
-    plateauFrac: (end - start + 1) / n,
+  const edge = Math.max(1, Math.round(n * 0.1));
+  let minIdx = Math.round(n * 0.05);
+  for (let i = minIdx; i < n - edge; i++) if (sample[i] < sample[minIdx]) minIdx = i;
+  const min = sample[minIdx];
+
+  let from = 0;
+  let peak = 0;
+  while (peak < minIdx && sample[peak + 1] >= sample[peak]) peak++;
+  if (peak <= n * ONSET_RISE_WITHIN && sample[peak] - sample[0] > ONSET_RISE_CHAO) {
+    from = Math.min(minIdx, peak + 1);
+  }
+  let start = sample[from];
+  for (let i = from; i <= minIdx; i++) {
+    const lo = Math.max(from, i - 1);
+    const hi = Math.min(minIdx, i + 1);
+    let sum = 0;
+    for (let j = lo; j <= hi; j++) sum += sample[j];
+    start = Math.max(start, sum / (hi - lo + 1));
+  }
+  const rise = Math.max(...sample.slice(minIdx)) - min;
+  const drop = Math.max(0, start - min);
+  return { start, min, drop, dropShare: drop / Math.max(1e-6, drop + rise) };
+}
+
+interface CueAnchors {
+  drop: [number, number];
+  low: [number, number];
+  dropShare: [number, number];
+  /** 1 − corr(T2 average, T3 average): scales the correlation vote to ±1 at each average. */
+  shapeSpread: number;
+}
+
+const anchorCache = new WeakMap<Record<Tone, number[]>, CueAnchors>();
+
+/**
+ * The T2 and T3 averages' own drop measurements — the cue's -1 and +1.
+ * Measured through the same resample as a live contour, so an attempt
+ * identical to an average votes exactly ±1 on the drop cues.
+ */
+function cueAnchors(templates: Record<Tone, number[]>): CueAnchors {
+  const cached = anchorCache.get(templates);
+  if (cached) return cached;
+  const d2 = dropShape(resampleFixed(templates[2], CUE_POINTS));
+  const d3 = dropShape(resampleFixed(templates[3], CUE_POINTS));
+  const r = correlation(
+    resampleFixed(templates[2], RESAMPLE_POINTS),
+    resampleFixed(templates[3], RESAMPLE_POINTS),
+  );
+  const anchors: CueAnchors = {
+    drop: [d2.drop, d3.drop],
+    low: [d2.min, d3.min],
+    dropShare: [d2.dropShare, d3.dropShare],
+    shapeSpread: Math.max(0.05, 1 - (r ?? 0)),
   };
+  anchorCache.set(templates, anchors);
+  return anchors;
+}
+
+/**
+ * How far one vote may go past an average. Capped so a single extreme cue
+ * (a very low dip from a miscalibrated board, say) can't outvote the other
+ * three on its own — 1.5 held the fewest wrongful wall hits across the
+ * stress variants `npm run classifier-check` runs (28 Sep 2026).
+ */
+const VOTE_CAP = 1.5;
+
+/** Where `value` sits on the line from `t2` (-1) to `t3` (+1), capped at ±VOTE_CAP. */
+function vote(value: number, [t2, t3]: [number, number]): number {
+  const half = (t3 - t2) / 2;
+  if (Math.abs(half) < 1e-6) return 0;
+  return Math.max(-VOTE_CAP, Math.min(VOTE_CAP, (value - (t2 + t3) / 2) / half));
+}
+
+/**
+ * The T2-vs-T3 vote: negative = T2, positive = T3, ±1 = exactly like that
+ * tone's average. The mean of four votes, each anchored on the averages, so
+ * no two cues have to agree for a read and no single one decides it:
+ *
+ * - **drop** (chao): how far the voice falls before turning. The strongest
+ *   single cue on Jane's word clips (96%), but not on its own: the textbook
+ *   214 Tone 3 — and the fallback corridor measured from `jane_ma3` — starts
+ *   near chao 2 and only drops ~1, right on the midpoint.
+ * - **low point** (chao): how low the dip goes. T3 bottoms out near 1.6, T2
+ *   around 2.3. Absolute height, but this is the one height the game
+ *   calibrates directly: the board's lower half is anchored on the player's
+ *   own measured Tone 3 floor (PRD §5.4). It rescues the 214 shape above.
+ * - **drop share**: the drop over the whole movement. Scale-free, so it
+ *   steadies a shallow or miscalibrated attempt where the two chao cues
+ *   would drift.
+ * - **shape**: which averaged shape correlates better — the old evidence,
+ *   kept as one voice among four rather than the whole decision.
+ *
+ * Timing (where the low point falls) was measured and left out: it
+ * separates Jane's T2/T3 only 83% of the time and made every combination
+ * worse — her turning point moves around more than her drop does.
+ */
+function t2t3Cue(
+  sample: number[],
+  c2: number,
+  c3: number,
+  templates: Record<Tone, number[]>,
+): { cue: number; strongestDissent: number } {
+  const anchors = cueAnchors(templates);
+  const d = dropShape(sample);
+  const votes = [
+    vote(d.drop, anchors.drop),
+    vote(d.min, anchors.low),
+    vote(d.dropShare, anchors.dropShare),
+    Math.max(-VOTE_CAP, Math.min(VOTE_CAP, (c3 - c2) / anchors.shapeSpread)),
+  ];
+  const cue = votes.reduce((s, v) => s + v, 0) / votes.length;
+  // How hard the most contrary vote pulls the other way — 0 when all agree.
+  const strongestDissent = Math.max(0, ...votes.map((v) => -Math.sign(cue) * v));
+  return { cue, strongestDissent };
+}
+
+/** Longest gap between consecutive voiced points — where creak went unvoiced. */
+function longestGapMs(points: { tMs: number }[]): number {
+  let gap = 0;
+  for (let i = 1; i < points.length; i++) gap = Math.max(gap, points[i].tMs - points[i - 1].tMs);
+  return gap;
 }
 
 /**
  * Which of the four tones `contour` most resembles, or `"none"` if it
- * doesn't resemble any of them well enough, or is too close a call between
- * two of them to say. Null only when there isn't enough signal to say
- * anything at all (fewer than 2 points) — the same "not enough evidence"
- * posture `heardUtterance`/`unheardHint` take in `scoring.ts`.
+ * doesn't resemble any of them well enough, or is too close a call to say.
+ * Null only when there isn't enough signal to say anything at all (fewer than
+ * 2 points) — the same "not enough evidence" posture `heardUtterance` takes
+ * in `scoring.ts`.
  *
- * The onset trim here is deliberately small (`toneClassifierOnsetTrimFraction`,
- * default 5%) — just enough to drop a click/silence artifact right at the
- * start, not a real chunk of the tone. A larger shared trim risked shaving
- * into genuine early signal (T3's dip starts early), so the tones that need
- * more protection from the onset get their own dedicated handling instead of
- * a bigger blanket cut:
+ * The onset trim is deliberately small (`toneClassifierOnsetTrimFraction`,
+ * default 5%) — just enough to drop a click at the very start. Tone 1 gets
+ * its own window instead: only the last `toneClassifierT1TailFraction` of the
+ * sample, where the voice has settled, is judged for flatness.
  *
- * - **Tone 1** doesn't get a correlation — its target is level, so there's
- *   nothing to correlate a shape *against* — but it does get its own
- *   judging window: only the *last* `toneClassifierT1TailFraction` of the
- *   sample (where the voice has actually settled), not the whole shape,
- *   which may still be transitioning early on. Its score is a continuous
- *   "how flat is this tail" confidence, competing against T2–T4's
- *   correlation on equal footing — not a binary gate that short-circuits
- *   everything else.
- * - **T2 vs T3** additionally gets a direct, correlation-independent check:
- *   `detectDip` finds the sample's own lowest point, and if it sits away
- *   from the edges, dips deep enough below the mean
- *   (`toneClassifierDipThresholdChao`), *and* sits late enough
- *   (`toneClassifierDipMinPositionFrac` — T2 dips early, T3 dips later),
- *   nudges T3's score up (`toneClassifierDipBonus`) — see `detectDip`'s doc
- *   comment for why depth alone isn't a reliable discriminator here and
- *   position is what actually separates the two.
+ * Stage 1 picks the family — level (T1), dip-rise (the better of T2/T3's
+ * correlation) or fall (T4) — and the winner must clear
+ * `toneClassifierMinConfidence` and beat the runner-up family by
+ * `toneClassifierMarginThreshold`. Stage 2, for a dip-rise winner only,
+ * names T2 or T3 from `t2t3Cue`, or "none" inside
+ * `toneClassifierT23DeadZone`.
  */
 export function classifyTone(
   contour: Contour,
   /**
-   * The per-tone reference shapes to correlate against. Always the baked
-   * averages in the game; a parameter only so `src/dev/classifier-check.ts`
-   * can compare the committed averages against freshly computed ones in one
-   * run.
+   * The per-tone reference shapes. Always the baked averages in the game; a
+   * parameter so `src/dev/classifier-check.ts` can compare the committed
+   * averages against freshly computed ones in one run.
    */
   templates: Record<Tone, number[]> = AVERAGED_TONE_SHAPE,
 ): ToneClassification | null {
@@ -292,75 +358,47 @@ export function classifyTone(
   );
   const t1Window = sample.slice(tailStart);
   const t1Excursion = Math.max(...t1Window) - Math.min(...t1Window);
+  const level =
+    1 - Math.min(1, Math.max(0, t1Excursion / tuning().toneClassifierFlatnessScaleChao));
 
-  const scores = new Map<Tone, number>();
-  scores.set(
-    1,
-    1 - Math.min(1, Math.max(0, t1Excursion / tuning().toneClassifierFlatnessScaleChao)),
-  );
-  for (const tone of [2, 3, 4] as Tone[]) {
-    const template = resampleFixed(templates[tone], RESAMPLE_POINTS);
-    const r = correlation(sample, template);
-    if (r !== null) scores.set(tone, Math.min(1, Math.max(0, r)));
+  const corr = (tone: Tone): number => {
+    const r = correlation(sample, resampleFixed(templates[tone], RESAMPLE_POINTS));
+    return r === null ? 0 : Math.min(1, Math.max(0, r));
+  };
+  const c2 = corr(2);
+  const c3 = corr(3);
+  const fall = corr(4);
+  const dipRise = Math.max(c2, c3);
+
+  const families = [
+    { family: "level" as const, score: level },
+    { family: "dipRise" as const, score: dipRise },
+    { family: "fall" as const, score: fall },
+  ].sort((a, b) => b.score - a.score);
+  const [best, runnerUp] = families;
+
+  // Too weak a match to anything, or a near-tie between two families: an
+  // ambiguous attempt, not a confident read of the winner.
+  if (
+    best.score < tuning().toneClassifierMinConfidence ||
+    best.score - runnerUp.score < tuning().toneClassifierMarginThreshold
+  ) {
+    return { tone: "none", confidence: best.score, t2t3Cue: null, decisive: false };
   }
+  if (best.family === "level") return { tone: 1, confidence: best.score, t2t3Cue: null, decisive: true };
+  if (best.family === "fall") return { tone: 4, confidence: best.score, t2t3Cue: null, decisive: true };
 
-  const dip = detectDip(sample);
-  const t3Score = scores.get(3);
-  if (t3Score !== undefined && dip.isInterior) {
-    let bonus = 0;
-    // Depth-gated, as before: `dip.depth` is mean-relative, and only
-    // meaningful once there's a real point to be deep *relative to*.
-    if (
-      dip.depth > tuning().toneClassifierDipThresholdChao &&
-      dip.positionFrac >= tuning().toneClassifierDipMinPositionFrac
-    ) {
-      bonus += tuning().toneClassifierDipBonus;
-    }
-    // Deliberately its own gate, not also requiring `toneClassifierDipThresholdChao`:
-    // a long hold drags the sample's own mean down toward the floor, which
-    // shrinks the mean-relative `depth` measurement even though the actual
-    // drop from onset to floor is large — so the depth gate above quietly
-    // failed on every real held-floor attempt this was built to catch.
-    // `plateauFrac` already only fires on a real, sustained low stretch
-    // (band-limited to `toneClassifierPlateauBandFrac` of the sample's own
-    // range), so it doesn't need a second, redundant depth check. Reported
-    // directly against a played-back session (25 Aug 2026): several genuine
-    // T3 attempts held the floor for roughly half the sample before a late,
-    // steep rise, and read as T2 or "none" even after `positionFrac` moved
-    // to the plateau's end — the position fix alone wasn't enough ballast
-    // against T2's own correlation pull.
-    if (dip.plateauFrac >= tuning().toneClassifierPlateauMinFrac) {
-      bonus += tuning().toneClassifierPlateauBonus;
-    }
-    if (bonus > 0) scores.set(3, Math.min(1, t3Score + bonus));
+  const { cue, strongestDissent } = t2t3Cue(resample(contour.points, CUE_POINTS), c2, c3, templates);
+  if (Math.abs(cue) < tuning().toneClassifierT23DeadZone) {
+    return { tone: "none", confidence: best.score, t2t3Cue: cue, decisive: false };
   }
-
-  let best: Tone | null = null;
-  let bestScore = -Infinity;
-  let runnerUpScore = -Infinity;
-  for (const tone of TONES) {
-    const score = scores.get(tone);
-    if (score === undefined) continue;
-    if (score > bestScore) {
-      runnerUpScore = bestScore;
-      bestScore = score;
-      best = tone;
-    } else if (score > runnerUpScore) {
-      runnerUpScore = score;
-    }
-  }
-
-  if (best === null) return { tone: "none", confidence: 0 };
-
-  if (bestScore < tuning().toneClassifierMinConfidence) {
-    return { tone: "none", confidence: bestScore };
-  }
-  // A near-tie between the top two is an ambiguous attempt, not a confident
-  // read of the winner — a raw floor on the winner's own score can't catch
-  // this on its own.
-  if (bestScore - runnerUpScore < tuning().toneClassifierMarginThreshold) {
-    return { tone: "none", confidence: bestScore };
-  }
-
-  return { tone: best, confidence: bestScore };
+  return {
+    tone: cue > 0 ? 3 : 2,
+    confidence: best.score,
+    t2t3Cue: cue,
+    decisive:
+      Math.abs(cue) >= tuning().toneMismatchMinT23Cue &&
+      strongestDissent < tuning().toneMismatchMaxT23Dissent &&
+      longestGapMs(trimmed) < tuning().toneMismatchMaxGapMs,
+  };
 }

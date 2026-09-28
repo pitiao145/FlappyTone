@@ -18,13 +18,20 @@
 //   fixtures/captures/jane_ma1..4.wav   through PitchTracker, longest utterance.
 //   synthetic      the two toneClassifier.test.ts shapes the regeneration broke.
 //
-// What matters for the live game is not only accuracy: a confident wrong read
-// on a correct speaker is a forced wall hit (`isDrasticToneMismatch`), so the
-// "confident wrong" count is the number to watch. "boost" counts correct reads
+// What matters for the live game is not only accuracy: a wrong read that
+// `isDrasticToneMismatch` accepts is a forced wall hit on a correct speaker,
+// so "wall hits" is the number to watch. "boost" counts correct reads
 // confident enough for `applyClassifierBoost`.
+//
+// With contours.json, two more sections: the same clips pushed through
+// simulated trouble (a miscalibrated range, a shifted board, jitter and
+// dropouts, a creaky T3 whose dip goes unvoiced, a low onset scoop), and the
+// four fallback corridors flown up to 120ms early or late.
 
 import { existsSync, readFileSync } from "node:fs";
-import { classifyTone, type ClassifiedTone } from "../game/toneClassifier.ts";
+import { classifyTone, type ClassifiedTone, type ToneClassification } from "../game/toneClassifier.ts";
+import { isDrasticToneMismatch } from "../game/scoring.ts";
+import { corridorChaoAt, shapeForTone } from "../game/gates.ts";
 import { AVERAGED_TONE_SHAPE } from "../game/toneAverages.ts";
 import { averagePolyline } from "../game/toneAverage.ts";
 import { wordsFromCatalog, wordsOfTone } from "../game/words.ts";
@@ -146,26 +153,34 @@ function syntheticCases(templates: Record<Tone, number[]>): Case[] {
     { id: "onset swing + T2 template", tone: 2, contour: contourOf(onsetSwing) },
     { id: "hold-then-rise 0.80", tone: 3, contour: contourOf(holdThenRise(0.8)) },
     { id: "hold-then-rise 0.85", tone: 3, contour: contourOf(holdThenRise(0.85)) },
-    { id: "hold-then-rise 0.30 (T2)", tone: 2, contour: contourOf(holdThenRise(0.3)) },
-    { id: "hold-then-rise 0.40 (T2)", tone: 2, contour: contourOf(holdThenRise(0.4)) },
-    { id: "hold-then-rise 0.50 (T2)", tone: 2, contour: contourOf(holdThenRise(0.5)) },
+    { id: "hold-then-rise 0.50", tone: 3, contour: contourOf(holdThenRise(0.5)) },
+    {
+      id: "shallow early dip (T2)",
+      tone: 2,
+      contour: contourOf(
+        Array.from({ length: 30 }, (_, k) => {
+          const t = k / 29;
+          return { tMs: t * 900, chao: t < 0.3 ? 2.9 - 0.6 * (t / 0.3) : 2.3 + 2.6 * ((t - 0.3) / 0.7) };
+        }),
+      ),
+    },
   ];
 }
 
 // ---- Reporting.
-type Read = { tone: ClassifiedTone | null; confidence: number };
+type Read = { tone: ClassifiedTone | null; confidence: number; full: ToneClassification | null };
 
 function readAll(cases: Case[], templates: Record<Tone, number[]>): Read[] {
   return cases.map((c) => {
     const r = classifyTone(c.contour, templates);
-    return r ? { tone: r.tone, confidence: r.confidence } : { tone: null, confidence: 0 };
+    return r ? { tone: r.tone, confidence: r.confidence, full: r } : { tone: null, confidence: 0, full: null };
   });
 }
 
 function matrix(label: string, cases: Case[], reads: Read[]): void {
   const cols: (ClassifiedTone | "null")[] = [1, 2, 3, 4, "none", "null"];
   console.log(`  ${label}`);
-  console.log(`    true │ ${cols.map((c) => String(c === "null" ? "–" : c === "none" ? "none" : `T${c}`).padStart(5)).join("")} │ right  conf-wrong  boost`);
+  console.log(`    true │ ${cols.map((c) => String(c === "null" ? "–" : c === "none" ? "none" : `T${c}`).padStart(5)).join("")} │ right  wall-hits  boost`);
   for (const t of TONES) {
     const idx = cases.map((c, i) => (c.tone === t ? i : -1)).filter((i) => i >= 0);
     if (idx.length === 0) continue;
@@ -173,25 +188,21 @@ function matrix(label: string, cases: Case[], reads: Read[]): void {
       idx.filter((i) => (reads[i].tone ?? "null") === col).length,
     );
     const right = idx.filter((i) => reads[i].tone === t).length;
-    // Confident wrong = what isDrasticToneMismatch would turn into a wall hit.
-    const confWrong = idx.filter(
-      (i) =>
-        reads[i].tone !== null &&
-        reads[i].tone !== "none" &&
-        reads[i].tone !== t &&
-        reads[i].confidence >= tuning().toneClassifierMinConfidence,
-    ).length;
+    // What the live game would turn into a wall hit on this correct speaker.
+    const confWrong = idx.filter((i) => isDrasticToneMismatch(t, reads[i].full)).length;
     const boost = idx.filter(
       (i) => reads[i].tone === t && reads[i].confidence >= tuning().toneClassifierBoostMinConfidence,
     ).length;
     console.log(
-      `    T${t} ${String(idx.length).padStart(3)} │ ${counts.map((n) => String(n || "·").padStart(5)).join("")} │ ${`${Math.round((right / idx.length) * 100)}%`.padStart(5)}  ${String(confWrong).padStart(10)}  ${String(boost).padStart(5)}`,
+      `    T${t} ${String(idx.length).padStart(3)} │ ${counts.map((n) => String(n || "·").padStart(5)).join("")} │ ${`${Math.round((right / idx.length) * 100)}%`.padStart(5)}  ${String(confWrong).padStart(9)}  ${String(boost).padStart(5)}`,
     );
   }
 }
 
 function fmt(r: Read): string {
-  return r.tone === null ? "–" : `${r.tone === "none" ? "none" : `T${r.tone}`} ${r.confidence.toFixed(2)}`;
+  if (r.tone === null) return "–";
+  const cue = r.full?.t2t3Cue;
+  return `${r.tone === "none" ? "none" : `T${r.tone}`} ${r.confidence.toFixed(2)}${cue == null ? "" : ` cue ${cue.toFixed(2)}${r.full!.decisive ? "" : "·"}`}`;
 }
 
 function source(
@@ -244,3 +255,75 @@ if (contoursPath) source(`measured clip contours (${contoursPath})`, clipCases(c
 else console.log("\n(no contours.json given — skipping measured clip contours)");
 source("jane_ma*.wav through PitchTracker", captureCases(), true);
 source("synthetic test shapes (the T2 one is rebuilt from each template set)", syntheticCases, true);
+console.log("  (· after a cue = not decisive: may be named, can never cost a heart)");
+
+// ---- Stress: the measured clips through simulated trouble.
+if (contoursPath) {
+  const clips = clipCases(contoursPath);
+  let seed = 1;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const gauss = () => Math.sqrt(-2 * Math.log(rnd() + 1e-12)) * Math.cos(2 * Math.PI * rnd());
+  const clamp = (c: number) => Math.max(1, Math.min(5, c));
+  type Pts = { tMs: number; chao: number }[];
+  const variants: [string, (p: Pts) => Pts][] = [
+    ["clean", (p) => p],
+    ["range x0.7", (p) => p.map((x) => ({ ...x, chao: clamp(3 + (x.chao - 3) * 0.7) }))],
+    ["range x1.3", (p) => p.map((x) => ({ ...x, chao: clamp(3 + (x.chao - 3) * 1.3) }))],
+    ["shift +0.6", (p) => p.map((x) => ({ ...x, chao: clamp(x.chao + 0.6) }))],
+    ["shift -0.6", (p) => p.map((x) => ({ ...x, chao: clamp(x.chao - 0.6) }))],
+    ["jitter+dropouts", (p) => {
+      const q = p.filter(() => rnd() > 0.2).map((x) => ({ ...x, chao: clamp(x.chao + 0.15 * gauss()) }));
+      return q.length >= 2 ? q : p;
+    }],
+    ["creak gap", (p) => {
+      const floor = Math.min(...p.map((x) => x.chao));
+      const q = p.filter((x) => x.chao > floor + 0.35);
+      return q.length >= 4 ? q : p;
+    }],
+    ["onset scoop", (p) => [
+      ...[0, 1, 2].map((k) => ({ tMs: p[0].tMs - 150 + k * 50, chao: clamp(p[0].chao - 0.8 + k * 0.25) })),
+      ...p,
+    ]],
+  ];
+  console.log(`\n== stress: measured clips through simulated trouble (${clips.length} each)`);
+  let allRight = 0;
+  let allHits = 0;
+  for (const [name, warp] of variants) {
+    seed = 7;
+    const right: Record<Tone, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+    const n: Record<Tone, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+    let hits = 0;
+    for (const c of clips) {
+      const r = classifyTone(contourOf(warp(c.contour.points)));
+      n[c.tone]++;
+      if (r?.tone === c.tone) right[c.tone]++;
+      else if (isDrasticToneMismatch(c.tone, r)) hits++;
+    }
+    const total = TONES.reduce((s, t) => s + right[t], 0);
+    allRight += total;
+    allHits += hits;
+    console.log(
+      `  ${name.padEnd(16)} ${TONES.map((t) => `T${t} ${right[t]}/${n[t]}`).join("  ")}   right ${total}  wall hits ${hits}`,
+    );
+  }
+  console.log(`  ${"all variants".padEnd(16)} right ${allRight}  wall hits ${allHits}`);
+}
+
+// ---- The fallback corridors, flown early and late.
+console.log("\n== fallback corridors (tuning polylines), flown early (-) or late (+)");
+for (const tone of TONES) {
+  const shape = shapeForTone(tone);
+  const durMs = tuning().gateDurationS[tone] * 1000;
+  const cells: string[] = [];
+  for (const offMs of [-120, -80, -40, 0, 40, 80, 120]) {
+    const pts: { tMs: number; chao: number }[] = [];
+    for (let tMs = 0; tMs <= durMs; tMs += 23) {
+      pts.push({ tMs, chao: corridorChaoAt(shape, Math.max(0, Math.min(1, (tMs + offMs) / durMs))) });
+    }
+    const r = classifyTone(contourOf(pts));
+    const read = r ? (r.tone === "none" ? "none" : `T${r.tone}`) : "–";
+    cells.push(`${offMs > 0 ? "+" : ""}${offMs}: ${read}${isDrasticToneMismatch(tone, r) ? "!" : ""}`);
+  }
+  console.log(`  T${tone}  ${cells.map((c) => c.padEnd(10)).join(" ")}`);
+}
+console.log("  (! = would cost a correct speaker a heart)");

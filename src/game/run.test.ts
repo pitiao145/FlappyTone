@@ -1024,16 +1024,13 @@ describe("Run — timing slack (a right shape, slightly off the beat)", () => {
   });
 
   it("clears a contour that is a beat late", () => {
-    // Known, accepted gap (25 Aug 2026): with the classifier's own
-    // mismatch-collision feature on by default, this specific shape — a
-    // correct T3, shifted 80ms late — reads as a confident T2 and collides.
-    // The corridor-tolerance forgiveness this describe block is about still
-    // works (this used to collide on tolerance alone before that existed);
-    // what's now failing is the classifier's shape read on a timing-shifted
-    // trace, a separate, still-open weakness. Enabled anyway per direct
-    // playtesting feedback: "it's working quite well" outweighs this one
-    // synthetic edge case for now.
-    expect(collisionsFor(80)).toBe(1);
+    // Was a known, accepted gap (25 Aug 2026): this correct T3, shifted 80ms,
+    // loses the top of its fall and read as a confident T2, forcing a wall
+    // hit. Closed 28 Sep 2026: the T2/T3 cue still names it T2 (drop, drop
+    // share and shape outvote its low point), but a heart now needs the cues
+    // to agree (`toneMismatchMaxT23Dissent`) and its chao-1.2 floor argues
+    // hard for T3 — so no heart is taken.
+    expect(collisionsFor(80)).toBe(0);
   });
 
   it("still walls off a contour that is wildly out of step", () => {

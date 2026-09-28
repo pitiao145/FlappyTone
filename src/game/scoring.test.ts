@@ -16,6 +16,7 @@ import {
   type RunStats,
 } from "./scoring.ts";
 import type { Tone } from "./gates.ts";
+import type { ClassifiedTone, ToneClassification } from "./toneClassifier.ts";
 import { DEFAULT_TUNING } from "./tuning.ts";
 
 /** Analysis hop: 1024 samples at 44.1kHz. Frames really do arrive this far apart. */
@@ -350,35 +351,48 @@ describe("applyClassifierBoost", () => {
 describe("isDrasticToneMismatch", () => {
   const confident = DEFAULT_TUNING.toneClassifierMinConfidence + 0.1;
   const unconfident = DEFAULT_TUNING.toneClassifierMinConfidence - 0.1;
+  const read = (
+    tone: ClassifiedTone,
+    confidence: number,
+    decisive = true,
+  ): ToneClassification => ({ tone, confidence, t2t3Cue: null, decisive });
 
   it("is false when the classification is null (nothing to classify)", () => {
     expect(isDrasticToneMismatch(1, null)).toBe(false);
   });
 
   it("is false when the classifier read 'none'", () => {
-    expect(isDrasticToneMismatch(1, { tone: "none", confidence: 1 })).toBe(false);
+    expect(isDrasticToneMismatch(1, read("none", 1))).toBe(false);
   });
 
   it("is false when the classifier agrees with the target", () => {
-    expect(isDrasticToneMismatch(2, { tone: 2, confidence: confident })).toBe(false);
+    expect(isDrasticToneMismatch(2, read(2, confident))).toBe(false);
   });
 
   it("is false when confidence doesn't clear the threshold", () => {
-    expect(isDrasticToneMismatch(1, { tone: 4, confidence: unconfident })).toBe(false);
+    expect(isDrasticToneMismatch(1, read(4, unconfident))).toBe(false);
   });
 
   it("is true for a confident T1/T4 mixup", () => {
-    expect(isDrasticToneMismatch(1, { tone: 4, confidence: confident })).toBe(true);
-    expect(isDrasticToneMismatch(4, { tone: 1, confidence: confident })).toBe(true);
+    expect(isDrasticToneMismatch(1, read(4, confident))).toBe(true);
+    expect(isDrasticToneMismatch(4, read(1, confident))).toBe(true);
   });
 
   it("is true for a confident T2/T3 mixup", () => {
-    expect(isDrasticToneMismatch(2, { tone: 3, confidence: confident })).toBe(true);
-    expect(isDrasticToneMismatch(3, { tone: 2, confidence: confident })).toBe(true);
+    expect(isDrasticToneMismatch(2, read(3, confident))).toBe(true);
+    expect(isDrasticToneMismatch(3, read(2, confident))).toBe(true);
+  });
+
+  it("is false for a T2/T3 mixup the classifier could name but not stand behind", () => {
+    // Close to the midpoint between the T2 and T3 averages, or a dip lost to
+    // creak: enough to say "sounds like T3" in the visualiser, never enough
+    // to take a heart (see ToneClassification.decisive).
+    expect(isDrasticToneMismatch(2, read(3, confident, false))).toBe(false);
+    expect(isDrasticToneMismatch(3, read(2, confident, false))).toBe(false);
   });
 
   it("is true crossing between {1,4} and {2,3}", () => {
-    expect(isDrasticToneMismatch(1, { tone: 3, confidence: confident })).toBe(true);
+    expect(isDrasticToneMismatch(1, read(3, confident))).toBe(true);
   });
 });
 
