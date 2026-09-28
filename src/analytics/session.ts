@@ -105,7 +105,15 @@ export type AnalyticsEvent =
       /** Every syllable's tone, in order — `[tone]` for a single-syllable gate. Carries a `pairs`/mixed run's combo without a schema bump. */
       tones: number[];
       outcome: GateOutcome;
+      /** Score accuracy (corridor fit on the gate's clock), 0..1. */
       acc: number;
+      /**
+       * Tone accuracy (`src/game/toneAccuracy.ts`), 0..1: did the voice make
+       * the right tone shape, timing-free. A single rounded number derived
+       * from the contour, never the contour itself. Null when unheard or
+       * when the gate has no reference (a combo with a neutral syllable).
+       */
+      toneAcc: number | null;
       uttMs: number;
       voicedFrac: number;
       seeded: number;
@@ -328,6 +336,7 @@ export function gateEvent(entry: GateLogEntry, index: number): AnalyticsEvent {
     tones: entry.tones,
     outcome: entry.outcome,
     acc: round(entry.accuracy, 3),
+    toneAcc: entry.toneAccuracy === null ? null : round(entry.toneAccuracy, 3),
     uttMs: Math.round(entry.utteranceMs),
     voicedFrac: round(entry.voicedFraction, 3),
     seeded: entry.seeded,

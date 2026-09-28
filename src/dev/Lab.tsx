@@ -294,8 +294,11 @@ export function Lab({ onBack }: Props) {
                 </button>
                 {gateResult?.gateLog[0] && (
                   <p className="param-help">
-                    {gateResult.gateLog[0].outcome} · accuracy{" "}
-                    {Math.round(gateResult.gateLog[0].accuracy * 100)}%
+                    {gateResult.gateLog[0].outcome} · score accuracy{" "}
+                    {Math.round(gateResult.gateLog[0].accuracy * 100)}% · tone accuracy{" "}
+                    {gateResult.gateLog[0].toneAccuracy === null
+                      ? "—"
+                      : `${Math.round(gateResult.gateLog[0].toneAccuracy * 100)}%`}
                   </p>
                 )}
                 {/* The standalone recognizer's independent read — never
@@ -666,8 +669,11 @@ function PairGatesTab({
             </button>
             {result?.gateLog[0] && (
               <p className="param-help">
-                {result.gateLog[0].outcome} · accuracy{" "}
-                {Math.round(result.gateLog[0].accuracy * 100)}%
+                {result.gateLog[0].outcome} · score accuracy{" "}
+                {Math.round(result.gateLog[0].accuracy * 100)}% · tone accuracy{" "}
+                {result.gateLog[0].toneAccuracy === null
+                  ? "—"
+                  : `${Math.round(result.gateLog[0].toneAccuracy * 100)}%`}
               </p>
             )}
           </div>

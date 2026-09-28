@@ -48,6 +48,7 @@ import {
 } from "../pitch/calibration.ts";
 import type { Contour } from "./contours.ts";
 import { classifyTone, type ClassifiedTone } from "./toneClassifier.ts";
+import { longestUtterance, toneAccuracy } from "./toneAccuracy.ts";
 
 export type RunMode = "game" | "tutorial" | "single" | "drill" | "learn" | "pairs";
 
@@ -277,6 +278,13 @@ export interface LastOutcome {
   atMs: number;
   /** 0–1 corridor fit, as scored. Drives how hot the ignition burns. */
   accuracy: number;
+  /**
+   * 0–1 tone accuracy (`toneAccuracy.ts`): did the voice make the right tone
+   * shape, on the player's own clock. A learning number, separate from
+   * `accuracy` — measured on a wall hit too. Null when unheard, or when
+   * there is no reference (a combo with a neutral syllable).
+   */
+  toneAccuracy: number | null;
   /** Points this gate added, combo multiplier already applied. 0 when none. */
   points: number;
   /** Combo multiplier in force after this gate — the escalation lever. */
@@ -507,6 +515,12 @@ export interface GateLogEntry {
    * anything aggregating this must exclude them the way `applyGate` does.
    */
   accuracy: number;
+  /**
+   * Tone accuracy (`toneAccuracy.ts`), 0–1, or null when unheard / no
+   * reference. Logged beside `accuracy` so a flown run shows the two numbers
+   * side by side: a correct tone said early loses score, not this.
+   */
+  toneAccuracy: number | null;
   samples: number;
   voiced: number;
   voicedFraction: number;
@@ -1247,6 +1261,20 @@ export class Run {
       ({ outcome, accuracy } = applyClassifierBoost(outcome, accuracy, classifiedConfidence));
     }
 
+    // Tone accuracy — the learning number, separate from the score. Every
+    // mode, a wall hit included: only an unheard gate has nothing to judge.
+    // Measured on the utterance alone (from its real start, pre-gate seeding
+    // included — the same start the classifier reads), so it is timing-free.
+    let gateToneAccuracy: number | null = null;
+    if (heard) {
+      const utteranceStartMs =
+        state.samples.length > 0 ? state.samples[0].atMs : state.enteredAtMs;
+      const voiced = this.trail
+        .filter((p) => p.t >= utteranceStartMs && p.voiced)
+        .map((p) => ({ tMs: p.t, chao: p.chao }));
+      gateToneAccuracy = toneAccuracy(longestUtterance(voiced, mergeGapMs), state.gate.tones);
+    }
+
     this.gatesFinished += 1;
     this.lastGateEndedAtMs = this.nowMs;
     this.preGate = [];
@@ -1257,6 +1285,7 @@ export class Run {
       tones: state.gate.tones,
       outcome,
       accuracy,
+      toneAccuracy: gateToneAccuracy,
       samples: state.samples.length,
       voiced: voicedCount,
       voicedFraction:
@@ -1296,6 +1325,7 @@ export class Run {
       tones: state.gate.tones,
       atMs: this.nowMs,
       accuracy,
+      toneAccuracy: gateToneAccuracy,
       points: this.stats.score - scoreBefore,
       comboMult: multiplierFor(this.stats.combo),
       // Only the stretch flown inside the gate — the trail also holds the

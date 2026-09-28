@@ -1775,3 +1775,91 @@ describe("deferFill / primeQueue (cold-start pool sequencing)", () => {
     expect(gates[0].word?.id).toBe("a1");
   });
 });
+
+describe("Run — tone accuracy beside the score (spec A)", () => {
+  /**
+   * The corridor's own contour, shifted in time — but silent between gates,
+   * like a real player. (The timing-slack block voices a flat chao 3 there,
+   * which pre-gate seeding would glue onto the front of every utterance.)
+   */
+  function shifted(offsetMs: number) {
+    return (s: RunSnapshot) => {
+      if (!s.activeGate) return pitch(null);
+      const { tone, t } = s.activeGate;
+      const offsetT = offsetMs / (GATE_DURATION_S[tone] * 1000);
+      return pitch(corridorChaoAt(shapeForTone(tone), t + offsetT));
+    };
+  }
+
+  /** One LastOutcome per finished gate, in order. */
+  function gatesOf(snapshots: RunSnapshot[]) {
+    const out: NonNullable<RunSnapshot["lastOutcome"]>[] = [];
+    let lastAt = -1;
+    for (const s of snapshots) {
+      if (s.lastOutcome && s.lastOutcome.atMs !== lastAt) {
+        lastAt = s.lastOutcome.atMs;
+        out.push(s.lastOutcome);
+      }
+    }
+    return out;
+  }
+
+  it("measures every heard gate and leaves an unheard one null", () => {
+    const heard = gatesOf(simulate(newGameRun(), 900, trackCorridor).snapshots);
+    expect(heard.length).toBeGreaterThan(2);
+    for (const g of heard) expect(g.toneAccuracy).not.toBeNull();
+
+    const silent = gatesOf(simulate(newGameRun(), 900, () => pitch(null)).snapshots);
+    expect(silent.length).toBeGreaterThan(0);
+    for (const g of silent) {
+      expect(g.outcome).toBe("unheard");
+      expect(g.toneAccuracy).toBeNull();
+    }
+  });
+
+  it("moves less than the score when the same flight is early or late — timing is the score's job", () => {
+    // Exact timing-freedom (same take, any offset, identical number) is
+    // pinned in toneAccuracy.test.ts. Here the gate still cuts the voice off
+    // at its edges, so a shifted flight is a slightly different utterance;
+    // what must hold is that tone accuracy moves less than score accuracy.
+    const onTime = gatesOf(simulate(newGameRun(), 1600, shifted(0)).snapshots);
+    let scoreMoved = 0;
+    for (const offset of [-80, 80]) {
+      const off = gatesOf(simulate(newGameRun(), 1600, shifted(offset)).snapshots);
+      const n = Math.min(onTime.length, off.length);
+      expect(n).toBeGreaterThan(3);
+      for (let i = 0; i < n; i++) {
+        expect(off[i].tone).toBe(onTime[i].tone);
+        const dScore = Math.abs(off[i].accuracy - onTime[i].accuracy);
+        const dTone = Math.abs(off[i].toneAccuracy! - onTime[i].toneAccuracy!);
+        if (dScore > 0.05) scoreMoved++;
+        expect(dTone).toBeLessThanOrEqual(dScore + 0.02);
+      }
+    }
+    // The comparison must actually have been exercised.
+    expect(scoreMoved).toBeGreaterThan(0);
+  });
+
+  it("still measures the tone on a wall hit", () => {
+    // Wildly out of step: the corridor walls it off (score 0, heart lost),
+    // but the voice still made a shape, and that shape is still measured.
+    const gates = gatesOf(simulate(newGameRun(), 1600, shifted(400)).snapshots);
+    const walls = gates.filter((g) => g.outcome === "collision");
+    expect(walls.length).toBeGreaterThan(0);
+    for (const g of walls) {
+      expect(g.accuracy).toBe(0);
+      expect(g.toneAccuracy).not.toBeNull();
+    }
+  });
+
+  it("logs both numbers side by side", () => {
+    const run = newGameRun();
+    simulate(run, 900, trackCorridor);
+    const log = run.snapshot().gateLog;
+    expect(log.length).toBeGreaterThan(0);
+    for (const g of log) {
+      if (g.outcome === "unheard") expect(g.toneAccuracy).toBeNull();
+      else expect(typeof g.toneAccuracy).toBe("number");
+    }
+  });
+});
