@@ -56,6 +56,7 @@
     "src/dev/make-clips.ts",
     "src/dev/make-tone-averages.ts",
     "src/dev/classifier-check.ts",
+    "src/game/toneAccuracy.fixtures.test.ts",
     "src/game/toneAverage.ts",
     "src/dev/pull-recordings.ts",
     "src/record/wordlist.ts",

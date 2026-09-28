@@ -313,6 +313,27 @@ function t2t3Cue(
   return { cue, strongestDissent };
 }
 
+/**
+ * The T2-vs-T3 vote for any contour, whatever family it would classify as —
+ * the same measurement `classifyTone` uses inside the dip-rise family.
+ * Exported for `toneAccuracy.ts`, which scores how T3-like a T3 attempt is
+ * (and how T2-like a T2 one) with the cue that actually separates them.
+ * Null with fewer than 2 points.
+ */
+export function t2t3CueOf(
+  contour: Contour,
+  templates: Record<Tone, number[]> = AVERAGED_TONE_SHAPE,
+): number | null {
+  if (contour.points.length < 2) return null;
+  const trimmed = trimOnset(contour.points, tuning().toneClassifierOnsetTrimFraction);
+  const sample = resample(trimmed, RESAMPLE_POINTS);
+  const corr = (tone: Tone): number => {
+    const r = correlation(sample, resampleFixed(templates[tone], RESAMPLE_POINTS));
+    return r === null ? 0 : Math.min(1, Math.max(0, r));
+  };
+  return t2t3Cue(resample(contour.points, CUE_POINTS), corr(2), corr(3), templates).cue;
+}
+
 /** Longest gap between consecutive voiced points — where creak went unvoiced. */
 function longestGapMs(points: { tMs: number }[]): number {
   let gap = 0;

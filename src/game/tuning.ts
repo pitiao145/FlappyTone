@@ -220,6 +220,43 @@ export interface Tuning {
    */
   pairScoreMultiplier: number;
 
+  // ---- tone accuracy (src/game/toneAccuracy.ts) — learning metric, never the score
+  /**
+   * Weight of shape — correlation of the player's utterance with the
+   * reference, clamped at 0 — in tone accuracy. The reference is the tone's
+   * average (single syllable) or the exact combo's average (pair).
+   */
+  toneAccShapeWeight: number;
+  /** Weight of movement size: player range ÷ reference range, penalised both ways (`min(r, 1/r)`). */
+  toneAccMovementWeight: number;
+  /** Weight of height: mean absolute chao distance from the reference, 0 → 1, `toneAccHeightZeroChao` → 0. */
+  toneAccHeightWeight: number;
+  /**
+   * Weight of the T2/T3 cue, single-syllable T2 and T3 targets only: how far
+   * the classifier's T2-vs-T3 vote (drop, low point, drop share, shape) sits
+   * toward the target. Shape correlation alone can't tell these two apart —
+   * their averages correlate 0.73 — so without this a T2 said for a T3 would
+   * keep most of its accuracy.
+   */
+  toneAccT23Weight: number;
+  /** Mean chao distance from the reference at which the height part reaches 0. */
+  toneAccHeightZeroChao: number;
+  /**
+   * A reference moving less than this (chao range) is judged as a level
+   * tone: flatness and height only, no correlation — a level line has no
+   * shape to correlate against. Tone 1, and a 1+1 pair.
+   */
+  toneAccFlatTargetChao: number;
+  /**
+   * An attempt moving less than this on a tone that does move scores near 0
+   * whatever its correlation: the correlation of a flat, noisy line is
+   * meaningless. Below it, accuracy is at most `toneAccFlatAttemptMax`,
+   * scaled by how much it did move.
+   */
+  toneAccFlatAttemptChao: number;
+  /** The ceiling for a near-flat attempt on a moving tone (see `toneAccFlatAttemptChao`). */
+  toneAccFlatAttemptMax: number;
+
   // ---- tone classifier
   /**
    * Below this score, `classifyTone` reports "none" rather than picking a
@@ -470,6 +507,14 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   multiMergeGapMs: 400,
   multiGateChance: 0.5,
   pairScoreMultiplier: 5.0,
+  toneAccShapeWeight: 0.6,
+  toneAccMovementWeight: 0.25,
+  toneAccHeightWeight: 0.15,
+  toneAccT23Weight: 0.8,
+  toneAccHeightZeroChao: 1.5,
+  toneAccFlatTargetChao: 0.6,
+  toneAccFlatAttemptChao: 0.4,
+  toneAccFlatAttemptMax: 0.1,
   toneClassifierMinConfidence: 0.5,
   toneClassifierOnsetTrimFraction: 0.05,
   toneClassifierFlatnessScaleChao: 1.25,

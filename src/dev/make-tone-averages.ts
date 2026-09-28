@@ -21,7 +21,7 @@
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
-import { wordsFromCatalog, wordsOfTone } from "../game/words.ts";
+import { multiWords, toneComboKey, wordsFromCatalog, wordsOfTone } from "../game/words.ts";
 import type { Tone } from "../game/gates.ts";
 import { averagePolyline } from "../game/toneAverage.ts";
 import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
@@ -57,6 +57,28 @@ for (const tone of TONES) {
   console.log(`T${tone}: averaged ${toneWords.length} clips.`);
 }
 
+// Pair averages, one per exact tone combo, for tone accuracy on two-syllable
+// gates (src/game/toneAccuracy.ts). The bundle is the default speaker's
+// TEXTBOOK catalog only, so these are too. A combo with a neutral (0)
+// syllable is left out on purpose — tone accuracy returns null for it — and
+// a combo is kept even with one clip: a thin average is still the speaker's
+// own shape, and the alternative is no number at all.
+const pairGroups = new Map<string, { tones: Tone[]; words: typeof words }>();
+for (const w of multiWords(words)) {
+  if (w.tones.includes(0 as Tone)) continue;
+  const key = toneComboKey(w.tones);
+  const group = pairGroups.get(key) ?? { tones: w.tones, words: [] };
+  group.words.push(w);
+  pairGroups.set(key, group);
+}
+const pairKeys = [...pairGroups.keys()].sort();
+const pairAverages = new Map<string, number[]>();
+for (const key of pairKeys) {
+  const { words: group } = pairGroups.get(key)!;
+  pairAverages.set(key, averagePolyline(group));
+  console.log(`${key}: averaged ${group.length} clip${group.length === 1 ? "" : "s"}.`);
+}
+
 const formatRow = (values: number[]) =>
   values.map((v) => v.toFixed(4)).join(", ");
 
@@ -68,7 +90,8 @@ const output = `/**
  * recorded words' own measured polyline, sampled at t = k/60 for k = 0..60.
  * The same measurement \`averagePolyline\` (src/ui/toneAverageChart.ts)
  * produces for the Lab's \`averages\` tab and the landing page's cards —
- * baked here so \`src/game/toneClassifier.ts\` can read it with zero I/O.
+ * baked here so \`src/game/toneClassifier.ts\` and \`src/game/toneAccuracy.ts\`
+ * can read it with zero I/O.
  *
  * These are the **default speaker's** averages, and they stay that way on
  * purpose even now that there is a roster. This is a tone *shape* reference in
@@ -85,6 +108,17 @@ export const AVERAGED_TONE_SHAPE: Record<Tone, number[]> = {
   2: [${formatRow(averaged[2])}],
   3: [${formatRow(averaged[3])}],
   4: [${formatRow(averaged[4])}],
+};
+
+/**
+ * Two-syllable words, averaged per exact tone combo (keyed by
+ * \`toneComboKey\`, e.g. "3-2") over the whole word's polyline, same 61-point
+ * grid. Textbook style only (all the bundle holds); combos with a neutral
+ * syllable are left out. Read by \`src/game/toneAccuracy.ts\` — never by the
+ * classifier, which judges single syllables only.
+ */
+export const AVERAGED_PAIR_SHAPE: Record<string, number[]> = {
+${pairKeys.map((k) => `  "${k}": [${formatRow(pairAverages.get(k)!)}],`).join("\n")}
 };
 `;
 

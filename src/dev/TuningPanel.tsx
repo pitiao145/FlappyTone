@@ -79,6 +79,28 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
     ],
   },
   {
+    title: "tone accuracy",
+    note: "the learning metric (stats, visualiser) — timing-free, never feeds the score. Compare it with score accuracy per gate in the gate log.",
+    knobs: [
+      { key: "toneAccShapeWeight", label: "shape weight", min: 0, max: 2, step: 0.05,
+        help: "Weight of the correlation with the reference shape (the tone's or the combo's average)." },
+      { key: "toneAccMovementWeight", label: "movement weight", min: 0, max: 2, step: 0.05,
+        help: "Weight of movement size: player range over reference range, too big penalised like too small. Scaled by the shape match." },
+      { key: "toneAccHeightWeight", label: "height weight", min: 0, max: 2, step: 0.05,
+        help: "Weight of height: mean chao distance from the reference." },
+      { key: "toneAccT23Weight", label: "T2/T3 cue weight", min: 0, max: 2, step: 0.05,
+        help: "Single T2/T3 targets only: weight of the classifier's drop/low-point vote pointed at the target. Scaled by the shape match." },
+      { key: "toneAccHeightZeroChao", label: "height zero at", min: 0.5, max: 3, step: 0.1,
+        help: "Mean chao distance at which the height part reaches 0." },
+      { key: "toneAccFlatTargetChao", label: "level target below", min: 0.2, max: 1.5, step: 0.05,
+        help: "A reference moving less than this is judged on flatness + height only (T1, a 1+1 pair)." },
+      { key: "toneAccFlatAttemptChao", label: "flat attempt below", min: 0.1, max: 1, step: 0.05,
+        help: "An attempt moving less than this on a moving tone scores near 0, whatever its correlation." },
+      { key: "toneAccFlatAttemptMax", label: "flat attempt max", min: 0, max: 0.5, step: 0.01,
+        help: "The most a near-flat attempt on a moving tone can score." },
+    ],
+  },
+  {
     title: "tone classifier",
     note: "the standalone tone recognizer, proven in the Lab visualiser — these knobs also feed live gate scoring when the toggles above are on.",
     knobs: [
