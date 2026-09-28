@@ -1,6 +1,6 @@
 # FlappyTone — Privacy Policy
 
-**Last updated: 24 September 2026**
+**Last updated: 28 September 2026**
 
 This policy explains what personal data FlappyTone ("we", "us") collects, why, and your rights over it. FlappyTone is operated by Pierre Bruyninckx, an independent developer, at [flappytone.com](https://flappytone.com). For any privacy question or request, contact [pierre@pierrebuilds.dev](mailto:pierre@pierrebuilds.dev).
 
@@ -8,7 +8,7 @@ We are based in Taiwan and follow a data-minimal approach: we ask for personal d
 
 ## Your voice is never sent to us
 
-FlappyTone listens to your voice through your device's microphone to drive the game. **This audio is processed entirely on your device (in your browser) and is never uploaded, recorded, or stored by us.** We only ever keep the *derived numbers* your play produces — such as your score and per-tone accuracy — not any audio. FlappyTone also uses no AI models for this; pitch detection is plain on-device signal processing.
+FlappyTone listens to your voice through your device's microphone to drive the game. **This audio is processed entirely on your device (in your browser) and is never uploaded, recorded, or stored by us.** We only ever keep the *derived numbers* your play produces — such as your score, per-tone accuracy and, for EarlyBird accounts, your average pitch shape per tone (see below) — not any audio. FlappyTone also uses no AI models for this; pitch detection is plain on-device signal processing.
 
 ## What we collect
 
@@ -22,6 +22,7 @@ FlappyTone listens to your voice through your device's microphone to drive the g
 - **Marketing consent** — whether you opted in to product-update emails, and when.
 
 **If you buy EarlyBird access:**
+- **Your average tone shape.** To show how your tones evolve over time, we store, per day and per tone (or two-tone combination), the running total of your pitch shapes and how many attempts it covers. A shape is 61 numbers describing how high or low your voice was across one attempt, measured on your device. It is **not audio** and cannot be turned back into your voice. We only compute and store this for EarlyBird accounts; guest and free accounts never send it. It is deleted with your account; to have it deleted on its own, email us.
 - Your purchase is handled by **Lemon Squeezy** as merchant of record. They collect the payment and billing details needed for the transaction and tax. **We do not receive or store your card number.** We receive confirmation that your account has access, and basic order information (such as your email and order reference).
 
 **When you use the site (analytics):**
