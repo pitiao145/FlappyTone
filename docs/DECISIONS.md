@@ -286,6 +286,36 @@ everything. `lastRuns` and `lastPlayedDate` stay local: one is a display cache
 of *this* device, the other decides whether today continues the streak, and
 neither has an honest cross-device answer.
 
+### Player tone shapes: daily sums, an SQL add, and one table per job (28 Sep 2026)
+
+Spec B (`docs/SPECS/flappytone-SPEC-player-tone-average.md`) stores a Pro
+player's own average tone shape. Decisions made building it:
+
+- **Sums per day, not one row per attempt, and not merge-by-max.** A sum
+  plus a count answers "average up to D" and "average in a period" with one
+  row per key per day played. Merge-by-max — the account sync's rule —
+  cannot combine sums, so this is a separate write lane, not an extension of
+  `tone_accuracy_stats`.
+- **The add is an SQL function (`add_tone_shapes`), because PostgREST's
+  upsert can only replace a column.** Read-modify-write from `api/shapes.ts`
+  would race two tabs posting at once. The function is `security invoker`
+  (the service role already bypasses RLS, so definer rights would add
+  nothing) with execute revoked from PUBLIC (0009's lesson). Checked live:
+  two posts to one row summed element-wise, in order, count added.
+- **Keys match `tone_accuracy_stats` (`"2"`, `"3-2"`), not the spec's
+  `'t1'`/`'3+2'`,** so the two tables join on `key = target`.
+- **Capture is asked per gate (`captureShapes: () => getTier() === "pro"`),
+  not once at Run construction** — the same late-tier reason the run pool
+  reads the synchronous store. Posted once from `Game.tsx`'s run-effect
+  cleanup, which every end path (game over, quit, restart, leaving) goes
+  through; `keepalive` so it survives a navigation.
+- **Drawn in raw chao, not height-aligned.** The player's line is in their
+  calibrated chao space and Jane's in hers; spec A found a board that reads a
+  player low makes the T2/T3 cue lean T3. Only Jane's captures are in the
+  repo, so the mismatch could not be measured before shipping. Raw first;
+  whether to add a "shape only" (mean-height-aligned) view is decided after
+  real Pro runs exist to look at.
+
 ## Tone pairs
 
 ### Neutral tone gets a sentinel, not a new concept; pairs cap at exactly two syllables (19 Sep 2026)

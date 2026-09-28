@@ -60,9 +60,9 @@ stay device-local and unsynced — none of it tamper-proof. The daily run
 limiter (`src/game/dailyLimit.ts`) is local-only for a guest but
 server-authoritative for an account (`api/run.ts`, §7.2). Lifetime tone
 accuracy (per tone and per pair combo, §7) syncs by merge-by-max for an account; an anonymous player's stats never
-reach the server at all. The leaderboard score, the run count, and the
-payment entitlement are the three values a signed-in player's browser sends
-to a server it doesn't fully trust itself on.
+reach the server at all. The leaderboard score, the run count, the
+payment entitlement and (Pro only) the tone-shape sums are the values a
+signed-in player's browser sends to a server it doesn't fully trust itself on.
 
 ## 4. Platform & stack
 
@@ -312,6 +312,7 @@ Actual screen set (`src/app/GameApp.tsx`'s `Screen` type): `play` (title/home), 
 - **Game** — the scored run: hearts, combo, difficulty ramp.
 - **Tone pairs** — the `pairs` run mode: shuffle across every two-syllable combo the tier's own words can build a gate from, or drill one combo. The corridor is measured from the speaker's own two-syllable contour, not built from per-tone templates (§6 and CLAUDE.md's "Tone pairs" section have the detail). The tone-mismatch classifier and its accuracy boost (§7) are both off for these gates; per-tone stats don't count them either — their tone accuracy goes to per-combo stats instead. Both explicit, not silent single-tone shortcuts.
 - **Game over** — total score, best combo, a tone-accuracy breakdown of what was played this run (single tones as tiles, pair combos as a list weakest first, capped at 4 with "show all"), one-line takeaway (§7). The pause menu shows the same breakdown mid-run, in every mode with stats.
+- **Progress** — for Pro, "See how your tones evolve over time": per tone and per pair combo with ≥5 heard attempts, the player's own average shape drawn over Jane's, with a fainter earlier average (1 or 2 months ago, or a chosen date) to compare against; the count behind each line is shown. Stored as per-day sums in `player_tone_shapes`, written only by `api/shapes.ts`, captured only for Pro (all modes and the visualiser; wall hits count, unheard gates don't). The player's line is in their own calibrated chao space, Jane's in hers — shape compares directly, height only as far as calibration lines up. Guest/free see a Pro teaser.
 - **Progress** — lifetime run/gate/word counts and the last 5 runs' per-tone tone accuracy (plus a "Tone pairs" list once the player has flown pairs), from `runHistory.ts` (device-local), plus the live weekly leaderboard (§7.1), which is the one section here reading from a server.
 - **Profile** — real account UI now (`src/ui/AccountCard.tsx`): signup/login/rename for a player with an account, backed by the same local-first stats. Shows the daily run count against the player's actual tier limit (`dailyLimit.ts`/`TIER_LIMITS`) and their board name, generated or chosen (Pro only), so they can find their own row.
 
