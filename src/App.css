@@ -8698,9 +8698,9 @@ button.switch-track.switch-on {
   vertical-align: middle;
 }
 .player-shape-key-now {
-  border-top-color: var(--accent);
+  border-top-color: var(--ink);
 }
 .player-shape-key-then {
-  border-top: 2px dashed var(--accent);
+  border-top: 2px dashed var(--ink);
   opacity: 0.6;
 }

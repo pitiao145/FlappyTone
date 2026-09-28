@@ -83,7 +83,7 @@ export function PlayerToneEvolution() {
       </div>
       <p className="note player-shape-legend">
         <span className="player-shape-key player-shape-key-jane" /> Jane&apos;s average ·{" "}
-        <span className="player-shape-key player-shape-key-now" /> yours now
+        <span className="player-shape-key player-shape-key-now" /> yours now (tone colour)
         {thenDay && (
           <>
             {" "}
@@ -97,7 +97,7 @@ export function PlayerToneEvolution() {
             key={key}
             shapeKey={key}
             now={now!}
-            then={then && then.count >= MIN_ATTEMPTS_TO_SHOW ? then : null}
+            then={then}
             thenDay={thenDay}
           />
         ))}
@@ -125,7 +125,8 @@ function ShapeCard({
 
   useEffect(() => {
     if (ref.current) {
-      drawPlayerShapeChart(ref.current, { jane, now: now.line, then: then?.line ?? null }, tint, CARD_W, CARD_H);
+      const earlier = then && then.count >= MIN_ATTEMPTS_TO_SHOW ? then.line : null;
+      drawPlayerShapeChart(ref.current, { jane, now: now.line, then: earlier }, tint, CARD_W, CARD_H);
     }
   }, [jane, now, then, tint]);
 
@@ -141,7 +142,9 @@ function ShapeCard({
         <span className="syllable">{label}</span>
         <span className="cue">
           based on {now.count} attempts
-          {thenDay && (then ? ` · ${then.count} by ${thenDay}` : ` · too few by ${thenDay}`)}
+          {thenDay && then && (then.count >= MIN_ATTEMPTS_TO_SHOW
+            ? ` · ${then.count} by ${thenDay}`
+            : ` · too few by ${thenDay} (${then.count})`)}
         </span>
       </figcaption>
     </figure>
