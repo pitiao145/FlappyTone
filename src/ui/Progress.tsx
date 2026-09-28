@@ -3,6 +3,8 @@ import { track } from "../analytics/client.ts";
 import { loadInventory } from "../audio/inventory.ts";
 import type { Tone } from "../game/gates.ts";
 import {
+  comboAccuracyFromHistory,
+  lifetimeComboAccuracy,
   lifetimeToneAccuracy,
   loadRunHistory,
   toneAccuracyFromHistory,
@@ -114,6 +116,16 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
     () => (usingLifetimeAccuracy ? lifetimeToneAccuracy(history) : toneAccuracyFromHistory(history)),
     [history, usingLifetimeAccuracy],
   );
+  // Pair combos, same last-5 / lifetime fallback as the tones above.
+  const comboAccuracy = useMemo(
+    () => (usingLifetimeAccuracy ? lifetimeComboAccuracy(history) : comboAccuracyFromHistory(history)),
+    [history, usingLifetimeAccuracy],
+  );
+  // A returning player whose per-tone numbers were reset when tone accuracy
+  // replaced corridor accuracy (runHistory.ts, STATS_VERSION): say why the
+  // bars are empty instead of letting it look like lost progress.
+  const accuracyJustReset =
+    history.totalRuns > 0 && toneAccuracy.every((t) => t.gates === 0) && comboAccuracy.length === 0;
   const streak = useMemo(() => loadStreak(), [version]);
 
   // Mock accuracy-over-time data for the Pro teaser chart — generated once so
@@ -264,9 +276,11 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
         {activeTab === "accuracy" ? (
           <>
             <p className="note">
-              {usingLifetimeAccuracy
-                ? "Averaged over all your runs."
-                : `Averaged over your last ${Math.min(5, history.lastRuns.length)} runs.`}
+              {accuracyJustReset
+                ? "Tone accuracy now measures the shape of your tone, whatever your timing. It starts counting from your next run."
+                : usingLifetimeAccuracy
+                  ? "Tone accuracy, averaged over all your runs."
+                  : `Tone accuracy, averaged over your last ${Math.min(5, history.lastRuns.length)} runs.`}
             </p>
             <div className="breakdown">
               {toneAccuracy.map((t) => (
@@ -286,6 +300,40 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
                 </div>
               ))}
             </div>
+            {comboAccuracy.length > 0 && (
+              <>
+                <p className="acc-subhead">Tone pairs</p>
+                <div className="breakdown">
+                  {comboAccuracy.map((c) => (
+                    <div
+                      className="breakdown-row"
+                      key={c.key}
+                      aria-label={`Tone ${c.tones[0]} then tone ${c.tones[1]}: ${Math.round(c.pct)}%`}
+                    >
+                      <span className="syllable" aria-hidden>
+                        {c.tones.map((t, i) => (
+                          <span key={i}>
+                            {i > 0 && " + "}
+                            <span style={{ color: TONE_LINE_COLOR[t] }}>{t}</span>
+                          </span>
+                        ))}
+                      </span>
+                      <span className="bar">
+                        <span
+                          className="bar-fill"
+                          style={{
+                            width: `${c.pct}%`,
+                            background: `linear-gradient(90deg, ${TONE_LINE_COLOR[c.tones[0]]}, ${TONE_LINE_COLOR[c.tones[1]]})`,
+                          }}
+                          aria-hidden
+                        />
+                      </span>
+                      <span className="pct">{Math.round(c.pct)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </>
         ) : (
           <>
@@ -330,9 +378,16 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
         ) : (
           <div className="run-history-list">
             {history.lastRuns.map((run) => {
-              const gates = TONES.reduce((sum, t) => sum + run.perTone[t].gates, 0);
-              const accSum = TONES.reduce((sum, t) => sum + run.perTone[t].accSum, 0);
-              const pct = gates > 0 ? Math.round((accSum / gates) * 100) : 0;
+              // Tone accuracy across the run's single-tone and pair gates. A
+              // run from before the reset has none measured: "—", not "0%".
+              const combos = Object.values(run.perCombo ?? {});
+              const gates =
+                TONES.reduce((sum, t) => sum + run.perTone[t].gates, 0) +
+                combos.reduce((sum, c) => sum + c.gates, 0);
+              const accSum =
+                TONES.reduce((sum, t) => sum + run.perTone[t].accSum, 0) +
+                combos.reduce((sum, c) => sum + c.accSum, 0);
+              const pct = gates > 0 ? `${Math.round((accSum / gates) * 100)}%` : "—";
               return (
                 <div className="run-history-row" key={run.atISO}>
                   <span className="run-history-date">
@@ -343,7 +398,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
                   </span>
                   <span className="run-history-score">{run.score}</span>
                   <span className="run-history-detail">
-                    {pct}% · {run.gates} gates
+                    {pct} · {run.gates} gates
                   </span>
                   <span className={`run-badge run-badge-${run.outcome}`}>
                     {OUTCOME_LABEL[run.outcome]}

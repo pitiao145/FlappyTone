@@ -10,6 +10,7 @@ import { loadDailyRuns } from "../game/dailyLimit.ts";
 import { hasShownFeedbackToday, markFeedbackShown } from "../game/runFeedback.ts";
 import type { RunMode } from "../game/run.ts";
 import { GateLogPanel } from "../dev/GateLogPanel.tsx";
+import { hasToneAccuracy, ToneAccuracyBreakdown } from "./ToneAccuracyBreakdown.tsx";
 import { track } from "../analytics/client.ts";
 import {
   displayName,
@@ -441,33 +442,18 @@ export function GameOver({
           )}
         </div>
 
-        {/* ---- 4. tone-accuracy grid */}
-        <div className="go-col">
-          <section className="go-card go-tones pause-accuracy">
-            <p className="pause-accuracy-label">This run · tone accuracy</p>
-            <div className="pause-accuracy-grid">
-              {breakdown.map((b) => (
-                <div
-                  className={`pause-tone-card go-tone-tile${
-                    weakest && b.tone === weakest.tone ? " go-tone-tile-weak" : ""
-                  }`}
-                  key={b.tone}
-                >
-                  <ToneMarkIcon tone={b.tone} className="pause-tone-icon" />
-                  <div className="pause-tone-bar">
-                    <div
-                      className="pause-tone-bar-fill"
-                      style={{ width: `${Math.round(b.pct ?? 0)}%` }}
-                    />
-                  </div>
-                  <span className="pause-tone-pct">
-                    {b.pct === null ? "—" : `${Math.round(b.pct)}%`}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
+        {/* ---- 4. tone accuracy — what was played only, tones then pairs */}
+        {hasToneAccuracy(stats) && (
+          <div className="go-col">
+            <section className="go-card go-tones">
+              <ToneAccuracyBreakdown
+                stats={stats}
+                weakTone={weakest?.tone ?? null}
+                tileClassName="go-tone-tile"
+              />
+            </section>
+          </div>
+        )}
 
         {/* ---- 5/6/7. leaderboard slot, recalibration, feedback */}
         <div className="go-col">
