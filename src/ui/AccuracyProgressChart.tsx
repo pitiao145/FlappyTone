@@ -9,8 +9,6 @@ import {
   PointElement,
   Tooltip,
 } from "chart.js";
-import type { Tone } from "../game/gates.ts";
-import { TONE_LINE_COLOR } from "./toneColors.ts";
 
 // Register only the pieces this one line chart needs, so Chart.js stays
 // tree-shaken in the app bundle.
@@ -26,10 +24,10 @@ Chart.register(
 
 /**
  * The Progress tab's "Accuracy progress" chart: accuracy-% over time for one
- * tone. A Pro teaser — the series is MOCK placeholder data (see
- * `mockAccuracySeries` in Progress.tsx); no per-run tone-accuracy history is
- * persisted yet. Chart.js line chart with gridlines, a faint area fill, and
- * dot markers, styled to the redesign's paper/ink palette.
+ * tone or pair combo. Pro sees the real per-day series from `run_log`
+ * (spec C); guest/free see MOCK placeholder data (`example`). Chart.js line
+ * chart with gridlines, a faint area fill, and dot markers, styled to the
+ * redesign's paper/ink palette.
  */
 
 const INK_FAINT = "rgba(36, 29, 21, 0.12)";
@@ -45,19 +43,23 @@ function hexToRgba(hex: string, alpha: number): string {
 }
 
 interface Props {
-  tone: Tone;
+  /** What the series is, for the accessible label: "tone 2", "tones 3 + 2". */
+  subject: string;
+  /** Line colour, a `#rrggbb` hex. */
+  color: string;
   labels: string[];
   data: number[];
+  /** Placeholder data for the Pro teaser. */
+  example?: boolean;
 }
 
-export function AccuracyProgressChart({ tone, labels, data }: Props) {
+export function AccuracyProgressChart({ subject, color, labels, data, example }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef = useRef<Chart | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const color = TONE_LINE_COLOR[tone];
 
     chartRef.current = new Chart(canvas, {
       type: "line",
@@ -115,14 +117,14 @@ export function AccuracyProgressChart({ tone, labels, data }: Props) {
       chartRef.current?.destroy();
       chartRef.current = null;
     };
-  }, [tone, labels, data]);
+  }, [color, labels, data]);
 
   return (
     <div className="acc-chart">
       <canvas
         ref={canvasRef}
         role="img"
-        aria-label={`Accuracy over time for tone ${tone} (example data)`}
+        aria-label={`Accuracy over time for ${subject}${example ? " (example data)" : ""}`}
       />
     </div>
   );

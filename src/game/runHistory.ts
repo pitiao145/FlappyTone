@@ -19,7 +19,7 @@ import type { Tone } from "./gates.ts";
 const KEY = "toneflap.history.v1";
 const MAX_RUNS = 5;
 
-export type RunOutcome = "finished" | "out_of_hearts" | "quit";
+export type RunOutcome = "finished" | "out_of_hearts" | "quit" | "restart";
 
 export interface RunHistoryEntry {
   atISO: string;

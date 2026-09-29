@@ -7342,7 +7342,8 @@ button.switch-track.switch-on {
   background: var(--good);
 }
 
-.run-badge-quit {
+.run-badge-quit,
+.run-badge-restart {
   background: var(--ink-muted);
 }
 
