@@ -316,6 +316,34 @@ player's own average tone shape. Decisions made building it:
   whether to add a "shape only" (mean-height-aligned) view is decided after
   real Pro runs exist to look at.
 
+### Pro run log: one row per run, a fifth sole writer (29 Sep 2026)
+
+Spec C (`docs/SPECS/flappytone-SPEC-pro-run-history.md`) stores a Pro
+player's all-time run history and feeds the per-day accuracy trend. Where it
+departs from the spec, and why:
+
+- **Keys are `"1".."4"` / `"3-2"`, not the spec's `"t1"` / `"3+2"`,** so
+  `run_log.per_key` joins `tone_accuracy_stats` and `player_tone_shapes` on
+  the same key. Same call spec B made.
+- **`restart` is a fourth outcome, stored as itself.** The game already
+  reports it (`RunEndReason`), and folding it into `quit` would lose the
+  difference between leaving and starting over. `RunOutcome` in
+  `runHistory.ts` gained it, so the local list labels it "restarted".
+- **A new `api/runlog.ts`, not an extension of `api/run.ts`.** `api/run.ts`
+  counts a run for every account and answers with a cap; this logs a full row
+  for Pro only and can fail without affecting the cap. Two jobs, two writers.
+  It is fired from `Game.tsx`'s `reportRunEnd`, not the effect cleanup that
+  posts shapes: the cleanup does not know how the run ended, `reportRunEnd`
+  does and every end path goes through it. Runs with no scored gate are
+  still logged (`tone_acc` null, empty `per_key`), since the run happened.
+- **The trend is read client-side** from each row's `per_key` (`day` +
+  `per_key` for every row) and aggregated in `dailyTrend`. Fine until a
+  player has thousands of runs; an RPC or view is the next step if it gets
+  slow, and needs no second table.
+- **No backfill, free runs never stored** (Pierre, as the spec says). A
+  player's first Pro session shows the local last 5 and a note until the
+  server has rows.
+
 ## Tone pairs
 
 ### Neutral tone gets a sentinel, not a new concept; pairs cap at exactly two syllables (19 Sep 2026)
