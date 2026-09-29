@@ -31,6 +31,8 @@ import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { getTier, tierReady, useTier } from "../data/tier.ts";
 import { postShapes } from "../data/shapes.ts";
+import { postRunLog } from "../data/runlog.ts";
+import { buildRunLogEntry } from "../game/runTrend.ts";
 import { resolvedPool } from "../game/words.ts";
 import type { Proficiency } from "../game/tiers.ts";
 import type { LevelChoice } from "../game/settings.ts";
@@ -423,8 +425,10 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         // actually finished on is the honest answer.
         voice: inventorySpeaker(),
       });
+      // Pro only (a no-op for everyone else): the all-time run log, spec C.
+      void postRunLog(buildRunLogEntry(snap.stats, mode, reason));
     },
-    [reportGates],
+    [reportGates, mode],
   );
 
   /**

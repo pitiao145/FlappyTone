@@ -245,6 +245,53 @@ export type Database = {
         }
         Relationships: []
       }
+      run_log: {
+        Row: {
+          day: string
+          gates: number
+          id: number
+          mode: string
+          outcome: string
+          per_key: Json
+          played_at: string
+          score: number
+          tone_acc: number | null
+          user_id: string
+        }
+        Insert: {
+          day: string
+          gates: number
+          id?: never
+          mode: string
+          outcome: string
+          per_key?: Json
+          played_at?: string
+          score: number
+          tone_acc?: number | null
+          user_id: string
+        }
+        Update: {
+          day?: string
+          gates?: number
+          id?: never
+          mode?: string
+          outcome?: string
+          per_key?: Json
+          played_at?: string
+          score?: number
+          tone_acc?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       speakers: {
         Row: {
           accent: string
