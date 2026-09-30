@@ -51,8 +51,8 @@ describe("the confirmed access table (docs/Tiers.csv brainstorm)", () => {
     expect(tierLimits().pro.intermediate).toEqual({ levels: [1, 2, 3], allowMix: true });
   });
 
-  it("free caps tone-pairs at 5 words per combo; guest has no access; pro is unlimited", () => {
-    expect(tierLimits().free.pairWordsPerCombo).toBe(5);
+  it("free caps tone-pairs at 10 words per combo; guest has no access; pro is unlimited", () => {
+    expect(tierLimits().free.pairWordsPerCombo).toBe(10);
     expect(tierLimits().guest.pairWordsPerCombo).toBe(0);
     expect(tierLimits().pro.pairWordsPerCombo).toBe(Infinity);
   });
