@@ -8,6 +8,7 @@ import { AVERAGED_TONE_SHAPE } from "./toneAverages.ts";
 import {
   longestUtterance,
   referenceFor,
+  referenceFromWord,
   toneAccuracy,
   toneAccuracyDetail,
 } from "./toneAccuracy.ts";
@@ -165,6 +166,24 @@ describe("toneAccuracy — when there is nothing honest to say", () => {
   it("has a reference for every non-neutral combo", () => {
     for (const a of [1, 2, 3, 4] as Tone[]) {
       for (const b of [1, 2, 3, 4] as Tone[]) expect(referenceFor([a, b])).not.toBeNull();
+    }
+  });
+});
+
+describe("referenceFromWord", () => {
+  it("real words flown along their own contour score high, and at least as high as against the tone average", () => {
+    for (const t of [1, 2, 3, 4] as const) {
+      const ws = wordsOfTone(words, t);
+      let own = 0;
+      let avg = 0;
+      for (const w of ws) {
+        const ref = referenceFromWord(w);
+        const utterance = ref.map((chao, i) => ({ tMs: i * 20, chao }));
+        own += toneAccuracyDetail(utterance, w.tones, ref)?.accuracy ?? 0;
+        avg += toneAccuracyDetail(utterance, w.tones)?.accuracy ?? 0;
+      }
+      expect(own / ws.length).toBeGreaterThan(0.85);
+      expect(own).toBeGreaterThanOrEqual(avg);
     }
   });
 });

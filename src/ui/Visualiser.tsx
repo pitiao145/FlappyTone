@@ -29,7 +29,7 @@ import type { CalibrationSettings } from "../game/settings.ts";
 import { classifyTone, type ToneClassification } from "../game/toneClassifier.ts";
 import { tierLimits, type TocflLevel } from "../game/tiers.ts";
 import { tuning } from "../game/tuning.ts";
-import { toneAccuracy } from "../game/toneAccuracy.ts";
+import { referenceFromWord, toneAccuracyDetail } from "../game/toneAccuracy.ts";
 import type { Word } from "../game/words.ts";
 import { wordsForList, wordsOfTone } from "../game/words.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
@@ -470,11 +470,12 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       const latest = finished.at(-1);
       if (word && latest && latest.startedAtMs !== lastScoredAtRef.current) {
         lastScoredAtRef.current = latest.startedAtMs;
-        // Tone accuracy — the same timing-free measure the game logs per gate
-        // and the per-tone stats keep, so practice here and play there read
-        // on one scale. `latest` is already one utterance (the recorder
-        // merges short gaps), time-zeroed.
-        const accuracy = toneAccuracy(latest.points, word.tones);
+        // Tone accuracy — the same timing-free measure the game logs per gate,
+        // but judged against THIS word's own recorded contour (the line on
+        // screen), not the tone's average. `latest` is already one utterance
+        // (the recorder merges short gaps), time-zeroed.
+        const accuracy =
+          toneAccuracyDetail(latest.points, word.tones, referenceFromWord(word))?.accuracy ?? null;
         if (accuracy !== null) {
           // Same attempt, same "was it measured" bar as the game's gates.
           if (getTier() === "pro") shapes.add(word.tones, latest.points);

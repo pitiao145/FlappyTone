@@ -34,7 +34,7 @@
  */
 
 import type { ContourPoint } from "./contours.ts";
-import type { Tone } from "./gates.ts";
+import { corridorChaoAt, shapeForWord, type Tone } from "./gates.ts";
 import {
   correlation,
   resample,
@@ -82,6 +82,17 @@ export function referenceFor(tones: Tone[]): number[] | null {
   // A neutral syllable has no averaged combo (left out of the generator on
   // purpose), so this also covers "neutral combos are not measured".
   return AVERAGED_PAIR_SHAPE[toneComboKey(tones)] ?? null;
+}
+
+/**
+ * The word's own recorded contour as a reference: the shape the player just
+ * heard and sees drawn. Used by the visualiser, where the target is one
+ * specific word, not the tone's average. Evenly spaced along the polyline's
+ * own 0..1 timeline, on the same 61-point grid the averages use.
+ */
+export function referenceFromWord(word: { tone: Tone; polyline: [number, number][]; durationS: number }): number[] {
+  const shape = shapeForWord(word);
+  return Array.from({ length: 61 }, (_, i) => corridorChaoAt(shape, i / 60));
 }
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
