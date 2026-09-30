@@ -549,7 +549,17 @@ for (const cut of cuts) {
   if (!cohorts.has(key)) cohorts.set(key, []);
   cohorts.get(key)!.push(cut);
 }
+// Natural takes keep their measured contour. The map's target is the textbook
+// citation span, and natural speech is compressed enough that hitting it means
+// stretching every shape (T3 ×3.4) toward a textbook look, which defeats
+// recording natural speech at all. Heights are then in the session's own chao
+// space, as calibrated from its own f0Center/range.
+const normalizeCohorts = style !== "natural";
+if (!normalizeCohorts) {
+  console.log(`style natural: chao normalization skipped — ${cuts.length} take(s) kept at measured contour.`);
+}
 for (const [key, cohort] of [...cohorts].sort(([a], [b]) => a.localeCompare(b))) {
+  if (!normalizeCohorts) break;
   const span = cohortSpan(cohort.map((c) => c.contour));
   const target = cohortTargetSpan(cohort[0].row.tones);
   const hasCitationTone = cohort[0].row.tones.some((tone) => tone >= 1 && tone <= 4);
