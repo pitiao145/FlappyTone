@@ -3957,7 +3957,7 @@
   gap: var(--space-4);
   overflow-x: auto;
   scrollbar-width: none;
-  max-width: min(52vw, 420px);
+  max-width: min(52vw, 600px);
   padding-inline: var(--space-2);
 }
 
