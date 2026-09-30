@@ -43,8 +43,8 @@ player_tone_shapes (
 - Average in a period (e.g. September vs October) = same over that range.
 - Small: one row per key per day played.
 
-**Which attempts:** all heard gates, all modes, visualiser included (Pierre:
-"see if this pollutes the averages"). Wall hits and mismatches count too.
+**Which attempts:** all heard gates, all modes. The visualiser was included at first (Pierre:
+"see if this pollutes the averages") and was removed 30 Sep 2026. Wall hits and mismatches count too.
 Neutral-tone combos: excluded (same as spec A). Unheard gates: excluded.
 
 ## 4. Pro only — nothing computed or stored otherwise
@@ -60,7 +60,7 @@ Neutral-tone combos: excluded (same as spec A). Unheard gates: excluded.
   - bounds `day` to ±1 day of server UTC, like `api/run.ts`;
   - validates array length (61) and value range (chao 0.5..5.5).
 - Client: one POST per finished run (fire-and-forget, never throws, a failure
-  loses that run's shape data only). The visualiser batches per session.
+  loses that run's shape data only). (The visualiser no longer captures shapes — removed 30 Sep 2026.)
 - Read: RLS `select` where `auth.uid() = user_id`.
 - Migration via Supabase MCP `apply_migration` with explicit GRANTs,
   regenerate `database.types.ts`, run `get_advisors`. Test file naming in
