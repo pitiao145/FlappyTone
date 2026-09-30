@@ -6681,9 +6681,9 @@
     },
     {
       "clip_key": "clips/jane/zhangfu40.wav",
-      "clip_s": 1.1753,
+      "clip_s": 1.6447,
       "created_at": "2026-09-20T01:37:08.065377+00:00",
-      "duration_s": 0.8154,
+      "duration_s": 1.2847,
       "english": "husband",
       "hanzi": "丈夫",
       "id": "zhangfu40",
@@ -6693,13 +6693,13 @@
       ],
       "meta": {
         "reference": {
-          "session": "2026-09-20-jus5s9",
+          "session": "2026-09-28-kh04zm",
           "f0Center": 198.8,
           "rangeSemitones": 8.5
         },
         "references": {
           "jane": {
-            "session": "2026-09-20-jus5s9",
+            "session": "2026-09-28-kh04zm",
             "f0Center": 198.8,
             "rangeSemitones": 8.5
           }
@@ -6711,31 +6711,31 @@
       "polyline": [
         [
           0,
-          4.287
+          4.624
         ],
         [
-          0.3401,
-          3.904
+          0.1495,
+          4.331
         ],
         [
-          0.471,
-          2.384
+          0.2823,
+          1.795
         ],
         [
-          0.6831,
-          1.284
+          0.3671,
+          1.795
         ],
         [
-          0.8925,
-          1.563
+          0.5,
+          3.732
         ],
         [
           1,
-          1.486
+          3.759
         ]
       ],
       "position": 136,
-      "recorded_at": "2026-09-20T11:39:25.129+00:00",
+      "recorded_at": "2026-09-28T07:59:16.383+00:00",
       "status": "published",
       "syllables": 2,
       "tone": 4,
@@ -6743,7 +6743,7 @@
         4,
         0
       ],
-      "updated_at": "2026-09-20T23:42:18.861435+00:00"
+      "updated_at": "2026-09-30T01:20:35.873618+00:00"
     },
     {
       "clip_key": "clips/jane/shangwu43.wav",
@@ -8804,9 +8804,9 @@
     },
     {
       "clip_key": "clips/jane/pianyi20.wav",
-      "clip_s": 1.3033,
+      "clip_s": 1.666,
       "created_at": "2026-09-20T01:37:08.065377+00:00",
-      "duration_s": 0.9007,
+      "duration_s": 1.3274,
       "english": "convenient",
       "hanzi": "便宜",
       "id": "pianyi20",
@@ -8817,57 +8817,57 @@
       ],
       "meta": {
         "reference": {
-          "session": "2026-09-20-jus5s9",
+          "session": "2026-09-28-kh04zm",
           "f0Center": 198.8,
           "rangeSemitones": 8.5
         },
         "references": {
           "jane": {
-            "session": "2026-09-20-jus5s9",
+            "session": "2026-09-28-kh04zm",
             "f0Center": 198.8,
             "rangeSemitones": 8.5
           }
         }
       },
       "min_tier": "free",
-      "onset_s": 0.275,
+      "onset_s": 0.232,
       "pinyin": "pián yi",
       "polyline": [
         [
           0,
-          2.685
+          2.552
         ],
         [
-          0.3553,
-          2.192
+          0.2893,
+          2.392
         ],
         [
-          0.4737,
-          2.404
+          0.4018,
+          4.421
         ],
         [
-          0.571,
-          3.175
+          0.4678,
+          4.421
         ],
         [
-          0.5947,
-          3.668
+          0.4839,
+          4.387
         ],
         [
-          0.7106,
-          4.331
+          0.5465,
+          2.358
         ],
         [
-          0.7816,
-          4.4
+          0.6107,
+          2.067
         ],
         [
           1,
-          2.967
+          4.336
         ]
       ],
       "position": 206,
-      "recorded_at": "2026-09-20T11:18:56.035+00:00",
+      "recorded_at": "2026-09-28T07:55:38.188+00:00",
       "status": "published",
       "syllables": 2,
       "tone": 2,
@@ -8875,7 +8875,7 @@
         2,
         0
       ],
-      "updated_at": "2026-09-20T23:41:47.274302+00:00"
+      "updated_at": "2026-09-30T01:20:34.184896+00:00"
     },
     {
       "clip_key": "clips/jane/xin4.wav",
@@ -15137,9 +15137,9 @@
     },
     {
       "clip_key": "clips/jane/duibuqi403.wav",
-      "clip_s": 1.794,
+      "clip_s": 1.922,
       "created_at": "2026-09-20T01:37:08.065377+00:00",
-      "duration_s": 1.434,
+      "duration_s": 1.562,
       "english": "I'm sorry; excuse me; I beg your pardon",
       "hanzi": "對不起",
       "id": "duibuqi403",
@@ -15149,13 +15149,13 @@
       ],
       "meta": {
         "reference": {
-          "session": "2026-09-20-jus5s9",
+          "session": "2026-09-28-kh04zm",
           "f0Center": 198.8,
           "rangeSemitones": 8.5
         },
         "references": {
           "jane": {
-            "session": "2026-09-20-jus5s9",
+            "session": "2026-09-28-kh04zm",
             "f0Center": 198.8,
             "rangeSemitones": 8.5
           }
@@ -15167,55 +15167,55 @@
       "polyline": [
         [
           0,
-          4.925
+          5
         ],
         [
-          0.119,
-          4.839
+          0.0819,
+          4.864
         ],
         [
-          0.2231,
-          2.72
+          0.1366,
+          4.105
         ],
         [
-          0.3587,
-          3.169
+          0.1927,
+          2.978
         ],
         [
-          0.5669,
-          2.523
+          0.2883,
+          4.662
         ],
         [
-          0.6248,
-          2.253
+          0.3414,
+          4.602
         ],
         [
-          0.6843,
-          1.417
+          0.4097,
+          3.706
         ],
         [
-          0.7306,
-          1.417
+          0.4249,
+          3.309
         ],
         [
-          0.7455,
-          1.188
+          0.5751,
+          2.76
         ],
         [
-          0.8331,
-          1.297
+          0.6965,
+          1.405
         ],
         [
-          0.8926,
-          2.253
+          0.8058,
+          1.184
         ],
         [
           1,
-          3.043
+          3.256
         ]
       ],
       "position": 436,
-      "recorded_at": "2026-09-20T11:24:56.997+00:00",
+      "recorded_at": "2026-09-28T07:54:37.756+00:00",
       "status": "published",
       "syllables": 3,
       "tone": 4,
@@ -15224,7 +15224,7 @@
         0,
         3
       ],
-      "updated_at": "2026-09-20T23:41:17.613652+00:00"
+      "updated_at": "2026-09-30T01:20:33.783366+00:00"
     },
     {
       "clip_key": "clips/jane/duimian44.wav",
@@ -18788,9 +18788,9 @@
     },
     {
       "clip_key": "clips/jane/zaoshang30.wav",
-      "clip_s": 1.218,
+      "clip_s": 1.346,
       "created_at": "2026-09-20T01:37:08.065377+00:00",
-      "duration_s": 0.858,
+      "duration_s": 1.0074,
       "english": "early morning",
       "hanzi": "早上",
       "id": "zaoshang30",
@@ -18800,13 +18800,13 @@
       ],
       "meta": {
         "reference": {
-          "session": "2026-09-20-jus5s9",
+          "session": "2026-09-28-kh04zm",
           "f0Center": 198.8,
           "rangeSemitones": 8.5
         },
         "references": {
           "jane": {
-            "session": "2026-09-20-jus5s9",
+            "session": "2026-09-28-kh04zm",
             "f0Center": 198.8,
             "rangeSemitones": 8.5
           }
@@ -18818,31 +18818,39 @@
       "polyline": [
         [
           0,
-          3.9
+          2.726
         ],
         [
-          0.1243,
-          3.66
+          0.1059,
+          2.332
         ],
         [
-          0.2486,
-          1.722
+          0.233,
+          1.341
         ],
         [
-          0.5249,
-          1.722
+          0.3412,
+          1.341
         ],
         [
-          0.8729,
-          4.404
+          0.7224,
+          4.968
+        ],
+        [
+          0.8259,
+          4.723
+        ],
+        [
+          0.9318,
+          1.802
         ],
         [
           1,
-          3.953
+          1.802
         ]
       ],
       "position": 575,
-      "recorded_at": "2026-09-20T11:25:37.674+00:00",
+      "recorded_at": "2026-09-28T07:54:00.276+00:00",
       "status": "published",
       "syllables": 2,
       "tone": 3,
@@ -18850,7 +18858,7 @@
         3,
         0
       ],
-      "updated_at": "2026-09-20T23:42:17.807356+00:00"
+      "updated_at": "2026-09-30T01:20:35.586779+00:00"
     },
     {
       "clip_key": "clips/jane/mingtian21.wav",
@@ -19365,9 +19373,9 @@
     },
     {
       "clip_key": "clips/jane/wanshang30.wav",
-      "clip_s": 1.1967,
+      "clip_s": 1.5167,
       "created_at": "2026-09-20T01:37:08.065377+00:00",
-      "duration_s": 0.858,
+      "duration_s": 1.1567,
       "english": "evening; night; in the evening",
       "hanzi": "晚上",
       "id": "wanshang30",
@@ -19377,13 +19385,13 @@
       ],
       "meta": {
         "reference": {
-          "session": "2026-09-20-jus5s9",
+          "session": "2026-09-28-kh04zm",
           "f0Center": 198.8,
           "rangeSemitones": 8.5
         },
         "references": {
           "jane": {
-            "session": "2026-09-20-jus5s9",
+            "session": "2026-09-28-kh04zm",
             "f0Center": 198.8,
             "rangeSemitones": 8.5
           }
@@ -19395,39 +19403,35 @@
       "polyline": [
         [
           0,
-          3.733
+          2.497
         ],
         [
-          0.2238,
-          3.723
+          0.1475,
+          2.689
         ],
         [
-          0.4475,
-          2.294
+          0.2602,
+          1.657
         ],
         [
-          0.5746,
-          2.294
+          0.6107,
+          5
         ],
         [
-          0.7735,
-          4.519
+          0.7377,
+          4.71
         ],
         [
-          0.8702,
-          4.012
-        ],
-        [
-          0.9199,
-          3.453
+          0.9037,
+          1.264
         ],
         [
           1,
-          3.453
+          1.264
         ]
       ],
       "position": 590,
-      "recorded_at": "2026-09-20T11:26:52.211+00:00",
+      "recorded_at": "2026-09-28T07:55:50.445+00:00",
       "status": "published",
       "syllables": 2,
       "tone": 3,
@@ -19435,7 +19439,7 @@
         3,
         0
       ],
-      "updated_at": "2026-09-20T23:42:01.132097+00:00"
+      "updated_at": "2026-09-30T01:20:34.94199+00:00"
     },
     {
       "clip_key": "clips/jane/wanhui34.wav",
@@ -25914,9 +25918,9 @@
     },
     {
       "clip_key": "clips/jane/yifu10.wav",
-      "clip_s": 1.1327,
+      "clip_s": 1.794,
       "created_at": "2026-09-20T01:37:08.065377+00:00",
-      "duration_s": 0.7727,
+      "duration_s": 1.434,
       "english": "clothes",
       "hanzi": "衣服",
       "id": "yifu10",
@@ -25926,13 +25930,13 @@
       ],
       "meta": {
         "reference": {
-          "session": "2026-09-20-jus5s9",
+          "session": "2026-09-28-kh04zm",
           "f0Center": 198.8,
           "rangeSemitones": 8.5
         },
         "references": {
           "jane": {
-            "session": "2026-09-20-jus5s9",
+            "session": "2026-09-28-kh04zm",
             "f0Center": 198.8,
             "rangeSemitones": 8.5
           }
@@ -25944,23 +25948,31 @@
       "polyline": [
         [
           0,
-          4.934
+          4.964
         ],
         [
-          0.6104,
+          0.3438,
           5
         ],
         [
-          0.8589,
-          4.602
+          0.4628,
+          4.046
+        ],
+        [
+          0.5951,
+          3.667
+        ],
+        [
+          0.7438,
+          3.766
         ],
         [
           1,
-          4.305
+          4.819
         ]
       ],
       "position": 860,
-      "recorded_at": "2026-09-20T11:40:41.755+00:00",
+      "recorded_at": "2026-09-28T07:58:58.402+00:00",
       "status": "published",
       "syllables": 2,
       "tone": 1,
@@ -25968,7 +25980,7 @@
         1,
         0
       ],
-      "updated_at": "2026-09-20T23:42:11.517919+00:00"
+      "updated_at": "2026-09-30T01:20:35.224797+00:00"
     },
     {
       "clip_key": "clips/jane/biaoyan33.wav",
@@ -26539,9 +26551,9 @@
     },
     {
       "clip_key": "clips/jane/renshi40.wav",
-      "clip_s": 1.2607,
+      "clip_s": 1.5167,
       "created_at": "2026-09-20T01:37:08.065377+00:00",
-      "duration_s": 0.9007,
+      "duration_s": 1.1567,
       "english": "to know; to recognize; to be familiar with",
       "hanzi": "認識",
       "id": "renshi40",
@@ -26551,13 +26563,13 @@
       ],
       "meta": {
         "reference": {
-          "session": "2026-09-20-jus5s9",
+          "session": "2026-09-28-kh04zm",
           "f0Center": 198.8,
           "rangeSemitones": 8.5
         },
         "references": {
           "jane": {
-            "session": "2026-09-20-jus5s9",
+            "session": "2026-09-28-kh04zm",
             "f0Center": 198.8,
             "rangeSemitones": 8.5
           }
@@ -26569,31 +26581,39 @@
       "polyline": [
         [
           0,
-          3.06
+          3.025
         ],
         [
-          0.1421,
-          3.345
+          0.0922,
+          3.242
         ],
         [
-          0.2842,
-          4.649
+          0.1844,
+          4.372
         ],
         [
-          0.6421,
-          1.65
+          0.4447,
+          1.283
         ],
         [
-          0.879,
-          1.915
+          0.6475,
+          3.867
+        ],
+        [
+          0.7562,
+          3.798
+        ],
+        [
+          0.9222,
+          1.083
         ],
         [
           1,
-          1.744
+          1.083
         ]
       ],
       "position": 890,
-      "recorded_at": "2026-09-20T11:40:54.209+00:00",
+      "recorded_at": "2026-09-28T07:59:34.11+00:00",
       "status": "published",
       "syllables": 2,
       "tone": 4,
@@ -26601,7 +26621,7 @@
         4,
         0
       ],
-      "updated_at": "2026-09-20T23:41:50.023137+00:00"
+      "updated_at": "2026-09-30T01:20:34.561664+00:00"
     },
     {
       "clip_key": "clips/jane/yuyan32.wav",
