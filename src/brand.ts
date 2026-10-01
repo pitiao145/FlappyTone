@@ -85,7 +85,15 @@ export const brand = {
   toneDataTitle: "Trained on the voice of a native Mandarin speaker from Taiwan",
   toneDataEyebrow: "Based on real speech, not the textbook",
   toneDataIntro:
-    "Every corridor is measured from Jane, a native Taiwanese speaker, across 450+ recorded words. Traditional characters, Taiwan pronunciation. The word list follows TOCFL order, not because this is exam prep, but because it's a solid, native-vetted answer to what's actually worth learning first as a beginner. No random vocab, no rote drills, just real words you practice until your voice makes the shape. And if a shape doesn't match a textbook you've used, that's not a bug, it's a real accent. More accents, and eventually other tonal languages, are on the roadmap.",
+    "Every corridor is measured from Jane, a native Taiwanese speaker, across 450+ recorded words. Traditional characters, Taiwan pronunciation. The word list follows TOCFL order, so these are words that are actually worth learning first as a beginner, not random vocab. And if a shape doesn't match a textbook you've used, that's not a bug, it's a real accent. More accents, and eventually other tonal languages, are on the roadmap.",
+
+  /** Paragraph under `toneDataIntro`, about Jane, with "Jane's Mandarin" linked. Placeholder copy, to be edited. */
+  jane: {
+    before: "Jane is also the founder of ",
+    linkText: "Jane's Mandarin",
+    after: ", where she helps heritage learners reconnect with their roots through Taiwanese Mandarin.",
+    href: "https://janesmandarin.com/",
+  },
 
   /**
    * The four tones, as the landing page names them.

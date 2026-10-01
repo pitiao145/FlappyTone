@@ -227,6 +227,18 @@ export function Landing({ onPlay, onVisualiser }: Props) {
             <p className="section-eyebrow">{brand.toneDataEyebrow}</p>
             <h2>{brand.toneDataTitle}</h2>
             <p>{brand.toneDataIntro}</p>
+            <p>
+              {brand.jane.before}
+              <a
+                href={brand.jane.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => capturePostHogEvent("landing_cta_clicked", { cta: "jane", location: "real_speech" }, INSTANT)}
+              >
+                {brand.jane.linkText}
+              </a>
+              {brand.jane.after}
+            </p>
           </div>
           <div className="real-speech-data">
             <div className="tone-average-grid">
