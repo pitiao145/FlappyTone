@@ -60,6 +60,12 @@ export interface PitchTrackerConfig {
   adaptiveWindowFrames: number;
   /** Percentile of that history read as the noise level (0.1 = 10th). */
   adaptivePercentile: number;
+  /**
+   * RMS the adaptive window starts filled with. 0 = the calibrated floor.
+   * The game passes the previous run's room estimate, so only a session's
+   * first run has to warm up from quiet.
+   */
+  adaptiveSeedRms: number;
   fMin: number;
   fMax: number;
 }

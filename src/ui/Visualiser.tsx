@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { trackerNoiseConfig } from "../game/noise.ts";
+import { rememberRoomNoise, trackerNoiseConfig } from "../game/noise.ts";
+import { tapePush } from "../dev/micTape.ts";
 import { track } from "../analytics/client.ts";
 import { inventoryNow, loadInventory, subscribeInventory } from "../audio/inventory.ts";
 import { MicError } from "../audio/mic.ts";
@@ -424,6 +425,8 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     // re-install this exact callback after unmuting reopens the session,
     // without re-running this whole effect.
     const onFrame = (frame: Float32Array, sampleRate: number) => {
+      // Noise lab only (dev + preview): keep the raw mic for a WAV export.
+      if (import.meta.env.DEV || __NOISE_LAB__) tapePush(frame, sampleRate);
       // Deaf while the example plays — otherwise the game's own voice is drawn
       // as the player's contour.
       if (isCueAudible()) return;
@@ -551,6 +554,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       document.removeEventListener("visibilitychange", onVisibility);
       releaseWakeLock();
       setFrameSink(null);
+      if (tracker) rememberRoomNoise(tracker.getNoiseEstimate());
       setActiveTracker(null);
       frameSinkRef.current = null;
     };

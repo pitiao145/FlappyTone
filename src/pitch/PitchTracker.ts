@@ -45,6 +45,7 @@ export const DEFAULT_CONFIG: Omit<PitchTrackerConfig, "sampleRate"> = {
   adaptiveGateOverNoise: 0,
   adaptiveWindowFrames: 86,
   adaptivePercentile: 0.1,
+  adaptiveSeedRms: 0,
   fMin: 70,
   fMax: 400,
   // 1024 of the frame's centre: tone bodies (fast T2 rises / T4 falls) keep
@@ -79,7 +80,8 @@ export class PitchTracker {
     // the player first (it is built on the first frame after a cue); an empty
     // window would read their voice as the room and gate it out. Seeded, the
     // estimate only rises once ~90% of the window is genuinely louder.
-    for (let i = 0; i < this.config.adaptiveWindowFrames; i++) this.noise.push(this.config.noiseFloor);
+    const seed = Math.max(this.config.noiseFloor, this.config.adaptiveSeedRms);
+    for (let i = 0; i < this.config.adaptiveWindowFrames; i++) this.noise.push(seed);
     this.effectiveFloor = this.config.noiseFloor;
   }
 

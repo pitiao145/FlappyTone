@@ -61,3 +61,11 @@ describe("PitchTracker adaptive floor", () => {
     expect(t.getEffectiveNoiseFloor()).toBe(0.01);
   });
 });
+
+describe("adaptive seed", () => {
+  it("starts from a carried room estimate instead of the calibrated floor", () => {
+    const t = new PitchTracker({ sampleRate: SR, noiseFloor: 0.002, adaptiveGateOverNoise: 2, adaptiveSeedRms: 0.05 });
+    t.push(new Float32Array(2048));
+    expect(t.getEffectiveNoiseFloor()).toBeCloseTo((0.05 * 2) / 3, 5);
+  });
+});

@@ -5,6 +5,18 @@ import { tuning, type NoiseMode } from "./tuning.ts";
 
 const HOP = 1024;
 
+/**
+ * Room-noise estimate carried from the last run's tracker. Each run builds a
+ * fresh tracker, and a fresh tracker starts from the quiet calibrated floor
+ * and needs ~2 s to learn the room — on the beach test (1 Oct 2026) that
+ * warm-up was visibly the bird diving on bass after every restart.
+ */
+let carriedNoiseRms = 0;
+
+export function rememberRoomNoise(rms: number): void {
+  if (Number.isFinite(rms) && rms > 0) carriedNoiseRms = rms;
+}
+
 export function usesAdaptiveFloor(mode: NoiseMode = tuning().noiseMode): boolean {
   return mode === "adaptive" || mode === "strict" || mode === "browserAdaptive";
 }
@@ -21,6 +33,7 @@ export function trackerNoiseConfig(sampleRate: number): Partial<PitchTrackerConf
     adaptiveGateOverNoise: t.noiseGateOverNoise,
     adaptiveWindowFrames: Math.max(8, Math.round((t.noiseFloorWindowMs / 1000) * (sampleRate / HOP))),
     adaptivePercentile: t.noiseFloorPercentile,
+    adaptiveSeedRms: carriedNoiseRms,
     ...(t.noiseMode === "strict" ? { clarityThreshold: t.noiseStrictClarity } : {}),
   };
 }

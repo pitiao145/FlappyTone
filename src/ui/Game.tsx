@@ -8,7 +8,8 @@ import {
   lazy,
   Suspense,
 } from "react";
-import { trackerNoiseConfig } from "../game/noise.ts";
+import { rememberRoomNoise, trackerNoiseConfig } from "../game/noise.ts";
+import { tapePush } from "../dev/micTape.ts";
 
 // Dev-only noisy-room overlay; lazy behind DEV/__NOISE_LAB__ so it never reaches a production dist/.
 const NoiseBadge = import.meta.env.DEV || __NOISE_LAB__
@@ -591,6 +592,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // — there is only one sink slot for the whole app). Resuming here has to
     // reclaim it, the same way Visualiser's own `toggleMute` does.
     const onFrame = (frame: Float32Array, sampleRate: number) => {
+      // Noise lab only (dev + preview): keep the raw mic for a WAV export.
+      if (import.meta.env.DEV || __NOISE_LAB__) tapePush(frame, sampleRate);
       // Deaf while the game itself is talking — the cue would drive the dot.
       if (isCueAudible()) return;
       if (!tracker) {
@@ -973,6 +976,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       document.removeEventListener("visibilitychange", onVisibility);
       releaseWakeLock();
       setFrameSink(null);
+      if (tracker) rememberRoomNoise(tracker.getNoiseEstimate());
       setActiveTracker(null);
       runRef.current = null;
     };
