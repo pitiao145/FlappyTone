@@ -372,12 +372,10 @@ export const CALIBRATION_TONES: Tone[] = [1, 1, 3, 3];
 // against the same four words is more consistent than each getting a random
 // set, and pinning them is what lets Calibration.tsx warm their clips ahead
 // of time (the flight itself picks a word the moment it opens gate i, too
-// late to start a fetch). Order pairs 1:1 with CALIBRATION_TONES. A ma1b/shu1
+// late to start a fetch). Order pairs 1:1 with CALIBRATION_TONES. A ma1b/mao1
 // pair anchors the same T1 measurement CALIBRATION_TONES[0..1] used to draw
-// randomly, ma3b/wo3 the T3 one. Every id must be fetchable by a guest:
-// the clips Worker 403s a word outside every sampler list whose TOCFL level
-// the tier lacks (the old mao1, tocfl3-only, silently cued synthetically for that reason).
-export const CALIBRATION_WORD_IDS: string[] = ["ma1b", "shu1", "ma3b", "wo3"];
+// randomly, ma3b/wo3 the T3 one.
+export const CALIBRATION_WORD_IDS: string[] = ["ma1b", "mao1", "ma3b", "wo3"];
 
 /**
  * Is `tones` the calibration flight's own tone script — by content, not

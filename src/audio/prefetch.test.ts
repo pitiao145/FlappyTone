@@ -247,7 +247,7 @@ describe("the calibration flight's exact tier", () => {
       ...(
         [
           ["ma1b", "媽", "mā", 1],
-          ["shu1", "書", "shū", 1],
+          ["mao1", "貓", "māo", 1],
           ["ma3b", "馬", "mǎ", 3],
           ["wo3", "我", "wǒ", 3],
         ] as const
@@ -290,7 +290,7 @@ describe("the calibration flight's exact tier", () => {
       run.tickFrame(16, now);
       now += 16;
     }
-    expect(seen).toEqual(new Set(["ma1b", "shu1", "ma3b", "wo3"]));
+    expect(seen).toEqual(new Set(["ma1b", "mao1", "ma3b", "wo3"]));
   });
 });
 
