@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { track } from "../analytics/client.ts";
-import { loadInventory } from "../audio/inventory.ts";
 import type { Tone } from "../game/gates.ts";
 import {
   comboAccuracyFromHistory,
@@ -11,15 +10,13 @@ import {
   type RunOutcome,
 } from "../game/runHistory.ts";
 import { loadStreak } from "../game/streak.ts";
-import { wordsOfTone, type Word } from "../game/words.ts";
 import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
 import { fetchRunLogPage, fetchTrendRows } from "../data/runlog.ts";
 import { dailyTrend, trendKeys, type RunLogRow } from "../game/runTrend.ts";
 import { Leaderboard } from "./Leaderboard.tsx";
 import { FREE_FEATURES, GUEST_FEATURES, PRO_FEATURES, PRO_PRICE, TIER_LABEL } from "./plan.ts";
-import { PlayerToneEvolution } from "./PlayerToneEvolution.tsx";
-import { ToneAverageCard } from "./ToneAverageCard.tsx";
+import { PlayerToneEvolution, SamplePlayerToneEvolution } from "./PlayerToneEvolution.tsx";
 import { TONE_LINE_COLOR } from "./toneColors.ts";
 
 // Lazy so Chart.js (~165KB) loads only when the "Accuracy progress" tab is
@@ -156,10 +153,6 @@ interface Props {
  */
 export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
   const tier = useTier();
-  const [words, setWords] = useState<Word[] | null>(null);
-  useEffect(() => {
-    loadInventory().then(setWords, () => setWords([]));
-  }, []);
   const leaderboardSectionRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     // Read-and-clear happens here, after commit, not during GameApp's
@@ -174,12 +167,6 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
     // time, it never toggles the ref live.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const wordsByTone = useMemo(() => {
-    const map = new Map<Tone, Word[]>();
-    for (const t of TONES) map.set(t, wordsOfTone(words ?? [], t));
-    return map;
-  }, [words]);
-
   // Ticks after a sign-in/sign-out finishes syncing local storage (or, for a
   // sign-out, right away) — see `sessionVersion.ts`. Without it these stats
   // stayed frozen at whatever they were when the tab first mounted.
@@ -559,16 +546,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
           <PlayerToneEvolution key={version} />
         ) : (
           <>
-            <div className="tone-average-grid">
-              {TONES.map((t) => (
-                <ToneAverageCard
-                  key={t}
-                  tone={t}
-                  words={wordsByTone.get(t) ?? []}
-                  showCaption={false}
-                />
-              ))}
-            </div>
+            <SamplePlayerToneEvolution />
             {lockCta(
               "🔒 Compare against your own attempts — unlock with Pro",
               "tone_evolution",

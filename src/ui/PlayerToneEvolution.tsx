@@ -10,6 +10,7 @@ import {
   type ShapeRow,
 } from "../game/playerShape.ts";
 import { AVERAGED_PAIR_SHAPE, AVERAGED_TONE_SHAPE } from "../game/toneAverages.ts";
+import { SAMPLE_TONE_SHAPES } from "./sampleToneShapes.ts";
 import { drawPlayerShapeChart, TONE_AVERAGE_COLOR } from "./toneAverageChart.ts";
 
 const CARD_W = 200;
@@ -100,6 +101,23 @@ export function PlayerToneEvolution() {
             then={then}
             thenDay={thenDay}
           />
+        ))}
+      </div>
+    </>
+  );
+}
+
+/** The same cards on a real player's snapshot, for guests and free players (no earlier point to compare). */
+export function SamplePlayerToneEvolution() {
+  return (
+    <>
+      <p className="note player-shape-legend">
+        Sample from a real player: <span className="player-shape-key player-shape-key-jane" /> Jane&apos;s average ·{" "}
+        <span className="player-shape-key player-shape-key-now" /> theirs (tone colour)
+      </p>
+      <div className="tone-average-grid">
+        {Object.entries(SAMPLE_TONE_SHAPES).map(([key, now]) => (
+          <ShapeCard key={key} shapeKey={key} now={now} then={null} thenDay={null} />
         ))}
       </div>
     </>
