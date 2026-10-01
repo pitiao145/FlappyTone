@@ -174,3 +174,58 @@ export class MedianFilter {
     this.buffer = [];
   }
 }
+
+/**
+ * Running noise-level estimate: a low percentile of recent frame RMS. Speech
+ * comes and goes; the room's noise is what is left in the quietest frames.
+ * Pure arithmetic — a ring buffer plus a small sorted copy, no allocation per
+ * frame beyond the splice.
+ */
+export class NoiseFloorTracker {
+  private ring: number[] = [];
+  private sorted: number[] = [];
+  private next = 0;
+  private windowFrames: number;
+  private percentile: number;
+
+  constructor(windowFrames: number, percentile: number) {
+    this.windowFrames = windowFrames;
+    this.percentile = percentile;
+  }
+
+  push(rms: number): number {
+    if (this.ring.length < this.windowFrames) {
+      this.ring.push(rms);
+    } else {
+      const old = this.ring[this.next];
+      this.ring[this.next] = rms;
+      this.next = (this.next + 1) % this.windowFrames;
+      this.sorted.splice(lowerBound(this.sorted, old), 1);
+    }
+    this.sorted.splice(lowerBound(this.sorted, rms), 0, rms);
+    return this.estimate();
+  }
+
+  /** Current noise estimate (RMS), 0 before any frame. */
+  estimate(): number {
+    const n = this.sorted.length;
+    return n ? this.sorted[Math.min(n - 1, Math.floor(n * this.percentile))] : 0;
+  }
+
+  reset(): void {
+    this.ring = [];
+    this.sorted = [];
+    this.next = 0;
+  }
+}
+
+function lowerBound(a: number[], v: number): number {
+  let lo = 0;
+  let hi = a.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (a[mid] < v) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}

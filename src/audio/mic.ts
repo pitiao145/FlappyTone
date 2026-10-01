@@ -1,3 +1,4 @@
+import { usesBrowserSuppression } from "../game/noise.ts";
 import { isChromeIOS } from "./platform.ts";
 
 export type MicErrorKind =
@@ -213,7 +214,9 @@ export async function startMic(
         s = await navigator.mediaDevices.getUserMedia({
           audio: {
             echoCancellation: false,
-            noiseSuppression: false,
+            // Off in shipped play; on only for the "browser" noise modes under
+            // test (docs/noise-plan.md). AGC stays off: it breaks the RMS gate.
+            noiseSuppression: usesBrowserSuppression(),
             autoGainControl: false,
           },
         });

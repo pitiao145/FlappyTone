@@ -5,7 +5,15 @@ import {
   useImperativeHandle,
   useRef,
   useState,
+  lazy,
+  Suspense,
 } from "react";
+import { trackerNoiseConfig } from "../game/noise.ts";
+
+// Dev-only noisy-room overlay; lazy behind DEV so it never reaches dist/.
+const NoiseBadge = import.meta.env.DEV
+  ? lazy(() => import("../dev/NoiseBadge.tsx").then((m) => ({ default: m.NoiseBadge })))
+  : null;
 import { track } from "../analytics/client.ts";
 import { gateEvent, type RunEndReason } from "../analytics/session.ts";
 import {
@@ -592,6 +600,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           noiseFloor: settings.noiseFloor,
           rangeSemitones: settings.rangeSemitones,
           rangeDownSemitones: settings.rangeDownSemitones,
+          ...trackerNoiseConfig(sampleRate),
         });
         // Published so the dev Lab's sliders reach the tracker that is
         // actually flying the dot, rather than a tracker nobody is listening to.
@@ -1159,6 +1168,11 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} />
 
         <MicStatusBanner />
+        {NoiseBadge && (
+          <Suspense fallback={null}>
+            <NoiseBadge />
+          </Suspense>
+        )}
 
         <div className="hud">
           <div className="hud-top">

@@ -30,6 +30,14 @@ const DIR = "fixtures/captures";
 const TARGETS = ["jane_ma1.wav", "jane_ma2.wav", "jane_ma3.wav", "jane_ma4.wav", "jane_ma3_natural.wav"];
 const BABBLE_SRC = ["jane_ma0_neutral.wav", "jane_ba1.wav", "jane_chang2.wav", ...TARGETS];
 const SNRS = [Infinity, 20, 10, 5, 0];
+/** Silence prepended to every file (noise fills it once mixed): a real run's
+ * tracker hears the room for seconds before the first gate, and the shipped
+ * adaptive floor is seeded with the calibrated floor and needs ~2 s to adapt. */
+const LEAD_S = argvNum("--lead", 3);
+function argvNum(flag: string, d: number): number {
+  const i = process.argv.indexOf(flag);
+  return i >= 0 ? Number(process.argv[i + 1]) : d;
+}
 
 // ------------------------------------------------------------- utilities
 
@@ -147,7 +155,7 @@ function hum(n: number, sr: number, r: () => number): Float32Array {
   return y;
 }
 /** Six overlapping, resampled talkers built from the other captures. */
-function babble(n: number, sr: number, exclude: string, r: () => number): Float32Array {
+function babble(n: number, _sr: number, exclude: string, r: () => number): Float32Array {
   const y = new Float32Array(n);
   const srcs = BABBLE_SRC.filter((f) => f !== exclude).map((f) => load(f).x);
   for (let t = 0; t < 6; t++) {
@@ -293,6 +301,8 @@ const CANDIDATES: Candidate[] = [
   { name: "G speaker band", cfg: speakerBand },
   { name: "H D2+G", cfg: speakerBand, frameHook: () => adaptiveFloor(2) },
   { name: "I C+D2+G", pre: bandpass, cfg: speakerBand, frameHook: () => adaptiveFloor(2) },
+  { name: "P prod adaptive", cfg: { adaptiveGateOverNoise: 2, adaptiveWindowFrames: 86, adaptivePercentile: 0.1 } },
+  { name: "Q prod strict", cfg: { adaptiveGateOverNoise: 2, adaptiveWindowFrames: 86, adaptivePercentile: 0.1, clarityThreshold: 0.8 } },
   { name: "K B+D2", cfg: { clarityThreshold: 0.8 }, frameHook: () => adaptiveFloor(2) },
   { name: "J D2+G+E1", cfg: speakerBand, frameHook: chain(() => adaptiveFloor(2), harmonicGate(0.75)) },
 ];
@@ -392,7 +402,9 @@ for (const c of cands) {
       if (snr === Infinity && noise !== "fan") continue; // clean row once per candidate
       const acc: M[] = [];
       TARGETS.forEach((t, ti) => {
-        const { x, sr } = load(t);
+        const { x: raw, sr } = load(t);
+        const x = new Float32Array(raw.length + Math.round(LEAD_S * sr));
+        x.set(raw, x.length - raw.length);
         const hopS = HOP / sr;
         const base = replay(x, sr, { name: "ref" });
         const regs = segment(base, hopS);

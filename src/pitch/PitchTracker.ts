@@ -1,6 +1,7 @@
 import {
   DEFAULT_VOICING,
   MedianFilter,
+  NoiseFloorTracker,
   clampSlew,
   correctOctave,
   hzToSemitones,
@@ -39,6 +40,11 @@ export const DEFAULT_CONFIG: Omit<PitchTrackerConfig, "sampleRate"> = {
   // lands only once the dot has already stopped being held for the old sound.
   staleUnvoicedFrames: 5,
   noiseFloor: 0.0033, // effective RMS floor ≈ 0.01 until calibration exists
+  // Off by default: offline tools (clipCut, report, analyze) keep the fixed
+  // floor they were measured with. The game turns it on via tuning().
+  adaptiveGateOverNoise: 0,
+  adaptiveWindowFrames: 86,
+  adaptivePercentile: 0.1,
   fMin: 70,
   fMax: 400,
   // 1024 of the frame's centre: tone bodies (fast T2 rises / T4 falls) keep
@@ -55,6 +61,8 @@ export class PitchTracker {
   /** Consecutive unvoiced frames; bounds how long the glide rescue trusts prevVoicedF0. */
   private framesSinceVoiced = Number.MAX_SAFE_INTEGER;
   private smoothedChao = 3;
+  private noise: NoiseFloorTracker;
+  private effectiveFloor = 0;
 
   constructor(config: Partial<PitchTrackerConfig> & { sampleRate: number }) {
     // A caller that sets only `rangeSemitones` means a symmetric board, and
@@ -66,6 +74,23 @@ export class PitchTracker {
         ? { rangeDownSemitones: config.rangeSemitones }
         : {};
     this.config = { ...DEFAULT_CONFIG, ...config, ...mirrored };
+    this.noise = new NoiseFloorTracker(this.config.adaptiveWindowFrames, this.config.adaptivePercentile);
+    // Seed the window with the calibrated floor. A fresh tracker often hears
+    // the player first (it is built on the first frame after a cue); an empty
+    // window would read their voice as the room and gate it out. Seeded, the
+    // estimate only rises once ~90% of the window is genuinely louder.
+    for (let i = 0; i < this.config.adaptiveWindowFrames; i++) this.noise.push(this.config.noiseFloor);
+    this.effectiveFloor = this.config.noiseFloor;
+  }
+
+  /** Estimated room-noise RMS (0 until frames arrive). Read by the "loud here" check. */
+  getNoiseEstimate(): number {
+    return this.noise.estimate();
+  }
+
+  /** The RMS floor the voicing gate used on the last frame. */
+  getEffectiveNoiseFloor(): number {
+    return this.effectiveFloor;
   }
 
   /**
@@ -124,6 +149,12 @@ export class PitchTracker {
     // whole 2048 lets silence in the outer samples veto a centre that is
     // cleanly voiced — a spurious "couldn't hear that" at syllable onset.
     const rms = rmsOf(frame.subarray(off, off + w));
+    const noiseEst = this.noise.push(rms);
+    const gateOver = this.config.adaptiveGateOverNoise;
+    this.effectiveFloor =
+      gateOver > 0
+        ? Math.max(noiseFloor, (noiseEst * gateOver) / this.config.rmsMult)
+        : noiseFloor;
 
     const voiced = isFrameVoiced(
       {
@@ -135,7 +166,7 @@ export class PitchTracker {
       },
       {
         clarityThreshold,
-        noiseFloor,
+        noiseFloor: this.effectiveFloor,
         rmsMult: this.config.rmsMult,
         rescueClarity: this.config.rescueClarity,
         rescueRmsMult: this.config.rescueRmsMult,

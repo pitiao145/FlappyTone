@@ -48,6 +48,18 @@ export interface PitchTrackerConfig {
   detectWindow: number;
   /** Calibrated silence RMS; voiced requires rms >= noiseFloor * 3 */
   noiseFloor: number;
+  /**
+   * Adaptive noise floor (docs/noise-research.md, candidate D2). When > 0, the
+   * RMS gate also tracks the room: the floor becomes
+   * max(noiseFloor, percentile(recent frame RMS) × adaptiveGateOverNoise / rmsMult),
+   * so the primary gate sits at `adaptiveGateOverNoise` × the estimated noise.
+   * 0 = off (the calibrated, fixed floor only).
+   */
+  adaptiveGateOverNoise: number;
+  /** Frames of RMS history the adaptive floor looks back over (~86 ≈ 2 s). */
+  adaptiveWindowFrames: number;
+  /** Percentile of that history read as the noise level (0.1 = 10th). */
+  adaptivePercentile: number;
   fMin: number;
   fMax: number;
 }

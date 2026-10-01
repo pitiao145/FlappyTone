@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { trackerNoiseConfig } from "../game/noise.ts";
 import { track } from "../analytics/client.ts";
 import { inventoryNow, loadInventory, subscribeInventory } from "../audio/inventory.ts";
 import { MicError } from "../audio/mic.ts";
@@ -433,6 +434,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
           noiseFloor: settings.noiseFloor,
           rangeSemitones: settings.rangeSemitones,
           rangeDownSemitones: settings.rangeDownSemitones,
+          ...trackerNoiseConfig(sampleRate),
         });
         setActiveTracker(tracker);
       }

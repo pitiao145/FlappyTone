@@ -483,7 +483,32 @@ export interface Tuning {
    * switch exists for everyone the guess suits badly.
    */
   voiceMatchF0Hz: number;
+
+  // ---- noise robustness (docs/noise-research.md, docs/noise-plan.md)
+  /**
+   * Which noise front-end the game's tracker runs. "off" is the shipped
+   * behaviour (fixed calibrated floor, raw mic). Others are under test:
+   *   adaptive         — RMS gate follows the room (candidate D2)
+   *   strict           — adaptive + clarity raised to `noiseStrictClarity` (K)
+   *   browser          — getUserMedia noiseSuppression on, nothing else
+   *   browserAdaptive  — both
+   * Read when a tracker is built and when the mic stream is acquired.
+   */
+  noiseMode: NoiseMode;
+  /** Adaptive gate height as a multiple of the estimated room-noise RMS. */
+  noiseGateOverNoise: number;
+  /** Look-back window of the room-noise estimate, ms. */
+  noiseFloorWindowMs: number;
+  /** Percentile of recent frame RMS read as the room noise (0–1). */
+  noiseFloorPercentile: number;
+  /** Clarity threshold used by the "strict" noise mode. */
+  noiseStrictClarity: number;
+  /** Room noise ≥ this × the calibrated floor counts as a loud room (hint). */
+  loudRoomRatio: number;
 }
+
+export type NoiseMode = "off" | "adaptive" | "strict" | "browser" | "browserAdaptive";
+export const NOISE_MODES: readonly NoiseMode[] = ["off", "adaptive", "strict", "browser", "browserAdaptive"];
 
 export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   baseScrollSpeed: 200,
@@ -541,6 +566,12 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   gateDurationS: Object.freeze({ 1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6 }),
   polylines: DEFAULT_POLYLINES,
   voiceMatchF0Hz: 160,
+  noiseMode: "off",
+  noiseGateOverNoise: 2,
+  noiseFloorWindowMs: 2000,
+  noiseFloorPercentile: 0.1,
+  noiseStrictClarity: 0.8,
+  loudRoomRatio: 4,
 }) as Readonly<Tuning>;
 
 function clonePolylines(p: Record<Tone, Polyline>): Record<Tone, Polyline> {
