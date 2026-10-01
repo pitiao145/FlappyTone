@@ -165,6 +165,41 @@ export type Database = {
         }
         Relationships: []
       }
+      player_tone_shapes: {
+        Row: {
+          count: number
+          day: string
+          key: string
+          sum: number[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          count: number
+          day: string
+          key: string
+          sum: number[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          day?: string
+          key?: string
+          sum?: number[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_tone_shapes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           best_score: number
@@ -210,6 +245,53 @@ export type Database = {
         }
         Relationships: []
       }
+      run_log: {
+        Row: {
+          day: string
+          gates: number
+          id: number
+          mode: string
+          outcome: string
+          per_key: Json
+          played_at: string
+          score: number
+          tone_acc: number | null
+          user_id: string
+        }
+        Insert: {
+          day: string
+          gates: number
+          id?: never
+          mode: string
+          outcome: string
+          per_key?: Json
+          played_at?: string
+          score: number
+          tone_acc?: number | null
+          user_id: string
+        }
+        Update: {
+          day?: string
+          gates?: number
+          id?: never
+          mode?: string
+          outcome?: string
+          per_key?: Json
+          played_at?: string
+          score?: number
+          tone_acc?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       speakers: {
         Row: {
           accent: string
@@ -242,6 +324,44 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      tone_accuracy_stats: {
+        Row: {
+          attempts: number
+          best_accuracy: number
+          sum_accuracy: number
+          target: string
+          unheard: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          best_accuracy?: number
+          sum_accuracy?: number
+          target: string
+          unheard?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          best_accuracy?: number
+          sum_accuracy?: number
+          target?: string
+          unheard?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tone_accuracy_stats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tone_stats: {
         Row: {
@@ -460,6 +580,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_tone_shapes: {
+        Args: { p_day: string; p_rows: Json; p_user_id: string }
+        Returns: undefined
+      }
       board: { Args: { p_limit?: number; p_week: string }; Returns: Json }
       board_period: {
         Args: { p_limit?: number; p_period: string }

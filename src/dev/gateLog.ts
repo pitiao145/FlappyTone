@@ -79,12 +79,26 @@ export function formatGateLog(log: StoredGateLog): string {
   const pct = entries.length === 0 ? 0 : (unheard / entries.length) * 100;
   const seeded = entries.filter((g) => g.seeded > 0).length;
 
+  // Score accuracy vs tone accuracy — the readout spec A asks for. `acc` is
+  // the corridor fit on the gate's clock (0 on a wall hit); `toneAcc` is the
+  // shape on the player's own clock. Where they disagree is the point: a
+  // right tone said early/late, or a wall hit on a correct shape.
+  const both = entries.filter(
+    (g): g is typeof g & { toneAccuracy: number } =>
+      g.outcome !== "unheard" && typeof g.toneAccuracy === "number",
+  );
+  const mean = (v: number[]) => (v.length === 0 ? 0 : v.reduce((a, b) => a + b, 0) / v.length);
+  const toneHighScoreLow = both.filter((g) => g.toneAccuracy - g.accuracy >= 0.3).length;
+  const scoreHighToneLow = both.filter((g) => g.accuracy - g.toneAccuracy >= 0.3).length;
+
   const header = [
     `gates=${entries.length}  unheard=${unheard} (${pct.toFixed(0)}%)`,
     `seeded=${seeded}  missedEarly=${missedUtterances}`,
+    `mean acc=${mean(both.map((g) => g.accuracy)).toFixed(2)}  mean toneAcc=${mean(both.map((g) => g.toneAccuracy)).toFixed(2)}  (${both.length} heard gates)`,
+    `toneAcc ≥ acc+0.3: ${toneHighScoreLow}   acc ≥ toneAcc+0.3: ${scoreHighToneLow}`,
     `savedAt=${log.savedAt}`,
     "",
-    "#   tone  outcome      acc  voiced/total  voiced%  utteranceMs  seeded  worstExcursionMs  recognized",
+    "#   tone  outcome      acc  toneAcc  voiced/total  voiced%  utteranceMs  seeded  worstExcursionMs  recognized",
   ].join("\n");
 
   const rows = entries.map((g, i) => {
@@ -99,6 +113,10 @@ export function formatGateLog(log: StoredGateLog): string {
     const acc = (g.outcome === "unheard" ? "—" : g.accuracy.toFixed(2)).padStart(
       5,
     );
+    // A log saved before tone accuracy existed has no field at all.
+    const toneAcc = (
+      typeof g.toneAccuracy === "number" ? g.toneAccuracy.toFixed(2) : "—"
+    ).padStart(7);
     const recognized = (
       g.classifiedTone === null
         ? "—"
@@ -106,7 +124,8 @@ export function formatGateLog(log: StoredGateLog): string {
           ? "none"
           : `T${g.classifiedTone}`
     ).padStart(10);
-    return `${n}   T${g.tone}    ${g.outcome.padEnd(9)}  ${acc}  ${voiced}  ${frac}  ${utt}  ${String(g.seeded).padStart(6)}  ${exc}  ${recognized}`;
+    const tone = (g.tones?.length ?? 1) > 1 ? g.tones.join("+") : `T${g.tone}`;
+    return `${n}   ${tone.padEnd(4)}  ${g.outcome.padEnd(9)}  ${acc}  ${toneAcc}  ${voiced}  ${frac}  ${utt}  ${String(g.seeded).padStart(6)}  ${exc}  ${recognized}`;
   });
 
   return [header, ...rows].join("\n");

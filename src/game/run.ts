@@ -48,6 +48,8 @@ import {
 } from "../pitch/calibration.ts";
 import type { Contour } from "./contours.ts";
 import { classifyTone, type ClassifiedTone } from "./toneClassifier.ts";
+import { longestUtterance, toneAccuracy } from "./toneAccuracy.ts";
+import { ShapeAccumulator, type ShapeBucket } from "./playerShape.ts";
 
 export type RunMode = "game" | "tutorial" | "single" | "drill" | "learn" | "pairs";
 
@@ -117,6 +119,13 @@ export interface RunConfig {
    * exists until it does.
    */
   deferFill?: boolean;
+  /**
+   * Whether to keep this player's tone lines (spec B, Pro only). Asked per
+   * heard gate, not once, so a tier that resolves after the Run is built is
+   * honoured from the next gate. Omitted, nothing is computed or kept. The
+   * host drains `drainShapes()` when the run ends; the Run never posts.
+   */
+  captureShapes?: () => boolean;
   /**
    * The one word a "single" mode run flies — a Lab-only mode that flies
    * exactly one hand-picked gate through the real collision/scoring pipeline,
@@ -277,6 +286,13 @@ export interface LastOutcome {
   atMs: number;
   /** 0–1 corridor fit, as scored. Drives how hot the ignition burns. */
   accuracy: number;
+  /**
+   * 0–1 tone accuracy (`toneAccuracy.ts`): did the voice make the right tone
+   * shape, on the player's own clock. A learning number, separate from
+   * `accuracy` — measured on a wall hit too. Null when unheard, or when
+   * there is no reference (a combo with a neutral syllable).
+   */
+  toneAccuracy: number | null;
   /** Points this gate added, combo multiplier already applied. 0 when none. */
   points: number;
   /** Combo multiplier in force after this gate — the escalation lever. */
@@ -507,6 +523,12 @@ export interface GateLogEntry {
    * anything aggregating this must exclude them the way `applyGate` does.
    */
   accuracy: number;
+  /**
+   * Tone accuracy (`toneAccuracy.ts`), 0–1, or null when unheard / no
+   * reference. Logged beside `accuracy` so a flown run shows the two numbers
+   * side by side: a correct tone said early loses score, not this.
+   */
+  toneAccuracy: number | null;
   samples: number;
   voiced: number;
   voicedFraction: number;
@@ -638,6 +660,9 @@ export class Run {
   private idleRunStartMs: number | null = null;
   private idleRunLastMs = -Infinity;
   private idleRunCounted = false;
+  /** The player's tone lines this run (spec B); filled only while `captureShapes()` says so. */
+  private readonly shapes = new ShapeAccumulator();
+  private readonly captureShapes: (() => boolean) | null;
 
   constructor(cfg: RunConfig) {
     this.mode = cfg.mode;
@@ -654,9 +679,15 @@ export class Run {
     this.drillTone = cfg.drillTone ?? null;
     this.pairCombo = cfg.pairCombo ?? null;
     this.wordMix = cfg.wordMix ?? "single";
+    this.captureShapes = cfg.captureShapes ?? null;
     this.difficulty = this.difficultyFor(0);
     this.stats = newRunStats(3);
     if (!cfg.deferFill) this.fillQueue();
+  }
+
+  /** The tone lines kept since the last drain (spec B), and empties them. */
+  drainShapes(): ShapeBucket[] {
+    return this.shapes.drain();
   }
 
   /** Fills the queue after a `deferFill` construction. No-op if already filled. */
@@ -1247,6 +1278,23 @@ export class Run {
       ({ outcome, accuracy } = applyClassifierBoost(outcome, accuracy, classifiedConfidence));
     }
 
+    // Tone accuracy — the learning number, separate from the score. Every
+    // mode, a wall hit included: only an unheard gate has nothing to judge.
+    // Measured on the utterance alone (from its real start, pre-gate seeding
+    // included — the same start the classifier reads), so it is timing-free.
+    let gateToneAccuracy: number | null = null;
+    if (heard) {
+      const utteranceStartMs =
+        state.samples.length > 0 ? state.samples[0].atMs : state.enteredAtMs;
+      const voiced = this.trail
+        .filter((p) => p.t >= utteranceStartMs && p.voiced)
+        .map((p) => ({ tMs: p.t, chao: p.chao }));
+      const utterance = longestUtterance(voiced, mergeGapMs);
+      gateToneAccuracy = toneAccuracy(utterance, state.gate.tones);
+      // Same utterance, wall hits and mismatches included (spec B §3).
+      if (this.captureShapes?.()) this.shapes.add(state.gate.tones, utterance);
+    }
+
     this.gatesFinished += 1;
     this.lastGateEndedAtMs = this.nowMs;
     this.preGate = [];
@@ -1257,6 +1305,7 @@ export class Run {
       tones: state.gate.tones,
       outcome,
       accuracy,
+      toneAccuracy: gateToneAccuracy,
       samples: state.samples.length,
       voiced: voicedCount,
       voicedFraction:
@@ -1285,7 +1334,8 @@ export class Run {
         this.stats,
         state.gate.tones,
         outcome,
-        accuracy,
+        // Stats keep tone accuracy, never the score's corridor accuracy.
+        gateToneAccuracy,
         mismatchedAs,
       );
     }
@@ -1296,6 +1346,7 @@ export class Run {
       tones: state.gate.tones,
       atMs: this.nowMs,
       accuracy,
+      toneAccuracy: gateToneAccuracy,
       points: this.stats.score - scoreBefore,
       comboMult: multiplierFor(this.stats.combo),
       // Only the stretch flown inside the gate — the trail also holds the

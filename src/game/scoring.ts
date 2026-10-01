@@ -6,6 +6,7 @@
 import type { Tone } from "./gates.ts";
 import type { ClassifiedTone, ToneClassification } from "./toneClassifier.ts";
 import { tuning } from "./tuning.ts";
+import { toneComboKey } from "./words.ts";
 
 export interface GateSample {
   /** |bird - corridor centre| in chao. */
@@ -186,9 +187,10 @@ export function applyClassifierBoost(
  * set of pairs — every cross-tone confusion is either a {1,4}/{2,3}
  * within-group swap or crosses between the flat/falling tones and the
  * contour tones, and both are drastic by the request's own framing. So the
- * only real gate is confidence: the classifier must clear its own bar
+ * gates are confidence — the classifier must clear its own bar
  * (`toneClassifierMinConfidence`/`toneClassifierMarginThreshold`, enforced
- * inside `classifyTone` itself before it ever returns a non-`"none"` tone).
+ * inside `classifyTone` itself before it ever returns a non-`"none"` tone) —
+ * and, for a T2↔T3 read, `decisive`: a stricter bar than naming the tone.
  *
  * A `"none"` read (low confidence / ambiguous) never counts — that stays the
  * existing neutral "couldn't hear that" territory.
@@ -200,6 +202,10 @@ export function isDrasticToneMismatch(
   if (classification === null) return false;
   const winner = classification.tone;
   if (winner === "none" || winner === target) return false;
+  // A T2↔T3 read close to the midpoint of the two averages, or one whose dip
+  // went unvoiced, can name a tone but cannot take a heart — see
+  // `ToneClassification.decisive`.
+  if (!classification.decisive) return false;
   return classification.confidence >= tuning().toneClassifierMinConfidence;
 }
 
@@ -237,15 +243,33 @@ export function multiplierFor(combo: number): number {
   return 1;
 }
 
+/** Tone accuracy tallied for one combo of pair gates this run. */
+export interface ComboStats {
+  /** Pair gates of this combo with a tone accuracy (heard). */
+  gates: number;
+  /** Sum of their tone accuracy, 0..1 each. */
+  accSum: number;
+  /** Highest single-gate tone accuracy for this combo. */
+  best: number;
+  unheard: number;
+}
+
 export interface RunStats {
   score: number;
   hearts: number;
   /** Consecutive perfect/good gates. Carried in stats so applyGate can thread it explicitly. */
   combo: number;
   bestMultiplier: number;
+  /**
+   * Single-syllable gates, per tone. `accSum`/`best` are **tone accuracy**
+   * (`toneAccuracy.ts`, did the voice make the right tone), not the score's
+   * corridor accuracy — since 28 Sep 2026, spec A. A wall hit is still
+   * measured; only an unheard gate has nothing to add.
+   */
   perTone: Record<
     Tone,
     {
+      /** Gates with a tone accuracy — heard, wall hits included. */
       gates: number;
       accSum: number;
       unheard: number;
@@ -254,14 +278,20 @@ export interface RunStats {
       /** Which wrong tone the classifier heard instead, on those mismatched gates. */
       mismatchedAs: Partial<Record<Tone, number>>;
       /**
-       * Highest single-gate accuracy scored for this tone this run, 0..1.
-       * Follows the same "unheard doesn't count" rule as `accSum`/`gates`
-       * below — an unheard gate is not a low-accuracy attempt, it is no
-       * attempt at all (PRD §6).
+       * Highest single-gate tone accuracy for this tone this run, 0..1.
+       * Unheard gates don't count — an unheard gate is not a low-accuracy
+       * attempt, it is no attempt at all (PRD §6).
        */
       best: number;
     }
   >;
+  /**
+   * Two-syllable gates, per exact combo (`toneComboKey`, e.g. "3-2"), tone
+   * accuracy only. Kept apart from `perTone` on purpose: a pair's accuracy is
+   * a fact about the word, not about either syllable's tone alone. Combos
+   * with a neutral syllable have no reference and are never stored.
+   */
+  perCombo: Record<string, ComboStats>;
 }
 
 /** A fresh run: default 3 hearts, zeroed score and per-tone stats. */
@@ -270,28 +300,30 @@ export function newRunStats(hearts = 3): RunStats {
   for (const tone of [1, 2, 3, 4] as Tone[]) {
     perTone[tone] = { gates: 0, accSum: 0, unheard: 0, mismatched: 0, mismatchedAs: {}, best: 0 };
   }
-  return { score: 0, hearts, combo: 0, bestMultiplier: 1, perTone };
+  return { score: 0, hearts, combo: 0, bestMultiplier: 1, perTone, perCombo: {} };
 }
 
 /**
  * Folds a gate's outcome into run stats. Mutate-free: returns a new object,
  * `stats` is left untouched. Collisions cost a heart; unheard gates cost
- * nothing and don't reset the combo, but are tallied per-tone separately
- * from scored (voiced) gates.
+ * nothing and don't reset the combo.
+ *
+ * Points come from `outcome` alone. `toneAccuracy` is what the per-tone and
+ * per-combo stats sum — did the voice make the right tone, measured on a wall
+ * hit too — and never the score's corridor accuracy (spec A, 28 Sep 2026).
+ * Null when the gate was unheard or has no reference (a combo with a neutral
+ * syllable).
  *
  * `tones` is the gate's full tone sequence — `[tone]` for a single-syllable
- * gate. Score/hearts/combo update for every gate; `perTone`/`lifetimePerTone`
- * are a single-tone concept (which tone does this accuracy belong to?) that
- * has no honest answer for a pair, so a multi-syllable gate (`tones.length >
- * 1`) skips the per-tone update entirely rather than crediting or blaming
- * either syllable's tone alone (plan's own decision — per-pair stats are a
- * later feature, not a silent approximation now).
+ * gate. A single syllable feeds `perTone`; a two-syllable gate feeds
+ * `perCombo` and never `perTone` (a pair's accuracy is not a fact about
+ * either syllable's tone alone).
  */
 export function applyGate(
   stats: RunStats,
   tones: Tone[],
   outcome: GateOutcome,
-  accuracy: number,
+  toneAccuracy: number | null,
   /** Set when this gate's outcome was forced to a collision by a drastic classifier mismatch. */
   mismatchedAs?: ClassifiedTone | null,
 ): RunStats {
@@ -309,7 +341,8 @@ export function applyGate(
   };
 
   if (tones.length !== 1) {
-    return { ...base, perTone: stats.perTone };
+    const perCombo = foldCombo(stats.perCombo, tones, outcome, toneAccuracy);
+    return { ...base, perTone: stats.perTone, perCombo };
   }
   const tone = tones[0];
 
@@ -317,12 +350,14 @@ export function applyGate(
   const withOutcome =
     outcome === "unheard"
       ? { ...prevTone, unheard: prevTone.unheard + 1 }
-      : {
-          ...prevTone,
-          gates: prevTone.gates + 1,
-          accSum: prevTone.accSum + accuracy,
-          best: Math.max(prevTone.best, accuracy),
-        };
+      : toneAccuracy === null
+        ? prevTone
+        : {
+            ...prevTone,
+            gates: prevTone.gates + 1,
+            accSum: prevTone.accSum + toneAccuracy,
+            best: Math.max(prevTone.best, toneAccuracy),
+          };
   const nextTone =
     mismatchedAs != null && mismatchedAs !== "none"
       ? {
@@ -338,6 +373,30 @@ export function applyGate(
   return {
     ...base,
     perTone: { ...stats.perTone, [tone]: nextTone },
+    perCombo: stats.perCombo,
+  };
+}
+
+/** Folds a pair gate into `perCombo`. Neutral combos and 3+ syllables are skipped. */
+function foldCombo(
+  perCombo: RunStats["perCombo"],
+  tones: Tone[],
+  outcome: GateOutcome,
+  toneAccuracy: number | null,
+): RunStats["perCombo"] {
+  if (tones.length !== 2 || tones.some((t) => !(t >= 1 && t <= 4))) return perCombo;
+  const key = toneComboKey(tones);
+  const prev = perCombo[key] ?? { gates: 0, accSum: 0, best: 0, unheard: 0 };
+  if (outcome === "unheard") return { ...perCombo, [key]: { ...prev, unheard: prev.unheard + 1 } };
+  if (toneAccuracy === null) return perCombo;
+  return {
+    ...perCombo,
+    [key]: {
+      ...prev,
+      gates: prev.gates + 1,
+      accSum: prev.accSum + toneAccuracy,
+      best: Math.max(prev.best, toneAccuracy),
+    },
   };
 }
 
@@ -391,6 +450,32 @@ export function toneBreakdown(stats: RunStats): ToneBreakdownEntry[] {
       mismatchedAsMostly,
     };
   });
+}
+
+export interface ComboBreakdownEntry {
+  /** `toneComboKey`, e.g. "3-2". */
+  key: string;
+  tones: Tone[];
+  /** Mean tone accuracy, 0-100. */
+  pct: number;
+  gates: number;
+}
+
+/**
+ * Tone accuracy per pair combo flown this run, weakest first. Only combos with
+ * at least one measured gate — a combo that was never heard, or never came up,
+ * has nothing to show.
+ */
+export function comboBreakdown(perCombo: RunStats["perCombo"]): ComboBreakdownEntry[] {
+  return Object.entries(perCombo)
+    .filter(([, c]) => c.gates > 0)
+    .map(([key, c]) => ({
+      key,
+      tones: key.split("-").map(Number) as Tone[],
+      pct: (c.accSum / c.gates) * 100,
+      gates: c.gates,
+    }))
+    .sort((a, b) => a.pct - b.pct || a.key.localeCompare(b.key));
 }
 
 /**

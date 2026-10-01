@@ -1024,16 +1024,13 @@ describe("Run — timing slack (a right shape, slightly off the beat)", () => {
   });
 
   it("clears a contour that is a beat late", () => {
-    // Known, accepted gap (25 Aug 2026): with the classifier's own
-    // mismatch-collision feature on by default, this specific shape — a
-    // correct T3, shifted 80ms late — reads as a confident T2 and collides.
-    // The corridor-tolerance forgiveness this describe block is about still
-    // works (this used to collide on tolerance alone before that existed);
-    // what's now failing is the classifier's shape read on a timing-shifted
-    // trace, a separate, still-open weakness. Enabled anyway per direct
-    // playtesting feedback: "it's working quite well" outweighs this one
-    // synthetic edge case for now.
-    expect(collisionsFor(80)).toBe(1);
+    // Was a known, accepted gap (25 Aug 2026): this correct T3, shifted 80ms,
+    // loses the top of its fall and read as a confident T2, forcing a wall
+    // hit. Closed 28 Sep 2026: the T2/T3 cue still names it T2 (drop, drop
+    // share and shape outvote its low point), but a heart now needs the cues
+    // to agree (`toneMismatchMaxT23Dissent`) and its chao-1.2 floor argues
+    // hard for T3 — so no heart is taken.
+    expect(collisionsFor(80)).toBe(0);
   });
 
   it("still walls off a contour that is wildly out of step", () => {
@@ -1776,5 +1773,135 @@ describe("deferFill / primeQueue (cold-start pool sequencing)", () => {
     const gates = run.snapshot().gates;
     expect(gates.length).toBeGreaterThan(0);
     expect(gates[0].word?.id).toBe("a1");
+  });
+});
+
+describe("Run — tone accuracy beside the score (spec A)", () => {
+  /**
+   * The corridor's own contour, shifted in time — but silent between gates,
+   * like a real player. (The timing-slack block voices a flat chao 3 there,
+   * which pre-gate seeding would glue onto the front of every utterance.)
+   */
+  function shifted(offsetMs: number) {
+    return (s: RunSnapshot) => {
+      if (!s.activeGate) return pitch(null);
+      const { tone, t } = s.activeGate;
+      const offsetT = offsetMs / (GATE_DURATION_S[tone] * 1000);
+      return pitch(corridorChaoAt(shapeForTone(tone), t + offsetT));
+    };
+  }
+
+  /** One LastOutcome per finished gate, in order. */
+  function gatesOf(snapshots: RunSnapshot[]) {
+    const out: NonNullable<RunSnapshot["lastOutcome"]>[] = [];
+    let lastAt = -1;
+    for (const s of snapshots) {
+      if (s.lastOutcome && s.lastOutcome.atMs !== lastAt) {
+        lastAt = s.lastOutcome.atMs;
+        out.push(s.lastOutcome);
+      }
+    }
+    return out;
+  }
+
+  it("measures every heard gate and leaves an unheard one null", () => {
+    const heard = gatesOf(simulate(newGameRun(), 900, trackCorridor).snapshots);
+    expect(heard.length).toBeGreaterThan(2);
+    for (const g of heard) expect(g.toneAccuracy).not.toBeNull();
+
+    const silent = gatesOf(simulate(newGameRun(), 900, () => pitch(null)).snapshots);
+    expect(silent.length).toBeGreaterThan(0);
+    for (const g of silent) {
+      expect(g.outcome).toBe("unheard");
+      expect(g.toneAccuracy).toBeNull();
+    }
+  });
+
+  it("moves less than the score when the same flight is early or late — timing is the score's job", () => {
+    // Exact timing-freedom (same take, any offset, identical number) is
+    // pinned in toneAccuracy.test.ts. Here the gate still cuts the voice off
+    // at its edges, so a shifted flight is a slightly different utterance;
+    // what must hold is that tone accuracy moves less than score accuracy.
+    const onTime = gatesOf(simulate(newGameRun(), 1600, shifted(0)).snapshots);
+    let scoreMoved = 0;
+    for (const offset of [-80, 80]) {
+      const off = gatesOf(simulate(newGameRun(), 1600, shifted(offset)).snapshots);
+      const n = Math.min(onTime.length, off.length);
+      expect(n).toBeGreaterThan(3);
+      for (let i = 0; i < n; i++) {
+        expect(off[i].tone).toBe(onTime[i].tone);
+        const dScore = Math.abs(off[i].accuracy - onTime[i].accuracy);
+        const dTone = Math.abs(off[i].toneAccuracy! - onTime[i].toneAccuracy!);
+        if (dScore > 0.05) scoreMoved++;
+        expect(dTone).toBeLessThanOrEqual(dScore + 0.02);
+      }
+    }
+    // The comparison must actually have been exercised.
+    expect(scoreMoved).toBeGreaterThan(0);
+  });
+
+  it("still measures the tone on a wall hit", () => {
+    // Wildly out of step: the corridor walls it off (score 0, heart lost),
+    // but the voice still made a shape, and that shape is still measured.
+    const gates = gatesOf(simulate(newGameRun(), 1600, shifted(400)).snapshots);
+    const walls = gates.filter((g) => g.outcome === "collision");
+    expect(walls.length).toBeGreaterThan(0);
+    for (const g of walls) {
+      expect(g.accuracy).toBe(0);
+      expect(g.toneAccuracy).not.toBeNull();
+    }
+  });
+
+  it("logs both numbers side by side", () => {
+    const run = newGameRun();
+    simulate(run, 900, trackCorridor);
+    const log = run.snapshot().gateLog;
+    expect(log.length).toBeGreaterThan(0);
+    for (const g of log) {
+      if (g.outcome === "unheard") expect(g.toneAccuracy).toBeNull();
+      else expect(typeof g.toneAccuracy).toBe("number");
+    }
+  });
+});
+
+describe("player tone shapes (spec B)", () => {
+  function shapeRun(capture: () => boolean): Run {
+    return new Run({ mode: "game", width: W, rand: seqRand([0, 0, 0.5, 0.75]), captureShapes: capture });
+  }
+  const measured = (run: Run) => run.snapshot().gateLog.filter((g) => g.toneAccuracy !== null).length;
+  const stored = (run: Run) => run.drainShapes().reduce((n, b) => n + b.count, 0);
+
+  it("keeps nothing without captureShapes, or while it says no", () => {
+    const off = new Run({ mode: "game", width: W, rand: seqRand([0, 0, 0.5, 0.75]) });
+    simulate(off, 900, trackCorridor);
+    expect(off.drainShapes()).toEqual([]);
+    const no = shapeRun(() => false);
+    simulate(no, 900, trackCorridor);
+    expect(no.drainShapes()).toEqual([]);
+  });
+
+  it("keeps one line per heard gate — the same gates tone accuracy measures", () => {
+    const run = shapeRun(() => true);
+    simulate(run, 900, trackCorridor);
+    expect(measured(run)).toBeGreaterThan(2);
+    const buckets = run.drainShapes();
+    expect(buckets.reduce((n, b) => n + b.count, 0)).toBe(measured(run));
+    for (const b of buckets) {
+      expect(b.key).toMatch(/^[1-4]$/);
+      expect(b.sum).toHaveLength(61);
+    }
+    expect(run.drainShapes()).toEqual([]);
+  });
+
+  it("includes wall hits, excludes unheard gates", () => {
+    const walls = shapeRun(() => true);
+    simulate(walls, 1600, (s) => pitch(s.activeGate ? (s.activeGate.corridorChao > 3 ? 1 : 5) : 3));
+    const log = walls.snapshot().gateLog;
+    expect(log.some((g) => g.outcome === "collision" && g.toneAccuracy !== null)).toBe(true);
+    expect(stored(walls)).toBe(measured(walls));
+
+    const silent = shapeRun(() => true);
+    simulate(silent, 900, () => pitch(null));
+    expect(silent.drainShapes()).toEqual([]);
   });
 });

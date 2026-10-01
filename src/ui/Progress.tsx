@@ -3,6 +3,8 @@ import { track } from "../analytics/client.ts";
 import { loadInventory } from "../audio/inventory.ts";
 import type { Tone } from "../game/gates.ts";
 import {
+  comboAccuracyFromHistory,
+  lifetimeComboAccuracy,
   lifetimeToneAccuracy,
   loadRunHistory,
   toneAccuracyFromHistory,
@@ -12,8 +14,11 @@ import { loadStreak } from "../game/streak.ts";
 import { wordsOfTone, type Word } from "../game/words.ts";
 import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
+import { fetchRunLogPage, fetchTrendRows } from "../data/runlog.ts";
+import { dailyTrend, trendKeys, type RunLogRow } from "../game/runTrend.ts";
 import { Leaderboard } from "./Leaderboard.tsx";
 import { FREE_FEATURES, GUEST_FEATURES, PRO_FEATURES, PRO_PRICE, TIER_LABEL } from "./plan.ts";
+import { PlayerToneEvolution } from "./PlayerToneEvolution.tsx";
 import { ToneAverageCard } from "./ToneAverageCard.tsx";
 import { TONE_LINE_COLOR } from "./toneColors.ts";
 
@@ -29,6 +34,7 @@ const OUTCOME_LABEL: Record<RunOutcome, string> = {
   finished: "finished",
   out_of_hearts: "out of hearts",
   quit: "quit",
+  restart: "restarted",
 };
 
 /** Eight short date labels, one every ~3 days ending today — the mock chart's x-axis. */
@@ -53,7 +59,80 @@ function mockToneSeries(n: number): number[] {
   return out;
 }
 
+function RunRow({
+  at,
+  score,
+  pct,
+  gates,
+  outcome,
+}: {
+  at: string;
+  score: number;
+  /** 0–100, or null when no gate was measured — "—", not "0%". */
+  pct: number | null;
+  gates: number;
+  outcome: RunOutcome;
+}) {
+  return (
+    <div className="run-history-row">
+      <span className="run-history-date">
+        {new Date(at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+      </span>
+      <span className="run-history-score">{score}</span>
+      <span className="run-history-detail">
+        {pct === null ? "—" : `${Math.round(pct)}%`} · {gates} gates
+      </span>
+      <span className={`run-badge run-badge-${outcome}`}>{OUTCOME_LABEL[outcome]}</span>
+    </div>
+  );
+}
+
+/** The device-local last-5 list — everyone's history, and a new Pro player's until the log has rows. */
+function LocalRuns({ history }: { history: ReturnType<typeof loadRunHistory> }) {
+  if (history.lastRuns.length === 0) return <p className="note">Play a run to see it here.</p>;
+  return (
+    <div className="run-history-list">
+      {history.lastRuns.map((run) => {
+        // Tone accuracy across the run's single-tone and pair gates. A run
+        // from before the reset has none measured.
+        const combos = Object.values(run.perCombo ?? {});
+        const gates =
+          TONES.reduce((sum, t) => sum + run.perTone[t].gates, 0) + combos.reduce((sum, c) => sum + c.gates, 0);
+        const accSum =
+          TONES.reduce((sum, t) => sum + run.perTone[t].accSum, 0) + combos.reduce((sum, c) => sum + c.accSum, 0);
+        return (
+          <RunRow
+            key={run.atISO}
+            at={run.atISO}
+            score={run.score}
+            pct={gates > 0 ? (accSum / gates) * 100 : null}
+            gates={run.gates}
+            outcome={run.outcome}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 type AccuracyTab = "accuracy" | "progress";
+
+const LOG_PAGE_SIZE = 20;
+
+/** "2" → "Tone 2"; "3-2" → "3 + 2". */
+function keyLabel(key: string): string {
+  return key.includes("-") ? key.split("-").join(" + ") : `Tone ${key}`;
+}
+
+/** A chart line takes its (first) tone's colour. */
+function keyColor(key: string): string {
+  return TONE_LINE_COLOR[Number(key[0]) as Tone];
+}
+
+function shortDay(day: string): string {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
 
 interface Props {
   /** Opens the EarlyBird modal — used only by the pricing card's "Join EarlyBird" CTA now. */
@@ -114,6 +193,16 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
     () => (usingLifetimeAccuracy ? lifetimeToneAccuracy(history) : toneAccuracyFromHistory(history)),
     [history, usingLifetimeAccuracy],
   );
+  // Pair combos, same last-5 / lifetime fallback as the tones above.
+  const comboAccuracy = useMemo(
+    () => (usingLifetimeAccuracy ? lifetimeComboAccuracy(history) : comboAccuracyFromHistory(history)),
+    [history, usingLifetimeAccuracy],
+  );
+  // A returning player whose per-tone numbers were reset when tone accuracy
+  // replaced corridor accuracy (runHistory.ts, STATS_VERSION): say why the
+  // bars are empty instead of letting it look like lost progress.
+  const accuracyJustReset =
+    history.totalRuns > 0 && toneAccuracy.every((t) => t.gates === 0) && comboAccuracy.length === 0;
   const streak = useMemo(() => loadStreak(), [version]);
 
   // Mock accuracy-over-time data for the Pro teaser chart — generated once so
@@ -134,38 +223,58 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
   const [selectedTone, setSelectedTone] = useState<Tone>(1);
   const isPro = tier === "pro";
 
+  // Pro: the server run log (spec C). `version` re-reads after a sign-in
+  // change, same as the local stats above.
+  const [runLog, setRunLog] = useState<{ rows: RunLogRow[]; total: number; loaded: boolean }>({
+    rows: [],
+    total: 0,
+    loaded: false,
+  });
+  const [trendRows, setTrendRows] = useState<Awaited<ReturnType<typeof fetchTrendRows>> | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  useEffect(() => {
+    if (!isPro) return;
+    let live = true;
+    void fetchRunLogPage(0, LOG_PAGE_SIZE).then((p) => live && setRunLog({ ...p, loaded: true }));
+    void fetchTrendRows().then((r) => live && setTrendRows(r));
+    return () => {
+      live = false;
+    };
+  }, [isPro, version]);
+  const loadMoreRuns = async () => {
+    setLoadingMore(true);
+    const p = await fetchRunLogPage(Math.ceil(runLog.rows.length / LOG_PAGE_SIZE), LOG_PAGE_SIZE);
+    setRunLog((cur) => ({ rows: [...cur.rows, ...p.rows], total: p.total || cur.total, loaded: true }));
+    setLoadingMore(false);
+  };
+  const trend = useMemo(() => dailyTrend(trendRows ?? []), [trendRows]);
+  const proKeys = useMemo(() => trendKeys(trend), [trend]);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const activeKey = selectedKey && trend.has(selectedKey) ? selectedKey : (proKeys[0] ?? null);
+  const proSeries = useMemo(() => {
+    const pts = activeKey ? (trend.get(activeKey) ?? []) : [];
+    return { labels: pts.map((p) => shortDay(p.day)), data: pts.map((p) => Math.round(p.accuracy * 100)) };
+  }, [trend, activeKey]);
+
   /** Each teaser CTA fires its own named event (see call sites below) before scrolling. */
   const scrollToPricing = () => {
     document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  /**
-   * Full trends/tone-shape charts and a >5-run history aren't built for any
-   * tier yet (see docs/flappytone-SPEC-monetization-launch.md, "Explicitly
-   * OUT of scope for launch"). A Pro player has already paid, so they get a
-   * plain "Soon" instead of an upsell that would just re-sell them the thing
-   * they own; guest/free keep the existing Pro-locked preview.
-   */
-  const soonOrLockBadge = isPro ? (
-    <span className="soon-badge">Soon</span>
-  ) : (
-    <span className="pro-badge">🔒 Pro</span>
+  /** The Pro lock for a teaser; a Pro player never sees a teaser (each card has a real Pro branch). */
+  const lockBadge = <span className="pro-badge">🔒 Pro</span>;
+  const lockCta = (label: string, card: string) => (
+    <button
+      type="button"
+      className="link progress-card-cta"
+      onClick={() => {
+        track({ type: "progress_locked_cta_click", card });
+        scrollToPricing();
+      }}
+    >
+      {label}
+    </button>
   );
-  const soonOrLockCta = (label: string, card: string) =>
-    isPro ? (
-      <p className="note progress-card-cta-soon">Coming soon.</p>
-    ) : (
-      <button
-        type="button"
-        className="link progress-card-cta"
-        onClick={() => {
-          track({ type: "progress_locked_cta_click", card });
-          scrollToPricing();
-        }}
-      >
-        {label}
-      </button>
-    );
 
   return (
     <div className="screen progress-screen">
@@ -258,15 +367,17 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
               Accuracy progress
             </button>
           </div>
-          {activeTab === "progress" && soonOrLockBadge}
+          {activeTab === "progress" && !isPro && lockBadge}
         </div>
 
         {activeTab === "accuracy" ? (
           <>
             <p className="note">
-              {usingLifetimeAccuracy
-                ? "Averaged over all your runs."
-                : `Averaged over your last ${Math.min(5, history.lastRuns.length)} runs.`}
+              {accuracyJustReset
+                ? "Tone accuracy measures how close the shape of your tone is compared to the average shape of the reference speaker."
+                : usingLifetimeAccuracy
+                  ? "Tone accuracy, averaged over all your runs."
+                  : `Tone accuracy, averaged over your last ${Math.min(5, history.lastRuns.length)} runs.`}
             </p>
             <div className="breakdown">
               {toneAccuracy.map((t) => (
@@ -286,76 +397,153 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
                 </div>
               ))}
             </div>
-          </>
-        ) : (
-          <>
-            <p className="note">Accuracy over time for the selected tone (example data).</p>
-            <div className="tone-pills">
-              {TONES.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  className={`tone-pill${selectedTone === t ? " tone-pill-active" : ""}`}
-                  style={selectedTone === t ? { background: TONE_LINE_COLOR[t] } : undefined}
-                  onClick={() => setSelectedTone(t)}
-                >
-                  Tone {t}
-                </button>
-              ))}
-            </div>
-            <Suspense fallback={<div className="acc-chart acc-chart-loading" aria-hidden />}>
-              <AccuracyProgressChart
-                tone={selectedTone}
-                labels={mock.labels}
-                data={mock.series[selectedTone]}
-              />
-            </Suspense>
-            {soonOrLockCta(
-              "🔒 Compare against your own attempts — unlock with Pro",
-              "accuracy_chart",
+            {comboAccuracy.length > 0 && (
+              <>
+                <p className="acc-subhead">Tone pairs</p>
+                <div className="breakdown">
+                  {comboAccuracy.map((c) => (
+                    <div
+                      className="breakdown-row"
+                      key={c.key}
+                      aria-label={`Tone ${c.tones[0]} then tone ${c.tones[1]}: ${Math.round(c.pct)}%`}
+                    >
+                      <span className="syllable" aria-hidden>
+                        {c.tones.map((t, i) => (
+                          <span key={i}>
+                            {i > 0 && " + "}
+                            <span style={{ color: TONE_LINE_COLOR[t] }}>{t}</span>
+                          </span>
+                        ))}
+                      </span>
+                      <span className="bar">
+                        <span
+                          className="bar-fill"
+                          style={{
+                            width: `${c.pct}%`,
+                            background: `linear-gradient(90deg, ${TONE_LINE_COLOR[c.tones[0]]}, ${TONE_LINE_COLOR[c.tones[1]]})`,
+                          }}
+                          aria-hidden
+                        />
+                      </span>
+                      <span className="pct">{Math.round(c.pct)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </>
+        ) : (
+          isPro ? (
+            <>
+              {activeKey === null ? (
+                <p className="note">
+                  {trendRows === null
+                    ? "Loading your trend…"
+                    : "Your daily trend starts with your next run."}
+                </p>
+              ) : (
+                <>
+                  <p className="note">Tone accuracy per day, from every run since you went Pro.</p>
+                  <div className="tone-pills">
+                    {proKeys.map((k) => (
+                      <button
+                        key={k}
+                        type="button"
+                        className={`tone-pill${activeKey === k ? " tone-pill-active" : ""}`}
+                        style={activeKey === k ? { background: keyColor(k) } : undefined}
+                        onClick={() => setSelectedKey(k)}
+                      >
+                        {keyLabel(k)}
+                      </button>
+                    ))}
+                  </div>
+                  <Suspense fallback={<div className="acc-chart acc-chart-loading" aria-hidden />}>
+                    <AccuracyProgressChart
+                      subject={keyLabel(activeKey).toLowerCase()}
+                      color={keyColor(activeKey)}
+                      labels={proSeries.labels}
+                      data={proSeries.data}
+                    />
+                  </Suspense>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="note">Accuracy over time for the selected tone (example data).</p>
+              <div className="tone-pills">
+                {TONES.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className={`tone-pill${selectedTone === t ? " tone-pill-active" : ""}`}
+                    style={selectedTone === t ? { background: TONE_LINE_COLOR[t] } : undefined}
+                    onClick={() => setSelectedTone(t)}
+                  >
+                    Tone {t}
+                  </button>
+                ))}
+              </div>
+              <Suspense fallback={<div className="acc-chart acc-chart-loading" aria-hidden />}>
+                <AccuracyProgressChart
+                  subject={`tone ${selectedTone}`}
+                  color={TONE_LINE_COLOR[selectedTone]}
+                  labels={mock.labels}
+                  data={mock.series[selectedTone]}
+                  example
+                />
+              </Suspense>
+              {lockCta(
+                "🔒 Compare against your own attempts — unlock with Pro",
+                "accuracy_chart",
+              )}
+            </>
+          )
         )}
       </section>
 
-      {/* ---- Run history */}
+      {/* ---- Run history. Pro: every run since they went Pro, from the
+           server log (spec C). Everyone else: the last 5, this device only. */}
       <section className="progress-card sticker-card">
         <div className="progress-card-header">
           <h3>Run history</h3>
-          <span className="badge-solid badge-solid-jade">Last 5 runs</span>
+          <span className="badge-solid badge-solid-jade">{isPro ? "All runs" : "Last 5 runs"}</span>
         </div>
-        <p className="note">Shows runs from this device only.</p>
-        {history.lastRuns.length === 0 ? (
-          <p className="note">Play a run to see it here.</p>
+        {isPro ? (
+          <>
+            <p className="note">
+              {runLog.total > 0
+                ? `${runLog.total} ${runLog.total === 1 ? "run" : "runs"} since you went Pro.`
+                : "Your full history starts now and is saved to your account."}
+            </p>
+            {runLog.rows.length > 0 ? (
+              <div className="run-history-list">
+                {runLog.rows.map((r) => (
+                  <RunRow
+                    key={r.id}
+                    at={r.played_at}
+                    score={r.score}
+                    pct={r.tone_acc === null ? null : r.tone_acc * 100}
+                    gates={r.gates}
+                    outcome={r.outcome}
+                  />
+                ))}
+              </div>
+            ) : (
+              runLog.loaded && <LocalRuns history={history} />
+            )}
+            {runLog.rows.length < runLog.total && (
+              <button type="button" className="link" disabled={loadingMore} onClick={() => void loadMoreRuns()}>
+                {loadingMore ? "Loading…" : "Show more runs"}
+              </button>
+            )}
+          </>
         ) : (
-          <div className="run-history-list">
-            {history.lastRuns.map((run) => {
-              const gates = TONES.reduce((sum, t) => sum + run.perTone[t].gates, 0);
-              const accSum = TONES.reduce((sum, t) => sum + run.perTone[t].accSum, 0);
-              const pct = gates > 0 ? Math.round((accSum / gates) * 100) : 0;
-              return (
-                <div className="run-history-row" key={run.atISO}>
-                  <span className="run-history-date">
-                    {new Date(run.atISO).toLocaleDateString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
-                  <span className="run-history-score">{run.score}</span>
-                  <span className="run-history-detail">
-                    {pct}% · {run.gates} gates
-                  </span>
-                  <span className={`run-badge run-badge-${run.outcome}`}>
-                    {OUTCOME_LABEL[run.outcome]}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-        {soonOrLockCta(
-          `🔒 See all ${history.totalRuns} runs & trends — unlock with Pro`,
-          "run_history",
+          <>
+            <p className="note">Shows runs from this device only.</p>
+            <LocalRuns history={history} />
+            {lockCta(`🔒 See all ${history.totalRuns} runs & trends — unlock with Pro`, "run_history")}
+          </>
         )}
       </section>
 
@@ -363,21 +551,29 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
       <section className="progress-card sticker-card">
         <div className="progress-card-header">
           <h3>See how your tones evolve over time</h3>
-          {soonOrLockBadge}
+          {!isPro && lockBadge}
         </div>
-        <div className="tone-average-grid">
-          {TONES.map((t) => (
-            <ToneAverageCard
-              key={t}
-              tone={t}
-              words={wordsByTone.get(t) ?? []}
-              showCaption={false}
-            />
-          ))}
-        </div>
-        {soonOrLockCta(
-          "🔒 Compare against your own attempts — unlock with Pro",
-          "tone_evolution",
+        {isPro ? (
+          // Spec B: the player's own average shape over Jane's, per tone
+          // and per combo, with an earlier point to compare against.
+          <PlayerToneEvolution key={version} />
+        ) : (
+          <>
+            <div className="tone-average-grid">
+              {TONES.map((t) => (
+                <ToneAverageCard
+                  key={t}
+                  tone={t}
+                  words={wordsByTone.get(t) ?? []}
+                  showCaption={false}
+                />
+              ))}
+            </div>
+            {lockCta(
+              "🔒 Compare against your own attempts — unlock with Pro",
+              "tone_evolution",
+            )}
+          </>
         )}
       </section>
 

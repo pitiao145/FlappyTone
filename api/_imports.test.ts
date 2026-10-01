@@ -45,7 +45,9 @@ describe("api/ deploy surface", () => {
     expect(files.filter((f) => !f.startsWith("_")).sort()).toEqual([
       "newsletter.ts",
       "run.ts",
+      "runlog.ts",
       "score.ts",
+      "shapes.ts",
       "webhook-ls.ts",
     ]);
   });

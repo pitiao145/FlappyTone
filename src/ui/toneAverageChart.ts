@@ -102,3 +102,56 @@ export function drawToneAverageChart(
   });
   ctx.stroke();
 }
+
+/**
+ * The player's own average over Jane's (spec B): Jane's reference average in
+ * neutral ink, the player's current average bold in the tone's color, and an
+ * earlier average (the comparison point) dashed and faint. All three are on
+ * the 61-point grid, same crop as the card chart above.
+ *
+ * The player's lines are in THEIR calibrated chao space, Jane's in hers — the
+ * shape is comparable, the height only as far as calibration lines up.
+ */
+export function drawPlayerShapeChart(
+  canvas: HTMLCanvasElement,
+  lines: { jane: number[] | null; now: number[] | null; then: number[] | null },
+  tint: string,
+  width: number,
+  height: number,
+): void {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  const y = (chao: number) => ((TOP - chao) / (TOP - BOTTOM)) * height;
+
+  ctx.strokeStyle = rgba("grid", 0.35);
+  ctx.lineWidth = 1;
+  for (let chao = 1; chao <= 5; chao++) {
+    ctx.beginPath();
+    ctx.moveTo(0, y(chao));
+    ctx.lineTo(width, y(chao));
+    ctx.stroke();
+  }
+
+  const stroke = (line: number[] | null, style: string, w: number, dash: number[]) => {
+    if (!line || line.length < 2) return;
+    ctx.strokeStyle = style;
+    ctx.lineWidth = w;
+    ctx.setLineDash(dash);
+    ctx.beginPath();
+    line.forEach((chao, i) => {
+      const px = (i / (line.length - 1)) * width;
+      if (i === 0) ctx.moveTo(px, y(chao));
+      else ctx.lineTo(px, y(chao));
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+  };
+  stroke(lines.jane, rgba("ink", 0.45), 2, []);
+  stroke(lines.then, `${tint} 0.45)`, 2, [5, 4]);
+  stroke(lines.now, `${tint} 0.95)`, 2.5, []);
+}

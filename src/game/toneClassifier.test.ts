@@ -4,6 +4,7 @@ import type { Tone } from "./gates.ts";
 import { AVERAGED_TONE_SHAPE } from "./toneAverages.ts";
 import { resetTuning, setTuning } from "./tuning.ts";
 import type { Contour, ContourPoint } from "./contours.ts";
+import { corridorChaoAt, shapeForTone } from "./gates.ts";
 
 const TONES: Tone[] = [1, 2, 3, 4];
 
@@ -218,17 +219,16 @@ describe("classifyTone", () => {
   });
 
   describe("margin / ambiguity", () => {
-    it("reports none when the winner doesn't clear the runner-up by the margin threshold", () => {
+    it("reports none when the winning family doesn't clear the runner-up by the margin threshold", () => {
       try {
         const attempt = contourFromTone(2, 800);
         // A clear win at the shipped default margin.
         expect(classifyTone(attempt)?.tone).toBe(2);
 
-        // Cranking the margin requirement far past what any real winner
-        // could clear turns the same clean attempt into "none" — proving
-        // the winner-minus-runner-up subtraction is actually wired in, not
-        // just the raw confidence floor.
-        setTuning({ toneClassifierMarginThreshold: 0.95 });
+        // A margin no score in 0..1 can clear turns the same clean attempt
+        // into "none" — proving the family-vs-family subtraction is wired
+        // in, not just the raw confidence floor.
+        setTuning({ toneClassifierMarginThreshold: 1.01 });
         expect(classifyTone(attempt)?.tone).toBe("none");
       } finally {
         resetTuning();
@@ -236,59 +236,38 @@ describe("classifyTone", () => {
     });
   });
 
-  describe("T2/T3 dip detection", () => {
-    it("does not nudge a genuine T2 attempt toward T3 at the shipped default", () => {
-      // Regression guard for the exact false-positive risk this mechanism
-      // carries: T2's own averaged template has an interior dip nearly as
-      // deep as T3's (~0.94 vs ~0.99 chao at 16-point resolution), so a
-      // naively low threshold would boost T3 during ordinary correct T2
-      // attempts too. The shipped default sits above both.
-      expect(classifyTone(contourFromTone(2, 800))?.tone).toBe(2);
+  describe("T2 vs T3", () => {
+    /** A shape given as values evenly spread over `durationMs`. */
+    function contourOf(values: number[], durationMs = 900): Contour {
+      return {
+        points: values.map((chao, i) => ({ tMs: (i / (values.length - 1)) * durationMs, chao })),
+        startedAtMs: 0,
+        endedAtMs: durationMs,
+      };
+    }
+
+    it("anchors the vote on the averages: the T2 average votes about -1, the T3 average about +1", () => {
+      const t2 = classifyTone(contourOf(AVERAGED_TONE_SHAPE[2]));
+      const t3 = classifyTone(contourOf(AVERAGED_TONE_SHAPE[3]));
+      expect(t2?.tone).toBe(2);
+      expect(t3?.tone).toBe(3);
+      // Not exactly ±1: the shape vote reads the onset-trimmed contour.
+      expect(t2!.t2t3Cue!).toBeCloseTo(-1, 0);
+      expect(t3!.t2t3Cue!).toBeCloseTo(1, 0);
+      expect(t2!.decisive && t3!.decisive).toBe(true);
     });
 
-    it("nudges an ambiguous dip-shaped attempt toward T3 once the dip bonus is strengthened", () => {
-      try {
-        // A shape whose correlation alone favors T2 but not confidently
-        // (T2 ≈0.93, T3 ≈0.85 — margin ≈0.09, under the default 0.12 floor)
-        // and whose interior dip (≈0.95 chao) sits just under the shipped
-        // default dip threshold (1.1), so the bonus doesn't fire yet.
-        const n = 16;
-        const points: ContourPoint[] = Array.from({ length: n }, (_, k) => {
-          const t = k / (n - 1);
-          const chao =
-            t < 0.45 ? 3 - 1.5 * (t / 0.45) : 1.5 + 2.5 * ((t - 0.45) / 0.55);
-          return { tMs: t * 900, chao };
-        });
-        const contour: Contour = { points, startedAtMs: 0, endedAtMs: 900 };
-
-        // At the shipped default, the correlation margin alone isn't
-        // confident enough — ambiguous.
-        expect(classifyTone(contour)?.tone).toBe("none");
-
-        // Lowering the dip threshold below this shape's own depth and
-        // strengthening the bonus (and, since T3's boosted score clamps at
-        // 1, also loosening the margin floor to let that clamped score
-        // actually clear it) flips the same input to a confident T3 pick —
-        // proving the bonus is actually wired into the final score, not
-        // just present in the tuning object.
-        setTuning({
-          toneClassifierDipThresholdChao: 0.9,
-          toneClassifierDipBonus: 0.3,
-          toneClassifierMarginThreshold: 0.05,
-        });
-        expect(classifyTone(contour)?.tone).toBe(3);
-      } finally {
-        resetTuning();
-      }
+    it("reports no T2/T3 vote for a level or falling shape", () => {
+      expect(classifyTone(flatContour(4.5))?.t2t3Cue).toBeNull();
+      expect(classifyTone(contourFromTone(4, 800))?.t2t3Cue).toBeNull();
     });
 
-    it("recognizes a real hold-then-rise T3 that a moderate dip bonus alone couldn't rescue", () => {
-      // Reported directly against a played-back Lab session (25 Aug 2026):
-      // a genuine T3 attempt that dips fast, holds the floor for most of the
-      // utterance, then rises late and steeply — read as T2 or "none" every
-      // time under the old argmin-based position measurement, since a long
-      // flat floor puts the *lowest single sample* near where the floor
-      // starts, not where it ends.
+    it("recognizes a real hold-then-rise T3, however long the hold", () => {
+      // Reported against a played-back Lab session (25 Aug 2026): a genuine
+      // T3 that dips fast, holds the floor, then rises late and steeply read
+      // as T2 or "none" under shape correlation alone. The fall is over in
+      // the first tenth, so the drop is measured on the untrimmed contour —
+      // the onset trim would cut it away.
       function holdThenRise(riseStartFrac: number): Contour {
         const n = 40;
         const durationMs = 900;
@@ -305,54 +284,54 @@ describe("classifyTone", () => {
         });
         return { points, startedAtMs: 0, endedAtMs: durationMs };
       }
-
-      // A long hold (rise doesn't start until 80-85% through) is
-      // unambiguously T3.
-      expect(classifyTone(holdThenRise(0.8))?.tone).toBe(3);
-      expect(classifyTone(holdThenRise(0.85))?.tone).toBe(3);
-
-      // A short hold is a genuine T2 shape and must stay T2, not get pulled
-      // toward T3 by the new plateau signal.
-      expect(classifyTone(holdThenRise(0.4))?.tone).toBe(2);
-      expect(classifyTone(holdThenRise(0.5))?.tone).toBe(2);
+      // Re-baselined 28 Sep 2026: the old test also required the 0.4/0.5
+      // holds to read T2. A fall of 2 chao down to chao 1 is a T3 by every
+      // measure on Jane's real clips — none of her 47 textbook T2s drops
+      // below ~1.8 — so the T2 case below is a genuine T2 shape instead.
+      for (const riseStart of [0.4, 0.5, 0.8, 0.85]) {
+        expect(classifyTone(holdThenRise(riseStart))?.tone).toBe(3);
+      }
     });
 
-    it("does not let the relaxed plateau gate pull a real T2 attempt toward T3", () => {
-      // Regression guard for the exact failure the plateau fix introduced:
-      // T2's own averaged dip is wide enough, once resampled to 16 points,
-      // to look like a small "plateau" too — the gate has to sit above that
-      // natural width, not just above a bare single-point dip.
-      expect(classifyTone(contourFromTone(2, 800))?.tone).toBe(2);
+    it("keeps a real T2 — a shallow early dip — as T2", () => {
+      const t2 = Array.from({ length: 30 }, (_, k) => {
+        const t = k / 29;
+        return t < 0.3 ? 2.9 - 0.6 * (t / 0.3) : 2.3 + 2.6 * ((t - 0.3) / 0.7);
+      });
+      const result = classifyTone(contourOf(t2));
+      expect(result?.tone).toBe(2);
+      expect(result?.decisive).toBe(true);
     });
 
-    it("position gate blocks the bonus for a deep dip that sits early (T2-shaped), not late", () => {
+    it("never reads the fallback T3 corridor (textbook 214, from jane_ma3) as T2", () => {
+      // It starts near chao 2 and drops only ~1, right on the drop cue's
+      // midpoint — the low-point vote is what keeps it T3.
+      const shape = shapeForTone(3);
+      const values = Array.from({ length: 50 }, (_, k) => corridorChaoAt(shape, k / 49));
+      expect(classifyTone(contourOf(values, 1250))?.tone).toBe(3);
+    });
+
+    it("says none rather than guess inside the dead zone", () => {
       try {
-        const n = 16;
-        const dipT = 0.28;
-        const points: ContourPoint[] = Array.from({ length: n }, (_, k) => {
-          const t = k / (n - 1);
-          const chao =
-            t < dipT
-              ? 3 - 1.5 * (t / dipT)
-              : 1.5 + 2.5 * ((t - dipT) / (1 - dipT));
-          return { tMs: t * 900, chao };
-        });
-        const contour: Contour = { points, startedAtMs: 0, endedAtMs: 900 };
-
-        // A deep (≈1.0 chao) interior dip, but at ~20% through — T2's
-        // natural position, not T3's (≈50%). Correlation alone already
-        // favors T2 comfortably (≈0.98 vs ≈0.61). Lowering the depth
-        // threshold and cranking the bonus enough that, unguarded by
-        // position, T3 (0.61 + 0.5, clamped to 1) would sail past T2
-        // (0.98) — the position gate is the only thing stopping that.
-        setTuning({
-          toneClassifierDipThresholdChao: 0.5,
-          toneClassifierDipBonus: 0.5,
-        });
-        expect(classifyTone(contour)?.tone).toBe(2);
+        setTuning({ toneClassifierT23DeadZone: 1.6 });
+        expect(classifyTone(contourOf(AVERAGED_TONE_SHAPE[3]))?.tone).toBe("none");
       } finally {
         resetTuning();
       }
+    });
+
+    it("never lets a close call or a lost dip decide a heart", () => {
+      // Halfway between the two averages: may be named, never decisive.
+      const midway = AVERAGED_TONE_SHAPE[2].map((v, i) => (v + AVERAGED_TONE_SHAPE[3][i]) / 2);
+      expect(classifyTone(contourOf(midway))?.decisive).toBe(false);
+
+      // The T2 average with 150ms of its dip unvoiced — what creak does.
+      // Still named T2, but the gap takes away the right to cost a heart.
+      const t2 = contourOf(AVERAGED_TONE_SHAPE[2]);
+      const gapped = { ...t2, points: t2.points.filter((p) => p.tMs < 250 || p.tMs > 400) };
+      const read = classifyTone(gapped);
+      expect(read?.tone).toBe(2);
+      expect(read?.decisive).toBe(false);
     });
   });
 });

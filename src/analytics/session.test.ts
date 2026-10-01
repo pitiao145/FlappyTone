@@ -56,6 +56,7 @@ describe("gateEvent", () => {
     tones: [3],
     outcome: "unheard",
     accuracy: 0,
+    toneAccuracy: null,
     samples: 38,
     voiced: 12,
     voicedFraction: 0.3157894736842105,
@@ -74,11 +75,17 @@ describe("gateEvent", () => {
       tones: [3],
       outcome: "unheard",
       acc: 0,
+      toneAcc: null,
       uttMs: 143,
       voicedFrac: 0.316,
       seeded: 0,
       excMs: 413,
     });
+  });
+
+  it("rounds a heard gate's tone accuracy alongside its score accuracy", () => {
+    const heard = gateEvent({ ...entry, outcome: "collision", accuracy: 0, toneAccuracy: 0.87654 }, 2);
+    expect(heard).toMatchObject({ acc: 0, toneAcc: 0.877 });
   });
 
   it("carries no per-frame data — only the gate summary", () => {
@@ -96,6 +103,7 @@ describe("gateEvent", () => {
       "outcome",
       "seeded",
       "tone",
+      "toneAcc",
       "tones",
       "type",
       "uttMs",

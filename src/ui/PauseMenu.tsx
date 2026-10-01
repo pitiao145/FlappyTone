@@ -2,7 +2,6 @@ import { useState } from "react";
 import { CORRIDOR_WIDTHS, type CorridorWidth } from "../game/gates.ts";
 import type { CueStyle, RunMode } from "../game/run.ts";
 import type { RunStats } from "../game/scoring.ts";
-import { toneBreakdown } from "../game/scoring.ts";
 import {
   loadCorridorWidth,
   loadCueStyle,
@@ -16,7 +15,8 @@ import {
   saveShowTranslation,
 } from "../game/settings.ts";
 import { Choice } from "./Choice.tsx";
-import { ChevronIcon, ToneMarkIcon } from "./toneIcons.tsx";
+import { ChevronIcon } from "./toneIcons.tsx";
+import { ToneAccuracyBreakdown } from "./ToneAccuracyBreakdown.tsx";
 import { GearIcon, PauseIcon, PlayIcon, RestartIcon } from "./icons.tsx";
 import { Switch } from "./Switch.tsx";
 
@@ -79,8 +79,6 @@ export function PauseMenu({
   const [pinyinShown, setPinyinShown] = useState<boolean>(loadShowPinyin);
   const [toneMarksShown, setToneMarksShown] = useState<boolean>(loadShowToneMarks);
 
-  const breakdown = stats ? toneBreakdown(stats) : null;
-
   return (
     <div className="pause-card">
       <div className="pause-header">
@@ -98,27 +96,9 @@ export function PauseMenu({
         )}
       </div>
 
-      {mode === "game" && breakdown && (
-        <div className="pause-accuracy">
-          <p className="pause-accuracy-label">This run — tone accuracy</p>
-          <div className="pause-accuracy-grid">
-            {breakdown.map((b) => (
-              <div className="pause-tone-card" key={b.tone}>
-                <ToneMarkIcon tone={b.tone} className="pause-tone-icon" />
-                <div className="pause-tone-bar">
-                  <div
-                    className="pause-tone-bar-fill"
-                    style={{ width: `${Math.round(b.pct ?? 0)}%` }}
-                  />
-                </div>
-                <span className="pause-tone-pct">
-                  {b.pct === null ? "—" : `${Math.round(b.pct)}%`}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Every mode with stats (game, drill, learn, pairs) — all practice
+          (spec A §4). Renders nothing until a gate has been measured. */}
+      {stats && <ToneAccuracyBreakdown stats={stats} />}
 
       <button className="primary resume-button" onClick={onResume}>
         <PlayIcon />

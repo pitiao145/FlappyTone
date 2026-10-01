@@ -62,7 +62,7 @@ export const PRO_FEATURES: string[] = [
   "Leaderboard under a name you choose",
   "Offline play (coming soon)",
   "Accuracy per tone across every run, plus its evolution over time (coming soon)",
-  "Your average tone shape, and how it evolves over time (coming soon)",
+  "Your average tone shape, and how it evolves over time",
   "Customize your bird & profile (coming soon)",
   "Every future feature, as it ships",
 ];

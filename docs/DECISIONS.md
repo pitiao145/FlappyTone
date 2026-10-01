@@ -286,6 +286,64 @@ everything. `lastRuns` and `lastPlayedDate` stay local: one is a display cache
 of *this* device, the other decides whether today continues the streak, and
 neither has an honest cross-device answer.
 
+### Player tone shapes: daily sums, an SQL add, and one table per job (28 Sep 2026)
+
+Spec B (`docs/SPECS/flappytone-SPEC-player-tone-average.md`) stores a Pro
+player's own average tone shape. Decisions made building it:
+
+- **Sums per day, not one row per attempt, and not merge-by-max.** A sum
+  plus a count answers "average up to D" and "average in a period" with one
+  row per key per day played. Merge-by-max — the account sync's rule —
+  cannot combine sums, so this is a separate write lane, not an extension of
+  `tone_accuracy_stats`.
+- **The add is an SQL function (`add_tone_shapes`), because PostgREST's
+  upsert can only replace a column.** Read-modify-write from `api/shapes.ts`
+  would race two tabs posting at once. The function is `security invoker`
+  (the service role already bypasses RLS, so definer rights would add
+  nothing) with execute revoked from PUBLIC (0009's lesson). Checked live:
+  two posts to one row summed element-wise, in order, count added.
+- **Keys match `tone_accuracy_stats` (`"2"`, `"3-2"`), not the spec's
+  `'t1'`/`'3+2'`,** so the two tables join on `key = target`.
+- **Capture is asked per gate (`captureShapes: () => getTier() === "pro"`),
+  not once at Run construction** — the same late-tier reason the run pool
+  reads the synchronous store. Posted once from `Game.tsx`'s run-effect
+  cleanup, which every end path (game over, quit, restart, leaving) goes
+  through; `keepalive` so it survives a navigation.
+- **Drawn in raw chao, not height-aligned.** The player's line is in their
+  calibrated chao space and Jane's in hers; spec A found a board that reads a
+  player low makes the T2/T3 cue lean T3. Only Jane's captures are in the
+  repo, so the mismatch could not be measured before shipping. Raw first;
+  whether to add a "shape only" (mean-height-aligned) view is decided after
+  real Pro runs exist to look at.
+
+### Pro run log: one row per run, a fifth sole writer (29 Sep 2026)
+
+Spec C (`docs/SPECS/flappytone-SPEC-pro-run-history.md`) stores a Pro
+player's all-time run history and feeds the per-day accuracy trend. Where it
+departs from the spec, and why:
+
+- **Keys are `"1".."4"` / `"3-2"`, not the spec's `"t1"` / `"3+2"`,** so
+  `run_log.per_key` joins `tone_accuracy_stats` and `player_tone_shapes` on
+  the same key. Same call spec B made.
+- **`restart` is a fourth outcome, stored as itself.** The game already
+  reports it (`RunEndReason`), and folding it into `quit` would lose the
+  difference between leaving and starting over. `RunOutcome` in
+  `runHistory.ts` gained it, so the local list labels it "restarted".
+- **A new `api/runlog.ts`, not an extension of `api/run.ts`.** `api/run.ts`
+  counts a run for every account and answers with a cap; this logs a full row
+  for Pro only and can fail without affecting the cap. Two jobs, two writers.
+  It is fired from `Game.tsx`'s `reportRunEnd`, not the effect cleanup that
+  posts shapes: the cleanup does not know how the run ended, `reportRunEnd`
+  does and every end path goes through it. Runs with no scored gate are
+  still logged (`tone_acc` null, empty `per_key`), since the run happened.
+- **The trend is read client-side** from each row's `per_key` (`day` +
+  `per_key` for every row) and aggregated in `dailyTrend`. Fine until a
+  player has thousands of runs; an RPC or view is the next step if it gets
+  slow, and needs no second table.
+- **No backfill, free runs never stored** (Pierre, as the spec says). A
+  player's first Pro session shows the local last 5 and a note until the
+  server has rows.
+
 ## Tone pairs
 
 ### Neutral tone gets a sentinel, not a new concept; pairs cap at exactly two syllables (19 Sep 2026)
@@ -820,6 +878,123 @@ the demo now visibly holds longer than the gate scores, for those two tones.
 Not fixed — see `tuning.ts`'s `gateDurationS` doc comment. Retune from the
 Lab if this gets revisited; don't just restore the clip length without
 re-checking T1's scores.
+
+## Score and tone accuracy are separate numbers (28 Sep 2026)
+
+One number used to do two jobs. A gate's "accuracy" was the corridor error on
+the gate's own clock (`scoreGate`) — right for a **game score**, where early,
+late or a wall hit should cost points, and wrong for **learning**: a correct
+tone said 150ms early scored low, and a wall hit scored 0 even when the shape
+was right. Pierre's product direction: the product teaches tones, the game is
+a wrapper. So every gate now gets two numbers (spec A,
+`docs/SPECS/flappytone-SPEC-tone-accuracy.md`), and they must not be merged
+back into one:
+
+- **Score** is unchanged: `scoreGate`, the boost, the mismatch collision,
+  Perfect/Good/OK, points, hearts, the leaderboard.
+- **Tone accuracy** (`src/game/toneAccuracy.ts`) is measured on the player's
+  own utterance, time-normalised, against the speaker's per-tone or
+  per-combo average, and feeds every stat a player learns from: per-tone and
+  per-combo stats, the pause/game-over/progress breakdowns, the visualiser.
+  It is measured in every mode and on a wall hit; only an unheard gate has
+  none.
+
+Decisions made while building it, each for a measured reason:
+
+- **T2 and T3 targets use the classifier's T2/T3 cue** (Pierre). The T2 and
+  T3 averages correlate 0.73, so on shape alone a T2 said for a T3 kept most
+  of its accuracy. With the cue (weight 0.8, a starting value from Jane's
+  clips): T2-for-T3 0.55, T3-for-T2 0.40, against 0.87/0.94 for the right
+  tone.
+- **Movement size and the cue are scaled by the shape match.** Without it a
+  T4 fall scored 0.56 as a T3 — the right *amount* of movement and a big
+  drop, in the wrong shape. With it, a tone from another family scores ~0.
+- **Pairs are judged against the exact combo's average**
+  (`AVERAGED_PAIR_SHAPE`, 5–20 clips per combo), simple even stretch, no
+  per-syllable cue. Combos with a neutral syllable return null and are never
+  stored.
+- **Measured on the utterance, not the gate.** `longestUtterance` uses the
+  same merge rule as `heardUtterance`, so a cough before the tone is its own
+  run and does not stretch the alignment. The gate still cuts the voice off
+  at its edges, so in the game an early or late flight is not bit-identical
+  — `run.test.ts` pins that it moves tone accuracy less than the score.
+
+**Old per-tone numbers were reset, not migrated** (Pierre): they meant
+corridor accuracy. Locally a `statsVersion` field (2) zeroes every per-tone
+number once and keeps runs, best score, gates, words and the streak. On the
+server a **new table** (`tone_accuracy_stats`, migration 0025, one row per
+target: `"2"` or `"3-2"`) replaces `tone_stats` rather than clearing it:
+sync is merge-by-max in both directions, so a cleared `tone_stats` would have
+been refilled by the first device (or old open tab) still holding an old
+lifetime total. A separate table makes that impossible by construction;
+`tone_stats` is marked deprecated and can be dropped once no old client
+writes it.
+
+**Open:** the fallback corridors (tutorial, wordless gates) are measured from
+Jane's citation `ma` takes and differ from her word averages — flown
+perfectly they score ~0.72–0.77. The reference choice for those gates is
+Pierre's to make; nothing switches it silently.
+
+## T2 vs T3 is decided by the dip, not by correlation (28 Sep 2026)
+
+Regenerating `toneAverages.ts` from 120 words to 211 clips (the
+`make-tone-averages` fix) broke two classifier tests, and checking why against
+Jane's real measured contours (`word_clips.contour`, 211 single-syllable
+textbook clips, `npm run classifier-check`) showed the classifier itself was
+the weak part, not the new averages. It told T2 from T3 by correlating the
+whole shape with each tone's average plus hand-tuned dip/plateau bonuses and a
+0.12 winner-over-runner-up margin. With more clips the T2 and T3 averages
+correlate 0.73 with each other (was 0.66), so real T2s sat inside the margin
+and read "none": 29 of 47 named correctly, down from 34. No retune could fix
+it — right and wrong reads overlapped in margin (能 read as a wrong T3 by
+0.125 while 16 correct T2s won by less), so every setting traded wall hits on
+correct speakers against correct reads, and the dip/plateau bonuses made no
+difference at all.
+
+**The replacement measures what phonetics says separates the two tones.**
+Correlation still picks the family — level (T1), dip-then-rise (T2/T3), fall
+(T4) — where it works well. Inside the dip-rise family, four votes, each placed
+on the line from the T2 average (-1) to the T3 average (+1): the drop before
+the low point (alone 96% on Jane's T2/T3 clips), the low point's height, the
+drop's share of the whole movement (scale-free), and the old correlation
+difference. The turning point's *timing*, the textbook cue, was measured and
+left out: 83% alone, and it made every combination worse — Jane's turning
+point moves more than her drop does. Every anchor is read off the averages,
+so a regeneration moves them with no hand-set chao values.
+
+Three details each came from a specific failure while building it:
+
+- **The low-point vote exists because of the fallback T3 corridor.** It is
+  measured from `jane_ma3` and is the textbook 214: it starts near chao 2 and
+  drops only ~1, right on the drop cue's midpoint, and read as T2. How low the
+  dip goes separates it, and that height is calibrated for this cue by
+  construction — the board's lower half is anchored on the player's own Tone 3
+  floor (PRD §5.4).
+- **The drop is measured on the untrimmed contour**, from the highest point
+  before the dip. The 25 Aug Lab case (a T3 that falls to the floor in its
+  first tenth and holds) lost its whole fall to the 5% onset trim. The onset is
+  protected instead by skipping a leading rise of more than 0.5 chao — neither
+  35 nor 214 begins by climbing, so that is a scoop or a tracker transient.
+- **Naming a tone and taking a heart are separate bars.** A T2/T3 read names
+  the tone outside a ±0.1 dead zone, but only costs a heart
+  (`ToneClassification.decisive`) at ±0.5, when no single cue votes for the
+  other tone by 1 or more, and when the dip has no voicing gap of 100ms+
+  (creak — rule 8). The dissent rule closed the documented "T3 80ms late
+  collides" gap in `run.test.ts`.
+
+Result on the 211 clips: 200 named correctly (was 185), T2 43/47 (was 34),
+T3 52/52 (was 46), boosts 184 (was 171), no wall hits on correct speech
+either way. Across eight simulated-trouble variants (miscalibrated range,
+shifted board, jitter + dropouts, creak gap, onset scoop): 1579 right with 2
+wall hits, against 1459 with 6. Known weak spot: a board that reads the player
+low (range ×1.3, shift −0.6) names only ~25 of 47 T2s — mostly as a
+non-decisive T3, so the boost is lost but no heart is. Test re-baselines, each
+with its reason in the test: the "hold-then-rise 0.4/0.5 must stay T2" cases
+(a 2-chao fall to chao 1 is a T3 by every measure on Jane's clips — none of her
+T2s dips below ~1.8), a shallow-T3 case that is now allowed to read T3
+non-decisively, and the bonus-mechanics tests, which tested code that is gone.
+**This changes live scoring** (the boost and the mismatch collision both read
+the classifier), so it needs flying in the Lab before it ships.
 
 ## Tone-mismatch collision / classifier boost (25–29 Aug 2026)
 

@@ -3957,7 +3957,7 @@
   gap: var(--space-4);
   overflow-x: auto;
   scrollbar-width: none;
-  max-width: min(52vw, 420px);
+  max-width: min(52vw, 600px);
   padding-inline: var(--space-2);
 }
 
@@ -5624,6 +5624,72 @@ div.hero-cards {
   color: var(--ink-muted);
 }
 
+/* Progress: the "Tone pairs" list under the per-tone bars. */
+.acc-subhead {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+/* Tone accuracy breakdown (ToneAccuracyBreakdown.tsx): single tones as the
+   tiles above, pair combos as a compact list below, weakest first. */
+.tone-acc-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tone-acc-group-label {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+.tone-acc-pairs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tone-acc-pair {
+  display: grid;
+  grid-template-columns: auto 1fr 3.2em;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-panel);
+}
+
+.tone-acc-pair .pause-tone-pct {
+  text-align: right;
+}
+
+.tone-acc-pair-label {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.tone-acc-pair-mark svg {
+  display: block;
+  width: 22px;
+  height: 16px;
+}
+
+.tone-acc-more {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+}
+
 .pause-action-row {
   display: flex;
   gap: var(--space-2);
@@ -7276,7 +7342,8 @@ button.switch-track.switch-on {
   background: var(--good);
 }
 
-.run-badge-quit {
+.run-badge-quit,
+.run-badge-restart {
   background: var(--ink-muted);
 }
 
@@ -8608,4 +8675,33 @@ button.switch-track.switch-on {
   .modal-card .feedback-rating {
     transition: none;
   }
+}
+
+/* ---- Progress: the player's own tone shape (spec B, Pro) */
+.player-shape-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.player-shape-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.player-shape-key {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  border-top: 2.5px solid var(--ink-muted);
+  vertical-align: middle;
+}
+.player-shape-key-now {
+  border-top-color: var(--ink);
+}
+.player-shape-key-then {
+  border-top: 2px dashed var(--ink);
+  opacity: 0.6;
 }

@@ -30,6 +30,9 @@ import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { getTier, tierReady, useTier } from "../data/tier.ts";
+import { postShapes } from "../data/shapes.ts";
+import { postRunLog } from "../data/runlog.ts";
+import { buildRunLogEntry } from "../game/runTrend.ts";
 import { resolvedPool } from "../game/words.ts";
 import type { Proficiency } from "../game/tiers.ts";
 import type { LevelChoice } from "../game/settings.ts";
@@ -422,8 +425,10 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         // actually finished on is the honest answer.
         voice: inventorySpeaker(),
       });
+      // Pro only (a no-op for everyone else): the all-time run log, spec C.
+      void postRunLog(buildRunLogEntry(snap.stats, mode, reason));
     },
-    [reportGates],
+    [reportGates, mode],
   );
 
   /**
@@ -532,6 +537,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // a normal tutorial teaches all four.
       tutorialTones: autoStart ? CALIBRATION_TONES : undefined,
       deferFill: true,
+      // Pro only (spec B). Asked per gate from the synchronous store, for the
+      // same reason `words` reads it: a late tier must not rebuild the Run.
+      captureShapes: () => getTier() === "pro",
     });
     runRef.current = run;
     reportedGatesRef.current = 0;
@@ -933,6 +941,10 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
 
     return () => {
       running = false;
+      // Every way a run ends (game over, quit, restart, leaving) tears this
+      // effect down, so this is the one POST per run. keepalive lets it
+      // outlive a page navigation. Fire-and-forget; empty for non-Pro.
+      void postShapes(run.drainShapes(), { keepalive: true });
       // Cancels an in-flight warm-up: a run torn down mid-hold must not start.
       warmGenRef.current += 1;
       warmingRef.current = false;
