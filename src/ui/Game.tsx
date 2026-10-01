@@ -10,8 +10,8 @@ import {
 } from "react";
 import { trackerNoiseConfig } from "../game/noise.ts";
 
-// Dev-only noisy-room overlay; lazy behind DEV so it never reaches dist/.
-const NoiseBadge = import.meta.env.DEV
+// Dev-only noisy-room overlay; lazy behind DEV/__NOISE_LAB__ so it never reaches a production dist/.
+const NoiseBadge = import.meta.env.DEV || __NOISE_LAB__
   ? lazy(() => import("../dev/NoiseBadge.tsx").then((m) => ({ default: m.NoiseBadge })))
   : null;
 import { track } from "../analytics/client.ts";

@@ -19,7 +19,14 @@ import { dropDevFixtures } from './src/dev/dropDevFixtures.ts'
 // api/ functions *from a phone* is the one thing this cannot do.
 const underVercelDev = process.env.FT_NO_SSL === "1"
 
+// Noisy-room test switch (docs/noise-plan.md §0): compiled into Vercel
+// *preview* builds so it can be played on a phone, and nowhere else — a
+// production build sees `false` and Rollup drops the badge and the ?noise=
+// switch entirely (hard rule 7). VERCEL_ENV is a Vercel system variable.
+const noiseLab = process.env.VERCEL_ENV === "preview" || process.env.FT_NOISE_LAB === "1"
+
 export default defineConfig({
+  define: { __NOISE_LAB__: JSON.stringify(noiseLab) },
   // prerenderLanding writes the landing copy into index.html so a crawler (and
   // every link-preview bot, none of which run JS) sees more than an empty root.
   // prettyUrls gives dev and preview the /app and /record URLs vercel.json
