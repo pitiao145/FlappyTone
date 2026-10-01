@@ -1334,7 +1334,7 @@ describe("Run — calibration flight uses fixed words, not random ones", () => {
   const calibrationWords: Word[] = wordsFrom([
     { id: "ma1b", hanzi: "媽", pinyin: "mā", tone: 1, file: "ma1b.wav", durationS: 0.55,
       polyline: [[0, 4.5], [1, 4.5]] },
-    { id: "mao1", hanzi: "貓", pinyin: "māo", tone: 1, file: "mao1.wav", durationS: 0.6,
+    { id: "shu1", hanzi: "書", pinyin: "shū", tone: 1, file: "shu1.wav", durationS: 0.6,
       polyline: [[0, 4.5], [1, 4.5]] },
     { id: "ma3b", hanzi: "馬", pinyin: "mǎ", tone: 3, file: "ma3b.wav", durationS: 1.25,
       polyline: [[0, 2.2], [1, 5]] },
@@ -1359,7 +1359,7 @@ describe("Run — calibration flight uses fixed words, not random ones", () => {
     });
   }
 
-  it("spawns exactly ma1b, mao1, ma3b, wo3 in order, even with an adversarial rand always at 0", () => {
+  it("spawns exactly ma1b, shu1, ma3b, wo3 in order, even with an adversarial rand always at 0", () => {
     const run = calibrationRun(() => 0);
     const { snapshots } = simulate(run, 3000, () => pitch(1));
     const seen: string[] = [];
@@ -1368,10 +1368,10 @@ describe("Run — calibration flight uses fixed words, not random ones", () => {
         if (g.word && !seen.includes(g.word.id)) seen.push(g.word.id);
       }
     }
-    expect(seen).toEqual(["ma1b", "mao1", "ma3b", "wo3"]);
+    expect(seen).toEqual(["ma1b", "shu1", "ma3b", "wo3"]);
   });
 
-  it("spawns exactly ma1b, mao1, ma3b, wo3 in order, even with an adversarial rand always at 0.999", () => {
+  it("spawns exactly ma1b, shu1, ma3b, wo3 in order, even with an adversarial rand always at 0.999", () => {
     const run = calibrationRun(() => 0.999);
     const { snapshots } = simulate(run, 3000, () => pitch(1));
     const seen: string[] = [];
@@ -1380,11 +1380,11 @@ describe("Run — calibration flight uses fixed words, not random ones", () => {
         if (g.word && !seen.includes(g.word.id)) seen.push(g.word.id);
       }
     }
-    expect(seen).toEqual(["ma1b", "mao1", "ma3b", "wo3"]);
+    expect(seen).toEqual(["ma1b", "shu1", "ma3b", "wo3"]);
   });
 
   it("falls back to pickWord for a fixed id missing from the inventory, without losing the gate or its tone", () => {
-    // No ma1b/mao1/ma3b/wo3 at all — every fixed id is missing.
+    // No ma1b/shu1/ma3b/wo3 at all — every fixed id is missing.
     const fallbackPool: Word[] = wordsFrom([
       { id: "t1only", hanzi: "八", pinyin: "bā", tone: 1, file: "t1only.wav", durationS: 0.5,
         polyline: [[0, 4.5], [1, 4.5]] },
@@ -1462,7 +1462,7 @@ describe("Run — calibration flight uses fixed words, not random ones", () => {
         if (g.word && !seen.includes(g.word.id)) seen.push(g.word.id);
       }
     }
-    expect(seen).toEqual(["ma1b", "mao1", "ma3b", "wo3"]);
+    expect(seen).toEqual(["ma1b", "shu1", "ma3b", "wo3"]);
   });
 });
 
