@@ -80,6 +80,8 @@ interface Props {
    * untouched, since that path never carries a challenge score.
    */
   challengeScore?: number | null;
+  /** Who set `challengeScore` (the link's `?n=`), when known. */
+  challengeName?: string | null;
 }
 
 export function TutorialDone({
@@ -89,7 +91,11 @@ export function TutorialDone({
   canvasWidth,
   canvasHeight,
   challengeScore,
+  challengeName,
 }: Props) {
+  const target = challengeName
+    ? `${challengeName}'s ${challengeScore?.toLocaleString()}`
+    : challengeScore?.toLocaleString();
   const base = COPY[variant];
   const copy =
     challengeScore == null
@@ -97,13 +103,13 @@ export function TutorialDone({
       : variant === "tutorial"
         ? {
             ...base,
-            body: `You've got the hang of it — time to beat ${challengeScore.toLocaleString()}.`,
+            body: `You've got the hang of it — time to beat ${target}.`,
             button: "Beat the score",
           }
         : variant === "calibration" || variant === "calibrationChallenge"
           ? {
               ...base,
-              body: `You're tuned up. Now go beat that ${challengeScore.toLocaleString()}.`,
+              body: `You're tuned up. Now go beat ${challengeName ? target : `that ${target}`}.`,
               button: "Beat the score",
             }
           : base;

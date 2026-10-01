@@ -66,6 +66,7 @@ import { SilentModeGate } from "../ui/SilentModeGate.tsx";
 import { TutorialDone } from "../ui/TutorialDone.tsx";
 import { Visualiser } from "../ui/Visualiser";
 import { micErrorCopy } from "../ui/micErrors";
+import { parseChallengeName } from "../share/shareName.ts";
 import { GameNav, type NavTab } from "./GameNav.tsx";
 import "../App.css";
 
@@ -207,6 +208,15 @@ export function parseChallengeScore(search: string): number | null {
   if (!Number.isFinite(n) || !Number.isInteger(n)) return null;
   if (n <= 0 || n > CHALLENGE_SCORE_MAX) return null;
   return n;
+}
+
+function challengeName(): string | null {
+  try {
+    return parseChallengeName(window.location.search);
+  } catch {
+    /* no window (tests) */
+  }
+  return null;
 }
 
 function challengeScore(): number | null {
@@ -388,6 +398,8 @@ export default function GameApp() {
    * does since none of those screens unmount GameApp.
    */
   const [challengeScoreState] = useState<number | null>(() => challengeScore());
+  /** Who set that score (`?n=`), so the banner reads "Pierre scored" rather than "Someone". */
+  const [challengeNameState] = useState<string | null>(() => challengeName());
   /**
    * What GameOver should offer, if anything — decided here, once the
    * tracking window for this run fills. Not the raw measurement: see
@@ -993,14 +1005,20 @@ export default function GameApp() {
     if (challengeScoreState != null) {
       track({ type: "challenge_landed", target: challengeScoreState });
     }
-    // Strip `c`/`ref`/`openExternalBrowser` (already captured above — the
+    // Strip `c`/`n`/`ref`/`openExternalBrowser` (already captured above — the
     // last is only ever read by LINE's own WebView, see share.ts's
     // challengeUrl) so a refresh mid-session doesn't re-trigger the "beat X"
     // banner or double-count `landed`'s ref.
     try {
       const params = new URLSearchParams(window.location.search);
-      if (params.has("c") || params.has("ref") || params.has("openExternalBrowser")) {
+      if (
+        params.has("c") ||
+        params.has("n") ||
+        params.has("ref") ||
+        params.has("openExternalBrowser")
+      ) {
         params.delete("c");
+        params.delete("n");
         params.delete("ref");
         params.delete("openExternalBrowser");
         const next = params.toString();
@@ -1142,6 +1160,7 @@ export default function GameApp() {
               canvasWidth={CANVAS_W}
               canvasHeight={GAME_CANVAS_H}
               challengeScore={challengeScoreState}
+              challengeName={challengeNameState}
               onDevLogin={() => setScreen("devlogin")}
             />
           )}
@@ -1198,6 +1217,7 @@ export default function GameApp() {
             canvasWidth={CANVAS_W}
             canvasHeight={GAME_CANVAS_H}
             challengeScore={challengeScoreState}
+            challengeName={challengeNameState}
           />
         )}
 
@@ -1366,6 +1386,7 @@ export default function GameApp() {
             onRecalibrate={setSettings}
             mode={lastModeRef.current}
             challengeScore={challengeScoreState}
+            challengeName={challengeNameState}
             onUpgrade={() => {
               // Guest chose to join: they already know an account is needed, so
               // go straight to the signup gate — no EarlyBird modal in between.

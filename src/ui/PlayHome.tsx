@@ -31,6 +31,8 @@ interface Props {
   canvasHeight: number;
   /** Non-null when this session arrived via a `?c=<score>` share link — see docs/flappytone-SPEC-share.md. */
   challengeScore: number | null;
+  /** Who set it (`?n=` on the share link); null falls back to "Someone". */
+  challengeName?: string | null;
 }
 
 /**
@@ -50,6 +52,7 @@ export function PlayHome({
   canvasWidth,
   canvasHeight,
   challengeScore,
+  challengeName,
 }: Props) {
   const error = externalError;
 
@@ -72,7 +75,7 @@ export function PlayHome({
           />
           {challengeScore != null && (
             <p className="prompt challenge-score">
-              <strong>Someone scored {challengeScore.toLocaleString()}.</strong>
+              <strong>{challengeName ?? "Someone"} scored {challengeScore.toLocaleString()}.</strong>
               <br />
               Practice your Mandarin tones and try to beat them!
             </p>

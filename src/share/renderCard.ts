@@ -101,6 +101,8 @@ function roundRect(
 export async function renderShareCard(
   stats: RunStats,
   history: RunHistoryStore,
+  /** Cleaned name from the share step; "" keeps the anonymous "I SCORED". */
+  name = "",
 ): Promise<Blob> {
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -195,7 +197,7 @@ export async function renderShareCard(
   // 4. Big score — "I scored" kicker + gold plaque number.
   ctx.fillStyle = INK_SOFT;
   ctx.font = `600 34px "${FONT_BODY}"`;
-  ctx.fillText("I SCORED", W / 2, y);
+  ctx.fillText(name ? `${name.toUpperCase()} SCORED` : "I SCORED", W / 2, y);
   y += 150;
 
   const gradient = ctx.createLinearGradient(0, y - 130, 0, y + 20);

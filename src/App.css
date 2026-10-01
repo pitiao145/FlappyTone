@@ -8066,6 +8066,20 @@ button.switch-track.switch-on {
   cursor: default;
 }
 
+.share-name-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 16px;
+  margin: 0 0 var(--space-4);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-md);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px; /* 16px stops iOS Safari zooming the page on focus */
+  text-align: center;
+}
+
 .join-modal-post-btn {
   --gold: #c98a3c;
   --gold-deep: #a86c20;

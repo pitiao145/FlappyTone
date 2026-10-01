@@ -33,6 +33,8 @@ import { ToneMarkIcon, TONE_SHORT_LABEL } from "./toneIcons.tsx";
 import { ShareIcon } from "./icons.tsx";
 import { renderShareCard } from "../share/renderCard.ts";
 import { downloadShareCard, shareRunResult } from "../share/share.ts";
+import { loadShareName, saveShareName } from "../share/shareName.ts";
+import { ShareNameModal } from "./ShareNameModal.tsx";
 
 type RunFeedbackSentiment = Extract<AnalyticsEvent, { type: "run_feedback" }>["sentiment"];
 
@@ -60,6 +62,8 @@ interface Props {
   mode: RunMode;
   /** The target this run was chasing, if it arrived via a `?c=<score>` challenge link. */
   challengeScore: number | null;
+  /** Who set `challengeScore`, from the link's `?n=` — null for an older or nameless link. */
+  challengeName?: string | null;
   /** Opens the account/upgrade path — a guest gets this instead of joining the board. */
   onUpgrade: () => void;
   /** Navigates to the full (week/month/all-time) leaderboard on the Progress screen. */
@@ -78,6 +82,7 @@ export function GameOver({
   onRecalibrate,
   mode,
   challengeScore,
+  challengeName,
   onUpgrade,
   onViewFullLeaderboard,
 }: Props) {
@@ -335,17 +340,26 @@ export function GameOver({
 
   const [shareBusy, setShareBusy] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [namingShare, setNamingShare] = useState(false);
 
-  const onShare = async () => {
+  // Fired when Share is tapped (before the name step, the card or the share
+  // sheet) — a cancelled share still counts as intent, per the spec.
+  const startShare = () => {
     if (shareBusy) return;
-    // Fired before the share sheet opens (or the card even renders) — a
-    // cancelled share still counts as intent, per the spec.
     track({ type: "share_clicked", mode, score: stats.score, is_best: isNewBest });
+    setNamingShare(true);
+  };
+
+  // Share is two steps: the name prompt (startShare), then this.
+  const onShare = async (name: string) => {
+    if (shareBusy) return;
+    saveShareName(name);
+    setNamingShare(false);
     setShareBusy(true);
     setShareCopied(false);
     try {
-      const blob = await renderShareCard(stats, history);
-      const outcome = await shareRunResult(stats, blob);
+      const blob = await renderShareCard(stats, history, name);
+      const outcome = await shareRunResult(stats, blob, name);
       if (outcome === "copied") {
         setShareCopied(true);
         if (!navigator.share) downloadShareCard(blob, stats.score);
@@ -379,7 +393,7 @@ export function GameOver({
       type="button"
       className="gameover-share"
       disabled={shareBusy}
-      onClick={() => void onShare()}
+      onClick={startShare}
     >
       <ShareIcon />
       {shareBusy ? "Sharing…" : "Share"}
@@ -388,6 +402,13 @@ export function GameOver({
 
   return (
     <div className="screen gameover-screen">
+      {namingShare && (
+        <ShareNameModal
+          initialName={loadShareName()}
+          onConfirm={(name) => void onShare(name)}
+          onDismiss={() => setNamingShare(false)}
+        />
+      )}
       {/* ---- 1. header / score card, with the Pip breaking out of its corner */}
       <header className="go-header">
         <img className="go-bird" src="/Bird-up-no-halo.png" alt="" aria-hidden="true" />
@@ -404,7 +425,7 @@ export function GameOver({
             <p className="go-challenge">
               {stats.score >= challengeScore
                 ? `You beat it! 🎉 (target ${challengeScore.toLocaleString()})`
-                : `So close — ${challengeScore.toLocaleString()} to beat.`}
+                : `So close — ${challengeScore.toLocaleString()}${challengeName ? ` (${challengeName})` : ""} to beat.`}
             </p>
           )}
         </div>
@@ -636,7 +657,10 @@ export function GameOver({
             setCelebrateOpen(false);
             setLeaderboardOpen(true);
           }}
-          onShare={() => void onShare()}
+          onShare={() => {
+            setCelebrateOpen(false);
+            startShare();
+          }}
           onJoin={() => {
             setCelebrateOpen(false);
             setJoinOffer(true);

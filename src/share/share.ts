@@ -35,16 +35,18 @@ const TONE_EMOJI: Record<number, string> = {
  * detecting LINE specifically (impossible outbound, see the "does LINE
  * count as a share target" conversation this followed).
  */
-function challengeUrl(score: number): string {
-  return `${SITE_URL}${APP_PATH}?ref=share&c=${score}&openExternalBrowser=1`;
+function challengeUrl(score: number, name: string): string {
+  const n = name ? `&n=${encodeURIComponent(name)}` : "";
+  return `${SITE_URL}${APP_PATH}?ref=share&c=${score}${n}&openExternalBrowser=1`;
 }
 
 /** Wordle-style block for the copy-to-clipboard fallback — the paste has to look like something on its own. */
-function clipboardBlock(stats: RunStats, url: string): string {
+function clipboardBlock(stats: RunStats, url: string, name: string): string {
   const squares = toneBreakdown(stats)
     .map((b) => TONE_EMOJI[b.tone])
     .join(" ");
-  return `FlappyTone — I scored ${stats.score.toLocaleString()}\n${squares}\n${url}`;
+  const who = name ? `${name} scored` : "I scored";
+  return `FlappyTone — ${who} ${stats.score.toLocaleString()}\n${squares}\n${url}`;
 }
 
 export type ShareOutcome = "shared" | "shared_no_image" | "copied" | "cancelled" | "failed";
@@ -58,8 +60,10 @@ export type ShareOutcome = "shared" | "shared_no_image" | "copied" | "cancelled"
 export async function shareRunResult(
   stats: RunStats,
   pngBlob: Blob,
+  /** Cleaned name from the share step ("" = none) — rides in the link as `?n=`. */
+  name = "",
 ): Promise<ShareOutcome> {
-  const url = challengeUrl(stats.score);
+  const url = challengeUrl(stats.score, name);
 
   try {
     const file = new File([pngBlob], "flappytone-result.png", { type: "image/png" });
@@ -98,7 +102,7 @@ export async function shareRunResult(
   }
 
   try {
-    await navigator.clipboard.writeText(clipboardBlock(stats, url));
+    await navigator.clipboard.writeText(clipboardBlock(stats, url, name));
     return "copied";
   } catch {
     return "failed";
