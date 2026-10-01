@@ -374,7 +374,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
           <>
             <p className="note">
               {accuracyJustReset
-                ? "Tone accuracy now measures the shape of your tone, whatever your timing. It starts counting from your next run."
+                ? "Tone accuracy measures how close the shape of your tone is compared to the average shape of the reference speaker."
                 : usingLifetimeAccuracy
                   ? "Tone accuracy, averaged over all your runs."
                   : `Tone accuracy, averaged over your last ${Math.min(5, history.lastRuns.length)} runs.`}
@@ -514,7 +514,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
             <p className="note">
               {runLog.total > 0
                 ? `${runLog.total} ${runLog.total === 1 ? "run" : "runs"} since you went Pro.`
-                : "Your full history starts now — every run from here on is saved to your account."}
+                : "Your full history starts now and is saved to your account."}
             </p>
             {runLog.rows.length > 0 ? (
               <div className="run-history-list">
