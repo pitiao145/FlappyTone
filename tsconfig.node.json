@@ -32,6 +32,7 @@
     "src/dev/update-demo.ts",
     "src/dev/make-tones.ts",
     "src/dev/report.ts",
+    "src/dev/noise-bench.ts",
     "src/dev/tone-synth.ts",
     "src/dev/wav.ts",
     "src/pitch",

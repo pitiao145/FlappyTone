@@ -34,6 +34,7 @@
     "src/dev/update-demo.ts",
     "src/dev/make-tones.ts",
     "src/dev/report.ts",
+    "src/dev/noise-bench.ts",
     "src/dev/make-ref-clips.ts",
     "src/pitch/fixtures.test.ts",
     "src/game/toneAccuracy.fixtures.test.ts",
