@@ -3848,27 +3848,19 @@
   margin-inline: auto;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  /* One vertical rhythm for the whole page: every section (hero row, cards,
+     panels, roadmap, footer lead-in) is separated by this single gap. Sections
+     size to their content — an earlier one-viewport-per-section rule
+     (min-height + centring) left short sections floating in huge gaps while
+     tall ones sat nearly flush, so spacing read as random. */
+  gap: 4.5rem;
   text-align: left;
 }
 
 @media (min-width: 901px) {
   .landing {
-    gap: 2.5rem;
+    gap: 7rem;
   }
-}
-
-/* Habit-Garden-style rhythm: every section (bar aside) claims the full
-   viewport below the sticky nav and centres its content in it, so scrolling
-   reads as one section at a time rather than a dense scroll of text. The nav
-   is 88px everywhere else on this page (see `.landing-section`'s own
-   scroll-margin-top) — reused here rather than measured again. A section
-   whose own content is taller than the viewport just grows past `min-height`,
-   nothing clips. */
-.landing > section,
-.landing > .hero-row {
-  min-height: calc(100dvh - 88px);
-  justify-content: center;
 }
 
 /* Two boxes, not one: the bar is full-bleed (background reaches the true
