@@ -164,10 +164,16 @@ export function Overview({ passcode }: Props) {
   // "pending"/"recorded" below is a status for `selectedStyle`, not the
   // other style's.
   const statusForActive = useCallback((w: BoothWord) => statusFor(w, selectedStyle), [selectedStyle]);
-  const pending = useMemo(() => words.filter((w) => statusForActive(w) === "pending"), [words, statusForActive]);
+  // "All" means every word being worked right now: a word that lives only in
+  // disabled (HSK) lists is excluded, so the totals match the enabled pills.
+  const workable = useMemo(
+    () => words.filter((w) => !(w.lists?.length && w.lists.every((l) => l.startsWith(DISABLED_LIST_PREFIX)))),
+    [words],
+  );
+  const pending = useMemo(() => workable.filter((w) => statusForActive(w) === "pending"), [workable, statusForActive]);
   const recorded = useMemo(
-    () => words.filter((w) => statusForActive(w) !== "pending"),
-    [words, statusForActive],
+    () => workable.filter((w) => statusForActive(w) !== "pending"),
+    [workable, statusForActive],
   );
   const total = pending.length + recorded.length;
 
@@ -177,7 +183,11 @@ export function Overview({ passcode }: Props) {
     // sending it once `/booth/words` shipped this field, and a stale
     // deploy (or an older client mid-rollout) must degrade to "no picker",
     // never crash the whole screen.
-    for (const w of words) for (const l of w.lists ?? []) ids.add(l);
+    // Only lists someone records from. Sampler lists (and any future derived
+    // list) are subsets of these, and HSK is not being recorded, so neither
+    // earns a picker entry.
+    for (const w of words)
+      for (const l of w.lists ?? []) if (LIST_ORDER.includes(l) && !l.startsWith(DISABLED_LIST_PREFIX)) ids.add(l);
     return ids;
   }, [words]);
 
@@ -263,7 +273,7 @@ export function Overview({ passcode }: Props) {
   }
 
   return (
-    <div className="rec">
+    <div className="rec rec-wide">
       <header className="rec-head">
         <h1 className="rec-title">Recording booth</h1>
         <p className="rec-sub">
@@ -271,43 +281,51 @@ export function Overview({ passcode }: Props) {
         </p>
       </header>
 
+      <div className="rec-layout">
       {pills.length > 0 && (
-        <div className="rec-list-picker">
+        <nav className="rec-list-picker" aria-label="Word lists">
           <button
             className={`rec-pill${selectedList === null ? " rec-pill-active" : ""}`}
             onClick={() => setSelectedList(null)}
           >
             All
           </button>
-          {pills.map(({ listId, style: pillStyle }) => {
-            const disabled = listId.startsWith(DISABLED_LIST_PREFIX);
-            const done =
-              !disabled &&
-              words.filter((w) => w.lists?.includes(listId) && statusFor(w, pillStyle) === "pending").length === 0;
-            const active = selectedList === listId && selectedStyle === pillStyle;
-            return (
-              <button
-                key={`${listId}:${pillStyle}`}
-                className={
-                  `rec-pill${active ? " rec-pill-active" : ""}` + (done ? " rec-pill-done" : "")
-                }
-                disabled={disabled}
-                title={disabled ? "Not being recorded right now" : undefined}
-                onClick={() => {
-                  setSelectedList(listId);
-                  setSelectedStyle(pillStyle);
-                }}
-              >
-                <span className="rec-pill-icon" aria-hidden="true">
-                  {done ? "✓" : "○"}
-                </span>{" "}
-                {listLabel(listId, pillStyle)}
-              </button>
-            );
-          })}
-        </div>
+          {(["textbook", "natural"] as const).map((groupStyle) => (
+            <div className="rec-pill-group" key={groupStyle}>
+              <h2 className="rec-pill-group-head">{groupStyle}</h2>
+              {pills
+                .filter((p) => p.style === groupStyle)
+                .map(({ listId, style: pillStyle }) => {
+                  const pendingCount = words.filter(
+                    (w) => w.lists?.includes(listId) && statusFor(w, pillStyle) === "pending",
+                  ).length;
+                  const done = pendingCount === 0;
+                  const active = selectedList === listId && selectedStyle === pillStyle;
+                  return (
+                    <button
+                      key={`${listId}:${pillStyle}`}
+                      className={
+                        `rec-pill${active ? " rec-pill-active" : ""}` + (done ? " rec-pill-done" : "")
+                      }
+                      onClick={() => {
+                        setSelectedList(listId);
+                        setSelectedStyle(pillStyle);
+                      }}
+                    >
+                      <span className="rec-pill-icon" aria-hidden="true">
+                        {done ? "✓" : "○"}
+                      </span>{" "}
+                      <span className="rec-pill-label">{LIST_LABELS[listId] ?? listId}</span>
+                      <span className="rec-pill-count">{pendingCount}</span>
+                    </button>
+                  );
+                })}
+            </div>
+          ))}
+        </nav>
       )}
 
+      <div className="rec-main">
       {visiblePending.length > 0 ? (
         <>
           <p className="rec-sub">
@@ -376,6 +394,8 @@ export function Overview({ passcode }: Props) {
           {uploads.failed > 0 && `${uploads.failed} failed`}
         </span>
       </div>
+      </div>
+      </div>
 
       {confirming && (
         <ConfirmRedo
@@ -407,8 +427,7 @@ function WordRow({
   return (
     <div className="rec-row">
       <span className="rec-row-word">
-        <span className="rec-row-hanzi">{word.hanzi}</span> {word.pinyin}{" "}
-        <span className="rec-tone">({word.tone})</span>
+        <span className="rec-row-hanzi">{word.hanzi}</span> {word.pinyin}
       </span>
       <span className={`rec-badge rec-badge-${captured ? "recorded" : status}`}>
         {captured && status === "pending" ? "uploading" : status}
