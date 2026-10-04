@@ -330,6 +330,7 @@ export function Landing({ onPlay, onVisualiser }: Props) {
               <li>Progress saved and synced to your account</li>
               <li>A real leaderboard entry, under a generated name</li>
               <li>{tierLimits().free.wordsPerTone} words per tone in the visualiser</li>
+              <li>Limited tone pair practice</li>
             </ul>
             <button
               className="secondary"
@@ -348,6 +349,7 @@ export function Landing({ onPlay, onVisualiser }: Props) {
               <li>Every word, every tone, every TOCFL level</li>
               <li>Full tone pairs access</li>
               <li>Leaderboard entry under a name you choose</li>
+              <li>Offline play (coming soon)</li>
             </ul>
             <button
               className="primary"
@@ -377,11 +379,13 @@ export function Landing({ onPlay, onVisualiser }: Props) {
 
       <section id="mobile" className="landing-section">
 
-          <div className="mobile-text">
+        <div className="roadmap-header">
+          <div className="roadmap-header-text">
             <p className="section-eyebrow">{brand.mobile.eyebrow}</p>
             <h2>{brand.mobile.title}</h2>
             <p>{brand.mobile.body}</p>
-
+          </div>
+          <div className="roadmap-header-form">
             {mobileNewsletter.status === "success" ? (
               <p className="newsletter-success">You&rsquo;re on the list.</p>
             ) : (
@@ -421,6 +425,7 @@ export function Landing({ onPlay, onVisualiser }: Props) {
               </p>
             )}
             <p className="coming-soon-disclaimer">{brand.mobile.notify.disclaimer}</p>
+          </div>
         </div>
 
         <div className="mobile-platforms">
