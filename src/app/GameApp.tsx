@@ -143,7 +143,9 @@ function navTabFor(screen: Screen): NavTab {
  * drops the whole subtree — Lab, tuning UI, Capture — from a
  * production build rather than merely hiding the button.
  */
-const Lab = import.meta.env.DEV
+// Also in Vercel preview builds (__NOISE_LAB__) for the noise-compare tab;
+// production still compiles it out.
+const Lab = import.meta.env.DEV || __NOISE_LAB__
   ? lazy(() => import("../dev/Lab.tsx").then((m) => ({ default: m.Lab })))
   : null;
 

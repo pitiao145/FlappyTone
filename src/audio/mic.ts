@@ -61,7 +61,7 @@ const HOP_SIZE = 1024;
 // AudioWorkletProcessor that accumulates render quanta and posts
 // FRAME_SIZE-sample frames every HOP_SIZE samples. Registered via a Blob URL
 // so the whole audio layer ships as one module.
-const WORKLET_SOURCE = `
+export const WORKLET_SOURCE = `
 class CaptureProcessor extends AudioWorkletProcessor {
   constructor() {
     super();

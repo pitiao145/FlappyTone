@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { NoiseCompare } from "./NoiseCompare.tsx";
 import fallback from "../data/wordsFallback.json";
 import { ensureMic, setFrameSink, stopMic } from "../audio/session.ts";
 import { setActiveTracker } from "../game/activeTracker.ts";
@@ -55,7 +56,8 @@ type Tab =
   | "capture"
   | "visualiser"
   | "tonepairs"
-  | "pairgates";
+  | "pairgates"
+  | "noise";
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "play", label: "play" },
@@ -67,6 +69,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "visualiser", label: "visualiser" },
   { id: "tonepairs", label: "tone pairs" },
   { id: "pairgates", label: "pair gates" },
+  { id: "noise", label: "noise compare" },
 ];
 
 /**
@@ -400,6 +403,8 @@ worst excursion ${Math.round(Math.max(0, ...last.gateLog.map((g) => g.worstExcur
       {tab === "averages" && <ToneAverages />}
 
       {tab === "pitch" && <PitchTab />}
+
+      {tab === "noise" && <NoiseCompare />}
 
       {tab === "gates" && (
         <div className="lab-controls">

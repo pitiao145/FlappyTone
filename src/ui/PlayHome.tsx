@@ -97,6 +97,14 @@ export function PlayHome({
           </div>
           {error && <p className="error">{error}</p>}
 
+          {/* Preview builds (not dev, not production): only the Lab, for its
+              noise-compare tab (docs/noise-plan.md). */}
+          {!import.meta.env.DEV && __NOISE_LAB__ && (
+            <button className="dev-toggle" onClick={() => onStart("lab")}>
+              lab
+            </button>
+          )}
+
           {/* Dev builds only. The Lab is a separate instance of the game for
               tuning, and it is not part of the product. */}
           {import.meta.env.DEV && (

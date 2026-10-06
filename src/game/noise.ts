@@ -26,15 +26,18 @@ export function usesBrowserSuppression(mode: NoiseMode = tuning().noiseMode): bo
 }
 
 /** Tracker overrides for the current noise mode; empty for "off"/"browser". */
-export function trackerNoiseConfig(sampleRate: number): Partial<PitchTrackerConfig> {
+export function trackerNoiseConfig(
+  sampleRate: number,
+  mode: NoiseMode = tuning().noiseMode,
+): Partial<PitchTrackerConfig> {
   const t = tuning();
-  if (!usesAdaptiveFloor(t.noiseMode)) return {};
+  if (!usesAdaptiveFloor(mode)) return {};
   return {
     adaptiveGateOverNoise: t.noiseGateOverNoise,
     adaptiveWindowFrames: Math.max(8, Math.round((t.noiseFloorWindowMs / 1000) * (sampleRate / HOP))),
     adaptivePercentile: t.noiseFloorPercentile,
     adaptiveSeedRms: carriedNoiseRms,
-    ...(t.noiseMode === "strict" ? { clarityThreshold: t.noiseStrictClarity } : {}),
+    ...(mode === "strict" ? { clarityThreshold: t.noiseStrictClarity } : {}),
   };
 }
 
