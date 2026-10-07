@@ -493,6 +493,61 @@ gate instead say so explicitly:
   test exercises the raw catalog, not `Game.tsx`'s own separate syllable
   filter. The two must not be conflated when reading test counts either.
 
+## Speech style: natural becomes playable (7 Oct 2026)
+
+Spec: `docs/SPECS/flappytone-SPEC-speech-style.md`. The setting picks which of
+a word's two recordings plays; nothing else forks (same words, tiers, board,
+stats). Decisions worth keeping:
+
+- **A word with no natural take drops out of a natural run; it does not fall
+  back to its textbook take.** Twelve words have no natural recording. A
+  fallback would put a slow textbook corridor inside a run the player chose
+  for everyday speed, with no sign of why. Dropping is honest and
+  self-healing: the word returns the moment it is recorded and published. It
+  is a third filter after `min_tier` and tier/level (`resolvedPool`), not a
+  change to either gate. The visualiser's rail drops the same words.
+- **Calibration and the guided tutorial are always textbook.** The board is
+  anchored on the player's own Tone 1 and Tone 3 from slow, clear gates
+  (PRD §5.4); natural-speed gates would anchor it on shallower shapes (the
+  natural T3 dip is the reason the classifier below fails). `Run` forces
+  textbook for `mode === "tutorial"`, so no caller can pass the wrong style.
+- **Guest is textbook by tier, not by overwriting the setting.**
+  `effectiveSpeechStyle(tier)` is read at the use site; the stored value is
+  never touched, so a free/Pro player who signs out and back in keeps their
+  choice. UX gating only — a guest ticket can fetch a natural clip, and that
+  is not a boundary worth defending.
+- **The classifier is off for natural gates (floor rule).** On 185 scorable
+  single-syllable clips per style, textbook anchors gave natural speech 163
+  right and 3 clean wall hits (textbook: 174 and 0); natural T3 fell from
+  100% to 76%, because natural T3s dip less and the T2/T3 cue leans on the
+  dip. Style-aware anchors recovered T3 (37→46) but lost T2 (33→25), left
+  3 clean wall hits and raised hits under trouble (38→57). Neither bar
+  (0 clean wall hits, T3 near textbook) was met, so Pierre kept the floor:
+  `isDrasticToneMismatch` and `applyClassifierBoost` do not run on natural
+  gates (hard rule 8: unclear signal is never scored wrong). Tone accuracy is
+  separate and does follow the style, T2/T3 cue included — it never costs a
+  heart and scores a right natural T3 0.85 (0.77 textbook-anchored). Revisit
+  only with a new `classifier-check` run showing 0 clean wall hits.
+- **One pool for everything recorded about the player** — stats,
+  `player_tone_shapes`, `run_log`, board, run cap. No style column
+  server-side. The Pro tone-evolution chart draws Jane's average for the
+  player's *current* effective style; a player who mixes styles sees their own
+  line (all history) against one style's reference.
+- **Fallback bundle stays textbook-only**, for the reason the bundle is
+  default-speaker-only already: a dead network means no clip audio, so only
+  corridors are left, and shipping both styles would weigh on the landing
+  page for nothing.
+- **Deploy order:** the clips Worker before any client that sends `?style=`.
+  An old Worker ignores the param and would serve textbook audio under a
+  natural corridor.
+- **Analytics:** `run_end.speechStyle` is the run's own style (`Run.speechStyle`,
+  so a tutorial or a guest reads textbook), `visualiser_session.speechStyle`
+  the effective style, `setting_changed` key `speech_style`. Closed
+  two-value union; nothing typed.
+- **The dev `?style=` override was removed** once the setting replaced it —
+  it would have let a guest or the tutorial fly natural in dev, which the
+  production rules above forbid.
+
 ## Clip pipeline
 
 ### Style is a recording attribute, not a speaker row or a words column (27 Sep 2026)
@@ -531,7 +586,7 @@ rather than leaving two rows silently colliding on `(word_id, speaker_id)`
 the moment a natural take is uploaded for a word that already has a textbook
 one.
 
-**The game does not read `natural` yet, on purpose — this migration ships
+**The game did not read `natural` at this migration, on purpose (it does since the Speech style entry above) — this migration shipped
 infrastructure and the booth, not a game feature.** `src/data/words.ts`'s
 live catalog query and the Worker's `GET /clip/:speaker/:id` both gained an
 explicit `.eq(...,"style","textbook")`/`.eq("style","textbook")` filter,

@@ -206,6 +206,20 @@ describe("run_end", () => {
     expect(ev.type === "run_end" && ev.voice).toBe("mark");
   });
 
+  it("carries the speech style, and it survives sanitizing", () => {
+    const ev: AnalyticsEvent = {
+      type: "run_end",
+      reason: "finished",
+      gates: 5,
+      score: 600,
+      bestMult: 1,
+      missedEarly: 0,
+      speechStyle: "natural",
+    };
+    expect(ev.type === "run_end" && ev.speechStyle).toBe("natural");
+    expect(sanitizeGameProperties({ speechStyle: "natural" }).speechStyle).toBe("natural");
+  });
+
   it("survives the transport boundary, where a property the allowlist misses is dropped", () => {
     // `voice` reaching the union is only half of it: `before_send` re-reduces
     // every *sent* property, so a field added to the type and not carried

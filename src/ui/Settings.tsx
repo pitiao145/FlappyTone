@@ -36,8 +36,16 @@ import {
 import { loadRoster } from "../data/speakers.ts";
 import { fetchCatalog } from "../data/words.ts";
 import { multiWords, type Word } from "../game/words.ts";
-import { loadProficiency, saveProficiency } from "../game/settings.ts";
+import {
+  effectiveSpeechStyle,
+  loadProficiency,
+  loadSpeechStyle,
+  saveProficiency,
+  saveSpeechStyle,
+} from "../game/settings.ts";
+import type { SpeechStyle } from "../game/words.ts";
 import type { Proficiency } from "../game/tiers.ts";
+import { useTier } from "../data/tier.ts";
 import { Choice } from "./Choice.tsx";
 import { MicrophoneIcon } from "./toneIcons.tsx";
 import { Switch } from "./Switch.tsx";
@@ -57,6 +65,10 @@ const VOICE_LABEL: Record<Gender, string> = {
   female: "Woman's voice",
   male: "Man's voice",
 };
+
+const SPEECH_STYLES = ["textbook", "natural"] as const satisfies readonly SpeechStyle[];
+
+const SPEECH_STYLE_LABEL: Record<SpeechStyle, string> = { textbook: "Textbook", natural: "Natural" };
 
 const PROFICIENCIES = ["beginner", "intermediate"] as const satisfies readonly Proficiency[];
 
@@ -216,6 +228,8 @@ export function Settings({
    */
   const [words, setWords] = useState<Word[] | null>(() => inventoryNow());
   const [proficiency, setProficiency] = useState<Proficiency>(() => loadProficiency());
+  const tier = useTier();
+  const [speechStyle, setSpeechStyle] = useState<SpeechStyle>(() => loadSpeechStyle());
   const [width, setWidth] = useState<CorridorWidth>(loadCorridorWidth);
   // "off" is disabled below (broken), so a previously-persisted "off" is
   // coerced back to "pause" rather than silently staying selected.
@@ -392,7 +406,7 @@ export function Settings({
 
 
 
-      {settings && multiWords(words ?? []).length > 0 && (
+      {settings && (
         <section className="setting setting-card">
           <div className="setting-card-head">
             <SettingIcon>
@@ -400,22 +414,48 @@ export function Settings({
             </SettingIcon>
             <h3>Proficiency</h3>
           </div>
-          <Choice
-            options={PROFICIENCIES}
-            value={proficiency}
-            label={(v) => PROFICIENCY_LABEL[v]}
-            onChange={(v) => {
-              setProficiency(v);
-              // Also writes wordMix (run.ts's single/multi draw) — see
-              // saveProficiency's own comment for why that's bundled in.
-              saveProficiency(v);
-              track({ type: "setting_changed", key: "proficiency", value: v });
-            }}
-          />
-          <p className="param-help">
-            Beginner is single syllables only, applies to each game mode.
-            Intermediate adds two-syllable tone pairs into the same run.
-          </p>
+          {multiWords(words ?? []).length > 0 && (
+            <>
+              <Choice
+                options={PROFICIENCIES}
+                value={proficiency}
+                label={(v) => PROFICIENCY_LABEL[v]}
+                onChange={(v) => {
+                  setProficiency(v);
+                  // Also writes wordMix (run.ts's single/multi draw) — see
+                  // saveProficiency's own comment for why that's bundled in.
+                  saveProficiency(v);
+                  track({ type: "setting_changed", key: "proficiency", value: v });
+                }}
+              />
+              <p className="param-help">
+                Beginner is single syllables only, applies to each game mode.
+                Intermediate adds two-syllable tone pairs into the same run.
+              </p>
+            </>
+          )}
+          <section>
+            <h4>Speech style</h4>
+            {/* A guest sees the effective style (always textbook), disabled; a
+                free/Pro player who later signs out keeps the stored choice. */}
+            <Choice
+              options={SPEECH_STYLES}
+              value={tier === "guest" ? effectiveSpeechStyle(tier) : speechStyle}
+              label={(v) => SPEECH_STYLE_LABEL[v]}
+              disabled={() => tier === "guest"}
+              onChange={(v) => {
+                setSpeechStyle(v);
+                saveSpeechStyle(v);
+                track({ type: "setting_changed", key: "speech_style", value: v });
+              }}
+            />
+            <p className="param-help">
+              Natural: everyday speed. Textbook: slow and clear. Applies to
+              game runs and the visualiser; the calibration flight and the
+              first tutorial are always textbook.
+              {tier === "guest" && " Create a free account to choose."}
+            </p>
+          </section>
         </section>
       )}
 

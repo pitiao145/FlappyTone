@@ -33,7 +33,7 @@ import { getTier, tierReady, useTier } from "../data/tier.ts";
 import { postShapes } from "../data/shapes.ts";
 import { postRunLog } from "../data/runlog.ts";
 import { buildRunLogEntry } from "../game/runTrend.ts";
-import { resolvedPool, type SpeechStyle, type Word } from "../game/words.ts";
+import { resolvedPool, type Word } from "../game/words.ts";
 import type { Proficiency } from "../game/tiers.ts";
 import type { LevelChoice } from "../game/settings.ts";
 import { TONE_INFO, type Tone } from "../game/gates.ts";
@@ -184,19 +184,6 @@ interface Props {
    * wrapping it would silently break that flex sizing.
    */
   hidden?: boolean;
-}
-
-/**
- * Dev-only `?style=` override for the speech style. Only reachable behind
- * `import.meta.env.DEV` at its call site, so a production build drops it.
- */
-function devSpeechStyleOverride(): SpeechStyle | null {
-  try {
-    const v = new URLSearchParams(window.location.search).get("style");
-    return v === "natural" || v === "textbook" ? v : null;
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -437,6 +424,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         // replaces the pool through `setWords`, so the speaker the run
         // actually finished on is the honest answer.
         voice: inventorySpeaker(),
+        speechStyle: runRef.current?.speechStyle,
       });
       // Pro only (a no-op for everyone else): the all-time run log, spec C.
       void postRunLog(buildRunLogEntry(snap.stats, mode, reason));
@@ -553,11 +541,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // that resolves later (guest → free) applies from the next run, never
       // by rebuilding this one. The Run itself forces textbook for
       // `tutorial` (calibration flight and guided tutorial).
-      //
-      // Dev only: `?style=natural` (or `?style=textbook`) overrides the
-      // setting and the tier, so natural runs can be flown before any UI
-      // exists (spec §5.1). Gated here, at the usage site (hard rule 7).
-      speechStyle: (import.meta.env.DEV && devSpeechStyleOverride()) || effectiveSpeechStyle(getTier()),
+      speechStyle: effectiveSpeechStyle(getTier()),
       deferFill: true,
       // Pro only (spec B). Asked per gate from the synchronous store, for the
       // same reason `words` reads it: a late tier must not rebuild the Run.

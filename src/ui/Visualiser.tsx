@@ -23,13 +23,13 @@ import { useTier } from "../data/tier.ts";
 import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { ContourRecorder } from "../game/contours.ts";
 import type { Tone } from "../game/gates.ts";
-import type { CalibrationSettings } from "../game/settings.ts";
+import { effectiveSpeechStyle, type CalibrationSettings } from "../game/settings.ts";
 import { classifyTone, type ToneClassification } from "../game/toneClassifier.ts";
 import { tierLimits, type TocflLevel } from "../game/tiers.ts";
 import { tuning } from "../game/tuning.ts";
 import { referenceFromWord, toneAccuracyDetail } from "../game/toneAccuracy.ts";
 import type { Word } from "../game/words.ts";
-import { wordsForList, wordsOfTone } from "../game/words.ts";
+import { wordsForList, wordsInStyle, wordsOfTone } from "../game/words.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawVisualiser } from "../render/visualiser.ts";
@@ -120,6 +120,12 @@ interface Props {
 export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Props) {
   const tier = useTier();
   const limits = tierLimits()[tier];
+  // The recording style the visualiser plays, draws and scores in (spec
+  // decision 9). A guest is always textbook. Words with no natural take drop
+  // out of the rail, as they do from a natural run's pool.
+  const speechStyle = effectiveSpeechStyle(tier);
+  const speechStyleRef = useRef(speechStyle);
+  speechStyleRef.current = speechStyle;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   /**
@@ -224,6 +230,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         wordSelected: sessionWordSelectedRef.current,
         durationMs: Math.round(performance.now() - started),
         attempts: sessionAttemptsRef.current,
+        speechStyle: speechStyleRef.current,
       });
     };
   }, []);
@@ -336,10 +343,13 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   // wrong once the effect owns an AbortController it would tear down each time.
   const listWords = useMemo(
     () =>
-      limits.beginner.levels === null
-        ? words
-        : wordsForList(words, selectedLevel ? [selectedLevel] : limits.beginner.levels, "beginner"),
-    [words, limits.beginner.levels, selectedLevel],
+      wordsInStyle(
+        limits.beginner.levels === null
+          ? words
+          : wordsForList(words, selectedLevel ? [selectedLevel] : limits.beginner.levels, "beginner"),
+        speechStyle,
+      ),
+    [words, limits.beginner.levels, selectedLevel, speechStyle],
   );
 
   /**
@@ -471,7 +481,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         // screen), not the tone's average. `latest` is already one utterance
         // (the recorder merges short gaps), time-zeroed.
         const accuracy =
-          toneAccuracyDetail(latest.points, word.tones, referenceFromWord(word))?.accuracy ?? null;
+          toneAccuracyDetail(latest.points, word.tones, referenceFromWord(word), word.clipStyle ?? "textbook")?.accuracy ?? null;
         if (accuracy !== null) {
           const stats = wordStatsRef.current;
           const next = {

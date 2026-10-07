@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchShapes } from "../data/shapes.ts";
+import { useTier } from "../data/tier.ts";
+import { effectiveSpeechStyle } from "../game/settings.ts";
 import type { Tone } from "../game/gates.ts";
 import {
   averageUpTo,
@@ -137,7 +139,9 @@ function ShapeCard({
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const single = !shapeKey.includes("-");
-  const jane = single ? AVERAGED_TONE_SHAPE.textbook[Number(shapeKey) as Tone] : (AVERAGED_PAIR_SHAPE.textbook[shapeKey] ?? null);
+  // Jane's average for the player's current effective style (spec decision 6).
+  const style = effectiveSpeechStyle(useTier());
+  const jane = single ? AVERAGED_TONE_SHAPE[style][Number(shapeKey) as Tone] : (AVERAGED_PAIR_SHAPE[style][shapeKey] ?? null);
   const tint = single ? TONE_AVERAGE_COLOR[Number(shapeKey) as Tone] : COMBO_TINT;
   const label = single ? `Tone ${shapeKey}` : `Tones ${shapeKey.replace("-", " + ")}`;
 

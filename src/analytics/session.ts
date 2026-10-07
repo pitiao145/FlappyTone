@@ -44,6 +44,7 @@
 
 import type { CorridorWidth, Tone } from "../game/gates.ts";
 import type { CueStyle, GateLogEntry, RunMode, WordMix } from "../game/run.ts";
+import type { SpeechStyle } from "../game/words.ts";
 import type { GateOutcome } from "../game/scoring.ts";
 
 /** Why a run stopped. `quit` and `restart` both come from the pause menu, which otherwise leaves no trace. */
@@ -146,6 +147,13 @@ export type AnalyticsEvent =
       voice?: string;
       /** Classic `game` mode's word pool setting for this run. Absent for every other mode. */
       wordMix?: WordMix;
+      /**
+       * The recording style the run flew (`Run.speechStyle`, so a guest or a
+       * tutorial reads `textbook` whatever the stored setting says). A closed
+       * two-value union, never anything typed. Optional for the same reason
+       * as `voice`.
+       */
+      speechStyle?: SpeechStyle;
     }
   /**
    * The native clip wasn't loaded yet when its cue was due, so the synthetic
@@ -203,7 +211,15 @@ export type AnalyticsEvent =
   /** Progress.tsx's pricing-section "Join EarlyBird" button. */
   | { type: "progress_earlybird_pricing_click" }
   /** Leaderboard.tsx's first successful board resolution per mount. */
-  | { type: "visualiser_session"; toneCount: number; wordSelected: boolean; durationMs: number; attempts: number }
+  | {
+      type: "visualiser_session";
+      toneCount: number;
+      wordSelected: boolean;
+      durationMs: number;
+      attempts: number;
+      /** The effective speech style the visualiser played and scored in. */
+      speechStyle?: SpeechStyle;
+    }
   /** FeedbackWidget.tsx's submit, once it resolves ok. Never carries the free-text message — screen/rating/tier only. */
   | { type: "feedback_submitted"; screen: string; rating: number | null; tier: string };
 
@@ -245,6 +261,7 @@ export type SettingKey =
   | "translation"
   | "pinyin"
   | "tone_marks"
+  | "speech_style"
   | "sharing";
 
 /**
