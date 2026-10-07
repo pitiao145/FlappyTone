@@ -49,8 +49,14 @@ nothing in this spec waits for it.
    column anywhere server-side.
 6. **Pro tone-evolution chart** draws Jane's average for the player's
    *current* effective style.
-7. **Classifier:** stays anchored on textbook averages **unless** the check
-   in §5 says otherwise. Decision deferred to Pierre after the numbers.
+7. **Classifier:** the §5.2 check (done, see there) showed textbook anchors
+   cost correct natural speakers hearts, which breaks hard rule 8. Floor
+   rule, whatever happens next: **a natural gate never loses a heart to the
+   classifier until that is shown safe** — until then
+   `isDrasticToneMismatch` and `applyClassifierBoost` are off for natural
+   gates (the same treatment pair gates get). Style-aware anchors are
+   measured offline first (§5.2 follow-up); Pierre chooses between them and
+   the floor after the numbers.
 8. **Always textbook, regardless of setting:** the calibration flight, the
    guided teaching tutorial that follows it. `learn` mode stays synthetic.
 9. **Visualiser follows the effective style:** tapped word plays that
@@ -113,8 +119,9 @@ nothing in this spec waits for it.
   `AVERAGED_PAIR_SHAPE` keyed by style: `Record<SpeechStyle, …>`. Natural
   sources: the default speaker's published natural `word_clips`.
 - `toneAccuracy(…, style)` picks the matching reference. The classifier
-  keeps reading `AVERAGED_TONE_SHAPE.textbook` (decision 7) — make that
-  explicit in its code, not implicit.
+  reads `AVERAGED_TONE_SHAPE.textbook` explicitly (not implicitly) unless
+  Pierre picks style-aware anchors after the §5.2 follow-up; either way
+  decision 7's floor rule holds until he does.
 - `fixtures/contours/jane-natural-sample.json` (a sample of natural
   `word_clips.contour`, SQL in its `source` field) backs a
   leave-one-out test mirroring the textbook one.
@@ -142,13 +149,33 @@ syncing the setting · tier-gating natural behind Pro.
    corridors that move too fast at 200px/s, pairs whose pause collapses
    under `multiMergeGapMs`, utterances under `minUtteranceMs` (would read
    "couldn't hear that" on a correct speaker — hard rule 8).
-2. **Classifier check.** Pull all natural single-syllable contours
-   (read-only SELECT, not committed), run `npm run classifier-check` with
-   the textbook-anchored classifier. Report confusion matrix, wall hits on
-   correct speech, and the eight simulated-trouble variants, next to the
-   textbook baseline (200/211 named, 0 wall hits). Pierre decides:
-   keep textbook anchors, or make anchors style-aware (then a Lab flight
-   before ship, since it changes hearts).
+2. **Classifier check — done 7 Oct 2026.** All 211 natural and 211
+   textbook single-syllable clips of Jane, 185 scorable in each, both
+   against the live textbook-anchored classifier (`classifier-check`;
+   contours in scratchpad, not committed). The spec's earlier "200/211"
+   baseline was over all 211 on 28 Sep; the like-for-like figure today is
+   174/185.
+
+   | | textbook right | textbook wall hits | natural right | natural wall hits |
+   |---|---|---|---|---|
+   | T1 (38) | 33 | 0 | 31 | 0 |
+   | T2 (35) | 31 | 0 | 33 | 1 |
+   | T3 (49) | 49 | 0 | 37 | 2 |
+   | T4 (63) | 61 | 0 | 62 | 0 |
+   | clean total | 174 | 0 | 163 | 3 |
+   | all 8 variants | 1380 | 4 | 1193 | 37 |
+
+   Natural T3s dip less, and the T2/T3 cue leans on the dip, so T3 drops
+   from 100% to 76% (1 of 49 under a creak gap), and correct speech starts
+   costing hearts. Hence decision 7's floor rule.
+
+   **Follow-up (session 3, before any live scoring change):** extend
+   `classifier-check` to take a style, and measure natural clips against
+   natural-anchored T2/T3 cues with the same tables. Then Pierre chooses:
+   - style-aware anchors, if they bring clean natural wall hits to 0 and
+     T3 back near textbook → ships after a Lab flight (it changes hearts);
+   - otherwise textbook anchors stay, and the floor rule (mismatch
+     collision and boost off for natural gates) ships as the behaviour.
 3. `npm run test`, `typecheck`, `build` + the dev-tooling grep (rule 7) +
    the landing `PitchTracker` grep. `npm run worker:test`.
 4. `?intent=visualiser` on a cleared-localStorage session still works.
