@@ -1308,7 +1308,7 @@ export class Run {
         .filter((p) => p.t >= utteranceStartMs && p.voiced)
         .map((p) => ({ tMs: p.t, chao: p.chao }));
       const utterance = longestUtterance(voiced, mergeGapMs);
-      gateToneAccuracy = toneAccuracy(utterance, state.gate.tones);
+      gateToneAccuracy = toneAccuracy(utterance, state.gate.tones, this.speechStyle);
       // Same utterance, wall hits and mismatches included (spec B §3).
       if (this.captureShapes?.()) this.shapes.add(state.gate.tones, utterance);
     }

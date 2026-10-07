@@ -43,7 +43,7 @@ import {
   trimOnset,
 } from "./toneClassifier.ts";
 import { AVERAGED_PAIR_SHAPE, AVERAGED_TONE_SHAPE } from "./toneAverages.ts";
-import { toneComboKey } from "./words.ts";
+import { toneComboKey, type SpeechStyle } from "./words.ts";
 import { tuning } from "./tuning.ts";
 
 /** Points per syllable the utterance and the reference are compared at. */
@@ -75,13 +75,17 @@ function spanOf(points: ContourPoint[]): number {
   return points.length < 2 ? 0 : points[points.length - 1].tMs - points[0].tMs;
 }
 
-/** The averaged reference for a target, or null when there is none to judge against. */
-export function referenceFor(tones: Tone[]): number[] | null {
-  if (tones.length === 1) return AVERAGED_TONE_SHAPE.textbook[tones[0]] ?? null;
+/**
+ * The averaged reference for a target in one speech style, or null when there
+ * is none to judge against. A natural gate is judged against natural averages
+ * (speech style spec, decision 4).
+ */
+export function referenceFor(tones: Tone[], style: SpeechStyle = "textbook"): number[] | null {
+  if (tones.length === 1) return AVERAGED_TONE_SHAPE[style][tones[0]] ?? null;
   if (tones.length !== 2) return null;
   // A neutral syllable has no averaged combo (left out of the generator on
   // purpose), so this also covers "neutral combos are not measured".
-  return AVERAGED_PAIR_SHAPE.textbook[toneComboKey(tones)] ?? null;
+  return AVERAGED_PAIR_SHAPE[style][toneComboKey(tones)] ?? null;
 }
 
 /**
@@ -122,20 +126,28 @@ export interface ToneAccuracyDetail {
  * `utterance` is the attempt itself (see `longestUtterance`), in chao, on the
  * player's own clock; only its own span matters.
  */
-export function toneAccuracy(utterance: ContourPoint[], tones: Tone[]): number | null {
-  return toneAccuracyDetail(utterance, tones)?.accuracy ?? null;
+export function toneAccuracy(
+  utterance: ContourPoint[],
+  tones: Tone[],
+  style: SpeechStyle = "textbook",
+): number | null {
+  return toneAccuracyDetail(utterance, tones, undefined, style)?.accuracy ?? null;
 }
 
 /**
  * `toneAccuracy` with its parts. `reference` overrides the baked average —
  * never passed in the game; tests use it to score a recorded clip against an
- * average built without that clip.
+ * average built without that clip. `style` picks the baked average when no
+ * reference is given, and anchors the T2/T3 cue on that style's averages
+ * either way (scoring only — the classifier itself stays textbook).
  */
 export function toneAccuracyDetail(
   utterance: ContourPoint[],
   tones: Tone[],
-  reference: number[] | null = referenceFor(tones),
+  referenceOverride?: number[] | null,
+  style: SpeechStyle = "textbook",
 ): ToneAccuracyDetail | null {
+  const reference = referenceOverride === undefined ? referenceFor(tones, style) : referenceOverride;
   if (utterance.length < 2) return null;
   if (!reference) return null;
 
@@ -198,7 +210,7 @@ export function toneAccuracyDetail(
 
   let t23: number | null = null;
   if (tones.length === 1 && (tones[0] === 2 || tones[0] === 3)) {
-    const cue = t2t3CueOf({ points: utterance, startedAtMs: 0, endedAtMs: null });
+    const cue = t2t3CueOf({ points: utterance, startedAtMs: 0, endedAtMs: null }, AVERAGED_TONE_SHAPE[style]);
     if (cue !== null) {
       // The cue is -1 at the T2 average and +1 at the T3 average; pointed at
       // the target, that is 0 at the wrong tone's average and 1 at the right
