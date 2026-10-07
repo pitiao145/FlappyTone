@@ -54,6 +54,7 @@ describe("gateEvent", () => {
   const entry: GateLogEntry = {
     tone: 3,
     tones: [3],
+    speechStyle: "textbook",
     outcome: "unheard",
     accuracy: 0,
     toneAccuracy: null,

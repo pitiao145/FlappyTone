@@ -23,7 +23,7 @@ import {
   type GateShape,
   type Tone,
 } from "./gates.ts";
-import { pickMultiWord, pickWord, type Word } from "./words.ts";
+import { pickMultiWord, pickWord, wordInStyle, wordsInStyle, type SpeechStyle, type Word } from "./words.ts";
 import {
   applyClassifierBoost,
   applyGate,
@@ -139,6 +139,15 @@ export interface RunConfig {
    * down — to keep it short). Ignored outside tutorial mode.
    */
   tutorialTones?: Tone[];
+  /**
+   * Which recording style this run plays (speech style spec §3.3). Fixed for
+   * the run: a mid-run settings change applies from the next run. The Run
+   * re-points every word it is given at this style's take (`wordsInStyle`)
+   * and leaves out words with none. `tutorial` (the calibration flight and
+   * the guided tutorial) is always textbook, whatever is passed. Defaults to
+   * textbook.
+   */
+  speechStyle?: SpeechStyle;
   /**
    * The single tone every gate is drawn from for `mode === "drill"`. Required
    * when `mode === "drill"`, ignored otherwise.
@@ -529,6 +538,8 @@ export interface GateLogEntry {
    * side by side: a correct tone said early loses score, not this.
    */
   toneAccuracy: number | null;
+  /** The recording style this gate's corridor and cue came from. */
+  speechStyle: SpeechStyle;
   samples: number;
   voiced: number;
   voicedFraction: number;
@@ -557,6 +568,8 @@ interface NoiseFrame {
 
 export class Run {
   private readonly mode: RunMode;
+  /** The recording style every gate of this run uses. See `RunConfig.speechStyle`. */
+  readonly speechStyle: SpeechStyle;
   private readonly width: number;
   private readonly rand: () => number;
   private readonly corridor: CorridorWidth;
@@ -666,14 +679,15 @@ export class Run {
 
   constructor(cfg: RunConfig) {
     this.mode = cfg.mode;
+    this.speechStyle = cfg.mode === "tutorial" ? "textbook" : (cfg.speechStyle ?? "textbook");
     this.width = cfg.width;
     this.rand = cfg.rand ?? Math.random;
     this.corridor = cfg.corridor ?? "normal";
     this.cueStyle = cfg.cueStyle ?? "pause";
     this.cueDurationMsFor = cfg.cueDurationMsFor ?? (() => CUE_DURATION_MS);
     this.releaseMicForCue = cfg.releaseMicForCue ?? false;
-    this.words = cfg.words ?? [];
-    this.singleWord = cfg.singleWord ?? null;
+    this.words = wordsInStyle(cfg.words ?? [], this.speechStyle);
+    this.singleWord = cfg.singleWord ? wordInStyle(cfg.singleWord, this.speechStyle) : null;
     this.isCalibrationFlight = isCalibrationTones(cfg.tutorialTones);
     this.tutorialTones = cfg.tutorialTones ?? TUTORIAL_TONES;
     this.drillTone = cfg.drillTone ?? null;
@@ -913,7 +927,7 @@ export class Run {
    * run exists; this is the seam for the case where it does not.
    */
   setWords(words: Word[]): void {
-    this.words = words;
+    this.words = wordsInStyle(words, this.speechStyle);
   }
 
   /**
@@ -1306,6 +1320,7 @@ export class Run {
       outcome,
       accuracy,
       toneAccuracy: gateToneAccuracy,
+      speechStyle: this.speechStyle,
       samples: state.samples.length,
       voiced: voicedCount,
       voicedFraction:

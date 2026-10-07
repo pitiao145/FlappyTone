@@ -1,6 +1,7 @@
 /**
- * `GET /clip/:speaker/:id?v=<word_clips.updated_at>` — the gated,
- * edge-cached clip read. The single-segment `/clip/:id` back-compat route
+ * `GET /clip/:speaker/:id?style=<textbook|natural>&v=<word_clips.updated_at>`
+ * — the gated, edge-cached clip read. `style` absent means `textbook` (every
+ * client that predates speech style); anything else 400s. The single-segment `/clip/:id` back-compat route
  * (resolving to the default speaker) has been removed: no real player has
  * ever run this architecture (live flappytone.com still serves the
  * pre-migration Vercel Blob build), and the only place that constructs a
@@ -34,6 +35,13 @@
  *    refactor the way a query parameter can. The speaker is NOT in the play
  *    ticket: voice is not an entitlement, and `min_tier` (read from `words`,
  *    not `word_clips`) gates every voice identically.
+ *
+ * 5. **The style is in the cache key too, for the same reason as the
+ *    speaker.** A textbook and a natural take of one word share speaker, id
+ *    and (by coincidence of a batch upload) possibly `v`; a key without the
+ *    style would serve one style's audio under the other's URL. Textbook
+ *    keeps the pre-style key shape (no style segment) so the entries already
+ *    in the edge cache stay valid; natural gets `/clip/{speaker}/natural/{id}`.
  */
 import { serviceDb } from "../db.ts";
 import { verifyTicket } from "../tickets.ts";
@@ -45,6 +53,9 @@ const ID_RE = /^[a-z0-9]{1,32}$/;
 
 /** Same alphabet as the DB check constraint. Validate, never sanitise. */
 const SPEAKER_RE = /^[a-z0-9]{1,16}$/;
+
+/** The recording styles `word_clips.style` allows (migration 0024). */
+const STYLES = new Set(["textbook", "natural"]);
 
 const WORDS_TTL_MS = 5 * 60 * 1000;
 
@@ -102,7 +113,7 @@ function levelAllowed(listIds: string[], tier: string): boolean {
 }
 
 /**
- * Keyed "speaker:id", not id. A map keyed on id alone would resolve a male
+ * Keyed "speaker:style:id", not id. A map keyed on id alone would resolve a male
  * request to whatever row happened to load last.
  */
 interface Inventory {
@@ -122,14 +133,10 @@ async function loadWords(env: Env): Promise<Inventory> {
   const db = serviceDb(env);
   const clips = await db
     .from("word_clips")
-    .select("word_id,speaker_id,clip_key,words!inner(min_tier,word_lists(list_id))")
-    .eq("status", "published")
-    // Textbook only (migration 0024). This route has no `?style=` and stays
-    // that way "for now" per the plan this migration ships with — without
-    // this filter, a published natural row would land in the same
-    // `speaker:word_id` map key as its textbook sibling and whichever one
-    // this query happened to return last would silently serve here.
-    .eq("style", "textbook");
+    .select("word_id,speaker_id,style,clip_key,words!inner(min_tier,word_lists(list_id))")
+    // Both styles. The style is part of the map key below, so a textbook and
+    // a natural row of one word can never land on the same entry.
+    .eq("status", "published");
   if (clips.error || !clips.data) {
     throw new Error("words query failed");
   }
@@ -137,12 +144,13 @@ async function loadWords(env: Env): Promise<Inventory> {
   for (const row of clips.data as unknown as Array<{
     word_id: string;
     speaker_id: string;
+    style: string;
     clip_key: string | null;
     words: { min_tier: string; word_lists: Array<{ list_id: string }> | null };
   }>) {
     // `min_tier` and list membership both live on `words`, not `word_clips`:
     // game access and TOCFL level are the same for every voice of the word.
-    map.set(`${row.speaker_id}:${row.word_id}`, {
+    map.set(`${row.speaker_id}:${row.style}:${row.word_id}`, {
       clipKey: row.clip_key,
       minTier: row.words.min_tier,
       listIds: (row.words.word_lists ?? []).map((l) => l.list_id),
@@ -207,7 +215,10 @@ export async function handleClip(req: Request, env: Env, ctx: ExecutionContext):
   if (!SPEAKER_RE.test(speaker)) return Response.json({ error: "Bad speaker." }, { status: 400 });
   if (!ID_RE.test(id)) return Response.json({ error: "Bad clip id." }, { status: 400 });
 
-  const word = inventory.words.get(`${speaker}:${id}`);
+  const style = url.searchParams.get("style") ?? "textbook";
+  if (!STYLES.has(style)) return Response.json({ error: "Bad style." }, { status: 400 });
+
+  const word = inventory.words.get(`${speaker}:${style}:${id}`);
   if (!word || !word.clipKey) return Response.json({ error: "Not found." }, { status: 404 });
   // Default-deny: anything that is not exactly "free" needs a pro ticket, so
   // a third tier added to `words.min_tier` later fails closed rather than open.
@@ -222,7 +233,10 @@ export async function handleClip(req: Request, env: Env, ctx: ExecutionContext):
   }
 
   const v = url.searchParams.get("v") ?? "";
-  const cacheKey = new Request(`${CACHE_HOST}/clip/${speaker}/${id}?v=${encodeURIComponent(v)}`);
+  const stylePath = style === "textbook" ? "" : `${style}/`;
+  const cacheKey = new Request(
+    `${CACHE_HOST}/clip/${speaker}/${stylePath}${id}?v=${encodeURIComponent(v)}`,
+  );
   const cache = (caches as unknown as { default: Cache }).default;
 
   const hit = await cache.match(cacheKey);

@@ -15,8 +15,8 @@ import {
   type RecalTrackingState,
 } from "./recalibration.ts";
 import { CUE_STYLES, WORD_MIXES, type CueStyle, type WordMix } from "./run.ts";
-import type { Proficiency } from "./tiers.ts";
-import type { LevelChoice } from "./words.ts";
+import type { Proficiency, Tier } from "./tiers.ts";
+import type { LevelChoice, SpeechStyle } from "./words.ts";
 export type { LevelChoice } from "./words.ts";
 import { type VoicePref } from "./voice.ts";
 
@@ -474,4 +474,36 @@ export function saveLastLevel(proficiency: Proficiency, level: LevelChoice): voi
   }
   state[proficiency] = level;
   localStorage.setItem(LAST_LEVEL_KEY, JSON.stringify(state));
+}
+
+// -------------------------------------------------------- speech style
+
+const SPEECH_STYLE_KEY = "toneflap.speechstyle.v1";
+
+/**
+ * The stored Speech style preference — which recording style a run plays.
+ * Device-local, not synced. Defaults to textbook. Read it through
+ * `effectiveSpeechStyle`, never directly, when deciding what a run flies.
+ */
+export function loadSpeechStyle(): SpeechStyle {
+  try {
+    const raw = localStorage.getItem(SPEECH_STYLE_KEY);
+    return raw === "natural" ? "natural" : "textbook";
+  } catch {
+    return "textbook";
+  }
+}
+
+export function saveSpeechStyle(style: SpeechStyle): void {
+  localStorage.setItem(SPEECH_STYLE_KEY, style);
+}
+
+/**
+ * The style a run (or the visualiser) actually uses. A guest always plays
+ * textbook; the stored value is left alone, so a free/Pro player who signs
+ * out and back in gets their choice back. UX gating only — not a security
+ * boundary (spec decision 2).
+ */
+export function effectiveSpeechStyle(tier: Tier): SpeechStyle {
+  return tier === "guest" ? "textbook" : loadSpeechStyle();
 }

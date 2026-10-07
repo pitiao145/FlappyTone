@@ -16,6 +16,7 @@ const wordsQuery = vi.hoisted(() => ({
   rows: [] as {
     word_id: string;
     speaker_id: string;
+    style?: string;
     clip_key: string | null;
     words: { min_tier: string; word_lists?: Array<{ list_id: string }> };
   }[],
@@ -26,10 +27,8 @@ vi.mock("../src/db.ts", () => ({
   serviceDb: () => ({
     from: () => ({
       select: () => ({
-        // Two chained `.eq()` now (`status` then `style` — migration 0024):
-        // the first returns a thenable that is ALSO chainable, so both
-        // `await query.eq(...)` (one call) and `await query.eq(...).eq(...)`
-        // (two calls) resolve to the same result either way.
+        // The first `.eq()` returns a thenable that is ALSO chainable, so a
+        // query with one filter or several resolves to the same result.
         eq: () => {
           const chain = {
             eq: () => chain,
@@ -101,7 +100,13 @@ beforeEach(() => {
       clip_key: "sampler.wav",
       words: { min_tier: "free", word_lists: [{ list_id: "sampler-beginner" }] },
     },
-  ];
+  ].map((r) => ({ style: "textbook", ...r }));
+  wordsQuery.rows.push(
+    { word_id: "ba1", speaker_id: "jane", style: "natural", clip_key: "ba1-nat.wav", words: { min_tier: "free" } },
+    { word_id: "pw1", speaker_id: "jane", style: "natural", clip_key: "pw1-nat.wav", words: { min_tier: "pro" } },
+  );
+  clips.objects.set("ba1-nat.wav", new TextEncoder().encode("RIFFfake-natural"));
+  clips.objects.set("pw1-nat.wav", new TextEncoder().encode("RIFFfake-pro-natural"));
   __resetWordCacheForTests();
 });
 
@@ -294,5 +299,48 @@ describe("TOCFL level gate (coarse — the ticket carries only tier, not the run
   it("does not touch R2 on a 403 from the level gate", async () => {
     expect((await get("/clip/jane/t3word?v=1", await ticketFor("free"), env)).status).toBe(403);
     expect(clips.getCalls).toBe(0);
+  });
+});
+
+describe("GET /clip/:speaker/:id?style=", () => {
+  it("serves textbook when style is absent, natural when asked", async () => {
+    const t = await ticketFor("free");
+    expect(await (await get("/clip/jane/ba1?v=1", t, env)).text()).toBe("RIFFfake-free");
+    expect(await (await get("/clip/jane/ba1?style=textbook&v=1", t, env)).text()).toBe("RIFFfake-free");
+    expect(await (await get("/clip/jane/ba1?style=natural&v=1", t, env)).text()).toBe("RIFFfake-natural");
+  });
+
+  it("does not share a cache entry between two styles of one word", async () => {
+    // Same speaker, id and v: only the style tells them apart.
+    const t = await ticketFor("free");
+    await get("/clip/jane/ba1?v=1", t, env);
+    await get("/clip/jane/ba1?style=natural&v=1", t, env);
+    const keys = [...cache.store.keys()];
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).not.toBe(keys[1]);
+    const again = await get("/clip/jane/ba1?style=natural&v=1", t, env);
+    expect(await again.text()).toBe("RIFFfake-natural");
+  });
+
+  it("keeps the textbook cache key in its pre-style shape", async () => {
+    await get("/clip/jane/ba1?style=textbook&v=1", await ticketFor("free"), env);
+    expect([...cache.store.keys()]).toEqual(["https://clips.flappytone.com/clip/jane/ba1?v=1"]);
+  });
+
+  it("400s an unknown style without touching R2", async () => {
+    const t = await ticketFor("free");
+    expect((await get("/clip/jane/ba1?style=fast&v=1", t, env)).status).toBe(400);
+    expect((await get("/clip/jane/ba1?style=&v=1", t, env)).status).toBe(400);
+    expect(clips.getCalls).toBe(0);
+  });
+
+  it("404s a word with no clip in the asked style", async () => {
+    const t = await ticketFor("free");
+    expect((await get("/clip/jane/t2word?style=natural&v=1", t, env)).status).toBe(404);
+  });
+
+  it("still gates a pro word in natural", async () => {
+    expect((await get("/clip/jane/pw1?style=natural&v=1", await ticketFor("free"), env)).status).toBe(403);
+    expect((await get("/clip/jane/pw1?style=natural&v=1", await ticketFor("pro"), env)).status).toBe(200);
   });
 });

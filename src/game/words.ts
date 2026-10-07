@@ -31,6 +31,27 @@ import type { RunMode } from "./run.ts";
  */
 export type LevelChoice = TocflLevel | "mix";
 
+/**
+ * Which recording of a word plays: the slow, exaggerated citation take
+ * (`textbook`, every word has one) or the everyday-speed one (`natural`).
+ * Mirrors `word_clips.style` (migration 0024).
+ */
+export type SpeechStyle = "textbook" | "natural";
+
+/**
+ * Everything measured from ONE recording of a word — the fields that differ
+ * between its textbook and natural takes. The corridor, gate width and cue
+ * timing all come from here, so they always match the clip that plays.
+ */
+export interface ClipMeasurements {
+  clipKey: string;
+  durationS: number;
+  onsetS: number;
+  clipS: number;
+  polyline: Polyline;
+  updatedAt: string;
+}
+
 export interface Word {
   /** The catalog row's id, and the key everything else is looked up by. */
   id: string;
@@ -88,6 +109,18 @@ export interface Word {
   minTier: "free" | "pro";
   updatedAt: string;
   /**
+   * The style the top-level measurement fields above come from. Absent on a
+   * catalog word, which always carries its textbook take there; set by
+   * `wordInStyle` on a word re-pointed at another style. Part of the clip
+   * cache key and the clip URL (`src/audio/reference.ts`).
+   */
+  clipStyle?: SpeechStyle;
+  /**
+   * The natural take's measurements, when one is published. Absent means the
+   * word has no natural recording, and a natural run leaves it out.
+   */
+  natural?: ClipMeasurements;
+  /**
    * TOCFL/HSK/sampler `lists.id` membership (e.g. `"tocfl1"`, `"sampler-beginner"`),
    * via `word_lists`. Empty for a row from before this field existed — never a
    * reason to drop the word, only to exclude it from any list-scoped pool.
@@ -144,6 +177,33 @@ function isPolyline(value: unknown): value is Polyline {
   );
 }
 
+/** The natural measurements carried under a row's `natural` key, or undefined if absent/malformed. */
+function readNatural(value: unknown): ClipMeasurements | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  const n = value as Record<string, unknown>;
+  if (
+    n.status !== "published" ||
+    typeof n.clip_key !== "string" ||
+    typeof n.duration_s !== "number" ||
+    !Number.isFinite(n.duration_s) ||
+    n.duration_s <= 0 ||
+    n.duration_s > MAX_DURATION_S ||
+    !isPolyline(n.polyline)
+  ) {
+    return undefined;
+  }
+  const clipS = readClipS(n.clip_s, n.duration_s);
+  const onsetS = readOnsetS(n.onset_s, clipS ?? n.duration_s);
+  return {
+    clipKey: n.clip_key,
+    durationS: n.duration_s,
+    onsetS,
+    clipS: clipS ?? onsetS + n.duration_s,
+    polyline: n.polyline,
+    updatedAt: typeof n.updated_at === "string" ? n.updated_at : "",
+  };
+}
+
 /**
  * Reads catalog rows (the `words` table's shape) into words, dropping
  * anything malformed rather than throwing.
@@ -187,6 +247,7 @@ export function wordsFromCatalog(rows: unknown): Word[] {
     const clipS = readClipS(r.clip_s, r.duration_s);
     const onsetS = readOnsetS(r.onset_s, clipS ?? r.duration_s);
     const tone = r.tone as Tone;
+    const natural = readNatural(r.natural);
     // 0 (neutral tone) is kept here even though it's never a valid `tone`
     // value above — `isMulti` reads it off `tones` to exclude a neutral-tone
     // word from the multi-syllable pool, so filtering it out here would hide
@@ -214,10 +275,58 @@ export function wordsFromCatalog(rows: unknown): Word[] {
         minTier: r.min_tier,
         updatedAt: typeof r.updated_at === "string" ? r.updated_at : "",
         listIds: Array.isArray(r.lists) ? r.lists.filter((l): l is string => typeof l === "string") : [],
+        ...(natural ? { natural } : {}),
       },
     });
   }
   return entries.sort((a, b) => a.position - b.position).map((e) => e.word);
+}
+
+/**
+ * The one place that picks between a word's recordings. `null` means the word
+ * has no take in that style. Everything that needs a corridor, a cue length
+ * or a clip URL for a style goes through this (usually via `wordInStyle`).
+ */
+export function clipFor(word: Word, style: SpeechStyle): ClipMeasurements | null {
+  if (style === "natural") return word.natural ?? null;
+  if (word.clipStyle === "natural") return null; // already re-pointed; its textbook take is gone
+  return {
+    clipKey: word.clipKey,
+    durationS: word.durationS,
+    onsetS: word.onsetS,
+    clipS: word.clipS,
+    polyline: word.polyline,
+    updatedAt: word.updatedAt,
+  };
+}
+
+/**
+ * The word re-pointed at one style's recording: its top-level measurement
+ * fields replaced by that take's, and `clipStyle` stamped so the clip URL and
+ * cache key follow. `null` when there is no take in that style. Idempotent.
+ *
+ * This is what lets `shapeForWord`, the Run's cue timing and the prefetch stay
+ * unchanged: they read the top-level fields, which now belong to the style.
+ */
+export function wordInStyle(word: Word, style: SpeechStyle): Word | null {
+  if (style === "textbook" && word.clipStyle !== "natural") return word;
+  if (style === "natural" && word.clipStyle === "natural") return word;
+  const clip = clipFor(word, style);
+  return clip ? { ...word, ...clip, clipStyle: style } : null;
+}
+
+/**
+ * A pool narrowed to one style: every word re-pointed at that style's take,
+ * and words without one LEFT OUT (spec decision 3 — no textbook fallback
+ * inside a natural run). A third filter, independent of tier and `min_tier`.
+ */
+export function wordsInStyle(words: Word[], style: SpeechStyle): Word[] {
+  const out: Word[] = [];
+  for (const w of words) {
+    const s = wordInStyle(w, style);
+    if (s) out.push(s);
+  }
+  return out;
 }
 
 /**
@@ -309,7 +418,10 @@ export function resolveLevels(
 
 /**
  * The full pool a `Run` of `mode` should draw from: tier → TOCFL
- * level/sampler → tone-pairs-per-combo cap, in that order.
+ * level/sampler → tone-pairs-per-combo cap → speech style, in that order.
+ * The style filter is last on purpose: the per-combo cap picks the same
+ * words in either style, and a natural run just loses the ones with no
+ * natural take.
  *
  * Only `"game"` and `"pairs"` read `proficiency`/`levelChoice` — `"learn"`
  * and `"tutorial"` pick by tone/fixed set already and are unaffected by the
@@ -322,6 +434,17 @@ export function resolveLevels(
  * Beginner access allows — sampler for guest, docs/Tiers.csv's own table).
  */
 export function resolvedPool(
+  words: Word[],
+  tier: Tier,
+  mode: RunMode,
+  proficiency: Proficiency,
+  levelChoice: LevelChoice | null,
+  style: SpeechStyle = "textbook",
+): Word[] {
+  return wordsInStyle(tierLevelPool(words, tier, mode, proficiency, levelChoice), style);
+}
+
+function tierLevelPool(
   words: Word[],
   tier: Tier,
   mode: RunMode,

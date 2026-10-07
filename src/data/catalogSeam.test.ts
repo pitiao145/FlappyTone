@@ -71,6 +71,7 @@ const CATALOG_ROW_KEYS = new Set<keyof CatalogRow>([
   "status",
   "min_tier",
   "speaker_id",
+  "style",
   "clip_key",
   "duration_s",
   "onset_s",
@@ -166,9 +167,11 @@ describe("the catalog row shape", () => {
     // `src/data/words.ts` stamps `DEFAULT_SPEAKER_ID` on at the fallback call
     // site instead of baking a column that would always read "jane" anyway.
     // `contour` is the other deliberate omission — nothing in src/ reads it,
-    // and it is ~28 kB gzip on the landing page's critical path.
+    // and it is ~28 kB gzip on the landing page's critical path. `style` is
+    // the third: the bundle is textbook-only by construction (speech style
+    // spec, decision 10), and a row without one parses as textbook.
     const { wordTokens, embedTokens } = parseCatalogSelect(CATALOG_SELECT);
-    const required = [...wordTokens, ...embedTokens].filter((c) => c !== "speaker_id");
+    const required = [...wordTokens, ...embedTokens].filter((c) => c !== "speaker_id" && c !== "style");
     const baked = new Set<string>(FALLBACK_COLUMNS);
     for (const column of required) {
       expect(baked.has(column), column).toBe(true);
@@ -222,6 +225,32 @@ describe("flattenCatalogRows", () => {
 
   it("drops a row with no clip rather than inventing geometry", () => {
     expect(flattenCatalogRows([{ ...embeddedRow, word_clips: [] }])).toEqual([]);
+  });
+
+  it("keeps textbook at the top level and the natural take under `natural`", () => {
+    const tb = { ...embeddedRow.word_clips[0], style: "textbook" };
+    const nat = { ...tb, style: "natural", clip_key: "clips/natural/ma1b.wav", duration_s: 0.3 };
+    // Order on the wire must not matter.
+    const [flat] = flattenCatalogRows([{ ...embeddedRow, word_clips: [nat, tb] }]) as Record<string, unknown>[];
+    expect(flat.clip_key).toBe("clips/ma1b.wav");
+    expect(flat.style).toBeUndefined();
+    expect((flat.natural as Record<string, unknown>).clip_key).toBe("clips/natural/ma1b.wav");
+
+    const [word] = wordsFromCatalog(flattenCatalogRows([{ ...embeddedRow, word_clips: [nat, tb] }]));
+    expect(word.durationS).toBe(0.6);
+    expect(word.natural?.durationS).toBe(0.3);
+    expect(word.natural?.clipKey).toBe("clips/natural/ma1b.wav");
+  });
+
+  it("drops a word with only a natural take — textbook is required", () => {
+    const nat = { ...embeddedRow.word_clips[0], style: "natural" };
+    expect(flattenCatalogRows([{ ...embeddedRow, word_clips: [nat] }])).toEqual([]);
+  });
+
+  it("drops a row with two clips of one style — the query is supposed to be speaker-scoped", () => {
+    const tb = { ...embeddedRow.word_clips[0], style: "textbook" };
+    const nat = { ...tb, style: "natural" };
+    expect(flattenCatalogRows([{ ...embeddedRow, word_clips: [tb, nat, { ...nat, speaker_id: "mark" }] }])).toEqual([]);
   });
 
   it("drops a row with more than one clip — the query is supposed to be speaker-scoped", () => {

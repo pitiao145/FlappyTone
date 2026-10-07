@@ -32,6 +32,11 @@ export interface CatalogRow {
   status: string;
   min_tier: string;
   speaker_id: string;
+  /**
+   * `word_clips.style` — on the wire inside the embed only. `flattenCatalogRows`
+   * splits on it and strips it: the top-level fields are always textbook.
+   */
+  style?: string;
   clip_key: string | null;
   duration_s: number | null;
   onset_s: number | null;
@@ -39,6 +44,12 @@ export interface CatalogRow {
   polyline: unknown;
   contour?: unknown;
   updated_at: string;
+  /**
+   * The natural take's clip columns, when one is published — set by
+   * `flattenCatalogRows`, never on the wire. The textbook take is the
+   * top-level fields above.
+   */
+  natural?: Record<string, unknown>;
   /** TOCFL/HSK/sampler list ids this word belongs to (`lists.id`), via `word_lists`. */
   lists?: string[];
 }
@@ -49,6 +60,7 @@ export interface CatalogRow {
  */
 const CLIP_COLUMNS = [
   "speaker_id",
+  "style",
   "status",
   "clip_key",
   "duration_s",
@@ -68,13 +80,15 @@ export const CATALOG_SELECT =
   `id,hanzi,pinyin,english,tone,tones,syllables,position,min_tier,word_clips!inner(${CLIP_COLUMNS.join(",")}),word_lists(list_id)`;
 
 /**
- * Lifts the embedded clip onto the word, producing the flat shape
- * `wordsFromCatalog` has always parsed.
+ * Lifts the embedded clips onto the word, producing the flat shape
+ * `wordsFromCatalog` parses: the textbook clip's columns at the top level
+ * (as they always were), the natural clip's under `natural`.
  *
- * Exactly one clip per word or the row is dropped. Zero means the embed
- * filter did not apply; more than one means the query was not speaker-scoped.
- * Both are query bugs, and serving a word with the wrong voice's geometry is
- * worse than serving one word fewer.
+ * Exactly one clip per style or the row is dropped, and a textbook clip is
+ * required. More than one of a style means the query was not speaker-scoped
+ * — a query bug, and serving a word with the wrong voice's geometry is worse
+ * than serving one word fewer. A clip with no `style` (a row cached before
+ * the column was selected) counts as textbook.
  */
 export function flattenCatalogRows(rows: unknown[]): unknown[] {
   const out: unknown[] = [];
@@ -82,16 +96,27 @@ export function flattenCatalogRows(rows: unknown[]): unknown[] {
     if (!row || typeof row !== "object") continue;
     const rec = row as Record<string, unknown>;
     const clips = rec.word_clips;
-    if (!Array.isArray(clips) || clips.length !== 1) continue;
-    const clip = clips[0];
-    if (!clip || typeof clip !== "object") continue;
+    if (!Array.isArray(clips)) continue;
+    const byStyle = new Map<string, Record<string, unknown>[]>();
+    for (const c of clips) {
+      if (!c || typeof c !== "object") continue;
+      const cr = c as Record<string, unknown>;
+      const style = typeof cr.style === "string" ? cr.style : "textbook";
+      byStyle.set(style, [...(byStyle.get(style) ?? []), cr]);
+    }
+    const textbook = byStyle.get("textbook");
+    const natural = byStyle.get("natural");
+    if (!textbook || textbook.length !== 1) continue;
+    if (natural && natural.length !== 1) continue;
+    const { style: _style, ...clip } = textbook[0];
     const { word_clips: _drop, word_lists, ...word } = rec;
     const lists = Array.isArray(word_lists)
       ? word_lists
           .map((l) => (l && typeof l === "object" ? (l as Record<string, unknown>).list_id : null))
           .filter((id): id is string => typeof id === "string")
       : [];
-    out.push({ ...word, ...(clip as Record<string, unknown>), lists });
+    const nat = natural?.[0];
+    out.push({ ...word, ...clip, lists, ...(nat ? { natural: nat } : {}) });
   }
   return out;
 }

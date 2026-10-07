@@ -15,7 +15,7 @@
 import { corridorChaoAt,
   shapeForTone, shapeForWord, GATE_DURATION_S, type Tone } from "../game/gates.ts";
 import { RANGE_SEMITONES } from "../pitch/math.ts";
-import type { Word } from "../game/words.ts";
+import type { SpeechStyle, Word } from "../game/words.ts";
 import { CLIPS_BASE_URL, getPlayTicket, invalidatePlayTicket } from "./clipToken.ts";
 import {
   ClipAborted,
@@ -140,7 +140,16 @@ interface RefClip {
  * exists for every voice on the roster, so a key of `id` alone would serve one
  * speaker's audio under another's name with no error and nothing to notice.
  */
-const clipKeyFor = (word: Word): string => `${word.speakerId}:${word.id}`;
+const clipKeyFor = (word: Word): string => `${word.speakerId}:${styleOf(word)}:${word.id}`;
+
+/**
+ * The style of the take this word's fields describe. Also in the key and the
+ * URL for the same reason the speaker is: a textbook and a natural take of
+ * one word share speaker and id, and must never share a cache entry. The
+ * caller picks the style (the Run or the visualiser, via `wordInStyle`) —
+ * this module never reads the setting itself.
+ */
+const styleOf = (word: Word): SpeechStyle => word.clipStyle ?? "textbook";
 
 const clips = new Map<string, RefClip>();
 /** In-flight or finished loads, so a word is fetched at most once. */
@@ -218,7 +227,9 @@ export function loadClip(
     if (!fixture && (!CLIPS_BASE_URL || !ticket)) throw new Error("no clips source");
     const url = fixture
       ? `/dev-fixtures/tonepairs/${fixture}.wav`
-      : `${CLIPS_BASE_URL}/clip/${word.speakerId}/${word.id}?v=${encodeURIComponent(word.updatedAt)}`;
+      : `${CLIPS_BASE_URL}/clip/${word.speakerId}/${word.id}?${
+          styleOf(word) === "textbook" ? "" : `style=${styleOf(word)}&`
+        }v=${encodeURIComponent(word.updatedAt)}`;
     const res = await submitClipFetch(
       () => fetch(url, ticket ? { headers: { Authorization: `Bearer ${ticket}` } } : undefined),
       { key, priority, signal: opts.signal },

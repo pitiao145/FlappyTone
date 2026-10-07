@@ -33,7 +33,7 @@ import { getTier, tierReady, useTier } from "../data/tier.ts";
 import { postShapes } from "../data/shapes.ts";
 import { postRunLog } from "../data/runlog.ts";
 import { buildRunLogEntry } from "../game/runTrend.ts";
-import { resolvedPool } from "../game/words.ts";
+import { resolvedPool, type SpeechStyle, type Word } from "../game/words.ts";
 import type { Proficiency } from "../game/tiers.ts";
 import type { LevelChoice } from "../game/settings.ts";
 import { TONE_INFO, type Tone } from "../game/gates.ts";
@@ -42,10 +42,10 @@ import { sandhiTones } from "../game/sandhi.ts";
 import { ToneClueSpeakerIcon, ToneMarkIcon } from "./toneMarkIcons.tsx";
 import { tuning } from "../game/tuning.ts";
 import { CALIBRATION_TONES, Run, type RunMode, type RunSnapshot, type WordMix } from "../game/run.ts";
-import type { Word } from "../game/words.ts";
 import type { GateOutcome, UnheardHint } from "../game/scoring.ts";
 import type { ClassifiedTone } from "../game/toneClassifier.ts";
 import {
+  effectiveSpeechStyle,
   loadCorridorWidth,
   loadCueStyle,
   loadNoticeSeen,
@@ -184,6 +184,19 @@ interface Props {
    * wrapping it would silently break that flex sizing.
    */
   hidden?: boolean;
+}
+
+/**
+ * Dev-only `?style=` override for the speech style. Only reachable behind
+ * `import.meta.env.DEV` at its call site, so a production build drops it.
+ */
+function devSpeechStyleOverride(): SpeechStyle | null {
+  try {
+    const v = new URLSearchParams(window.location.search).get("style");
+    return v === "natural" || v === "textbook" ? v : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -536,6 +549,15 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // The calibration flight (autoStart) flies only the grid-anchoring tones;
       // a normal tutorial teaches all four.
       tutorialTones: autoStart ? CALIBRATION_TONES : undefined,
+      // Fixed for the run, read synchronously like the tier above: a tier
+      // that resolves later (guest → free) applies from the next run, never
+      // by rebuilding this one. The Run itself forces textbook for
+      // `tutorial` (calibration flight and guided tutorial).
+      //
+      // Dev only: `?style=natural` (or `?style=textbook`) overrides the
+      // setting and the tier, so natural runs can be flown before any UI
+      // exists (spec §5.1). Gated here, at the usage site (hard rule 7).
+      speechStyle: (import.meta.env.DEV && devSpeechStyleOverride()) || effectiveSpeechStyle(getTier()),
       deferFill: true,
       // Pro only (spec B). Asked per gate from the synchronous store, for the
       // same reason `words` reads it: a late tier must not rebuild the Run.
@@ -1043,7 +1065,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         pairCombo,
         wordMix,
         queued,
-        pool: resolvedPool(all, tier, mode, proficiency, levelChoice),
+        // The run's own style, so the speculative tier warms the clips this
+        // run can actually draw (and under the right cache key).
+        pool: resolvedPool(all, tier, mode, proficiency, levelChoice, runRef.current?.speechStyle),
         perTone: tuning().prefetchWordsPerTone,
       });
       prefetchPool(plan.words, {

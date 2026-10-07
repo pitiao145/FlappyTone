@@ -211,17 +211,19 @@ describe("fetchCatalog", () => {
     expect(c.eq).toHaveBeenCalledWith("word_lists.list_id", "core");
   });
 
-  it("filters to textbook clips only — a natural row must never reach a run", async () => {
-    // Migration 0024 gave a recording a style. The game slice for `natural`
-    // (player setting, tier gating, run composition) hasn't shipped, so the
-    // live query has to keep excluding it explicitly, not by the accident of
-    // there being no natural rows yet.
-    const c = client({ data: [embedRow()], error: null });
+  it("fetches both styles and carries the natural take on the word", async () => {
+    const base = embedRow();
+    const tb = { ...base.word_clips[0], style: "textbook" };
+    const nat = { ...tb, style: "natural", clip_key: "clips/jane/natural/x.wav" };
+    const c = client({ data: [{ ...base, word_clips: [tb, nat] }], error: null });
     vi.mocked(supabaseModule.getSupabase).mockReturnValue(c.supabase);
 
-    await fetchCatalog({ speaker: "jane" });
+    const words = await fetchCatalog({ speaker: "jane" });
 
-    expect(c.eq).toHaveBeenCalledWith("word_clips.style", "textbook");
+    expect(c.eq).not.toHaveBeenCalledWith("word_clips.style", expect.anything());
+    expect(words).toHaveLength(1);
+    expect(words[0].clipKey).toBe(tb.clip_key);
+    expect(words[0].natural?.clipKey).toBe("clips/jane/natural/x.wav");
   });
 
   it("caches per speaker, so a switch cannot serve the other voice", async () => {
