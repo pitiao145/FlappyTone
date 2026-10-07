@@ -169,13 +169,34 @@ syncing the setting · tier-gating natural behind Pro.
    from 100% to 76% (1 of 49 under a creak gap), and correct speech starts
    costing hearts. Hence decision 7's floor rule.
 
-   **Follow-up (session 3, before any live scoring change):** extend
-   `classifier-check` to take a style, and measure natural clips against
-   natural-anchored T2/T3 cues with the same tables. Then Pierre chooses:
-   - style-aware anchors, if they bring clean natural wall hits to 0 and
-     T3 back near textbook → ships after a Lab flight (it changes hearts);
-   - otherwise textbook anchors stay, and the floor rule (mismatch
-     collision and boost off for natural gates) ships as the behaviour.
+   **Follow-up — done 7 Oct 2026 (session 3). Decision: keep the floor.**
+   `classifier-check --anchors textbook|natural` re-ran the same 185 clips
+   per style, with every template (family correlation and T2/T3 cue)
+   taken from the chosen style's averages:
+
+   | | textbook clips, textbook anchors | natural clips, textbook anchors | natural clips, natural anchors |
+   |---|---|---|---|
+   | T1 / T2 / T3 / T4 right | 33 / 31 / 49 / 61 | 31 / 33 / 37 / 62 | 30 / 25 / 46 / 62 |
+   | clean total | 174 | 163 | 163 |
+   | clean wall hits | 0 | 3 | 3 |
+   | all 8 variants (right / wall hits) | 1384 / 3 | 1188 / 38 | 1200 / 57 |
+
+   Natural anchors recover T3 (37 → 46) but lose T2 (33 → 25), leave clean
+   wall hits on correct speech at 3, and raise them under trouble (38 → 57;
+   jitter, creak and a miscalibrated range worst). They also make the
+   fallback T2 corridor flown 120ms early cost a heart. Neither condition
+   (0 clean wall hits, T3 near textbook) is met, so **Pierre kept the
+   floor rule as the shipped behaviour**: `isDrasticToneMismatch` and
+   `applyClassifierBoost` stay off for natural gates (the classifier is not
+   run on them at all), and the live classifier reads textbook averages
+   only. Small drift from the first table (1380/4, 1193/37) is the live
+   catalog moving between pulls; the clean rows match.
+
+   Tone accuracy is separate and does follow the style, T2/T3 cue
+   included: on natural clips the natural-anchored cue scores a right T3
+   0.85 (0.77 textbook-anchored) and a right T2 0.86 (0.69), so it never
+   costs a heart and does read the player better.
+
 3. `npm run test`, `typecheck`, `build` + the dev-tooling grep (rule 7) +
    the landing `PitchTracker` grep. `npm run worker:test`.
 4. `?intent=visualiser` on a cleared-localStorage session still works.
