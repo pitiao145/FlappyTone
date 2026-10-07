@@ -1178,6 +1178,18 @@ describe("Run — rewarding a confident correct shape (spec: classifier boost)",
     const log = snapshots[snapshots.length - 1].gateLog.find((g) => g.tone === 2);
     expect(log?.outcome).toBe("collision");
   });
+
+  it("neither boosts nor reads a natural gate (speech style floor rule)", () => {
+    // Same trace that boosts to perfect above. Textbook anchors misread
+    // natural speech, so the classifier must stay out of a natural gate —
+    // no boost, no read, so no mismatch collision either.
+    const run = new Run({ mode: "game", width: W, rand: () => 0.3, speechStyle: "natural" });
+    const { snapshots } = simulate(run, 1600, levelShifted(0.5));
+    const log = snapshots[snapshots.length - 1].gateLog.find((g) => g.tone === 2);
+    expect(log?.speechStyle).toBe("natural");
+    expect(log?.classifiedTone).toBeNull();
+    expect(log?.outcome).toBe("good");
+  });
 });
 
 describe("Run — flying an inventory", () => {

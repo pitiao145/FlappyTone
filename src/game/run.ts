@@ -1237,8 +1237,12 @@ export class Run {
     // The classifier is trained and tuned on single-syllable shapes only —
     // running it against a two-syllable contour would misread every gate, so
     // both the mismatch-collision and the correct-tone boost are off for
-    // multi-syllable gates (plan's own decision).
-    if (heard && state.gate.syllables === 1) {
+    // multi-syllable gates (plan's own decision). Natural gates get the same
+    // treatment (speech style spec, decision 7): textbook-anchored T2/T3 cues
+    // cost correct natural speakers hearts, so the classifier stays out of a
+    // natural gate until style-aware anchors are shown safe.
+    const classifierApplies = state.gate.syllables === 1 && this.speechStyle === "textbook";
+    if (heard && classifierApplies) {
       // The classifier judges shape alone, so it must see the *whole*
       // utterance, not just whatever fell after the gate opened. A player
       // who starts a hair early has the front of their tone seeded from
@@ -1279,7 +1283,7 @@ export class Run {
 
     if (
       heard &&
-      state.gate.syllables === 1 &&
+      classifierApplies &&
       !forcedCollision &&
       // A confident read of the *correct* tone can raise accuracy/outcome,
       // not just lower it — corridor tracking punishes timing/precision the
