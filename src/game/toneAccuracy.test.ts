@@ -118,7 +118,7 @@ describe("toneAccuracy — flat attempts and level targets", () => {
   });
 
   it("judges Tone 1 on flatness and height, not correlation", () => {
-    const level = AVERAGED_TONE_SHAPE[1][0];
+    const level = AVERAGED_TONE_SHAPE.textbook[1][0];
     const good = toneAccuracyDetail(flat(level), [1])!;
     expect(good.mode).toBe("level");
     expect(good.accuracy).toBeGreaterThan(0.9);

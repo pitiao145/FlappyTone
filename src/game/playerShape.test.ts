@@ -37,7 +37,7 @@ describe("shapeKey", () => {
 
 describe("shapeOfUtterance", () => {
   it("is on the same 61-point grid as Jane's averages", () => {
-    expect(SHAPE_POINTS).toBe(AVERAGED_TONE_SHAPE[1].length);
+    expect(SHAPE_POINTS).toBe(AVERAGED_TONE_SHAPE.textbook[1].length);
     expect(shapeOfUtterance(ramp(1, 5))).toHaveLength(61);
   });
   it("is time-normalised: the same shape said slower gives the same line", () => {

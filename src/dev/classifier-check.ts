@@ -58,7 +58,7 @@ const fresh = {} as Record<Tone, number[]>;
 for (const t of TONES) fresh[t] = averagePolyline(wordsOfTone(words, t));
 
 const sameAverages = TONES.every((t) =>
-  fresh[t].every((v, i) => Math.abs(v - AVERAGED_TONE_SHAPE[t][i]) < 5e-5),
+  fresh[t].every((v, i) => Math.abs(v - AVERAGED_TONE_SHAPE.textbook[t][i]) < 5e-5),
 );
 
 interface Case {
@@ -213,10 +213,10 @@ function source(
   // A synthetic case built FROM a template must be rebuilt per template set,
   // exactly as the test would be after a regeneration.
   const build = typeof casesFor === "function" ? casesFor : () => casesFor;
-  const cases = build(AVERAGED_TONE_SHAPE);
+  const cases = build(AVERAGED_TONE_SHAPE.textbook);
   console.log(`\n== ${name} (${cases.length})`);
   if (cases.length === 0) return;
-  const baked = readAll(cases, AVERAGED_TONE_SHAPE);
+  const baked = readAll(cases, AVERAGED_TONE_SHAPE.textbook);
   const fresh_ = readAll(build(fresh), fresh);
   matrix("baked averages (toneAverages.ts, live today)", cases, baked);
   if (!sameAverages) matrix("fresh averages (from wordsFallback.json)", cases, fresh_);
@@ -244,7 +244,7 @@ console.log(
 );
 console.log(`Level/start of each average (baked → fresh):`);
 for (const t of TONES) {
-  const b = AVERAGED_TONE_SHAPE[t];
+  const b = AVERAGED_TONE_SHAPE.textbook[t];
   const f = fresh[t];
   console.log(
     `  T${t}  start ${b[0].toFixed(2)} → ${f[0].toFixed(2)}   mid ${b[30].toFixed(2)} → ${f[30].toFixed(2)}   end ${b[60].toFixed(2)} → ${f[60].toFixed(2)}`,

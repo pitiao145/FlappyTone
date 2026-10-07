@@ -77,11 +77,11 @@ function spanOf(points: ContourPoint[]): number {
 
 /** The averaged reference for a target, or null when there is none to judge against. */
 export function referenceFor(tones: Tone[]): number[] | null {
-  if (tones.length === 1) return AVERAGED_TONE_SHAPE[tones[0]] ?? null;
+  if (tones.length === 1) return AVERAGED_TONE_SHAPE.textbook[tones[0]] ?? null;
   if (tones.length !== 2) return null;
   // A neutral syllable has no averaged combo (left out of the generator on
   // purpose), so this also covers "neutral combos are not measured".
-  return AVERAGED_PAIR_SHAPE[toneComboKey(tones)] ?? null;
+  return AVERAGED_PAIR_SHAPE.textbook[toneComboKey(tones)] ?? null;
 }
 
 /**

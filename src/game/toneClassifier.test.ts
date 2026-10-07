@@ -42,7 +42,7 @@ function contourFromTone(
   amplitudeScale = 1,
   n = 20,
 ): Contour {
-  const shape = AVERAGED_TONE_SHAPE[tone];
+  const shape = AVERAGED_TONE_SHAPE.textbook[tone];
   const raw = Array.from({ length: n }, (_, k) => chaoAtT(shape, k / (n - 1)));
   const mean = raw.reduce((s, v) => s + v, 0) / raw.length;
   const onsetMs = durationMs * 0.3;
@@ -129,7 +129,7 @@ describe("classifyTone", () => {
       // then a clean T2 shape for the rest. Untrimmed, this swing would
       // dominate the resampled vector; trimmed, only the real T2 shape
       // should remain and classify correctly.
-      const shape = AVERAGED_TONE_SHAPE[2];
+      const shape = AVERAGED_TONE_SHAPE.textbook[2];
       const onsetMs = 200;
       const realMs = 800;
       const onset: ContourPoint[] = Array.from({ length: 6 }, (_, k) => ({
@@ -247,8 +247,8 @@ describe("classifyTone", () => {
     }
 
     it("anchors the vote on the averages: the T2 average votes about -1, the T3 average about +1", () => {
-      const t2 = classifyTone(contourOf(AVERAGED_TONE_SHAPE[2]));
-      const t3 = classifyTone(contourOf(AVERAGED_TONE_SHAPE[3]));
+      const t2 = classifyTone(contourOf(AVERAGED_TONE_SHAPE.textbook[2]));
+      const t3 = classifyTone(contourOf(AVERAGED_TONE_SHAPE.textbook[3]));
       expect(t2?.tone).toBe(2);
       expect(t3?.tone).toBe(3);
       // Not exactly ±1: the shape vote reads the onset-trimmed contour.
@@ -314,7 +314,7 @@ describe("classifyTone", () => {
     it("says none rather than guess inside the dead zone", () => {
       try {
         setTuning({ toneClassifierT23DeadZone: 1.6 });
-        expect(classifyTone(contourOf(AVERAGED_TONE_SHAPE[3]))?.tone).toBe("none");
+        expect(classifyTone(contourOf(AVERAGED_TONE_SHAPE.textbook[3]))?.tone).toBe("none");
       } finally {
         resetTuning();
       }
@@ -322,12 +322,12 @@ describe("classifyTone", () => {
 
     it("never lets a close call or a lost dip decide a heart", () => {
       // Halfway between the two averages: may be named, never decisive.
-      const midway = AVERAGED_TONE_SHAPE[2].map((v, i) => (v + AVERAGED_TONE_SHAPE[3][i]) / 2);
+      const midway = AVERAGED_TONE_SHAPE.textbook[2].map((v, i) => (v + AVERAGED_TONE_SHAPE.textbook[3][i]) / 2);
       expect(classifyTone(contourOf(midway))?.decisive).toBe(false);
 
       // The T2 average with 150ms of its dip unvoiced — what creak does.
       // Still named T2, but the gap takes away the right to cost a heart.
-      const t2 = contourOf(AVERAGED_TONE_SHAPE[2]);
+      const t2 = contourOf(AVERAGED_TONE_SHAPE.textbook[2]);
       const gapped = { ...t2, points: t2.points.filter((p) => p.tMs < 250 || p.tMs > 400) };
       const read = classifyTone(gapped);
       expect(read?.tone).toBe(2);

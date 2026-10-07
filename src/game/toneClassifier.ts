@@ -322,7 +322,7 @@ function t2t3Cue(
  */
 export function t2t3CueOf(
   contour: Contour,
-  templates: Record<Tone, number[]> = AVERAGED_TONE_SHAPE,
+  templates: Record<Tone, number[]> = AVERAGED_TONE_SHAPE.textbook,
 ): number | null {
   if (contour.points.length < 2) return null;
   const trimmed = trimOnset(contour.points, tuning().toneClassifierOnsetTrimFraction);
@@ -367,7 +367,7 @@ export function classifyTone(
    * parameter so `src/dev/classifier-check.ts` can compare the committed
    * averages against freshly computed ones in one run.
    */
-  templates: Record<Tone, number[]> = AVERAGED_TONE_SHAPE,
+  templates: Record<Tone, number[]> = AVERAGED_TONE_SHAPE.textbook,
 ): ToneClassification | null {
   if (contour.points.length < 2) return null;
 
