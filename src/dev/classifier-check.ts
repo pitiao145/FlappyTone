@@ -1,4 +1,10 @@
-// CLI: npm run classifier-check -- [contours.json] [--verbose]
+// CLI: npm run classifier-check -- [contours.json] [--anchors textbook|natural] [--verbose]
+//
+// `--anchors` picks which style's averages the classifier reads (speech style
+// spec §5.2 follow-up): every template, so both the family correlation and the
+// T2/T3 cue anchors. Default `textbook`, what the game runs. `natural` is an
+// offline measurement only — the live classifier always reads textbook. The
+// contours file decides which clips are read; pull textbook or natural rows.
 //
 // Reads the tone classifier against real measured shapes, twice: once with the
 // averages baked into `src/game/toneAverages.ts` (what the game runs today),
@@ -46,7 +52,15 @@ const root = new URL("../../", import.meta.url).pathname;
 const TONES: Tone[] = [1, 2, 3, 4];
 const args = process.argv.slice(2);
 const verbose = args.includes("--verbose");
-const contoursPath = args.find((a) => !a.startsWith("--"));
+const anchorsAt = args.indexOf("--anchors");
+const anchorStyle = anchorsAt >= 0 ? args[anchorsAt + 1] : "textbook";
+if (anchorStyle !== "textbook" && anchorStyle !== "natural") {
+  console.error(`--anchors must be textbook or natural, got ${anchorStyle}`);
+  process.exit(1);
+}
+const contoursPath = args.find((a, i) => !a.startsWith("--") && i !== anchorsAt + 1);
+/** The templates every read below uses. */
+const live: Record<Tone, number[]> = AVERAGED_TONE_SHAPE[anchorStyle];
 
 // ---- Fresh averages, the same computation make-tone-averages bakes.
 const words = wordsFromCatalog(
@@ -57,9 +71,11 @@ const words = wordsFromCatalog(
 const fresh = {} as Record<Tone, number[]>;
 for (const t of TONES) fresh[t] = averagePolyline(wordsOfTone(words, t));
 
-const sameAverages = TONES.every((t) =>
-  fresh[t].every((v, i) => Math.abs(v - AVERAGED_TONE_SHAPE.textbook[t][i]) < 5e-5),
-);
+// The fresh-vs-baked comparison only means something for textbook (the
+// bundle is textbook-only); with natural anchors it is skipped.
+const sameAverages =
+  anchorStyle !== "textbook" ||
+  TONES.every((t) => fresh[t].every((v, i) => Math.abs(v - live[t][i]) < 5e-5));
 
 interface Case {
   id: string;
@@ -213,12 +229,12 @@ function source(
   // A synthetic case built FROM a template must be rebuilt per template set,
   // exactly as the test would be after a regeneration.
   const build = typeof casesFor === "function" ? casesFor : () => casesFor;
-  const cases = build(AVERAGED_TONE_SHAPE.textbook);
+  const cases = build(live);
   console.log(`\n== ${name} (${cases.length})`);
   if (cases.length === 0) return;
-  const baked = readAll(cases, AVERAGED_TONE_SHAPE.textbook);
+  const baked = readAll(cases, live);
   const fresh_ = readAll(build(fresh), fresh);
-  matrix("baked averages (toneAverages.ts, live today)", cases, baked);
+  matrix(`baked ${anchorStyle} averages (toneAverages.ts)`, cases, baked);
   if (!sameAverages) matrix("fresh averages (from wordsFallback.json)", cases, fresh_);
   const changed = cases
     .map((c, i) => ({ c, a: baked[i], b: fresh_[i] }))
@@ -237,14 +253,17 @@ function source(
   }
 }
 
+console.log(`Anchors: ${anchorStyle} averages${anchorStyle === "textbook" ? " (live)" : " (offline only, not live)"}.`);
 console.log(
-  sameAverages
+  anchorStyle !== "textbook"
+    ? "Fresh-vs-baked comparison skipped (natural anchors)."
+    : sameAverages
     ? "Baked averages match wordsFallback.json — one column shown."
     : "Baked averages differ from wordsFallback.json — showing both.",
 );
 console.log(`Level/start of each average (baked → fresh):`);
 for (const t of TONES) {
-  const b = AVERAGED_TONE_SHAPE.textbook[t];
+  const b = live[t];
   const f = fresh[t];
   console.log(
     `  T${t}  start ${b[0].toFixed(2)} → ${f[0].toFixed(2)}   mid ${b[30].toFixed(2)} → ${f[30].toFixed(2)}   end ${b[60].toFixed(2)} → ${f[60].toFixed(2)}`,
@@ -294,7 +313,7 @@ if (contoursPath) {
     const n: Record<Tone, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
     let hits = 0;
     for (const c of clips) {
-      const r = classifyTone(contourOf(warp(c.contour.points)));
+      const r = classifyTone(contourOf(warp(c.contour.points)), live);
       n[c.tone]++;
       if (r?.tone === c.tone) right[c.tone]++;
       else if (isDrasticToneMismatch(c.tone, r)) hits++;
@@ -320,7 +339,7 @@ for (const tone of TONES) {
     for (let tMs = 0; tMs <= durMs; tMs += 23) {
       pts.push({ tMs, chao: corridorChaoAt(shape, Math.max(0, Math.min(1, (tMs + offMs) / durMs))) });
     }
-    const r = classifyTone(contourOf(pts));
+    const r = classifyTone(contourOf(pts), live);
     const read = r ? (r.tone === "none" ? "none" : `T${r.tone}`) : "–";
     cells.push(`${offMs > 0 ? "+" : ""}${offMs}: ${read}${isDrasticToneMismatch(tone, r) ? "!" : ""}`);
   }
