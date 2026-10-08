@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { loadInventory } from "../audio/inventory.ts";
+import { useEffect, useMemo, useRef } from "react";
 import { drawToneAverageChart } from "../ui/toneAverageChart.ts";
 import { availableToneCombos, toneComboKey, wordsOfCombo, wordsOfTone } from "../game/words.ts";
 import type { Tone } from "../game/gates.ts";
@@ -60,36 +59,25 @@ function PairCard({ words, tones, color }: { words: Word[]; tones: Tone[]; color
   );
 }
 
-export function ToneAverages() {
-  const [words, setWords] = useState<Word[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadInventory().then(
-      (w) => setWords(w),
-      (e: unknown) => setError(e instanceof Error ? e.message : "manifest failed"),
-    );
-  }, []);
+/** `words` arrives already re-pointed at the Lab's chosen speech style. */
+export function ToneAverages({ words }: { words: Word[] }) {
 
   const byTone = useMemo(() => {
     const map = new Map<Tone, Word[]>();
     for (const t of [1, 2, 3, 4] as Tone[]) {
-      map.set(t, wordsOfTone(words ?? [], t));
+      map.set(t, wordsOfTone(words, t));
     }
     return map;
   }, [words]);
 
-  const combos = useMemo(() => availableToneCombos(words ?? []), [words]);
+  const combos = useMemo(() => availableToneCombos(words), [words]);
   const byCombo = useMemo(() => {
     const map = new Map<string, Word[]>();
     for (const combo of combos) {
-      map.set(toneComboKey(combo), wordsOfCombo(words ?? [], combo));
+      map.set(toneComboKey(combo), wordsOfCombo(words, combo));
     }
     return map;
   }, [words, combos]);
-
-  if (error) return <p className="error">{error}</p>;
-  if (!words) return <p className="param-help">loading the manifest…</p>;
 
   return (
     <div className="word-gates">

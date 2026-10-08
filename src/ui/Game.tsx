@@ -536,7 +536,13 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // that resolves later (guest → free) applies from the next run, never
       // by rebuilding this one. The Run itself forces textbook for
       // `tutorial` (calibration flight and guided tutorial).
-      speechStyle: effectiveSpeechStyle(getTier()),
+      // A single-gate test (the Lab) flies the take the word was handed: `Run`
+      // re-points `singleWord` at its own style, which drops a natural take
+      // when the setting says textbook (no gate) and would swap a textbook
+      // pick for its natural take when the setting says natural.
+      speechStyle: singleWord
+        ? (singleWord.clipStyle ?? "textbook")
+        : effectiveSpeechStyle(getTier()),
       deferFill: true,
       // Pro only (spec B). Asked per gate from the synchronous store, for the
       // same reason `words` reads it: a late tier must not rebuild the Run.

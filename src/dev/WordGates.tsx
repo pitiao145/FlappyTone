@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import fallback from "../data/wordsFallback.json";
-import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
 import { ensurePlaybackCtx, loadClip, playToneCue } from "../audio/reference.ts";
 import {
   corridorChaoAt,
@@ -11,7 +9,7 @@ import {
 } from "../game/gates.ts";
 import { loadSettings } from "../game/settings.ts";
 import { tuning } from "../game/tuning.ts";
-import { wordsFromCatalog, multiWords, type Word } from "../game/words.ts";
+import { multiWords, type Word } from "../game/words.ts";
 import { DEFAULT_CONFIG } from "../pitch/PitchTracker.ts";
 import { corridorEdges } from "../render/world.ts";
 import { traceSmoothPath } from "../render/scene.ts";
@@ -212,17 +210,8 @@ function Card({ word, tolH, band }: { word: Word; tolH: number; band: Band }) {
   );
 }
 
-export function WordGates() {
-  /**
-   * The bundled catalog export, same reason as the Lab's own picker: this page
-   * is a fixed reference sheet of every corridor, and it should not change
-   * shape because the database did mid-session. `npm run export-fallback`
-   * refreshes it.
-   */
-  const words = useMemo(
-    () => wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID }))),
-    [],
-  );
+/** `words` arrives already re-pointed at the Lab's chosen speech style. */
+export function WordGates({ words }: { words: Word[] }) {
   const [filter, setFilter] = useState<Tone | "all" | "pairs">("all");
 
   const tolH = tuning().baseToleranceH;
@@ -239,9 +228,7 @@ export function WordGates() {
   if (words.length === 0) {
     return (
       <p className="param-help">
-        The inventory is empty — src/data/wordsFallback.json has no rows. A run
-        would degrade to the tuning defaults here, which looks like the game
-        working; this does not. Run `npm run export-fallback`.
+        No takes in this speech style yet.
       </p>
     );
   }

@@ -2701,6 +2701,25 @@
   overflow-x: auto;
 }
 
+/* Gallery tabs: the whole page scrolls, header stays pinned. */
+.lab-screen.lab-page-scroll {
+  height: auto;
+  overflow: visible;
+}
+
+.lab-page-scroll .lab-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--surface);
+}
+
+.lab-page-scroll .word-grid {
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
+}
+
 @media (max-width: 1100px) {
   .lab-screen {
     height: auto;

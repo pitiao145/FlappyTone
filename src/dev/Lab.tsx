@@ -18,7 +18,7 @@ import {
   saveCorridorWidth,
   type CalibrationSettings,
 } from "../game/settings.ts";
-import { multiWords, type Word } from "../game/words.ts";
+import { multiWords, wordsInStyle, type SpeechStyle, type Word } from "../game/words.ts";
 import { DEFAULT_CONFIG } from "../pitch/PitchTracker.ts";
 import { Choice } from "../ui/Choice.tsx";
 import { Game } from "../ui/Game.tsx";
@@ -56,6 +56,9 @@ const FALLBACK_SETTINGS: CalibrationSettings = {
 
 const TONES: Tone[] = [1, 2, 3, 4];
 
+/** Gallery tabs scroll as one page; the workbench tabs keep fixed panes that scroll inside. */
+const PAGE_SCROLL: ReadonlySet<Tab> = new Set(["words", "averages", "tonepairs"]);
+
 interface Props {
   onBack: () => void;
 }
@@ -90,6 +93,10 @@ export function Lab({ onBack }: Props) {
     };
   }, []);
 
+  /** One style for every single-word view; a word with no take in it drops out, as in a run. */
+  const [style, setStyle] = useState<SpeechStyle>("textbook");
+  const styled = useMemo(() => wordsInStyle(words, style), [words, style]);
+
   /** Pairs in the catalog, else (dev only) the four fixture words, so pairs can be flown before any is published. */
   const pairs = useMemo(() => {
     const real = multiWords(words);
@@ -97,7 +104,7 @@ export function Lab({ onBack }: Props) {
   }, [words]);
 
   return (
-    <div className="screen lab-screen">
+    <div className={PAGE_SCROLL.has(tab) ? "screen lab-screen lab-page-scroll" : "screen lab-screen"}>
       <header className="lab-header">
         <button className="lab-exit" onClick={onBack}>
           Exit lab
@@ -117,6 +124,10 @@ export function Lab({ onBack }: Props) {
           ))}
         </nav>
         <div className="lab-width">
+          <span className="param-name">Speech style</span>
+          <Choice options={["textbook", "natural"] as const} value={style} onChange={setStyle} />
+        </div>
+        <div className="lab-width">
           <span className="param-name">Tunnel width</span>
           <Choice
             options={CORRIDOR_WIDTHS}
@@ -131,13 +142,13 @@ export function Lab({ onBack }: Props) {
 
       <main className="lab-body">
         {tab === "play" && (
-          <PlayTab words={words} pairs={pairs} settings={settings} corridorWidth={corridorWidth} />
+          <PlayTab words={words} styled={styled} pairs={pairs} settings={settings} corridorWidth={corridorWidth} />
         )}
         {tab === "pairgates" && (
           <PairGates pairs={pairs} settings={settings} corridorWidth={corridorWidth} />
         )}
-        {tab === "words" && <WordGates />}
-        {tab === "averages" && <ToneAverages />}
+        {tab === "words" && <WordGates words={styled} />}
+        {tab === "averages" && <ToneAverages words={styled} />}
         {tab === "tonepairs" && <TonePairs />}
         {tab === "visualiser" && (
           <div className="lab-pane lab-pane-stage">
@@ -151,24 +162,27 @@ export function Lab({ onBack }: Props) {
 
 function PlayTab({
   words,
+  styled,
   pairs,
   settings,
   corridorWidth,
 }: {
   words: Word[];
+  styled: Word[];
   pairs: Word[];
   settings: CalibrationSettings;
   corridorWidth: CorridorWidth;
 }) {
   const [toneFilter, setToneFilter] = useState<Tone | "all">("all");
-  const [selected, setSelected] = useState<Word | null>(null);
-  const singles = useMemo(() => words.filter((w) => w.syllables === 1), [words]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const singles = useMemo(() => styled.filter((w) => w.syllables === 1), [styled]);
   const shown = useMemo(
     () => (toneFilter === "all" ? singles : singles.filter((w) => w.tone === toneFilter)),
     [singles, toneFilter],
   );
   // Default to the first word once the list lands, without overriding a pick.
-  const word = selected ?? singles[0] ?? null;
+  // Looked up by id so a style switch keeps the pick (or falls back if that style has no take).
+  const word = singles.find((w) => w.id === selectedId) ?? singles[0] ?? null;
 
   return (
     <div className="lab-grid lab-grid-play">
@@ -200,7 +214,7 @@ function PlayTab({
               <button
                 className={w.id === word?.id ? "word-item active" : "word-item"}
                 aria-pressed={w.id === word?.id}
-                onClick={() => setSelected(w)}
+                onClick={() => setSelectedId(w.id)}
               >
                 <span className="word-hanzi">{w.hanzi}</span>
                 <span className="word-pinyin">{w.pinyin}</span>
