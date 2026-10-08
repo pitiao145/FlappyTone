@@ -135,3 +135,56 @@ export function pinnedFractionOf(contour: ContourPoint[]): number {
   const pinned = contour.filter(([, chao]) => chao <= 1.05 || chao >= 4.95).length;
   return pinned / contour.length;
 }
+
+/** One cohort as placement sees it: its tones and every clip's contour. */
+export interface CohortContours {
+  tones: readonly number[];
+  contours: ContourPoint[][];
+}
+
+/** Why a cohort was left at its measured contour. */
+export type PlacementSkip = "neutral-only" | "no-map-source";
+
+export interface CohortPlacement {
+  /** The span of the cohort the map was computed FROM (the map source). */
+  sourceSpan: ChaoSpan;
+  target: ChaoSpan;
+  map: ChaoMap;
+}
+
+/**
+ * The chao map for every cohort, keyed like `process-clips`' `cohortKey`.
+ *
+ * `mapSources` is the cohort each map is computed from. A textbook run passes
+ * its own cohorts: each tone is stretched onto its citation span. A natural
+ * run passes the TEXTBOOK cohorts of the same speaker: natural is placed with
+ * textbook's map, not stretched onto the citation span itself, so a word's two
+ * styles share one map and natural stays as much smaller than textbook as it
+ * was spoken (docs/DECISIONS.md, "Speech style"). A natural stretch of its own
+ * would inflate every natural shape to textbook size and hide the difference.
+ *
+ * A cohort with no map source is skipped, not stretched onto its own span —
+ * the caller warns. A neutral-only cohort has no citation height and is
+ * skipped too.
+ */
+export function cohortPlacements(
+  cohorts: ReadonlyMap<string, CohortContours>,
+  mapSources: ReadonlyMap<string, CohortContours>,
+): Map<string, CohortPlacement | PlacementSkip> {
+  const out = new Map<string, CohortPlacement | PlacementSkip>();
+  for (const [key, cohort] of cohorts) {
+    if (!cohort.tones.some((t) => t >= 1 && t <= 4)) {
+      out.set(key, "neutral-only");
+      continue;
+    }
+    const source = mapSources.get(key);
+    if (!source || source.contours.length === 0) {
+      out.set(key, "no-map-source");
+      continue;
+    }
+    const sourceSpan = cohortSpan(source.contours);
+    const target = cohortTargetSpan(cohort.tones);
+    out.set(key, { sourceSpan, target, map: chaoMapFor(sourceSpan, target) });
+  }
+  return out;
+}

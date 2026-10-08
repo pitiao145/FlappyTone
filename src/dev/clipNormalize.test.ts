@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyChaoMap,
   chaoMapFor,
+  cohortPlacements,
   cohortSpan,
   cohortTargetSpan,
   pinnedFractionOf,
@@ -167,5 +168,46 @@ describe("the whole placement, on tone-shaped cohorts", () => {
     };
     expect(at(0.5)).toBeGreaterThan(4);
     expect(at(1)).toBeLessThan(2);
+  });
+});
+
+describe("cohortPlacements: natural is placed with textbook's map", () => {
+  // Textbook T4 falls across ~3 chao of measure space; natural across ~1.
+  const textbookT4 = [contourOf((t) => 4.5 - 3 * t), contourOf((t) => 4.3 - 2.8 * t)];
+  const naturalT4 = [contourOf((t) => 3.8 - 1 * t), contourOf((t) => 3.7 - 0.9 * t)];
+  const textbook = new Map([["4", { tones: [4], contours: textbookT4 }]]);
+  const natural = new Map([
+    ["4", { tones: [4], contours: naturalT4 }],
+    ["3-2", { tones: [3, 2], contours: [contourOf((t) => 3 - t)] }],
+    ["0", { tones: [0], contours: [contourOf(() => 3)] }],
+  ]);
+
+  it("gives a natural cohort exactly the map textbook's own cohort gets", () => {
+    const own = cohortPlacements(textbook, textbook).get("4");
+    const borrowed = cohortPlacements(natural, textbook).get("4");
+    expect(typeof own).toBe("object");
+    expect(borrowed).toEqual(own);
+  });
+
+  it("keeps natural as much smaller than textbook as it was spoken", () => {
+    const p = cohortPlacements(natural, textbook).get("4");
+    if (typeof p !== "object") throw new Error("expected a placement");
+    const placedNatural = cohortSpan(naturalT4.map((c) => applyChaoMap(c, p.map)));
+    const placedTextbook = cohortSpan(textbookT4.map((c) => applyChaoMap(c, p.map)));
+    const ratio = (s: { low: number; high: number }) => s.high - s.low;
+    expect(ratio(placedNatural) / ratio(placedTextbook)).toBeCloseTo(
+      ratio(cohortSpan(naturalT4)) / ratio(cohortSpan(textbookT4)),
+      5,
+    );
+    // Not stretched onto the citation span of its own.
+    expect(ratio(placedNatural)).toBeLessThan(ratio(cohortTargetSpan([4])) * 0.6);
+  });
+
+  it("skips a cohort with no textbook map source instead of stretching it alone", () => {
+    expect(cohortPlacements(natural, textbook).get("3-2")).toBe("no-map-source");
+  });
+
+  it("leaves a neutral-only cohort unplaced", () => {
+    expect(cohortPlacements(natural, textbook).get("0")).toBe("neutral-only");
   });
 });

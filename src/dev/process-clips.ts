@@ -5,6 +5,7 @@
  *   npm run process-clips -- --speaker jane --style textbook --session 2026-09-01-ab12cd
  *   npm run process-clips -- --speaker jane --style textbook --all           # re-cut published too
  *   npm run process-clips -- --speaker jane --style textbook --all --dry-run # cut, write nothing
+ *   npm run process-clips -- --speaker jane --style natural --all --no-upload # rows only, no R2
  *
  * ## `--speaker` and `--style` are both required, and unknown values exit non-zero
  *
@@ -91,10 +92,11 @@ import {
 } from "./clipCut.ts";
 import {
   applyChaoMap,
-  chaoMapFor,
+  cohortPlacements,
   cohortSpan,
-  cohortTargetSpan,
   pinnedFractionOf,
+  type ChaoSpan,
+  type CohortContours,
 } from "./clipNormalize.ts";
 import { MIN_REFERENCE_FRAMES, resolveSeed } from "./clipPipeline.ts";
 import { median, reviewClip } from "./clipReview.ts";
@@ -121,6 +123,10 @@ const clipsDir = `${root}fixtures/clips`;
 const args = process.argv.slice(2);
 const all = args.includes("--all");
 const dryRun = args.includes("--dry-run");
+// Re-cut without re-uploading: the audio is the take itself with faded edges,
+// byte-identical on a re-cut, so a measurement-only change (a new chao map)
+// needs only the word_clips rows rewritten.
+const noUpload = args.includes("--no-upload");
 const sessionIdx = args.indexOf("--session");
 // A flag is not a session id. Taking the next token blindly means
 // `-- --session --dry-run` silently filters on the session "--dry-run",
@@ -220,39 +226,43 @@ interface Row {
  * left in place — every one of them Jane's, whichever `--speaker` was passed.
  * `words!inner` supplies only what is true of the word itself.
  */
-const { data: allRows, error: rowsError } = await supabase
-  .from("word_clips")
-  .select("word_id,status,clip_key,raw_key,recorded_session,words!inner(tone,tones,syllables,position)")
-  .eq("speaker_id", speakerId)
-  .eq("style", style);
-if (rowsError) throw new Error(`word_clips select failed: ${rowsError.message}`);
+async function loadCatalog(forStyle: "textbook" | "natural"): Promise<Row[]> {
+  const { data: allRows, error: rowsError } = await supabase
+    .from("word_clips")
+    .select("word_id,status,clip_key,raw_key,recorded_session,words!inner(tone,tones,syllables,position)")
+    .eq("speaker_id", speakerId)
+    .eq("style", forStyle);
+  if (rowsError) throw new Error(`word_clips select failed: ${rowsError.message}`);
 
-// Ordered here rather than in the query: `position` lives on the embedded
-// side, and a sort PostgREST silently declines to apply would reorder nothing
-// and say nothing.
-const catalog = ((allRows ?? []) as unknown as {
-  word_id: string;
-  status: string;
-  clip_key: string | null;
-  raw_key: string | null;
-  recorded_session: string | null;
-  words: { tone: number; tones: number[] | null; syllables: number | null; position: number };
-}[])
-  .map((r): Row => ({
-    id: r.word_id,
-    tone: r.words.tone,
-    // `tones`/`syllables` have defaults in the schema, but a row written
-    // before 0013 can still read null. A word with neither is single by
-    // definition, which is also what every pre-0013 row is.
-    tones: (r.words.tones?.length ? r.words.tones : [r.words.tone]) as Tone[],
-    syllables: r.words.syllables ?? 1,
-    position: r.words.position,
-    status: r.status,
-    clip_key: r.clip_key,
-    raw_key: r.raw_key,
-    recorded_session: r.recorded_session,
-  }))
-  .sort((a, b) => a.position - b.position);
+  // Ordered here rather than in the query: `position` lives on the embedded
+  // side, and a sort PostgREST silently declines to apply would reorder nothing
+  // and say nothing.
+  return ((allRows ?? []) as unknown as {
+    word_id: string;
+    status: string;
+    clip_key: string | null;
+    raw_key: string | null;
+    recorded_session: string | null;
+    words: { tone: number; tones: number[] | null; syllables: number | null; position: number };
+  }[])
+    .map((r): Row => ({
+      id: r.word_id,
+      tone: r.words.tone,
+      // `tones`/`syllables` have defaults in the schema, but a row written
+      // before 0013 can still read null. A word with neither is single by
+      // definition, which is also what every pre-0013 row is.
+      tones: (r.words.tones?.length ? r.words.tones : [r.words.tone]) as Tone[],
+      syllables: r.words.syllables ?? 1,
+      position: r.words.position,
+      status: r.status,
+      clip_key: r.clip_key,
+      raw_key: r.raw_key,
+      recorded_session: r.recorded_session,
+    }))
+    .sort((a, b) => a.position - b.position);
+}
+
+const catalog = await loadCatalog(style);
 
 /** Everything with audio in the raw bucket, whatever its status. */
 function hasTake(row: Row): boolean {
@@ -316,23 +326,6 @@ function localPath(row: Row): string {
   return `${recordingsDir}/${speakerId}/${row.recorded_session}/${row.id}.wav`;
 }
 
-const missing = toCut.filter((r) => !existsSync(localPath(r)));
-if (missing.length && dryRun) {
-  console.error(
-    `--dry-run writes nothing, and ${missing.length} raw take(s) are not on disk:\n  ` +
-      missing.map((r) => `${r.recorded_session}/${r.id}.wav`).join("\n  ") +
-      `\n\nRun without --dry-run (which caches them under fixtures/recordings/) first.`,
-  );
-  process.exit(1);
-}
-for (const row of missing) {
-  // fixtures/recordings/ is the local evidence cache, gitignored and
-  // re-pullable: the raw take is what you go back to when a clip comes out
-  // wrong, so it stays on disk rather than being streamed and forgotten.
-  mkdirSync(`${recordingsDir}/${speakerId}/${row.recorded_session}`, { recursive: true });
-  console.log(`pulling ${row.raw_key}`);
-  r2Get("flappytone-raw", row.raw_key!, localPath(row));
-}
 
 /**
  * The take itself, with click-free edges — this is what ships. Nothing is
@@ -355,13 +348,6 @@ interface Take {
   sampleRate: number;
 }
 
-const takesBySession = new Map<string, Take[]>();
-for (const row of toCut) {
-  const { samples, sampleRate } = decodeWav(new Uint8Array(readFileSync(localPath(row))));
-  const session = row.recorded_session!;
-  if (!takesBySession.has(session)) takesBySession.set(session, []);
-  takesBySession.get(session)!.push({ row, samples, sampleRate });
-}
 
 // --------------------------------------------- the voice, per session
 
@@ -428,38 +414,6 @@ interface SessionReference extends PitchReference {
   borrowedFrom: string | null;
 }
 
-const referenceBySession = new Map<string, SessionReference>();
-const referenceNotes: string[] = [];
-
-for (const [session, takes] of takesBySession) {
-  const measured = measurePitchReference(takes, seedF0);
-
-  if (measured && measured.frames >= MIN_REFERENCE_FRAMES) {
-    referenceBySession.set(session, { ...measured, borrowedFrom: null });
-    console.log(
-      `\n${session}: ${takes.length} take(s), f0Center ${measured.f0Center.toFixed(1)}Hz, ` +
-        `range ±${measured.rangeSemitones} st (${measured.frames} voiced frames)`,
-    );
-    continue;
-  }
-
-  const borrowed = await referenceOfLastPublished();
-  if (!borrowed) {
-    throw new Error(
-      `${session}: only ${measured?.frames ?? 0} voiced frame(s), under the ` +
-        `${MIN_REFERENCE_FRAMES}-frame minimum, and no published ${speakerId} word has a stored ` +
-        `reference to borrow. Record more of this session before processing it.`,
-    );
-  }
-  referenceBySession.set(session, { ...borrowed, borrowedFrom: `the last published ${speakerId} word` });
-  const note =
-    `${session}: only ${measured?.frames ?? 0} voiced frame(s), under the ` +
-    `${MIN_REFERENCE_FRAMES}-frame minimum — borrowed f0Center ` +
-    `${borrowed.f0Center.toFixed(1)}Hz / ±${borrowed.rangeSemitones} st from the last ` +
-    `published ${speakerId} word instead of measuring this session (Decision 9).`;
-  referenceNotes.push(note);
-  console.log(`\n⚠ ${note}`);
-}
 
 // ------------------------------------------------------------- the cut
 
@@ -480,44 +434,114 @@ interface Cut {
   sampleRate: number;
 }
 
-const cuts: Cut[] = [];
-const failed: string[] = [];
+/**
+ * Pulls, decodes and cuts `toCut`, measuring each session's pitch reference
+ * from its own takes. One path for every style: a natural run cuts the
+ * textbook takes through here too, to borrow their chao maps.
+ */
+async function cutRows(toCut: Row[]): Promise<{ cuts: Cut[]; failed: string[]; referenceNotes: string[] }> {
+  const missing = toCut.filter((r) => !existsSync(localPath(r)));
+  if (missing.length && dryRun) {
+    console.error(
+      `--dry-run writes nothing, and ${missing.length} raw take(s) are not on disk:\n  ` +
+        missing.map((r) => `${r.recorded_session}/${r.id}.wav`).join("\n  ") +
+        `\n\nRun without --dry-run (which caches them under fixtures/recordings/) first.`,
+    );
+    process.exit(1);
+  }
+  for (const row of missing) {
+    // fixtures/recordings/ is the local evidence cache, gitignored and
+    // re-pullable: the raw take is what you go back to when a clip comes out
+    // wrong, so it stays on disk rather than being streamed and forgotten.
+    mkdirSync(`${recordingsDir}/${speakerId}/${row.recorded_session}`, { recursive: true });
+    console.log(`pulling ${row.raw_key}`);
+    r2Get("flappytone-raw", row.raw_key!, localPath(row));
+  }
 
-for (const [session, takes] of takesBySession) {
-  const reference = referenceBySession.get(session)!;
-  for (const { row, samples, sampleRate } of takes) {
-    const tone = row.tone as Tone;
-    try {
-      const clip = cutClip(
-        samples,
-        sampleRate,
-        reference.f0Center,
-        MEASURE_RANGE_SEMITONES,
-        tone,
-        row.syllables,
+  const takesBySession = new Map<string, Take[]>();
+  for (const row of toCut) {
+    const { samples, sampleRate } = decodeWav(new Uint8Array(readFileSync(localPath(row))));
+    const session = row.recorded_session!;
+    if (!takesBySession.has(session)) takesBySession.set(session, []);
+    takesBySession.get(session)!.push({ row, samples, sampleRate });
+  }
+
+  const referenceBySession = new Map<string, SessionReference>();
+  const referenceNotes: string[] = [];
+
+  for (const [session, takes] of takesBySession) {
+    const measured = measurePitchReference(takes, seedF0);
+
+    if (measured && measured.frames >= MIN_REFERENCE_FRAMES) {
+      referenceBySession.set(session, { ...measured, borrowedFrom: null });
+      console.log(
+        `\n${session}: ${takes.length} take(s), f0Center ${measured.f0Center.toFixed(1)}Hz, ` +
+          `range ±${measured.rangeSemitones} st (${measured.frames} voiced frames)`,
       );
-      cuts.push({
-        row,
-        tone,
-        syllableSpans: clip.syllableSpans,
-        underSegmented: clip.underSegmented,
-        overSegmented: clip.overSegmented,
-        session,
-        reference,
-        durationMs: clip.durationMs,
-        // From the start of the *file*, not of the cut: the file is the take.
-        onsetMs: clip.toneStartMs,
-        clipMs: clip.sourceMs,
-        contour: clip.contour,
-        pinnedFraction: clip.pinnedFraction,
-        samples: fadeEdges(samples, sampleRate),
-        sampleRate,
-      });
-    } catch (err) {
-      failed.push(`${session}/${row.id}.wav: ${(err as Error).message}`);
+      continue;
+    }
+
+    const borrowed = await referenceOfLastPublished();
+    if (!borrowed) {
+      throw new Error(
+        `${session}: only ${measured?.frames ?? 0} voiced frame(s), under the ` +
+          `${MIN_REFERENCE_FRAMES}-frame minimum, and no published ${speakerId} word has a stored ` +
+          `reference to borrow. Record more of this session before processing it.`,
+      );
+    }
+    referenceBySession.set(session, { ...borrowed, borrowedFrom: `the last published ${speakerId} word` });
+    const note =
+      `${session}: only ${measured?.frames ?? 0} voiced frame(s), under the ` +
+      `${MIN_REFERENCE_FRAMES}-frame minimum — borrowed f0Center ` +
+      `${borrowed.f0Center.toFixed(1)}Hz / ±${borrowed.rangeSemitones} st from the last ` +
+      `published ${speakerId} word instead of measuring this session (Decision 9).`;
+    referenceNotes.push(note);
+    console.log(`\n⚠ ${note}`);
+  }
+
+  const cuts: Cut[] = [];
+  const failed: string[] = [];
+
+  for (const [session, takes] of takesBySession) {
+    const reference = referenceBySession.get(session)!;
+    for (const { row, samples, sampleRate } of takes) {
+      const tone = row.tone as Tone;
+      try {
+        const clip = cutClip(
+          samples,
+          sampleRate,
+          reference.f0Center,
+          MEASURE_RANGE_SEMITONES,
+          tone,
+          row.syllables,
+        );
+        cuts.push({
+          row,
+          tone,
+          syllableSpans: clip.syllableSpans,
+          underSegmented: clip.underSegmented,
+          overSegmented: clip.overSegmented,
+          session,
+          reference,
+          durationMs: clip.durationMs,
+          // From the start of the *file*, not of the cut: the file is the take.
+          onsetMs: clip.toneStartMs,
+          clipMs: clip.sourceMs,
+          contour: clip.contour,
+          pinnedFraction: clip.pinnedFraction,
+          samples: fadeEdges(samples, sampleRate),
+          sampleRate,
+        });
+      } catch (err) {
+        failed.push(`${session}/${row.id}.wav: ${(err as Error).message}`);
+      }
     }
   }
+  return { cuts, failed, referenceNotes };
 }
+
+const { cuts, failed, referenceNotes } = await cutRows(toCut);
+
 
 if (cuts.length === 0) {
   console.error("Nothing could be cut.");
@@ -539,47 +563,81 @@ if (cuts.length === 0) {
 // measured shape untouched, which is all this step ever does for a single
 // syllable either.
 //
-// NOTE: not specified by the tone-pairs plan. Nothing multi-syllable is in
-// the catalog yet, so this decides nothing retroactively, but it decides what
-// every future pair corridor is scaled to. Worth a look before Phase 4
-// content lands.
-const cohorts = new Map<string, Cut[]>();
-for (const cut of cuts) {
-  const key = cohortKey(cut.row);
-  if (!cohorts.has(key)) cohorts.set(key, []);
-  cohorts.get(key)!.push(cut);
+// A NATURAL cohort is placed with TEXTBOOK's map for the same key, never a
+// stretch of its own. The contour comes out of the cutter in its ±15-semitone
+// measure space, not on the board — unplaced, natural T1 sat at chao ~3.3 and
+// every corridor was flat and mid-board. Stretching natural onto the citation
+// span would inflate every shape to textbook size (T3 ×3.4) and hide how much
+// smaller natural speech really is. Borrowing textbook's map puts both styles
+// of a word on the board by one map, so natural stays as much flatter than
+// textbook as Jane spoke it (docs/DECISIONS.md, "Speech style").
+function groupCohorts(of: Cut[]): Map<string, Cut[]> {
+  const out = new Map<string, Cut[]>();
+  for (const cut of of) {
+    const key = cohortKey(cut.row);
+    if (!out.has(key)) out.set(key, []);
+    out.get(key)!.push(cut);
+  }
+  return out;
 }
-// Natural takes keep their measured contour. The map's target is the textbook
-// citation span, and natural speech is compressed enough that hitting it means
-// stretching every shape (T3 ×3.4) toward a textbook look, which defeats
-// recording natural speech at all. Heights are then in the session's own chao
-// space, as calibrated from its own f0Center/range.
-const normalizeCohorts = style !== "natural";
-if (!normalizeCohorts) {
-  console.log(`style natural: chao normalization skipped — ${cuts.length} take(s) kept at measured contour.`);
+const asContours = (m: Map<string, Cut[]>): Map<string, CohortContours> =>
+  new Map([...m].map(([k, c]) => [k, { tones: c[0].row.tones, contours: c.map((x) => x.contour) }]));
+
+const cohorts = groupCohorts(cuts);
+
+let mapSources: Map<string, CohortContours>;
+if (style === "natural") {
+  // Every textbook take, exactly as `--style textbook --all` cuts them, so the
+  // borrowed maps are the ones the published textbook corridors were placed by.
+  const textbookToCut = (await loadCatalog("textbook")).filter(
+    (r) => hasTake(r) && ["recorded", "published"].includes(r.status),
+  );
+  console.log(`\nstyle natural: cutting ${textbookToCut.length} textbook take(s) for their chao maps.`);
+  const textbook = await cutRows(textbookToCut);
+  for (const f of textbook.failed) console.log(`  textbook map source failed to cut: ${f}`);
+  mapSources = asContours(groupCohorts(textbook.cuts));
+} else {
+  mapSources = asContours(cohorts);
 }
+
+const placements = cohortPlacements(asContours(cohorts), mapSources);
+const fmtSpan = (s: ChaoSpan) => `${s.low.toFixed(2)}–${s.high.toFixed(2)}`;
 for (const [key, cohort] of [...cohorts].sort(([a], [b]) => a.localeCompare(b))) {
-  if (!normalizeCohorts) break;
-  const span = cohortSpan(cohort.map((c) => c.contour));
-  const target = cohortTargetSpan(cohort[0].row.tones);
-  const hasCitationTone = cohort[0].row.tones.some((tone) => tone >= 1 && tone <= 4);
-  if (!hasCitationTone) {
+  const placement = placements.get(key)!;
+  if (placement === "neutral-only") {
     console.log(
       `T${key}: neutral-only cohort — skipping citation-span normalization; ` +
         `${cohort.length} take(s) kept at measured contour.`,
     );
     continue;
   }
-  const map = chaoMapFor(span, target);
+  if (placement === "no-map-source") {
+    console.log(
+      `\n⚠⚠ T${key}: NO TEXTBOOK COHORT to borrow a chao map from — ${cohort.length} natural ` +
+        `take(s) left UNPLACED, in the cutter's measure space, not on the board. ` +
+        `Record and publish this combo's textbook takes, then re-run.\n`,
+    );
+    continue;
+  }
+  const { map, target, sourceSpan } = placement;
+  const measured = cohortSpan(cohort.map((c) => c.contour));
   for (const cut of cohort) {
     cut.contour = applyChaoMap(cut.contour, map);
     cut.pinnedFraction = pinnedFractionOf(cut.contour);
   }
-  console.log(
-    `T${key}: measured ${span.low.toFixed(2)}–${span.high.toFixed(2)} chao -> ` +
-      `${target.low.toFixed(2)}–${target.high.toFixed(2)}  (×${map.a.toFixed(2)} ${map.b >= 0 ? "+" : ""}${map.b.toFixed(2)})  ` +
-      `from ${cohort.length} take(s)`,
-  );
+  const mapText = `(×${map.a.toFixed(2)} ${map.b >= 0 ? "+" : ""}${map.b.toFixed(2)})`;
+  if (style === "natural") {
+    console.log(
+      `T${key}: natural measured ${fmtSpan(measured)} chao, textbook map ${fmtSpan(sourceSpan)} -> ` +
+        `${fmtSpan(target)} ${mapText} -> natural ${fmtSpan(cohortSpan(cohort.map((c) => c.contour)))}  ` +
+        `from ${cohort.length} take(s)`,
+    );
+  } else {
+    console.log(
+      `T${key}: measured ${fmtSpan(measured)} chao -> ${fmtSpan(target)}  ${mapText}  ` +
+        `from ${cohort.length} take(s)`,
+    );
+  }
 }
 
 // ---- Cohort medians, for the review's duration outlier check.
@@ -757,8 +815,12 @@ if (dryRun) {
   process.exit(0);
 }
 
-for (const clip of toPublish) {
-  r2Put("flappytone-clips", clip.clipKey, clip.file);
+if (noUpload) {
+  console.log(`--no-upload: ${toPublish.length} clip(s) NOT uploaded to R2; writing measurements only.`);
+} else {
+  for (const clip of toPublish) {
+    r2Put("flappytone-clips", clip.clipKey, clip.file);
+  }
 }
 
 // `meta` is a whole-column write, so anything else already in it would be lost
@@ -824,7 +886,7 @@ for (const clip of toPublish) {
   if (metaWriteError) throw new Error(`words meta update failed for ${clip.id}: ${metaWriteError.message}`);
 }
 
-console.log(`\nPublished ${toPublish.length} clip(s) to flappytone-clips and the catalog.`);
+console.log(`\nPublished ${toPublish.length} clip(s) to ${noUpload ? "" : "flappytone-clips and "}the catalog.`);
 
 // The bundled fallback is a snapshot of the published rows, so it is stale the
 // moment this finishes. Regenerating it here is what stops that being noticed
