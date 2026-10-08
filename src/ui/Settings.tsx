@@ -450,9 +450,7 @@ export function Settings({
               }}
             />
             <p className="param-help">
-              Natural: everyday speed. Textbook: slow and clear. Applies to
-              game runs and the visualiser; the calibration flight and the
-              first tutorial are always textbook.
+            Textbook: slow and clear | Natural: everyday speed.  
               {tier === "guest" && " Create a free account to choose."}
             </p>
           </section>
