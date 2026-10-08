@@ -9,7 +9,6 @@ import { loadRunHistory } from "../game/runHistory.ts";
 import { loadDailyRuns } from "../game/dailyLimit.ts";
 import { hasShownFeedbackToday, markFeedbackShown } from "../game/runFeedback.ts";
 import type { RunMode } from "../game/run.ts";
-import { GateLogPanel } from "../dev/GateLogPanel.tsx";
 import { hasToneAccuracy, ToneAccuracyBreakdown } from "./ToneAccuracyBreakdown.tsx";
 import { track } from "../analytics/client.ts";
 import {
@@ -618,11 +617,6 @@ export function GameOver({
               )}
             </section>
           )}
-
-          {/* Guarded here as well as inside the panel: the internal guard hides
-              it, this one lets Rollup drop the component from the production
-              bundle entirely (CLAUDE.md rule 7). */}
-          {import.meta.env.DEV && <GateLogPanel />}
         </div>
       </div>
 

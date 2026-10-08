@@ -1255,44 +1255,6 @@
   }
 }
 
-/* Dev-only gate diagnostics (the Lab's gates tab) — the unheard rate in play. */
-.gate-log {
-  margin-top: 6px;
-  padding: 6px 8px;
-  width: 100%;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  line-height: 1.35;
-  text-align: left;
-  background: rgba(var(--surface-rgb), 0.78);
-  color: var(--ink-muted);
-  pointer-events: none;
-}
-
-.gate-log-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-  margin: 10px 0;
-}
-
-.gate-log-panel textarea {
-  width: 100%;
-  height: 150px;
-  padding: 6px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  line-height: 1.35;
-  white-space: pre;
-  background: var(--surface);
-  color: var(--ink-muted);
-  resize: vertical;
-}
-
 /* ------------------------------------------------------------- game over */
 
 /* Redesigned run-over screen — sticker-card language shared with Progress
@@ -2158,53 +2120,6 @@
   outline-offset: 2px;
 }
 
-.dev-panel {
-  width: 260px;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
-  background: var(--surface-panel);
-  border-radius: var(--radius-md);
-}
-
-.dev-panel table {
-  border-collapse: collapse;
-  width: 100%;
-}
-
-.dev-panel td {
-  padding: 2px 4px;
-}
-
-.dev-panel td:last-child {
-  text-align: right;
-  color: var(--accent);
-}
-
-.dev-panel label {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  color: var(--ink-muted);
-}
-
-.dev-panel input[type="range"] {
-  width: 100%;
-}
-
-.dev-panel .param-name {
-  color: var(--ink);
-}
-
-.dev-panel .param-help {
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--ink-dim);
-}
-
 @media (max-width: 700px) {
   .app {
     flex-direction: column;
@@ -2216,10 +2131,6 @@
        had nothing above it to scroll past, so it never looked stuck. */
     justify-content: flex-start;
   }
-  .dev-panel {
-    width: 100%;
-    max-width: 420px;
-  }
 }
 
 /* ---------------------------------------------------------------- dev lab */
@@ -2229,93 +2140,233 @@
 
 .lab-screen {
   width: 100%;
-  max-width: 1800px;
-  gap: 12px;
+  max-width: 1760px;
+  gap: 0;
   align-items: stretch;
   text-align: left;
   margin-inline: auto;
+  /* The Lab owns the viewport: header fixed at the top, panes scroll inside. */
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .lab-header {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
   flex-wrap: wrap;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lab-screen .lab-exit {
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.lab-screen .lab-exit:hover {
+  color: var(--ink);
+  border-color: var(--ink-soft);
+}
+
+.lab-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .lab-tabs {
   display: flex;
-  gap: 6px;
+  gap: 2px;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
 }
 
 .lab-tabs .tab {
-  padding: 4px 10px;
-  font-size: 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
+  padding: 8px 14px;
+  font-size: var(--text-sm);
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
   background: transparent;
   color: var(--ink-muted);
   cursor: pointer;
 }
 
-.lab-tabs .tab.active {
-  border-color: var(--accent);
+.lab-tabs .tab:hover {
   color: var(--ink);
 }
 
-.lab-split {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  flex-wrap: wrap;
+.lab-tabs .tab.active {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
 }
 
-.lab-play-grid {
+.lab-width {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lab-width .choice-option {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  font-size: var(--text-xs);
+}
+
+.lab-screen .lab-exit:focus-visible,
+.lab-tabs .tab:focus-visible,
+.lab-screen .chip:focus-visible,
+.lab-screen .word-item:focus-visible,
+.lab-screen .pair-cell:focus-visible,
+.tgroup summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.lab-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: 14px;
+}
+
+.lab-grid {
   display: grid;
-  grid-template-columns: 260px minmax(360px, 440px) 1fr;
-  gap: 20px;
-  /* stretch (the default), not start: a live Game's `.screen.game-screen`
-     child has no width of its own, so its `.stage` (width: 100%) needs a
-     definite-width ancestor to resolve against. `align-items: center` here
-     made this flex item shrink-to-fit instead, and a percentage width
-     inside a shrink-to-fit ancestor resolves to 0 — the canvas silently
-     collapsed to nothing the moment a run started. */
-  align-items: stretch;
-  /* Bounded height so `.lab-picker`'s `overflow-y: auto` has something to
-     shrink against — without it the row grows to fit the full word list and
-     the whole page scrolls instead of just the picker. */
-  height: calc(100svh - 160px);
+  gap: 16px;
+  flex: 1 1 auto;
   min-height: 0;
 }
 
-.lab-stage {
+.lab-grid-play {
+  grid-template-columns: 240px minmax(340px, 440px) minmax(320px, 1fr);
+}
+
+.lab-grid-pairs {
+  grid-template-columns: minmax(420px, 1fr) minmax(340px, 440px);
+}
+
+.lab-pane {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  align-items: stretch;
+  gap: 12px;
   min-height: 0;
+  min-width: 0;
   overflow-y: auto;
+  padding: 14px;
+  background: var(--surface-panel);
+  border-radius: var(--radius-md);
 }
 
-.lab-picker {
+.lab-pane h3,
+.lab-pane h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.lab-pane h3 {
+  font-size: var(--text-lg);
+}
+
+.lab-pane h4 {
+  font-size: var(--text-base);
+}
+
+.pane-head {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  min-height: 0;
-  height: 100%;
+  gap: 8px;
 }
 
-/* The idle canvas preview and the "full run instead" fallback both want to
-   sit centred in the (wider) stretched column rather than stretching full
-   width themselves — align-self overrides the stretch above for just these.
-   Was a hardcoded `width: 360px`, which pinned the paused preview to the
-   canvas's raw pixel size while a flown `<Game>` sits straight in
-   `.lab-stage` with no such cap and scales its `.stage` (see `.stage canvas`
-   above: width 100%, capped at min(420px, viewport-derived)) to fill the grid
-   column — up to 420px. The two were rendering at different on-screen widths
-   for the identical 360×640 canvas. `max-width: 420px` matches `.stage`'s own
-   cap so the paused preview scales exactly like the live game does. */
-.lab-idle {
+.lab-empty {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lab-screen .chip {
+  padding: 4px 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.lab-screen .chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Word picker */
+.word-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lab-screen .word-item {
+  display: grid;
+  grid-template-columns: 2em 1fr auto;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.lab-screen .word-item:hover {
+  background: rgba(var(--ink-rgb), 0.05);
+}
+
+.lab-screen .word-item.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.word-hanzi {
+  font-size: 1.15rem;
+  color: var(--ink);
+}
+
+.word-tone {
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+
+/* Gate stage */
+.gate-stage {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2324,56 +2375,53 @@
   align-self: center;
 }
 
-.lab-controls {
-  flex: 1 1 320px;
+.result-card {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 16px;
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
 }
 
-/* `.lab-controls`'s flex-basis is written for the play tab's flex-row, where
-   it sets a width. `.word-gates` (the words/averages tabs) is a flex-
-   *column*, where the same basis instead demands a 320px height under a
-   couple of lines of text — see WordGates.tsx's intro block. */
-.word-gates > .lab-controls {
-  flex: 0 0 auto;
+.result-card dt {
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
 }
 
-.gate-picker {
+.result-card dd {
+  margin: 0;
+  font-size: var(--text-base);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.result-sub {
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.lab-fold {
+  width: 100%;
+  max-width: 420px;
+  align-self: center;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.lab-fold > summary {
+  cursor: pointer;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+  color: var(--ink-muted);
+}
+
+.lab-fold-body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: 100%;
-  min-height: 0;
-}
-
-.gate-picker-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  min-height: 0;
-  /* `.lab-picker`'s flex-column ancestors never resolve a definite height —
-     the grid row sizes to content, not the viewport — so `flex: 1` alone
-     never triggers overflow: the list simply grows and pushes the whole
-     page down instead of scrolling in place. A viewport-relative cap gives
-     it something concrete to overflow against. */
-  max-height: calc(100vh - 260px);
-  overflow-y: auto;
-  overflow-x: hidden;
-  width: 100%;
-}
-
-.gate-picker-item {
-  text-align: left;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm, 6px);
-  background: transparent;
-  color: var(--ink-muted);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.gate-picker-item.active {
-  background: var(--surface-panel);
-  color: var(--ink);
+  padding-top: 8px;
 }
 
 .game-settings-row {
@@ -2390,22 +2438,296 @@
   flex: 1 1 auto;
 }
 
-.lab-checkbox {
+.lab-fold .choice-option {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  font-size: var(--text-xs);
+}
+
+/* Pair gates gallery */
+.pair-gallery {
+  overflow: hidden;
+}
+
+.pair-scroll {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 22px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.pair-combo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pair-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.pair-cols-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 2px 0;
+  background: var(--surface-panel);
+}
+
+.pair-word {
+  margin: 8px 0 4px;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.pair-hanzi {
+  font-size: 1.2rem;
+  color: var(--ink);
+}
+
+.lab-screen .pair-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  text-align: left;
   cursor: pointer;
 }
 
-/* The play tab's speed/tunnel-width row, now sitting under the canvas
-   instead of beside it — full-size pills (built for a standalone settings
-   screen) ran three options wide and wrapped awkwardly at this column
-   width. Smaller, non-growing pills so "relaxed / normal / fast" sits on
-   one line instead of each option claiming equal flex width. */
-.game-settings-compact .choice-option {
-  flex: 0 0 auto;
-  padding: 4px 10px;
-  font-size: 12px;
+.lab-screen .pair-cell:hover {
+  box-shadow: 0 0 0 1px var(--line-strong);
+}
+
+.lab-screen .pair-cell.active {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.lab-screen .pair-cell canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 210 / 150;
+  background: var(--canvas-backdrop);
+  border-radius: 4px;
+}
+
+.lab-screen .pair-cell.missing {
+  align-items: center;
+  justify-content: center;
+  min-height: 90px;
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+  cursor: default;
+}
+
+/* Tuning */
+.lab-pane-tuning {
+  padding: 0;
+}
+
+.tuning-panel {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+
+.tuning-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px;
+  background: var(--surface-panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.tuning-head h3 {
+  margin: 0;
+}
+
+.tuning-sub {
+  margin: 2px 0 0;
+}
+
+.tuning-panel .row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tgroup {
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tgroup > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.tgroup > summary::-webkit-details-marker {
+  display: none;
+}
+
+.tgroup > summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid var(--ink-soft);
+  border-bottom: 2px solid var(--ink-soft);
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+
+.tgroup[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.tgroup-title {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.tgroup-moved {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--warn);
+  color: var(--accent-ink);
+  font-size: var(--text-xs);
+}
+
+.tgroup > .param-help {
+  margin: 0 0 8px;
+}
+
+.tgroup[open] {
+  padding-bottom: 12px;
+}
+
+.tuning-panel .knob {
+  padding: 6px 0 6px 10px;
+  border-left: 2px solid transparent;
+}
+
+/* A moved value must be obvious: the whole point of a tuning session is
+   knowing which numbers are no longer the shipped ones. */
+.tuning-panel .knob.moved {
+  border-left-color: var(--warn-strong);
+}
+
+.knob-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.knob-val {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ink);
+}
+
+.tuning-panel .param-name {
+  color: var(--ink);
+}
+
+.tuning-panel input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+/* Help stays out of the way until the knob is hovered or focused. */
+.tuning-panel .knob > .param-help {
+  max-height: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--ink-soft);
+  transition: max-height 0.15s;
+}
+
+.tuning-panel .knob:hover > .param-help,
+.tuning-panel .knob:focus-within > .param-help {
+  max-height: 12em;
+  margin-top: 4px;
+}
+
+.knob-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.tuning-panel .revert {
+  padding: 0 6px;
+  border: 1px solid var(--warn-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--warn-strong);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.diff {
+  margin: 0;
+  padding: 8px;
+  background: var(--surface-deep);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--good-dim);
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+@media (max-width: 1100px) {
+  .lab-screen {
+    height: auto;
+    overflow: visible;
+  }
+  .lab-grid-play,
+  .lab-grid-pairs {
+    grid-template-columns: 1fr;
+  }
+  .lab-pane,
+  .pair-scroll {
+    overflow-y: visible;
+  }
+}
+
+/* The Lab is a desktop workbench: no sidebar, so give it the whole width. */
+@media (min-width: 720px) {
+  .app-game:has(.lab-screen) {
+    padding-left: env(safe-area-inset-left);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .app-game:has(.lab-screen) .game-nav {
+    display: none;
+  }
+  .app-game:has(.lab-screen) .app-main {
+    width: 100%;
+  }
 }
 
 /* Dev-only: the whole clip inventory as gates, for reviewing corridor shapes. */
@@ -2469,108 +2791,6 @@
   height: auto;
   aspect-ratio: 320 / 220;
   cursor: default;
-}
-
-.tuning-panel {
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  column-count: 2;
-  column-gap: 24px;
-  padding: 12px;
-  background: var(--surface-panel);
-  border-radius: var(--radius-md);
-  color: var(--ink-muted);
-}
-
-.tuning-panel section {
-  break-inside: avoid;
-  margin-bottom: 16px;
-}
-
-.tuning-panel h4 {
-  margin: 0 0 2px;
-  color: var(--ink);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 11px;
-}
-
-.tuning-panel section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.tuning-panel .knob {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding-left: 8px;
-  border-left: 2px solid transparent;
-}
-
-/* A moved value must be obvious: the whole point of a tuning session is
-   knowing which numbers are no longer the shipped ones. */
-.tuning-panel .knob.moved {
-  border-left-color: var(--warn-strong);
-}
-
-.tuning-panel .param-name {
-  color: var(--ink);
-}
-
-.tuning-panel .param-help {
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--ink-dim);
-}
-
-.tuning-panel input[type="range"] {
-  width: 100%;
-}
-
-.tuning-panel .revert {
-  margin-left: 6px;
-  padding: 0 4px;
-  border: none;
-  background: transparent;
-  color: var(--warn-strong);
-  cursor: pointer;
-}
-
-.tuning-panel .row {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
-.diff {
-  margin: 0;
-  padding: 8px;
-  background: var(--surface-deep);
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--good-dim);
-  white-space: pre-wrap;
-  overflow-x: auto;
-}
-
-.dev-panel .param-help.warn {
-  color: var(--warn-strong);
-}
-
-@media (max-width: 900px) {
-  .lab-split {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .lab-play-grid {
-    grid-template-columns: 1fr;
-  }
-  .tuning-panel {
-    column-count: 1;
-  }
 }
 
 /* --------------------------------------------------- settings & visualiser */

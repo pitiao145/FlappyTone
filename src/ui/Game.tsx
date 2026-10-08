@@ -27,8 +27,6 @@ import {
   stopMic,
 } from "../audio/session.ts";
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
-import { GATE_LOG_ENABLED, saveGateLog } from "../dev/gateLog.ts";
-import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { getTier, tierReady, useTier } from "../data/tier.ts";
 import { postShapes } from "../data/shapes.ts";
 import { postRunLog } from "../data/runlog.ts";
@@ -122,9 +120,6 @@ const HINT_TEXT: Record<UnheardHint, string> = {
   longer: "hold it a little longer",
   generic: "didn't catch that",
 };
-
-/** Only the last few gates fit on screen; the full log lives on the end screen. */
-const GATE_LOG_ON_SCREEN = 4;
 
 /**
  * The tutorial's guided walkthrough, shown around gate 1 of every tutorial
@@ -599,12 +594,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           rangeSemitones: settings.rangeSemitones,
           rangeDownSemitones: settings.rangeDownSemitones,
         });
-        // Published so the dev Lab's sliders reach the tracker that is
-        // actually flying the dot, rather than a tracker nobody is listening to.
-        setActiveTracker(tracker);
       }
       const pitch = tracker.push(frame);
-      publishState(pitch);
       // A walkthrough card (steps B/C/D) holds the world still — no pitch
       // frame should reach Run while one is up. The frozen-time offset (see
       // frozenAccumMsRef's comment) keeps Run's own clock continuous.
@@ -742,7 +733,6 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       if (snap.over && !finished) {
         finished = true;
         running = false;
-        saveGateLog(snap.gateLog, snap.missedUtterances);
         // The tutorial has no hearts — reaching the end of it is finishing.
         reportRunEnd(snap, mode === "tutorial" ? "finished" : "out_of_hearts");
         clearInterval(hudTimer);
@@ -769,9 +759,6 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         // Skipped entirely in learn mode, which cues synthetically by design
         // (see playToneCue's forceSynth above) and would never play the clip.
         if (cuesUseClips) for (const g of snap.gates) if (g.word) void loadClip(g.word);
-        // Mirrored every tick, not just at game over, so quitting mid-run or
-        // closing the tab still leaves the numbers behind.
-        saveGateLog(snap.gateLog, snap.missedUtterances);
         reportGates(snap);
       }, 1000 / HUD_HZ);
     };
@@ -970,7 +957,6 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       document.removeEventListener("visibilitychange", onVisibility);
       releaseWakeLock();
       setFrameSink(null);
-      setActiveTracker(null);
       runRef.current = null;
     };
     // reportGates/reportRunEnd are stable (useCallback with no changing deps),
@@ -1277,7 +1263,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           {/* Single group pinned to the bottom of the flex `.hud` column via
               one margin-top: auto on the wrapper. Each child used to carry
               its own auto margin, which meant two present at once (the
-              banner and the dev gate-log) split the leftover space between
+              banner and the toast) split the leftover space between
               them instead of stacking together at the bottom. */}
           <div className="hud-bottom">
             {banner === "listen" && (
@@ -1316,27 +1302,6 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
               </div>
             )}
             {hud?.noisy && <div className="hint">it's noisy in here</div>}
-
-            {GATE_LOG_ENABLED && hud && (
-              <div className="gate-log">
-                <div>
-                  unheard{" "}
-                  {hud.gateLog.filter((g) => g.outcome === "unheard").length}/
-                  {hud.gateLog.length} · missed early {hud.missedUtterances}
-                </div>
-                {hud.gateLog
-                  .slice(-GATE_LOG_ON_SCREEN)
-                  .reverse()
-                  .map((g) => (
-                    <div key={g.atMs}>
-                      T{g.tone} {g.outcome} · {g.voiced}/{g.samples} (
-                      {Math.round(g.voicedFraction * 100)}%) ·{" "}
-                      {Math.round(g.utteranceMs)}ms
-                      {g.seeded > 0 ? ` · +${g.seeded} early` : ""}
-                    </div>
-                  ))}
-              </div>
-            )}
           </div>
         </div>
 

@@ -150,11 +150,9 @@ assertions above still pass.
 The dot's behaviour on *real* voices (through the real acoustic path: speaker →
 room → laptop mic) is tuned with two dev tools built for the purpose:
 
-1. **Capture screen** — laptop, Title → `dev` → `capture`. Record while a clip
-   plays; Stop downloads `<name>.wav` + `<name>.telemetry.json`. Naming:
-   `<speaker>_<syllable><tone>[_note]` (e.g. `jane_ma3`, `jane_ma3_natural`) —
-   the trailing digit tells the report CLI which contour to score against.
-   Move WAVs into `fixtures/captures/` and commit them.
+1. **Captures** — the in-app Capture screen was removed from the Lab (Oct 2026). Record a WAV any other way, named
+   `<speaker>_<syllable><tone>[_note]` (e.g. `jane_ma3`, `jane_ma3_natural`) — the trailing digit tells the report CLI
+   which contour to score against. Commit it in `fixtures/captures/`.
 2. **Report CLI** — `npm run report [files...] [--set alpha=0.6,clarity=0.8]...
    [--json out.json] [--f0 hz]`. Defaults to all of `fixtures/captures/*.wav`.
    Replays each file through `PitchTracker` per parameter set and prints, per
@@ -169,10 +167,7 @@ room → laptop mic) is tuned with two dev tools built for the purpose:
 
 Tuning workflow: capture once → `npm run report --set ... --set ...` → pick the
 winner on the numbers → update `DEFAULT_CONFIG` → re-run fixture tests and
-report which goldens moved. To *look at* what the game saw, use the Capture
-screen's trace viewer: upload any WAV and it draws the full dot path (blue),
-raw pitch (grey) and unheard gaps on the Chao grid — the trail with no time
-pressure.
+report which goldens moved. To *look at* what the game saw, use `npm run analyze` (ASCII contour).
 
 ---
 

@@ -20,7 +20,6 @@ import {
 } from "../audio/session.ts";
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { useTier } from "../data/tier.ts";
-import { publishState, setActiveTracker } from "../game/activeTracker.ts";
 import { ContourRecorder } from "../game/contours.ts";
 import type { Tone } from "../game/gates.ts";
 import { effectiveSpeechStyle, type CalibrationSettings } from "../game/settings.ts";
@@ -444,10 +443,8 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
           rangeSemitones: settings.rangeSemitones,
           rangeDownSemitones: settings.rangeDownSemitones,
         });
-        setActiveTracker(tracker);
       }
       const p = tracker.push(frame);
-      publishState(p);
       const now = performance.now();
       recorder.push(p.smoothedChao, p.voiced, now);
       voiced = p.voiced;
@@ -559,7 +556,6 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       document.removeEventListener("visibilitychange", onVisibility);
       releaseWakeLock();
       setFrameSink(null);
-      setActiveTracker(null);
       frameSinkRef.current = null;
     };
   }, [settings, canvasW, canvasH]);

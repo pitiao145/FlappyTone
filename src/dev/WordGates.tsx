@@ -33,12 +33,12 @@ import { traceSmoothPath } from "../render/scene.ts";
  * Dev only.
  */
 
-const CARD_W = 210;
-const CARD_H = 150;
+export const CARD_W = 210;
+export const CARD_H = 150;
 /** The corridor is measured against a full-height canvas, then mapped to the card. */
 const VIRTUAL_H = 1000;
 
-interface Band {
+export interface Band {
   top: number;
   bottom: number;
 }
@@ -55,12 +55,12 @@ interface Band {
  * card that rescaled to fit its own gate would make every shape look the same
  * size, which is the one thing this view exists to compare.
  */
-function bandFor(words: Word[], tolH: number): Band {
+export function bandFor(words: Word[], tolH: number): Band {
   let top = 5;
   let bottom = 1;
   for (const word of words) {
     const shape = shapeForWord(word);
-    const tol = toleranceChao(word.tone, tolH);
+    const tol = toleranceChao(word.tones, tolH);
     const { top: t, bottom: b } = corridorEdges(shape, tol, 0, CARD_W, VIRTUAL_H);
     for (const p of t) top = Math.max(top, yToChao(p.y));
     for (const p of b) bottom = Math.min(bottom, yToChao(p.y));
@@ -73,12 +73,14 @@ function yToChao(y: number): number {
   return 1 + ((0.8 * VIRTUAL_H - y) / (0.6 * VIRTUAL_H)) * 4;
 }
 
+/** Paper-theme tints: dark enough to read on the cream card, one hue per tone. */
 const TONE_COLOR: Record<Tone, string> = {
-  1: "rgba(150, 200, 255,",
-  2: "rgba(150, 235, 190,",
-  3: "rgba(235, 200, 140,",
-  4: "rgba(230, 165, 160,",
+  1: "rgba(46, 104, 176,",
+  2: "rgba(28, 122, 99,",
+  3: "rgba(168, 103, 42,",
+  4: "rgba(163, 52, 31,",
 };
+const PAIR_COLOR = "rgba(36, 29, 21,";
 
 /**
  * Vertices in the corridor, ignoring the tail every contour ends on.
@@ -90,7 +92,7 @@ function vertexCount(shape: GateShape): number {
   return shape.polyline.length;
 }
 
-function drawWord(
+export function drawWord(
   canvas: HTMLCanvasElement,
   word: Word,
   tolH: number,
@@ -105,14 +107,14 @@ function drawWord(
   ctx.clearRect(0, 0, CARD_W, CARD_H);
 
   const shape = shapeForWord(word);
-  const tol = toleranceChao(word.tone, tolH);
-  const tint = TONE_COLOR[word.tone];
+  const tol = toleranceChao(word.tones, tolH);
+  const tint = word.syllables > 1 ? PAIR_COLOR : TONE_COLOR[word.tone];
 
   const y = (chao: number) =>
     ((band.top - chao) / (band.top - band.bottom)) * CARD_H;
 
   // Chao 1–5, as faint as in the game: guides recede, walls do not.
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
+  ctx.strokeStyle = "rgba(36, 29, 21, 0.10)";
   ctx.lineWidth = 1;
   for (let chao = 1; chao <= 5; chao++) {
     ctx.beginPath();
@@ -253,7 +255,7 @@ export function WordGates() {
 
   return (
     <div className="word-gates">
-      <div className="lab-controls">
+      <div className="word-gates-head">
         <nav className="lab-tabs">
           {(["all", "pairs", 1, 2, 3, 4] as const).map((k) => (
             <button

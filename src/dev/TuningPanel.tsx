@@ -200,153 +200,167 @@ export function TuningPanel() {
     }
   };
 
+  const movedIn = (group: (typeof GROUPS)[number]) =>
+    group.knobs.filter((k) => t[k.key] !== DEFAULT_TUNING[k.key]).length;
+  const movedCount = diff && Object.keys(diff).length;
+
+  const knobRow = (k: Knob) => {
+    const value = t[k.key];
+    const moved = value !== DEFAULT_TUNING[k.key];
+    return (
+      <div key={k.key} className={moved ? "knob moved" : "knob"}>
+        <label>
+          <span className="knob-top">
+            <span className="param-name">{k.label}</span>
+            <span className="knob-val">{value}</span>
+            {moved && (
+              <button
+                type="button"
+                className="revert"
+                title={`back to ${DEFAULT_TUNING[k.key]}`}
+                onClick={() => write({ [k.key]: DEFAULT_TUNING[k.key] } as Partial<Tuning>)}
+              >
+                reset
+              </button>
+            )}
+          </span>
+          <input
+            type="range"
+            min={k.min}
+            max={k.max}
+            step={k.step}
+            value={value}
+            onChange={(e) => write({ [k.key]: Number(e.target.value) } as Partial<Tuning>)}
+          />
+        </label>
+        <p className="param-help">{k.help}</p>
+      </div>
+    );
+  };
+
+  const toggleRow = (
+    label: string,
+    checked: boolean,
+    key: "toneMismatchCollisionEnabled" | "toneClassifierBoostEnabled",
+    help: string,
+  ) => (
+    <div className="knob">
+      <label className="knob-toggle">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => write({ [key]: e.target.checked } as Partial<Tuning>)}
+        />
+        <span className="param-name">{label}</span>
+      </label>
+      <p className="param-help">{help}</p>
+    </div>
+  );
+
   return (
     <div className="tuning-panel">
-      {GROUPS.map((group) => (
-        <section key={group.title}>
-          <h4>{group.title}</h4>
-          <p className="param-help">{group.note}</p>
-          {group.title === "tone classifier" && (
-            <label className="knob">
-              <span className="param-name">
-                drastic mismatch is a collision
-              </span>
-              <input
-                type="checkbox"
-                checked={t.toneMismatchCollisionEnabled}
-                onChange={(e) =>
-                  write({ toneMismatchCollisionEnabled: e.target.checked })
-                }
-              />
-              <span className="param-help">
-                When on, a confident T1/T4 mixup with any other tone, or a
-                confident T2↔T3 mixup, forces the gate to a wall-style
-                collision — heart lost, gate scores 0 — instead of only
-                capping at "ok". On by default: reliable in a played-back
-                session. Known accepted gaps remain — a shape shifted ~80ms
-                late, or a brief off-corridor wobble, can still misclassify.
-                Flip off if false-positive collisions show up while tuning.
-              </span>
-            </label>
-          )}
-          {group.title === "tone classifier" && (
-            <label className="knob">
-              <span className="param-name">
-                reward a confident correct shape
-              </span>
-              <input
-                type="checkbox"
-                checked={t.toneClassifierBoostEnabled}
-                onChange={(e) =>
-                  write({ toneClassifierBoostEnabled: e.target.checked })
-                }
-              />
-              <span className="param-help">
-                When on, a gate the classifier reads as the *correct* tone
-                with confidence at or above{" "}
-                {Math.round(t.toneClassifierBoostMinConfidence * 100)}% has
-                its accuracy raised to match — an unmistakable shape can
-                score well even if the pitch trace wandered outside a tight
-                corridor tolerance. On by default: unlike the mismatch
-                features above, a false positive here only over-rewards, it
-                never costs a heart.
-              </span>
-            </label>
-          )}
-          {group.knobs.map((k) => {
-            const value = t[k.key];
-            const moved = value !== DEFAULT_TUNING[k.key];
-            return (
-              <label key={k.key} className={moved ? "knob moved" : "knob"}>
-                <span className="param-name">
-                  {k.label} — {value}
-                  {moved && (
-                    <button
-                      className="revert"
-                      title={`back to ${DEFAULT_TUNING[k.key]}`}
-                      onClick={() => write({ [k.key]: DEFAULT_TUNING[k.key] } as Partial<Tuning>)}
-                    >
-                      ↺
-                    </button>
-                  )}
-                </span>
-                <input
-                  type="range"
-                  min={k.min}
-                  max={k.max}
-                  step={k.step}
-                  value={value}
-                  onChange={(e) =>
-                    write({ [k.key]: Number(e.target.value) } as Partial<Tuning>)
-                  }
-                />
-                <span className="param-help">{k.help}</span>
-              </label>
-            );
-          })}
-        </section>
-      ))}
-
-      <section>
-        <h4>gate length — fallback only</h4>
-        <p className="param-help">
-          Seconds per tone. A gate is built from a word now, and a word carries
-          its own length from manifest.json, so these no longer set the gates
-          you fly. What still reads them: every T3 corridor (her natural T3 does
-          not rise, so T3 flies the citation shape), a gate with no word behind
-          it, and the title screen's demo loop. Moving one makes the demo and
-          the corridor disagree on those, which is a failure this project has
-          hit twice.
-        </p>
-        {TONES.map((tone) => {
-          const value = t.gateDurationS[tone];
-          const moved = value !== DEFAULT_TUNING.gateDurationS[tone];
-          return (
-            <label key={tone} className={moved ? "knob moved" : "knob"}>
-              <span className="param-name">
-                T{tone} — {value}s
-              </span>
-              <input
-                type="range"
-                min={0.3}
-                max={2}
-                step={0.01}
-                value={value}
-                onChange={(e) =>
-                  write({
-                    gateDurationS: { [tone]: Number(e.target.value) } as Record<
-                      Tone,
-                      number
-                    >,
-                  })
-                }
-              />
-            </label>
-          );
-        })}
-      </section>
-
-      <section className="tuning-actions">
-        <h4>what you changed</h4>
-        <pre className="diff">{formatTuningDiff(diff)}</pre>
+      <header className="tuning-head">
+        <div>
+          <h3>Tuning</h3>
+          <p className="param-help tuning-sub">
+            {movedCount
+              ? `${movedCount} value${movedCount === 1 ? "" : "s"} moved from the shipped defaults`
+              : "Everything is at its shipped default"}
+          </p>
+        </div>
         <div className="row">
-          <button onClick={() => void copyDiff()}>
-            {copied ? "copied" : "copy diff as TS"}
+          <button disabled={!movedCount} onClick={() => void copyDiff()}>
+            {copied ? "Copied" : "Copy diff as TS"}
           </button>
           <button
+            disabled={!movedCount}
             onClick={() => {
               resetTuning();
               bump((n) => n + 1);
             }}
           >
-            reset all
+            Reset all
           </button>
         </div>
+      </header>
 
+      {GROUPS.map((group, gi) => {
+        const n = movedIn(group);
+        return (
+          <details key={group.title} className="tgroup" open={gi === 0}>
+            <summary>
+              <span className="tgroup-title">{group.title}</span>
+              {n > 0 && <span className="tgroup-moved">{n} moved</span>}
+            </summary>
+            <p className="param-help">{group.note}</p>
+            {group.title === "tone classifier" &&
+              toggleRow(
+                "Drastic mismatch is a collision",
+                t.toneMismatchCollisionEnabled,
+                "toneMismatchCollisionEnabled",
+                "A confident T1/T4 mixup with any other tone, or a confident T2↔T3 mixup, forces a wall-style collision: heart lost, gate scores 0. Known gaps: a shape ~80ms late, or a brief off-corridor wobble, can still misclassify. Turn off if false collisions show up while tuning.",
+              )}
+            {group.title === "tone classifier" &&
+              toggleRow(
+                "Reward a confident correct shape",
+                t.toneClassifierBoostEnabled,
+                "toneClassifierBoostEnabled",
+                `A gate the classifier reads as the correct tone at ${Math.round(
+                  t.toneClassifierBoostMinConfidence * 100,
+                )}% confidence or more has its accuracy raised to match. A false positive only over-rewards; it never costs a heart.`,
+              )}
+            {group.knobs.map(knobRow)}
+          </details>
+        );
+      })}
+
+      <details className="tgroup">
+        <summary>
+          <span className="tgroup-title">gate length (fallback only)</span>
+        </summary>
+        <p className="param-help">
+          Seconds per tone. A gate is built from a word, and a word carries its
+          own length, so these no longer set the gates you fly. They still feed
+          T3 fallback corridors, wordless gates and the title screen's demo
+          loop. Moving one makes the demo and the corridor disagree there.
+        </p>
+        {TONES.map((tone) => {
+          const value = t.gateDurationS[tone];
+          const moved = value !== DEFAULT_TUNING.gateDurationS[tone];
+          return (
+            <div key={tone} className={moved ? "knob moved" : "knob"}>
+              <label>
+                <span className="knob-top">
+                  <span className="param-name">Tone {tone}</span>
+                  <span className="knob-val">{value}s</span>
+                </span>
+                <input
+                  type="range"
+                  min={0.3}
+                  max={2}
+                  step={0.01}
+                  value={value}
+                  onChange={(e) =>
+                    write({
+                      gateDurationS: { [tone]: Number(e.target.value) } as Record<Tone, number>,
+                    })
+                  }
+                />
+              </label>
+            </div>
+          );
+        })}
+      </details>
+
+      <details className="tgroup">
+        <summary>
+          <span className="tgroup-title">changes and presets</span>
+        </summary>
+        <pre className="diff">{formatTuningDiff(diff)}</pre>
         <div className="row">
           <input
             type="text"
-            placeholder="preset name"
+            placeholder="Preset name"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -358,10 +372,9 @@ export function TuningPanel() {
               setName("");
             }}
           >
-            save preset
+            Save preset
           </button>
         </div>
-
         {presets.map((p) => (
           <div className="row" key={p.name}>
             <button
@@ -374,6 +387,7 @@ export function TuningPanel() {
               {p.name}
             </button>
             <button
+              aria-label={`Delete preset ${p.name}`}
               onClick={() => {
                 deletePreset(p.name);
                 setPresets(loadPresets());
@@ -383,7 +397,7 @@ export function TuningPanel() {
             </button>
           </div>
         ))}
-      </section>
+      </details>
     </div>
   );
 }

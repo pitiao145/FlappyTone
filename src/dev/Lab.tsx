@@ -1,25 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import fallback from "../data/wordsFallback.json";
-import { ensureMic, setFrameSink, stopMic } from "../audio/session.ts";
-import { setActiveTracker } from "../game/activeTracker.ts";
-import type { Contour } from "../game/contours.ts";
-import { REST_CHAO } from "../game/dynamics.ts";
+import { useEffect, useMemo, useState } from "react";
+import { adoptInventory, inventoryNow, inventorySpeaker, loadInventory } from "../audio/inventory.ts";
+import { ensureMic, stopMic } from "../audio/session.ts";
+import { catalogFromFallback } from "../data/words.ts";
 import {
   applyCorridorWidth,
-  corridorChaoAt,
   CORRIDOR_WIDTHS,
   newDifficulty,
-  shapeForTone,
   toleranceChao,
   type CorridorWidth,
   type Tone,
 } from "../game/gates.ts";
-import {
-  configureTracker,
-  handleFrame,
-  startLoop,
-} from "../game/loop.ts";
-import { birdXFrac, type RunMode, type RunSnapshot } from "../game/run.ts";
+import type { RunMode, RunSnapshot } from "../game/run.ts";
 import {
   loadCorridorWidth,
   loadCueStyle,
@@ -27,46 +18,28 @@ import {
   saveCorridorWidth,
   type CalibrationSettings,
 } from "../game/settings.ts";
-import { classifyTone } from "../game/toneClassifier.ts";
-import { tuning } from "../game/tuning.ts";
-import { wordsFromCatalog, multiWords, type Word } from "../game/words.ts";
-import { FIXTURE_WORDS } from "./fixtureWords.ts";
-import { adoptInventory, inventorySpeaker } from "../audio/inventory.ts";
+import { multiWords, type Word } from "../game/words.ts";
 import { DEFAULT_CONFIG } from "../pitch/PitchTracker.ts";
-import { BACKDROP, chaoToY, drawChaoGrid, drawPip } from "../render/scene.ts";
-import { drawGate } from "../render/world.ts";
 import { Choice } from "../ui/Choice.tsx";
 import { Game } from "../ui/Game.tsx";
 import { Visualiser } from "../ui/Visualiser.tsx";
-import { Capture } from "./Capture.tsx";
-import { DevPanel } from "./DevPanel.tsx";
-import { GateLogPanel } from "./GateLogPanel.tsx";
+import { FIXTURE_WORDS } from "./fixtureWords.ts";
+import { GateStage } from "./GateStage.tsx";
+import { PairGates } from "./PairGates.tsx";
 import { ToneAverages } from "./ToneAverages.tsx";
 import { TonePairs } from "./TonePairs.tsx";
 import { TuningPanel } from "./TuningPanel.tsx";
 import { WordGates } from "./WordGates.tsx";
 
-type Tab =
-  | "play"
-  | "words"
-  | "averages"
-  | "pitch"
-  | "gates"
-  | "capture"
-  | "visualiser"
-  | "tonepairs"
-  | "pairgates";
+type Tab = "play" | "words" | "averages" | "visualiser" | "tonepairs" | "pairgates";
 
-const TABS: Array<{ id: Tab; label: string }> = [
-  { id: "play", label: "play" },
-  { id: "words", label: "words" },
-  { id: "averages", label: "averages" },
-  { id: "pitch", label: "pitch" },
-  { id: "gates", label: "gates" },
-  { id: "capture", label: "capture" },
-  { id: "visualiser", label: "visualiser" },
-  { id: "tonepairs", label: "tone pairs" },
-  { id: "pairgates", label: "pair gates" },
+const TABS: Array<{ id: Tab; label: string; hint: string }> = [
+  { id: "play", label: "Play", hint: "Fly one gate or a full run while moving the tuning sliders" },
+  { id: "pairgates", label: "Pair gates", hint: "Every two-syllable gate, per tone combo and speech style" },
+  { id: "words", label: "Words", hint: "Every single-syllable corridor, drawn at the current tuning" },
+  { id: "averages", label: "Averages", hint: "The averaged tone shapes the classifier reads against" },
+  { id: "visualiser", label: "Visualiser", hint: "The player-facing visualiser, for testing the recogniser" },
+  { id: "tonepairs", label: "Tone pairs", hint: "Measured pair fixtures against the textbook sandhi shapes" },
 ];
 
 /**
@@ -81,6 +54,8 @@ const FALLBACK_SETTINGS: CalibrationSettings = {
   rangeDownSemitones: DEFAULT_CONFIG.rangeDownSemitones,
 };
 
+const TONES: Tone[] = [1, 2, 3, 4];
+
 interface Props {
   onBack: () => void;
 }
@@ -89,40 +64,220 @@ interface Props {
  * The dev Lab: a second, disposable instance of the game that exists to be
  * measured and re-tuned, kept out of the player-facing app entirely.
  *
- * Dev builds only — App.tsx imports this lazily behind `import.meta.env.DEV`,
- * so Rollup drops the whole subtree (and Capture and the tuning
- * UI with it) from a production bundle.
+ * Dev builds only — GameApp imports this lazily behind `import.meta.env.DEV`,
+ * so Rollup drops the whole subtree (and the tuning UI with it) from a
+ * production bundle.
  */
 export function Lab({ onBack }: Props) {
   const [tab, setTab] = useState<Tab>("play");
-  const [settings] = useState<CalibrationSettings>(
-    () => loadSettings() ?? FALLBACK_SETTINGS,
+  const [settings] = useState<CalibrationSettings>(() => loadSettings() ?? FALLBACK_SETTINGS);
+  const [corridorWidth, setCorridorWidth] = useState<CorridorWidth>(loadCorridorWidth);
+
+  /**
+   * The catalog the game itself would fly: whatever the inventory already
+   * holds (seeded from the bundled export), upgraded to the live read once it
+   * lands — the live read is the only one that carries natural takes. A word
+   * list that changes mid-session is acceptable here; the picker keys on ids.
+   */
+  const [words, setWords] = useState<Word[]>(() => inventoryNow() ?? catalogFromFallback());
+  useEffect(() => {
+    let live = true;
+    void loadInventory().then((w) => {
+      if (live && w.length > 0) setWords(w);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  /** Pairs in the catalog, else (dev only) the four fixture words, so pairs can be flown before any is published. */
+  const pairs = useMemo(() => {
+    const real = multiWords(words);
+    return real.length > 0 ? real : FIXTURE_WORDS;
+  }, [words]);
+
+  return (
+    <div className="screen lab-screen">
+      <header className="lab-header">
+        <button className="lab-exit" onClick={onBack}>
+          Exit lab
+        </button>
+        <h2 className="lab-title">Lab</h2>
+        <nav className="lab-tabs" aria-label="Lab sections">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              className={t.id === tab ? "tab active" : "tab"}
+              aria-current={t.id === tab ? "page" : undefined}
+              title={t.hint}
+              onClick={() => setTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+        <div className="lab-width">
+          <span className="param-name">Tunnel width</span>
+          <Choice
+            options={CORRIDOR_WIDTHS}
+            value={corridorWidth}
+            onChange={(w) => {
+              setCorridorWidth(w);
+              saveCorridorWidth(w);
+            }}
+          />
+        </div>
+      </header>
+
+      <main className="lab-body">
+        {tab === "play" && (
+          <PlayTab words={words} pairs={pairs} settings={settings} corridorWidth={corridorWidth} />
+        )}
+        {tab === "pairgates" && (
+          <PairGates pairs={pairs} settings={settings} corridorWidth={corridorWidth} />
+        )}
+        {tab === "words" && <WordGates />}
+        {tab === "averages" && <ToneAverages />}
+        {tab === "tonepairs" && <TonePairs />}
+        {tab === "visualiser" && (
+          <div className="lab-pane lab-pane-stage">
+            <Visualiser settings={settings} canvasWidth={360} canvasHeight={640} />
+          </div>
+        )}
+      </main>
+    </div>
   );
-  /** Bumped to tear down and rebuild the run — how a tuning change is applied. */
+}
+
+function PlayTab({
+  words,
+  pairs,
+  settings,
+  corridorWidth,
+}: {
+  words: Word[];
+  pairs: Word[];
+  settings: CalibrationSettings;
+  corridorWidth: CorridorWidth;
+}) {
+  const [toneFilter, setToneFilter] = useState<Tone | "all">("all");
+  const [selected, setSelected] = useState<Word | null>(null);
+  const singles = useMemo(() => words.filter((w) => w.syllables === 1), [words]);
+  const shown = useMemo(
+    () => (toneFilter === "all" ? singles : singles.filter((w) => w.tone === toneFilter)),
+    [singles, toneFilter],
+  );
+  // Default to the first word once the list lands, without overriding a pick.
+  const word = selected ?? singles[0] ?? null;
+
+  return (
+    <div className="lab-grid lab-grid-play">
+      <section className="lab-pane lab-pane-picker" aria-label="Choose a word">
+        <div className="pane-head">
+          <h3>Word</h3>
+          <div className="chips" role="group" aria-label="Tone">
+            {(["all", ...TONES] as const).map((k) => (
+              <button
+                key={k}
+                className={k === toneFilter ? "chip active" : "chip"}
+                aria-pressed={k === toneFilter}
+                onClick={() => setToneFilter(k)}
+              >
+                {k === "all" ? "All" : `T${k}`}
+              </button>
+            ))}
+          </div>
+        </div>
+        {singles.length === 0 && (
+          <p className="lab-empty">
+            The catalog has no words yet. Run `npm run export-fallback`, or check that Supabase is
+            reachable.
+          </p>
+        )}
+        <ul className="word-list">
+          {shown.map((w) => (
+            <li key={w.id}>
+              <button
+                className={w.id === word?.id ? "word-item active" : "word-item"}
+                aria-pressed={w.id === word?.id}
+                onClick={() => setSelected(w)}
+              >
+                <span className="word-hanzi">{w.hanzi}</span>
+                <span className="word-pinyin">{w.pinyin}</span>
+                <span className={`word-tone t${w.tone}`}>T{w.tone}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="lab-pane lab-pane-stage" aria-label="Gate">
+        <GateStage word={word} settings={settings} corridorWidth={corridorWidth} showCitation={false} />
+        <EffectiveSettings corridorWidth={corridorWidth} />
+        <FullRun pairs={pairs} words={words} settings={settings} />
+      </section>
+
+      <section className="lab-pane lab-pane-tuning" aria-label="Tuning">
+        <TuningPanel />
+      </section>
+    </div>
+  );
+}
+
+/**
+ * The numbers tunnel width actually produces, once its factor is applied on top
+ * of the tuning sliders. Polls rather than subscribing: `tuning()` is a mutable
+ * singleton, not React state, so a slider dragged elsewhere has no event to hear.
+ */
+function EffectiveSettings({ corridorWidth }: { corridorWidth: CorridorWidth }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => tick((n) => n + 1), 250);
+    return () => clearInterval(id);
+  }, []);
+  const d = applyCorridorWidth(newDifficulty(), corridorWidth);
+  return (
+    <details className="lab-fold">
+      <summary>Effective values at {corridorWidth} width</summary>
+      <pre className="diff">
+        {`scroll speed       ${d.scrollSpeed.toFixed(0)} px/s
+rest between gates ${d.restMs.toFixed(0)} ms
+tunnel half-height ${d.toleranceH.toFixed(3)} of canvas height
+tolerance in chao  ${TONES.map((t) => `T${t} ${toleranceChao(t, d.toleranceH).toFixed(2)}`).join("  ")}`}
+      </pre>
+    </details>
+  );
+}
+
+/** A whole scored run, for checking pacing and difficulty rather than one gate. */
+function FullRun({
+  pairs,
+  words,
+  settings,
+}: {
+  pairs: Word[];
+  words: Word[];
+  settings: CalibrationSettings;
+}) {
+  const [runMode, setRunMode] = useState<RunMode>("game");
   const [runKey, setRunKey] = useState(0);
   const [running, setRunning] = useState(false);
   const [last, setLast] = useState<RunSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const restart = async () => {
+  const start = async () => {
     setError(null);
     try {
-      // Inside the click handler — iOS grants getUserMedia only during a gesture.
       await ensureMic();
-      // Game.tsx sources a run's word pool from the live inventory
-      // (inventoryNow()), not from a prop — so a "pairs" test run has to
-      // adopt the fixture/multi pool through the same seam a catalog switch
-      // uses. Switching back to "game" re-adopts the ordinary bundled words.
-      adoptInventory(
-        runMode === "pairs" ? "lab-pairs" : inventorySpeaker(),
-        runMode === "pairs" ? pairsWords : words,
-      );
+      // Game.tsx reads a run's pool from the live inventory, so a pairs run has
+      // to adopt the pair pool through the same seam a catalog switch uses.
+      adoptInventory(runMode === "pairs" ? "lab-pairs" : inventorySpeaker(), runMode === "pairs" ? pairs : words);
       setLast(null);
       setRunKey((k) => k + 1);
       setRunning(true);
     } catch (err) {
       setRunning(false);
-      setError(err instanceof Error ? err.message : "mic failed");
+      setError(err instanceof Error ? err.message : "Microphone failed");
     }
   };
 
@@ -131,725 +286,50 @@ export function Lab({ onBack }: Props) {
     stopMic();
   };
 
-  /**
-   * The bundled catalog export, not the live read: tuning is a comparison
-   * across sessions, and a word list that changes underneath it makes two
-   * Lab runs incomparable. Regenerate with `npm run export-fallback`.
-   */
-  const words = useMemo(() => wordsFromCatalog(fallback.rows), []);
-  /**
-   * The full-run pairs pool: the bundled catalog's own multi-syllable words
-   * when it has any, else (dev builds only) the four fixture words from
-   * Task 1.5 — so `multiMergeGapMs`/`multiGateChance` can be flown before any
-   * pair is actually published. Never reaches a production build: the
-   * fallback branch is gated on `import.meta.env.DEV`, same as the rest of
-   * this file.
-   */
-  const pairsWords = useMemo(() => {
-    const real = multiWords(words);
-    return real.length > 0 ? real : import.meta.env.DEV ? FIXTURE_WORDS : [];
-  }, [words]);
-  const [runMode, setRunMode] = useState<RunMode>("game");
-  const [toneFilter, setToneFilter] = useState<Tone | "all">("all");
-  const [selectedWord, setSelectedWord] = useState<Word | null>(() => words[0] ?? null);
-  const [gateKey, setGateKey] = useState(0);
-  const [flyingGate, setFlyingGate] = useState(false);
-  const [gateResult, setGateResult] = useState<RunSnapshot | null>(null);
-  const [gateError, setGateError] = useState<string | null>(null);
-  /**
-   * The standalone tone recognizer's read of the just-flown test gate —
-   * deliberately independent of `selectedWord`'s own tone, the same way the
-   * Visualiser's `showRecognizedTone` readout is: it answers "what did this
-   * shape resemble", not "did you hit the target". Built from
-   * `gateResult.lastOutcome.path` (`src/game/run.ts`) — the voiced samples
-   * actually flown through the gate — reshaped into the `Contour` format
-   * `classifyTone` (`src/game/toneClassifier.ts`) expects. This is the
-   * fastest loop for tuning the classifier's own knobs (the "tone
-   * classifier" group below): fly a gate, see both the real outcome and
-   * what the recognizer independently thought it heard, side by side.
-   */
-  const recognized = useMemo(() => {
-    const path = gateResult?.lastOutcome?.path;
-    if (!path || path.length < 2) return null;
-    const startMs = path[0].t;
-    const contour: Contour = {
-      points: path.map((p) => ({ tMs: p.t - startMs, chao: p.chao })),
-      startedAtMs: startMs,
-      endedAtMs: path[path.length - 1].t,
-    };
-    return classifyTone(contour);
-  }, [gateResult]);
-  /**
-   * The player-facing width setting — same localStorage the pause menu
-   * writes to, so a choice made here is also what "test" (which reads it
-   * fresh via `loadCorridorWidth` at mount) and a full run actually fly.
-   * Without this the preview's tolerance and the tolerance a test gate is
-   * scored against could silently disagree with what's shown.
-   */
-  const [corridorWidth, setCorridorWidth] = useState<CorridorWidth>(loadCorridorWidth);
-  /**
-   * Lab-only inspection toggle — overlays the citation T3 polyline (the shape
-   * `shapeForWord` substitutes in for every T3 gate, per its comment in
-   * gates.ts) on top of the word's own measured contour, so the two can be
-   * compared. `GatePreview` never calls `shapeForWord` for its primary
-   * corridor — it always draws `word.polyline` — so this is purely a paused,
-   * dev-only canvas overlay. It touches no exported game function, so real
-   * gates (`makeGate`/`shapeForWord`) are unaffected either way.
-   */
-  const [showCitation, setShowCitation] = useState(false);
-
-  const testGate = async () => {
-    setGateError(null);
-    try {
-      await ensureMic();
-      setGateResult(null);
-      setGateKey((k) => k + 1);
-      setFlyingGate(true);
-    } catch (err) {
-      setFlyingGate(false);
-      setGateError(err instanceof Error ? err.message : "mic failed");
-    }
-  };
-
-  const stopGate = () => {
-    setFlyingGate(false);
-    stopMic();
-  };
-
   return (
-    <div className="screen lab-screen">
-      <header className="lab-header">
-        <button className="link" onClick={onBack}>
-          ← exit lab
-        </button>
-        <nav className="lab-tabs">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              className={t.id === tab ? "tab active" : "tab"}
-              onClick={() => setTab(t.id)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
-      </header>
-
-      {error && <p className="error">{error}</p>}
-
-      {tab === "play" && (
-        <div className="lab-play-grid">
-          <div className="lab-picker">
-            <GatePicker
-              words={words}
-              tone={toneFilter}
-              onTone={setToneFilter}
-              selected={selectedWord}
-              onSelect={(w) => {
-                setSelectedWord(w);
-                setGateResult(null);
-              }}
+    <details className="lab-fold">
+      <summary>Full run instead of one gate</summary>
+      {running ? (
+        <Game
+          key={runKey}
+          mode={runMode}
+          settings={settings}
+          canvasWidth={360}
+          canvasHeight={640}
+          onOver={(snap) => {
+            setLast(snap);
+            setRunning(false);
+          }}
+          onQuit={stop}
+        />
+      ) : (
+        <div className="lab-fold-body">
+          <div className="game-settings-row">
+            <span className="param-name">Mode</span>
+            <Choice
+              options={["game", "pairs"] as const}
+              value={runMode as "game" | "pairs"}
+              onChange={setRunMode}
             />
           </div>
-
-          <div className="lab-stage">
-            {flyingGate && selectedWord ? (
-              <Game
-                key={gateKey}
-                mode="single"
-                singleWord={selectedWord}
-                settings={settings}
-                canvasWidth={360}
-                canvasHeight={640}
-                onOver={(snap) => {
-                  setGateResult(snap);
-                  setFlyingGate(false);
-                }}
-                onQuit={stopGate}
-              />
-            ) : (
-              <div className="lab-idle">
-                <GatePreview
-                  word={selectedWord}
-                  corridorWidth={corridorWidth}
-                  showCitation={showCitation}
-                />
-                {selectedWord?.tone === 3 && (
-                  <label className="param-help lab-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={showCitation}
-                      onChange={(e) => setShowCitation(e.target.checked)}
-                    />
-                    overlay old citation T3 shape (no longer what the game flies)
-                  </label>
-                )}
-                {gateError && <p className="error">{gateError}</p>}
-                <button
-                  className="primary"
-                  disabled={!selectedWord}
-                  onClick={() => void testGate()}
-                >
-                  test
-                </button>
-                {gateResult?.gateLog[0] && (
-                  <p className="param-help">
-                    {gateResult.gateLog[0].outcome} · score accuracy{" "}
-                    {Math.round(gateResult.gateLog[0].accuracy * 100)}% · tone accuracy{" "}
-                    {gateResult.gateLog[0].toneAccuracy === null
-                      ? "—"
-                      : `${Math.round(gateResult.gateLog[0].toneAccuracy * 100)}%`}
-                  </p>
-                )}
-                {/* The standalone recognizer's independent read — never
-                    told which tone was the target, so a mismatch against
-                    the line above is itself informative while tuning. */}
-                {recognized && (
-                  <p className="param-help">
-                    recognized:{" "}
-                    {recognized.tone === "none" ? "none" : `T${recognized.tone}`}{" "}
-                    ({Math.round(recognized.confidence * 100)}%)
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="lab-idle game-settings game-settings-compact">
-              <div className="game-settings-row">
-                <span className="param-name">tunnel width</span>
-                <Choice
-                  options={CORRIDOR_WIDTHS}
-                  value={corridorWidth}
-                  onChange={(w) => {
-                    setCorridorWidth(w);
-                    saveCorridorWidth(w);
-                  }}
-                />
-              </div>
-              <p className="param-help">
-                Same setting the pause menu writes. It is a factor on top of
-                the tuning sliders, not a slider of its own — the actual
-                numbers a run flies with:
-              </p>
-              <EffectiveSettings corridorWidth={corridorWidth} />
-            </div>
-
-            <details className="lab-idle">
-              <summary className="param-help">full run instead</summary>
-              {running ? (
-                <Game
-                  key={runKey}
-                  mode={runMode}
-                  settings={settings}
-                  canvasWidth={360}
-                  canvasHeight={640}
-                  onOver={(snap) => {
-                    setLast(snap);
-                    setRunning(false);
-                  }}
-                  onQuit={stop}
-                />
-              ) : (
-                <div className="lab-idle">
-                  <div className="game-settings-row">
-                    <span className="param-name">mode</span>
-                    <Choice
-                      options={["game", "pairs"] as const}
-                      value={runMode as "game" | "pairs"}
-                      onChange={setRunMode}
-                    />
-                  </div>
-                  {runMode === "pairs" && pairsWords.length === 0 && (
-                    <p className="param-help">
-                      No pairs available — neither the catalog nor the fixture
-                      inventory has one.
-                    </p>
-                  )}
-                  <p className="param-help">
-                    Runs on {loadCorridorWidth()} tunnel ·{" "}
-                    demo {loadCueStyle() === "off" ? "off" : "on"}, and on your saved calibration
-                    {loadSettings() === null ? " (none — using defaults)" : ""}.
-                  </p>
-                  <button
-                    className="primary"
-                    disabled={runMode === "pairs" && pairsWords.length === 0}
-                    onClick={() => void restart()}
-                  >
-                    {last ? "run again" : "start a run"}
-                  </button>
-                  {last && (
-                    <pre className="diff">
-                      {`score ${last.score}  ·  gates ${last.gateLog.length}
-unheard ${last.gateLog.filter((g) => g.outcome === "unheard").length}  ·  collisions ${last.gateLog.filter((g) => g.outcome === "collision").length}
+          <p className="param-help">
+            Uses your saved calibration{loadSettings() === null ? " (none yet, so defaults)" : ""},{" "}
+            {loadCorridorWidth()} tunnel, demo {loadCueStyle() === "off" ? "off" : "on"}.
+          </p>
+          {error && <p className="error">{error}</p>}
+          <button className="primary" disabled={runMode === "pairs" && pairs.length === 0} onClick={() => void start()}>
+            {last ? "Run again" : "Start a run"}
+          </button>
+          {last && (
+            <pre className="diff">
+              {`score ${last.score}  gates ${last.gateLog.length}
+unheard ${last.gateLog.filter((g) => g.outcome === "unheard").length}  collisions ${last.gateLog.filter((g) => g.outcome === "collision").length}
 missed early ${last.missedUtterances}
 worst excursion ${Math.round(Math.max(0, ...last.gateLog.map((g) => g.worstExcursionMs)))}ms`}
-                    </pre>
-                  )}
-                </div>
-              )}
-            </details>
-          </div>
-          <div className="lab-controls">
-            <TuningPanel />
-          </div>
+            </pre>
+          )}
         </div>
       )}
-
-      {tab === "words" && <WordGates />}
-
-      {tab === "averages" && <ToneAverages />}
-
-      {tab === "pitch" && <PitchTab />}
-
-      {tab === "gates" && (
-        <div className="lab-controls">
-          <GateLogPanel />
-          <p className="param-help">
-            The full per-gate log for the last run, live-mirrored to
-            localStorage — a run ended by quitting or by closing the tab still
-            leaves its numbers here, and a run flown outside the Lab lands here
-            too.
-          </p>
-        </div>
-      )}
-
-      {tab === "capture" && <Capture onBack={() => setTab("play")} />}
-
-      {tab === "tonepairs" && <TonePairs />}
-
-      {tab === "pairgates" && <PairGatesTab words={pairsWords} settings={settings} />}
-
-      {/* Same component the title screen's "visualiser" opens — a second,
-          disposable instance living in the Lab so a tone-recognition
-          algorithm can be tested against live attempts without a full run
-          around it. See docs/PRD.md §8 (screen 2c) for what this screen is
-          for; this tab adds no behavior of its own, only a place to reach it
-          from while tuning. */}
-      {tab === "visualiser" && (
-        <div className="lab-controls">
-          <Visualiser settings={settings} canvasWidth={360} canvasHeight={640} />
-        </div>
-      )}
-
-    </div>
-  );
-}
-
-const TONES: Tone[] = [1, 2, 3, 4];
-
-/** Tone filter + the matching word list, for picking one gate to test. */
-function GatePicker({
-  words,
-  tone,
-  onTone,
-  selected,
-  onSelect,
-}: {
-  words: Word[];
-  tone: Tone | "all";
-  onTone: (t: Tone | "all") => void;
-  selected: Word | null;
-  onSelect: (w: Word) => void;
-}) {
-  const shown = useMemo(
-    () => (tone === "all" ? words : words.filter((w) => w.tone === tone)),
-    [words, tone],
-  );
-
-  return (
-    <div className="gate-picker">
-      <nav className="lab-tabs">
-        {(["all", ...TONES] as const).map((k) => (
-          <button
-            key={k}
-            className={k === tone ? "tab active" : "tab"}
-            onClick={() => onTone(k)}
-          >
-            {k === "all" ? "all" : `T${k}`}
-          </button>
-        ))}
-      </nav>
-      {words.length === 0 && (
-        <p className="param-help">
-          The inventory is empty — src/data/wordsFallback.json has no rows. Run
-          `npm run export-fallback`.
-        </p>
-      )}
-      <div className="gate-picker-list">
-        {shown.map((w) => (
-          <button
-            key={w.id}
-            className={w.id === selected?.id ? "gate-picker-item active" : "gate-picker-item"}
-            onClick={() => onSelect(w)}
-          >
-            {w.pinyin} {w.hanzi} <span className="param-help">· {w.id}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-const TONE_LIST: Tone[] = [1, 2, 3, 4];
-
-/**
- * The numbers speed/tunnel width actually produce, once their factor is
- * applied on top of whatever the tuning sliders currently say — the sliders
- * themselves never move, so without this readout "narrow" or "relaxed" is a
- * label with no visible number behind it.
- *
- * Polls rather than subscribing: `tuning()` is a mutable singleton (see
- * TuningPanel), not React state, so a slider dragged elsewhere on the page
- * has no event this component could listen for.
- */
-function EffectiveSettings({
-  corridorWidth,
-}: {
-  corridorWidth: CorridorWidth;
-}) {
-  const [, tick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => tick((n) => n + 1), 250);
-    return () => clearInterval(id);
-  }, []);
-
-  const d = applyCorridorWidth(newDifficulty(), corridorWidth);
-
-  return (
-    <pre className="diff">
-      {`scroll speed      ${d.scrollSpeed.toFixed(0)} px/s
-rest between gates ${d.restMs.toFixed(0)} ms
-tunnel half-height  ${d.toleranceH.toFixed(3)}  (fraction of canvas height)
-tolerance in chao   ${TONE_LIST.map((t) => `T${t} ${toleranceChao(t, d.toleranceH).toFixed(2)}`).join("  ")}`}
-    </pre>
-  );
-}
-
-/**
- * A single gate, paused: the Chao grid and the corridor the selected word
- * would fly, drawn with the same functions the live game draws with, at the
- * game's own canvas size. Redraws on every frame while idle so a slider
- * dragged in TuningPanel — a mutable singleton, not React state — shows up
- * immediately without any extra wiring back to this component.
- *
- * The grid is drawn a second time, on top of the gate. `drawGate` paints its
- * wall near-opaque on purpose (PRD: the grid should "survive only inside the
- * open channel" during play), but a wide corridor's wall is a sliver and a
- * paused inspection view has no channel/wall distinction to teach — the grid
- * is a measuring stick here, and it must stay legible under the whole gate,
- * not just the parts outside it.
- *
- * The dot sits at rest (chao 3) at the tuned `birdXFrac` — the one PACING
- * knob ("dot position") this static view can show without actually flying:
- * everything else in PACING/DOT/JUDGING is a timing or animation behaviour
- * that only exists while a gate is being flown, so "test" is what shows those.
- *
- * `corridorWidth` is the player's width setting (see `game-settings` above),
- * applied the same way `Run` applies it — through `toleranceChao`, then
- * `applyCorridorWidth` — so "narrow" and "wide" flare the drawn tunnel
- * exactly as much as they would in an actual run. The gate's pixel width
- * comes from the same formula `makeGate` uses: `scrollSpeed *
- * shape.durationS`. Stretching the polyline across the full canvas instead
- * (the previous behaviour) drew every gate at the same width regardless of
- * the tone's actual duration, which flattened or steepened corridors
- * relative to how they actually fly — the preview must use the same pixel
- * width the game computes or it stops matching gameplay.
- * The gate starts (t=0) at the bird's x, matching the moment the player
- * begins flying it in a live run — the dot sits at the gate's own entrance
- * rather than partway through the corridor.
- *
- * The corridor drawn here is always the word's own measured shape
- * (`word.polyline`/`word.durationS`) — as of 16 Aug 2026 this is what
- * `shapeForWord` returns for every tone including 3, now that `clipCut.ts`
- * measures all 30 T3 words' real dip-and-rise instead of falling back to one
- * synthetic citation polyline. `showCitation` optionally overlays that old
- * citation shape (`shapeForTone(3)`) as a second dashed line, kept as a
- * historical/QA comparison — it is no longer what a real run flies for any
- * word. Neither of these calls `shapeForWord` or touches anything
- * `makeGate`/a real run reads — this is a paused canvas-only overlay,
- * gameplay is untouched either way.
- */
-/**
- * The actual production gate — `shapeForWord`'s shape-agnostic multi-syllable
- * corridor (Phase 1) through `GatePreview`/`Game`'s ordinary "single" flight —
- * for the four `fixtures/tonepairs/wav/*.wav` recordings, alone on their own
- * tab. A dedicated tab rather than a spot in "play"'s picker: that picker
- * reads `src/data/wordsFallback.json`, which is empty on a machine whose
- * local Supabase catalog was never re-exported after the DB migration, and
- * a four-item list doesn't need a tone filter or the rest of "play"'s
- * single-gate chrome crowding it out.
- */
-function PairGatesTab({
-  words,
-  settings,
-}: {
-  words: Word[];
-  settings: CalibrationSettings;
-}) {
-  const [selected, setSelected] = useState<Word | null>(words[0] ?? null);
-  const [corridorWidth, setCorridorWidth] = useState<CorridorWidth>(loadCorridorWidth);
-  const [gateKey, setGateKey] = useState(0);
-  const [flying, setFlying] = useState(false);
-  const [result, setResult] = useState<RunSnapshot | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const test = async () => {
-    setError(null);
-    try {
-      await ensureMic();
-      setResult(null);
-      setGateKey((k) => k + 1);
-      setFlying(true);
-    } catch (err) {
-      setFlying(false);
-      setError(err instanceof Error ? err.message : "mic failed");
-    }
-  };
-
-  const stop = () => {
-    setFlying(false);
-    stopMic();
-  };
-
-  if (words.length === 0) {
-    return (
-      <div className="lab-controls">
-        <p className="param-help">
-          No pair fixtures found. Run `npm run tonepairs:fixtures` to
-          (re)generate `src/dev/fixtureWords.json` from
-          `fixtures/tonepairs/wav/*.wav`.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="lab-play-grid">
-      <div className="lab-picker">
-        <div className="gate-picker-list">
-          {words.map((w) => (
-            <button
-              key={w.id}
-              className={w.id === selected?.id ? "gate-picker-item active" : "gate-picker-item"}
-              onClick={() => {
-                setSelected(w);
-                setResult(null);
-              }}
-            >
-              {w.pinyin} {w.hanzi}{" "}
-              <span className="param-help">
-                · T{w.tones.join("·T")} · {w.id}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="lab-stage">
-        {flying && selected ? (
-          <Game
-            key={gateKey}
-            mode="single"
-            singleWord={selected}
-            settings={settings}
-            canvasWidth={360}
-            canvasHeight={640}
-            onOver={(snap) => {
-              setResult(snap);
-              setFlying(false);
-            }}
-            onQuit={stop}
-          />
-        ) : (
-          <div className="lab-idle">
-            <GatePreview word={selected} corridorWidth={corridorWidth} showCitation={false} />
-            {error && <p className="error">{error}</p>}
-            <button className="primary" disabled={!selected} onClick={() => void test()}>
-              test
-            </button>
-            {result?.gateLog[0] && (
-              <p className="param-help">
-                {result.gateLog[0].outcome} · score accuracy{" "}
-                {Math.round(result.gateLog[0].accuracy * 100)}% · tone accuracy{" "}
-                {result.gateLog[0].toneAccuracy === null
-                  ? "—"
-                  : `${Math.round(result.gateLog[0].toneAccuracy * 100)}%`}
-              </p>
-            )}
-          </div>
-        )}
-
-        <div className="lab-idle game-settings game-settings-compact">
-          <div className="game-settings-row">
-            <span className="param-name">tunnel width</span>
-            <Choice
-              options={CORRIDOR_WIDTHS}
-              value={corridorWidth}
-              onChange={(w) => {
-                setCorridorWidth(w);
-                saveCorridorWidth(w);
-              }}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function GatePreview({
-  word,
-  corridorWidth,
-  showCitation,
-}: {
-  word: Word | null;
-  corridorWidth: CorridorWidth;
-  showCitation: boolean;
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    let raf = 0;
-    const draw = () => {
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        const { width, height } = canvas;
-        ctx.fillStyle = BACKDROP;
-        ctx.fillRect(0, 0, width, height);
-        drawChaoGrid(ctx, width, height);
-        if (word) {
-          const baseTol = toleranceChao(word.tones, tuning().baseToleranceH);
-          const d = applyCorridorWidth(
-            { scrollSpeed: tuning().baseScrollSpeed, toleranceH: baseTol, restMs: 0 },
-            corridorWidth,
-          );
-          const shape = { polyline: word.polyline, durationS: word.durationS };
-          const widthPx = d.scrollSpeed * shape.durationS;
-          const dotX = width * birdXFrac();
-          const x0 = dotX;
-          const x1 = dotX + widthPx;
-          drawGate(
-            ctx,
-            width,
-            height,
-            {
-              tone: word.tone,
-              tones: word.tones,
-              word,
-              shape,
-              x0,
-              x1,
-              tolChao: d.toleranceH,
-              xStart: 0,
-            },
-            true,
-          );
-          if (showCitation && word.tone === 3) {
-            drawCentrelineOverlay(ctx, height, shapeForTone(3), x0, x1);
-          }
-        }
-        drawChaoGrid(ctx, width, height);
-        drawPip(ctx, height, REST_CHAO, width * birdXFrac(), 0, "flying", true, 0, Infinity, true, width);
-      }
-      raf = requestAnimationFrame(draw);
-    };
-    raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
-  }, [word, corridorWidth, showCitation]);
-
-  return (
-    <div className="stage">
-      <canvas ref={canvasRef} width={360} height={640} />
-    </div>
-  );
-}
-
-/**
- * A single dashed centreline for a shape, drawn over an already-rendered
- * gate — the "what the game actually flies" overlay for T3. Deliberately
- * bare compared to `drawGate`'s own ghost centreline (no corridor fill or
- * wall): the primary gate already carries that, and a second wall here would
- * just be visual noise on top of it.
- */
-function drawCentrelineOverlay(
-  ctx: CanvasRenderingContext2D,
-  height: number,
-  shape: Parameters<typeof corridorChaoAt>[0],
-  x0: number,
-  x1: number,
-): void {
-  const steps = 60;
-  ctx.save();
-  ctx.setLineDash([3, 5]);
-  ctx.strokeStyle = "rgba(200, 60, 60, 0.85)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    const x = x0 + t * (x1 - x0);
-    const y = chaoToY(corridorChaoAt(shape, t), height);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
-  ctx.restore();
-}
-
-/**
- * The Step-0 prototype: one dot, the Chao grid, a trail, and the tracker
- * controls. No gates — pitch tuning should not require flying anything.
- */
-function PitchTab() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [live, setLive] = useState(false);
-
-  useEffect(() => {
-    if (!live) return;
-    const saved = loadSettings();
-    configureTracker(
-      saved
-        ? {
-            f0Center: saved.f0Center,
-            noiseFloor: saved.noiseFloor,
-            rangeSemitones: saved.rangeSemitones,
-            rangeDownSemitones: saved.rangeDownSemitones,
-          }
-        : {},
-    );
-    setFrameSink(handleFrame);
-    const stopLoop = canvasRef.current
-      ? startLoop(canvasRef.current, 360, 640)
-      : null;
-    return () => {
-      stopLoop?.();
-      setFrameSink(null);
-      setActiveTracker(null);
-    };
-  }, [live]);
-
-  return (
-    <div className="lab-split">
-      <div className="lab-stage">
-        <div className="stage">
-          <canvas ref={canvasRef} width={360} height={640} />
-        </div>
-        {!live && (
-          <button
-            className="primary"
-            onClick={() => {
-              // Gesture-scoped, as every audio entry point in this app must be.
-              void ensureMic().then(() => setLive(true));
-            }}
-          >
-            open the mic
-          </button>
-        )}
-      </div>
-      <div className="lab-controls">
-        <DevPanel />
-      </div>
-    </div>
+    </details>
   );
 }
