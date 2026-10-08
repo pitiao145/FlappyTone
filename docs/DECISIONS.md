@@ -533,6 +533,30 @@ stats). Decisions worth keeping:
   server-side. The Pro tone-evolution chart draws Jane's average for the
   player's *current* effective style; a player who mixes styles sees their own
   line (all history) against one style's reference.
+- **Natural is placed on the board with TEXTBOOK's chao map (8 Oct 2026).**
+  Natural first shipped with the placement step skipped, on the idea that its
+  heights were "in the session's own chao space". They were not: they were in
+  the cutter's ±15-semitone measure space. Natural T1 sat at chao 3.3
+  (textbook 4.6) and T2/T3/T4 moved 1.1/0.9/1.5 chao (textbook 2.8/3.2/3.0):
+  flat, mid-board corridors that no calibrated player's voice matches.
+  Pierre's bar is a "true" corridor: real shape, real timing, real size
+  relative to textbook. A stretch of natural onto the citation span would
+  inflate every natural shape to textbook size and hide the difference
+  (T3 ×3.4). So `process-clips --style natural` cuts the speaker's textbook
+  takes too and applies textbook's per-cohort map to the natural cohort of
+  the same key (`cohortPlacements`); a key with no textbook cohort is left
+  unplaced with a loud warning. After: T1 4.57, moves T2 2.5 / T3 2.2 /
+  T4 2.4 — on the board, still flatter than textbook, as she spoke it (raw,
+  before any map, natural ranges are 57–85% of textbook's). Each style is
+  measured against its own session's f0Center (textbook 199 Hz, natural
+  181 Hz); on T1 the paired-word offset is +0.12 chao, immaterial. Re-done
+  as a rows-only re-publish (`--no-upload`). Effect on the classifier with
+  textbook anchors: natural T3 96% (76% before), but natural T2 51% — the
+  floor rule stays. Two candidate T2/T3 votes (low-point time; time in the
+  bottom third of the contour's own range) with natural anchors reach T2
+  44/47, T3 49/52, 1 clean wall hit (`he2`, read as a fall) and 15 under the
+  stress variants (textbook 1); they are tuning flags, off, measured with
+  `classifier-check --votes lowTime,dwell --loo`.
 - **Fallback bundle stays textbook-only**, for the reason the bundle is
   default-speaker-only already: a dead network means no clip audio, so only
   corridors are left, and shipping both styles would weigh on the landing
