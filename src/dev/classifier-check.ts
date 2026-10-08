@@ -1,4 +1,14 @@
-// CLI: npm run classifier-check -- [contours.json] [--anchors textbook|natural] [--verbose]
+// CLI: npm run classifier-check -- [contours.json] [--anchors textbook|natural]
+//        [--votes lowTime,dwell] [--loo] [--verbose]
+//
+// `--loo` rebuilds the averages from the contours file's own polylines, so it
+// replaces `--anchors`: use it only with clips of the anchor style (natural
+// clips + `--anchors textbook` need no --loo — they are not in that average).
+// `--votes` turns on the extra T2/T3 votes (`toneClassifierLowTimeVote`,
+// `toneClassifierDwellVote` in tuning.ts; both off in the game). `--loo`
+// judges each measured clip against averages rebuilt WITHOUT it, from the
+// polylines in contours.json (a 6th element per row; rows without one use
+// the baked averages) — so a clip is never its own reference.
 //
 // `--anchors` picks which style's averages the classifier reads (speech style
 // spec §5.2 follow-up): every template, so both the family correlation and the
@@ -42,7 +52,7 @@ import { AVERAGED_TONE_SHAPE } from "../game/toneAverages.ts";
 import { averagePolyline } from "../game/toneAverage.ts";
 import { wordsFromCatalog, wordsOfTone } from "../game/words.ts";
 import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
-import { tuning } from "../game/tuning.ts";
+import { setTuning, tuning } from "../game/tuning.ts";
 import type { Tone } from "../game/gates.ts";
 import type { Contour } from "../game/contours.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
@@ -58,7 +68,23 @@ if (anchorStyle !== "textbook" && anchorStyle !== "natural") {
   console.error(`--anchors must be textbook or natural, got ${anchorStyle}`);
   process.exit(1);
 }
-const contoursPath = args.find((a, i) => !a.startsWith("--") && i !== anchorsAt + 1);
+const votesAt = args.indexOf("--votes");
+const extraVotes = votesAt >= 0 ? (args[votesAt + 1] ?? "").split(",") : [];
+for (const v of extraVotes) {
+  if (v !== "lowTime" && v !== "dwell") {
+    console.error(`--votes takes lowTime,dwell — got ${v}`);
+    process.exit(1);
+  }
+}
+setTuning({
+  toneClassifierLowTimeVote: extraVotes.includes("lowTime"),
+  toneClassifierDwellVote: extraVotes.includes("dwell"),
+});
+const leaveOneOut = args.includes("--loo");
+// A flag's value is not the contours path. Guarded on the flag being present:
+// an absent flag's index is -1, and "-1 + 1" would skip argument 0.
+const flagValues = new Set([anchorsAt, votesAt].filter((i) => i >= 0).map((i) => i + 1));
+const contoursPath = args.find((a, i) => !a.startsWith("--") && !flagValues.has(i));
 /** The templates every read below uses. */
 const live: Record<Tone, number[]> = AVERAGED_TONE_SHAPE[anchorStyle];
 
@@ -81,6 +107,8 @@ interface Case {
   id: string;
   tone: Tone;
   contour: Contour;
+  /** Leave-one-out averages for this clip (`--loo`); the run's templates otherwise. */
+  templates?: Record<Tone, number[]>;
 }
 
 function contourOf(points: { tMs: number; chao: number }[]): Contour {
@@ -93,21 +121,34 @@ function contourOf(points: { tMs: number; chao: number }[]): Contour {
 
 // ---- Source 1: measured clip contours.
 function clipCases(path: string): Case[] {
-  const rows = JSON.parse(readFileSync(path, "utf8")) as [
+  const rows = (JSON.parse(readFileSync(path, "utf8")) as [
     string,
     number[],
     number,
     number,
     [number, number][],
-  ][];
-  return rows
-    .filter((r) => r[1].length === 1 && r[1][0] >= 1 && r[1][0] <= 4 && r[4].length >= 2)
-    .map(([id, tones, , durationS, contour]) => ({
-      id,
-      tone: tones[0] as Tone,
-      // `contour`'s t is a 0..1 fraction of the tone window.
-      contour: contourOf(contour.map(([t, chao]) => ({ tMs: t * durationS * 1000, chao }))),
-    }));
+    [number, number][]?,
+  ][]).filter((r) => r[1].length === 1 && r[1][0] >= 1 && r[1][0] <= 4 && r[4].length >= 2);
+  const sources = rows
+    .filter((r) => r[5]?.length)
+    .map((r) => ({ id: r[0], tone: r[1][0] as Tone, polyline: r[5]! }));
+  const looFor = (id: string): Record<Tone, number[]> | undefined => {
+    if (!leaveOneOut || sources.length === 0) return undefined;
+    const out = {} as Record<Tone, number[]>;
+    for (const t of TONES) {
+      out[t] = averagePolyline(
+        sources.filter((s) => s.tone === t && s.id !== id) as unknown as Parameters<typeof averagePolyline>[0],
+      );
+    }
+    return out;
+  };
+  return rows.map(([id, tones, , durationS, contour]) => ({
+    id,
+    tone: tones[0] as Tone,
+    // `contour`'s t is a 0..1 fraction of the tone window.
+    contour: contourOf(contour.map(([t, chao]) => ({ tMs: t * durationS * 1000, chao }))),
+    templates: looFor(id),
+  }));
 }
 
 // ---- Source 2: Jane's ground-truth captures, through the real tracker.
@@ -188,7 +229,7 @@ type Read = { tone: ClassifiedTone | null; confidence: number; full: ToneClassif
 
 function readAll(cases: Case[], templates: Record<Tone, number[]>): Read[] {
   return cases.map((c) => {
-    const r = classifyTone(c.contour, templates);
+    const r = classifyTone(c.contour, templates === live ? (c.templates ?? templates) : templates);
     return r ? { tone: r.tone, confidence: r.confidence, full: r } : { tone: null, confidence: 0, full: null };
   });
 }
@@ -254,6 +295,7 @@ function source(
 }
 
 console.log(`Anchors: ${anchorStyle} averages${anchorStyle === "textbook" ? " (live)" : " (offline only, not live)"}.`);
+console.log(`Extra T2/T3 votes: ${extraVotes.join(", ") || "none (live)"}. Leave-one-out: ${leaveOneOut ? "on" : "off"}.`);
 console.log(
   anchorStyle !== "textbook"
     ? "Fresh-vs-baked comparison skipped (natural anchors)."
@@ -313,7 +355,7 @@ if (contoursPath) {
     const n: Record<Tone, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
     let hits = 0;
     for (const c of clips) {
-      const r = classifyTone(contourOf(warp(c.contour.points)), live);
+      const r = classifyTone(contourOf(warp(c.contour.points)), c.templates ?? live);
       n[c.tone]++;
       if (r?.tone === c.tone) right[c.tone]++;
       else if (isDrasticToneMismatch(c.tone, r)) hits++;

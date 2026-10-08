@@ -169,6 +169,10 @@ interface DropShape {
   drop: number;
   /** drop / (drop + rise): the drop's share of the whole movement, scale-free. */
   dropShare: number;
+  /** Where the low point falls, 0..1 of the contour. */
+  lowTime: number;
+  /** Share of the contour in the bottom third of its own range. */
+  dwell: number;
 }
 
 /**
@@ -218,13 +222,23 @@ function dropShape(sample: number[]): DropShape {
   }
   const rise = Math.max(...sample.slice(minIdx)) - min;
   const drop = Math.max(0, start - min);
-  return { start, min, drop, dropShare: drop / Math.max(1e-6, drop + rise) };
+  const range = Math.max(...sample) - Math.min(...sample);
+  return {
+    start,
+    min,
+    drop,
+    dropShare: drop / Math.max(1e-6, drop + rise),
+    lowTime: minIdx / Math.max(1, n - 1),
+    dwell: sample.filter((v) => v <= min + range / 3).length / n,
+  };
 }
 
 interface CueAnchors {
   drop: [number, number];
   low: [number, number];
   dropShare: [number, number];
+  lowTime: [number, number];
+  dwell: [number, number];
   /** 1 − corr(T2 average, T3 average): scales the correlation vote to ±1 at each average. */
   shapeSpread: number;
 }
@@ -249,6 +263,8 @@ function cueAnchors(templates: Record<Tone, number[]>): CueAnchors {
     drop: [d2.drop, d3.drop],
     low: [d2.min, d3.min],
     dropShare: [d2.dropShare, d3.dropShare],
+    lowTime: [d2.lowTime, d3.lowTime],
+    dwell: [d2.dwell, d3.dwell],
     shapeSpread: Math.max(0.05, 1 - (r ?? 0)),
   };
   anchorCache.set(templates, anchors);
@@ -307,6 +323,8 @@ function t2t3Cue(
     vote(d.dropShare, anchors.dropShare),
     Math.max(-VOTE_CAP, Math.min(VOTE_CAP, (c3 - c2) / anchors.shapeSpread)),
   ];
+  if (tuning().toneClassifierLowTimeVote) votes.push(vote(d.lowTime, anchors.lowTime));
+  if (tuning().toneClassifierDwellVote) votes.push(vote(d.dwell, anchors.dwell));
   const cue = votes.reduce((s, v) => s + v, 0) / votes.length;
   // How hard the most contrary vote pulls the other way — 0 when all agree.
   const strongestDissent = Math.max(0, ...votes.map((v) => -Math.sign(cue) * v));

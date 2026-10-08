@@ -370,6 +370,16 @@ export interface Tuning {
    */
   toneClassifierBoostEnabled: boolean;
   /**
+   * Two extra T2/T3 votes, off while they are measured (`classifier-check
+   * --votes lowTime,dwell`). `lowTime`: when the low point falls, as a share
+   * of the contour. `dwell`: the share of the contour spent in the bottom
+   * third of its OWN range — a T2 sits near its shallow bottom for most of
+   * the syllable, a T3 drops through it. Both read 84–88% alone on Jane's
+   * natural T2/T3 clips, where the depth votes fall to ~88% (8 Oct 2026).
+   */
+  toneClassifierLowTimeVote: boolean;
+  toneClassifierDwellVote: boolean;
+  /**
    * Confidence floor before `applyClassifierBoost` does anything — a reward
    * for being *sure*, not a general softening. 0.9 per the player call this
    * was tuned from: "if a player does a tone 100% accurately according to
@@ -526,6 +536,8 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   toneMismatchMaxGapMs: 100,
   toneMismatchCollisionEnabled: true,
   toneClassifierBoostEnabled: true,
+  toneClassifierLowTimeVote: false,
+  toneClassifierDwellVote: false,
   toneClassifierBoostMinConfidence: 0.9,
   toneClassifierBoostFloorAccuracy: 0.6,
   graceMs: 120,
