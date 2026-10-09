@@ -193,6 +193,8 @@ const VOTE_KEYS: VoteKey[] = ["turnTime", "riseShare", "riseRate", "drop", "drop
 const VOTE_CAP = 1.5;
 /** A family winning by this much keeps its full score as confidence. */
 const FAMILY_CLEAR_MARGIN = 0.6;
+/** Summed T2/T3 evidence of 1 ≈ 82%, 2 ≈ 95%. */
+const T23_EVIDENCE_SLOPE = 1.5;
 
 /** Every T2/T3 vote: -1 at the T2 anchor, +1 at the T3 anchor, capped ±1.5. */
 export function t2t3Votes(f: ToneFeatures): Record<VoteKey, number> {
@@ -268,8 +270,12 @@ export function classifyToneV2(contour: Contour): ToneClassification | null {
 
   const { cue, votes } = t2t3Cue(f);
   if (cue === 0) return { tone: "none", confidence: familyConfidence * 0.5, t2t3Cue: cue, decisive: false };
-  // 50% at the midpoint between T2 and T3, 100% at a full vote (±1).
-  const t23Confidence = 0.5 + 0.5 * clamp01(Math.abs(cue));
+  // Confidence from the SUM of the evidence, not the mean: a vote near 0 is
+  // "no evidence", not doubt, so it must not dilute one clear vote (a T2 at
+  // chao 2.3 whose timing votes sit mid-way read 53% under the mean). The
+  // read itself is unchanged — sum and mean share a sign. 50% at 0.
+  const evidence = votes.reduce((a, b) => a + b, 0);
+  const t23Confidence = 1 / (1 + Math.exp(-T23_EVIDENCE_SLOPE * Math.abs(evidence)));
   const dissent = Math.max(0, ...votes.map((v) => -Math.sign(cue) * v));
   return {
     tone: cue > 0 ? 3 : 2,
