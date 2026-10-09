@@ -48,6 +48,15 @@ export interface PitchTrackerConfig {
   detectWindow: number;
   /** Calibrated silence RMS; voiced requires rms >= noiseFloor * 3 */
   noiseFloor: number;
+  /**
+   * Consecutive voiced frames required before any of them is reported voiced.
+   * 1 (the default) reports every voiced frame — what every offline
+   * measurement (clipCut, report, analyze) uses, so corridors never move.
+   * Live play passes `tuning().minVoicedRun` (3): a fan or a breath on the mic
+   * throws up lone, unrelated "voiced" frames that jerk the dot; real speech
+   * is dozens in a row. Costs (n-1) hops of onset latency.
+   */
+  minVoicedRun: number;
   fMin: number;
   fMax: number;
 }

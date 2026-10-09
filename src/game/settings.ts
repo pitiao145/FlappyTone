@@ -43,6 +43,14 @@ export interface CalibrationSettings {
    * and both range halves — the trade `runHistory.ts` already refused.
    */
   voice?: VoicePref;
+  /**
+   * Median RMS of the player's voiced frames in calibration's talk step — how
+   * loud this player is on this device. Caps the per-session noise cutoff so
+   * a noisy room can raise it, but never above a fraction of the voice
+   * (`tuning().voiceCapFraction`). Optional and additive, like `voice`:
+   * absent on older records, which fall back to the fixed `noiseFloorMax`.
+   */
+  voiceRms?: number;
 }
 
 /**
@@ -117,6 +125,9 @@ export function loadSettings(): CalibrationSettings | null {
     };
     if (voice) loaded.voice = voice;
     else delete loaded.voice;
+    if (!(typeof s.voiceRms === "number" && s.voiceRms > 0 && s.voiceRms < 1)) {
+      delete loaded.voiceRms;
+    }
     return loaded;
   } catch {
     return null;

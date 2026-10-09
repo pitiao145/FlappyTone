@@ -593,7 +593,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // Measures the room in the first quiet moments after the mic opens (the
     // warm-up hold in a run, before the first tap in the Visualiser) instead
     // of trusting the floor saved at calibration — src/pitch/noiseMeter.ts.
-    const measureNoise = sessionNoiseMeter();
+    const measureNoise = sessionNoiseMeter(settings.voiceRms);
     const onFrame = (frame: Float32Array, sampleRate: number) => {
       // Deaf while the game itself is talking — the cue would drive the dot.
       if (isCueAudible()) return;
@@ -603,7 +603,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           f0Center: settings.f0Center,
           // The saved calibration floor, capped, until this session's own
           // measurement of the room lands (`measureNoise` below).
-          noiseFloor: startingNoiseFloor(settings.noiseFloor),
+          noiseFloor: startingNoiseFloor(settings.noiseFloor, settings.voiceRms),
+          minVoicedRun: tuning().minVoicedRun,
           rangeSemitones: settings.rangeSemitones,
           rangeDownSemitones: settings.rangeDownSemitones,
         });

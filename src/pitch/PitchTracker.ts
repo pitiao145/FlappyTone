@@ -45,6 +45,7 @@ export const DEFAULT_CONFIG: Omit<PitchTrackerConfig, "sampleRate"> = {
   // clarity that a full-2048 search smears away. Chosen on fixtures/captures
   // via `npm run report --set window=...`.
   detectWindow: 1024,
+  minVoicedRun: 1,
 };
 
 export class PitchTracker {
@@ -55,6 +56,8 @@ export class PitchTracker {
   /** Consecutive unvoiced frames; bounds how long the glide rescue trusts prevVoicedF0. */
   private framesSinceVoiced = Number.MAX_SAFE_INTEGER;
   private smoothedChao = 3;
+  /** Consecutive frames that passed the voicing gate (see `minVoicedRun`). */
+  private voicedRun = 0;
 
   constructor(config: Partial<PitchTrackerConfig> & { sampleRate: number }) {
     // A caller that sets only `rangeSemitones` means a symmetric board, and
@@ -145,6 +148,7 @@ export class PitchTracker {
     );
 
     if (!voiced) {
+      this.voicedRun = 0;
       this.framesSinceVoiced++;
       // Past this gap the previous syllable stops being evidence about the
       // next one — the player has breathed and may restart anywhere. Holding
@@ -178,6 +182,23 @@ export class PitchTracker {
     );
     this.prevSemitones = semitones;
     const chao = semitonesToChao(semitones, rangeSemitones, rangeDownSemitones);
+
+    // Not yet a run long enough to trust (`minVoicedRun`): pitch history above
+    // still advances, so a confirmed run starts from settled filters, but the
+    // frame is reported unvoiced and the smoothed value does not move — a
+    // lone blip never reaches the dot.
+    this.voicedRun++;
+    if (this.voicedRun < this.config.minVoicedRun) {
+      return {
+        f0: null,
+        clarity,
+        rms,
+        voiced: false,
+        semitones: null,
+        chao: null,
+        smoothedChao: this.smoothedChao,
+      };
+    }
     this.smoothedChao += alpha * (chao - this.smoothedChao);
 
     return {

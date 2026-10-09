@@ -35,9 +35,11 @@ import {
   computeF0Center,
   computeNoiseFloor,
   computeRangeHalves,
+  median,
   type RangeHalves,
 } from "../pitch/calibration.ts";
 import { rmsOf } from "../pitch/math.ts";
+import { tuning } from "../game/tuning.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import type { PitchTrackerConfig } from "../pitch/types.ts";
 import { RANGE_SEMITONES } from "../pitch/math.ts";
@@ -218,6 +220,8 @@ export function Calibration({
   const [f0Center, setF0Center] = useState<number | null>(
     existing?.f0Center ?? null,
   );
+  /** How loud this player speaks on this device — see `CalibrationSettings.voiceRms`. */
+  const [voiceRms, setVoiceRms] = useState<number | null>(existing?.voiceRms ?? null);
   /**
    * Which recorded voice this player flies against.
    *
@@ -347,17 +351,19 @@ export function Calibration({
 
     if (step === "talk") {
       const f0s: number[] = [];
+      const rmss: number[] = [];
       const heard = makeVoicedClock();
       let tracker: PitchTracker | null = null;
       setFrameSink((frame, sampleRate) => {
         tracker ??= new PitchTracker(
           noiseFloor === null
-            ? { sampleRate, rmsMult: TALK_RMS_MULT }
-            : { sampleRate, noiseFloor, rmsMult: TALK_RMS_MULT },
+            ? { sampleRate, rmsMult: TALK_RMS_MULT, minVoicedRun: tuning().minVoicedRun }
+            : { sampleRate, noiseFloor, rmsMult: TALK_RMS_MULT, minVoicedRun: tuning().minVoicedRun },
         );
         const p = tracker.push(frame);
         if (p.voiced && p.f0 !== null) {
           f0s.push(p.f0);
+          rmss.push(p.rms);
           heard.tick(performance.now());
         }
       });
@@ -384,6 +390,7 @@ export function Calibration({
         }
         setHint(null);
         setF0Center(centre);
+        setVoiceRms(median(rmss));
         // The auto-pick, from the centre just measured. Written as
         // `cur ?? ...` rather than a read of `voice`: it can never overwrite a
         // stored preference, and it does not depend on this effect's closure
@@ -419,6 +426,7 @@ export function Calibration({
     const cfg: Partial<PitchTrackerConfig> = {
       rangeSemitones: range.up,
       rangeDownSemitones: range.down,
+      minVoicedRun: tuning().minVoicedRun,
     };
     if (f0Center !== null) cfg.f0Center = f0Center;
     if (noiseFloor !== null) cfg.noiseFloor = noiseFloor;
@@ -487,6 +495,7 @@ export function Calibration({
           rangeSemitones: range.up,
           rangeDownSemitones: range.down,
           ...(voice ? { voice } : {}),
+          ...(voiceRms !== null ? { voiceRms } : {}),
         };
 
   const save = () => {
@@ -524,7 +533,7 @@ export function Calibration({
     }
     // settingsNow closes over the three values in the deps below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, f0Center, noiseFloor, range, voice]);
+  }, [step, f0Center, noiseFloor, range, voice, voiceRms]);
 
   // Warm the calibration flight's four fixed clips (task 8e) the moment this
   // screen appears, not on "Let's go" — the whole point is to spend the

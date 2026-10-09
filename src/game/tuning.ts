@@ -465,6 +465,16 @@ export interface Tuning {
    */
   noiseFloorMin: number;
   noiseFloorMax: number;
+  /**
+   * Personal cap on the gate: the cutoff (`noiseFloor × 3`) may not exceed
+   * this fraction of the player's own voice loudness, measured at calibration
+   * (`CalibrationSettings.voiceRms`). Replaces `noiseFloorMax` for a player
+   * who has one. NOT YET TUNED — a first value from two iPhone captures
+   * (quiet room, fan); retune from more environments.
+   */
+  voiceCapFraction: number;
+  /** Live-play `PitchTrackerConfig.minVoicedRun` — lone-blip rejection. */
+  minVoicedRun: number;
 
   // ---- calibration
   /**
@@ -572,6 +582,8 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   noiseMeasureMs: 400,
   noiseFloorMin: 1e-4,
   noiseFloorMax: 0.0015,
+  voiceCapFraction: 0.4,
+  minVoicedRun: 3,
   reachToToneSpaceUp: 1,
   reachToToneSpaceDown: 1,
   gateDurationS: Object.freeze({ 1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6 }),
