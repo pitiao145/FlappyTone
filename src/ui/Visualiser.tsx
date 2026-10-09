@@ -29,6 +29,7 @@ import { tuning } from "../game/tuning.ts";
 import { referenceFromWord, toneAccuracyDetail } from "../game/toneAccuracy.ts";
 import type { Word } from "../game/words.ts";
 import { wordsForList, wordsInStyle, wordsOfTone } from "../game/words.ts";
+import { sessionNoiseMeter, startingNoiseFloor } from "../game/sessionNoise.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawVisualiser } from "../render/visualiser.ts";
@@ -431,6 +432,10 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     // Stored in a ref (not just handed to setFrameSink) so `toggleMute` can
     // re-install this exact callback after unmuting reopens the session,
     // without re-running this whole effect.
+    // Measures the room in the first quiet moments after the mic opens (the
+    // warm-up hold in a run, before the first tap in the Visualiser) instead
+    // of trusting the floor saved at calibration — src/pitch/noiseMeter.ts.
+    const measureNoise = sessionNoiseMeter(settings.voiceRms);
     const onFrame = (frame: Float32Array, sampleRate: number) => {
       // Deaf while the example plays — otherwise the game's own voice is drawn
       // as the player's contour.
@@ -439,11 +444,16 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         tracker = new PitchTracker({
           sampleRate,
           f0Center: settings.f0Center,
-          noiseFloor: settings.noiseFloor,
+          // The saved calibration floor, capped, until this session's own
+          // measurement of the room lands (`measureNoise` below).
+          noiseFloor: startingNoiseFloor(settings.noiseFloor, settings.voiceRms),
+          minVoicedRun: tuning().minVoicedRun,
           rangeSemitones: settings.rangeSemitones,
           rangeDownSemitones: settings.rangeDownSemitones,
         });
       }
+      const measured = measureNoise(frame, sampleRate);
+      if (measured !== null) tracker.setNoiseFloor(measured);
       const p = tracker.push(frame);
       const now = performance.now();
       recorder.push(p.smoothedChao, p.voiced, now);

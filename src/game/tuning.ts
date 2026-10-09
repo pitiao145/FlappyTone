@@ -447,6 +447,34 @@ export interface Tuning {
    * deliberate. Kept well under the cap so the common case is still a blink.
    */
   warmupMinMs: number;
+  /**
+   * Per-session room-noise measurement (`src/pitch/noiseMeter.ts`). Each game
+   * run and Visualiser visit measures the room right after the mic opens,
+   * instead of trusting the floor saved at calibration — a noisy calibration
+   * moment once made a whole install deaf to the quiet tail of every word.
+   * `noiseSkipMs` drops the tap that opened the mic; `noiseMeasureMs` is the
+   * quiet window measured after it (`warmupMinMs` must cover both).
+   */
+  noiseSkipMs: number;
+  noiseMeasureMs: number;
+  /**
+   * Clamp on any noise floor in play — the session measurement and the saved
+   * calibration value used until it lands. 0.0015 keeps the gate (×3 ≈ 0.0045)
+   * under the fading tail of phone-mic speech (~0.005–0.015 measured on an
+   * iPhone PWA capture); the min matches calibration's own NOISE_FLOOR_MIN.
+   */
+  noiseFloorMin: number;
+  noiseFloorMax: number;
+  /**
+   * Personal cap on the gate: the cutoff (`noiseFloor × 3`) may not exceed
+   * this fraction of the player's own voice loudness, measured at calibration
+   * (`CalibrationSettings.voiceRms`). Replaces `noiseFloorMax` for a player
+   * who has one. NOT YET TUNED — a first value from two iPhone captures
+   * (quiet room, fan); retune from more environments.
+   */
+  voiceCapFraction: number;
+  /** Live-play `PitchTrackerConfig.minVoicedRun` — lone-blip rejection. */
+  minVoicedRun: number;
 
   // ---- calibration
   /**
@@ -547,7 +575,15 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   trailSeconds: 1.0,
   prefetchWordsPerTone: 6,
   warmupMaxMs: 3500,
-  warmupMinMs: 400,
+  // Raised from 400 so the session noise measurement (skip + measure) always
+  // fits inside the warm-up hold, even on a warm cache.
+  warmupMinMs: 650,
+  noiseSkipMs: 200,
+  noiseMeasureMs: 400,
+  noiseFloorMin: 1e-4,
+  noiseFloorMax: 0.0015,
+  voiceCapFraction: 0.4,
+  minVoicedRun: 3,
   reachToToneSpaceUp: 1,
   reachToToneSpaceDown: 1,
   gateDurationS: Object.freeze({ 1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6 }),

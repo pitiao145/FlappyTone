@@ -1192,6 +1192,29 @@ the visualiser, we need to personalize the grid to your voice." — shown only
 when `!settings`, so a returning calibrated player still sees the plain "Tap
 to start" and isn't told they need to do something they already did.
 
+## Room noise is measured per session, not trusted from calibration (9 Oct 2026)
+
+The voicing gate ignores sound below `noiseFloor × 3`. The floor used to be
+measured once, in calibration's quiet step, and reused by every later session.
+An installed iPhone PWA (its own localStorage, so its own calibration) had
+saved 0.0044 — 7× Safari's 0.0006 on the same phone — which put the cutoff at
+~0.013, right on top of phone-mic speech (0.008–0.015). Each word was heard as
+it began and lost as it faded: "the bird reacts, then cuts off". Captured
+on-device: the mic, the cue release/re-acquire and the AudioContext were all
+healthy; replaying the capture through `PitchTracker`, 54 of ~200 speech
+frames were voiced at the saved floor, 195 with the room measured fresh.
+
+Now each game run and Visualiser visit measures the room itself
+(`src/pitch/noiseMeter.ts`, wired via `src/game/sessionNoise.ts`): skip the
+opening tap (`noiseSkipMs`), take the median over `noiseMeasureMs`, clamp to
+[`noiseFloorMin`, `noiseFloorMax`]. In a run this lands inside the warm-up
+hold (`warmupMinMs` raised 400 → 650 so it always fits); the saved value,
+clamped, is used only until it lands. Measured once per session, not
+continuously — runs are short, and a once-only window is simpler to reason
+about. Accepted gap: a room that changes during a long Visualiser visit is
+picked up on the next visit. The volume-warning screen could not host the
+measurement: the mic deliberately isn't open yet there (`SilentModeGate.tsx`).
+
 ## Gate width / difficulty ramp simplification (16 Aug 2026)
 
 `scrollSpeed` used to climb with the difficulty ramp. Fixed it instead,
