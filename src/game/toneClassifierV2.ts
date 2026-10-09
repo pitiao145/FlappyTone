@@ -191,6 +191,8 @@ export function familyScores(f: ToneFeatures): {
 type VoteKey = "turnTime" | "riseShare" | "riseRate" | "drop" | "dropShare" | "low";
 const VOTE_KEYS: VoteKey[] = ["turnTime", "riseShare", "riseRate", "drop", "dropShare", "low"];
 const VOTE_CAP = 1.5;
+/** A family winning by this much keeps its full score as confidence. */
+const FAMILY_CLEAR_MARGIN = 0.6;
 
 /** Every T2/T3 vote: -1 at the T2 anchor, +1 at the T3 anchor, capped ±1.5. */
 export function t2t3Votes(f: ToneFeatures): Record<VoteKey, number> {
@@ -248,25 +250,33 @@ export function classifyToneV2(contour: Contour): ToneClassification | null {
     .sort((a, b) => b[1] - a[1]);
   const [[family, best], [, runnerUp]] = ranked;
 
-  if (best < t.toneClassifierMinConfidence || best - runnerUp < t.toneClassifierMarginThreshold) {
+  // Only a shape that matches no family at all is "none". A close call
+  // names the leaning tone with a lower percentage instead — and is never
+  // decisive, so it cannot cost a heart.
+  if (best < t.toneClassifierMinConfidence) {
     return { tone: "none", confidence: best, t2t3Cue: null, decisive: false };
   }
-  if (family === "level") return { tone: 1, confidence: best, t2t3Cue: null, decisive: true };
-  if (family === "fall") return { tone: 4, confidence: best, t2t3Cue: null, decisive: true };
+  // Graded, not saturated: a clear winner keeps its score, a near-tie
+  // with the runner-up family halves it.
+  const familyConfidence = best * (0.5 + 0.5 * clamp01((best - runnerUp) / FAMILY_CLEAR_MARGIN));
+  const familyDecisive = best - runnerUp >= t.toneClassifierMarginThreshold;
+  if (family === "level") return { tone: 1, confidence: familyConfidence, t2t3Cue: null, decisive: familyDecisive };
+  if (family === "fall") return { tone: 4, confidence: familyConfidence, t2t3Cue: null, decisive: familyDecisive };
   // A low fall is named T3 but never decisive: it is the one T3 read made
   // from height alone, so it must not cost a heart on a miscalibrated board.
-  if (family === "lowFall") return { tone: 3, confidence: best, t2t3Cue: null, decisive: false };
+  if (family === "lowFall") return { tone: 3, confidence: familyConfidence, t2t3Cue: null, decisive: false };
 
   const { cue, votes } = t2t3Cue(f);
-  if (Math.abs(cue) < t.toneClassifierT23DeadZone) {
-    return { tone: "none", confidence: best, t2t3Cue: cue, decisive: false };
-  }
+  if (cue === 0) return { tone: "none", confidence: familyConfidence * 0.5, t2t3Cue: cue, decisive: false };
+  // 50% at the midpoint between T2 and T3, 100% at a full vote (±1).
+  const t23Confidence = 0.5 + 0.5 * clamp01(Math.abs(cue));
   const dissent = Math.max(0, ...votes.map((v) => -Math.sign(cue) * v));
   return {
     tone: cue > 0 ? 3 : 2,
-    confidence: best,
+    confidence: familyConfidence * t23Confidence,
     t2t3Cue: cue,
     decisive:
+      familyDecisive &&
       Math.abs(cue) >= t.toneMismatchMinT23Cue &&
       dissent < t.toneMismatchMaxT23Dissent &&
       longestGapMs(contour.points) < t.toneMismatchMaxGapMs,
