@@ -32,6 +32,7 @@ import type { Contour } from "./contours.ts";
 import type { Tone } from "./gates.ts";
 import { AVERAGED_TONE_SHAPE } from "./toneAverages.ts";
 import { tuning } from "./tuning.ts";
+import { classifyToneV2 } from "./toneClassifierV2.ts";
 
 export type ClassifiedTone = Tone | "none";
 
@@ -387,6 +388,7 @@ export function classifyTone(
    */
   templates: Record<Tone, number[]> = AVERAGED_TONE_SHAPE.textbook,
 ): ToneClassification | null {
+  if (tuning().toneClassifierV2) return classifyToneV2(contour);
   if (contour.points.length < 2) return null;
 
   const trimmed = trimOnset(contour.points, tuning().toneClassifierOnsetTrimFraction);

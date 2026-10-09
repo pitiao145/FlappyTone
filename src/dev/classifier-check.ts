@@ -77,6 +77,7 @@ for (const v of extraVotes) {
   }
 }
 setTuning({
+  toneClassifierV2: args.includes("--v2"),
   toneClassifierLowTimeVote: extraVotes.includes("lowTime"),
   toneClassifierDwellVote: extraVotes.includes("dwell"),
 });

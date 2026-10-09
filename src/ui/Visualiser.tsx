@@ -23,7 +23,8 @@ import { useTier } from "../data/tier.ts";
 import { ContourRecorder } from "../game/contours.ts";
 import type { Tone } from "../game/gates.ts";
 import { effectiveSpeechStyle, type CalibrationSettings } from "../game/settings.ts";
-import { classifyTone, type ToneClassification } from "../game/toneClassifier.ts";
+import { type ToneClassification } from "../game/toneClassifier.ts";
+import { classifyToneV2 } from "../game/toneClassifierV2.ts";
 import { tierLimits, type TocflLevel } from "../game/tiers.ts";
 import { tuning } from "../game/tuning.ts";
 import { referenceFromWord, toneAccuracyDetail } from "../game/toneAccuracy.ts";
@@ -498,7 +499,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       // a target". See `classifyTone`.
       if (latest && latest.startedAtMs !== lastRecognizedAtRef.current) {
         lastRecognizedAtRef.current = latest.startedAtMs;
-        const result = classifyTone(latest);
+        const result = classifyToneV2(latest);
         sessionAttemptsRef.current += 1;
         setRecognized(result);
         // Bumps a remount key (see recognizedReadout) rather than a plain

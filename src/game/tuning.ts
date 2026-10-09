@@ -380,6 +380,27 @@ export interface Tuning {
   toneClassifierLowTimeVote: boolean;
   toneClassifierDwellVote: boolean;
   /**
+   * Classifier v2 (`toneClassifierV2.ts`): measured cues with fixed
+   * thresholds, no correlation with Jane's averages. When true, `classifyTone`
+   * delegates to it everywhere (game included). False in the game while it is
+   * evaluated; the visualiser calls v2 directly.
+   */
+  toneClassifierV2: boolean;
+  /** v2: a tail whose mean sits at or under this chao is never a Tone 1, however flat. */
+  toneV2T1MinChao: number;
+  /**
+   * v2: each T2/T3 cue's [T2, T3] anchor — the feature's value that votes -1
+   * and +1. See `toneClassifierV2.ts` for what each measures.
+   */
+  toneV2T23Anchors: {
+    turnTime: [number, number];
+    riseShare: [number, number];
+    riseRate: [number, number];
+    drop: [number, number];
+    dropShare: [number, number];
+    low: [number, number];
+  };
+  /**
    * Confidence floor before `applyClassifierBoost` does anything — a reward
    * for being *sure*, not a general softening. 0.9 per the player call this
    * was tuned from: "if a player does a tone 100% accurately according to
@@ -538,6 +559,16 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   toneClassifierBoostEnabled: true,
   toneClassifierLowTimeVote: false,
   toneClassifierDwellVote: false,
+  toneClassifierV2: false,
+  toneV2T1MinChao: 3,
+  toneV2T23Anchors: {
+    turnTime: [0.36, 0.54],
+    riseShare: [0.56, 0.41],
+    riseRate: [4, 6.6],
+    drop: [0.7, 1.9],
+    dropShare: [0.22, 0.4],
+    low: [2.2, 1.6],
+  },
   toneClassifierBoostMinConfidence: 0.9,
   toneClassifierBoostFloorAccuracy: 0.6,
   graceMs: 120,
