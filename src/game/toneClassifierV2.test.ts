@@ -49,6 +49,24 @@ describe("classifyToneV2", () => {
     expect(f!.turnTime).toBeGreaterThan(0.35);
   });
 
+  // Traced from a visualiser screenshot (9 Oct 2026): x→time, y→chao.
+  const traced = (xy: number[][], ms: number): Contour =>
+    contourOf(
+      xy.map(([x, y]) => ({
+        tMs: ((x - xy[0][0]) / (xy[xy.length - 1][0] - xy[0][0])) * ms,
+        chao: 5 - (y - 57) / 250,
+      })),
+    );
+  const pierreT2 = [[193,372],[205,455],[212,505],[222,492],[240,530],[250,580],[265,595],[288,620],[300,650],[318,690],[338,750],[348,765],[365,768],[390,762],[405,758],[420,730],[432,695],[445,640],[460,560],[482,385],[492,350],[505,190],[512,125],[520,70],[535,58],[568,58]];
+  const janeWordT2 = [[193,497],[230,560],[270,630],[310,700],[340,760],[365,783],[380,780],[400,740],[430,640],[460,520],[490,400],[520,270],[548,145]];
+
+  it("does not read a mid-turning T2 with a steep rise as Tone 3", () => {
+    for (const ms of [600, 900]) {
+      expect(classifyToneV2(traced(pierreT2, ms))?.tone).toBe(2);
+      expect(classifyToneV2(traced(janeWordT2, ms))?.tone).not.toBe(3);
+    }
+  });
+
   it("names every one of Jane's textbook sample clips correctly", () => {
     const rows = sample.rows as unknown as { id: string; tones: number[]; durationS: number; contour: [number, number][] }[];
     for (const r of rows.filter((x) => x.tones.length === 1)) {

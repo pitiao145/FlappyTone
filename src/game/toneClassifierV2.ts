@@ -204,6 +204,27 @@ export function t2t3Votes(f: ToneFeatures): Record<VoteKey, number> {
   return out;
 }
 
+/**
+ * The T2/T3 vote: the mean of the six votes, then the floor rule.
+ *
+ * Floor rule: a dip that stays clearly above the T3 floor (`low` vote
+ * ≤ -0.5, about chao 2.05+), with no T3-sized drop (`drop` vote < 0.5) and
+ * no clearly late turn (`turnTime` vote < 0.6), is judged on depth alone —
+ * timing cannot make it a T3. Without it, a mid-turning T2 with a steep rise
+ * read T3: Pierre's 9 Oct 2026 attempt and Jane's own line for that word,
+ * both pinned in the tests. The late-turn gate keeps shallow natural T3s
+ * (很 hen3, 女 nv3: low ~2.2, turn clearly late) reading T3.
+ * Weighting depth above timing and merging the two rise votes were both
+ * tried and lost natural T3s.
+ */
+export function t2t3Cue(f: ToneFeatures): { cue: number; votes: number[] } {
+  const v = t2t3Votes(f);
+  const votes = Object.values(v);
+  let cue = votes.reduce((a, b) => a + b, 0) / votes.length;
+  if (v.low <= -0.5 && v.drop < 0.5 && v.turnTime < 0.6 && cue > 0) cue = (v.low + v.drop) / 2;
+  return { cue, votes };
+}
+
 function longestGapMs(points: { tMs: number }[]): number {
   let gap = 0;
   for (let i = 1; i < points.length; i++) gap = Math.max(gap, points[i].tMs - points[i - 1].tMs);
@@ -236,8 +257,7 @@ export function classifyToneV2(contour: Contour): ToneClassification | null {
   // from height alone, so it must not cost a heart on a miscalibrated board.
   if (family === "lowFall") return { tone: 3, confidence: best, t2t3Cue: null, decisive: false };
 
-  const votes = Object.values(t2t3Votes(f));
-  const cue = votes.reduce((a, b) => a + b, 0) / votes.length;
+  const { cue, votes } = t2t3Cue(f);
   if (Math.abs(cue) < t.toneClassifierT23DeadZone) {
     return { tone: "none", confidence: best, t2t3Cue: cue, decisive: false };
   }
