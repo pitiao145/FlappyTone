@@ -10,7 +10,9 @@
  *
  * - **T1, level:** a flat tail AND a high one. A flat line under chao 3 is
  *   not a Tone 1, however flat (`toneV2T1MinChao`).
- * - **T4, fall:** a large fall from an early peak with no real rise after it.
+ * - **T4, fall:** a large fall from a HIGH early peak (chao 4–5) with no real
+ *   rise after it. The same fall from mid board (3–4) is a falling-only T3
+ *   (`toneV2T4MinPeakChao`).
  * - **T2 / T3, dip then rise:** separated by six votes, each a fixed
  *   threshold pair (`toneV2T23Anchors`), not an average:
  *   - `turnTime`: when the low point comes (Shen & Lin 1991, Moore &
@@ -63,6 +65,8 @@ export interface ToneFeatures {
   tailExcursion: number;
   /** Peak in the first 60%, minus the lowest point after it. */
   fall: number;
+  /** That peak's height: a T4 falls from high (4–5), a falling-only T3 from mid (3–4). */
+  fallPeak: number;
 }
 
 function resampleReal(points: { tMs: number; chao: number }[]): number[] {
@@ -148,13 +152,19 @@ export function toneFeatures(contour: Contour): ToneFeatures | null {
     tailMean,
     tailExcursion,
     fall,
+    fallPeak: s[peakIdx],
   };
 }
 
 const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
 
 /** Family scores, 0..1 each. Exported for tests and the check tool. */
-export function familyScores(f: ToneFeatures): { level: number; dipRise: number; fall: number } {
+export function familyScores(f: ToneFeatures): {
+  level: number;
+  dipRise: number;
+  fall: number;
+  lowFall: number;
+} {
   const t = tuning();
   const flat = 1 - clamp01(f.tailExcursion / t.toneClassifierFlatnessScaleChao);
   // Height: 0 at or under the floor, full half a chao above it.
@@ -163,13 +173,19 @@ export function familyScores(f: ToneFeatures): { level: number; dipRise: number;
   const still = 1 - clamp01((Math.max(f.drop, f.rise, f.fall) - 1) / 1);
   const level = flat * high * still;
 
-  // A fall: a big drop from an early peak, little of it won back.
-  const fall = clamp01((f.fall - f.rise - 0.4) / 1.2);
+  // A fall: a big drop from an early peak, little of it won back. Split by
+  // where it starts: a T4 falls from high (Jane: median 4.75 textbook, 4.3
+  // natural), a falling-only T3 — the "half third" heard in running speech —
+  // from mid board (median 3.4). Full T4 at `toneV2T4MinPeakChao` + 0.5.
+  const fallShape = clamp01((f.fall - f.rise - 0.4) / 1.2);
+  const highStart = clamp01((f.fallPeak - t.toneV2T4MinPeakChao) / 0.5);
+  const fall = fallShape * highStart;
+  const lowFall = fallShape * (1 - highStart);
 
   // Dip-rise: a real rise after the low, at least as big as most of the drop.
   const dipRise = clamp01((f.rise - 0.4) / 1.2) * clamp01(f.rise / Math.max(0.3, 0.6 * f.drop));
 
-  return { level, dipRise, fall };
+  return { level, dipRise, fall, lowFall };
 }
 
 type VoteKey = "turnTime" | "riseShare" | "riseRate" | "drop" | "dropShare" | "low";
@@ -204,6 +220,7 @@ export function classifyToneV2(contour: Contour): ToneClassification | null {
       ["level", scores.level],
       ["dipRise", scores.dipRise],
       ["fall", scores.fall],
+      ["lowFall", scores.lowFall],
     ] as const
   )
     .slice()
@@ -215,6 +232,9 @@ export function classifyToneV2(contour: Contour): ToneClassification | null {
   }
   if (family === "level") return { tone: 1, confidence: best, t2t3Cue: null, decisive: true };
   if (family === "fall") return { tone: 4, confidence: best, t2t3Cue: null, decisive: true };
+  // A low fall is named T3 but never decisive: it is the one T3 read made
+  // from height alone, so it must not cost a heart on a miscalibrated board.
+  if (family === "lowFall") return { tone: 3, confidence: best, t2t3Cue: null, decisive: false };
 
   const votes = Object.values(t2t3Votes(f));
   const cue = votes.reduce((a, b) => a + b, 0) / votes.length;

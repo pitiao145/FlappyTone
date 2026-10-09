@@ -389,6 +389,11 @@ export interface Tuning {
   /** v2: a tail whose mean sits at or under this chao is never a Tone 1, however flat. */
   toneV2T1MinChao: number;
   /**
+   * v2: a fall whose peak sits at or under this chao is a falling-only T3,
+   * not a T4; full T4 from half a chao above it.
+   */
+  toneV2T4MinPeakChao: number;
+  /**
    * v2: each T2/T3 cue's [T2, T3] anchor — the feature's value that votes -1
    * and +1. See `toneClassifierV2.ts` for what each measures.
    */
@@ -561,6 +566,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   toneClassifierDwellVote: false,
   toneClassifierV2: false,
   toneV2T1MinChao: 3,
+  toneV2T4MinPeakChao: 3.4,
   toneV2T23Anchors: {
     turnTime: [0.36, 0.54],
     riseShare: [0.56, 0.41],

@@ -26,6 +26,12 @@ describe("classifyToneV2", () => {
     expect(classifyToneV2(shape((t) => (t < 0.15 ? 4.5 : 4.5 - 3.2 * ((t - 0.15) / 0.85))))?.tone).toBe(4);
   });
 
+  it("reads a fall from mid board as a falling-only Tone 3, never decisive", () => {
+    const r = classifyToneV2(shape((t) => (t < 0.1 ? 3.4 : 3.4 - 2.2 * ((t - 0.1) / 0.9))));
+    expect(r?.tone).toBe(3);
+    expect(r?.decisive).toBe(false);
+  });
+
   it("reads an early shallow dip and long rise as Tone 2", () => {
     const r = classifyToneV2(shape((t) => (t < 0.3 ? 2.9 - 0.6 * (t / 0.3) : 2.3 + 2.6 * ((t - 0.3) / 0.7))));
     expect(r?.tone).toBe(2);
