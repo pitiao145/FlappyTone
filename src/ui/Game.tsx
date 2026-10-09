@@ -54,6 +54,7 @@ import {
   saveNoticeSeen,
   type CalibrationSettings,
 } from "../game/settings.ts";
+import { sessionNoiseMeter, startingNoiseFloor } from "../game/sessionNoise.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawWorld, refreshMotionPreference } from "../render/world.ts";
@@ -589,6 +590,10 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // frame sink for itself while it's up front (see `src/audio/session.ts`
     // — there is only one sink slot for the whole app). Resuming here has to
     // reclaim it, the same way Visualiser's own `toggleMute` does.
+    // Measures the room in the first quiet moments after the mic opens (the
+    // warm-up hold in a run, before the first tap in the Visualiser) instead
+    // of trusting the floor saved at calibration — src/pitch/noiseMeter.ts.
+    const measureNoise = sessionNoiseMeter();
     const onFrame = (frame: Float32Array, sampleRate: number) => {
       // Deaf while the game itself is talking — the cue would drive the dot.
       if (isCueAudible()) return;
@@ -596,11 +601,15 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         tracker = new PitchTracker({
           sampleRate,
           f0Center: settings.f0Center,
-          noiseFloor: settings.noiseFloor,
+          // The saved calibration floor, capped, until this session's own
+          // measurement of the room lands (`measureNoise` below).
+          noiseFloor: startingNoiseFloor(settings.noiseFloor),
           rangeSemitones: settings.rangeSemitones,
           rangeDownSemitones: settings.rangeDownSemitones,
         });
       }
+      const measured = measureNoise(frame, sampleRate);
+      if (measured !== null) tracker.setNoiseFloor(measured);
       const pitch = tracker.push(frame);
       // A walkthrough card (steps B/C/D) holds the world still — no pitch
       // frame should reach Run while one is up. The frozen-time offset (see
