@@ -198,6 +198,20 @@ export function BellRingingIcon() {
   );
 }
 
+/** Phosphor `BatteryFull`, Bold — the power-saving-mode warning's glyph. */
+export function BatteryFullIcon() {
+  return (
+    <svg {...BOX}>
+      <rect x="16" y="64" width="200" height="128" rx="16" {...STROKE_BOLD} />
+      <line className="battery-bar battery-bar-0" x1="56" y1="96" x2="56" y2="160" {...STROKE_BOLD} />
+      <line className="battery-bar battery-bar-1" x1="96" y1="96" x2="96" y2="160" {...STROKE_BOLD} />
+      <line className="battery-bar battery-bar-2" x1="136" y1="96" x2="136" y2="160" {...STROKE_BOLD} />
+      <line className="battery-bar battery-bar-3" x1="176" y1="96" x2="176" y2="160" {...STROKE_BOLD} />
+      <line x1="248" y1="96" x2="248" y2="160" {...STROKE_BOLD} />
+    </svg>
+  );
+}
+
 /** Phosphor `ArrowClockwise`, Regular. */
 export function RestartIcon() {
   return (

@@ -1,5 +1,23 @@
 import { loadReduceMotion } from "../game/settings.ts";
-import { BellRingingIcon, SpeakerHighIcon } from "./icons.tsx";
+import { BatteryFullIcon, BellRingingIcon, SpeakerHighIcon } from "./icons.tsx";
+
+const STEPS = [
+  {
+    Icon: BellRingingIcon,
+    title: "Switch to loud mode",
+    body: "Flip your phone's silent switch off. The game doesn't work in silent mode.",
+  },
+  {
+    Icon: SpeakerHighIcon,
+    title: "Turn up your volume",
+    body: "You need to hear the example before you say it.",
+  },
+  {
+    Icon: BatteryFullIcon,
+    title: "Turn off power saving",
+    body: "Low power mode lowers the frame rate, so the game looks slow.",
+  },
+];
 
 interface Props {
   busy: boolean;
@@ -33,16 +51,20 @@ export function SilentModeGate({ busy, error, onConfirm, canvasWidth, canvasHeig
         style={{ width: canvasWidth, height: canvasHeight }}
       >
         <div className="screen playhome-overlay">
-          <div className={`silent-gate-icons${loadReduceMotion() ? " silent-gate-icons--still" : ""}`}>
-            <SpeakerHighIcon />
-            <BellRingingIcon />
-          </div>
-          <h1>Turn up your volume</h1>
-          <p className="note">
-            This game doesn't work in silent mode. Make sure your phone's
-            silent switch is off and your volume is up.
-          </p>
-          <br></br>
+          <h1>Before you start</h1>
+          <ol className={`silent-gate-steps${loadReduceMotion() ? " silent-gate-steps--still" : ""}`}>
+            {STEPS.map(({ Icon, title, body }) => (
+              <li key={title} className="silent-gate-step">
+                <span className="silent-gate-icon">
+                  <Icon />
+                </span>
+                <span className="silent-gate-text">
+                  <strong>{title}</strong>
+                  <span>{body}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
           <p className="note">
             For best results, do not use bluetooth headphones as they may cause lag.
           </p>
