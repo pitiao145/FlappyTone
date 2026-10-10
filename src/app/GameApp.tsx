@@ -348,6 +348,7 @@ export default function GameApp() {
   // share link has to work on a session that has never opened the mic yet.
   // `leaderboard`/`pairs`/`pricing` need no such handoff (see `initialIntent`'s
   // doc comment) — they just pick a different initial screen.
+  const [settingsFocus, setSettingsFocus] = useState<"speechStyle" | null>(null);
   const [screen, setScreen] = useState<Screen>(() => {
     switch (initialIntent()) {
       case "visualiser":
@@ -1157,6 +1158,10 @@ export default function GameApp() {
               error={error}
               onStart={startPlay}
               onModes={() => setScreen("modes")}
+              onOpenSpeechStyle={() => {
+                setSettingsFocus("speechStyle");
+                setScreen("settings");
+              }}
               canvasWidth={CANVAS_W}
               canvasHeight={GAME_CANVAS_H}
               challengeScore={challengeScoreState}
@@ -1253,6 +1258,7 @@ export default function GameApp() {
             onTutorial={() => startPlay("tutorial")}
             onHowTo={() => setScreen("howto")}
             onSignedOut={() => setScreen("play")}
+            focus={settingsFocus}
           />
         )}
 

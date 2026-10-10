@@ -165,6 +165,8 @@ interface Props {
   onHowTo: () => void;
   /** Called after sign-out resolves, so the router can land on Play home. */
   onSignedOut?: () => void;
+  /** Scrolls the named section into view on arrival (e.g. from a Play-home update banner). */
+  focus?: "speechStyle" | null;
 }
 
 /**
@@ -187,6 +189,7 @@ export function Settings({
   onTutorial,
   onHowTo,
   onSignedOut,
+  focus,
 }: Props) {
   const [confirmForget, setConfirmForget] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -227,6 +230,11 @@ export function Settings({
    * elsewhere by the time a player reaches Settings.
    */
   const [words, setWords] = useState<Word[] | null>(() => inventoryNow());
+  useEffect(() => {
+    if (focus === "speechStyle") {
+      document.getElementById("setting-speech-style")?.scrollIntoView({ block: "center" });
+    }
+  }, [focus]);
   const [proficiency, setProficiency] = useState<Proficiency>(() => loadProficiency());
   const tier = useTier();
   const [speechStyle, setSpeechStyle] = useState<SpeechStyle>(() => loadSpeechStyle());
@@ -435,7 +443,7 @@ export function Settings({
               </p>
             </section>
           )}
-          <section>
+          <section id="setting-speech-style">
             <h4>Speech style</h4>
             {/* A guest sees the effective style (always textbook), disabled; a
                 free/Pro player who later signs out keeps the stored choice. */}

@@ -8213,6 +8213,36 @@ button.switch-track.switch-on {
   border: none;
 }
 
+/* Bare circular × for any card corner. `.screen button` is (0,1,1) and adds a
+   pill border, padding and min-height, so a single-class close rule loses to
+   it; this one is written at (0,2,1) so new close buttons only need the
+   class. Position it from the card's own rule. */
+.screen button.close-x,
+.modal-card button.close-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--ink-soft);
+}
+
+.screen button.close-x:hover:not(:disabled),
+.screen button.close-x:focus-visible,
+.modal-card button.close-x:hover:not(:disabled) {
+  border: none;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
 /* Bottom-sheet presentation, used by JoinBoardModal (4b) and available to any
    other modal that opts in — mobile-first: sheet by default, centered modal
    from 720px up, matching the breakpoint the rest of the app uses. */
@@ -8988,4 +9018,125 @@ button.switch-track.switch-on {
 .player-shape-key-then {
   border-top: 2px dashed var(--ink);
   opacity: 0.6;
+}
+
+/* Play-home "what's new" card (UpdateBanner): a paper sticker slapped on
+   the screen. One entrance (it lands with a small overshoot, then the tag
+   wiggles once); after that it only answers the pointer. */
+.update-banner {
+  --tilt: -1.6deg;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  width: 100%;
+  max-width: 320px;
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  background: var(--surface);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-md);
+  box-shadow: 4px 4px 0 rgba(var(--ink-rgb), 0.18);
+  transform: rotate(var(--tilt));
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  animation: update-banner-slap 520ms cubic-bezier(0.2, 0.9, 0.3, 1.25) 250ms both;
+}
+
+.update-banner:hover {
+  transform: rotate(0deg) translate(-1px, -1px);
+  box-shadow: 6px 6px 0 var(--accent);
+}
+
+.update-banner:active {
+  transform: rotate(0deg) translate(3px, 3px);
+  box-shadow: 1px 1px 0 var(--accent);
+}
+
+.update-banner .badge-new {
+  display: inline-block;
+  animation: update-banner-wiggle 700ms ease-in-out 800ms 1 both;
+}
+
+.update-banner-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 160px;
+  gap: 2px;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.update-banner-text strong {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  color: var(--ink);
+}
+
+.screen button.update-banner-link {
+  flex-basis: auto;
+  min-height: 0;
+  padding: 4px 10px;
+  margin-left: -10px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-pill);
+  text-align: left;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.screen button.update-banner-link:hover:not(:disabled),
+.screen button.update-banner-link:focus-visible {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.update-banner .close-x {
+  align-self: flex-start;
+  margin: -4px -8px 0 0;
+}
+
+/* Mobile: the home logo sits top-left over the canvas; the overlay is
+   vertically centred, so tall content grows upward into it. */
+@media (max-width: 719px) {
+  .playhome-overlay:has(.update-banner) {
+    padding-top: 84px;
+  }
+}
+
+@keyframes update-banner-slap {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) rotate(4deg) scale(1.08);
+    box-shadow: 12px 14px 0 rgba(var(--ink-rgb), 0.08);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(var(--tilt));
+    box-shadow: 4px 4px 0 rgba(var(--ink-rgb), 0.18);
+  }
+}
+
+@keyframes update-banner-wiggle {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-9deg) scale(1.1); }
+  45% { transform: rotate(7deg) scale(1.1); }
+  70% { transform: rotate(-4deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .update-banner,
+  .update-banner .badge-new {
+    animation: none;
+  }
+
+  .update-banner,
+  .update-banner-link,
+  .update-banner .close-x {
+    transition: none;
+  }
 }

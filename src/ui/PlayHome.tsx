@@ -1,5 +1,6 @@
 import { SITE_HREF } from "./appLink.ts";
 import { brand } from "../brand.ts";
+import { UpdateBanner } from "./UpdateBanner.tsx";
 
 /** "drill", "learn" and "pairs" are only ever started from ModeSelect, never
  * from a button here — kept in this union anyway since GameApp's
@@ -23,6 +24,8 @@ interface Props {
   onStart: (intent: PlayIntent) => void;
   /** Opens the Modes picker. No mic needed — only starting a run there does. */
   onModes: () => void;
+  /** Opens Settings scrolled to the Speech style control (the current update banner's link). */
+  onOpenSpeechStyle: () => void;
   /** Dev builds only: opens the magic-link login. Needs no mic, so it does not
    * go through `onStart`'s gesture path. */
   onDevLogin: () => void;
@@ -48,6 +51,7 @@ export function PlayHome({
   error: externalError,
   onStart,
   onModes,
+  onOpenSpeechStyle,
   onDevLogin,
   canvasWidth,
   canvasHeight,
@@ -68,6 +72,18 @@ export function PlayHome({
           <img src="/favicon.svg" alt="" width={60} height={60} />
         </a>
         <div className="screen playhome-overlay">
+          {/* What's new. One banner at a time: swap the props when the next
+              update ships. The link needs a saved calibration, since Settings
+              only shows the speech-style control to a calibrated player. */}
+          <UpdateBanner
+            id="speech-style"
+            label="New"
+            title="Choose your speech style"
+            body="Practise with slow, clear recordings or everyday speed."
+            actionLabel={calibrated ? "Try it in Settings" : undefined}
+            onAction={onOpenSpeechStyle}
+          />
+
           <img
             src="/Bird-hor-no-halo.png"
             alt="Flappytone mascot"
@@ -94,7 +110,6 @@ export function PlayHome({
             </button>
             <button onClick={onModes}>
               Modes
-              <span className="badge badge-new">New</span>
             </button>
             <button onClick={() => onStart("tutorial")}>Tutorial</button>
           </div>
