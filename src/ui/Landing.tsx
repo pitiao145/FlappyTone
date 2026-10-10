@@ -13,6 +13,7 @@ import { DotsThreeVerticalIcon, PlusSquareIcon, ShareIcon } from "./icons.tsx";
 import { Nav } from "./Nav.tsx";
 import { goToApp } from "./appLink.ts";
 import { PRO_PRICE } from "./plan.ts";
+import { UpdateBanner } from "./UpdateBanner.tsx";
 import { ToneAverageCard } from "./ToneAverageCard.tsx";
 import { useNewsletterSubscribe } from "./useNewsletterSubscribe.ts";
 
@@ -87,6 +88,20 @@ export function Landing({ onPlay, onVisualiser }: Props) {
   return (
     <div className="landing">
       <Nav onPlay={onPlay} />
+
+      <UpdateBanner
+        variant="bar"
+        dismissible={false}
+        id={brand.updateBanner.id}
+        label={brand.updateBanner.label}
+        title={brand.updateBanner.title}
+        body={brand.updateBanner.body}
+        actionLabel={brand.updateBanner.cta}
+        onAction={() => {
+          capturePostHogEvent("landing_cta_clicked", { cta: "update_banner", location: "update_banner" });
+          document.getElementById("options")?.scrollIntoView({ behavior: "smooth" });
+        }}
+      />
 
       <div className="hero-row">
         <header id="top" className="landing-hero">
@@ -280,6 +295,46 @@ export function Landing({ onPlay, onVisualiser }: Props) {
             <cite>{brand.tonePairs.quoteAttribution}</cite>
           </blockquote>
         </div>
+      </section>
+
+      <section id="options" className="landing-section landing-section-panel">
+        <div>
+          <p className="section-eyebrow">{brand.options.eyebrow}</p>
+          <h2>{brand.options.title}</h2>
+          <p>{brand.options.body}</p>
+        </div>
+        <div className="options-group">
+          <h3>{brand.options.modesTitle}</h3>
+          <div className="options-grid options-grid-modes">
+            {brand.options.modes.map((m) => (
+              <article className="hero-card" key={m.title}>
+                <h3>{m.title}</h3>
+                <p>{m.body}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+        <div className="options-group">
+          <h3>{brand.options.settingsTitle}</h3>
+          <div className="options-grid options-grid-settings">
+            {brand.options.settings.map((o) => (
+              <article className="hero-card" key={o.title}>
+                <h3>{o.title}</h3>
+                <p className="options-choices">{o.choices}</p>
+                <p>{o.body}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+        <button
+          className="primary landing-section-cta"
+          onClick={() => {
+            capturePostHogEvent("landing_cta_clicked", { cta: "play", location: "options" }, INSTANT);
+            onPlay();
+          }}
+        >
+          {brand.options.cta}
+        </button>
       </section>
 
       <section id="leaderboard" className="landing-section landing-section-panel">

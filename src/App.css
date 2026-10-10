@@ -4696,7 +4696,7 @@ div.hero-cards {
   background: rgba(var(--accent-rgb), 0.1);
 }
 
-.landing button:not(.nav-cta-btn):not(.nav-hamburger):not(.nav-shady-btn):not(.primary) {
+.landing button:not(.nav-cta-btn):not(.nav-hamburger):not(.nav-shady-btn):not(.primary):not(.close-x):not(.update-banner-link) {
   font-size: var(--text-base);
   padding: 12px 20px;
   border-radius: var(--radius-pill);
@@ -4709,12 +4709,12 @@ div.hero-cards {
   align-items: center;
 }
 
-.landing button:not(.nav-cta-btn):not(.nav-hamburger):not(.nav-shady-btn):not(.primary):hover:not(:disabled) {
+.landing button:not(.nav-cta-btn):not(.nav-hamburger):not(.nav-shady-btn):not(.primary):not(.close-x):not(.update-banner-link):hover:not(:disabled) {
   border-color: var(--ink-soft);
   color: var(--ink);
 }
 
-.landing button:not(.nav-cta-btn):not(.nav-hamburger):not(.nav-shady-btn):not(.primary):focus-visible {
+.landing button:not(.nav-cta-btn):not(.nav-hamburger):not(.nav-shady-btn):not(.primary):not(.close-x):not(.update-banner-link):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -8218,7 +8218,10 @@ button.switch-track.switch-on {
    it; this one is written at (0,2,1) so new close buttons only need the
    class. Position it from the card's own rule. */
 .screen button.close-x,
-.modal-card button.close-x {
+.modal-card button.close-x,
+.landing button.close-x {
+  font-family: inherit;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -8237,7 +8240,9 @@ button.switch-track.switch-on {
 
 .screen button.close-x:hover:not(:disabled),
 .screen button.close-x:focus-visible,
-.modal-card button.close-x:hover:not(:disabled) {
+.modal-card button.close-x:hover:not(:disabled),
+.landing button.close-x:hover:not(:disabled),
+.landing button.close-x:focus-visible {
   border: none;
   background: var(--accent);
   color: var(--accent-ink);
@@ -9072,7 +9077,10 @@ button.switch-track.switch-on {
   color: var(--ink);
 }
 
-.screen button.update-banner-link {
+.screen button.update-banner-link,
+.landing button.update-banner-link {
+  font-family: inherit;
+  display: inline-flex;
   flex-basis: auto;
   min-height: 0;
   padding: 4px 10px;
@@ -9090,7 +9098,9 @@ button.switch-track.switch-on {
 }
 
 .screen button.update-banner-link:hover:not(:disabled),
-.screen button.update-banner-link:focus-visible {
+.screen button.update-banner-link:focus-visible,
+.landing button.update-banner-link:hover:not(:disabled),
+.landing button.update-banner-link:focus-visible {
   background: var(--accent);
   color: var(--accent-ink);
 }
@@ -9139,4 +9149,96 @@ button.switch-track.switch-on {
   .update-banner .close-x {
     transition: none;
   }
+}
+
+/* Landing: a thin, full-width, permanent strip. Flat (no tilt), one row;
+   wraps to two lines on a phone. */
+.update-banner--bar {
+  --tilt: 0deg;
+  flex-wrap: nowrap;
+  max-width: none;
+  padding: var(--space-2) var(--space-4);
+  gap: var(--space-3);
+  box-shadow: 3px 3px 0 rgba(var(--ink-rgb), 0.18);
+}
+
+/* Cancel most of .landing's section gap so the strip hugs the nav and hero
+   instead of floating in the page-rhythm spacing. */
+.landing > .update-banner--bar {
+  margin-block: calc(var(--space-4) - 4.5rem) calc(var(--space-2) - 4.5rem);
+}
+
+@media (min-width: 901px) {
+  .landing > .update-banner--bar {
+    margin-block: calc(var(--space-4) - 7rem) calc(var(--space-2) - 7rem);
+  }
+}
+
+.update-banner--bar .update-banner-text {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+}
+
+.update-banner--bar .update-banner-text strong {
+  font-size: var(--text-sm);
+}
+
+.screen button.update-banner--bar .update-banner-link,
+.update-banner--bar button.update-banner-link {
+  flex-shrink: 0;
+  margin-left: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 719px) {
+  .update-banner--bar {
+    flex-wrap: wrap;
+  }
+}
+
+/* "Your game, your way" — modes and settings grids. */
+.options-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.options-group h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 640px) {
+  .options-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 901px) {
+  .options-grid-modes {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .options-grid-settings {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.options-grid .hero-card {
+  padding: var(--space-5);
+}
+
+.options-choices {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--accent);
 }

@@ -10,6 +10,10 @@ interface Props {
   /** Omit to render the banner without a link. */
   actionLabel?: string;
   onAction?: () => void;
+  /** "bar" is a thin full-width strip (landing page); "card" the Play-home sticker. */
+  variant?: "card" | "bar";
+  /** A permanent banner has no × and ignores any saved dismissal. Default true. */
+  dismissible?: boolean;
 }
 
 const KEY = "flappytone.dismissedUpdates";
@@ -24,8 +28,17 @@ function readDismissed(): string[] {
 }
 
 /** A "what's new" card for the Play home: one feature, one line, one link. */
-export function UpdateBanner({ id, label, title, body, actionLabel, onAction }: Props) {
-  const [hidden, setHidden] = useState(() => readDismissed().includes(id));
+export function UpdateBanner({
+  id,
+  label,
+  title,
+  body,
+  actionLabel,
+  onAction,
+  variant = "card",
+  dismissible = true,
+}: Props) {
+  const [hidden, setHidden] = useState(() => dismissible && readDismissed().includes(id));
   if (hidden) return null;
 
   const dismiss = () => {
@@ -38,15 +51,17 @@ export function UpdateBanner({ id, label, title, body, actionLabel, onAction }: 
   };
 
   return (
-    <aside className="update-banner">
+    <aside className={`update-banner update-banner--${variant}`}>
       <span className="badge badge-new">{label}</span>
       <div className="update-banner-text">
         <strong>{title}</strong>
         <span>{body}</span>
       </div>
-      <button type="button" className="close-x" onClick={dismiss} aria-label="Dismiss update">
-        ×
-      </button>
+      {dismissible && (
+        <button type="button" className="close-x" onClick={dismiss} aria-label="Dismiss update">
+          ×
+        </button>
+      )}
       {actionLabel && onAction && (
         <button type="button" className="update-banner-link" onClick={onAction}>
           {actionLabel} →

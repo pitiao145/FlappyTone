@@ -140,6 +140,48 @@ export const brand = {
     quoteAttribution: "— an early tester",
   },
 
+  /** What's new banner above the hero; the link scrolls to `options`. */
+  updateBanner: {
+    id: "lp-speech-style",
+    label: "Update",
+    title: "Slow or everyday speech.",
+    body: "Choose how fast the recordings are spoken, plus new modes and settings.",
+    cta: "See what's new",
+  },
+
+  /** Modes and settings, now that there are enough of them to be worth listing. */
+  options: {
+    eyebrow: "Your game, your way",
+    title: "Pick how you practise",
+    body: "Same voice-controlled bird, shaped around where you are with the tones.",
+    modesTitle: "Game modes",
+    modes: [
+      { title: "Classic", body: "A scored run of random words. Hearts, combos, and a difficulty that climbs." },
+      { title: "Tone Drill", body: "Choose one tone and fly it again and again until it sticks." },
+      { title: "Learn", body: "Hum along with the demo's shape. A gentle way to meet each tone." },
+      { title: "Tone Pairs", body: "Two-syllable words, shuffled or drilled one combo at a time." },
+    ],
+    settingsTitle: "Settings",
+    settings: [
+      {
+        title: "Speech style",
+        choices: "Slow · Regular",
+        body: "Slow is clear, textbook-style recordings. Regular is everyday speed, the way people really talk.",
+      },
+      {
+        title: "Words",
+        choices: "Beginner · Intermediate",
+        body: "Beginner flies single syllables. Intermediate mixes in two-syllable pairs.",
+      },
+      {
+        title: "Tunnel width",
+        choices: "Narrow · Normal · Wide",
+        body: "Make the corridor forgiving while a tone is new, or demanding once it isn't.",
+      },
+    ],
+    cta: "Try it",
+  },
+
   /** Weekly leaderboard. */
   leaderboard: {
     eyebrow: "Compete",
