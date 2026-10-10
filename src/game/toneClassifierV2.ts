@@ -42,6 +42,8 @@ import { tuning } from "./tuning.ts";
 const POINTS = 40;
 /** A leading rise this big within the first quarter is an onset scoop, skipped. */
 const ONSET_RISE_CHAO = 0.5;
+/** Where the low-point search starts, as a share of the contour. */
+const LOW_SEARCH_FROM = 0.12;
 /** Frames within this of the low count as still on the floor. */
 const TURN_BAND_CHAO = 0.1;
 
@@ -105,8 +107,10 @@ export function toneFeatures(contour: Contour): ToneFeatures | null {
   const s = resampleReal(pts);
   const n = s.length;
 
-  // Low point, away from the very edges (a final creak is not the turn).
-  let lowIdx = Math.round(n * 0.05);
+  // Low point, away from the very edges: a final creak is not the turn, and
+  // a two-frame onset glitch is not the dip (a 好 hǎo whose first frames
+  // dipped to 1.0 before the real T3 fall read as a floor-start T2).
+  let lowIdx = Math.round(n * LOW_SEARCH_FROM);
   for (let i = lowIdx; i < n - Math.round(n * 0.1); i++) if (s[i] < s[lowIdx]) lowIdx = i;
   const low = s[lowIdx];
 
@@ -171,7 +175,11 @@ export function familyScores(f: ToneFeatures): {
   const high = clamp01((f.tailMean - t.toneV2T1MinChao) / 0.5);
   // A whole-contour movement bigger than a T1 ever has also rules it out.
   const still = 1 - clamp01((Math.max(f.drop, f.rise, f.fall) - 1) / 1);
-  const level = flat * high * still;
+  // A T1 is a HELD level. A flat line shorter than this is a fragment (only
+  // the top of a rise heard, say), never a T1. Falls may be quick — Jane's
+  // natural 是 shì is 255ms — so the length rule is for T1 only.
+  const held = f.durMs >= t.toneV2T1MinMs ? 1 : 0;
+  const level = flat * high * still * held;
 
   // A fall: a big drop from an early peak, little of it won back. Split by
   // where it starts: a T4 falls from high (Jane: median 4.75 textbook, 4.3
@@ -193,6 +201,8 @@ const VOTE_KEYS: VoteKey[] = ["turnTime", "riseShare", "riseRate", "drop", "drop
 const VOTE_CAP = 1.5;
 /** A family winning by this much keeps its full score as confidence. */
 const FAMILY_CLEAR_MARGIN = 0.6;
+/** A start within this of the low point counts as starting on the floor. */
+const FLOOR_START_MAX_FALL = 0.6;
 /** Summed T2/T3 evidence of 1 ≈ 82%, 2 ≈ 95%. */
 const T23_EVIDENCE_SLOPE = 1.5;
 
@@ -221,12 +231,19 @@ export function t2t3Votes(f: ToneFeatures): Record<VoteKey, number> {
  * Weighting depth above timing and merging the two rise votes were both
  * tried and lost natural T3s.
  */
-export function t2t3Cue(f: ToneFeatures): { cue: number; votes: number[] } {
+export function t2t3Cue(f: ToneFeatures): { cue: number; votes: number[]; floorStart: boolean } {
   const v = t2t3Votes(f);
-  const votes = Object.values(v);
+  // Floor start: a T3 may begin AT its low point and only rise (好 hǎo said
+  // low, then up). There is no fall to measure, so the two drop votes are
+  // not evidence for T2 — leave them out when the voice starts on a deep
+  // floor (`low` vote ≥ 0.8, about chao 1.65 or lower).
+  const floorStart = f.start - f.low < FLOOR_START_MAX_FALL && v.low >= 0.8;
+  const votes = Object.entries(v)
+    .filter(([k]) => !(floorStart && (k === "drop" || k === "dropShare")))
+    .map(([, x]) => x);
   let cue = votes.reduce((a, b) => a + b, 0) / votes.length;
   if (v.low <= -0.5 && v.drop < 0.5 && v.turnTime < 0.6 && cue > 0) cue = (v.low + v.drop) / 2;
-  return { cue, votes };
+  return { cue, votes, floorStart };
 }
 
 function longestGapMs(points: { tMs: number }[]): number {
@@ -268,7 +285,7 @@ export function classifyToneV2(contour: Contour): ToneClassification | null {
   // from height alone, so it must not cost a heart on a miscalibrated board.
   if (family === "lowFall") return { tone: 3, confidence: familyConfidence, t2t3Cue: null, decisive: false };
 
-  const { cue, votes } = t2t3Cue(f);
+  const { cue, votes, floorStart } = t2t3Cue(f);
   if (cue === 0) return { tone: "none", confidence: familyConfidence * 0.5, t2t3Cue: cue, decisive: false };
   // Confidence from the SUM of the evidence, not the mean: a vote near 0 is
   // "no evidence", not doubt, so it must not dilute one clear vote (a T2 at
@@ -282,6 +299,9 @@ export function classifyToneV2(contour: Contour): ToneClassification | null {
     confidence: familyConfidence * t23Confidence,
     t2t3Cue: cue,
     decisive:
+      // A floor-start read drops two votes, so it names a tone but never
+      // costs a heart (a T2 on a board that reads low can look like one).
+      !floorStart &&
       familyDecisive &&
       Math.abs(cue) >= t.toneMismatchMinT23Cue &&
       dissent < t.toneMismatchMaxT23Dissent &&

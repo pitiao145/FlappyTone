@@ -22,6 +22,18 @@ describe("classifyToneV2", () => {
     expect(classifyToneV2(shape(() => 1.5))?.tone).not.toBe(1);
   });
 
+  it("never reads a short flat fragment as Tone 1", () => {
+    expect(classifyToneV2(shape(() => 5, 233))?.tone).not.toBe(1);
+  });
+
+  it("ignores a two-frame onset glitch when finding the low point", () => {
+    // Pierre's 好 hǎo (10 Oct 2026): 1.6 1.09 1.01, then the real fall from 2.7.
+    const f = toneFeatures(
+      shape((t) => (t < 0.06 ? 1.05 : t < 0.15 ? 2.7 : t < 0.6 ? 1.93 : 1.93 + 3 * ((t - 0.6) / 0.4)), 858),
+    );
+    expect(f!.low).toBeGreaterThan(1.8);
+  });
+
   it("reads a fall from an early peak as Tone 4", () => {
     expect(classifyToneV2(shape((t) => (t < 0.15 ? 4.5 : 4.5 - 3.2 * ((t - 0.15) / 0.85))))?.tone).toBe(4);
   });

@@ -388,6 +388,8 @@ export interface Tuning {
   toneClassifierV2: boolean;
   /** v2: a tail whose mean sits at or under this chao is never a Tone 1, however flat. */
   toneV2T1MinChao: number;
+  /** v2: a flat line shorter than this is a fragment, never a Tone 1 (Jane's shortest T1: 512ms). */
+  toneV2T1MinMs: number;
   /**
    * v2: a fall whose peak sits at or under this chao is a falling-only T3,
    * not a T4; full T4 from half a chao above it.
@@ -566,6 +568,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   toneClassifierDwellVote: false,
   toneClassifierV2: false,
   toneV2T1MinChao: 3,
+  toneV2T1MinMs: 350,
   toneV2T4MinPeakChao: 3.4,
   toneV2T23Anchors: {
     turnTime: [0.36, 0.54],
