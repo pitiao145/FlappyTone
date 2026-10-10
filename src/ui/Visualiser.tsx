@@ -23,7 +23,8 @@ import { useTier } from "../data/tier.ts";
 import { ContourRecorder } from "../game/contours.ts";
 import type { Tone } from "../game/gates.ts";
 import { effectiveSpeechStyle, type CalibrationSettings } from "../game/settings.ts";
-import { classifyTone, type ToneClassification } from "../game/toneClassifier.ts";
+import { type ToneClassification } from "../game/toneClassifier.ts";
+import { classifyToneV2 } from "../game/toneClassifierV2.ts";
 import { tierLimits, type TocflLevel } from "../game/tiers.ts";
 import { tuning } from "../game/tuning.ts";
 import { referenceFromWord, toneAccuracyDetail } from "../game/toneAccuracy.ts";
@@ -508,8 +509,19 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       // a target". See `classifyTone`.
       if (latest && latest.startedAtMs !== lastRecognizedAtRef.current) {
         lastRecognizedAtRef.current = latest.startedAtMs;
-        const result = classifyTone(latest);
+        const result = classifyToneV2(latest);
         sessionAttemptsRef.current += 1;
+        // Dev only: keep every attempt for offline classifier tests. In the
+        // console: copy(JSON.stringify(window.__toneLog)).
+        if (import.meta.env.DEV) {
+          const w = window as unknown as { __toneLog?: unknown[] };
+          (w.__toneLog ??= []).push({
+            target: toneRef.current,
+            word: wordRef.current?.id ?? null,
+            points: latest.points.map((p) => [Math.round(p.tMs), Math.round(p.chao * 1000) / 1000]),
+            read: result,
+          });
+        }
         setRecognized(result);
         // Bumps a remount key (see recognizedReadout) rather than a plain
         // boolean — the card has to shake again for a second wrong attempt

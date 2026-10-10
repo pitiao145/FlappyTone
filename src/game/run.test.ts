@@ -1179,16 +1179,33 @@ describe("Run — rewarding a confident correct shape (spec: classifier boost)",
     expect(log?.outcome).toBe("collision");
   });
 
-  it("neither boosts nor reads a natural gate (speech style floor rule)", () => {
-    // Same trace that boosts to perfect above. Textbook anchors misread
-    // natural speech, so the classifier must stay out of a natural gate —
-    // no boost, no read, so no mismatch collision either.
+  it("with classifier v1, neither boosts nor reads a natural gate (speech style floor rule)", () => {
+    // Same trace that boosts to perfect above. v1's textbook anchors misread
+    // natural speech, so v1 stays out of a natural gate entirely — no boost,
+    // no read, so no mismatch collision either. (v2: the test below.)
+    setTuning({ toneClassifierV2: false });
     const run = new Run({ mode: "game", width: W, rand: () => 0.3, speechStyle: "natural" });
     const { snapshots } = simulate(run, 1600, levelShifted(0.5));
     const log = snapshots[snapshots.length - 1].gateLog.find((g) => g.tone === 2);
     expect(log?.speechStyle).toBe("natural");
     expect(log?.classifiedTone).toBeNull();
     expect(log?.outcome).toBe("good");
+    resetTuning();
+  });
+
+  it("with classifier v2, boosts a natural gate but never takes a heart on it", () => {
+    setTuning({ toneClassifierV2: true });
+    const run = new Run({ mode: "game", width: W, rand: () => 0.3, speechStyle: "natural" });
+    const { snapshots } = simulate(run, 1600, levelShifted(0.5));
+    const log = snapshots[snapshots.length - 1].gateLog;
+    const t2 = log.find((g) => g.tone === 2);
+    expect(t2?.classifiedTone).toBe(2);
+    expect(t2?.outcome).toBe("perfect");
+    // The flight tracks the corridor, so no gate hits a wall: any collision
+    // here could only be the classifier's, which a natural gate never takes.
+    expect(log.length).toBeGreaterThan(3);
+    for (const g of log) expect(g.outcome).not.toBe("collision");
+    resetTuning();
   });
 });
 
@@ -1834,6 +1851,10 @@ describe("Run — tone accuracy beside the score (spec A)", () => {
     // pinned in toneAccuracy.test.ts. Here the gate still cuts the voice off
     // at its edges, so a shifted flight is a slightly different utterance;
     // what must hold is that tone accuracy moves less than score accuracy.
+    // The classifier boost is off: it lifts a confidently-read shape to the
+    // same score on time and off time (classifier v2 reads these fallback
+    // shapes confidently), which hides the corridor score this compares.
+    setTuning({ toneClassifierBoostEnabled: false });
     const onTime = gatesOf(simulate(newGameRun(), 1600, shifted(0)).snapshots);
     let scoreMoved = 0;
     for (const offset of [-80, 80]) {
@@ -1850,6 +1871,7 @@ describe("Run — tone accuracy beside the score (spec A)", () => {
     }
     // The comparison must actually have been exercised.
     expect(scoreMoved).toBeGreaterThan(0);
+    resetTuning();
   });
 
   it("still measures the tone on a wall hit", () => {

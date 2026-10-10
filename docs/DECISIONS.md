@@ -528,6 +528,14 @@ stats). Decisions worth keeping:
   separate and does follow the style, T2/T3 cue included — it never costs a
   heart and scores a right natural T3 0.85 (0.77 textbook-anchored). Revisit
   only with a new `classifier-check` run showing 0 clean wall hits.
+- **Classifier v2 gets the boost on natural gates, never the collision
+  (10 Oct 2026).** v2 (`toneClassifierV2.ts`) still has one clean wall hit
+  on Jane's natural clips — 和 hé, which she says as a pure fall and v2
+  reads as a decisive T4 — so the floor rule's bar (0 clean wall hits) is
+  not met for the collision. The boost only ever raises a score, so with
+  `toneClassifierV2` on, a natural single-syllable gate runs the classifier
+  for the boost alone (`run.ts`: `classifierApplies` vs `mismatchApplies`).
+  With v1 nothing changed: natural gates still skip the classifier.
 - **One pool for everything recorded about the player** — stats,
   `player_tone_shapes`, `run_log`, board, run cap. No style column
   server-side. The Pro tone-evolution chart draws Jane's average for the
@@ -1013,6 +1021,51 @@ writes it.
 Jane's citation `ma` takes and differ from her word averages — flown
 perfectly they score ~0.72–0.77. The reference choice for those gates is
 Pierre's to make; nothing switches it silently.
+
+## Classifier v2: measured cues, no averages (10 Oct 2026)
+
+v1 compared a shape with Jane's averaged T2 and T3, which correlate 0.73 —
+so "which average is it like" was weakest exactly where it mattered, and a
+learner's early, fast T2 rise looked like her T3. v2 (`toneClassifierV2.ts`)
+measures the shape on real time against fixed thresholds instead. Decisions,
+each from a measured case:
+
+- **T2 vs T3 by phonetic cues** (turn-point timing and the fall before it —
+  Shen & Lin 1991, Moore & Jongman 1997 — plus rise share, rise speed, drop
+  share, low point). Jane's T2 turns early and rises slowly over ~56% of the
+  syllable; her T3 turns late and rises fast over ~41%. The turn is the
+  middle of the low stretch, not its first frame (a T3 that falls fast, holds
+  and rises late).
+- **Placement was checked, and is not the cause** (`exp/tone-placement`,
+  dry runs only): Jane's raw T2 really dips (2.6 st vs T3's 5.9); per-tone
+  placement adds ~0.1 chao. A shallower T2 target only scored better by
+  moving her clips and the threshold together.
+- **Rules from single failures, each kept non-decisive where it guesses:**
+  T1 needs a high tail (≤ chao 3 is never T1) and ≥ 350ms (a 233ms flat
+  fragment read "T1 100%"; falls may be quick — Jane's natural 是 is 255ms);
+  a fall from mid board is a falling-only T3, never decisive; a shallow,
+  mid-turning dip with no T3-sized drop is judged on depth alone (Pierre's
+  T2 and Jane's own 回 read T3); a deep floor start drops the two drop votes,
+  never decisive (it cost a T2 a heart on a low-reading board); the low-point
+  search skips the first 12% (a two-frame onset glitch stole a T3's dip); a
+  zigzag (movement > 8× range) is "none".
+- **Confidence from summed evidence, not the mean.** A vote near 0 is no
+  evidence; averaging it in made a clear T2 read 53%. The read is unchanged
+  (sum and mean share a sign); only the percentage moved. The boost
+  threshold stayed 0.9 — v2 boosts as often as v1 (Jane 52 vs 49, Pierre
+  42 vs 44).
+- **Heart bar 0.6, not v1's 0.5**: the shape midway between Jane's T2 and T3
+  averages votes -0.52 under v2.
+- **Tried and dropped:** weighting depth above timing, and merging the two
+  rise votes — each lost Jane's shallow natural T3s (很, 女). Rise share is
+  Jane's best cue (96%) and Pierre's worst (59–69%); depth is the reverse.
+  No weighting won on both, so the six votes stay equal.
+
+Result: Jane's clips all read right in both styles; stress textbook 419
+right / 0 wall hits (v1 409/0), natural 342/8 (v1 330/14); on Pierre's 126
+visualiser attempts ~87% match the aimed tone, and hearts taken on his
+textbook attempts go 2 → 0. v1 stays as `classifyToneV1` behind
+`toneClassifierV2` until v2 has been played for a while.
 
 ## T2 vs T3 is decided by the dip, not by correlation (28 Sep 2026)
 

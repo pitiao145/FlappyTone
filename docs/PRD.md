@@ -190,12 +190,12 @@ accuracy = clamp(1 - mean(err_t), 0, 1)   // over voiced frames only
 
 **Hearts:** 3 per run.
 
-**Tone classifier (`src/game/toneClassifier.ts`), layered on top of corridor scoring, not replacing it.** Two stages: correlation with the averaged tone shapes picks the family (level T1 / dip-rise T2–T3 / fall T4); inside dip-rise, T2 vs T3 is a vote of four cues anchored on the T2 and T3 averages — how far the voice drops before its low point, how low that point is, the drop's share of the whole movement, and the correlation difference.
+**Tone classifier (v2, `src/game/toneClassifierV2.ts`), layered on top of corridor scoring, not replacing it.** It measures the shape directly, on real time, with fixed thresholds — no comparison with the averaged shapes. Family first: level T1 (a flat, high, held tail), fall T4 (a fall from a high peak), dip-rise T2–T3 otherwise. Inside dip-rise, T2 vs T3 is a vote of six cues: when the turn comes, how much of the syllable is spent rising, how fast it rises, how far the voice drops, the drop's share of the movement, and how low the dip goes. The percentage shown is how strong the evidence is; a close call names the nearer tone at a lower percentage.
 
 - `isDrasticToneMismatch` — a confident classifier read of a drastically wrong tone (T1/T4 confused with anything, or a confident T2↔T3 mixup) forces a wall-style collision even if the pitch trace happened to sit inside the wrong corridor. On by default. A T2↔T3 read must also be *decisive* — a strong vote, no single cue arguing hard for the other tone, and no voicing gap in the dip (creak) — so a close call can name a tone but never cost a heart.
 - `applyClassifierBoost` — a confident (≥0.9) read of the *correct* tone can raise a gate's accuracy past what corridor tracking alone earned, floored at the "good" threshold. On by default. Never resurrects a collision or an unheard gate.
 
-**Both are off for Natural-style gates** (as for pair gates): the classifier's anchors are textbook, and natural speakers' shallower T3 dip made it read correct speech as a wrong tone. Tone accuracy (below) still follows the style.
+**On Natural-style gates only the boost runs** (pair gates: neither): a reward can never cost a heart, while the mismatch collision still misreads one of Jane's natural recordings. Tone accuracy (below) still follows the style.
 
 Known gaps in both are documented in `docs/DECISIONS.md`.
 

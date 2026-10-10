@@ -380,6 +380,42 @@ export interface Tuning {
   toneClassifierLowTimeVote: boolean;
   toneClassifierDwellVote: boolean;
   /**
+   * Classifier v2 (`toneClassifierV2.ts`): measured cues with fixed
+   * thresholds, no correlation with Jane's averages. When true (shipped),
+   * `classifyTone` delegates to it everywhere; false falls back to v1
+   * (`classifyToneV1`). The visualiser always calls v2.
+   */
+  toneClassifierV2: boolean;
+  /** v2: a tail whose mean sits at or under this chao is never a Tone 1, however flat. */
+  toneV2T1MinChao: number;
+  /** v2: a flat line shorter than this is a fragment, never a Tone 1 (Jane's shortest T1: 512ms). */
+  toneV2T1MinMs: number;
+  /** v2: total movement over range above this is a zigzag, read "none". Real tones stay under ~2.1; a jittery T1 (tiny range) reaches ~6; a 5-1 zigzag is 10.6. */
+  toneV2MaxWiggle: number;
+  /**
+   * v2's own `toneMismatchMinT23Cue`: a T2/T3 read costs a heart only past
+   * this vote. 0.6, not v1's 0.5 — the shape midway between Jane's T2 and
+   * T3 averages votes -0.52 under v2 and must not take a heart.
+   */
+  toneV2MinT23Cue: number;
+  /**
+   * v2: a fall whose peak sits at or under this chao is a falling-only T3,
+   * not a T4; full T4 from half a chao above it.
+   */
+  toneV2T4MinPeakChao: number;
+  /**
+   * v2: each T2/T3 cue's [T2, T3] anchor — the feature's value that votes -1
+   * and +1. See `toneClassifierV2.ts` for what each measures.
+   */
+  toneV2T23Anchors: {
+    turnTime: [number, number];
+    riseShare: [number, number];
+    riseRate: [number, number];
+    drop: [number, number];
+    dropShare: [number, number];
+    low: [number, number];
+  };
+  /**
    * Confidence floor before `applyClassifierBoost` does anything — a reward
    * for being *sure*, not a general softening. 0.9 per the player call this
    * was tuned from: "if a player does a tone 100% accurately according to
@@ -566,6 +602,20 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   toneClassifierBoostEnabled: true,
   toneClassifierLowTimeVote: false,
   toneClassifierDwellVote: false,
+  toneClassifierV2: true,
+  toneV2T1MinChao: 3,
+  toneV2T1MinMs: 350,
+  toneV2MaxWiggle: 8,
+  toneV2MinT23Cue: 0.6,
+  toneV2T4MinPeakChao: 3.4,
+  toneV2T23Anchors: {
+    turnTime: [0.36, 0.54],
+    riseShare: [0.56, 0.41],
+    riseRate: [4, 6.6],
+    drop: [0.7, 1.9],
+    dropShare: [0.22, 0.4],
+    low: [2.2, 1.6],
+  },
   toneClassifierBoostMinConfidence: 0.9,
   toneClassifierBoostFloorAccuracy: 0.6,
   graceMs: 120,

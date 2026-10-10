@@ -32,6 +32,7 @@ import type { Contour } from "./contours.ts";
 import type { Tone } from "./gates.ts";
 import { AVERAGED_TONE_SHAPE } from "./toneAverages.ts";
 import { tuning } from "./tuning.ts";
+import { classifyToneV2 } from "./toneClassifierV2.ts";
 
 export type ClassifiedTone = Tone | "none";
 
@@ -385,6 +386,14 @@ export function classifyTone(
    * parameter so `src/dev/classifier-check.ts` can compare the committed
    * averages against freshly computed ones in one run.
    */
+  templates: Record<Tone, number[]> = AVERAGED_TONE_SHAPE.textbook,
+): ToneClassification | null {
+  return tuning().toneClassifierV2 ? classifyToneV2(contour) : classifyToneV1(contour, templates);
+}
+
+/** Version 1 (correlation with Jane's averages), kept while v2 is evaluated. */
+export function classifyToneV1(
+  contour: Contour,
   templates: Record<Tone, number[]> = AVERAGED_TONE_SHAPE.textbook,
 ): ToneClassification | null {
   if (contour.points.length < 2) return null;

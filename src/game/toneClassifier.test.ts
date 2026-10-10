@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { classifyTone } from "./toneClassifier.ts";
+// v1's own suite: pinned to v1 whatever `toneClassifierV2` says.
+import { classifyToneV1 as classifyTone } from "./toneClassifier.ts";
 import type { Tone } from "./gates.ts";
 import { AVERAGED_TONE_SHAPE } from "./toneAverages.ts";
 import { resetTuning, setTuning } from "./tuning.ts";
