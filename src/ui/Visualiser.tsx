@@ -501,6 +501,17 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         lastRecognizedAtRef.current = latest.startedAtMs;
         const result = classifyToneV2(latest);
         sessionAttemptsRef.current += 1;
+        // Dev only: keep every attempt for offline classifier tests. In the
+        // console: copy(JSON.stringify(window.__toneLog)).
+        if (import.meta.env.DEV) {
+          const w = window as unknown as { __toneLog?: unknown[] };
+          (w.__toneLog ??= []).push({
+            target: toneRef.current,
+            word: wordRef.current?.id ?? null,
+            points: latest.points.map((p) => [Math.round(p.tMs), Math.round(p.chao * 1000) / 1000]),
+            read: result,
+          });
+        }
         setRecognized(result);
         // Bumps a remount key (see recognizedReadout) rather than a plain
         // boolean — the card has to shake again for a second wrong attempt
