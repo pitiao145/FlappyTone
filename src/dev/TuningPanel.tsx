@@ -241,7 +241,7 @@ export function TuningPanel() {
   const toggleRow = (
     label: string,
     checked: boolean,
-    key: "toneMismatchCollisionEnabled" | "toneClassifierBoostEnabled",
+    key: "toneMismatchCollisionEnabled" | "toneClassifierBoostEnabled" | "toneClassifierV2",
     help: string,
   ) => (
     <div className="knob">
@@ -293,6 +293,13 @@ export function TuningPanel() {
               {n > 0 && <span className="tgroup-moved">{n} moved</span>}
             </summary>
             <p className="param-help">{group.note}</p>
+            {group.title === "tone classifier" &&
+              toggleRow(
+                "Use classifier v2",
+                t.toneClassifierV2,
+                "toneClassifierV2",
+                "v2 measures the shape directly (turn time, rise, drop, depth) instead of comparing with Jane's averages. Drives the mismatch collision and the boost below. Natural-style and pair gates never run the classifier either way.",
+              )}
             {group.title === "tone classifier" &&
               toggleRow(
                 "Drastic mismatch is a collision",

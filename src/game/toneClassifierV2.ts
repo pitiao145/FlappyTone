@@ -69,6 +69,8 @@ export interface ToneFeatures {
   fall: number;
   /** That peak's height: a T4 falls from high (4–5), a falling-only T3 from mid (3–4). */
   fallPeak: number;
+  /** Total movement over the range: ~1–2 for a real tone, far more for a zigzag. */
+  wiggle: number;
 }
 
 function resampleReal(points: { tMs: number; chao: number }[]): number[] {
@@ -157,6 +159,8 @@ export function toneFeatures(contour: Contour): ToneFeatures | null {
     tailExcursion,
     fall,
     fallPeak: s[peakIdx],
+    wiggle: s.reduce((a, v, i) => (i ? a + Math.abs(v - s[i - 1]) : 0), 0) /
+      Math.max(0.3, Math.max(...s) - Math.min(...s)),
   };
 }
 
@@ -272,7 +276,9 @@ export function classifyToneV2(contour: Contour): ToneClassification | null {
   // Only a shape that matches no family at all is "none". A close call
   // names the leaning tone with a lower percentage instead — and is never
   // decisive, so it cannot cost a heart.
-  if (best < t.toneClassifierMinConfidence) {
+  // Back and forth far more than any tone moves (Jane's and Pierre's real
+  // attempts stay under ~2.1×): not a tone shape at all.
+  if (best < t.toneClassifierMinConfidence || f.wiggle > t.toneV2MaxWiggle) {
     return { tone: "none", confidence: best, t2t3Cue: null, decisive: false };
   }
   // Graded, not saturated: a clear winner keeps its score, a near-tie
@@ -303,7 +309,7 @@ export function classifyToneV2(contour: Contour): ToneClassification | null {
       // costs a heart (a T2 on a board that reads low can look like one).
       !floorStart &&
       familyDecisive &&
-      Math.abs(cue) >= t.toneMismatchMinT23Cue &&
+      Math.abs(cue) >= t.toneV2MinT23Cue &&
       dissent < t.toneMismatchMaxT23Dissent &&
       longestGapMs(contour.points) < t.toneMismatchMaxGapMs,
   };

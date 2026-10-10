@@ -388,7 +388,14 @@ export function classifyTone(
    */
   templates: Record<Tone, number[]> = AVERAGED_TONE_SHAPE.textbook,
 ): ToneClassification | null {
-  if (tuning().toneClassifierV2) return classifyToneV2(contour);
+  return tuning().toneClassifierV2 ? classifyToneV2(contour) : classifyToneV1(contour, templates);
+}
+
+/** Version 1 (correlation with Jane's averages), kept while v2 is evaluated. */
+export function classifyToneV1(
+  contour: Contour,
+  templates: Record<Tone, number[]> = AVERAGED_TONE_SHAPE.textbook,
+): ToneClassification | null {
   if (contour.points.length < 2) return null;
 
   const trimmed = trimOnset(contour.points, tuning().toneClassifierOnsetTrimFraction);

@@ -1834,6 +1834,10 @@ describe("Run — tone accuracy beside the score (spec A)", () => {
     // pinned in toneAccuracy.test.ts. Here the gate still cuts the voice off
     // at its edges, so a shifted flight is a slightly different utterance;
     // what must hold is that tone accuracy moves less than score accuracy.
+    // The classifier boost is off: it lifts a confidently-read shape to the
+    // same score on time and off time (classifier v2 reads these fallback
+    // shapes confidently), which hides the corridor score this compares.
+    setTuning({ toneClassifierBoostEnabled: false });
     const onTime = gatesOf(simulate(newGameRun(), 1600, shifted(0)).snapshots);
     let scoreMoved = 0;
     for (const offset of [-80, 80]) {
@@ -1850,6 +1854,7 @@ describe("Run — tone accuracy beside the score (spec A)", () => {
     }
     // The comparison must actually have been exercised.
     expect(scoreMoved).toBeGreaterThan(0);
+    resetTuning();
   });
 
   it("still measures the tone on a wall hit", () => {

@@ -390,6 +390,14 @@ export interface Tuning {
   toneV2T1MinChao: number;
   /** v2: a flat line shorter than this is a fragment, never a Tone 1 (Jane's shortest T1: 512ms). */
   toneV2T1MinMs: number;
+  /** v2: total movement over range above this is a zigzag, read "none". Real tones stay under ~2.1; a jittery T1 (tiny range) reaches ~6; a 5-1 zigzag is 10.6. */
+  toneV2MaxWiggle: number;
+  /**
+   * v2's own `toneMismatchMinT23Cue`: a T2/T3 read costs a heart only past
+   * this vote. 0.6, not v1's 0.5 — the shape midway between Jane's T2 and
+   * T3 averages votes -0.52 under v2 and must not take a heart.
+   */
+  toneV2MinT23Cue: number;
   /**
    * v2: a fall whose peak sits at or under this chao is a falling-only T3,
    * not a T4; full T4 from half a chao above it.
@@ -569,6 +577,8 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   toneClassifierV2: false,
   toneV2T1MinChao: 3,
   toneV2T1MinMs: 350,
+  toneV2MaxWiggle: 8,
+  toneV2MinT23Cue: 0.6,
   toneV2T4MinPeakChao: 3.4,
   toneV2T23Anchors: {
     turnTime: [0.36, 0.54],

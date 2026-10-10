@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import sample from "../../fixtures/contours/jane-textbook-sample.json";
 import { classifyToneV2, toneFeatures } from "./toneClassifierV2.ts";
 import type { Contour } from "./contours.ts";
+import { AVERAGED_TONE_SHAPE } from "./toneAverages.ts";
 
 const contourOf = (points: { tMs: number; chao: number }[]): Contour => ({
   points,
@@ -20,6 +21,17 @@ describe("classifyToneV2", () => {
   it("never reads a flat line under chao 3 as Tone 1", () => {
     expect(classifyToneV2(shape(() => 2.4))?.tone).not.toBe(1);
     expect(classifyToneV2(shape(() => 1.5))?.tone).not.toBe(1);
+  });
+
+  it("reads a zigzag unlike any tone as none", () => {
+    const zig = contourOf(Array.from({ length: 16 }, (_, k) => ({ tMs: (k / 15) * 800, chao: k % 2 ? 1 : 5 })));
+    expect(classifyToneV2(zig)?.tone).toBe("none");
+  });
+
+  it("never takes a heart on the shape midway between Jane's T2 and T3 averages", () => {
+    const mid = AVERAGED_TONE_SHAPE.textbook[2].map((v, i) => (v + AVERAGED_TONE_SHAPE.textbook[3][i]) / 2);
+    const c = contourOf(mid.map((chao, i) => ({ tMs: (i / (mid.length - 1)) * 900, chao })));
+    expect(classifyToneV2(c)?.decisive).toBe(false);
   });
 
   it("never reads a short flat fragment as Tone 1", () => {
