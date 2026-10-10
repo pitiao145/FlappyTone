@@ -68,7 +68,7 @@ const VOICE_LABEL: Record<Gender, string> = {
 
 const SPEECH_STYLES = ["textbook", "natural"] as const satisfies readonly SpeechStyle[];
 
-const SPEECH_STYLE_LABEL: Record<SpeechStyle, string> = { textbook: "Slow", natural: "Regular" };
+export const SPEECH_STYLE_LABEL: Record<SpeechStyle, string> = { textbook: "Slow", natural: "Regular" };
 
 const PROFICIENCIES = ["beginner", "intermediate"] as const satisfies readonly Proficiency[];
 

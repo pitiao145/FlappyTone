@@ -28,13 +28,22 @@ import { classifyToneV2 } from "../game/toneClassifierV2.ts";
 import { tierLimits, type TocflLevel } from "../game/tiers.ts";
 import { tuning } from "../game/tuning.ts";
 import { referenceFromWord, toneAccuracyDetail } from "../game/toneAccuracy.ts";
-import type { Word } from "../game/words.ts";
-import { wordsForList, wordsInStyle, wordsOfTone } from "../game/words.ts";
+import type { SpeechStyle, Word } from "../game/words.ts";
+import {
+  availableToneCombos,
+  multiWords,
+  toneComboKey,
+  wordsForList,
+  wordsInStyle,
+  wordsOfCombo,
+  wordsOfTone,
+} from "../game/words.ts";
 import { sessionNoiseMeter, startingNoiseFloor } from "../game/sessionNoise.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawVisualiser } from "../render/visualiser.ts";
 import { micErrorCopy } from "./micErrors.ts";
+import { SPEECH_STYLE_LABEL } from "./Settings.tsx";
 import {
   ChevronIcon,
   MicrophoneIcon,
@@ -42,6 +51,7 @@ import {
   ToneMarkIcon,
   TonesGridIcon,
   TONE_SHORT_LABEL,
+  type ToneOrNeutral,
 } from "./toneIcons.tsx";
 
 /**
@@ -56,6 +66,13 @@ export const SPAN_MS = 1600;
 const WRONG_TOAST_MS = 1200;
 
 const TONES: Tone[] = [1, 2, 3, 4];
+
+/**
+ * How long a tapped word waits for its clip before it plays the synthetic
+ * sweep instead. Long enough for a cold fetch (~1.4s), short enough that a
+ * dead network still answers the tap.
+ */
+const CLIP_WAIT_MS = 2500;
 
 interface WordStats {
   attempts: number;
@@ -96,9 +113,9 @@ function recognizedTier(
  * 1 so a future tier whose access starts higher still gets a sane default
  * instead of a level it cannot open.
  */
-function defaultLevel(levels: TocflLevel[] | null): TocflLevel | null {
-  if (levels === null || levels.length === 0) return null;
-  return levels.includes(1) ? 1 : [...levels].sort((a, b) => a - b)[0];
+function defaultLevels(levels: TocflLevel[] | null): TocflLevel[] {
+  if (levels === null || levels.length === 0) return [];
+  return [levels.includes(1) ? 1 : [...levels].sort((a, b) => a - b)[0]];
 }
 
 interface Props {
@@ -124,7 +141,13 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   // The recording style the visualiser plays, draws and scores in (spec
   // decision 9). A guest is always textbook. Words with no natural take drop
   // out of the rail, as they do from a natural run's pool.
-  const speechStyle = effectiveSpeechStyle(tier);
+  //
+  // The toggle on this screen overrides it for this visit only: it is never
+  // written to settings, so leaving the visualiser restores the saved choice.
+  // A guest cannot switch (always Slow), same as in Settings.
+  const [styleOverride, setStyleOverride] = useState<SpeechStyle | null>(null);
+  const speechStyle: SpeechStyle =
+    tier === "guest" ? "textbook" : (styleOverride ?? effectiveSpeechStyle(tier));
   const speechStyleRef = useRef(speechStyle);
   speechStyleRef.current = speechStyle;
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -140,12 +163,23 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   const canvasW = measured?.w ?? canvasWidth;
   const canvasH = measured?.h ?? canvasHeight;
   const [tone, setTone] = useState<Tone | null>(null);
+  /**
+   * The tone pair being practised, e.g. [3, 2]. Exclusive with `tone`: picking
+   * one clears the other.
+   */
+  const [combo, setCombo] = useState<Tone[] | null>(null);
   const [words, setWords] = useState<Word[]>(() => inventoryNow() ?? []);
   const [selectedWord, setSelectedWord] = useState<Word | null>(null);
   const [paused, setPaused] = useState(false);
   /** Mobile only — the collapsed tone-mark icon opens this to pick a tone. */
   const [tonePopoverOpen, setTonePopoverOpen] = useState(false);
-  const [popoverTab, setPopoverTab] = useState<"tone" | "wordlists">("tone");
+  const [popoverTab, setPopoverTab] = useState<"free" | "tone" | "pairs">("free");
+  /**
+   * Desktop only: once a tone or pair is picked, its tab's grid folds away so
+   * the word list below gets the room. Tapping the tab again unfolds it. (The
+   * mobile popover closes on a pick instead, so it always opens unfolded.)
+   */
+  const [pickerFolded, setPickerFolded] = useState(false);
   /**
    * The visualiser only ever practices single-syllable words, so it reads
    * `beginner`'s access — a guest's is always `null` (no picker; the
@@ -157,10 +191,12 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
    * every level the tier allows at once — a reasonable neutral state, but not
    * a useful landing state for a practice screen: the player arrives with the
    * whole catalog shuffled together and nothing indicating the lists exist.
-   * `null` remains reachable by tapping the active row to clear it.
+   * Several lists can be selected at once; their words are unioned. An empty
+   * selection (every row toggled off) falls back to every level the tier
+   * allows, the old `null` state.
    */
-  const [selectedLevel, setSelectedLevel] = useState<TocflLevel | null>(
-    () => defaultLevel(tierLimits()[tier].beginner.levels),
+  const [selectedLevels, setSelectedLevels] = useState<TocflLevel[]>(
+    () => defaultLevels(tierLimits()[tier].beginner.levels),
   );
   /**
    * Whether the default above has been applied for a tier whose levels were
@@ -179,7 +215,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     const levels = limits.beginner.levels;
     if (levels === null) return;
     leveledRef.current = true;
-    setSelectedLevel(defaultLevel(levels));
+    setSelectedLevels(defaultLevels(levels));
   }, [limits.beginner.levels]);
   /**
    * Mirrors `wordStatsRef` into React state so the accuracy readout — now a
@@ -347,11 +383,24 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       wordsInStyle(
         limits.beginner.levels === null
           ? words
-          : wordsForList(words, selectedLevel ? [selectedLevel] : limits.beginner.levels, "beginner"),
+          : wordsForList(
+              words,
+              selectedLevels.length > 0 ? selectedLevels : limits.beginner.levels,
+              "beginner",
+            ),
         speechStyle,
       ),
-    [words, limits.beginner.levels, selectedLevel, speechStyle],
+    [words, limits.beginner.levels, selectedLevels, speechStyle],
   );
+
+  /**
+   * Two-syllable words for the "Tone pairs" tab. Not scoped by the word lists
+   * (those are single-syllable TOCFL lists); capped per combo by
+   * `pairWordsPerCombo`, the same cap the pairs run mode uses.
+   */
+  const pairWords = useMemo(() => wordsInStyle(multiWords(words), speechStyle), [words, speechStyle]);
+  const combos = useMemo(() => availableToneCombos(pairWords), [pairWords]);
+  const pairsUnlocked = limits.pairWordsPerCombo > 0;
 
   /**
    * Warm the selected tone's clips so a tap plays instantly.
@@ -370,13 +419,17 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
    * `"now"` priority.
    */
   useEffect(() => {
-    if (tone === null) return;
+    if (tone === null && combo === null) return;
     const controller = new AbortController();
-    for (const w of wordsOfTone(listWords, tone, limits.wordsPerTone)) {
+    const pool =
+      combo !== null
+        ? wordsOfCombo(pairWords, combo, limits.pairWordsPerCombo)
+        : wordsOfTone(listWords, tone!, limits.wordsPerTone);
+    for (const w of pool) {
       void loadClip(w, { priority: "soon", signal: controller.signal });
     }
     return () => controller.abort();
-  }, [tone, listWords, limits.wordsPerTone]);
+  }, [tone, combo, listWords, pairWords, limits.wordsPerTone, limits.pairWordsPerCombo]);
 
   /**
    * The practice list is limited by COUNT, not by `min_tier`.
@@ -388,9 +441,21 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
    * keeps a guest's practice list empty (`wordsPerTone: 0`) and a free
    * account's at five, in `position` order.
    */
-  const wordsForTone = tone === null ? [] : wordsOfTone(listWords, tone, limits.wordsPerTone);
-  /** The rest of that tone's inventory, shown as locked chips for free players. */
-  const lockedWordsForTone = tone === null ? [] : wordsOfTone(listWords, tone).slice(wordsForTone.length);
+  const wordsForTone =
+    combo !== null
+      ? wordsOfCombo(pairWords, combo, limits.pairWordsPerCombo)
+      : tone === null
+        ? []
+        : wordsOfTone(listWords, tone, limits.wordsPerTone);
+  /** The rest of that tone's (or pair's) inventory, shown as locked chips for free players. */
+  const lockedWordsForTone =
+    combo !== null
+      ? wordsOfCombo(pairWords, combo).slice(wordsForTone.length)
+      : tone === null
+        ? []
+        : wordsOfTone(listWords, tone).slice(wordsForTone.length);
+  /** Something is picked — a tone or a pair — so the word rail has content. */
+  const filtering = tone !== null || combo !== null;
 
   // CSS (App.css) now stretches `.stage` to fill the real space it has —
   // full height on mobile, the 420px-capped column on desktop — instead of
@@ -470,9 +535,17 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       const live = recorder.live();
       const finished = recorder.finished();
       const head = live?.points.at(-1);
+      // A tone pair holds through the pause between its two syllables, as a
+      // pair gate does in play (`multiMergeGapMs`): the recorder keeps one
+      // utterance open across the gap, and the dot holds its last height
+      // instead of falling back to the rest line.
+      const pair = (wordRef.current?.syllables ?? 1) > 1;
+      const gapMs = pair ? tuning().multiMergeGapMs : tuning().mergeGapMs;
+      recorder.setMergeGapMs(gapMs);
+      const holding = pair && head !== undefined && now - lastVoicedAt <= gapMs;
       // Between utterances the dot returns to the rest line, as it does in
       // play — but nothing drifts *while* you are speaking.
-      const target = head && voiced ? head.chao : 3;
+      const target = head && (voiced || holding) ? head.chao : 3;
       displayChao +=
         (target - displayChao) * (1 - Math.exp(-dt / tuning().easeTauMs));
 
@@ -507,7 +580,13 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       // accuracy scoring above, but deliberately never reads `word`/`tone`:
       // it answers "what did this shape resemble", not "how well did it hit
       // a target". See `classifyTone`.
-      if (latest && latest.startedAtMs !== lastRecognizedAtRef.current) {
+      // Single-syllable only: the classifier misreads a two-syllable contour
+      // (same rule as the pairs run mode), so a pair word gets no read.
+      if (
+        latest &&
+        latest.startedAtMs !== lastRecognizedAtRef.current &&
+        (word?.syllables ?? 1) === 1
+      ) {
         lastRecognizedAtRef.current = latest.startedAtMs;
         const result = classifyToneV2(latest);
         sessionAttemptsRef.current += 1;
@@ -534,13 +613,15 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       }
 
       drawVisualiser(ctx, canvasW, canvasH, {
-        tone: toneRef.current,
+        // A pair has no generic per-tone shape to fall back on: draw its
+        // target only once a word is picked (then `word`'s own line is used).
+        tone: word ? word.tone : toneRef.current,
         word,
         live,
         finished,
         spanMs: SPAN_MS,
         chao: displayChao,
-        voiced: voiced || now - lastVoicedAt <= tuning().graceMs,
+        voiced: voiced || holding || now - lastVoicedAt <= tuning().graceMs,
       });
       if (running) rafId = requestAnimationFrame(tick);
     };
@@ -601,11 +682,35 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       return;
     }
     if (t !== null) sessionTonesRef.current.add(t);
+    setPickerFolded(t !== null);
     setTone(t);
+    setCombo(null);
     setSelectedWord(null);
     resetAttempts();
     setTonePopoverOpen(false);
-    setPopoverTab("tone");
+  };
+
+  /** The Free tab: no target, no word — say anything and see its shape. */
+  const chooseFree = () => {
+    setPopoverTab("free");
+    if (tone === null && combo === null) return;
+    setTone(null);
+    setCombo(null);
+    setSelectedWord(null);
+    resetAttempts();
+  };
+
+  const chooseCombo = (c: Tone[]) => {
+    if (!pairsUnlocked) {
+      showLocked("visualiser-tone-pairs");
+      return;
+    }
+    setPickerFolded(true);
+    setCombo(c);
+    setTone(null);
+    setSelectedWord(null);
+    resetAttempts();
+    setTonePopoverOpen(false);
   };
 
   /**
@@ -621,16 +726,35 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     onLocked?.(feature);
   };
 
+  /** Bumped on every word tap, so a slow clip load cannot play over a newer tap. */
+  const tapSeqRef = useRef(0);
+
   const playWord = (word: Word) => {
     // A tap on the already-selected word is a replay, not a new attempt at a
     // new word — the trail and the running accuracy must survive it.
     if (selectedWord?.id !== word.id) resetAttempts();
     sessionWordSelectedRef.current = true;
     setSelectedWord(word);
+    // Resume the output context inside the tap: the play below may run after
+    // an await, and iOS only allows a resume from a gesture.
+    void ensurePlaybackCtx();
+    const seq = ++tapSeqRef.current;
     // Jumps the warm-up queue: the tapped word is needed now, whatever the
-    // background trickle is currently working through. A no-op if it already
-    // landed.
-    void loadClip(word);
+    // background trickle is currently working through. Wait for it (up to
+    // CLIP_WAIT_MS) so a word the warm-up has not reached yet plays its real
+    // clip, not the synthetic sweep. A clip that is already loaded resolves
+    // at once.
+    const ready = Promise.race([
+      loadClip(word).catch(() => {}),
+      new Promise<void>((resolve) => setTimeout(resolve, CLIP_WAIT_MS)),
+    ]);
+    void ready.then(() => {
+      // A newer tap supersedes this one.
+      if (seq === tapSeqRef.current) startCue(word);
+    });
+  };
+
+  const startCue = (word: Word) => {
     const play = () =>
       // Plays on the dedicated output-only context (reference.ts).
       playToneCue(
@@ -780,89 +904,135 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   );
 
   /** Tab strip — shared by mobile popover and desktop panel. */
+  const tonePickerFree = (
+    <p className="vis-free-desc">
+      Say anything and see the shape of your voice. There is no target line and no word to copy.
+    </p>
+  );
+
+  /** One sentence under the tabs, saying what the open tab is for. */
+  const PRACTICE_DESC: Record<typeof popoverTab, string> = {
+    free: "Practice freely, by single tone, or by tone pair.",
+    tone: "Pick a tone, then tap a word to hear it and say it back.",
+    pairs: "Pick a two-syllable combination. Rows are the first tone, columns the second.",
+  };
+
+  const practiceHead = (
+    <div className="vis-practice-head">
+      <span className="vis-setting-label">Practice</span>
+      <p className="vis-setting-desc">
+        {pickerFolded && popoverTab !== "free"
+          ? `Tap ${popoverTab === "pairs" ? "Tone pairs" : "By tone"} to pick another.`
+          : PRACTICE_DESC[popoverTab]}
+      </p>
+    </div>
+  );
+
   const tonePickerTabs = (
     <div className="tone-popover-tabs">
+      {/* Free is a mode of its own, open to every tier; picking its tab is
+          picking it. By tone and Tone pairs are gated per tier, shown with a
+          lock where the tier cannot use them. */}
+      <button
+        className={popoverTab === "free" ? "tone-popover-tab active" : "tone-popover-tab"}
+        onClick={chooseFree}
+      >
+        Free
+      </button>
       <button
         className={popoverTab === "tone" ? "tone-popover-tab active" : "tone-popover-tab"}
-        onClick={() => setPopoverTab("tone")}
+        onClick={() => {
+          setPopoverTab("tone");
+          setPickerFolded(false);
+        }}
       >
-        By tone
+        By tone{!limits.visualiserPerTone && " 🔒"}
+        {tone !== null && (
+          <ToneMarkIcon tone={tone} className="tone-mark-icon vis-tab-pick" />
+        )}
       </button>
-      <button
-        className={popoverTab === "wordlists" ? "tone-popover-tab active" : "tone-popover-tab"}
-        onClick={() => setPopoverTab("wordlists")}
-      >
-        Word lists
-      </button>
+      {combos.length > 0 && (
+        <button
+          className={popoverTab === "pairs" ? "tone-popover-tab active" : "tone-popover-tab"}
+          onClick={() => {
+            setPopoverTab("pairs");
+            setPickerFolded(false);
+          }}
+        >
+          Tone pairs{!pairsUnlocked && " 🔒"}
+          {combo?.map((t, i) => (
+            <ToneMarkIcon key={i} tone={t as ToneOrNeutral} className="tone-mark-icon vis-tab-pick" />
+          ))}
+        </button>
+      )}
     </div>
   );
 
   const LEVEL_LABEL: Record<TocflLevel, string> = { 1: "TOCFL 1", 2: "TOCFL 2", 3: "TOCFL 3" };
 
-  const tonePickerWordlists = (
-    <div className="tone-popover-wordlists">
-      <p className="tone-popover-desc">
-        Practice by curated word lists — TOCFL levels, and more to come.
-      </p>
-      {limits.beginner.levels === null ? (
-        // Guest: a real button, not a static row. It is locked the same way
-        // the per-level rows below are, so it has to lead to the same upsell
-        // rather than being a dead label that says "sign up free" and does
-        // nothing when tapped.
-        <button
-          type="button"
-          className="word-list-row is-locked"
-          onClick={() => showLocked("visualiser-word-list")}
-          aria-label="TOCFL levels, locked, sign up free"
-        >
-          <span>TOCFL levels</span>
-          <span className="word-list-soon">sign up free</span>
-        </button>
-      ) : (
-        ([1, 2, 3] as const).map((n) => {
-          const unlocked = limits.beginner.levels!.includes(n);
-          return (
-            <button
-              key={n}
-              type="button"
-              className={`word-list-row${selectedLevel === n ? " active" : ""}${unlocked ? "" : " is-locked"}`}
-              // Deliberately NOT `disabled` when locked: a disabled button
-              // swallows the click, so the `onLocked` branch below was dead
-              // code and a locked level read as broken rather than as an
-              // upsell. `is-locked` carries the styling; the handler carries
-              // the meaning. Same shape `lockedWordChip` already uses.
-              onClick={() => {
-                if (!unlocked) {
-                  showLocked("visualiser-word-list");
-                  return;
-                }
-                setSelectedLevel((cur) => (cur === n ? null : n));
-              }}
-              aria-label={unlocked ? LEVEL_LABEL[n] : `${LEVEL_LABEL[n]}, locked, Pro`}
-            >
-              <span>{LEVEL_LABEL[n]}</span>
-              {unlocked ? (
-                selectedLevel === n && <span>✓</span>
-              ) : (
-                <span className="word-chip-lock">🔒</span>
-              )}
-            </button>
-          );
-        })
-      )}
+  const selectedListsLabel =
+    selectedLevels.length === 0 ? "All levels" : selectedLevels.map((n) => LEVEL_LABEL[n]).join(", ");
+
+  /**
+   * Word lists — a setting above the tone/pair tabs, not a tab of its own, so
+   * the active lists are always in view. Several can be on at once; none on
+   * means every level the tier allows.
+   */
+  const wordListSetting = (
+    <div className="vis-setting">
+      <div className="vis-setting-head">
+        <span className="vis-setting-label">Word lists</span>
+        {limits.beginner.levels !== null && (
+          <span className="vis-setting-value">{selectedListsLabel}</span>
+        )}
+      </div>
+      <p className="vis-setting-desc">Choose which lists your practice words come from. You can pick more than one.</p>
+      <div className="vis-setting-chips">
+        {limits.beginner.levels === null ? (
+          // Guest: locked, and leads to the same upsell as a locked level.
+          <button
+            type="button"
+            className="vis-setting-chip is-locked"
+            onClick={() => showLocked("visualiser-word-list")}
+            aria-label="TOCFL levels, locked, sign up free"
+          >
+            TOCFL levels 🔒
+          </button>
+        ) : (
+          ([1, 2, 3] as const).map((n) => {
+            const unlocked = limits.beginner.levels!.includes(n);
+            const on = selectedLevels.includes(n);
+            return (
+              <button
+                key={n}
+                type="button"
+                // Not `disabled` when locked: the tap must reach the upsell.
+                className={`vis-setting-chip${on ? " active" : ""}${unlocked ? "" : " is-locked"}`}
+                onClick={() => {
+                  if (!unlocked) {
+                    showLocked("visualiser-word-list");
+                    return;
+                  }
+                  setSelectedLevels((cur) =>
+                    cur.includes(n) ? cur.filter((l) => l !== n) : [...cur, n].sort((a, b) => a - b),
+                  );
+                }}
+                aria-pressed={unlocked ? on : undefined}
+                aria-label={unlocked ? LEVEL_LABEL[n] : `${LEVEL_LABEL[n]}, locked, Pro`}
+              >
+                {LEVEL_LABEL[n]}
+                {!unlocked && " 🔒"}
+              </button>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 
   /** Mobile popover — stacked rows with labels. */
   const tonePickerToneList = (
     <div className="tone-popover-list">
-      <button
-        className={tone === null ? "tone-popover-row active" : "tone-popover-row"}
-        onClick={() => chooseTone(null)}
-      >
-        <span className="tone-popover-row-icon tone-popover-row-icon-free">—</span>
-        Free (no filter)
-      </button>
       {TONES.map((t) => (
         <button
           key={t}
@@ -888,16 +1058,6 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   /** Desktop panel — one horizontal row of round pills. */
   const tonePickerTonePills = (
     <div className="tone-rail-pills">
-      <button
-        className={
-          tone === null
-            ? "choice-option tone-pill tone-pill-free active"
-            : "choice-option tone-pill tone-pill-free"
-        }
-        onClick={() => chooseTone(null)}
-      >
-        free
-      </button>
       {TONES.map((t) => (
         <button
           key={t}
@@ -918,17 +1078,117 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     </div>
   );
 
+  /**
+   * Which recording style the clips, lines and scores use — set in Settings,
+   * read through `effectiveSpeechStyle` (a guest is always Slow).
+   */
+  const chooseSpeechStyle = (style: SpeechStyle) => {
+    if (tier === "guest") {
+      showLocked("visualiser-speech-style");
+      return;
+    }
+    if (style === speechStyle) return;
+    setStyleOverride(style);
+    // The selected word's clip and line belong to the old style.
+    setSelectedWord(null);
+    resetAttempts();
+  };
+
+  /** Speech style for this visit only — never written to Settings. */
+  const speechStyleSetting = (
+    <div className="vis-setting">
+      <div className="vis-setting-head">
+        <span className="vis-setting-label">Speech</span>
+      </div>
+      <p className="vis-setting-desc">
+        Slow is clear and exaggerated. Regular is everyday speed. This only changes the visualiser.
+      </p>
+      <div className="vis-setting-chips" role="radiogroup" aria-label="Speech style">
+        {(["textbook", "natural"] as const).map((style) => (
+          <button
+            key={style}
+            type="button"
+            role="radio"
+            aria-checked={speechStyle === style}
+            className={`vis-setting-chip${speechStyle === style ? " active" : ""}${
+              tier === "guest" && style === "natural" ? " is-locked" : ""
+            }`}
+            onClick={() => chooseSpeechStyle(style)}
+          >
+            {SPEECH_STYLE_LABEL[style]}
+            {tier === "guest" && style === "natural" && " 🔒"}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  /**
+   * Same icons as Modes → Tone pairs, laid out as a fixed 4×5 table: the row
+   * is the first syllable's tone (1–4), the column the second's (1–4, then
+   * neutral). Every combo keeps the same place whatever the inventory holds,
+   * so a pair is found by position; a combo with no word is an empty cell.
+   */
+  const comboByKey = new Map(combos.map((c) => [toneComboKey(c), c]));
+  const tonePickerPairs = (
+    <div className="vis-pair-grid">
+      {TONES.flatMap((first) =>
+        ([1, 2, 3, 4, 0] as const).map((second) => {
+          const key = `${first}-${second}`;
+          const c = comboByKey.get(key);
+          if (!c) return <span key={key} className="vis-pair-empty" aria-hidden="true" />;
+          const active = combo !== null && toneComboKey(combo) === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              className={`choice-option vis-pair-tile${active ? " active" : ""}${pairsUnlocked ? "" : " is-locked"}`}
+              onClick={() => chooseCombo(c)}
+              aria-label={`Tone ${first} then ${second === 0 ? "neutral" : `tone ${second}`}${pairsUnlocked ? "" : ", locked"}`}
+            >
+              {c.map((t, n) => (
+                <ToneMarkIcon key={n} tone={t as ToneOrNeutral} className="tone-mark-icon" />
+              ))}
+              {!pairsUnlocked && <span className="tone-pill-lock">🔒</span>}
+            </button>
+          );
+        }),
+      )}
+    </div>
+  );
+
+  const pickerSettings = (
+    <div className="vis-settings">
+      {wordListSetting}
+      {speechStyleSetting}
+    </div>
+  );
+
   const mobileTonePickerPanel = (
     <>
+      {pickerSettings}
+      {practiceHead}
       {tonePickerTabs}
-      {popoverTab === "tone" ? tonePickerToneList : tonePickerWordlists}
+      {popoverTab === "free"
+        ? tonePickerFree
+        : popoverTab === "pairs" && combos.length > 0
+          ? tonePickerPairs
+          : tonePickerToneList}
     </>
   );
 
   const desktopTonePickerPanel = (
     <>
+      {pickerSettings}
+      {practiceHead}
       {tonePickerTabs}
-      {popoverTab === "tone" ? tonePickerTonePills : tonePickerWordlists}
+      {popoverTab === "free"
+        ? tonePickerFree
+        : pickerFolded
+          ? null
+          : popoverTab === "pairs" && combos.length > 0
+            ? tonePickerPairs
+            : tonePickerTonePills}
     </>
   );
 
@@ -981,7 +1241,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         {/* ---------------------------------------------------- mobile */}
         {/* Under the canvas, not beside it: filter on the left, words
             scrolling sideways so the grid can use the full width. */}
-        <div className={tone === null ? "vis-side-panel is-free" : "vis-side-panel"}>
+        <div className={filtering ? "vis-side-panel" : "vis-side-panel is-free"}>
           <div className="vis-filter-group">
             <button
               className="vis-filter-btn"
@@ -989,7 +1249,11 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
               aria-label="Filter words"
               aria-expanded={tonePopoverOpen}
             >
-              {tone === null ? (
+              {combo !== null ? (
+                combo.map((t, i) => (
+                  <ToneMarkIcon key={i} tone={t as ToneOrNeutral} className="tone-mark-icon" />
+                ))
+              ) : tone === null ? (
                 <TonesGridIcon className="vis-filter-icon" />
               ) : (
                 <ToneMarkIcon tone={tone} className="tone-mark-icon" />
@@ -999,7 +1263,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
           </div>
 
           <div className="word-rail-wrap">
-            {tone !== null ? (
+            {filtering ? (
               <div className="word-rail">
                 {wordsForTone.map(wordChip)}
                 {lockedWordsForTone.map(lockedWordChip)}
@@ -1019,7 +1283,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
 
           <div className="vis-tone-picker">{desktopTonePickerPanel}</div>
 
-          {tone !== null && (
+          {filtering && (
             <div className="word-strip">
               {wordsForTone.map(wordChip)}
               {lockedWordsForTone.map(lockedWordChip)}

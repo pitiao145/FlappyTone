@@ -3456,6 +3456,7 @@
   width: calc(50px * 288 / 228);
 }
 
+
 .vis-free-hint {
   margin: 0;
   font-size: 0.8rem;
@@ -3547,6 +3548,7 @@
   color: var(--ink);
   border-bottom-color: var(--accent);
 }
+
 
 .tone-popover-list {
   display: flex;
@@ -9241,4 +9243,192 @@ button.switch-track.switch-on {
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--accent);
+}
+
+/* Visualiser picker: word lists and speech style on top, then the
+   tone / tone-pair tabs. Two classes on every button: `.screen button` would
+   otherwise win the padding/border fight. Sizes step up on desktop, where
+   the panel has the room. */
+.vis-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 16px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.vis-setting-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.vis-setting-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.vis-setting-value {
+  font-size: 12px;
+  color: var(--ink-muted);
+  text-align: right;
+}
+
+.vis-setting-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vis-setting-chips .vis-setting-chip {
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--ink-dim);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.vis-setting-chips .vis-setting-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.vis-setting-chips .vis-setting-chip.is-locked {
+  opacity: 0.55;
+}
+
+.vis-setting-chips .vis-setting-chip:focus-visible,
+.vis-pair-grid .vis-pair-tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.vis-setting-desc {
+  margin: -2px 0 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+
+.vis-practice-head {
+  padding: 16px 16px 4px;
+}
+
+.vis-practice-head .vis-setting-desc {
+  margin: 6px 0 0;
+}
+
+@media (min-width: 720px) {
+  .vis-setting-desc {
+    font-size: 14px;
+  }
+
+  .vis-practice-head {
+    padding: 20px 20px 6px;
+  }
+}
+
+.tone-popover-tab .vis-tab-pick {
+  margin-left: 6px;
+  vertical-align: middle;
+  color: var(--accent);
+}
+
+.vis-free-desc {
+  margin: 0;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+@media (min-width: 720px) {
+  .vis-free-desc {
+    padding: 20px;
+    font-size: 15px;
+  }
+}
+
+/* Always 5 columns × 4 rows: row = first tone, column = second (1–4, neutral). */
+.vis-pair-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  padding: 16px;
+}
+
+.vis-pair-grid .vis-pair-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 4px;
+}
+
+.vis-pair-grid .vis-pair-tile .tone-mark-icon {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.vis-pair-grid .vis-pair-tile.is-locked {
+  opacity: 0.55;
+}
+
+@media (min-width: 720px) {
+  .vis-settings {
+    gap: 20px;
+    padding: 20px 20px 22px;
+  }
+
+  .vis-setting-label {
+    font-size: 15px;
+  }
+
+  .vis-setting-value {
+    font-size: 14px;
+  }
+
+  .vis-setting-chips {
+    gap: 10px;
+  }
+
+  .vis-setting-chips .vis-setting-chip {
+    min-height: 42px;
+    padding: 8px 18px;
+    font-size: 15px;
+  }
+
+  .tone-popover-tabs .tone-popover-tab {
+    padding: 14px 12px;
+    font-size: 15px;
+  }
+
+  .vis-pair-grid {
+    gap: 10px;
+    padding: 20px;
+  }
+
+  .vis-pair-grid .vis-pair-tile {
+    height: 50px;
+  }
+
+  .vis-pair-grid .vis-pair-tile .tone-mark-icon {
+    width: 22px;
+    height: 16.5px;
+  }
+
+  .visualiser-panel .tone-rail-pills {
+    padding: 20px;
+  }
 }

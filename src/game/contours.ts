@@ -38,13 +38,22 @@ export interface ContourRecorderOptions {
 const DEFAULT_MAX_KEPT = 3;
 
 export class ContourRecorder {
-  private readonly mergeGapMs: number;
+  private mergeGapMs: number;
   private readonly minMs: number;
   private readonly maxKept: number;
 
   private open: Contour | null = null;
   private lastVoicedAtMs = -Infinity;
   private kept: Contour[] = [];
+
+  /**
+   * Change how long a silence may last inside one utterance. The visualiser
+   * widens it for a tone pair (`multiMergeGapMs`), so the pause between the
+   * two syllables does not split the attempt in two.
+   */
+  setMergeGapMs(ms: number): void {
+    this.mergeGapMs = ms;
+  }
 
   constructor(opts: ContourRecorderOptions = {}) {
     this.mergeGapMs = opts.mergeGapMs ?? tuning().mergeGapMs;
