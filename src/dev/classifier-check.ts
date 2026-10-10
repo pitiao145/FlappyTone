@@ -1,5 +1,9 @@
 // CLI: npm run classifier-check -- [contours.json] [--anchors textbook|natural]
-//        [--votes lowTime,dwell] [--loo] [--verbose]
+//        [--votes lowTime,dwell] [--loo] [--v1] [--verbose]
+//
+// Runs the live classifier (v2) by default; `--v1` runs the old
+// correlation classifier (`classifyToneV1`), which `--anchors`/`--loo`/
+// `--votes` configure — v2 reads no averages.
 //
 // `--loo` rebuilds the averages from the contours file's own polylines, so it
 // replaces `--anchors`: use it only with clips of the anchor style (natural
@@ -77,7 +81,7 @@ for (const v of extraVotes) {
   }
 }
 setTuning({
-  toneClassifierV2: args.includes("--v2"),
+  toneClassifierV2: !args.includes("--v1"),
   toneClassifierLowTimeVote: extraVotes.includes("lowTime"),
   toneClassifierDwellVote: extraVotes.includes("dwell"),
 });

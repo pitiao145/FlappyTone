@@ -381,9 +381,9 @@ export interface Tuning {
   toneClassifierDwellVote: boolean;
   /**
    * Classifier v2 (`toneClassifierV2.ts`): measured cues with fixed
-   * thresholds, no correlation with Jane's averages. When true, `classifyTone`
-   * delegates to it everywhere (game included). False in the game while it is
-   * evaluated; the visualiser calls v2 directly.
+   * thresholds, no correlation with Jane's averages. When true (shipped),
+   * `classifyTone` delegates to it everywhere; false falls back to v1
+   * (`classifyToneV1`). The visualiser always calls v2.
    */
   toneClassifierV2: boolean;
   /** v2: a tail whose mean sits at or under this chao is never a Tone 1, however flat. */
@@ -574,7 +574,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   toneClassifierBoostEnabled: true,
   toneClassifierLowTimeVote: false,
   toneClassifierDwellVote: false,
-  toneClassifierV2: false,
+  toneClassifierV2: true,
   toneV2T1MinChao: 3,
   toneV2T1MinMs: 350,
   toneV2MaxWiggle: 8,
