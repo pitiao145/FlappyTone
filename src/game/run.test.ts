@@ -1190,6 +1190,21 @@ describe("Run — rewarding a confident correct shape (spec: classifier boost)",
     expect(log?.classifiedTone).toBeNull();
     expect(log?.outcome).toBe("good");
   });
+
+  it("with classifier v2, boosts a natural gate but never takes a heart on it", () => {
+    setTuning({ toneClassifierV2: true });
+    const run = new Run({ mode: "game", width: W, rand: () => 0.3, speechStyle: "natural" });
+    const { snapshots } = simulate(run, 1600, levelShifted(0.5));
+    const log = snapshots[snapshots.length - 1].gateLog;
+    const t2 = log.find((g) => g.tone === 2);
+    expect(t2?.classifiedTone).toBe(2);
+    expect(t2?.outcome).toBe("perfect");
+    // The flight tracks the corridor, so no gate hits a wall: any collision
+    // here could only be the classifier's, which a natural gate never takes.
+    expect(log.length).toBeGreaterThan(3);
+    for (const g of log) expect(g.outcome).not.toBe("collision");
+    resetTuning();
+  });
 });
 
 describe("Run — flying an inventory", () => {

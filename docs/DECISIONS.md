@@ -528,6 +528,14 @@ stats). Decisions worth keeping:
   separate and does follow the style, T2/T3 cue included — it never costs a
   heart and scores a right natural T3 0.85 (0.77 textbook-anchored). Revisit
   only with a new `classifier-check` run showing 0 clean wall hits.
+- **Classifier v2 gets the boost on natural gates, never the collision
+  (10 Oct 2026).** v2 (`toneClassifierV2.ts`) still has one clean wall hit
+  on Jane's natural clips — 和 hé, which she says as a pure fall and v2
+  reads as a decisive T4 — so the floor rule's bar (0 clean wall hits) is
+  not met for the collision. The boost only ever raises a score, so with
+  `toneClassifierV2` on, a natural single-syllable gate runs the classifier
+  for the boost alone (`run.ts`: `classifierApplies` vs `mismatchApplies`).
+  With v1 nothing changed: natural gates still skip the classifier.
 - **One pool for everything recorded about the player** — stats,
   `player_tone_shapes`, `run_log`, board, run cap. No style column
   server-side. The Pro tone-evolution chart draws Jane's average for the

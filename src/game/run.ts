@@ -1240,8 +1240,15 @@ export class Run {
     // multi-syllable gates (plan's own decision). Natural gates get the same
     // treatment (speech style spec, decision 7): textbook-anchored T2/T3 cues
     // cost correct natural speakers hearts, so the classifier stays out of a
-    // natural gate until style-aware anchors are shown safe.
-    const classifierApplies = state.gate.syllables === 1 && this.speechStyle === "textbook";
+    // natural gate until style-aware anchors are shown safe. With classifier
+    // v2 a natural gate gets the boost only (`boostApplies`) — a reward can
+    // never cost a heart, so hard rule 8 holds; the mismatch collision stays
+    // textbook-only (v2 still reads Jane's natural 和 hé, said as a pure fall,
+    // as a decisive T4).
+    const textbook = this.speechStyle === "textbook";
+    const classifierApplies =
+      state.gate.syllables === 1 && (textbook || tuning().toneClassifierV2);
+    const mismatchApplies = classifierApplies && textbook;
     if (heard && classifierApplies) {
       // The classifier judges shape alone, so it must see the *whole*
       // utterance, not just whatever fell after the gate opened. A player
@@ -1266,6 +1273,7 @@ export class Run {
       // wall does — checked before scoring so it flows through the normal
       // collision path rather than a separate outcome type.
       if (
+        mismatchApplies &&
         tuning().toneMismatchCollisionEnabled &&
         isDrasticToneMismatch(state.gate.tone, classification)
       ) {
