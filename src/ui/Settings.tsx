@@ -68,7 +68,7 @@ const VOICE_LABEL: Record<Gender, string> = {
 
 const SPEECH_STYLES = ["textbook", "natural"] as const satisfies readonly SpeechStyle[];
 
-const SPEECH_STYLE_LABEL: Record<SpeechStyle, string> = { textbook: "Textbook", natural: "Natural" };
+const SPEECH_STYLE_LABEL: Record<SpeechStyle, string> = { textbook: "Slow", natural: "Regular" };
 
 const PROFICIENCIES = ["beginner", "intermediate"] as const satisfies readonly Proficiency[];
 
@@ -415,7 +415,8 @@ export function Settings({
             <h3>Proficiency</h3>
           </div>
           {multiWords(words ?? []).length > 0 && (
-            <>
+            <section>
+              <h4>Words</h4>
               <Choice
                 options={PROFICIENCIES}
                 value={proficiency}
@@ -432,7 +433,7 @@ export function Settings({
                 Beginner is single syllables only, applies to each game mode.
                 Intermediate adds two-syllable tone pairs into the same run.
               </p>
-            </>
+            </section>
           )}
           <section>
             <h4>Speech style</h4>
@@ -450,7 +451,7 @@ export function Settings({
               }}
             />
             <p className="param-help">
-            Textbook: slow and clear | Natural: everyday speed.  
+            Slow: slow and clear | Regular: everyday speed.
               {tier === "guest" && " Create a free account to choose."}
             </p>
           </section>
