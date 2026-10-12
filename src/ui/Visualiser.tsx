@@ -1053,6 +1053,9 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     </div>
   );
 
+  const countBadge = (n: number | null) =>
+    n === null ? null : <span className="count-badge">{n}</span>;
+
   /** Mobile popover — stacked rows with labels. */
   const tonePickerToneList = (
     <div className="tone-popover-list">
@@ -1072,9 +1075,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
             <ToneMarkIcon tone={t} className="tone-mark-icon" />
           </span>
           Tone {t} · {TONE_SHORT_LABEL[t]}
-          {limits.visualiserPerTone && (
-            <span className="count-hint tone-count">{visualiserToneCount(listWords, tier, t) ?? ""}</span>
-          )}
+          {limits.visualiserPerTone && countBadge(visualiserToneCount(listWords, tier, t))}
           {!limits.visualiserPerTone && <span className="pro-badge">🔒 Pro</span>}
         </button>
       ))}
@@ -1098,9 +1099,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
           aria-label={`Tone ${t}, ${TONE_SHORT_LABEL[t]}${!limits.visualiserPerTone ? ", locked, Pro" : ""}`}
         >
           <ToneMarkIcon tone={t} className="tone-mark-icon" />
-          {limits.visualiserPerTone && (
-            <span className="count-hint tone-pill-count">{visualiserToneCount(listWords, tier, t) ?? ""}</span>
-          )}
+          {limits.visualiserPerTone && countBadge(visualiserToneCount(listWords, tier, t))}
           {!limits.visualiserPerTone && <span className="tone-pill-lock">🔒</span>}
         </button>
       ))}
@@ -1179,9 +1178,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
               {c.map((t, n) => (
                 <ToneMarkIcon key={n} tone={t as ToneOrNeutral} className="tone-mark-icon" />
               ))}
-              {pairsUnlocked && (
-                <span className="count-hint vis-pair-count">{visualiserComboCount(pairWords, tier, c) ?? ""}</span>
-              )}
+              {pairsUnlocked && countBadge(visualiserComboCount(pairWords, tier, c))}
               {!pairsUnlocked && <span className="tone-pill-lock">🔒</span>}
             </button>
           );

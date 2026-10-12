@@ -37,7 +37,12 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
   const words = useInventoryWords();
   const style = effectiveSpeechStyle(tier);
   // Same pool `Game.tsx` hands the Run: resolvedPool(..., "game", proficiency, level).
-  const countFor = (l: LevelChoice | null) => wordCountLabel(classicCount(words, tier, proficiency, l, style));
+  const rawCount = (l: LevelChoice | null) => classicCount(words, tier, proficiency, l, style);
+  const countFor = (l: LevelChoice | null) => wordCountLabel(rawCount(l));
+  const badge = (l: LevelChoice) => {
+    const n = rawCount(l);
+    return n === null ? null : <span className="count-badge" aria-label={wordCountLabel(n)}>{n}</span>;
+  };
 
   const access = tierLimits()[tier][proficiency];
   const locked = access.levels === null;
@@ -94,7 +99,7 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
                     onClick={() => setLevel(n)}
                   >
                     {LEVEL_LABEL[n]}
-                    {unlocked && <span className="count-hint">{countFor(n)}</span>}
+                    {unlocked && badge(n)}
                     {!unlocked && <span className="word-chip-lock">🔒</span>}
                   </button>
                 );
@@ -108,7 +113,7 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
                 >
                   <ShuffleIcon className="choice-option-mix-icon" />
                   Mix
-                  <span className="count-hint">{countFor("mix")}</span>
+                  {badge("mix")}
                 </button>
               </div>
             )}
@@ -124,7 +129,6 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
         )}
 
         <div className="menu playhome-menu">
-          {canPlay && !locked && <p className="note count-total">{countFor(level)}</p>}
           <button
             className="primary"
             disabled={!canPlay}

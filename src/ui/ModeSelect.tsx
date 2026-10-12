@@ -94,9 +94,11 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
   const combos = tier !== "guest" && tierWords ? availableToneCombos(tierWords) : [];
 
   // Counts come from poolCounts (the pools a Run really draws); null renders nothing.
-  const classicLabel = wordCountLabel(classicCount(words, tier, proficiency, loadLastLevel(proficiency), style));
-  const drillLabel = wordCountLabel(drillCount(words, tier, style));
-  const pairsLabel = combos.length > 0 ? wordCountLabel(pairsCount(words, tier, style)) : "";
+  const badge = (n: number | null) =>
+    n === null ? null : <span className="count-badge" aria-label={wordCountLabel(n)}>{n}</span>;
+  const classicBadge = badge(classicCount(words, tier, proficiency, loadLastLevel(proficiency), style));
+  const drillBadge = badge(drillCount(words, tier, style));
+  const pairsBadge = combos.length > 0 ? badge(pairsCount(words, tier, style)) : null;
 
   const go = (
     intent: PlayIntent,
@@ -129,9 +131,10 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
                   className="mode-card mode-card-classic"
                   onClick={go("game")}
                 >
+                  {classicBadge}
                   <span className="mode-card-title">Classic</span>
                   <span className="mode-card-desc">
-                    Classic game mode: random words. {classicLabel}
+                    Classic game mode: random words.
                   </span>
                 </button>
                 <button
@@ -139,9 +142,10 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
                   className="mode-card mode-card-drill"
                   onClick={() => setStep("tone")}
                 >
+                  {drillBadge}
                   <span className="mode-card-title">Tone Drill</span>
                   <span className="mode-card-desc">
-                    Choose one tone you want to drill, for focused practice. {drillLabel}
+                    Choose one tone you want to drill, for focused practice.
                   </span>
                 </button>
                 <button
@@ -160,6 +164,7 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
                   disabled={combos.length === 0}
                   onClick={() => setStep("pairs")}
                 >
+                  {pairsBadge}
                   <span className="mode-card-title">
                     Tone pairs
                     {combos.length === 0 && <LockIcon className="mode-card-lock" />}
@@ -169,7 +174,7 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
                       ? tier === "guest"
                         ? "Sign up to unlock tone-pair practice."
                         : "No pairs available yet."
-                      : `Practice tone-pairs here! ${pairsLabel}`.trim()}
+                      : "Practice tone-pairs here!"}
                   </span>
                 </button>
               </div>
@@ -191,9 +196,7 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
                     >
                       <ToneMarkIcon tone={tone} className="tone-mark-icon" />
                       {tone}
-                      <span className="count-hint">
-                        {drillToneCount(words, tier, tone, style) ?? ""}
-                      </span>
+                      {badge(drillToneCount(words, tier, tone, style))}
                     </button>
                   );
                 })}
@@ -223,9 +226,7 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
                       {combo.map((tone, i) => (
                         <ToneMarkIcon key={i} tone={tone as ToneOrNeutral} className="pair-combo-tone-icon" />
                       ))}
-                      <span className="count-hint pair-combo-count">
-                        {pairsComboCount(words, tier, combo, style) ?? ""}
-                      </span>
+                      {badge(pairsComboCount(words, tier, combo, style))}
                     </button>
                   ))}
                 </div>

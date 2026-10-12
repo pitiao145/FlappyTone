@@ -9433,50 +9433,15 @@ button.switch-track.switch-on {
   }
 }
 
-/* Word counts ("N words") shown before play. Small and muted; tiles and pills
-   carry a bare number, stacked under the icon so it never wraps or widens them. */
-.count-hint {
-  font-size: 0.7rem;
-  font-weight: 500;
-  line-height: 1.1;
-  color: var(--ink-dim);
-  white-space: nowrap;
-}
-
-.choice-option > .count-hint {
-  display: block;
-}
-
-.screen .note.count-total {
-  margin: 0 0 var(--space-2);
-}
-
-.tone-popover-row .tone-count {
-  margin-left: auto;
-}
-
-.tone-pill {
-  position: relative;
-}
-
-.tone-pill .tone-pill-count {
+/* Word counts shown before play: a small green dot in the top-right corner of
+   the button, number inside. One style everywhere. */
+.count-badge {
   position: absolute;
-  bottom: -2px;
-  right: -2px;
-  font-size: 10px;
-  padding: 0 3px;
-  border-radius: 999px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-}
-
-.vis-pair-grid .vis-pair-tile .vis-pair-count {
-  position: absolute;
-  top: -6px;
-  right: -4px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
+  top: -7px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -9484,24 +9449,24 @@ button.switch-track.switch-on {
   border-radius: 999px;
   background: var(--good);
   color: #fff;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
+  font-style: normal;
   line-height: 1;
+  pointer-events: none;
 }
 
-.tone-pair-selection .pair-combo-tile {
+.choice-option:has(> .count-badge),
+.mode-card:has(> .count-badge),
+.tone-popover-row:has(> .count-badge),
+.tone-pill:has(> .count-badge),
+.pair-combo-tile:has(> .count-badge),
+.vis-pair-tile:has(> .count-badge) {
   position: relative;
 }
 
-.pair-combo-tile .pair-combo-count {
-  position: absolute;
-  bottom: 2px;
-  right: 4px;
-  font-size: 10px;
-  color: var(--ink);
-}
-
-.choice .choice-option .count-hint {
-  margin-left: 6px;
-  display: inline;
+.tone-popover-row .count-badge {
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
 }
