@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { drawToneAverageChart } from "../ui/toneAverageChart.ts";
-import { availableToneCombos, toneComboKey, wordsOfCombo, wordsOfTone } from "../game/words.ts";
+import { spokenTones } from "../game/sandhi.ts";
+import { isSingle, multiWords, toneComboKey } from "../game/words.ts";
 import type { Tone } from "../game/gates.ts";
 import type { Word } from "../game/words.ts";
 
@@ -65,19 +66,29 @@ export function ToneAverages({ words }: { words: Word[] }) {
   const byTone = useMemo(() => {
     const map = new Map<Tone, Word[]>();
     for (const t of [1, 2, 3, 4] as Tone[]) {
-      map.set(t, wordsOfTone(words, t));
+      // By SPOKEN tone, like make-tone-averages: natural 和 (hàn) is a T4 here.
+      map.set(t, words.filter((w) => isSingle(w) && spokenTones(w)[0] === t));
     }
     return map;
   }, [words]);
 
-  const combos = useMemo(() => availableToneCombos(words), [words]);
+  // Grouped by SPOKEN combo, the same rule make-tone-averages bakes with:
+  // 一下 (said yí xià) is a 2-4, 你好 a 2-3 — an average only means something
+  // over clips that were said the same way. Neutral combos have no average.
   const byCombo = useMemo(() => {
     const map = new Map<string, Word[]>();
-    for (const combo of combos) {
-      map.set(toneComboKey(combo), wordsOfCombo(words, combo));
+    for (const w of multiWords(words)) {
+      const spoken = spokenTones(w);
+      if (spoken.includes(0 as Tone)) continue;
+      const key = toneComboKey(spoken);
+      map.set(key, [...(map.get(key) ?? []), w]);
     }
     return map;
-  }, [words, combos]);
+  }, [words]);
+  const combos = useMemo(
+    () => [...byCombo.keys()].sort().map((k) => k.split("-").map(Number) as Tone[]),
+    [byCombo],
+  );
 
   return (
     <div className="word-gates">
@@ -102,7 +113,8 @@ export function ToneAverages({ words }: { words: Word[] }) {
       {combos.length > 0 && (
         <>
           <p className="param-help">
-            Tone pairs, same measurement — each combo's own two-syllable clips
+            Tone pairs, same measurement, grouped by how each word is SPOKEN
+            (一下 under 2-4, 你好 under 2-3) — each combo's own two-syllable clips
             averaged as one shape-agnostic contour (sandhi means a pair's
             realised shape isn't its two citation tones back to back, so this
             is not, and shouldn't look like, two single-tone cards stitched
