@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SPEECH_STYLE_LABEL } from "../ui/Settings.tsx";
 import type { CorridorWidth } from "../game/gates.ts";
 import type { CalibrationSettings } from "../game/settings.ts";
 import { tuning } from "../game/tuning.ts";
@@ -109,8 +110,8 @@ export function PairGates({ pairs, settings, corridorWidth }: Props) {
                 <span className="param-help"> {words.length} words</span>
               </h4>
               <div className="pair-cols pair-cols-head" aria-hidden="true">
-                <span className="param-help">Textbook</span>
-                <span className="param-help">Natural</span>
+                <span className="param-help">{SPEECH_STYLE_LABEL.textbook}</span>
+                <span className="param-help">{SPEECH_STYLE_LABEL.natural}</span>
               </div>
               {words.map((w) => (
                 <div key={w.id} className="pair-row">
@@ -128,12 +129,12 @@ export function PairGates({ pairs, settings, corridorWidth }: Props) {
                           tolH={tolH}
                           band={band}
                           active={active}
-                          label={`${w.pinyin} ${style}`}
+                          label={`${w.pinyin} ${SPEECH_STYLE_LABEL[style]}`}
                           onPick={() => setPick({ id: w.id, style })}
                         />
                       ) : (
                         <div key={style} className="pair-cell missing">
-                          <span className="param-help">No {style} take</span>
+                          <span className="param-help">No {SPEECH_STYLE_LABEL[style]} take</span>
                         </div>
                       );
                     })}

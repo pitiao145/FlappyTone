@@ -22,6 +22,7 @@ import { multiWords, wordsInStyle, type SpeechStyle, type Word } from "../game/w
 import { DEFAULT_CONFIG } from "../pitch/PitchTracker.ts";
 import { Choice } from "../ui/Choice.tsx";
 import { Game } from "../ui/Game.tsx";
+import { SPEECH_STYLE_LABEL } from "../ui/Settings.tsx";
 import { Visualiser } from "../ui/Visualiser.tsx";
 import { FIXTURE_WORDS } from "./fixtureWords.ts";
 import { GateStage } from "./GateStage.tsx";
@@ -125,7 +126,12 @@ export function Lab({ onBack }: Props) {
         </nav>
         <div className="lab-width">
           <span className="param-name">Speech style</span>
-          <Choice options={["textbook", "natural"] as const} value={style} onChange={setStyle} />
+          <Choice
+            options={["textbook", "natural"] as const}
+            value={style}
+            label={(v) => SPEECH_STYLE_LABEL[v]}
+            onChange={setStyle}
+          />
         </div>
         <div className="lab-width">
           <span className="param-name">Tunnel width</span>
