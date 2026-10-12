@@ -219,6 +219,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     const levels = limits.beginner.levels;
     if (levels === null) return;
     leveledRef.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- default levels, set once (guarded by leveledRef)
     setSelectedLevels(defaultLevels(levels));
   }, [limits.beginner.levels]);
   /**

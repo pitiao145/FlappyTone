@@ -192,6 +192,7 @@ export function GateStage({ word, settings, corridorWidth, showCitation = false 
   // A result belongs to the gate that produced it; picking another clears it.
   const identity = word ? `${word.id}:${word.clipStyle ?? "textbook"}` : "";
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a result belongs to one gate; clear it when the gate changes
     setResult(null);
     setError(null);
   }, [identity]);

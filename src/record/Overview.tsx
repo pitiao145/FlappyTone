@@ -157,6 +157,7 @@ export function Overview({ passcode }: Props) {
   }, [passcode]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one fetch on mount; state is set by the async load
     void load();
   }, [load]);
 

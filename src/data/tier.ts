@@ -52,7 +52,7 @@ let inFlight: Promise<void> | null = null;
 export async function refreshTier(): Promise<void> {
   const p = (async () => {
     setState({ tier: state.tier, loading: true });
-    let tier: Tier = "guest";
+    let tier: Tier;
     try {
       const [account, hasAccess] = await Promise.all([getAccount(), fetchHasAccess()]);
       tier = resolveTier(account.status, hasAccess);

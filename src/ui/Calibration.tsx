@@ -368,6 +368,7 @@ export function Calibration({
         }
       });
       const started = performance.now();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- first readout when the step starts, once
       setReadout(randomReadout(null));
       let lastReadout: string | null = null;
       // 20Hz: the meter reacts to the voice, and the step ends when the meter

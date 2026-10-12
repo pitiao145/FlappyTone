@@ -69,6 +69,7 @@ export function usePurchaseReturn(active: boolean): PurchaseReturnState {
   useEffect(() => {
     if (!active) return;
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset to checking each time polling starts
     setState("checking");
     void pollPurchaseReturn(
       (s) => {

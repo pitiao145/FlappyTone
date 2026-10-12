@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "vite",
+    "lint": "eslint .",
     "worker:dev": "npm -w workers/clips run dev",
     "worker:deploy": "npm -w workers/clips run deploy",
     "worker:test": "npm -w workers/clips test",

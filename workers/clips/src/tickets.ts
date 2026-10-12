@@ -24,7 +24,7 @@ export const TICKET_TTL_S = 30 * 60;
 export async function signTicket(t: Ticket, secret: string, now: Date = new Date()): Promise<string> {
   const key = new TextEncoder().encode(secret);
   const iat = Math.floor(now.getTime() / 1000);
-  let jwt = new SignJWT({ tier: t.tier, ip: t.ip, ...(t.sub !== undefined ? { sub: t.sub } : {}) })
+  const jwt = new SignJWT({ tier: t.tier, ip: t.ip, ...(t.sub !== undefined ? { sub: t.sub } : {}) })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt(iat)
     .setExpirationTime(iat + TICKET_TTL_S);

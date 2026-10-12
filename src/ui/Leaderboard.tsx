@@ -94,6 +94,7 @@ export function Leaderboard({ limit = 20, onClose, projectedScore, tabs = false,
   useEffect(() => {
     let cancelled = false;
     if (tabs) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear stale periods before re-fetching
       setPeriodCache({});
       // `getBoardPeriod` is contracted never to reject, but a rejection here
       // would leave the card stuck loading forever rather than falling
