@@ -19,6 +19,7 @@
  */
 
 import { loadShareData, type CalibrationSettings } from "../game/settings.ts";
+import type { SpeechStyle } from "../game/words.ts";
 import { deviceBucket, type AnalyticsEvent } from "./session.ts";
 import {
   captureGameEvent,
@@ -26,6 +27,7 @@ import {
   setCalibrationProperties,
   setDeviceProperty,
   setPostHogConsent,
+  setSpeechStyleProperty,
 } from "./posthog.ts";
 
 let initialized = false;
@@ -56,6 +58,15 @@ export function track(event: AnalyticsEvent): void {
 export function trackCalibration(cal: CalibrationSettings): void {
   try {
     setCalibrationProperties(cal);
+  } catch {
+    // ignore
+  }
+}
+
+/** Stamps the effective speech style as a super/person property. */
+export function trackSpeechStyle(style: SpeechStyle): void {
+  try {
+    setSpeechStyleProperty(style);
   } catch {
     // ignore
   }

@@ -1,5 +1,6 @@
 import { SITE_HREF } from "./appLink.ts";
 import { brand } from "../brand.ts";
+import { track } from "../analytics/client.ts";
 import { UpdateBanner } from "./UpdateBanner.tsx";
 
 /** "drill", "learn" and "pairs" are only ever started from ModeSelect, never
@@ -77,6 +78,7 @@ export function PlayHome({
               only shows the speech-style control to a calibrated player. */}
           <UpdateBanner
             id="speech-style"
+            onEvent={(action) => track({ type: "update_banner", id: "speech-style", surface: "play_home", action })}
             label="New"
             title="Choose your speech style"
             body="Practise with standard, clear pronunciation or faster spoken speech."

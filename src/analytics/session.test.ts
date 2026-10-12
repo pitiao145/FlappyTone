@@ -279,6 +279,7 @@ describe("eventTier", () => {
     "progress_locked_cta_click",
     "progress_earlybird_pricing_click",
     "feedback_submitted",
+    "update_banner",
   ];
 
   for (const type of GAMEPLAY) {
@@ -334,6 +335,7 @@ describe("APP_EVENTS", () => {
       "progress_earlybird_pricing_click",
       "visualiser_session",
       "feedback_submitted",
+      "update_banner",
     ]);
     for (const type of allTypes) {
       expect(APP_EVENTS.has(type), `APP_EVENTS is missing "${type}"`).toBe(true);

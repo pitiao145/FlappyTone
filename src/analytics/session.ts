@@ -217,9 +217,30 @@ export type AnalyticsEvent =
       wordSelected: boolean;
       durationMs: number;
       attempts: number;
-      /** The effective speech style the visualiser played and scored in. */
+      /** The effective speech style the visualiser played and scored in, at the end of the visit. */
       speechStyle?: SpeechStyle;
+      /** The effective speech style when the visit started (before any toggle). */
+      startStyle?: SpeechStyle;
+      /** Which practice tabs were opened this visit ("free" counts only if tapped). */
+      tabsUsed?: VisualiserTab[];
+      /** Distinct tone pairs picked. */
+      pairCombos?: number;
+      /** Finished attempts on a two-syllable word (not counted in `attempts`). */
+      pairAttempts?: number;
+      /** Every word tap, replays included. */
+      wordTaps?: number;
+      /** Times the visualiser's own speech toggle changed the style. */
+      styleToggles?: number;
+      /** TOCFL lists selected at the end of the visit (empty = all the tier allows). */
+      levels?: number[];
+      /** Whether the player changed the word-list selection this visit. */
+      levelsChanged?: boolean;
     }
+  /**
+   * A "what's new" banner in the game (the landing page's banner sends its own
+   * `landing_cta_clicked`). `shown` once per mount while visible.
+   */
+  | { type: "update_banner"; id: string; surface: UpdateBannerSurface; action: "shown" | "clicked" | "dismissed" }
   /** FeedbackWidget.tsx's submit, once it resolves ok. Never carries the free-text message — screen/rating/tier only. */
   | { type: "feedback_submitted"; screen: string; rating: number | null; tier: string };
 
@@ -254,6 +275,12 @@ export type TrackedScreen =
   | "resetPassword";
 
 /** The Settings controls that emit a `setting_changed` event. */
+/** The visualiser's practice tabs, mirrored from Visualiser.tsx. */
+export type VisualiserTab = "free" | "tone" | "pairs";
+
+/** Where an in-game update banner sits. */
+export type UpdateBannerSurface = "play_home";
+
 export type SettingKey =
   | "voice"
   | "proficiency"
@@ -311,6 +338,7 @@ export function eventTier(type: AnalyticsEvent["type"]): AnalyticsTier {
     case "progress_locked_cta_click":
     case "progress_earlybird_pricing_click":
     case "feedback_submitted":
+    case "update_banner":
       return "global";
   }
 }

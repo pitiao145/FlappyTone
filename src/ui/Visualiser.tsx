@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { track } from "../analytics/client.ts";
+import type { VisualiserTab } from "../analytics/session.ts";
 import { inventoryNow, loadInventory, subscribeInventory } from "../audio/inventory.ts";
 import { MicError } from "../audio/mic.ts";
 import {
@@ -150,6 +151,9 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     tier === "guest" ? "textbook" : (styleOverride ?? effectiveSpeechStyle(tier));
   const speechStyleRef = useRef(speechStyle);
   speechStyleRef.current = speechStyle;
+  /** The style before this visit's toggle — `visualiser_session.startStyle`. */
+  const baseStyleRef = useRef<SpeechStyle>(speechStyle);
+  baseStyleRef.current = tier === "guest" ? "textbook" : effectiveSpeechStyle(tier);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   /**
@@ -173,7 +177,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   const [paused, setPaused] = useState(false);
   /** Mobile only — the collapsed tone-mark icon opens this to pick a tone. */
   const [tonePopoverOpen, setTonePopoverOpen] = useState(false);
-  const [popoverTab, setPopoverTab] = useState<"free" | "tone" | "pairs">("free");
+  const [popoverTab, setPopoverTab] = useState<VisualiserTab>("free");
   /**
    * Desktop only: once a tone or pair is picked, its tab's grid folds away so
    * the word list below gets the room. Tapping the tab again unfolds it. (The
@@ -257,6 +261,15 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   const sessionAttemptsRef = useRef(0);
   const sessionTonesRef = useRef<Set<Tone>>(new Set());
   const sessionWordSelectedRef = useRef(false);
+  const sessionTabsRef = useRef<Set<VisualiserTab>>(new Set());
+  const sessionCombosRef = useRef<Set<string>>(new Set());
+  const sessionPairAttemptsRef = useRef(0);
+  const sessionWordTapsRef = useRef(0);
+  const sessionStyleTogglesRef = useRef(0);
+  const sessionLevelsChangedRef = useRef(false);
+  /** Mirrors `selectedLevels` for the unmount flush. */
+  const sessionLevelsRef = useRef<number[]>([]);
+  sessionLevelsRef.current = selectedLevels;
   useEffect(() => {
     sessionStartRef.current = performance.now();
     return () => {
@@ -268,6 +281,14 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         durationMs: Math.round(performance.now() - started),
         attempts: sessionAttemptsRef.current,
         speechStyle: speechStyleRef.current,
+        startStyle: baseStyleRef.current,
+        tabsUsed: [...sessionTabsRef.current],
+        pairCombos: sessionCombosRef.current.size,
+        pairAttempts: sessionPairAttemptsRef.current,
+        wordTaps: sessionWordTapsRef.current,
+        styleToggles: sessionStyleTogglesRef.current,
+        levels: sessionLevelsRef.current,
+        levelsChanged: sessionLevelsChangedRef.current,
       });
     };
   }, []);
@@ -563,6 +584,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         // (the recorder merges short gaps), time-zeroed.
         const accuracy =
           toneAccuracyDetail(latest.points, word.tones, referenceFromWord(word), word.clipStyle ?? "textbook")?.accuracy ?? null;
+        if (word.syllables > 1) sessionPairAttemptsRef.current += 1;
         if (accuracy !== null) {
           const stats = wordStatsRef.current;
           const next = {
@@ -693,6 +715,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   /** The Free tab: no target, no word — say anything and see its shape. */
   const chooseFree = () => {
     setPopoverTab("free");
+    sessionTabsRef.current.add("free");
     if (tone === null && combo === null) return;
     setTone(null);
     setCombo(null);
@@ -705,6 +728,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       showLocked("visualiser-tone-pairs");
       return;
     }
+    sessionCombosRef.current.add(toneComboKey(c));
     setPickerFolded(true);
     setCombo(c);
     setTone(null);
@@ -734,6 +758,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     // new word — the trail and the running accuracy must survive it.
     if (selectedWord?.id !== word.id) resetAttempts();
     sessionWordSelectedRef.current = true;
+    sessionWordTapsRef.current += 1;
     setSelectedWord(word);
     // Resume the output context inside the tap: the play below may run after
     // an await, and iOS only allows a resume from a gesture.
@@ -943,6 +968,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         className={popoverTab === "tone" ? "tone-popover-tab active" : "tone-popover-tab"}
         onClick={() => {
           setPopoverTab("tone");
+          sessionTabsRef.current.add("tone");
           setPickerFolded(false);
         }}
       >
@@ -956,6 +982,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
           className={popoverTab === "pairs" ? "tone-popover-tab active" : "tone-popover-tab"}
           onClick={() => {
             setPopoverTab("pairs");
+            sessionTabsRef.current.add("pairs");
             setPickerFolded(false);
           }}
         >
@@ -1013,6 +1040,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
                     showLocked("visualiser-word-list");
                     return;
                   }
+                  sessionLevelsChangedRef.current = true;
                   setSelectedLevels((cur) =>
                     cur.includes(n) ? cur.filter((l) => l !== n) : [...cur, n].sort((a, b) => a - b),
                   );
@@ -1088,6 +1116,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       return;
     }
     if (style === speechStyle) return;
+    sessionStyleTogglesRef.current += 1;
     setStyleOverride(style);
     // The selected word's clip and line belong to the old style.
     setSelectedWord(null);

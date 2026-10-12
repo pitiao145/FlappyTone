@@ -5,7 +5,7 @@ import { ensureMic, MicCancelled } from "../audio/session.ts";
 import { getAccount, signOut, type Account } from "../data/account.ts";
 import { fireAuthToast } from "../data/authToast.ts";
 import { micErrorCopy } from "./micErrors.ts";
-import { setSharingEnabled, track } from "../analytics/client.ts";
+import { setSharingEnabled, track, trackSpeechStyle } from "../analytics/client.ts";
 import { CORRIDOR_WIDTHS, type CorridorWidth } from "../game/gates.ts";
 import type { CueStyle } from "../game/run.ts";
 import {
@@ -456,6 +456,7 @@ export function Settings({
                 setSpeechStyle(v);
                 saveSpeechStyle(v);
                 track({ type: "setting_changed", key: "speech_style", value: v });
+                trackSpeechStyle(v);
               }}
             />
             <p className="param-help">

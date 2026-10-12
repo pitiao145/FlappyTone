@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { initAnalytics, track, trackCalibration } from "../analytics/client";
+import { initAnalytics, track, trackCalibration, trackSpeechStyle } from "../analytics/client";
+import { useTier } from "../data/tier.ts";
 import { initPostHog } from "../analytics/posthog.ts";
 import type { TrackedScreen } from "../analytics/session.ts";
 import { adoptInventory, inventorySpeaker, loadInventory } from "../audio/inventory";
@@ -29,6 +30,7 @@ import type { RunSnapshot } from "../game/run";
 import { recordRun } from "../game/runHistory.ts";
 import { recordPlay } from "../game/streak.ts";
 import {
+  effectiveSpeechStyle,
   loadLastLevel,
   loadProficiency,
   loadRecalTracking,
@@ -328,6 +330,12 @@ function useCanvasSize(mainRef: React.RefObject<HTMLElement | null>) {
  * between the two on load: reaching this URL at all *is* the decision.
  */
 export default function GameApp() {
+  const tier = useTier();
+  // Every later event carries the player's effective speech style, so charts
+  // can split by it even for players who never open Settings.
+  useEffect(() => {
+    trackSpeechStyle(effectiveSpeechStyle(tier));
+  }, [tier]);
   const mainRef = useRef<HTMLDivElement>(null);
   const { w: CANVAS_W, h: CANVAS_H, desktop } = useCanvasSize(mainRef);
   // A run's own top breathing room on desktop (App.css's .game-screen

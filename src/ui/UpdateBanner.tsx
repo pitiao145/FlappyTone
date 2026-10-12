@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface Props {
   /** Stable id of this update; a dismissal is remembered per id, so the next update shows again. */
@@ -14,6 +14,12 @@ interface Props {
   variant?: "card" | "bar";
   /** A permanent banner has no × and ignores any saved dismissal. Default true. */
   dismissible?: boolean;
+  /**
+   * Told when the banner is shown (once per mount), clicked or dismissed. A
+   * callback, not a `track()` import: the landing page shares this component
+   * and must not pull in the game's analytics client.
+   */
+  onEvent?: (action: "shown" | "clicked" | "dismissed") => void;
 }
 
 const KEY = "flappytone.dismissedUpdates";
@@ -37,11 +43,18 @@ export function UpdateBanner({
   onAction,
   variant = "card",
   dismissible = true,
+  onEvent,
 }: Props) {
   const [hidden, setHidden] = useState(() => dismissible && readDismissed().includes(id));
+  useEffect(() => {
+    if (!hidden) onEvent?.("shown");
+    // Once per mount: a dismissal hides it, it does not re-show it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   if (hidden) return null;
 
   const dismiss = () => {
+    onEvent?.("dismissed");
     setHidden(true);
     try {
       localStorage.setItem(KEY, JSON.stringify([...readDismissed(), id]));
@@ -63,7 +76,11 @@ export function UpdateBanner({
         </button>
       )}
       {actionLabel && onAction && (
-        <button type="button" className="update-banner-link" onClick={onAction}>
+        <button type="button" className="update-banner-link" onClick={() => {
+            onEvent?.("clicked");
+            onAction();
+          }}
+        >
           {actionLabel} →
         </button>
       )}

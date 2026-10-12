@@ -63,6 +63,7 @@
 
 import type { BeforeSendFn, CaptureResult } from "posthog-js";
 import type posthogType from "posthog-js";
+import type { SpeechStyle } from "../game/words.ts";
 import {
   eventTier,
   roundCalibration,
@@ -157,6 +158,7 @@ export const APP_EVENTS = new Set<string>([
   "progress_earlybird_pricing_click",
   "visualiser_session",
   "feedback_submitted",
+  "update_banner",
 ]);
 
 /** The only `$`-prefixed properties allowed through on a gameplay event. */
@@ -328,6 +330,23 @@ export function setDeviceProperty(device: string): void {
   runOrQueue(() => {
     try {
       ph?.setPersonProperties({ device });
+    } catch {
+      // ignore
+    }
+  });
+}
+
+/**
+ * Stamps the player's effective speech style on every later event (a super
+ * property) and on the person, so any chart can be split by it — including
+ * players who never touched the setting and so never sent `setting_changed`.
+ * A closed two-value union; global tier, like `setting_changed`.
+ */
+export function setSpeechStyleProperty(style: SpeechStyle): void {
+  runOrQueue(() => {
+    try {
+      ph?.register({ speech_style: style });
+      ph?.setPersonProperties({ speech_style: style });
     } catch {
       // ignore
     }
