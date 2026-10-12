@@ -120,7 +120,7 @@ describe("poolCounts equals the pool a Run receives", () => {
     }
     const proList = visualiserListWords(catalog, "pro", [], "textbook");
     expect(visualiserToneCount(proList, "pro", 1)).toBe(wordsOfTone(proList, 1).length);
-    const pairs = visualiserPairWords(catalog, "textbook");
+    const pairs = visualiserPairWords(catalog, "free", [], "textbook");
     for (const combo of availableToneCombos(pairs)) {
       expect(visualiserComboCount(pairs, "free", combo)).toBe(wordsOfCombo(pairs, combo, 10).length);
     }
@@ -130,6 +130,10 @@ describe("poolCounts equals the pool a Run receives", () => {
     const l1 = visualiserListWords(catalog, "pro", [1], "textbook");
     const all = visualiserListWords(catalog, "pro", [], "textbook");
     expect(l1.length).toBeLessThanOrEqual(all.length);
+    const p1 = visualiserPairWords(catalog, "pro", [1], "textbook");
+    const pAll = visualiserPairWords(catalog, "pro", [1, 2, 3], "textbook");
+    expect(p1.length).toBeLessThan(pAll.length);
+    expect(p1.every((w) => w.syllables === 2 && w.listIds.includes("tocfl1"))).toBe(true);
     const some = withNatural(catalog, (_, i) => i % 2 === 0);
     expect(visualiserListWords(some, "pro", [], "natural").length).toBeLessThan(
       visualiserListWords(some, "pro", [], "textbook").length,

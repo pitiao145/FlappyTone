@@ -410,11 +410,14 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   );
 
   /**
-   * Two-syllable words for the "Tone pairs" tab. Not scoped by the word lists
-   * (those are single-syllable TOCFL lists); capped per combo by
+   * Two-syllable words for the "Tone pairs" tab. Scoped by the same TOCFL selection as the tone list;
+   * capped per combo by
    * `pairWordsPerCombo`, the same cap the pairs run mode uses.
    */
-  const pairWords = useMemo(() => visualiserPairWords(words, speechStyle), [words, speechStyle]);
+  const pairWords = useMemo(
+    () => visualiserPairWords(words, tier, selectedLevels, speechStyle),
+    [words, tier, selectedLevels, speechStyle],
+  );
   const combos = useMemo(() => availableToneCombos(pairWords), [pairWords]);
   const pairsUnlocked = limits.pairWordsPerCombo > 0;
 

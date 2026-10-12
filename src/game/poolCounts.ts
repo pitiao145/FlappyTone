@@ -105,9 +105,24 @@ export function visualiserListWords(
   );
 }
 
-/** The visualiser's two-syllable list, in the effective style. */
-export function visualiserPairWords(words: readonly Word[], style: SpeechStyle): Word[] {
-  return wordsInStyle(multiWords([...words]), style);
+/**
+ * The visualiser's two-syllable list, narrowed by the same TOCFL selection as
+ * the single-syllable list (a tier with no levels, i.e. guest, is unfiltered),
+ * then style-filtered. `wordsForList` with "intermediate" keeps two-syllable
+ * words tagged with those levels; `multiWords` drops the singles.
+ */
+export function visualiserPairWords(
+  words: readonly Word[],
+  tier: Tier,
+  selectedLevels: readonly TocflLevel[],
+  style: SpeechStyle,
+): Word[] {
+  const levels = tierLimits()[tier].beginner.levels;
+  const scoped =
+    levels === null
+      ? [...words]
+      : wordsForList([...words], selectedLevels.length > 0 ? [...selectedLevels] : levels, "intermediate");
+  return wordsInStyle(multiWords(scoped), style);
 }
 
 /** Words the player can practise for one tone — the word rail's length. */
