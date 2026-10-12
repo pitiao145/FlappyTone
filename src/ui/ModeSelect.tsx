@@ -1,8 +1,17 @@
 import { useState } from "react";
 import { track } from "../analytics/client.ts";
-import { inventoryNow } from "../audio/inventory.ts";
 import type { Tone } from "../game/gates.ts";
 import { availableTones, availableToneCombos, resolvedPool, toneComboKey, wordsForTier } from "../game/words.ts";
+import { effectiveSpeechStyle, loadLastLevel, loadProficiency } from "../game/settings.ts";
+import {
+  classicCount,
+  drillCount,
+  drillToneCount,
+  pairsComboCount,
+  pairsCount,
+  wordCountLabel,
+} from "../game/poolCounts.ts";
+import { useInventoryWords } from "./useInventoryWords.ts";
 import type { PlayIntent } from "./PlayHome.tsx";
 import { useTier } from "../data/tier.ts";
 import { tierLimits } from "../game/tiers.ts";
@@ -66,7 +75,9 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
   // may see — a drill tile must not offer a tone whose only words are locked.
   // Empty (not yet loaded) means "don't know yet" — offer all four rather than
   // greying every tile.
-  const words = inventoryNow();
+  const words = useInventoryWords();
+  const style = effectiveSpeechStyle(tier);
+  const proficiency = loadProficiency();
   const tierWords = words ? wordsForTier(words, tier) : null;
   // Tone Drill reads the same tier/level-restricted pool `resolvedPool`
   // builds for mode "drill" (sampler for guest, TOCFL1+2 for free, everything
@@ -81,6 +92,11 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
   // "Available modes" row: guest gets Tone drill/Learn only, Tone pairs
   // starts at free.
   const combos = tier !== "guest" && tierWords ? availableToneCombos(tierWords) : [];
+
+  // Counts come from poolCounts (the pools a Run really draws); null renders nothing.
+  const classicLabel = wordCountLabel(classicCount(words, tier, proficiency, loadLastLevel(proficiency), style));
+  const drillLabel = wordCountLabel(drillCount(words, tier, style));
+  const pairsLabel = combos.length > 0 ? wordCountLabel(pairsCount(words, tier, style)) : "";
 
   const go = (
     intent: PlayIntent,
@@ -115,7 +131,7 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
                 >
                   <span className="mode-card-title">Classic</span>
                   <span className="mode-card-desc">
-                    Classic game mode: random words.
+                    Classic game mode: random words. {classicLabel}
                   </span>
                 </button>
                 <button
@@ -125,7 +141,7 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
                 >
                   <span className="mode-card-title">Tone Drill</span>
                   <span className="mode-card-desc">
-                    Choose one tone you want to drill, for focused practice.
+                    Choose one tone you want to drill, for focused practice. {drillLabel}
                   </span>
                 </button>
                 <button
@@ -153,7 +169,7 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
                       ? tier === "guest"
                         ? "Sign up to unlock tone-pair practice."
                         : "No pairs available yet."
-                      : "Practice tone-pairs here!"}
+                      : `Practice tone-pairs here! ${pairsLabel}`.trim()}
                   </span>
                 </button>
               </div>
@@ -175,6 +191,9 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
                     >
                       <ToneMarkIcon tone={tone} className="tone-mark-icon" />
                       {tone}
+                      <span className="count-hint">
+                        {drillToneCount(words, tier, tone, style) ?? ""}
+                      </span>
                     </button>
                   );
                 })}
@@ -204,6 +223,9 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
                       {combo.map((tone, i) => (
                         <ToneMarkIcon key={i} tone={tone as ToneOrNeutral} className="pair-combo-tone-icon" />
                       ))}
+                      <span className="count-hint pair-combo-count">
+                        {pairsComboCount(words, tier, combo, style) ?? ""}
+                      </span>
                     </button>
                   ))}
                 </div>

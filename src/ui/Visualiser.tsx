@@ -33,10 +33,7 @@ import { referenceFromWord, toneAccuracyDetail } from "../game/toneAccuracy.ts";
 import type { SpeechStyle, Word } from "../game/words.ts";
 import {
   availableToneCombos,
-  multiWords,
   toneComboKey,
-  wordsForList,
-  wordsInStyle,
   wordsOfCombo,
   wordsOfTone,
 } from "../game/words.ts";
@@ -46,6 +43,12 @@ import { scaleForDpr } from "../render/canvas.ts";
 import { drawVisualiser } from "../render/visualiser.ts";
 import { micErrorCopy } from "./micErrors.ts";
 import { SPEECH_STYLE_LABEL } from "./Settings.tsx";
+import {
+  visualiserComboCount,
+  visualiserListWords,
+  visualiserPairWords,
+  visualiserToneCount,
+} from "../game/poolCounts.ts";
 import {
   ChevronIcon,
   MicrophoneIcon,
@@ -402,18 +405,8 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   // every render — harmless only because `loadClip` dedupes, and actively
   // wrong once the effect owns an AbortController it would tear down each time.
   const listWords = useMemo(
-    () =>
-      wordsInStyle(
-        limits.beginner.levels === null
-          ? words
-          : wordsForList(
-              words,
-              selectedLevels.length > 0 ? selectedLevels : limits.beginner.levels,
-              "beginner",
-            ),
-        speechStyle,
-      ),
-    [words, limits.beginner.levels, selectedLevels, speechStyle],
+    () => visualiserListWords(words, tier, selectedLevels, speechStyle),
+    [words, tier, selectedLevels, speechStyle],
   );
 
   /**
@@ -421,7 +414,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
    * (those are single-syllable TOCFL lists); capped per combo by
    * `pairWordsPerCombo`, the same cap the pairs run mode uses.
    */
-  const pairWords = useMemo(() => wordsInStyle(multiWords(words), speechStyle), [words, speechStyle]);
+  const pairWords = useMemo(() => visualiserPairWords(words, speechStyle), [words, speechStyle]);
   const combos = useMemo(() => availableToneCombos(pairWords), [pairWords]);
   const pairsUnlocked = limits.pairWordsPerCombo > 0;
 
@@ -1079,6 +1072,9 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
             <ToneMarkIcon tone={t} className="tone-mark-icon" />
           </span>
           Tone {t} · {TONE_SHORT_LABEL[t]}
+          {limits.visualiserPerTone && (
+            <span className="count-hint tone-count">{visualiserToneCount(listWords, tier, t) ?? ""}</span>
+          )}
           {!limits.visualiserPerTone && <span className="pro-badge">🔒 Pro</span>}
         </button>
       ))}
@@ -1102,6 +1098,9 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
           aria-label={`Tone ${t}, ${TONE_SHORT_LABEL[t]}${!limits.visualiserPerTone ? ", locked, Pro" : ""}`}
         >
           <ToneMarkIcon tone={t} className="tone-mark-icon" />
+          {limits.visualiserPerTone && (
+            <span className="count-hint tone-pill-count">{visualiserToneCount(listWords, tier, t) ?? ""}</span>
+          )}
           {!limits.visualiserPerTone && <span className="tone-pill-lock">🔒</span>}
         </button>
       ))}
@@ -1180,6 +1179,9 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
               {c.map((t, n) => (
                 <ToneMarkIcon key={n} tone={t as ToneOrNeutral} className="tone-mark-icon" />
               ))}
+              {pairsUnlocked && (
+                <span className="count-hint vis-pair-count">{visualiserComboCount(pairWords, tier, c) ?? ""}</span>
+              )}
               {!pairsUnlocked && <span className="tone-pill-lock">🔒</span>}
             </button>
           );

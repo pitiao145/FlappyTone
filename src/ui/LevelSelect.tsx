@@ -2,7 +2,10 @@ import { useState } from "react";
 import { useTier } from "../data/tier.ts";
 import { tierLimits, type Proficiency } from "../game/tiers.ts";
 import type { LevelChoice } from "../game/settings.ts";
+import { effectiveSpeechStyle } from "../game/settings.ts";
+import { classicCount, wordCountLabel } from "../game/poolCounts.ts";
 import { ShuffleIcon } from "./toneIcons.tsx";
+import { useInventoryWords } from "./useInventoryWords.ts";
 
 interface Props {
   initialProficiency: Proficiency;
@@ -31,6 +34,10 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
   const tier = useTier();
   const [proficiency, setProficiency] = useState<Proficiency>(initialProficiency);
   const [level, setLevel] = useState<LevelChoice | null>(initialLevel);
+  const words = useInventoryWords();
+  const style = effectiveSpeechStyle(tier);
+  // Same pool `Game.tsx` hands the Run: resolvedPool(..., "game", proficiency, level).
+  const countFor = (l: LevelChoice | null) => wordCountLabel(classicCount(words, tier, proficiency, l, style));
 
   const access = tierLimits()[tier][proficiency];
   const locked = access.levels === null;
@@ -87,6 +94,7 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
                     onClick={() => setLevel(n)}
                   >
                     {LEVEL_LABEL[n]}
+                    {unlocked && <span className="count-hint">{countFor(n)}</span>}
                     {!unlocked && <span className="word-chip-lock">🔒</span>}
                   </button>
                 );
@@ -100,6 +108,7 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
                 >
                   <ShuffleIcon className="choice-option-mix-icon" />
                   Mix
+                  <span className="count-hint">{countFor("mix")}</span>
                 </button>
               </div>
             )}
@@ -110,11 +119,12 @@ export function LevelSelect({ initialProficiency, initialLevel, onConfirm, onBac
 
         {locked && (
           <p className="note">
-            You're playing the guest sampler — sign up free to unlock TOCFL levels.
+            You're playing the guest sampler {countFor(null)} — sign up free to unlock TOCFL levels.
           </p>
         )}
 
         <div className="menu playhome-menu">
+          {canPlay && !locked && <p className="note count-total">{countFor(level)}</p>}
           <button
             className="primary"
             disabled={!canPlay}
