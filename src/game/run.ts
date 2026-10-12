@@ -1243,8 +1243,8 @@ export class Run {
     // natural gate until style-aware anchors are shown safe. With classifier
     // v2 a natural gate gets the boost only (`boostApplies`) — a reward can
     // never cost a heart, so hard rule 8 holds; the mismatch collision stays
-    // textbook-only (v2 still reads Jane's natural 和 hé, said as a pure fall,
-    // as a decisive T4).
+    // textbook-only. The classifier is judged against the SPOKEN tone
+    // (`gate.spokenTones`): Jane's natural 和 is hàn, a T4, not a misread hé.
     const textbook = this.speechStyle === "textbook";
     const classifierApplies =
       state.gate.syllables === 1 && (textbook || tuning().toneClassifierV2);
@@ -1275,7 +1275,7 @@ export class Run {
       if (
         mismatchApplies &&
         tuning().toneMismatchCollisionEnabled &&
-        isDrasticToneMismatch(state.gate.tone, classification)
+        isDrasticToneMismatch(state.gate.spokenTones[0], classification)
       ) {
         forcedCollision = true;
         mismatchedAs = classifiedTone;
@@ -1298,7 +1298,7 @@ export class Run {
       // classifier doesn't care about, so an unmistakable shape can still
       // score well despite a wandering trace.
       tuning().toneClassifierBoostEnabled &&
-      classifiedTone === state.gate.tone &&
+      classifiedTone === state.gate.spokenTones[0] &&
       classifiedConfidence !== null
     ) {
       ({ outcome, accuracy } = applyClassifierBoost(outcome, accuracy, classifiedConfidence));
@@ -1316,9 +1316,9 @@ export class Run {
         .filter((p) => p.t >= utteranceStartMs && p.voiced)
         .map((p) => ({ tMs: p.t, chao: p.chao }));
       const utterance = longestUtterance(voiced, mergeGapMs);
-      gateToneAccuracy = toneAccuracy(utterance, state.gate.tones, this.speechStyle);
+      gateToneAccuracy = toneAccuracy(utterance, state.gate.spokenTones, this.speechStyle);
       // Same utterance, wall hits and mismatches included (spec B §3).
-      if (this.captureShapes?.()) this.shapes.add(state.gate.tones, utterance);
+      if (this.captureShapes?.()) this.shapes.add(state.gate.spokenTones, utterance);
     }
 
     this.gatesFinished += 1;
@@ -1359,7 +1359,8 @@ export class Run {
     ) {
       this.stats = applyGate(
         this.stats,
-        state.gate.tones,
+        // Stats are about speech, so they key on the spoken tones (一下 → "2-4").
+        state.gate.spokenTones,
         outcome,
         // Stats keep tone accuracy, never the score's corridor accuracy.
         gateToneAccuracy,

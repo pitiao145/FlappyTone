@@ -22,6 +22,7 @@ import type { Tone } from "./gates.ts";
 import { resample, trimOnset } from "./toneClassifier.ts";
 import { SAMPLES } from "./toneAverage.ts";
 import { tuning } from "./tuning.ts";
+import { isSpokenKey } from "./words.ts";
 
 export const SHAPE_POINTS = SAMPLES + 1;
 /** A line with fewer attempts behind it is not drawn (spec B §5). */
@@ -126,7 +127,7 @@ export function averageUpTo(rows: ShapeRow[], key: string, day: string): Average
 
 /** Every key that has at least one row, tones first, then combos. */
 export function keysWithData(rows: ShapeRow[]): string[] {
-  return [...new Set(rows.map((r) => r.key))].sort((a, b) => a.length - b.length || a.localeCompare(b));
+  return [...new Set(rows.map((r) => r.key))].filter(isSpokenKey).sort((a, b) => a.length - b.length || a.localeCompare(b));
 }
 
 /** The player's local date as YYYY-MM-DD — the day api/shapes.ts buckets by. */

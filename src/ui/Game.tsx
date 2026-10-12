@@ -1246,11 +1246,12 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
                     <ToneClueSpeakerIcon />
                   </span>
                   <span className="tone-marks-row">
-                    {sandhiTones({
+                    {/* A recording's own spoken tones (natural 和 = hàn) win over the rules. */}
+                    {(displayWord?.spokenTones ?? sandhiTones({
                       tones: displayWord?.tones ?? displayTones,
                       pinyin: displayWord?.pinyin ?? info.pinyin,
                       hanzi: displayWord?.hanzi ?? info.hanzi,
-                    }).map((t, i) => (
+                    })).map((t, i) => (
                       <span
                         key={i}
                         className="tone-mark-glyph"

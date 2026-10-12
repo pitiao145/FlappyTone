@@ -493,6 +493,37 @@ gate instead say so explicitly:
   test exercises the raw catalog, not `Game.tsx`'s own separate syllable
   filter. The two must not be conflated when reading test counts either.
 
+## Written tones follow TOCFL, speech follows the recording (12 Oct 2026)
+
+Brief 01 put `words.pinyin`/`tones` on TOCFL's MOE base tones (一 = yī,
+不 = bù, Jane's full-tone re-records; migration 0028). That exposed a mixup:
+the pair averages and every combo stat were keyed on WRITTEN tones, so the
+"1-4" average already held the spoken yí of 一定/一樣, and the fix would have
+pushed 一下/一共 (said yí) into it too. Pierre's rule: **anything written
+follows TOCFL; anything about speech follows what was spoken.**
+
+- `spokenTones()` (`src/game/sandhi.ts`) is the one source: the existing
+  Taiwan sandhi rules (一/不 by the next syllable, 3+3 → 2+3, half-third
+  folded to 3), unless the recording carries its own override. Every gate
+  carries `spokenTones`; tone accuracy, the classifier, per-tone/per-combo
+  stats, Pro tone shapes, the run log and `make-tone-averages` read it.
+  Labels, pools, the combo pickers and corridor width keep the written tones.
+- **The override is a recording attribute** (`word_clips.spoken_tones`,
+  migration 0029), for the same reason style is: 和 is hé in Jane's textbook
+  take and hàn (Taiwan reading) in her natural one. Rules cannot derive that.
+  Its pinyin label is `hé/hàn` so a natural-run player is not surprised; the
+  written tone stays 2. v2's "one clean wall hit on 和" was this mislabel,
+  not a misread.
+- **The picker stays written** (learners look words up that way), so drilling
+  "3+3" files results under "2+3", and 一下 drilled under "1+4" lands under
+  "2+4". Accepted.
+- **Old stats are not migrated.** Rows stored before this keep their written
+  keys; "3-3" is never spoken, so `isSpokenKey` hides it from every display
+  (data kept). Old 一/不 attempts stay mixed into "1-4"/"4-1"/"4-4" — few,
+  and indistinguishable from real ones.
+- The 一 rule ignores ordinal/standalone 一 (第一) and 看一看; none are in the
+  pairs catalog today.
+
 ## Speech style: natural becomes playable (7 Oct 2026)
 
 Spec: `docs/SPECS/flappytone-SPEC-speech-style.md`. The setting picks which of

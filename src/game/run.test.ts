@@ -1636,6 +1636,32 @@ describe("Run — pairs mode and word mix", () => {
     }
   });
 
+  it("a 一下 pair is stored under its SPOKEN combo (2-4), never the written 1-4", () => {
+    const run = new Run({
+      mode: "pairs",
+      width: W,
+      words: multiWordsFrom([
+        {
+          id: "yixia24",
+          hanzi: "一下",
+          pinyin: "yī xià",
+          tones: [1, 4],
+          file: "fixture:yi_xia",
+          durationS: 1.0,
+          polyline: [
+            [0, 2.5],
+            [0.5, 4.5],
+            [1, 1.5],
+          ],
+        },
+      ]),
+    });
+    simulate(run, 600, (s) => trackCorridor(s));
+    const stats = run.snapshot().stats;
+    expect(stats.perCombo["2-4"]?.gates ?? 0).toBeGreaterThan(0);
+    expect(stats.perCombo["1-4"]).toBeUndefined();
+  });
+
   it("a pause inside a multi gate's mergeGap window (300ms) still reads as one heard utterance", () => {
     const run = new Run({ mode: "pairs", width: W, words: multiInventory });
     let now = 0;

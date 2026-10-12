@@ -12,6 +12,7 @@ import {
   toneAccuracy,
   toneAccuracyDetail,
 } from "./toneAccuracy.ts";
+import { spokenTones } from "./sandhi.ts";
 import { multiWords, toneComboKey, wordsFromCatalog, wordsOfTone } from "./words.ts";
 
 /**
@@ -33,13 +34,21 @@ const words = wordsFromCatalog(
   (fallback as { rows: Record<string, unknown>[] }).rows.map((r) => ({ ...r, speaker_id: "jane" })),
 );
 
+// Speech is judged on SPOKEN tones (make-tone-averages groups that way), so
+// each sampled clip's tones are read as spoken: 一下 is a 2-4, 你好 a 2-3.
+const byId = new Map(words.map((w) => [w.id, w]));
+for (const r of rows) {
+  const w = byId.get(r.id);
+  if (w) r.tones = spokenTones(w);
+}
+
 /** The average the clip is judged against, rebuilt WITHOUT that clip. */
 function leaveOneOut(r: Row): number[] {
   if (r.tones.length === 1) {
     return averagePolyline(wordsOfTone(words, r.tones[0] as Tone).filter((w) => w.id !== r.id));
   }
   const key = toneComboKey(r.tones as Tone[]);
-  return averagePolyline(multiWords(words).filter((w) => toneComboKey(w.tones) === key && w.id !== r.id));
+  return averagePolyline(multiWords(words).filter((w) => toneComboKey(spokenTones(w)) === key && w.id !== r.id));
 }
 
 const median = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor((v.length - 1) / 2)];
@@ -163,9 +172,12 @@ describe("toneAccuracy — when there is nothing honest to say", () => {
     expect(toneAccuracy(take, [1, 2, 3])).toBeNull();
   });
 
-  it("has a reference for every non-neutral combo", () => {
+  it("has a reference for every SPOKEN non-neutral combo — 3-3 is never spoken (said 2-3)", () => {
     for (const a of [1, 2, 3, 4] as Tone[]) {
-      for (const b of [1, 2, 3, 4] as Tone[]) expect(referenceFor([a, b])).not.toBeNull();
+      for (const b of [1, 2, 3, 4] as Tone[]) {
+        if (a === 3 && b === 3) expect(referenceFor([a, b])).toBeNull();
+        else expect(referenceFor([a, b])).not.toBeNull();
+      }
     }
   });
 });

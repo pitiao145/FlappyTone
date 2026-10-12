@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import sample from "../../fixtures/contours/jane-natural-sample.json";
+import bundle from "../data/wordsFallback.json";
+import { spokenTones } from "./sandhi.ts";
 import type { ContourPoint } from "./contours.ts";
 import type { Tone } from "./gates.ts";
 import { averagePolyline } from "./toneAverage.ts";
@@ -26,6 +28,22 @@ interface Source {
   polyline: [number, number][];
 }
 const { rows, polylines } = sample as unknown as { rows: Row[]; polylines: Source[] };
+
+// Averages group by SPOKEN tones (make-tone-averages), so the fixture is read
+// the same way: each clip's tones become what it was spoken with — written
+// tones from the bundle through the sandhi rules, plus natural 和's own
+// override (`word_clips.spoken_tones` = {4}, it is hàn).
+const NATURAL_OVERRIDES: Record<string, Tone[]> = { he2: [4] };
+const byId = new Map(
+  (bundle as unknown as { rows: { id: string; hanzi: string; pinyin: string; tone: Tone; tones: Tone[] }[] }).rows.map((r) => [
+    r.id,
+    { ...r, tones: r.tones.length > 0 ? r.tones : [r.tone] }, // legacy singles store tones = {}
+  ]),
+);
+for (const x of [...rows, ...polylines]) {
+  const w = byId.get(x.id);
+  if (w) x.tones = spokenTones({ ...w, spokenTones: NATURAL_OVERRIDES[x.id] });
+}
 const pointsOf = (r: Row): ContourPoint[] =>
   r.contour.map(([t, chao]) => ({ tMs: t * r.durationS * 1000, chao }));
 

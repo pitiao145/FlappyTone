@@ -1,18 +1,18 @@
 hanzi,pinyin,english,lists
 一,yī,one; single; a (article),hsk1;tocfl1
-一下,yí xià,(after a verb) a bit; a little; all at once,hsk1
+一下,yī xià,(after a verb) a bit; a little; all at once,hsk1
 一些,yī xiē,some; a few; a little,hsk1;tocfl2
-一共,yí gòng,in total; altogether,hsk3
+一共,yī gòng,in total; altogether,hsk3
 一半,yī bàn,half,hsk1;tocfl3
 一定,yī dìng,surely; certainly; necessarily,hsk3;tocfl3
 一樣,yī yàng,same; like; equal to,hsk3;tocfl2
-一直,yì zhí,straight (in a straight line); continuously; always,hsk3
-一般,yì bān,same; ordinary; so-so,hsk3
+一直,yī zhí,straight (in a straight line); continuously; always,hsk3
+一般,yī bān,same; ordinary; so-so,hsk3
 一起,yī qǐ,in the same place; together; with,hsk2;tocfl2
-一邊,yì biān,one side; either side; on the one hand,hsk3
+一邊,yī biān,one side; either side; on the one hand,hsk3
 一點,yī diǎn,a bit; a little; one dot,tocfl2
 七,qī,seven,hsk1;tocfl1
-丈夫,zhàng fu,husband,hsk2
+丈夫,zhàng fū,husband,hsk2
 三,sān,three,hsk1;tocfl1
 上,shàng,up; upper; above,hsk1
 上來,shàng lái,to come up; to approach,hsk2
@@ -35,14 +35,14 @@ hanzi,pinyin,english,lists
 下麵,xià miàn,below; under; next,hsk2
 不,bù,no; not so; not,hsk1
 不久,bù jiǔ,not long (after); before too long; soon,hsk3
-不但,bú dàn,not only ( but also ),hsk3
+不但,bù dàn,not only ( but also ),hsk3
 不同,bù tóng,different; distinct; not the same,hsk3
 不好意思,bù hǎo yì si,to feel embarrassed; to find it embarrassing; to be sorry (for inconveniencing sb),hsk2
 不客氣,bù kè qì,you're welcome; don't mention it; impolite,hsk1;tocfl3
-不用,bú yòng,need not,hsk3
+不用,bù yòng,need not,hsk3
 不行,bù xíng,won't do; be out of the question; be no good,hsk3
-不要,bú yào,don't!; must not,hsk1
-不見,bú jiàn,not to see; not to meet; to have disappeared,hsk3
+不要,bù yào,don't!; must not,hsk1
+不見,bù jiàn,not to see; not to meet; to have disappeared,hsk3
 不錯,bù cuò,correct; right; not bad,hsk2;tocfl3
 世界,shì jiè,world,hsk3
 丟,diū,to lose; to put aside; to throw,hsk3
@@ -60,7 +60,7 @@ hanzi,pinyin,english,lists
 乾淨,gān jìng,clean; neat,hsk3
 了,le,(completed action marker); to finish; to achieve,tocfl1
 事,shì,matter; thing; item,hsk1
-事情,shì qing,affair; matter; thing,hsk2
+事情,shì qíng,affair; matter; thing,hsk2
 二,èr,two,hsk1;tocfl1
 五,wǔ,five,hsk1;tocfl1
 些,xiē,"classifier indicating a small amount or small number greater than 1: some, a few, several",hsk1
@@ -91,14 +91,14 @@ hanzi,pinyin,english,lists
 你好,nǐ hǎo,hello; hi,hsk1
 來,lái,to come,hsk1;tocfl1
 來自,lái zì,to come from (a place); From: (in email header),hsk3
-便宜,pián yi,convenient,hsk1;tocfl1
+便宜,pián yí,convenient,hsk1;tocfl1
 信,xìn,letter; mail; to trust,hsk3;tocfl2
 信封,xìn fēng,envelope,tocfl3
 信用卡,xìn yòng kǎ,credit card,hsk3
 個,ge,individual; this; that,tocfl1
 個子,gè zi,stature; height; size (of a person or object),hsk2
 們,men,"plural marker for pronouns, and nouns referring to individuals",hsk1
-假期,jià qī,vacation,hsk3
+假期,jià qí,vacation,hsk3
 做,zuò,to make; to produce; to write,hsk1;tocfl1
 做客,zuò kè,to be a guest or visitor,hsk3
 做飯,zuò fàn,to prepare a meal; to cook,hsk1
@@ -175,7 +175,7 @@ hanzi,pinyin,english,lists
 參加,cān jiā,to participate; to take part; to join,hsk3;tocfl2
 參觀,cān guān,to look around; to tour; to visit,tocfl3
 又,yòu,(once) again; also; both and,hsk3
-叔叔,shū shu,father's younger brother; paternal uncle,hsk3
+叔叔,shú shu,father's younger brother; paternal uncle,hsk3
 受,shòu,to receive; to accept; to suffer,hsk3
 受傷,shòu shāng,to sustain injuries; wounded (in an accident etc); harmed,tocfl3
 受到,shòu dào,to receive; to be ed,hsk3
@@ -207,10 +207,10 @@ hanzi,pinyin,english,lists
 名單,míng dān,list of names,hsk3
 名字,míng zi,name (of a person or thing),hsk1;tocfl1
 吧,ba,right?; OK?; I presume,hsk1;tocfl1
-告訴,gào su,to press charges; to file a complaint,hsk2
+告訴,gào sù,to press charges; to file a complaint,hsk2
 呌,jiào,to shout; to call; to order,hsk1
 呢,ne,particle indicating strong affirmation,hsk1;tocfl1
-和,hé,"Japanese (food, clothes etc); and; together with",tocfl2
+和,hé/hàn,"Japanese (food, clothes etc); and; together with",tocfl2
 咖啡,kā fēi,(loanword) coffee,hsk2;tocfl2
 咱們,zán men,I or me; (in a coaxing or familiar way) you; also pr. [za2 men5],hsk3
 員,yuán,person engaged in a certain field of activity; member; classifier for military generals,hsk3
@@ -266,12 +266,12 @@ hanzi,pinyin,english,lists
 外地,wài dì,parts of the country other than where one is,hsk3
 外語,wài yǔ,foreign language,hsk3
 外賣,wài mài,takeout (business); takeout (meal),hsk3
-外邊,wài bian,outside; outer surface; abroad,hsk1
+外邊,wài biān,outside; outer surface; abroad,hsk1
 外面,wài miàn,outside; surface; exterior,hsk2
 多,duō,many,hsk1;hsk2
 多少,duō shǎo,number; amount; somewhat,hsk1;tocfl1
 大,dà,big,hsk1
-大人,dà ren,adult; grownup; title of respect toward superiors,hsk3
+大人,dà rén,adult; grownup; title of respect toward superiors,hsk3
 大學,dà xué,"the Great Learning, one of the Four Books 四書|四书[Si4 shu1] in Confucianism",hsk1;tocfl1
 大學生,dà xué shēng,university student; college student,hsk1
 大家,dà jiā,everyone; influential family; great expert,hsk1;tocfl2
@@ -306,7 +306,7 @@ hanzi,pinyin,english,lists
 如果,rú guǒ,if; in case; in the event that,hsk3
 妳,nǐ,you; you,hsk1
 妹妹,mèi mei,younger sister; young woman,hsk1;tocfl1
-妻子,qī zi,wife and children,hsk2
+妻子,qī zǐ,wife and children,hsk2
 姊姊,jiě jie,older sister; Taiwan pr. [jie3 jie5],tocfl1
 姐妹,jiě mèi,"sisters; siblings; sister (school, city etc)",hsk3
 姐姐,jiě jie,older sister,hsk1
@@ -320,7 +320,7 @@ hanzi,pinyin,english,lists
 季節,jì jié,time; season; period,hsk3
 孩子,hái zi,child,hsk1;tocfl2
 學,xué,to study,hsk1
-學期,xué qī,term; semester,hsk3
+學期,xué qí,term; semester,hsk3
 學校,xué xiào,school,hsk1;tocfl1
 學生,xué shēng,student; schoolchild,hsk1;tocfl1
 學習,xué xí,to learn; to study,hsk1;tocfl2
@@ -341,7 +341,7 @@ hanzi,pinyin,english,lists
 寫,xiě,to write,hsk1;tocfl1
 封,fēng,to confer; to grant; to bestow a title,hsk3
 對,duì,correct,hsk1
-對不起,duì bu qǐ,I'm sorry; excuse me; I beg your pardon,hsk1;tocfl1
+對不起,duì bù qǐ,I'm sorry; excuse me; I beg your pardon,hsk1;tocfl1
 對話,duì huà,to talk (with sb); dialogue; conversation,hsk3
 對面,duì miàn,(sitting) opposite; across (the street); directly in front,tocfl3
 小,xiǎo,small,hsk1;tocfl1
@@ -367,7 +367,7 @@ hanzi,pinyin,english,lists
 左邊,zuǒ biān,left; the left side; to the left of,hsk2;tocfl2
 巧克力,qiǎo kè lì,chocolate (loanword),tocfl3
 差,chà,different; wrong; mistaken,hsk3
-差不多,chà bu duō,almost; nearly; more or less,hsk3
+差不多,chà bù duō,almost; nearly; more or less,hsk3
 已經,yǐ jīng,already,hsk2
 市,shì,market; city; municipality (administrative unit),hsk3
 市場,shì chǎng,marketplace; market (also in abstract),tocfl2
@@ -425,7 +425,7 @@ hanzi,pinyin,english,lists
 想,xiǎng,to think,hsk1;tocfl1
 意思,yì si,idea; opinion; meaning,hsk2;tocfl2
 愛,ài,to love; to be fond of; to like,hsk1;tocfl2
-愛人,ài ren,spouse (PRC); lover (non-PRC),hsk3
+愛人,ài rén,spouse (PRC); lover (non-PRC),hsk3
 愛好,ài hào,to like; to be fond of; to take pleasure in,hsk2
 感冒,gǎn mào,to catch cold; (common) cold; (Tw) to detest,hsk3;tocfl3
 感到,gǎn dào,to feel; to sense; to perceive,hsk3
@@ -434,7 +434,7 @@ hanzi,pinyin,english,lists
 懂,dǒng,to understand; to comprehend,hsk2;tocfl2
 懂得,dǒng de,to understand; to know; to comprehend,hsk3
 應該,yīng gāi,ought to; should; must,hsk3
-成績,chéng jì,achievement; performance records; grades,hsk3
+成績,chéng jī,achievement; performance records; grades,hsk3
 我,wǒ,"I, me",hsk1;tocfl1
 我們,wǒ men,we; us; ourselves,hsk1;tocfl1
 或,huò,maybe; perhaps; might,hsk3
@@ -491,14 +491,14 @@ hanzi,pinyin,english,lists
 日,rì,"sun; day; date, day of the month",hsk1
 日本,rì běn,Japan; Japanese,tocfl1
 早,zǎo,early,hsk1
-早上,zǎo shang,early morning,hsk1;tocfl1
+早上,zǎo shàng,early morning,hsk1;tocfl1
 早飯,zǎo fàn,breakfast,hsk1
 明天,míng tiān,tomorrow,hsk1;tocfl1
 明年,míng nián,next year,hsk1;tocfl2
-明白,míng bai,clear; obvious; unequivocal,hsk3
+明白,míng bái,clear; obvious; unequivocal,hsk3
 星期,xīng qí,week; day of the week; Sunday,hsk1;tocfl2
 星期天,xīng qí tiān,Sunday,hsk1;tocfl2
-星期日,xīng qī rì,Sunday,hsk1
+星期日,xīng qí rì,Sunday,hsk1
 春天,chūn tiān,spring (season),hsk3;tocfl3
 昨天,zuó tiān,yesterday,hsk1;tocfl1
 是,shì,to be,tocfl1
@@ -507,7 +507,7 @@ hanzi,pinyin,english,lists
 時候,shí hòu,time; length of time; moment,hsk1;tocfl1
 時間,shí jiān,(concept of) time; (duration of) time; (point in) time,hsk1
 晚,wǎn,evening; night; late,hsk1
-晚上,wǎn shang,evening; night; in the evening,hsk1;tocfl1
+晚上,wǎn shàng,evening; night; in the evening,hsk1;tocfl1
 晚會,wǎn huì,evening party,hsk3;tocfl3
 晚飯,wǎn fàn,evening meal; dinner; supper,hsk1
 晚點,wǎn diǎn,(of trains etc) late; delayed; behind schedule,hsk3
@@ -524,7 +524,7 @@ hanzi,pinyin,english,lists
 會,huì,"can, will",hsk1;hsk3;tocfl2
 會議,huì yì,meeting; conference,hsk3
 月,yuè,"moon, month",hsk1;tocfl2
-月亮,yuè liang,the moon,hsk3
+月亮,yuè liàng,the moon,hsk3
 有,yǒu,to have,hsk1;tocfl1
 有些,yǒu xiē,some; somewhat,hsk1;hsk3
 有名,yǒu míng,famous; well-known,hsk3
@@ -600,8 +600,8 @@ hanzi,pinyin,english,lists
 洗衣機,xǐ yī jī,washing machine; washer,hsk3
 海,hǎi,ocean; sea; great number of people or things,hsk3;tocfl2
 海邊,hǎi biān,coast; seaside; seashore,tocfl3
-涼快,liáng kuai,pleasantly cool (weather etc); to cool oneself; to cool off,hsk3
-清楚,qīng chu,clear; distinct; to understand thoroughly,hsk3
+涼快,liáng kuài,pleasantly cool (weather etc); to cool oneself; to cool off,hsk3
+清楚,qīng chǔ,clear; distinct; to understand thoroughly,hsk3
 渴,kě,thirsty,hsk3;tocfl3
 游泳,yóu yǒng,swimming; to swim,hsk2;tocfl3
 湖,hú,lake; 片,tocfl3
@@ -703,7 +703,7 @@ hanzi,pinyin,english,lists
 種,zhǒng,seed; species; kind,hsk3
 空調,kōng tiáo,air conditioning; air conditioner,hsk3
 穿,chuān,to wear; to put on; to dress,hsk1;tocfl2
-突然,tū rán,sudden; abrupt; unexpected,hsk3
+突然,tú rán,sudden; abrupt; unexpected,hsk3
 站,zhàn,station; to stand; to halt,hsk2;hsk3;tocfl2
 笑,xiào,old variant of 笑; to laugh; to smile,hsk2;tocfl2
 第,dì,(old) residence of a high official; but; however,hsk1;tocfl1
@@ -791,7 +791,7 @@ hanzi,pinyin,english,lists
 華語,huá yǔ,Chinese language,tocfl3
 萬,wàn,ten thousand; a great number,hsk2;tocfl3
 著,zhe,aspect particle indicating action in progress or ongoing state,hsk2;tocfl2
-著急,zháo jí,to worry; to feel anxious; to feel a sense of urgency,hsk3
+著急,zhāo jí,to worry; to feel anxious; to feel a sense of urgency,hsk3
 藉,jiè,to borrow; to lend; to make use of,hsk3
 藍,lán,blue,hsk3
 藥,yào,leaf of the iris; variant of 藥|药; medicine,hsk2;tocfl2
@@ -803,10 +803,10 @@ hanzi,pinyin,english,lists
 蛋,dàn,egg; oval-shaped thing; variant of 蜑,tocfl3
 蛋糕,dàn gāo,cake,hsk3;tocfl3
 行,xíng,to walk; to go; to travel,hsk3
-行李,xíng li,luggage,hsk3
+行李,xíng lǐ,luggage,hsk3
 街,jiē,street,hsk3;tocfl3
 衛生間,wèi shēng jiān,bathroom; toilet; WC,hsk3
-衣服,yī fu,clothes,hsk1;tocfl2
+衣服,yī fú,clothes,hsk1;tocfl2
 表演,biǎo yǎn,play; show; performance,hsk3;tocfl3
 被,bèi,quilt; to cover (with); to suffer (a misfortune),hsk3
 裙子,qún zi,skirt,hsk3;tocfl3
@@ -837,7 +837,7 @@ hanzi,pinyin,english,lists
 認得,rèn de,to recognize; to remember sth (or sb) on seeing it; to know,hsk3
 認為,rèn wéi,to believe; to think; to consider,hsk3
 認真,rèn zhēn,conscientious; earnest; serious,hsk3
-認識,rèn shi,to know; to recognize; to be familiar with,hsk1;tocfl2
+認識,rèn shì,to know; to recognize; to be familiar with,hsk1;tocfl2
 語言,yǔ yán,language,hsk3;tocfl3
 說,shuō,to speak,tocfl1
 說話,shuō huà,to speak; to say; to talk,hsk1;tocfl2

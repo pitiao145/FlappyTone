@@ -19,7 +19,7 @@ interface Props {
 export function hasToneAccuracy(stats: RunStats): boolean {
   return (
     toneBreakdown(stats).some((b) => b.gates > 0) ||
-    Object.values(stats.perCombo).some((c) => c.gates > 0)
+    comboBreakdown(stats.perCombo).length > 0
   );
 }
 

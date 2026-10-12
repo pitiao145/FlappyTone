@@ -203,7 +203,9 @@ for (const { line, text } of lines.slice(1)) {
   seen.set(key, line);
 
   try {
-    const syllables = parseWord(pinyin);
+    // "hé/hàn": the written (TOCFL) reading first, a spoken variant after the
+    // slash for the label only. Tones come from the written reading.
+    const syllables = parseWord(pinyin.split("/")[0]);
     const toned = syllables.filter((s) => s.tone !== 0);
     if (toned.length === 0 && syllables.length > 1) {
       // Every syllable neutral on a MULTI-syllable word: no tone anywhere to

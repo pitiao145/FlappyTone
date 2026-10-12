@@ -5,6 +5,7 @@
 
 import { brand } from "../brand.ts";
 import { DEFAULT_TUNING, tuning, type Polyline } from "./tuning.ts";
+import { spokenTones } from "./sandhi.ts";
 import type { Word } from "./words.ts";
 
 export type Tone = 1 | 2 | 3 | 4;
@@ -331,6 +332,12 @@ export interface Gate {
   tone: Tone;
   /** Every syllable's tone, in order. `[tone]` for a single-syllable gate. */
   tones: Tone[];
+  /**
+   * The tones the recording was SPOKEN with (`spokenTones`, sandhi.ts): what
+   * tone accuracy, per-combo stats and tone shapes key on. Labels, the pool
+   * and the corridor width keep the written `tones`.
+   */
+  spokenTones: Tone[];
   /** How many syllables this gate's word has. 1 for a bare-tone gate. */
   syllables: number;
   /** The word being cued and labelled. Null in tests that build a bare gate. */
@@ -453,6 +460,7 @@ export function makeGate(source: Word | Tone, xStart: number, d: Difficulty): Ga
   return {
     tone,
     tones,
+    spokenTones: word ? spokenTones(word) : [tone],
     syllables,
     word,
     shape,

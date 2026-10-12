@@ -35,7 +35,7 @@ describe("ToneAccuracyBreakdown", () => {
       [3, 2, 0.4],
       [2, 2, 0.7],
       [4, 1, 0.55],
-      [3, 3, 0.65],
+      [2, 3, 0.65],
     ];
     for (const [a, b, acc] of combos) stats = applyGate(stats, [a, b], "ok", acc);
     const out = html(stats);
@@ -44,9 +44,15 @@ describe("ToneAccuracyBreakdown", () => {
     expect(labels(out).filter((l) => l.includes("then"))).toEqual([
       "Tone 3 then tone 2: 40% tone accuracy",
       "Tone 4 then tone 1: 55% tone accuracy",
-      "Tone 3 then tone 3: 65% tone accuracy",
+      "Tone 2 then tone 3: 65% tone accuracy",
       "Tone 2 then tone 2: 70% tone accuracy",
     ]);
     expect(out).toContain("Show all 5");
+  });
+
+  it("hides a stored 3-3 row: a 3+3 is never spoken (said 2+3)", () => {
+    let stats = newRunStats();
+    stats = applyGate(stats, [3, 3], "ok", 0.65);
+    expect(html(stats)).not.toContain("Tone 3 then tone 3");
   });
 });

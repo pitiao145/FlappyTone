@@ -77,6 +77,7 @@ const CATALOG_ROW_KEYS = new Set<keyof CatalogRow>([
   "onset_s",
   "clip_s",
   "polyline",
+  "spoken_tones",
   "contour",
   "updated_at",
 ]);
@@ -170,8 +171,13 @@ describe("the catalog row shape", () => {
     // and it is ~28 kB gzip on the landing page's critical path. `style` is
     // the third: the bundle is textbook-only by construction (speech style
     // spec, decision 10), and a row without one parses as textbook.
+    // `spoken_tones` is the fourth: an override for the rare take the sandhi
+    // rules can't derive (和 natural), null on every textbook row — the bundle
+    // would carry a column of nulls, and a missing one derives by rule anyway.
     const { wordTokens, embedTokens } = parseCatalogSelect(CATALOG_SELECT);
-    const required = [...wordTokens, ...embedTokens].filter((c) => c !== "speaker_id" && c !== "style");
+    const required = [...wordTokens, ...embedTokens].filter(
+      (c) => c !== "speaker_id" && c !== "style" && c !== "spoken_tones",
+    );
     const baked = new Set<string>(FALLBACK_COLUMNS);
     for (const column of required) {
       expect(baked.has(column), column).toBe(true);

@@ -12,6 +12,7 @@
 import type { Tone } from "./gates.ts";
 import type { RunMode } from "./run.ts";
 import type { RunStats } from "./scoring.ts";
+import { isSpokenKey } from "./words.ts";
 
 export type LogOutcome = "finished" | "out_of_hearts" | "quit" | "restart";
 
@@ -89,7 +90,7 @@ export function dailyTrend(rows: Pick<RunLogRow, "day" | "per_key">[]): Map<stri
 
 /** Keys the player has data for: tones 1–4 first, then combos, each in order. */
 export function trendKeys(trend: Map<string, TrendPoint[]>): string[] {
-  return [...trend.keys()].sort((a, b) => {
+  return [...trend.keys()].filter(isSpokenKey).sort((a, b) => {
     const ca = a.includes("-");
     const cb = b.includes("-");
     return ca === cb ? a.localeCompare(b) : ca ? 1 : -1;

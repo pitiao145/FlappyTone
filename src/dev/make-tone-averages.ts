@@ -27,12 +27,13 @@
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
+import { spokenTones } from "../game/sandhi.ts";
 import {
+  isSingle,
   multiWords,
   toneComboKey,
   wordsFromCatalog,
   wordsInStyle,
-  wordsOfTone,
   type SpeechStyle,
   type Word,
 } from "../game/words.ts";
@@ -86,7 +87,10 @@ function averagesOf(style: SpeechStyle, source: Word[]): StyleAverages {
   console.log(`\n${style}:`);
   const tones = {} as Record<Tone, number[]>;
   for (const tone of TONES) {
-    const toneWords = wordsOfTone(source, tone);
+    // Grouped by the SPOKEN tone, not the written one: an average is a shape
+    // of speech (DECISIONS.md, "Written tones follow TOCFL, speech follows the
+    // recording"). Natural 和 is hàn, so it averages as a T4.
+    const toneWords = source.filter((w) => isSingle(w) && spokenTones(w)[0] === tone);
     if (toneWords.length === 0) {
       console.error(`No ${style} words found for tone ${tone}.`);
       process.exit(1);
@@ -102,8 +106,10 @@ function averagesOf(style: SpeechStyle, source: Word[]): StyleAverages {
   // own shape, and the alternative is no number at all.
   const groups = new Map<string, Word[]>();
   for (const w of multiWords(source)) {
-    if (w.tones.includes(0 as Tone)) continue;
-    const key = toneComboKey(w.tones);
+    // Spoken combo: 一下 (yī xià, said yí xià) averages as "2-4", 你好 as "2-3".
+    const spoken = spokenTones(w);
+    if (spoken.includes(0 as Tone)) continue;
+    const key = toneComboKey(spoken);
     groups.set(key, [...(groups.get(key) ?? []), w]);
   }
   const pairKeys = [...groups.keys()].sort();

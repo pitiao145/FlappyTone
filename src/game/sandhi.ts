@@ -8,12 +8,13 @@
  * Rules A–D), not textbook Mainland sandhi — see CLAUDE.md's "All hanzi is
  * Traditional Mandarin" for why the distinction matters here.
  *
- * Deliberately narrow: this never feeds a corridor or a score. Multi-syllable
- * gate corridors are measured directly from the speaker's own recording
- * (`src/dev/clipCutMulti.ts`), not derived from rules — see DECISIONS.md's
- * "Shape-agnostic corridor for multi-syllable words". This module only
- * answers "what tone mark should the HUD show as a pronunciation clue,"
- * which is a labeling question, not a scoring one.
+ * Written tones follow TOCFL; anything about SPEECH follows what was spoken
+ * (DECISIONS.md, "Written tones follow TOCFL, speech follows the recording").
+ * `sandhiTones` answers the HUD's pronunciation clue; `spokenTones` is the
+ * key everything measured from a voice is grouped and judged by — the tone
+ * accuracy reference, per-combo stats, player tone shapes and the averages.
+ * It never feeds a corridor (those are measured from the recording,
+ * `src/dev/clipCutMulti.ts`) and never points, combo or hearts.
  */
 
 import { parseWord } from "../record/pinyin.ts";
@@ -104,4 +105,15 @@ function firstSyllableYiBu(word: SandhiWord, nextTone: SandhiTone): SandhiTone |
     return nextTone === 4 ? 2 : 4;
   }
   return null;
+}
+
+/**
+ * The tones a word was SPOKEN with, as plain tones: a recording's own
+ * override (`word.spokenTones`, from `word_clips.spoken_tones` — 和's natural
+ * take is hàn) wins; otherwise `sandhiTones`, with the half-third folded back
+ * to 3 (still the T3 family for grouping). Neutral (0) is kept.
+ */
+export function spokenTones(word: SandhiWord & { spokenTones?: Tone[] }): Tone[] {
+  if (word.spokenTones && word.spokenTones.length === word.tones.length) return [...word.spokenTones];
+  return sandhiTones(word).map((t) => (t === "half3" ? 3 : t)) as Tone[];
 }

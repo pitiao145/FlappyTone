@@ -26,6 +26,7 @@ import type { Tone } from "../game/gates.ts";
 import { effectiveSpeechStyle, type CalibrationSettings } from "../game/settings.ts";
 import { type ToneClassification } from "../game/toneClassifier.ts";
 import { classifyToneV2 } from "../game/toneClassifierV2.ts";
+import { spokenTones } from "../game/sandhi.ts";
 import { tierLimits, type TocflLevel } from "../game/tiers.ts";
 import { tuning } from "../game/tuning.ts";
 import { referenceFromWord, toneAccuracyDetail } from "../game/toneAccuracy.ts";
@@ -584,7 +585,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         // screen), not the tone's average. `latest` is already one utterance
         // (the recorder merges short gaps), time-zeroed.
         const accuracy =
-          toneAccuracyDetail(latest.points, word.tones, referenceFromWord(word), word.clipStyle ?? "textbook")?.accuracy ?? null;
+          toneAccuracyDetail(latest.points, spokenTones(word), referenceFromWord(word), word.clipStyle ?? "textbook")?.accuracy ?? null;
         if (word.syllables > 1) sessionPairAttemptsRef.current += 1;
         if (accuracy !== null) {
           const stats = wordStatsRef.current;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sandhiTones, type SandhiWord } from "./sandhi.ts";
+import { sandhiTones, spokenTones, type SandhiWord } from "./sandhi.ts";
 
 function w(hanzi: string, pinyin: string, tones: SandhiWord["tones"]): SandhiWord {
   return { hanzi, pinyin, tones };
@@ -101,5 +101,29 @@ describe("sandhiTones", () => {
     it("布 (bù, T4) is not treated as 不 even before T4", () => {
       expect(sandhiTones(w("布料", "bù liào", [4, 4]))).toEqual([4, 4]);
     });
+  });
+});
+
+describe("spokenTones — what speech is grouped and judged by", () => {
+  it.each([
+    ["一下", "yī xià", [1, 4], [2, 4]],
+    ["一般", "yī bān", [1, 1], [4, 1]],
+    ["一直", "yī zhí", [1, 2], [4, 2]],
+    ["不要", "bù yào", [4, 4], [2, 4]],
+    ["不錯", "bù cuò", [4, 4], [2, 4]],
+    ["你好", "nǐ hǎo", [3, 3], [2, 3]],
+    ["老師", "lǎo shī", [3, 1], [3, 1]],
+    ["早上", "zǎo shàng", [3, 4], [3, 4]],
+    ["媽", "mā", [1], [1]],
+  ] as const)("%s (%s) %j is spoken %j", (hanzi, pinyin, tones, spoken) => {
+    expect(spokenTones(w(hanzi, pinyin, [...tones]))).toEqual([...spoken]);
+  });
+
+  it("a recording's own override wins (natural 和 is hàn)", () => {
+    expect(spokenTones({ ...w("和", "hé/hàn", [2]), spokenTones: [4] })).toEqual([4]);
+  });
+
+  it("an override of the wrong length is ignored", () => {
+    expect(spokenTones({ ...w("一下", "yī xià", [1, 4]), spokenTones: [4] })).toEqual([2, 4]);
   });
 });

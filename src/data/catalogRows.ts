@@ -42,6 +42,12 @@ export interface CatalogRow {
   onset_s: number | null;
   clip_s: number | null;
   polyline: unknown;
+  /**
+   * `word_clips.spoken_tones`: the tones this RECORDING was spoken with, when
+   * they differ from what the sandhi rules derive (和 natural = hàn, `{4}`).
+   * Null = derive by rule. Live query only; the fallback bundle omits it.
+   */
+  spoken_tones?: number[] | null;
   contour?: unknown;
   updated_at: string;
   /**
@@ -68,6 +74,7 @@ const CLIP_COLUMNS = [
   "clip_s",
   "polyline",
   "updated_at",
+  "spoken_tones",
 ] as const;
 
 /**

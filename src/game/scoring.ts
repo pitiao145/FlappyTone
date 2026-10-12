@@ -6,7 +6,7 @@
 import type { Tone } from "./gates.ts";
 import type { ClassifiedTone, ToneClassification } from "./toneClassifier.ts";
 import { tuning } from "./tuning.ts";
-import { toneComboKey } from "./words.ts";
+import { isSpokenKey, toneComboKey } from "./words.ts";
 
 export interface GateSample {
   /** |bird - corridor centre| in chao. */
@@ -468,7 +468,7 @@ export interface ComboBreakdownEntry {
  */
 export function comboBreakdown(perCombo: RunStats["perCombo"]): ComboBreakdownEntry[] {
   return Object.entries(perCombo)
-    .filter(([, c]) => c.gates > 0)
+    .filter(([key, c]) => c.gates > 0 && isSpokenKey(key))
     .map(([key, c]) => ({
       key,
       tones: key.split("-").map(Number) as Tone[],

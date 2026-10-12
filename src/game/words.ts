@@ -50,6 +50,12 @@ export interface ClipMeasurements {
   clipS: number;
   polyline: Polyline;
   updatedAt: string;
+  /**
+   * This take's own spoken tones, when the sandhi rules cannot derive them
+   * (`word_clips.spoken_tones`). `wordInStyle` clears the old take's value
+   * before applying this one, so an override never leaks across styles.
+   */
+  spokenTones?: Tone[];
 }
 
 export interface Word {
@@ -101,6 +107,8 @@ export interface Word {
   clipS: number;
   /** The measured contour, simplified to corridor vertices. */
   polyline: Polyline;
+  /** See `ClipMeasurements.spokenTones` — for the take the word currently points at. */
+  spokenTones?: Tone[];
   /**
    * Game access: which tier's run may fly this word. The same value the clips
    * Worker enforces at `/clip/:speaker/:id`, so the pool and the clip route agree.
@@ -178,7 +186,14 @@ function isPolyline(value: unknown): value is Polyline {
 }
 
 /** The natural measurements carried under a row's `natural` key, or undefined if absent/malformed. */
-function readNatural(value: unknown): ClipMeasurements | undefined {
+/** A `spoken_tones` cell, or undefined when absent/malformed (derive by rule instead). */
+function readSpokenTones(value: unknown, syllables: number): Tone[] | undefined {
+  if (!Array.isArray(value) || value.length === 0 || value.length !== syllables) return undefined;
+  if (!value.every((t) => [0, 1, 2, 3, 4].includes(t as number))) return undefined;
+  return value as Tone[];
+}
+
+function readNatural(value: unknown, syllables: number): ClipMeasurements | undefined {
   if (typeof value !== "object" || value === null) return undefined;
   const n = value as Record<string, unknown>;
   if (
@@ -201,6 +216,7 @@ function readNatural(value: unknown): ClipMeasurements | undefined {
     clipS: clipS ?? onsetS + n.duration_s,
     polyline: n.polyline,
     updatedAt: typeof n.updated_at === "string" ? n.updated_at : "",
+    spokenTones: readSpokenTones(n.spoken_tones, syllables),
   };
 }
 
@@ -247,7 +263,9 @@ export function wordsFromCatalog(rows: unknown): Word[] {
     const clipS = readClipS(r.clip_s, r.duration_s);
     const onsetS = readOnsetS(r.onset_s, clipS ?? r.duration_s);
     const tone = r.tone as Tone;
-    const natural = readNatural(r.natural);
+    const syllables = typeof r.syllables === "number" && Number.isFinite(r.syllables) ? r.syllables : 1;
+    const natural = readNatural(r.natural, syllables);
+    const spokenTones = readSpokenTones(r.spoken_tones, syllables);
     // 0 (neutral tone) is kept here even though it's never a valid `tone`
     // value above — `isMulti` reads it off `tones` to exclude a neutral-tone
     // word from the multi-syllable pool, so filtering it out here would hide
@@ -266,7 +284,7 @@ export function wordsFromCatalog(rows: unknown): Word[] {
         english: typeof r.english === "string" ? r.english : "",
         tone,
         tones: tones.length > 0 ? tones : [tone],
-        syllables: typeof r.syllables === "number" && Number.isFinite(r.syllables) ? r.syllables : 1,
+        syllables,
         clipKey: r.clip_key,
         durationS: r.duration_s,
         onsetS,
@@ -274,6 +292,7 @@ export function wordsFromCatalog(rows: unknown): Word[] {
         polyline: r.polyline,
         minTier: r.min_tier,
         updatedAt: typeof r.updated_at === "string" ? r.updated_at : "",
+        ...(spokenTones ? { spokenTones } : {}),
         listIds: Array.isArray(r.lists) ? r.lists.filter((l): l is string => typeof l === "string") : [],
         ...(natural ? { natural } : {}),
       },
@@ -297,6 +316,7 @@ export function clipFor(word: Word, style: SpeechStyle): ClipMeasurements | null
     clipS: word.clipS,
     polyline: word.polyline,
     updatedAt: word.updatedAt,
+    spokenTones: word.spokenTones,
   };
 }
 
@@ -312,7 +332,7 @@ export function wordInStyle(word: Word, style: SpeechStyle): Word | null {
   if (style === "textbook" && word.clipStyle !== "natural") return word;
   if (style === "natural" && word.clipStyle === "natural") return word;
   const clip = clipFor(word, style);
-  return clip ? { ...word, ...clip, clipStyle: style } : null;
+  return clip ? { ...word, spokenTones: undefined, ...clip, clipStyle: style } : null;
 }
 
 /**
@@ -595,6 +615,16 @@ export function multiWords(words: Word[]): Word[] {
 /** A stable, human-legible key for a tone combo, e.g. `"3-2"`. */
 export function toneComboKey(tones: Tone[]): string {
   return tones.join("-");
+}
+
+/**
+ * Combo keys that are never SPOKEN, so never shown as a stat: a 3+3 is said
+ * 2+3 (sandhi.ts). New attempts key on the spoken combo already; this hides
+ * rows a player stored before that change (DECISIONS.md, "Written tones
+ * follow TOCFL, speech follows the recording"). The data stays.
+ */
+export function isSpokenKey(key: string): boolean {
+  return key !== "3-3";
 }
 
 /** Every distinct tone combo the multi-syllable inventory can build a gate for, sorted. */
