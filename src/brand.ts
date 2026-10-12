@@ -144,7 +144,7 @@ export const brand = {
   updateBanner: {
     id: "lp-speech-style",
     label: "Update",
-    title: "Slow or everyday speech.",
+    title: "Standard or spoken speech.",
     body: "Choose how fast the recordings are spoken, plus new modes and settings.",
     cta: "See what's new",
   },
@@ -165,8 +165,8 @@ export const brand = {
     settings: [
       {
         title: "Speech style",
-        choices: "Slow · Regular",
-        body: "Slow is clear, textbook-style recordings. Regular is everyday speed, the way people really talk.",
+        choices: "Standard · Spoken",
+        body: "Standard is slow, clear, textbook-style pronunciation. Spoken is a bit faster, the way people really talk.",
       },
       {
         title: "Words",

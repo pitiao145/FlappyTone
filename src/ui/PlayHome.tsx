@@ -79,7 +79,7 @@ export function PlayHome({
             id="speech-style"
             label="New"
             title="Choose your speech style"
-            body="Practise with slow, clear recordings or everyday speed."
+            body="Practise with standard, clear pronunciation or faster spoken speech."
             actionLabel={calibrated ? "Try it in Settings" : undefined}
             onAction={onOpenSpeechStyle}
           />

@@ -144,7 +144,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   //
   // The toggle on this screen overrides it for this visit only: it is never
   // written to settings, so leaving the visualiser restores the saved choice.
-  // A guest cannot switch (always Slow), same as in Settings.
+  // A guest cannot switch (always Standard), same as in Settings.
   const [styleOverride, setStyleOverride] = useState<SpeechStyle | null>(null);
   const speechStyle: SpeechStyle =
     tier === "guest" ? "textbook" : (styleOverride ?? effectiveSpeechStyle(tier));
@@ -1080,7 +1080,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
 
   /**
    * Which recording style the clips, lines and scores use — set in Settings,
-   * read through `effectiveSpeechStyle` (a guest is always Slow).
+   * read through `effectiveSpeechStyle` (a guest is always Standard).
    */
   const chooseSpeechStyle = (style: SpeechStyle) => {
     if (tier === "guest") {
@@ -1101,7 +1101,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         <span className="vis-setting-label">Speech</span>
       </div>
       <p className="vis-setting-desc">
-        Slow is clear and exaggerated. Regular is everyday speed. This only changes the visualiser.
+        Standard is slow and clear. Spoken is a bit faster, at everyday speed. This only changes the visualiser.
       </p>
       <div className="vis-setting-chips" role="radiogroup" aria-label="Speech style">
         {(["textbook", "natural"] as const).map((style) => (

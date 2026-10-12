@@ -68,7 +68,7 @@ const VOICE_LABEL: Record<Gender, string> = {
 
 const SPEECH_STYLES = ["textbook", "natural"] as const satisfies readonly SpeechStyle[];
 
-export const SPEECH_STYLE_LABEL: Record<SpeechStyle, string> = { textbook: "Slow", natural: "Regular" };
+export const SPEECH_STYLE_LABEL: Record<SpeechStyle, string> = { textbook: "Standard", natural: "Spoken" };
 
 const PROFICIENCIES = ["beginner", "intermediate"] as const satisfies readonly Proficiency[];
 
@@ -459,7 +459,7 @@ export function Settings({
               }}
             />
             <p className="param-help">
-            Slow: slow and clear | Regular: everyday speed.
+            Standard: slow and clear pronunciation. Spoken: a bit faster, the way people really talk.
               {tier === "guest" && " Create a free account to choose."}
             </p>
           </section>
