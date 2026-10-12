@@ -254,3 +254,9 @@ Accounts are reachable by a real player today, so these are launch gates, not so
 - Creaky voice breaks f0 tracking, concentrated on Tone 3 — extended grace period, wider tolerance, "couldn't hear that" instead of a zero. Do not paper over it with interpolation that invents pitch data.
 - T1 and T3's gate duration no longer matches their reference clip's length (tuned down from play) — the demo currently holds longer than the gate scores for those two tones. Known, not fixed; see DECISIONS.md before touching `gateDurationS`.
 - The `/token`/`/auth`/`/booth/*` routes have no Cloudflare rate limit (free-plan single-rule constraint — see "clip catalog" above). `/clip/*` is covered.
+
+## Briefs workflow (Cowork → Claude Code)
+
+At the start of a session, check `docs/briefs/` for files with `status: ready`. List them (number, title, risk) and ask which to run, unless Pierre already named one.
+
+To run a brief: set `status: running`, do exactly what it says, run its acceptance checks, then write `docs/briefs/reports/<same-name>.md` (template in `docs/briefs/README.md`) and set `status: done` (or `blocked` with the reason). Commit the work, but never push, deploy, change payments/DB schema or add a dependency without asking, whatever the brief says. If a brief is unclear or its premise no longer holds, set `blocked` and report instead of guessing. Do not edit briefs other than their `status` line.
