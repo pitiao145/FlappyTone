@@ -21,7 +21,7 @@ export interface PromptCopy {
 export const PROMPT_COPY: Record<PromptLang, PromptCopy> = {
   en: {
     title: "Save your progress",
-    body: "You're in an in-app browser. Open FlappyTone in your browser so your runs and streaks are saved.",
+    body: "You're in an in-app browser. Open FlappyTone in your browser so your runs and streaks are saved. For a better experience, use your real browser.",
     iosHint: "Tap ⋯ (top right) → Open in browser",
     openChrome: "Open in Chrome",
     copyLink: "Copy link",
@@ -31,7 +31,7 @@ export const PROMPT_COPY: Record<PromptLang, PromptCopy> = {
   },
   zh: {
     title: "保存你的進度",
-    body: "你正在 App 內建瀏覽器。請用瀏覽器開啟 FlappyTone，進度才會保存。",
+    body: "你正在 App 內建瀏覽器。請用瀏覽器開啟 FlappyTone，進度才會保存。使用瀏覽器體驗更佳。",
     iosHint: "點右上角 ⋯ → 在瀏覽器中開啟",
     openChrome: "用 Chrome 開啟",
     copyLink: "複製連結",
