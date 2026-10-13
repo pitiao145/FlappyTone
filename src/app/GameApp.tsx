@@ -1,5 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { initAnalytics, track, trackCalibration, trackSpeechStyle } from "../analytics/client";
+import { initAnalytics, track, trackCalibration, trackInAppBrowser, trackSpeechStyle } from "../analytics/client";
+import { detectInAppBrowser } from "../lib/inAppBrowser";
+import { InAppBrowserPrompt } from "../ui/InAppBrowserPrompt";
 import { useTier } from "../data/tier.ts";
 import { initPostHog } from "../analytics/posthog.ts";
 import type { TrackedScreen } from "../analytics/session.ts";
@@ -1011,6 +1013,17 @@ export default function GameApp() {
       /* no window (tests) */
     }
     track(isShareRef ? { type: "landed", ref: "share" } : { type: "landed" });
+    // In-app browsers (Instagram/TikTok/Facebook): once per session, nothing
+    // at all for a normal browser.
+    try {
+      const inApp = detectInAppBrowser(navigator.userAgent);
+      if (inApp.app) {
+        trackInAppBrowser(inApp.app);
+        track({ type: "inapp_prompt", app: inApp.app, platform: inApp.platform, action: "detected" });
+      }
+    } catch {
+      /* no navigator (tests) */
+    }
     if (challengeScoreState != null) {
       track({ type: "challenge_landed", target: challengeScoreState });
     }
@@ -1159,6 +1172,7 @@ export default function GameApp() {
       <div className="app-main" ref={mainRef}>
         <div className="frame">
           {screen === "play" && <BrowserHint />}
+          {screen === "play" && <InAppBrowserPrompt />}
           {screen === "play" && (
             <PlayHome
               calibrated={settings !== null}

@@ -241,6 +241,17 @@ export type AnalyticsEvent =
    * `landing_cta_clicked`). `shown` once per mount while visible.
    */
   | { type: "update_banner"; id: string; surface: UpdateBannerSurface; action: "shown" | "clicked" | "dismissed" }
+  /**
+   * The Play home's "open in your browser" prompt, shown only inside the
+   * Instagram/TikTok/Facebook in-app browsers (`src/lib/inAppBrowser.ts`).
+   * `detected` once per session; the rest follow the overlay. Closed unions.
+   */
+  | {
+      type: "inapp_prompt";
+      app: "instagram" | "tiktok" | "facebook";
+      platform: "ios" | "android" | "other";
+      action: "detected" | "shown" | "dismissed" | "open_external_clicked" | "copy_link_clicked";
+    }
   /** FeedbackWidget.tsx's submit, once it resolves ok. Never carries the free-text message — screen/rating/tier only. */
   | { type: "feedback_submitted"; screen: string; rating: number | null; tier: string };
 
@@ -339,6 +350,7 @@ export function eventTier(type: AnalyticsEvent["type"]): AnalyticsTier {
     case "progress_earlybird_pricing_click":
     case "feedback_submitted":
     case "update_banner":
+    case "inapp_prompt":
       return "global";
   }
 }

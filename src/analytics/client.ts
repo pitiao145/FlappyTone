@@ -26,6 +26,7 @@ import {
   initPostHog,
   setCalibrationProperties,
   setDeviceProperty,
+  setInAppBrowserProperty,
   setPostHogConsent,
   setSpeechStyleProperty,
 } from "./posthog.ts";
@@ -67,6 +68,15 @@ export function trackCalibration(cal: CalibrationSettings): void {
 export function trackSpeechStyle(style: SpeechStyle): void {
   try {
     setSpeechStyleProperty(style);
+  } catch {
+    // ignore
+  }
+}
+
+/** Stamps the in-app browser (instagram/tiktok/facebook) as a super property. */
+export function trackInAppBrowser(app: string): void {
+  try {
+    setInAppBrowserProperty(app);
   } catch {
     // ignore
   }

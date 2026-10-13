@@ -159,6 +159,7 @@ export const APP_EVENTS = new Set<string>([
   "visualiser_session",
   "feedback_submitted",
   "update_banner",
+  "inapp_prompt",
 ]);
 
 /** The only `$`-prefixed properties allowed through on a gameplay event. */
@@ -347,6 +348,21 @@ export function setSpeechStyleProperty(style: SpeechStyle): void {
     try {
       ph?.register({ speech_style: style });
       ph?.setPersonProperties({ speech_style: style });
+    } catch {
+      // ignore
+    }
+  });
+}
+
+/**
+ * Stamps `in_app_browser` on every later event (a super property), so charts
+ * can split Instagram/TikTok/Facebook in-app sessions from normal browsers.
+ * Only ever called when an in-app browser was detected. Global tier.
+ */
+export function setInAppBrowserProperty(app: string): void {
+  runOrQueue(() => {
+    try {
+      ph?.register({ in_app_browser: app });
     } catch {
       // ignore
     }
