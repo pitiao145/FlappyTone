@@ -52,7 +52,12 @@ export function InAppBrowserPrompt(): React.ReactElement | null {
 
   useEffect(() => {
     if (info && !hidden) {
-      track({ type: "inapp_prompt", app: info.app, platform: info.platform, action: "shown" });
+      track({
+        type: "inapp_prompt",
+        app: info.app,
+        platform: info.platform,
+        action: "shown",
+      });
     }
     // Once per mount: a dismissal hides it, it does not re-show it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -60,8 +65,15 @@ export function InAppBrowserPrompt(): React.ReactElement | null {
 
   if (!info || hidden) return null;
   const t = PROMPT_COPY[promptLang()];
-  const send = (action: "dismissed" | "open_external_clicked" | "copy_link_clicked") =>
-    track({ type: "inapp_prompt", app: info.app, platform: info.platform, action });
+  const send = (
+    action: "dismissed" | "open_external_clicked" | "copy_link_clicked",
+  ) =>
+    track({
+      type: "inapp_prompt",
+      app: info.app,
+      platform: info.platform,
+      action,
+    });
 
   const dismiss = () => {
     send("dismissed");
@@ -79,29 +91,52 @@ export function InAppBrowserPrompt(): React.ReactElement | null {
 
   // Android: hand the page to Chrome. If Chrome is absent the intent does
   // nothing, and "Copy link" is right beside it as the fallback.
-  const intent = info.platform === "android" ? chromeIntentUrl(window.location.href) : null;
+  const intent =
+    info.platform === "android" ? chromeIntentUrl(window.location.href) : null;
 
   return (
-    <aside className="inapp-prompt" role="note" aria-label={t.title}>
-      <button type="button" className="inapp-prompt__close" aria-label={t.dismissLabel} onClick={dismiss}>
-        ✕
-      </button>
-      <strong className="inapp-prompt__title">{t.title}</strong>
-      <p className="inapp-prompt__body">{t.body}</p>
-      {info.platform === "ios" && <p className="inapp-prompt__hint">{t.iosHint}</p>}
-      <div className="inapp-prompt__actions">
-        {intent && (
-          <a className="inapp-prompt__btn inapp-prompt__btn--primary" href={intent} onClick={() => send("open_external_clicked")}>
-            {t.openChrome}
-          </a>
+    <div className="inapp-prompt-backdrop" onClick={dismiss}>
+      <aside
+        className="inapp-prompt"
+        role="note"
+        aria-label={t.title}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="inapp-prompt__close"
+          aria-label={t.dismissLabel}
+          onClick={dismiss}
+        >
+          ✕
+        </button>
+        <strong className="inapp-prompt__title">{t.title}</strong>
+        <p className="inapp-prompt__body">{t.body}</p>
+        {info.platform === "ios" && (
+          <p className="inapp-prompt__hint">{t.iosHint}</p>
         )}
-        <button type="button" className="inapp-prompt__btn" onClick={copy}>
-          {copied ? t.copied : t.copyLink}
-        </button>
-        <button type="button" className="inapp-prompt__link" onClick={dismiss}>
-          {t.keepPlaying}
-        </button>
-      </div>
-    </aside>
+        <div className="inapp-prompt__actions">
+          {intent && (
+            <a
+              className="inapp-prompt__btn inapp-prompt__btn--primary"
+              href={intent}
+              onClick={() => send("open_external_clicked")}
+            >
+              {t.openChrome}
+            </a>
+          )}
+          <button type="button" className="inapp-prompt__btn" onClick={copy}>
+            {copied ? t.copied : t.copyLink}
+          </button>
+          <button
+            type="button"
+            className="inapp-prompt__link"
+            onClick={dismiss}
+          >
+            {t.keepPlaying}
+          </button>
+        </div>
+      </aside>
+    </div>
   );
 }
