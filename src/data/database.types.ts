@@ -21,6 +21,32 @@ export type Database = {
   }
   public: {
     Tables: {
+      adoptions: {
+        Row: {
+          adopt_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          adopt_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          adopt_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "adoptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_runs: {
         Row: {
           count: number
@@ -592,6 +618,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_tone_accuracy: {
+        Args: { p_per_key: Json; p_user: string }
+        Returns: undefined
+      }
+      add_tone_shapes: {
+        Args: { p_day: string; p_rows: Json; p_user_id: string }
+        Returns: undefined
+      }
       adopt_guest: {
         Args: {
           p_adopt: string
@@ -601,12 +635,18 @@ export type Database = {
           p_runs: number
           p_streak_best: number
           p_streak_current: number
-          p_streak_last_day: string | null
+          p_streak_last_day: string
           p_user: string
           p_words: string[]
         }
         Returns: boolean
       }
+      board: { Args: { p_limit?: number; p_week: string }; Returns: Json }
+      board_period: {
+        Args: { p_limit?: number; p_period: string }
+        Returns: Json
+      }
+      merge_words: { Args: { p_a: string[]; p_b: string[] }; Returns: string[] }
       record_run: {
         Args: {
           p_day: string
@@ -614,25 +654,16 @@ export type Database = {
           p_mode: string
           p_outcome: string
           p_per_key: Json
-          p_ring: number | null
+          p_ring: number
           p_run: string
           p_score: number
           p_stats: boolean
           p_streak: boolean
-          p_tone_acc: number | null
+          p_tone_acc: number
           p_user: string
           p_words: string[]
         }
         Returns: boolean
-      }
-      add_tone_shapes: {
-        Args: { p_day: string; p_rows: Json; p_user_id: string }
-        Returns: undefined
-      }
-      board: { Args: { p_limit?: number; p_week: string }; Returns: Json }
-      board_period: {
-        Args: { p_limit?: number; p_period: string }
-        Returns: Json
       }
     }
     Enums: {
