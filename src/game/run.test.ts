@@ -1660,6 +1660,10 @@ describe("Run — pairs mode and word mix", () => {
     const stats = run.snapshot().stats;
     expect(stats.perCombo["2-4"]?.gates ?? 0).toBeGreaterThan(0);
     expect(stats.perCombo["1-4"]).toBeUndefined();
+    // Nothing is attributed to either syllable's single tone (brief 04).
+    for (const t of [1, 2, 3, 4] as const) {
+      expect(stats.perTone[t].gates + stats.perTone[t].unheard).toBe(0);
+    }
   });
 
   it("a pause inside a multi gate's mergeGap window (300ms) still reads as one heard utterance", () => {
