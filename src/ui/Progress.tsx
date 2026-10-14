@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { track } from "../analytics/client.ts";
 import type { Tone } from "../game/gates.ts";
 import {
+  accuracySource,
   comboAccuracyFromHistory,
   lifetimeComboAccuracy,
   lifetimeToneAccuracy,
@@ -172,10 +173,10 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
   // stayed frozen at whatever they were when the tab first mounted.
   const version = useSessionVersion();
   const history = useMemo(() => loadRunHistory(), [version]);
-  // Last-5-run accuracy is device-local and empty on a device with no local
-  // runs yet (e.g. just synced on a second device) — fall back to the
-  // lifetime figure from `lifetimePerTone`, which does sync.
-  const usingLifetimeAccuracy = history.lastRuns.length === 0;
+  // One source for the whole card (`accuracySource`): Pro reads the synced
+  // lifetime totals, free/guest their last runs, falling back to lifetime
+  // when those hold no measured gate (e.g. a second device).
+  const usingLifetimeAccuracy = accuracySource(history, tier) === "lifetime";
   const toneAccuracy = useMemo(
     () => (usingLifetimeAccuracy ? lifetimeToneAccuracy(history) : toneAccuracyFromHistory(history)),
     [history, usingLifetimeAccuracy],
@@ -363,8 +364,8 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
               {accuracyJustReset
                 ? "Tone accuracy measures how close the shape of your tone is compared to the average shape of the reference speaker."
                 : usingLifetimeAccuracy
-                  ? "Tone accuracy, averaged over all your runs."
-                  : `Tone accuracy, averaged over your last ${Math.min(5, history.lastRuns.length)} runs.`}
+                  ? "All time: tone accuracy over every run you've played."
+                  : `Last ${Math.min(5, history.lastRuns.length)} ${history.lastRuns.length === 1 ? "run" : "runs"} on this device: tone accuracy.`}
             </p>
             <div className="breakdown">
               {toneAccuracy.map((t) => (

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  accuracySource,
   comboAccuracyFromHistory,
   lifetimeComboAccuracy,
   lifetimeTargetStats,
@@ -193,5 +194,37 @@ describe("lifetimeToneAccuracy", () => {
     const t3 = lifetimeToneAccuracy(store).find((t) => t.tone === 3)!;
     expect(t3.pct).toBeNull();
     expect(Number.isNaN(t3.pct)).toBe(false);
+  });
+});
+
+describe("accuracySource (brief 04: second-device accuracy)", () => {
+  it("Pro reads lifetime totals even when this device has its own recent runs", () => {
+    // Device 2: synced lifetime says Tone 1 at 90% over 10 gates; one local run at 50%.
+    mergeIntoRunHistory({
+      bestScore: 0,
+      totalRuns: 10,
+      totalGates: 10,
+      perTarget: [{ target: "1", attempts: 10, unheard: 0, accSum: 9, best: 1 }],
+    });
+    const store = recordRun(fakeSnapshot(50, ["w1"], (s) => applyGate(s, [1], "ok", 0.5)), "finished");
+    expect(accuracySource(store, "pro")).toBe("lifetime");
+  });
+
+  it("free and guest keep last runs when they hold a measured gate", () => {
+    const store = recordRun(fakeSnapshot(50, ["w1"], (s) => applyGate(s, [1], "ok", 0.5)), "finished");
+    expect(accuracySource(store, "free")).toBe("lastRuns");
+    expect(accuracySource(store, "guest")).toBe("lastRuns");
+  });
+
+  it("falls back to lifetime when last runs hold no measured gate (pre-reset runs, unheard-only runs)", () => {
+    mergeIntoRunHistory({
+      bestScore: 0,
+      totalRuns: 3,
+      totalGates: 3,
+      perTarget: [{ target: "2", attempts: 3, unheard: 0, accSum: 2, best: 1 }],
+    });
+    const store = recordRun(fakeSnapshot(0, [], (s) => applyGate(s, [2], "unheard", 0)), "finished");
+    expect(store.lastRuns.length).toBe(1);
+    expect(accuracySource(store, "free")).toBe("lifetime");
   });
 });

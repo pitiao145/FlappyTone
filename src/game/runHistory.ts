@@ -361,3 +361,25 @@ function comboRows(entries: [string, { gates: number; accSum: number }][]): Comb
     }))
     .sort((a, b) => a.pct - b.pct || a.key.localeCompare(b.key));
 }
+
+/** Which numbers Progress's accuracy bars read: this device's last runs, or the synced lifetime totals. */
+export type AccuracySource = "lastRuns" | "lifetime";
+
+/**
+ * Picks one source for the whole accuracy card — the two are never mixed in
+ * one bar. Pro reads the synced lifetime totals: a second device's own last
+ * runs are only part of the player's history (brief 04). Free and guest read
+ * the last runs, unless those hold no measured gate at all (a fresh device,
+ * runs saved before the STATS_VERSION reset, or unheard-only runs) — then the
+ * lifetime totals, so the card is not blank while real numbers exist.
+ * Interim rule until the server owns stats (brief 05).
+ */
+export function accuracySource(store: RunHistoryStore, tier: "guest" | "free" | "pro"): AccuracySource {
+  if (tier === "pro") return "lifetime";
+  const measured = store.lastRuns.some(
+    (run) =>
+      ([1, 2, 3, 4] as Tone[]).some((t) => run.perTone[t].gates > 0) ||
+      Object.values(run.perCombo ?? {}).some((c) => c.gates > 0),
+  );
+  return measured ? "lastRuns" : "lifetime";
+}
