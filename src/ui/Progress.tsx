@@ -10,7 +10,7 @@ import {
   toneAccuracyFromHistory,
   type RunOutcome,
 } from "../game/runHistory.ts";
-import { loadStreak } from "../game/streak.ts";
+import { streakStatus } from "../game/streak.ts";
 import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
 import { fetchRunLogPage, fetchTrendRows } from "../data/runlog.ts";
@@ -191,7 +191,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
   // bars are empty instead of letting it look like lost progress.
   const accuracyJustReset =
     history.totalRuns > 0 && toneAccuracy.every((t) => t.gates === 0) && comboAccuracy.length === 0;
-  const streak = useMemo(() => loadStreak(), [version]);
+  const streak = useMemo(() => streakStatus(), [version]);
 
   // Mock accuracy-over-time data for the Pro teaser chart — generated once so
   // switching tabs/tones doesn't re-randomise. No real time-series exists yet.
@@ -281,10 +281,19 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
               🔥
             </span>
             <span className="streak-big">
-              {streak.current} {streak.current === 1 ? "day" : "days"}
+              {streak.state === "broken"
+                ? "Broken"
+                : `${streak.current} ${streak.current === 1 ? "day" : "days"}`}
             </span>
             <span className="streak-label">
-              streak{streak.best > streak.current ? ` · best ${streak.best}` : ""}
+              {streak.state === "done_today"
+                ? "Done today"
+                : streak.state === "at_risk"
+                  ? "Play today to keep it"
+                  : streak.state === "broken"
+                    ? "Play a run to start again"
+                    : "Finish a run to start a streak"}
+              {streak.best > streak.current ? ` · best ${streak.best}` : ""}
             </span>
             <span className="streak-warning">
               {tier === "guest"

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { clearStreak, loadStreak, recordPlay } from "./streak.ts";
+import { clearStreak, loadStreak, mergeStreak, recordPlay, streakStatus } from "./streak.ts";
 
 const KEY = "toneflap.streak.v1";
 
@@ -104,5 +104,65 @@ describe("Daily streak", () => {
     clearStreak();
     expect(loadStreak()).toEqual({ current: 0, best: 0 });
     expect(storageMap[KEY]).toBeUndefined();
+  });
+
+  describe("streakStatus (brief 04)", () => {
+    it("none when never played", () => {
+      setDay("2026-08-30");
+      expect(streakStatus()).toEqual({ state: "none", current: 0, best: 0 });
+    });
+
+    it("gap 0: done today", () => {
+      setDay("2026-08-30");
+      recordPlay();
+      expect(streakStatus()).toEqual({ state: "done_today", current: 1, best: 1 });
+    });
+
+    it("gap 1: at risk, streak still shown", () => {
+      setDay("2026-08-29");
+      recordPlay();
+      setDay("2026-08-30");
+      recordPlay();
+      setDay("2026-08-31");
+      expect(streakStatus()).toEqual({ state: "at_risk", current: 2, best: 2 });
+    });
+
+    it("gap 2: broken, best kept", () => {
+      setDay("2026-08-29");
+      recordPlay();
+      setDay("2026-08-31");
+      expect(streakStatus()).toEqual({ state: "broken", current: 0, best: 1 });
+    });
+
+    it("month and year boundaries count as one day", () => {
+      setDay("2026-01-31");
+      recordPlay();
+      setDay("2026-02-01");
+      expect(streakStatus().state).toBe("at_risk");
+      setDay("2026-12-31");
+      recordPlay();
+      setDay("2027-01-01");
+      expect(streakStatus().state).toBe("at_risk");
+    });
+
+    it("DST change days count as one day (local calendar, not 24h)", () => {
+      // Late at night before a spring-forward / fall-back day, early the morning after.
+      vi.setSystemTime(new Date("2026-03-07T23:30:00"));
+      recordPlay();
+      vi.setSystemTime(new Date("2026-03-08T00:30:00"));
+      expect(streakStatus().state).toBe("at_risk");
+      vi.setSystemTime(new Date("2026-10-31T23:30:00"));
+      recordPlay();
+      vi.setSystemTime(new Date("2026-11-01T23:30:00"));
+      expect(streakStatus().state).toBe("at_risk");
+    });
+
+    it("a merged account streak with no local play date shows none, not a stuck number", () => {
+      // Device 2: server says streak 5, but the local device never played, so
+      // there is no honest last-played day (brief 05 adds a server last_day).
+      setDay("2026-08-30");
+      mergeStreak({ current: 5, best: 7 });
+      expect(streakStatus()).toEqual({ state: "none", current: 0, best: 7 });
+    });
   });
 });

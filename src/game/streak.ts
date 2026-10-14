@@ -121,6 +121,29 @@ export function loadStreak(): Streak {
   return { current: gap <= 1 ? state.current : 0, best: state.best };
 }
 
+export type StreakPhase = "done_today" | "at_risk" | "broken" | "none";
+
+export interface StreakStatus extends Streak {
+  state: StreakPhase;
+}
+
+/**
+ * The streak as a state, by local calendar day, so the number never looks
+ * stuck: "done_today" (played today), "at_risk" (played yesterday — play
+ * today to keep it), "broken" (a whole day missed), "none" (never played on
+ * this device). `current` is 0 for broken/none. A device that only holds a
+ * merged account streak has no local play date and reads "none" — the server
+ * gets a last day in brief 05.
+ */
+export function streakStatus(): StreakStatus {
+  const state = load();
+  if (!state.lastPlayedDate) return { state: "none", current: 0, best: state.best };
+  const gap = dayDiff(state.lastPlayedDate, today());
+  if (gap <= 0) return { state: "done_today", current: state.current, best: state.best };
+  if (gap === 1) return { state: "at_risk", current: state.current, best: state.best };
+  return { state: "broken", current: 0, best: state.best };
+}
+
 /** Call once when a qualifying run completes (finished / out_of_hearts). */
 export function recordPlay(): Streak {
   const state = load();
