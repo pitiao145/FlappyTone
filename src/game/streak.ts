@@ -1,31 +1,18 @@
 /**
- * The free tier's daily play streak — localStorage only.
+ * The daily play streak.
  *
  * A streak day is any local calendar day in which the player completes at
  * least one real run (game over: finished or out of hearts). Play on
  * consecutive days and `current` climbs; miss a whole day and it falls back
- * to 0. `best` is the longest run ever reached on this device.
+ * to 0.
  *
- * Like `dailyLimit.ts`, this is explicitly NOT tamper-proof: there are no
- * accounts (CLAUDE.md's hard rule), so anyone can reset it by clearing site
- * data or editing localStorage in devtools. The `chk` field only deters a
- * casual "edit the number in devtools and reload" — a soft nudge, not
- * enforcement. Don't build product logic that assumes this can't be bypassed.
- *
- * PRO SEAM — cross-device streaks are a paid feature. There are no accounts
- * yet, so this module is device-local only. When accounts land, the shape to
- * add (without changing callers) is a small injectable adapter, e.g.:
- *
- *   interface StreakSyncAdapter {
- *     fetch(): Promise<StreakState | null>;   // server's view
- *     push(state: StreakState): Promise<void>;
- *   }
- *
- * `recordPlay` would then push after saving locally, and a signed-in load
- * would merge server + local by `max(current)` / `max(best)` with the
- * server's `lastPlayedDate` authoritative on conflict (its clock is
- * trustworthy; the device's is not). Keep the local path working offline as
- * the fallback — do not make the free/local streak depend on the network.
+ * For a guest this localStorage store is the streak, and it is NOT
+ * tamper-proof (the `chk` field only deters a casual devtools edit). For an
+ * account the server owns it (brief 05: `record_run()` advances
+ * `profiles.streak_current/streak_last_day`), and this store is only a cache
+ * of that (`cacheStreakFromServer`) — `recordPlay` is the optimistic local
+ * write until the next refresh. The state (done today / at risk / broken) is
+ * always read against the local calendar day.
  */
 
 const KEY = "toneflap.streak.v1";
@@ -131,9 +118,8 @@ export interface StreakStatus extends Streak {
  * The streak as a state, by local calendar day, so the number never looks
  * stuck: "done_today" (played today), "at_risk" (played yesterday — play
  * today to keep it), "broken" (a whole day missed), "none" (never played on
- * this device). `current` is 0 for broken/none. A device that only holds a
- * merged account streak has no local play date and reads "none" — the server
- * gets a last day in brief 05.
+ * this device). `current` is 0 for broken/none. For an account the play date
+ * is the server's `streak_last_day`, so every device shows the same state.
  */
 export function streakStatus(): StreakStatus {
   const state = load();
@@ -165,22 +151,14 @@ export function recordPlay(): Streak {
   return { current: next.current, best: next.best };
 }
 
-/**
- * Folds an account's streak back into the local one, keeping the larger of
- * each — the merge the PRO SEAM comment above sketched, now that accounts
- * exist. `lastPlayedDate` stays local: it is what decides whether today
- * continues or breaks the streak, and the local device's own record of when it
- * was last played is the only honest answer to that.
- */
-export function mergeStreak(incoming: { current: number; best: number }): Streak {
-  const state = load();
-  const next: StreakState = {
-    lastPlayedDate: state.lastPlayedDate,
-    current: Math.max(state.current, incoming.current),
-    best: Math.max(state.best, incoming.best),
-  };
-  save(next);
-  return { current: next.current, best: next.best };
+/** The raw stored state — the guest streak that an account adopts. */
+export function loadStreakState(): StreakState {
+  return load();
+}
+
+/** Replaces the local streak with the account's server streak (brief 05). */
+export function cacheStreakFromServer(server: { current: number; best: number; lastDay: string | null }): void {
+  save({ lastPlayedDate: server.lastDay ?? "", current: server.current, best: server.best });
 }
 
 /** Parity with clearRunHistory/clearSettings, for a future "forget my data" flow. */

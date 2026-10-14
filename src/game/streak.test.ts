@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { clearStreak, loadStreak, mergeStreak, recordPlay, streakStatus } from "./streak.ts";
+import { cacheStreakFromServer, clearStreak, loadStreak, recordPlay, streakStatus } from "./streak.ts";
 
 const KEY = "toneflap.streak.v1";
 
@@ -157,12 +157,23 @@ describe("Daily streak", () => {
       expect(streakStatus().state).toBe("at_risk");
     });
 
-    it("a merged account streak with no local play date shows none, not a stuck number", () => {
-      // Device 2: server says streak 5, but the local device never played, so
-      // there is no honest last-played day (brief 05 adds a server last_day).
+    it("an account streak reads its state from the server's last day (brief 05)", () => {
+      // Device 2 never played locally; the server says streak 5, last played yesterday.
       setDay("2026-08-30");
-      mergeStreak({ current: 5, best: 7 });
-      expect(streakStatus()).toEqual({ state: "none", current: 0, best: 7 });
+      cacheStreakFromServer({ current: 5, best: 7, lastDay: "2026-08-29" });
+      expect(streakStatus()).toEqual({ state: "at_risk", current: 5, best: 7 });
+      cacheStreakFromServer({ current: 5, best: 7, lastDay: "2026-08-30" });
+      expect(streakStatus().state).toBe("done_today");
+      cacheStreakFromServer({ current: 5, best: 7, lastDay: "2026-08-27" });
+      expect(streakStatus()).toEqual({ state: "broken", current: 0, best: 7 });
+      cacheStreakFromServer({ current: 0, best: 0, lastDay: null });
+      expect(streakStatus().state).toBe("none");
+    });
+
+    it("an optimistic local play continues a cached server streak", () => {
+      setDay("2026-08-30");
+      cacheStreakFromServer({ current: 5, best: 5, lastDay: "2026-08-29" });
+      expect(recordPlay()).toEqual({ current: 6, best: 6 });
     });
   });
 });

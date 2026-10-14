@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  accuracySource,
+  cacheFromServer,
   comboAccuracyFromHistory,
+  entriesFromRows,
+  hasGuestProgress,
   lifetimeComboAccuracy,
   lifetimeTargetStats,
   lifetimeToneAccuracy,
   loadRunHistory,
-  mergeIntoRunHistory,
   recordRun,
   STATS_VERSION,
   type RunHistoryStore,
@@ -149,24 +150,6 @@ describe("pair combos in history", () => {
     expect(lifetimeComboAccuracy(store).map((c) => c.key)).toEqual(["1-4", "3-2"]);
     expect(lifetimeTargetStats(store).map((t) => t.target)).toEqual(["1", "2", "3", "4", "1-4", "3-2"]);
   });
-
-  it("merges account targets back in by max, tones and combos alike, ignoring anything else", () => {
-    recordRun(fakeSnapshot(100, [], (s) => applyGate(s, [3, 2], "good", 0.6)), "finished");
-    const merged = mergeIntoRunHistory({
-      bestScore: 900,
-      totalRuns: 20,
-      totalGates: 80,
-      perTarget: [
-        { target: "2", attempts: 9, unheard: 1, accSum: 7, best: 0.9 },
-        { target: "3-2", attempts: 4, unheard: 0, accSum: 3, best: 0.85 },
-        { target: "4-0", attempts: 99, unheard: 0, accSum: 99, best: 1 },
-      ],
-    });
-    expect(merged.bestScore).toBe(900);
-    expect(merged.lifetimePerTone[2]).toEqual({ attempts: 9, unheard: 1, accSum: 7, best: 0.9 });
-    expect(merged.lifetimePerCombo["3-2"]).toEqual({ attempts: 4, unheard: 0, accSum: 3, best: 0.85 });
-    expect(merged.lifetimePerCombo["4-0"]).toBeUndefined();
-  });
 });
 
 describe("lifetimeToneAccuracy", () => {
@@ -197,34 +180,52 @@ describe("lifetimeToneAccuracy", () => {
   });
 });
 
-describe("accuracySource (brief 04: second-device accuracy)", () => {
-  it("Pro reads lifetime totals even when this device has its own recent runs", () => {
-    // Device 2: synced lifetime says Tone 1 at 90% over 10 gates; one local run at 50%.
-    mergeIntoRunHistory({
-      bestScore: 0,
-      totalRuns: 10,
-      totalGates: 10,
-      perTarget: [{ target: "1", attempts: 10, unheard: 0, accSum: 9, best: 1 }],
-    });
-    const store = recordRun(fakeSnapshot(50, ["w1"], (s) => applyGate(s, [1], "ok", 0.5)), "finished");
-    expect(accuracySource(store, "pro")).toBe("lifetime");
+describe("cacheFromServer (brief 05: the account's server state replaces the cache)", () => {
+  const server = {
+    totalRuns: 20,
+    bestScore: 900,
+    totalGates: 80,
+    wordIds: ["ma1b"],
+    perTarget: [
+      { target: "2", attempts: 9, unheard: 1, accSum: 7, best: 0.9 },
+      { target: "3-2", attempts: 4, unheard: 0, accSum: 3, best: 0.85 },
+    ],
+    recent: [
+      { played_at: "2026-10-13T10:00:00Z", score: 300, gates: 2, outcome: "quit" as const, per_key: { "2": { gates: 2, accSum: 1.6 } } },
+    ],
+  };
+
+  it("replaces, never max-merges: a smaller server number wins over a bigger local one", () => {
+    for (let i = 0; i < 30; i++) recordRun(fakeSnapshot(5000, ["w"], (s) => applyGate(s, [2], "good", 0.6)), "finished");
+    const store = cacheFromServer(server, "u1");
+    expect(store.totalRuns).toBe(20);
+    expect(store.bestScore).toBe(900);
+    expect(store.owner).toBe("u1");
+    expect(store.lifetimePerTone[2]).toEqual({ attempts: 9, unheard: 1, accSum: 7, best: 0.9 });
+    expect(store.lifetimePerTone[1].attempts).toBe(0);
+    expect(store.lifetimePerCombo["3-2"].attempts).toBe(4);
+    expect(store.lastRuns).toHaveLength(1);
+    expect(store.lastRuns[0].perTone[2]).toEqual({ gates: 2, accSum: 1.6, unheard: 0 });
+    expect(hasGuestProgress(store)).toBe(false);
   });
 
-  it("free and guest keep last runs when they hold a measured gate", () => {
-    const store = recordRun(fakeSnapshot(50, ["w1"], (s) => applyGate(s, [1], "ok", 0.5)), "finished");
-    expect(accuracySource(store, "free")).toBe("lastRuns");
-    expect(accuracySource(store, "guest")).toBe("lastRuns");
+  it("recordRun keeps the owner, so an optimistic local run never turns the cache into guest data", () => {
+    cacheFromServer(server, "u1");
+    const store = recordRun(fakeSnapshot(1, [], (s) => s), "finished");
+    expect(store.owner).toBe("u1");
+    expect(hasGuestProgress(store)).toBe(false);
   });
 
-  it("falls back to lifetime when last runs hold no measured gate (pre-reset runs, unheard-only runs)", () => {
-    mergeIntoRunHistory({
-      bestScore: 0,
-      totalRuns: 3,
-      totalGates: 3,
-      perTarget: [{ target: "2", attempts: 3, unheard: 0, accSum: 2, best: 1 }],
-    });
-    const store = recordRun(fakeSnapshot(0, [], (s) => applyGate(s, [2], "unheard", 0)), "finished");
-    expect(store.lastRuns.length).toBe(1);
-    expect(accuracySource(store, "free")).toBe("lifetime");
+  it("a guest store with runs is guest progress", () => {
+    const store = recordRun(fakeSnapshot(1, [], (s) => s), "quit");
+    expect(hasGuestProgress(store)).toBe(true);
+  });
+
+  it("entriesFromRows splits per_key into tones and combos", () => {
+    const [e] = entriesFromRows([
+      { played_at: "x", score: 1, gates: 3, outcome: "finished", per_key: { "1": { gates: 2, accSum: 1, unheard: 1 }, "3-2": { gates: 1, accSum: 0.5 } } },
+    ]);
+    expect(e.perTone[1]).toEqual({ gates: 2, accSum: 1, unheard: 1 });
+    expect(e.perCombo).toEqual({ "3-2": { gates: 1, accSum: 0.5, unheard: 0 } });
   });
 });

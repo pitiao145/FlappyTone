@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const RUN_ID = "11111111-2222-4333-8444-555555555555";
 const goodRun = {
+  runId: RUN_ID,
   mode: "game",
   score: 1200,
   gates: 4,
   outcome: "finished",
   tone_acc: 0.8,
-  per_key: { "2": { gates: 3, accSum: 2.4 }, "3-2": { gates: 1, accSum: 0.8 } },
+  per_key: { "2": { gates: 3, accSum: 2.4, unheard: 1, best: 0.9 }, "3-2": { gates: 1, accSum: 0.8, unheard: 0, best: 0.8 } },
+  wordIds: ["ma1b", "hao3wan2"],
 };
 const goodBody = { day: "2026-09-28", run: goodRun };
 
@@ -23,11 +26,15 @@ function req(options: { body?: unknown; auth?: string | null; rawBody?: string }
 async function load(opts: {
   user?: { id: string; is_anonymous?: boolean } | null;
   entitlement?: { has_access: boolean } | null;
-  insertError?: unknown;
+  rpcError?: unknown;
+  rpcResult?: boolean;
 } = {}) {
   const user = "user" in opts ? opts.user : { id: "user-1", is_anonymous: false };
   const entitlement = "entitlement" in opts ? opts.entitlement : { has_access: true };
-  const insert = vi.fn(async (_row: Record<string, unknown>) => ({ error: opts.insertError ?? null }));
+  const rpc = vi.fn(async (_fn: string, _args: Record<string, unknown>) => ({
+    data: opts.rpcError ? null : (opts.rpcResult ?? true),
+    error: opts.rpcError ?? null,
+  }));
   const ent: any = {
     select: vi.fn(() => ent),
     eq: vi.fn(() => ent),
@@ -36,12 +43,13 @@ async function load(opts: {
   vi.doMock("@supabase/supabase-js", () => ({
     createClient: vi.fn(() => ({
       auth: { getUser: vi.fn(async () => ({ data: { user }, error: null })) },
-      from: vi.fn((t: string) => (t === "run_log" ? { insert } : ent)),
+      from: vi.fn(() => ent),
+      rpc,
     })),
   }));
   vi.resetModules();
   const mod = await import("./runlog.js");
-  return { ...mod, insert };
+  return { ...mod, rpc };
 }
 
 describe("POST /api/runlog", () => {
@@ -76,15 +84,9 @@ describe("POST /api/runlog", () => {
   });
 
   it("returns 403 for an anonymous session", async () => {
-    const { POST, insert } = await load({ user: { id: "u", is_anonymous: true } });
+    const { POST, rpc } = await load({ user: { id: "u", is_anonymous: true } });
     expect((await POST(req())).status).toBe(403);
-    expect(insert).not.toHaveBeenCalled();
-  });
-
-  it.each([null, { has_access: false }])("returns 403 for a non-Pro account (%p)", async (entitlement) => {
-    const { POST, insert } = await load({ entitlement });
-    expect((await POST(req())).status).toBe(403);
-    expect(insert).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("returns 400 for malformed JSON", async () => {
@@ -92,14 +94,14 @@ describe("POST /api/runlog", () => {
     expect((await POST(req({ rawBody: "{nope" }))).status).toBe(400);
   });
 
-  it.each(["2026-09-30", "2026-09-26", "28-09-2026", 7])("returns 400 for day %p", async (day) => {
+  it.each(["2026-09-30", "2026-09-20", "28-09-2026", 7])("returns 400 for day %p", async (day) => {
     const { POST } = await load();
     expect((await POST(req({ body: { ...goodBody, day } }))).status).toBe(400);
   });
 
-  it("accepts a day within 24h of server UTC", async () => {
+  it.each(["2026-09-29", "2026-09-22"])("accepts day %p (a day ahead, or an outbox run a week old)", async (day) => {
     const { POST } = await load();
-    expect((await POST(req({ body: { ...goodBody, day: "2026-09-29" } }))).status).toBe(200);
+    expect((await POST(req({ body: { ...goodBody, day } }))).status).toBe(200);
   });
 
   it.each([
@@ -116,32 +118,122 @@ describe("POST /api/runlog", () => {
     ["neutral combo", { per_key: { "3-0": { gates: 1, accSum: 1 } } }],
     ["accSum over gates", { per_key: { "1": { gates: 2, accSum: 2.5 } } }],
     ["negative accSum", { per_key: { "1": { gates: 2, accSum: -1 } } }],
-    ["zero key gates", { per_key: { "1": { gates: 0, accSum: 0 } } }],
+    ["empty key", { per_key: { "1": { gates: 0, accSum: 0, unheard: 0 } } }],
+    ["best above 1", { per_key: { "1": { gates: 1, accSum: 1, best: 2 } } }],
     ["per_key an array", { per_key: [] }],
+    ["bad run id", { runId: "not-a-uuid" }],
+    ["bad word id", { wordIds: ["DROP TABLE"] }],
+    ["too many words", { wordIds: Array.from({ length: 201 }, (_, i) => `w${i}`) }],
   ])("returns 400 for a bad run: %s", async (_n, patch) => {
-    const { POST, insert } = await load();
+    const { POST, rpc } = await load();
     expect((await POST(req({ body: { day: "2026-09-28", run: { ...goodRun, ...patch } } }))).status).toBe(400);
-    expect(insert).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
   });
 
-  it("logs every mode and outcome, allows null accuracy and empty per_key", async () => {
-    const { POST, insert } = await load();
-    const run = { ...goodRun, mode: "drill", outcome: "restart", gates: 0, tone_acc: null, per_key: {} };
+  it("an unheard-only key is valid (it still adds to the unheard tally)", async () => {
+    const { POST } = await load();
+    const run = { ...goodRun, per_key: { "3": { gates: 0, accSum: 0, unheard: 2, best: 0 } } };
     expect((await POST(req({ body: { day: "2026-09-28", run } }))).status).toBe(200);
-    expect(insert).toHaveBeenCalledWith({ user_id: "user-1", day: "2026-09-28", ...run });
+  });
+
+  it("records a free account's counted run with stats, streak and a ring of 5", async () => {
+    const { POST, rpc } = await load({ entitlement: null });
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ applied: true });
+    expect(rpc).toHaveBeenCalledWith("record_run", expect.objectContaining({
+      p_user: "user-1", p_run: RUN_ID, p_day: "2026-09-28", p_stats: true, p_streak: true, p_ring: 5,
+      p_words: ["ma1b", "hao3wan2"],
+    }));
+  });
+
+  it("keeps every row for Pro (no ring)", async () => {
+    const { POST, rpc } = await load();
+    await POST(req());
+    expect(rpc.mock.calls[0][1].p_ring).toBeNull();
+  });
+
+  it("a retried run reports applied:false and still succeeds", async () => {
+    const { POST } = await load({ rpcResult: false });
+    const res = await POST(req());
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ applied: false });
+  });
+
+  it("does not store a free account's uncounted run (tutorial, restart)", async () => {
+    const { POST, rpc } = await load({ entitlement: { has_access: false } });
+    for (const patch of [{ mode: "tutorial" }, { outcome: "restart" }]) {
+      const res = await POST(req({ body: { day: "2026-09-28", run: { ...goodRun, ...patch } } }));
+      expect(await res.json()).toEqual({ applied: false });
+    }
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("logs a Pro tutorial run without stats or streak", async () => {
+    const { POST, rpc } = await load();
+    await POST(req({ body: { day: "2026-09-28", run: { ...goodRun, mode: "tutorial", tone_acc: null, per_key: {} } } }));
+    expect(rpc.mock.calls[0][1]).toMatchObject({ p_stats: false, p_streak: false });
+  });
+
+  it("accepts a pre-brief-05 body (no runId, unheard, best or words)", async () => {
+    const { POST, rpc } = await load();
+    const old = { mode: "game", score: 10, gates: 1, outcome: "quit", tone_acc: 0.5, per_key: { "1": { gates: 1, accSum: 0.5 } } };
+    expect((await POST(req({ body: { day: "2026-09-28", run: old } }))).status).toBe(200);
+    const args = rpc.mock.calls[0][1];
+    expect(args.p_run).toMatch(/^[0-9a-f-]{36}$/);
+    expect(args.p_per_key).toEqual({ "1": { gates: 1, accSum: 0.5, unheard: 0, best: 0 } });
   });
 
   it("never sends a client-supplied time or user id", async () => {
-    const { POST, insert } = await load();
+    const { POST, rpc } = await load();
     const body = { day: "2026-09-28", run: { ...goodRun, played_at: "2020-01-01T00:00:00Z", user_id: "evil" } };
     expect((await POST(req({ body }))).status).toBe(200);
-    const row = insert.mock.calls[0][0];
-    expect(row.user_id).toBe("user-1");
-    expect("played_at" in row).toBe(false);
+    const args = rpc.mock.calls[0][1];
+    expect(args.p_user).toBe("user-1");
+    expect(JSON.stringify(args)).not.toContain("2020-01-01");
   });
 
-  it("returns 502 when the insert fails", async () => {
-    const { POST } = await load({ insertError: new Error("db down") });
+  it("returns 502 when the database call fails", async () => {
+    const { POST } = await load({ rpcError: new Error("db down") });
     expect((await POST(req())).status).toBe(502);
+  });
+
+  describe("adopt", () => {
+    const adopt = {
+      adoptId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+      runs: 12, gates: 40, best: 3000, streakCurrent: 2, streakBest: 4, streakLastDay: "2026-09-27",
+      per_key: { "2": { gates: 10, accSum: 7, unheard: 2, best: 0.95 } },
+      wordIds: ["ma1b"],
+    };
+
+    it("adds a guest's totals through adopt_guest", async () => {
+      const { POST, rpc } = await load({ entitlement: null });
+      const res = await POST(req({ body: { kind: "adopt", adopt } }));
+      expect(await res.json()).toEqual({ applied: true });
+      expect(rpc).toHaveBeenCalledWith("adopt_guest", expect.objectContaining({
+        p_user: "user-1", p_adopt: adopt.adoptId, p_runs: 12, p_streak_last_day: "2026-09-27",
+      }));
+    });
+
+    it("a repeated adoption reports applied:false", async () => {
+      const { POST } = await load({ rpcResult: false });
+      expect(await (await POST(req({ body: { kind: "adopt", adopt } }))).json()).toEqual({ applied: false });
+    });
+
+    it.each([
+      ["bad id", { adoptId: "x" }],
+      ["runs too high", { runs: 10_001 }],
+      ["negative gates", { gates: -1 }],
+      ["future streak day", { streakLastDay: "2027-01-01" }],
+    ])("returns 400 for %s", async (_n, patch) => {
+      const { POST, rpc } = await load();
+      expect((await POST(req({ body: { kind: "adopt", adopt: { ...adopt, ...patch } } }))).status).toBe(400);
+      expect(rpc).not.toHaveBeenCalled();
+    });
+
+    it("returns 403 for an anonymous session", async () => {
+      const { POST } = await load({ user: { id: "u", is_anonymous: true } });
+      expect((await POST(req({ body: { kind: "adopt", adopt } }))).status).toBe(403);
+    });
   });
 });

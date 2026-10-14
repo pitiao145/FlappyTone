@@ -11,7 +11,7 @@ import { MicError } from "../audio/mic";
 import { ensurePlaybackCtx } from "../audio/reference";
 import { ensureMic, getMicSession, MicCancelled, stopMic } from "../audio/session";
 import { incrementDailyRuns, loadDailyRuns, refreshServerDailyRuns } from "../game/dailyLimit.ts";
-import { getAccount, localAggregates, pushAggregates, syncAccount } from "../data/account.ts";
+import { getAccount, syncAccount } from "../data/account.ts";
 import { loadRoster } from "../data/speakers.ts";
 import { fetchCatalog } from "../data/words.ts";
 import { resolveSpeaker } from "../game/voice.ts";
@@ -918,13 +918,9 @@ export default function GameApp() {
       incrementDailyRuns();
       // Same trigger advances the local daily streak (quits don't count).
       recordPlay();
-      // Fire-and-forget: a signed-in player's aggregates ride along with
-      // every completed run, not just at signup. Push only, no server read —
-      // syncAccount() already does the full merge elsewhere (app load).
-      // Never blocks setScreen("gameover") below.
-      void getAccount().then((account) => {
-        if (account.status === "permanent") void pushAggregates(localAggregates());
-      });
+      // An account's run reaches the server from `Game.tsx`'s `reportRunEnd`
+      // (once, through the outbox); the two writes above are only the local
+      // cache until the server's numbers replace it (brief 05).
     }
 
     // Windowed recalibration check — see recalibration.ts. Only a completed,
@@ -1079,8 +1075,8 @@ export default function GameApp() {
     void getPlayTicket();
     // Fire-and-forget, signed-in-only, never blocking render: refresh the
     // cached server run count so a returning player's daily count is right
-    // before their first run, and pull down anything the account already
-    // knows (per `syncAccount`'s merge-by-max).
+    // before their first run, post any run still in the outbox, and replace
+    // the local stats cache with the server's (`syncAccount`, brief 05).
     void getAccount().then((account) => {
       if (account.status !== "permanent") return;
       void refreshServerDailyRuns();

@@ -17,12 +17,19 @@ import { isSpokenKey } from "./words.ts";
 export type LogOutcome = "finished" | "out_of_hearts" | "quit" | "restart";
 
 export interface PerKeyStat {
+  /** Heard (measured) gates. */
   gates: number;
   accSum: number;
+  /** Unheard gates — no accuracy, tallied apart (hard rule 8). Absent on rows from before brief 05. */
+  unheard?: number;
+  /** Highest single-gate tone accuracy, 0..1. Absent on rows from before brief 05. */
+  best?: number;
 }
 
 /** The body of one `api/runlog.ts` POST (minus `day`). */
 export interface RunLogEntry {
+  /** Client-minted uuid: the server adds a run once, however often it is posted. */
+  runId: string;
   mode: RunMode;
   score: number;
   gates: number;
@@ -30,10 +37,12 @@ export interface RunLogEntry {
   /** The run's average tone accuracy, 0..1; null when no gate was scored. */
   tone_acc: number | null;
   per_key: Record<string, PerKeyStat>;
+  /** Word ids flown this run, for the account's "words" count. */
+  wordIds: string[];
 }
 
 /** A stored row, as the Progress screen reads it. */
-export interface RunLogRow extends RunLogEntry {
+export interface RunLogRow extends Omit<RunLogEntry, "runId" | "wordIds"> {
   id: number;
   played_at: string;
   day: string;
@@ -47,19 +56,45 @@ export interface TrendPoint {
   gates: number;
 }
 
-/** One run's log row. Measured gates only: unheard gates have no accuracy. */
-export function buildRunLogEntry(stats: RunStats, mode: RunMode, outcome: LogOutcome): RunLogEntry {
+/**
+ * One run's log row. `gates`/`accSum` are measured gates only (unheard gates
+ * have no accuracy), matching the local `recordRun`'s `totalGates`; `unheard`
+ * and `best` ride along so the server's lifetime stats keep the same columns
+ * the local ones do. A key with only unheard gates is kept for that tally.
+ */
+export function buildRunLogEntry(
+  stats: RunStats,
+  mode: RunMode,
+  outcome: LogOutcome,
+  runId: string,
+  wordIds: readonly string[],
+): RunLogEntry {
   const per_key: Record<string, PerKeyStat> = {};
-  const add = (key: string, gates: number, accSum: number) => {
-    if (gates < 1) return;
-    per_key[key] = { gates, accSum: Math.min(Math.max(accSum, 0), gates) };
+  const add = (key: string, s: { gates: number; accSum: number; unheard: number; best: number }) => {
+    if (s.gates < 1 && s.unheard < 1) return;
+    per_key[key] = {
+      gates: s.gates,
+      accSum: Math.min(Math.max(s.accSum, 0), s.gates),
+      unheard: s.unheard,
+      best: Math.min(Math.max(s.best, 0), 1),
+    };
   };
-  for (const t of [1, 2, 3, 4] as Tone[]) add(String(t), stats.perTone[t].gates, stats.perTone[t].accSum);
-  for (const [key, c] of Object.entries(stats.perCombo ?? {})) add(key, c.gates, c.accSum);
+  for (const t of [1, 2, 3, 4] as Tone[]) add(String(t), stats.perTone[t]);
+  for (const [key, c] of Object.entries(stats.perCombo ?? {})) add(key, c);
   const all = Object.values(per_key);
   const gates = all.reduce((s, e) => s + e.gates, 0);
   const accSum = all.reduce((s, e) => s + e.accSum, 0);
-  return { mode, score: Math.round(stats.score), gates, outcome, tone_acc: gates > 0 ? accSum / gates : null, per_key };
+  return {
+    runId,
+    mode,
+    score: Math.round(stats.score),
+    gates,
+    outcome,
+    tone_acc: gates > 0 ? accSum / gates : null,
+    per_key,
+    // Same bound as `api/runlog.ts`: one odd id must not cost the whole run.
+    wordIds: [...new Set(wordIds)].filter((w) => /^[a-z0-9_]{1,40}$/.test(w)).slice(0, 200),
+  };
 }
 
 /** Per key, one point per day with data, oldest first. */

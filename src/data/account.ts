@@ -13,21 +13,28 @@
  * Accounts are a Pro feature and the UI is dev-gated, so nothing here is
  * reachable by a player yet. This is the plumbing, built ahead of the product.
  *
- * Same contract as the rest of `src/data/`: nothing throws. A sync that fails
- * leaves the local stats untouched and authoritative, which is the safe
- * direction — localStorage is where an anonymous player's progress lives, and
- * a failed upload must never be able to erase it.
+ * Progress (brief 05): the server owns an account's stats. A guest's local
+ * progress is ADDED to the account once, on the guest -> account step
+ * (`adoptGuestProgress`, idempotent by an adopt id), and from then on the
+ * device's stores are only a cache of the server (`stats.ts`). There is no
+ * max-merge any more: it lost a second device's runs (brief 04).
+ *
+ * Same contract as the rest of `src/data/`: nothing throws. A failed adoption
+ * keeps its snapshot and retries on the next sync; the guest's numbers are
+ * never cleared before the server confirmed it holds them.
  */
 import { APP_PATH } from "../ui/appLink.ts";
 import {
+  clearRunHistory,
+  hasGuestProgress,
   lifetimeTargetStats,
   loadRunHistory,
-  mergeIntoRunHistory,
-  type TargetStats,
 } from "../game/runHistory.ts";
-import { loadStreak, mergeStreak } from "../game/streak.ts";
+import { clearStreak, loadStreakState } from "../game/streak.ts";
 import { displayName, setLocalDisplayName } from "./leaderboard.ts";
 import { bumpSessionVersion } from "./sessionVersion.ts";
+import { flushRunOutbox } from "./runlog.ts";
+import { ensureProfile, refreshServerStats } from "./stats.ts";
 
 import { currentSession, getSupabase, warn } from "./supabase.ts";
 
@@ -76,6 +83,7 @@ export async function startEmailSignIn(email: string): Promise<AuthResult> {
   if (!trimmed) return { ok: false, reason: "no email given" };
 
   try {
+    await snapshotGuestProgress();
     // Both paths must say where to come back to. Without an explicit redirect
     // Supabase falls back to the project's Site URL, which is `/` — the
     // marketing entry, which deliberately ships no Supabase code at all (see
@@ -123,6 +131,7 @@ export async function signUpWithPassword(
   if (password.length < 8) return { ok: false, reason: "password must be at least 8 characters" };
 
   try {
+    await snapshotGuestProgress();
     const account = await getAccount();
     const { error } =
       account.status === "anonymous"
@@ -151,8 +160,8 @@ export async function signUpWithPassword(
   }
 }
 
-/** Second-device / returning-player sign-in. Merge-by-max makes the sync safe
- * regardless of which side has more progress. */
+/** Second-device / returning-player sign-in. Any guest progress on this
+ * device is added to the account once (`snapshotGuestProgress`). */
 export async function signInWithPassword(email: string, password: string): Promise<AuthResult> {
   const supabase = getSupabase();
   if (!supabase) return { ok: false, reason: "no Supabase client" };
@@ -161,6 +170,7 @@ export async function signInWithPassword(email: string, password: string): Promi
   if (!password) return { ok: false, reason: "no password given" };
 
   try {
+    await snapshotGuestProgress();
     const { error } = await supabase.auth.signInWithPassword({ email: trimmed, password });
     if (error) {
       warn("account", `password sign-in failed: ${error.message}`);
@@ -272,9 +282,13 @@ export async function signOut(): Promise<void> {
   if (!supabase) return;
   try {
     await supabase.auth.signOut();
-    // Nothing local was rewritten (signed-out state has no localStorage of
-    // its own), but every surface reading account-derived data still needs
-    // to re-read and fall back to guest — see `sessionVersion.ts`.
+    // The stats on this device were the account's cache, not guest progress:
+    // a guest starts fresh, and the account's numbers stay on the server.
+    // Left in place they would mix with the guest's own runs.
+    clearRunHistory();
+    clearStreak();
+    // Every surface reading account-derived data needs to re-read and fall
+    // back to guest — see `sessionVersion.ts`.
     bumpSessionVersion();
   } catch (err) {
     warn("account", "sign-out failed", err);
@@ -319,255 +333,150 @@ export async function renameAccount(name: string): Promise<AuthResult> {
   }
 }
 
-/** The account-owned aggregates, in the shape both sides of the sync speak. */
-export interface Aggregates {
-  bestScore: number;
-  totalRuns: number;
-  totalGates: number;
+const ADOPT_KEY = "toneflap.adopt.v1";
+
+/** A guest's local totals, frozen at the guest -> account step, waiting to be added once. */
+export interface GuestSnapshot {
+  adoptId: string;
+  /** True once a POST was tried: the id must then be kept, the server may hold it. */
+  attempted: boolean;
+  runs: number;
+  gates: number;
+  best: number;
   streakCurrent: number;
   streakBest: number;
-  /**
-   * Lifetime tone accuracy, one row per target: a single tone ("1".."4") or a
-   * pair combo ("3-2"). Synced to `tone_accuracy_stats` (migration 0025),
-   * never to the old corridor-accuracy `tone_stats`, so pre-spec-A numbers
-   * cannot merge back into a reset device.
-   */
-  perTarget: TargetStats[];
+  streakLastDay: string | null;
+  per_key: Record<string, { gates: number; accSum: number; unheard: number; best: number }>;
+  wordIds: string[];
+}
+
+export function loadGuestSnapshot(): GuestSnapshot | null {
+  try {
+    const raw = localStorage.getItem(ADOPT_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as GuestSnapshot;
+    return typeof s?.adoptId === "string" && typeof s.runs === "number" ? s : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveGuestSnapshot(s: GuestSnapshot | null): void {
+  try {
+    if (s) localStorage.setItem(ADOPT_KEY, JSON.stringify(s));
+    else localStorage.removeItem(ADOPT_KEY);
+  } catch {
+    // Blocked storage: nothing to adopt survives, the guest numbers stay local.
+  }
 }
 
 /**
- * Merges two sets of aggregates by taking the larger of each.
- *
- * Merge-by-max is chosen over "newest wins" because these are all monotonic
- * records of things the player actually did: a count of runs, a best score, a
- * longest streak. Taking the max cannot lose an achievement, needs no clocks
- * to agree, and needs no conflict UI. It over-counts only if the same run is
- * somehow recorded on both sides, which is far cheaper than silently deleting
- * a week of practice from a second device.
- *
- * `streakCurrent` is the one field where max is arguable — two devices used on
- * different days are not really one longer streak — but the alternative needs
- * a trustworthy clock and a merge rule per calendar day, and being generous
- * about a streak is the harmless direction to be wrong in.
+ * Freezes this device's guest progress so the account it is about to become
+ * (or sign into) adds it once. Only an unowned store counts — a store that is
+ * already some account's cache is never added again. Called before the auth
+ * call, while the session is still the guest's. A snapshot already tried is
+ * kept as is (the server may hold its id).
  */
-export function mergeAggregates(a: Aggregates, b: Aggregates): Aggregates {
-  const byTarget = new Map<string, TargetStats>();
-  for (const t of [...a.perTarget, ...b.perTarget]) {
-    const prev = byTarget.get(t.target);
-    byTarget.set(
-      t.target,
-      prev
-        ? {
-            target: t.target,
-            attempts: Math.max(prev.attempts, t.attempts),
-            unheard: Math.max(prev.unheard, t.unheard),
-            accSum: Math.max(prev.accSum, t.accSum),
-            best: Math.max(prev.best, t.best),
-          }
-        : { ...t },
-    );
+export async function snapshotGuestProgress(): Promise<void> {
+  try {
+    if ((await getAccount()).status === "permanent") return;
+    const prev = loadGuestSnapshot();
+    if (prev?.attempted) return;
+    const store = loadRunHistory();
+    const streak = loadStreakState();
+    if (!hasGuestProgress(store) && streak.current === 0 && streak.best === 0) return;
+    const per_key: GuestSnapshot["per_key"] = {};
+    for (const t of lifetimeTargetStats(store)) {
+      if (t.attempts + t.unheard < 1) continue;
+      per_key[t.target] = {
+        gates: t.attempts,
+        accSum: Math.min(Math.max(t.accSum, 0), t.attempts),
+        unheard: t.unheard,
+        best: Math.min(Math.max(t.best, 0), 1),
+      };
+    }
+    saveGuestSnapshot({
+      adoptId: crypto.randomUUID(),
+      attempted: false,
+      runs: store.totalRuns,
+      gates: store.totalGates,
+      best: Math.round(store.bestScore),
+      streakCurrent: streak.current,
+      streakBest: streak.best,
+      streakLastDay: streak.lastPlayedDate || null,
+      per_key,
+      wordIds: store.wordIds.filter((w) => /^[a-z0-9_]{1,40}$/.test(w)),
+    });
+  } catch (err) {
+    warn("account", "could not snapshot guest progress", err);
   }
-  return {
-    bestScore: Math.max(a.bestScore, b.bestScore),
-    totalRuns: Math.max(a.totalRuns, b.totalRuns),
-    totalGates: Math.max(a.totalGates, b.totalGates),
-    streakCurrent: Math.max(a.streakCurrent, b.streakCurrent),
-    streakBest: Math.max(a.streakBest, b.streakBest),
-    perTarget: [...byTarget.values()].sort((x, y) => x.target.localeCompare(y.target)),
-  };
 }
 
-export const EMPTY_AGGREGATES: Aggregates = {
-  bestScore: 0,
-  totalRuns: 0,
-  totalGates: 0,
-  streakCurrent: 0,
-  streakBest: 0,
-  perTarget: [],
-};
-
-/** `fetchAggregates`'s return shape: the numeric aggregates plus the server's
- * `display_name`, so `syncAccount` can pull the name down without a second
- * round trip. The name is deliberately not part of `Aggregates`/
- * `mergeAggregates` — it isn't a monotonic count, so max-merging it makes no
- * sense, and it flows one way only (see `syncAccount`). */
-export interface RemoteAggregates {
-  aggregates: Aggregates;
-  displayName: string | null;
-}
-
-/** Reads the account's aggregates back. Empty when signed out or anonymous. */
-export async function fetchAggregates(): Promise<RemoteAggregates> {
+/**
+ * Adds a waiting guest snapshot to the signed-in account, once. On the
+ * server's answer (applied, or already applied) the snapshot and the guest
+ * stores are cleared; the next refresh fills the stores as the account's
+ * cache. On a network failure everything stays for the next sync.
+ */
+export async function adoptGuestProgress(): Promise<boolean> {
+  const snap = loadGuestSnapshot();
+  if (!snap) return false;
   const supabase = getSupabase();
   const account = await getAccount();
-  if (!supabase || account.status !== "permanent" || !account.userId) {
-    return { aggregates: EMPTY_AGGREGATES, displayName: null };
-  }
+  if (!supabase || account.status !== "permanent" || !account.userId) return false;
   try {
-    const [profile, tones] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("best_score, total_runs, total_gates, streak_current, streak_best, display_name")
-        .eq("id", account.userId)
-        .maybeSingle(),
-      supabase
-        .from("tone_accuracy_stats")
-        .select("target, attempts, unheard, sum_accuracy, best_accuracy")
-        .eq("user_id", account.userId),
-    ]);
-    if (profile.error) {
-      warn("account", `could not read profile aggregates: ${profile.error.message}`);
-      return { aggregates: EMPTY_AGGREGATES, displayName: null };
+    saveGuestSnapshot({ ...snap, attempted: true });
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return false;
+    const { attempted: _attempted, ...adopt } = snap;
+    const res = await fetch("/api/runlog", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      body: JSON.stringify({ kind: "adopt", adopt }),
+    });
+    if (res.status === 400) {
+      // Never valid (out of bounds): keep the guest numbers local, stop retrying.
+      warn("account", "guest progress was refused by the server");
+      saveGuestSnapshot(null);
+      return false;
     }
-    return {
-      aggregates: {
-        bestScore: profile.data?.best_score ?? 0,
-        totalRuns: profile.data?.total_runs ?? 0,
-        totalGates: profile.data?.total_gates ?? 0,
-        streakCurrent: profile.data?.streak_current ?? 0,
-        streakBest: profile.data?.streak_best ?? 0,
-        perTarget: (tones.data ?? []).map((t) => ({
-          target: t.target,
-          attempts: Number(t.attempts),
-          unheard: Number(t.unheard),
-          accSum: t.sum_accuracy,
-          best: t.best_accuracy,
-        })),
-      },
-      displayName: profile.data?.display_name ?? null,
-    };
+    if (!res.ok) {
+      warn("account", `adopting guest progress failed: ${res.status}`);
+      return false;
+    }
+    saveGuestSnapshot(null);
+    clearRunHistory();
+    clearStreak();
+    return true;
   } catch (err) {
-    warn("account", "could not read account aggregates", err);
-    return { aggregates: EMPTY_AGGREGATES, displayName: null };
+    warn("account", "adopting guest progress failed", err);
+    return false;
   }
-}
-
-/** This device's own view of the aggregates, read from localStorage. */
-export function localAggregates(): Aggregates {
-  const history = loadRunHistory();
-  const streak = loadStreak();
-  return {
-    bestScore: history.bestScore,
-    totalRuns: history.totalRuns,
-    totalGates: history.totalGates,
-    streakCurrent: streak.current,
-    streakBest: streak.best,
-    perTarget: lifetimeTargetStats(history),
-  };
 }
 
 /**
- * Reconciles this device with the account, in both directions.
- *
- * Runs on signup (uploading everything the player did while anonymous) and on
- * signing in elsewhere (pulling down what the account already knows). The two
- * are the same operation — merge by max, write the result to both sides —
- * which is why there is no separate "migrate my guest data" path to get wrong.
- *
- * Order matters on failure: the server is written first, and local is only
- * updated once that succeeded. A half-done sync therefore leaves the device
- * exactly as it was, still holding everything, rather than adopting server
- * values for progress that never made it up.
+ * Brings this device up to date with the account. Runs on signup, sign-in and
+ * app load: adds any waiting guest progress (once), posts any run still in
+ * the outbox, then replaces the local cache with the server's numbers.
  */
 export async function syncAccount(): Promise<AuthResult> {
   const account = await getAccount();
-  if (account.status !== "permanent") {
+  if (account.status !== "permanent" || !account.userId) {
     return { ok: false, reason: "sync needs an account" };
   }
-  const local = localAggregates();
-  const { aggregates: remote, displayName: remoteName } = await fetchAggregates();
-  const merged = mergeAggregates(local, remote);
-
-  const pushed = await pushAggregates(merged);
-  if (!pushed.ok) return pushed;
-
-  mergeIntoRunHistory({
-    bestScore: merged.bestScore,
-    totalRuns: merged.totalRuns,
-    totalGates: merged.totalGates,
-    perTarget: merged.perTarget,
-  });
-  mergeStreak({ current: merged.streakCurrent, best: merged.streakBest });
+  if (!(await ensureProfile(account.userId))) return { ok: false, reason: "could not create the profile row" };
+  await adoptGuestProgress();
+  await flushRunOutbox();
+  const refreshed = await refreshServerStats();
+  if (!refreshed.ok) return { ok: false, reason: "could not read account stats" };
 
   // Name flows down only, never up: the server already has this player's real
   // name (set at signup, or renamed since on another device), so the local
-  // cache adopts it. Never write the local name back to the server here —
-  // that would let a second device's stale generated name clobber a real one.
-  // Only `renameAccount()` may change the server's `display_name`.
-  if (remoteName) setLocalDisplayName(remoteName);
-
-  // Everything above is the actual localStorage rewrite this sync exists to
-  // do. Bump only now — after it's done, not when the auth event that
-  // triggered the sync fired — so a subscribed component's re-read lands on
-  // the merged values, not the pre-sync ones.
-  bumpSessionVersion();
-
+  // cache adopts it. Only `renameAccount()` may change the server's `display_name`.
+  if (refreshed.displayName) {
+    setLocalDisplayName(refreshed.displayName);
+    bumpSessionVersion();
+  }
   return { ok: true };
-}
-
-/** Writes merged aggregates up. Caller has already merged; this only stores. */
-export async function pushAggregates(merged: Aggregates): Promise<AuthResult> {
-  const supabase = getSupabase();
-  const account = await getAccount();
-  if (!supabase || account.status !== "permanent" || !account.userId) {
-    return { ok: false, reason: "sync needs an account" };
-  }
-  const userId = account.userId;
-  try {
-    // The row may not exist: only joining the board creates one, and a player
-    // can sign up having never joined. An `update` against no row matches
-    // nothing and reports no error, so the sync would claim success having
-    // written nothing at all. Insert-if-absent first; `ignoreDuplicates` keeps
-    // this from touching `display_name` on an existing row, which would trip
-    // the Pro-only rename trigger.
-    const { error: ensureError } = await supabase
-      .from("profiles")
-      .upsert(
-        { id: userId, display_name: displayName() },
-        { onConflict: "id", ignoreDuplicates: true },
-      );
-    if (ensureError) {
-      warn("account", `could not create the profile row: ${ensureError.message}`);
-      return { ok: false, reason: ensureError.message };
-    }
-
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({
-        best_score: merged.bestScore,
-        total_runs: merged.totalRuns,
-        total_gates: merged.totalGates,
-        streak_current: merged.streakCurrent,
-        streak_best: merged.streakBest,
-        synced_at: new Date().toISOString(),
-      })
-      .eq("id", userId);
-    if (profileError) {
-      warn("account", `could not save profile aggregates: ${profileError.message}`);
-      return { ok: false, reason: profileError.message };
-    }
-
-    if (merged.perTarget.length > 0) {
-      const { error: toneError } = await supabase.from("tone_accuracy_stats").upsert(
-        merged.perTarget.map((t) => ({
-          user_id: userId,
-          target: t.target,
-          attempts: t.attempts,
-          unheard: t.unheard,
-          sum_accuracy: t.accSum,
-          best_accuracy: t.best,
-          updated_at: new Date().toISOString(),
-        })),
-        { onConflict: "user_id,target" },
-      );
-      if (toneError) {
-        warn("account", `could not save tone stats: ${toneError.message}`);
-        return { ok: false, reason: toneError.message };
-      }
-    }
-    return { ok: true };
-  } catch (err) {
-    warn("account", "could not save account aggregates", err);
-    return { ok: false, reason: "network error" };
-  }
 }

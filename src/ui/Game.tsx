@@ -422,8 +422,13 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         voice: inventorySpeaker(),
         speechStyle: runRef.current?.speechStyle,
       });
-      // Pro only (a no-op for everyone else): the all-time run log, spec C.
-      void postRunLog(buildRunLogEntry(snap.stats, mode, reason));
+      // Every account's run goes to the server once (brief 05; a no-op for a
+      // guest). The log's outcome is the run's real end: game over with
+      // hearts left is "finished" (a completed drill), matching `GameApp`'s
+      // local `recordRun`; the analytics `reason` above is left as it was.
+      const outcome =
+        reason === "out_of_hearts" && mode !== "tutorial" && snap.stats.hearts > 0 ? "finished" : reason;
+      void postRunLog(buildRunLogEntry(snap.stats, mode, outcome, crypto.randomUUID(), snap.wordIds));
     },
     [reportGates, mode],
   );

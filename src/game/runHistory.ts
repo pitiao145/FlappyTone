@@ -3,10 +3,11 @@
  * per-tone stats, for the Progress tab. Same localStorage conventions as
  * `settings.ts` (versioned key, try/catch/validate on load).
  *
- * This is a deliberate, scoped exception to CLAUDE.md's "no persistence
- * except calibration" rule, carved out for the Progress/Profile teaser: it
- * is the player's own device-local stats, capped to the last 5 runs; an
- * account syncs the lifetime totals (src/data/account.ts).
+ * Two roles (brief 05). For a guest it is the source of truth: device-local,
+ * not tamper-proof. For an account it is only a render cache of what the
+ * server holds (`cacheFromServer`, owner = the account's user id): the server
+ * adds every run (`api/runlog.ts`), and `recordRun` here is just the
+ * optimistic local write until the next refresh replaces it.
  *
  * The per-tone and per-combo numbers are TONE accuracy (spec A), not the
  * score — see `STATS_VERSION` for the reset that came with that change.
@@ -61,6 +62,12 @@ export interface RunHistoryStore {
   lifetimePerCombo: Record<string, LifetimeToneStats>;
   /** See `STATS_VERSION`. */
   statsVersion: number;
+  /**
+   * The account user id this store caches, or absent for a guest's own
+   * progress. Only an unowned store's totals are ever adopted into an
+   * account (`src/data/account.ts`), so a cache is never added twice.
+   */
+  owner?: string;
 }
 
 function emptyPerTone(): Record<Tone, LifetimeToneStats> {
@@ -216,6 +223,7 @@ export function recordRun(snap: RunSnapshot, outcome: RunOutcome): RunHistorySto
     lifetimePerTone,
     lifetimePerCombo,
     statsVersion: STATS_VERSION,
+    ...(prev.owner ? { owner: prev.owner } : {}),
   };
   saveRunHistory(next);
   return next;
@@ -233,53 +241,72 @@ export interface TargetStats {
 const TONE_TARGET = /^[1-4]$/;
 const COMBO_TARGET = /^[1-4]-[1-4]$/;
 
-function maxMerge(prev: LifetimeToneStats | undefined, t: TargetStats): LifetimeToneStats {
-  if (!prev) return { attempts: t.attempts, unheard: t.unheard, accSum: t.accSum, best: t.best };
-  return {
-    attempts: Math.max(prev.attempts, t.attempts),
-    unheard: Math.max(prev.unheard, t.unheard),
-    accSum: Math.max(prev.accSum, t.accSum),
-    best: Math.max(prev.best, t.best),
-  };
+/** One stored run as the server returns it (`run_log`): per-key numbers under `tone_accuracy_stats`' keys. */
+export interface ServerRunRow {
+  played_at: string;
+  score: number;
+  gates: number;
+  outcome: RunOutcome;
+  per_key: Record<string, { gates: number; accSum: number; unheard?: number }>;
+}
+
+/** Everything the server holds for an account's Progress screen. */
+export interface ServerStats {
+  totalRuns: number;
+  bestScore: number;
+  totalGates: number;
+  wordIds: string[];
+  /** All-time tone accuracy (`tone_accuracy_stats`). */
+  perTarget: TargetStats[];
+  /** The latest counted runs, newest first. */
+  recent: ServerRunRow[];
+}
+
+/** Server run rows in the local entry shape, so one set of accuracy functions reads both. */
+export function entriesFromRows(rows: ServerRunRow[]): RunHistoryEntry[] {
+  return rows.map((row) => {
+    const perTone = emptyRunPerTone();
+    const perCombo: NonNullable<RunHistoryEntry["perCombo"]> = {};
+    for (const [key, e] of Object.entries(row.per_key ?? {})) {
+      const v = { gates: e.gates, accSum: e.accSum, unheard: e.unheard ?? 0 };
+      if (TONE_TARGET.test(key)) perTone[Number(key) as Tone] = v;
+      else if (COMBO_TARGET.test(key)) perCombo[key] = v;
+    }
+    return { atISO: row.played_at, score: row.score, gates: row.gates, outcome: row.outcome, perTone, perCombo };
+  });
 }
 
 /**
- * Folds account-held totals back into the local store, keeping the larger of
- * each. Used after a sync, so a device that was behind catches up without
- * losing anything it alone knew about.
- *
- * `lastRuns` is deliberately untouched: it is a display cache of *this*
- * device's recent runs, not an aggregate, and there is no meaningful way to
- * interleave two devices' run lists by anything other than a clock we don't
- * trust. Lifetime counts are the thing an account owns.
+ * Replaces the local store with the account's server state. Not a merge:
+ * the server already holds every run (brief 05), so whatever this device
+ * held is either already in it or about to be (the outbox).
  */
-export function mergeIntoRunHistory(incoming: {
-  bestScore: number;
-  totalRuns: number;
-  totalGates: number;
-  perTarget: TargetStats[];
-}): RunHistoryStore {
-  const prev = loadRunHistory();
-  const lifetimePerTone = { ...prev.lifetimePerTone };
-  const lifetimePerCombo = { ...prev.lifetimePerCombo };
-  for (const t of incoming.perTarget) {
-    if (TONE_TARGET.test(t.target)) {
-      const tone = Number(t.target) as Tone;
-      lifetimePerTone[tone] = maxMerge(prev.lifetimePerTone[tone], t);
-    } else if (COMBO_TARGET.test(t.target)) {
-      lifetimePerCombo[t.target] = maxMerge(prev.lifetimePerCombo[t.target], t);
-    }
+export function cacheFromServer(server: ServerStats, userId: string): RunHistoryStore {
+  const lifetimePerTone = emptyPerTone();
+  const lifetimePerCombo: Record<string, LifetimeToneStats> = {};
+  for (const t of server.perTarget) {
+    const v = { attempts: t.attempts, unheard: t.unheard, accSum: t.accSum, best: t.best };
+    if (TONE_TARGET.test(t.target)) lifetimePerTone[Number(t.target) as Tone] = v;
+    else if (COMBO_TARGET.test(t.target)) lifetimePerCombo[t.target] = v;
   }
   const next: RunHistoryStore = {
-    ...prev,
-    bestScore: Math.max(prev.bestScore, incoming.bestScore),
-    totalRuns: Math.max(prev.totalRuns, incoming.totalRuns),
-    totalGates: Math.max(prev.totalGates, incoming.totalGates),
+    totalRuns: server.totalRuns,
+    bestScore: server.bestScore,
+    totalGates: server.totalGates,
+    wordIds: server.wordIds,
+    lastRuns: entriesFromRows(server.recent).slice(0, MAX_RUNS),
     lifetimePerTone,
     lifetimePerCombo,
+    statsVersion: STATS_VERSION,
+    owner: userId,
   };
   saveRunHistory(next);
   return next;
+}
+
+/** True when an unowned (guest) store holds anything worth adopting into an account. */
+export function hasGuestProgress(store: RunHistoryStore): boolean {
+  return !store.owner && (store.totalRuns > 0 || store.wordIds.length > 0);
 }
 
 /** Lifetime tone accuracy as a flat list of targets, shaped for the account sync layer. */
@@ -298,7 +325,7 @@ export interface ToneAccuracy {
 }
 
 /** Tone accuracy per tone, aggregated across the stored last-5 runs. */
-export function toneAccuracyFromHistory(store: RunHistoryStore): ToneAccuracy[] {
+export function toneAccuracyFromHistory(store: Pick<RunHistoryStore, "lastRuns">): ToneAccuracy[] {
   return ([1, 2, 3, 4] as Tone[]).map((tone) => {
     let gates = 0;
     let accSum = 0;
@@ -311,9 +338,8 @@ export function toneAccuracyFromHistory(store: RunHistoryStore): ToneAccuracy[] 
 }
 
 /**
- * Tone accuracy per tone from lifetime totals (`lifetimePerTone`), for a
- * device whose `lastRuns` is empty (e.g. a second device, before any local run
- * has happened yet). Same unheard-exclusion rule as `toneAccuracyFromHistory`:
+ * Tone accuracy per tone from lifetime totals (`lifetimePerTone`): the
+ * "All time" period. Same unheard-exclusion rule as `toneAccuracyFromHistory`:
  * `attempts` counts only measured gates, matching `gates` there.
  */
 export function lifetimeToneAccuracy(store: RunHistoryStore): ToneAccuracy[] {
@@ -332,7 +358,7 @@ export interface ComboAccuracy {
 }
 
 /** Tone accuracy per pair combo across the stored last-5 runs, weakest first; played combos only. */
-export function comboAccuracyFromHistory(store: RunHistoryStore): ComboAccuracy[] {
+export function comboAccuracyFromHistory(store: Pick<RunHistoryStore, "lastRuns">): ComboAccuracy[] {
   const sums = new Map<string, { gates: number; accSum: number }>();
   for (const run of store.lastRuns) {
     for (const [key, c] of Object.entries(run.perCombo ?? {})) {
@@ -360,26 +386,4 @@ function comboRows(entries: [string, { gates: number; accSum: number }][]): Comb
       gates: c.gates,
     }))
     .sort((a, b) => a.pct - b.pct || a.key.localeCompare(b.key));
-}
-
-/** Which numbers Progress's accuracy bars read: this device's last runs, or the synced lifetime totals. */
-export type AccuracySource = "lastRuns" | "lifetime";
-
-/**
- * Picks one source for the whole accuracy card — the two are never mixed in
- * one bar. Pro reads the synced lifetime totals: a second device's own last
- * runs are only part of the player's history (brief 04). Free and guest read
- * the last runs, unless those hold no measured gate at all (a fresh device,
- * runs saved before the STATS_VERSION reset, or unheard-only runs) — then the
- * lifetime totals, so the card is not blank while real numbers exist.
- * Interim rule until the server owns stats (brief 05).
- */
-export function accuracySource(store: RunHistoryStore, tier: "guest" | "free" | "pro"): AccuracySource {
-  if (tier === "pro") return "lifetime";
-  const measured = store.lastRuns.some(
-    (run) =>
-      ([1, 2, 3, 4] as Tone[]).some((t) => run.perTone[t].gates > 0) ||
-      Object.values(run.perCombo ?? {}).some((c) => c.gates > 0),
-  );
-  return measured ? "lastRuns" : "lifetime";
 }

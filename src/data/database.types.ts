@@ -211,9 +211,11 @@ export type Database = {
           marketing_consent_at: string | null
           streak_best: number
           streak_current: number
+          streak_last_day: string | null
           synced_at: string | null
           total_gates: number
           total_runs: number
+          words_played: string[]
         }
         Insert: {
           best_score?: number
@@ -225,9 +227,11 @@ export type Database = {
           marketing_consent_at?: string | null
           streak_best?: number
           streak_current?: number
+          streak_last_day?: string | null
           synced_at?: string | null
           total_gates?: number
           total_runs?: number
+          words_played?: string[]
         }
         Update: {
           best_score?: number
@@ -239,9 +243,11 @@ export type Database = {
           marketing_consent_at?: string | null
           streak_best?: number
           streak_current?: number
+          streak_last_day?: string | null
           synced_at?: string | null
           total_gates?: number
           total_runs?: number
+          words_played?: string[]
         }
         Relationships: []
       }
@@ -254,6 +260,7 @@ export type Database = {
           outcome: string
           per_key: Json
           played_at: string
+          run_id: string | null
           score: number
           tone_acc: number | null
           user_id: string
@@ -266,6 +273,7 @@ export type Database = {
           outcome: string
           per_key?: Json
           played_at?: string
+          run_id?: string | null
           score: number
           tone_acc?: number | null
           user_id: string
@@ -278,6 +286,7 @@ export type Database = {
           outcome?: string
           per_key?: Json
           played_at?: string
+          run_id?: string | null
           score?: number
           tone_acc?: number | null
           user_id?: string
@@ -583,6 +592,39 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adopt_guest: {
+        Args: {
+          p_adopt: string
+          p_best: number
+          p_gates: number
+          p_per_key: Json
+          p_runs: number
+          p_streak_best: number
+          p_streak_current: number
+          p_streak_last_day: string | null
+          p_user: string
+          p_words: string[]
+        }
+        Returns: boolean
+      }
+      record_run: {
+        Args: {
+          p_day: string
+          p_gates: number
+          p_mode: string
+          p_outcome: string
+          p_per_key: Json
+          p_ring: number | null
+          p_run: string
+          p_score: number
+          p_stats: boolean
+          p_streak: boolean
+          p_tone_acc: number | null
+          p_user: string
+          p_words: string[]
+        }
+        Returns: boolean
+      }
       add_tone_shapes: {
         Args: { p_day: string; p_rows: Json; p_user_id: string }
         Returns: undefined

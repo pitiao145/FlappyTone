@@ -1,20 +1,20 @@
 /**
- * `mergeAggregates` is the one function in the sync path that can destroy
- * something irreplaceable. Everything else fails loudly or fails safe; a merge
- * bug quietly returns a smaller number and a player's practice is gone with no
- * error anywhere. So it is pure, and it is tested directly.
+ * Account flows: in-place signup, the sync's name pull-down, and the one-time
+ * guest -> account adoption (brief 05) — the one step that could count a
+ * player's practice twice, or lose it.
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import {
-  EMPTY_AGGREGATES,
-  mergeAggregates,
-  pushAggregates,
-  recordMarketingConsent,
+  adoptGuestProgress,
+  loadGuestSnapshot,
   signUpWithPassword,
+  snapshotGuestProgress,
   syncAccount,
-  type Aggregates,
 } from "./account.ts";
+import { cacheFromServer, loadRunHistory, recordRun } from "../game/runHistory.ts";
+import { applyGate, newRunStats } from "../game/scoring.ts";
+import type { RunSnapshot } from "../game/run.ts";
 import { displayName } from "./leaderboard.ts";
 import * as supabaseModule from "./supabase.ts";
 
@@ -27,10 +27,6 @@ vi.mock("./supabase.ts", async (importOriginal) => {
     warn: vi.fn(),
   };
 });
-
-function aggregates(over: Partial<Aggregates> = {}): Aggregates {
-  return { ...EMPTY_AGGREGATES, ...over };
-}
 
 function fakeClient() {
   const updateUser = vi.fn().mockResolvedValue({ error: null });
@@ -113,183 +109,6 @@ describe("signUpWithPassword", () => {
   });
 });
 
-describe("pushAggregates", () => {
-  beforeEach(() => {
-    vi.mocked(supabaseModule.warn).mockReset();
-  });
-
-  // Tracks call order across tables: only `profiles` matters for the
-  // upsert-before-update ordering this bug fix depends on.
-  function orderedClient(opts: { upsertError?: { message: string } } = {}) {
-    const calls: string[] = [];
-    const profileUpsert = vi.fn((..._args: unknown[]) => {
-      calls.push("upsert");
-      return Promise.resolve({ error: opts.upsertError ?? null });
-    });
-    const profileUpdate = vi.fn(() => {
-      calls.push("update");
-      return { eq: vi.fn().mockResolvedValue({ error: null }) };
-    });
-    const toneUpsert = vi.fn().mockResolvedValue({ error: null });
-    const client = {
-      from: vi.fn((table: string) => {
-        if (table === "profiles") return { upsert: profileUpsert, update: profileUpdate };
-        if (table === "tone_accuracy_stats") return { upsert: toneUpsert };
-        throw new Error(`unexpected table ${table}`);
-      }),
-    };
-    return { client, calls, profileUpsert, profileUpdate, toneUpsert };
-  }
-
-  it("inserts the profile row (ignoreDuplicates upsert) before updating it", async () => {
-    const { client, calls, profileUpsert, profileUpdate } = orderedClient();
-    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client as never);
-    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session("permanent"));
-
-    const result = await pushAggregates(aggregates());
-
-    expect(profileUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "u1" }),
-      { onConflict: "id", ignoreDuplicates: true },
-    );
-    expect(profileUpdate).toHaveBeenCalled();
-    expect(calls).toEqual(["upsert", "update"]);
-    expect(result.ok).toBe(true);
-  });
-
-  it("returns ok:false and skips the update when the insert-if-absent upsert errors", async () => {
-    const { client, calls, profileUpdate } = orderedClient({
-      upsertError: { message: "boom" },
-    });
-    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client as never);
-    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session("permanent"));
-
-    const result = await pushAggregates(aggregates());
-
-    expect(result).toEqual({ ok: false, reason: "boom" });
-    expect(profileUpdate).not.toHaveBeenCalled();
-    expect(calls).toEqual(["upsert"]);
-  });
-});
-
-describe("mergeAggregates", () => {
-  it("keeps the larger of every scalar", () => {
-    const a = aggregates({ bestScore: 1200, totalRuns: 3, totalGates: 40, streakBest: 5 });
-    const b = aggregates({ bestScore: 900, totalRuns: 11, totalGates: 12, streakBest: 2 });
-    expect(mergeAggregates(a, b)).toMatchObject({
-      bestScore: 1200,
-      totalRuns: 11,
-      totalGates: 40,
-      streakBest: 5,
-    });
-  });
-
-  it("is symmetric — neither side is privileged", () => {
-    const a = aggregates({ bestScore: 1200, totalRuns: 3 });
-    const b = aggregates({ bestScore: 900, totalRuns: 11 });
-    expect(mergeAggregates(a, b)).toEqual(mergeAggregates(b, a));
-  });
-
-  it("unions tones present on only one side", () => {
-    const a = aggregates({
-      perTarget: [{ target: "1", attempts: 10, unheard: 1, accSum: 7, best: 0.9 }],
-    });
-    const b = aggregates({
-      perTarget: [{ target: "3", attempts: 4, unheard: 0, accSum: 2, best: 0.5 }],
-    });
-    const merged = mergeAggregates(a, b);
-    expect(merged.perTarget.map((t) => t.target)).toEqual(["1", "3"]);
-  });
-
-  it("merges a tone held by both, field by field", () => {
-    const a = aggregates({
-      perTarget: [{ target: "2", attempts: 20, unheard: 5, accSum: 14, best: 0.6 }],
-    });
-    const b = aggregates({
-      perTarget: [{ target: "2", attempts: 8, unheard: 7, accSum: 18, best: 0.95 }],
-    });
-    expect(mergeAggregates(a, b).perTarget[0]).toEqual({
-      target: "2",
-      attempts: 20,
-      unheard: 7,
-      accSum: 18,
-      best: 0.95,
-    });
-  });
-
-  it("never returns less than either input — the property that actually matters", () => {
-    const a = aggregates({
-      bestScore: 500,
-      totalRuns: 9,
-      perTarget: [{ target: "4", attempts: 3, unheard: 0, accSum: 2, best: 0.7 }],
-    });
-    const merged = mergeAggregates(a, EMPTY_AGGREGATES);
-    expect(merged.bestScore).toBeGreaterThanOrEqual(a.bestScore);
-    expect(merged.totalRuns).toBeGreaterThanOrEqual(a.totalRuns);
-    expect(merged.perTarget[0].best).toBeGreaterThanOrEqual(a.perTarget[0].best);
-  });
-
-  it("returns tones in a stable order regardless of input order", () => {
-    const a = aggregates({
-      perTarget: [
-        { target: "4", attempts: 1, unheard: 0, accSum: 0, best: 0 },
-        { target: "1", attempts: 1, unheard: 0, accSum: 0, best: 0 },
-      ],
-    });
-    expect(mergeAggregates(a, EMPTY_AGGREGATES).perTarget.map((t) => t.target)).toEqual(["1", "4"]);
-  });
-
-  it("merges pair combos by target the same way as single tones", () => {
-    const a = aggregates({
-      perTarget: [
-        { target: "3-2", attempts: 6, unheard: 1, accSum: 4.2, best: 0.9 },
-        { target: "2", attempts: 3, unheard: 0, accSum: 2, best: 0.8 },
-      ],
-    });
-    const b = aggregates({
-      perTarget: [{ target: "3-2", attempts: 9, unheard: 0, accSum: 5, best: 0.7 }],
-    });
-    const merged = mergeAggregates(a, b);
-    expect(merged.perTarget.map((t) => t.target)).toEqual(["2", "3-2"]);
-    expect(merged.perTarget[1]).toEqual({ target: "3-2", attempts: 9, unheard: 1, accSum: 5, best: 0.9 });
-  });
-});
-
-describe("recordMarketingConsent", () => {
-  beforeEach(() => {
-    vi.mocked(supabaseModule.warn).mockReset();
-  });
-
-  it("establishes the row (insert-only) then updates only the consent columns — never display_name", async () => {
-    const calls: { table: string; op: string; arg: unknown }[] = [];
-    const profileUpsert = vi.fn((arg: unknown) => {
-      calls.push({ table: "profiles", op: "upsert", arg });
-      return Promise.resolve({ error: null });
-    });
-    const profileUpdate = vi.fn((arg: unknown) => {
-      calls.push({ table: "profiles", op: "update", arg });
-      return { eq: vi.fn().mockResolvedValue({ error: null }) };
-    });
-    const client = {
-      from: vi.fn(() => ({ upsert: profileUpsert, update: profileUpdate })),
-    };
-    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client as never);
-    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session("permanent"));
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
-
-    await recordMarketingConsent(true);
-
-    expect(profileUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "u1", display_name: expect.any(String) }),
-      { onConflict: "id", ignoreDuplicates: true },
-    );
-    expect(profileUpdate).toHaveBeenCalledWith(
-      expect.not.objectContaining({ display_name: expect.anything() }),
-    );
-    expect(calls.map((c) => c.op)).toEqual(["upsert", "update"]);
-  });
-});
-
 describe("syncAccount name pull-down", () => {
   beforeEach(() => {
     vi.mocked(supabaseModule.warn).mockReset();
@@ -322,6 +141,9 @@ describe("syncAccount name pull-down", () => {
       })),
     };
     const toneSelect = { eq: vi.fn().mockResolvedValue({ data: [], error: null }) };
+    const runChain: Record<string, unknown> = {};
+    for (const m of ["eq", "in", "order"]) runChain[m] = vi.fn(() => runChain);
+    runChain.limit = vi.fn().mockResolvedValue({ data: [], error: null });
     const profileUpsert = vi.fn().mockResolvedValue({ error: null });
     const profileUpdate = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }));
     const toneUpsert = vi.fn().mockResolvedValue({ error: null });
@@ -331,6 +153,7 @@ describe("syncAccount name pull-down", () => {
           return { select: () => profileSelect, upsert: profileUpsert, update: profileUpdate };
         }
         if (table === "tone_accuracy_stats") return { select: () => toneSelect, upsert: toneUpsert };
+        if (table === "run_log") return { select: () => runChain };
         throw new Error(`unexpected table ${table}`);
       }),
     };
@@ -364,7 +187,7 @@ describe("syncAccount name pull-down", () => {
 
     await syncAccount();
 
-    // pushAggregates's ensure-step still runs (ignoreDuplicates, harmless on
+    // The ensure-step still runs (ignoreDuplicates, harmless on
     // an existing row) but must carry this device's name, never overwriting
     // the server's — ignoreDuplicates is what makes that safe either way.
     expect(profileUpsert).toHaveBeenCalledWith(
@@ -381,5 +204,92 @@ describe("syncAccount name pull-down", () => {
     const before = displayName();
     await syncAccount();
     expect(displayName()).toBe(before);
+  });
+});
+
+describe("guest adoption (brief 05)", () => {
+  let storageMap: Record<string, string>;
+  beforeEach(() => {
+    vi.mocked(supabaseModule.warn).mockReset();
+    storageMap = {};
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => storageMap[key] ?? null,
+      setItem: (key: string, value: string) => {
+        storageMap[key] = value;
+      },
+      removeItem: (key: string) => {
+        delete storageMap[key];
+      },
+    } as Storage);
+  });
+
+  function playGuestRun(score: number): void {
+    const stats = applyGate(newRunStats(), [2], "good", 0.7);
+    stats.score = score;
+    recordRun({ stats, wordIds: ["ma2b"] } as unknown as RunSnapshot, "finished");
+  }
+
+  function adoptClient() {
+    const client = { auth: { getSession: vi.fn().mockResolvedValue({ data: { session: { access_token: "t" } } }) } };
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(client as never);
+  }
+
+  it("snapshots an unowned guest store while signed out, with its totals", async () => {
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session(null));
+    playGuestRun(400);
+    playGuestRun(900);
+    await snapshotGuestProgress();
+    const snap = loadGuestSnapshot()!;
+    expect(snap).toMatchObject({ runs: 2, best: 900, attempted: false, wordIds: ["ma2b"] });
+    expect(snap.per_key["2"]).toMatchObject({ gates: 2, unheard: 0 });
+  });
+
+  it("never snapshots a store that is already an account's cache", async () => {
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session(null));
+    cacheFromServer({ totalRuns: 9, bestScore: 1, totalGates: 1, wordIds: [], perTarget: [], recent: [] }, "u0");
+    await snapshotGuestProgress();
+    expect(loadGuestSnapshot()).toBeNull();
+  });
+
+  it("adopts once: posts the snapshot, then clears it and the guest store", async () => {
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session(null));
+    playGuestRun(400);
+    await snapshotGuestProgress();
+    const adoptId = loadGuestSnapshot()!.adoptId;
+
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session("permanent"));
+    adoptClient();
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await adoptGuestProgress()).toBe(true);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body).toMatchObject({ kind: "adopt", adopt: { adoptId, runs: 1, best: 400 } });
+    expect("attempted" in body.adopt).toBe(false);
+    expect(loadGuestSnapshot()).toBeNull();
+    expect(loadRunHistory().totalRuns).toBe(0);
+
+    // A second sync has nothing left to add.
+    expect(await adoptGuestProgress()).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the snapshot (same id) and the guest store when the post fails", async () => {
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session(null));
+    playGuestRun(400);
+    await snapshotGuestProgress();
+    const adoptId = loadGuestSnapshot()!.adoptId;
+
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session("permanent"));
+    adoptClient();
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    expect(await adoptGuestProgress()).toBe(false);
+    expect(loadGuestSnapshot()).toMatchObject({ adoptId, attempted: true });
+    expect(loadRunHistory().totalRuns).toBe(1);
+
+    // A later sign-in attempt must not mint a new id for an already-tried snapshot.
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session(null));
+    await snapshotGuestProgress();
+    expect(loadGuestSnapshot()!.adoptId).toBe(adoptId);
   });
 });

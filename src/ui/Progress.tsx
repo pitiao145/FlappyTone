@@ -1,20 +1,21 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { track } from "../analytics/client.ts";
 import type { Tone } from "../game/gates.ts";
+import { entriesFromRows, loadRunHistory, type RunHistoryEntry, type RunOutcome } from "../game/runHistory.ts";
 import {
-  accuracySource,
-  comboAccuracyFromHistory,
-  lifetimeComboAccuracy,
-  lifetimeToneAccuracy,
-  loadRunHistory,
-  toneAccuracyFromHistory,
-  type RunOutcome,
-} from "../game/runHistory.ts";
+  effectivePeriod,
+  PERIOD_LABEL,
+  PERIODS,
+  periodAccuracy,
+  periodAllowed,
+  type AccuracyPeriod,
+} from "../game/accuracyPeriod.ts";
 import { streakStatus } from "../game/streak.ts";
 import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
-import { fetchRunLogPage, fetchTrendRows } from "../data/runlog.ts";
-import { dailyTrend, trendKeys, type RunLogRow } from "../game/runTrend.ts";
+import { fetchTrendRows } from "../data/runlog.ts";
+import { fetchRecentRuns, refreshServerStats } from "../data/stats.ts";
+import { dailyTrend, trendKeys } from "../game/runTrend.ts";
 import { Leaderboard } from "./Leaderboard.tsx";
 import { FREE_FEATURES, GUEST_FEATURES, PRO_FEATURES, PRO_PRICE, TIER_LABEL } from "./plan.ts";
 import { PlayerToneEvolution, SamplePlayerToneEvolution } from "./PlayerToneEvolution.tsx";
@@ -85,7 +86,7 @@ function RunRow({
   );
 }
 
-/** The device-local last-5 list — everyone's history, and a new Pro player's until the log has rows. */
+/** The last-5 list — for everyone (brief 05): the server's latest 5 for an account, this device's for a guest. */
 function LocalRuns({ history }: { history: ReturnType<typeof loadRunHistory> }) {
   if (history.lastRuns.length === 0) return <p className="note">Play a run to see it here.</p>;
   return (
@@ -114,8 +115,6 @@ function LocalRuns({ history }: { history: ReturnType<typeof loadRunHistory> }) 
 }
 
 type AccuracyTab = "accuracy" | "progress";
-
-const LOG_PAGE_SIZE = 20;
 
 /** "2" → "Tone 2"; "3-2" → "3 + 2". */
 function keyLabel(key: string): string {
@@ -173,24 +172,28 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
   // stayed frozen at whatever they were when the tab first mounted.
   const version = useSessionVersion();
   const history = useMemo(() => loadRunHistory(), [version]);
-  // One source for the whole card (`accuracySource`): Pro reads the synced
-  // lifetime totals, free/guest their last runs, falling back to lifetime
-  // when those hold no measured gate (e.g. a second device).
-  const usingLifetimeAccuracy = accuracySource(history, tier) === "lifetime";
-  const toneAccuracy = useMemo(
-    () => (usingLifetimeAccuracy ? lifetimeToneAccuracy(history) : toneAccuracyFromHistory(history)),
-    [history, usingLifetimeAccuracy],
-  );
-  // Pair combos, same last-5 / lifetime fallback as the tones above.
-  const comboAccuracy = useMemo(
-    () => (usingLifetimeAccuracy ? lifetimeComboAccuracy(history) : comboAccuracyFromHistory(history)),
-    [history, usingLifetimeAccuracy],
-  );
-  // A returning player whose per-tone numbers were reset when tone accuracy
-  // replaced corridor accuracy (runHistory.ts, STATS_VERSION): say why the
-  // bars are empty instead of letting it look like lost progress.
-  const accuracyJustReset =
-    history.totalRuns > 0 && toneAccuracy.every((t) => t.gates === 0) && comboAccuracy.length === 0;
+  const isAccount = tier !== "guest";
+  // An account's numbers live on the server (brief 05): refresh the local
+  // cache on open, so a second device shows the same thing. `version` ticks
+  // when it lands and the memos above re-read.
+  useEffect(() => {
+    if (isAccount) void refreshServerStats();
+  }, [isAccount]);
+  // Free/guest: always the last 5 runs. Pro: a period picker.
+  const [chosenPeriod, setChosenPeriod] = useState<AccuracyPeriod>("last5");
+  const period = effectivePeriod(tier, chosenPeriod);
+  const [last50, setLast50] = useState<RunHistoryEntry[] | null>(null);
+  useEffect(() => {
+    if (period !== "last50") return;
+    let live = true;
+    void fetchRecentRuns(50).then((rows) => live && setLast50(entriesFromRows(rows)));
+    return () => {
+      live = false;
+    };
+  }, [period, version]);
+  const accuracy = useMemo(() => periodAccuracy(period, history, last50), [period, history, last50]);
+  const toneAccuracy = accuracy.tones;
+  const comboAccuracy = accuracy.combos;
   const streak = useMemo(() => streakStatus(), [version]);
 
   // Mock accuracy-over-time data for the Pro teaser chart — generated once so
@@ -211,30 +214,16 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
   const [selectedTone, setSelectedTone] = useState<Tone>(1);
   const isPro = tier === "pro";
 
-  // Pro: the server run log (spec C). `version` re-reads after a sign-in
-  // change, same as the local stats above.
-  const [runLog, setRunLog] = useState<{ rows: RunLogRow[]; total: number; loaded: boolean }>({
-    rows: [],
-    total: 0,
-    loaded: false,
-  });
+  // Pro: the per-day trend, from every run in `run_log` (spec C; never trimmed for Pro).
   const [trendRows, setTrendRows] = useState<Awaited<ReturnType<typeof fetchTrendRows>> | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
   useEffect(() => {
     if (!isPro) return;
     let live = true;
-    void fetchRunLogPage(0, LOG_PAGE_SIZE).then((p) => live && setRunLog({ ...p, loaded: true }));
     void fetchTrendRows().then((r) => live && setTrendRows(r));
     return () => {
       live = false;
     };
   }, [isPro, version]);
-  const loadMoreRuns = async () => {
-    setLoadingMore(true);
-    const p = await fetchRunLogPage(Math.ceil(runLog.rows.length / LOG_PAGE_SIZE), LOG_PAGE_SIZE);
-    setRunLog((cur) => ({ rows: [...cur.rows, ...p.rows], total: p.total || cur.total, loaded: true }));
-    setLoadingMore(false);
-  };
   const trend = useMemo(() => dailyTrend(trendRows ?? []), [trendRows]);
   const proKeys = useMemo(() => trendKeys(trend), [trend]);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -333,7 +322,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
             <span className="stat-label">words</span>
           </div>
         </div>
-        <p className="note">Word count is for this device only.</p>
+        {!isAccount && <p className="note">Saved on this device only.</p>}
       </div>
 
       {/* ---- Leaderboard. Real data and open to everyone, unlike the Pro
@@ -369,13 +358,46 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
 
         {activeTab === "accuracy" ? (
           <>
+            <div className="tone-pills" role="group" aria-label="Period">
+              {PERIODS.map((p) =>
+                periodAllowed(tier, p) ? (
+                  <button
+                    key={p}
+                    type="button"
+                    className={`tone-pill${period === p ? " tone-pill-active" : ""}`}
+                    aria-pressed={period === p}
+                    onClick={() => setChosenPeriod(p)}
+                  >
+                    {PERIOD_LABEL[p]}
+                  </button>
+                ) : (
+                  <button
+                    key={p}
+                    type="button"
+                    className="tone-pill"
+                    onClick={() => {
+                      track({ type: "progress_locked_cta_click", card: `accuracy_${p}` });
+                      scrollToPricing();
+                    }}
+                  >
+                    🔒 {PERIOD_LABEL[p]}
+                  </button>
+                ),
+              )}
+            </div>
             <p className="note">
-              {accuracyJustReset
-                ? "Tone accuracy measures how close the shape of your tone is compared to the average shape of the reference speaker."
-                : usingLifetimeAccuracy
-                  ? "All time: tone accuracy over every run you've played."
-                  : `Last ${Math.min(5, history.lastRuns.length)} ${history.lastRuns.length === 1 ? "run" : "runs"} on this device: tone accuracy.`}
+              {period === "all"
+                ? "Tone accuracy over every run you've played."
+                : period === "last50"
+                  ? "Tone accuracy over your last 50 runs."
+                  : `Tone accuracy over your last 5 runs${isAccount ? "" : " on this device"}.`}
             </p>
+            {accuracy.empty ? (
+              <p className="note">
+                {period === "last50" && last50 === null ? "Loading…" : "Play a run to see it here."}
+              </p>
+            ) : (
+            <>
             <div className="breakdown">
               {toneAccuracy.map((t) => (
                 <div className="breakdown-row" key={t.tone}>
@@ -427,6 +449,8 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
                   ))}
                 </div>
               </>
+            )}
+            </>
             )}
           </>
         ) : (
@@ -499,49 +523,17 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
         )}
       </section>
 
-      {/* ---- Run history. Pro: every run since they went Pro, from the
-           server log (spec C). Everyone else: the last 5, this device only. */}
+      {/* ---- Run history: the latest 5 for everyone (brief 05). An account's
+           come from the server, a guest's from this device. */}
       <section className="progress-card sticker-card">
         <div className="progress-card-header">
           <h3>Run history</h3>
-          <span className="badge-solid badge-solid-jade">{isPro ? "All runs" : "Last 5 runs"}</span>
+          <span className="badge-solid badge-solid-jade">Last 5 runs</span>
         </div>
-        {isPro ? (
-          <>
-            <p className="note">
-              {runLog.total > 0
-                ? `${runLog.total} ${runLog.total === 1 ? "run" : "runs"} since you went Pro.`
-                : "Your full history starts now and is saved to your account."}
-            </p>
-            {runLog.rows.length > 0 ? (
-              <div className="run-history-list">
-                {runLog.rows.map((r) => (
-                  <RunRow
-                    key={r.id}
-                    at={r.played_at}
-                    score={r.score}
-                    pct={r.tone_acc === null ? null : r.tone_acc * 100}
-                    gates={r.gates}
-                    outcome={r.outcome}
-                  />
-                ))}
-              </div>
-            ) : (
-              runLog.loaded && <LocalRuns history={history} />
-            )}
-            {runLog.rows.length < runLog.total && (
-              <button type="button" className="link" disabled={loadingMore} onClick={() => void loadMoreRuns()}>
-                {loadingMore ? "Loading…" : "Show more runs"}
-              </button>
-            )}
-          </>
-        ) : (
-          <>
-            <p className="note">Shows runs from this device only.</p>
-            <LocalRuns history={history} />
-            {lockCta(`🔒 See all ${history.totalRuns} runs & trends — unlock with Pro`, "run_history")}
-          </>
-        )}
+        {!isAccount && <p className="note">Shows runs from this device only.</p>}
+        <LocalRuns history={history} />
+        {!isPro &&
+          lockCta("🔒 See your accuracy over 50 runs, all time and per day — unlock with Pro", "run_history")}
       </section>
 
       {/* ---- Tone evolution (kept from today, restyled) */}

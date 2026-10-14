@@ -286,6 +286,39 @@ everything. `lastRuns` and `lastPlayedDate` stay local: one is a display cache
 of *this* device, the other decides whether today continues the streak, and
 neither has an honest cross-device answer.
 
+### The server owns account stats; max-merge removed (brief 05, 14 Oct 2026)
+
+Brief 04's audit showed max-merge losing real practice: device A 10 runs +
+device B 4 new runs synced to 10 on both, and `accSum`/`attempts` maxed
+independently could pair numbers from different devices. Additive counters
+cannot be max-merged. So an account's runs are now ADDED on the server, one
+POST per run (`api/runlog.ts` → `record_run()`, migration 0030), idempotent
+by a client `runId` so the outbox can retry freely. The device keeps a cache.
+
+- **Free runs are now stored server-side** (they were not under spec C):
+  only the runs that count, and only the latest 5 (trimmed on write), which
+  is exactly what the free Progress screen shows. Pro keeps every row, so the
+  per-day trend keeps reading `run_log` and no `daily_stats` table was
+  needed (brief 04's draft dropped). If a Pro account ever holds tens of
+  thousands of rows, a server-side rollup is the next step.
+- **Two flags, not one `p_counts`**, because the local semantics differ: a
+  quit counts for counters and accuracy (`onRunQuit` → `recordRun`) but not
+  for the streak; a restart counts for nothing; tutorial/learn/single count
+  for nothing. The API derives both from mode + outcome.
+- **Guest adoption is a snapshot, not a merge.** Totals are frozen at the
+  moment of sign-up/sign-in, while the session is still the guest's, and
+  added once (`adoptions` table). Only an unowned store is ever snapshot: a
+  store that is an account's cache carries `owner`, and sign-out clears it,
+  so no number can be added twice. Pre-brief-05 devices that were already
+  signed in are not adopted (their totals were already max-merged up); they
+  just become a cache.
+- **`day` may be up to 7 days old** (was ±24h) so an offline run still lands.
+  The streak only ever moves forward from the server's last day, so an old
+  day cannot extend it. Not a security boundary (the run itself is
+  client-reported).
+- Free is always last 5 with an empty state; no lifetime fallback (Pierre),
+  replacing brief 04's interim `accuracySource`.
+
 ### Player tone shapes: daily sums, an SQL add, and one table per job (28 Sep 2026)
 
 Spec B (`docs/SPECS/flappytone-SPEC-player-tone-average.md`) stores a Pro
