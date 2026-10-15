@@ -1,0 +1,10 @@
+{
+  "format": "9:16",
+  "gates": [
+    { "word": "ma1b", "flight": "perfect" },
+    { "word": "ma2", "flight": "perfect" },
+    { "word": "ma3b", "flight": "perfect" },
+    { "word": "ma4b", "flight": "perfect" }
+  ],
+  "end": [{ "screen": "share", "seconds": 2.5, "name": "" }]
+}

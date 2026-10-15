@@ -72,3 +72,5 @@ public/dev-fixtures/
 
 # Rendered demo videos (npm run render-demo). Re-renderable from demo/scenarios/.
 demo/out/
+video/public/clips/
+video/out/

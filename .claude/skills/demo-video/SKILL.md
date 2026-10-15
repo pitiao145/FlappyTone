@@ -18,7 +18,37 @@ Renders an MP4 of the real game with a **scripted voice** in place of the mic: a
 2. **Write** `demo/scenarios/<short-name>.json` (committed; schema in `src/dev/demoVideo/scenario.ts`).
 3. **Preview stills first:** `npm run render-demo -- demo/scenarios/<name>.json --stills 60,300,600` and Read the PNGs. Fix overlaps or bad words before the full render.
 4. **Render:** `npm run render-demo -- demo/scenarios/<name>.json` → `demo/out/<name>.mp4` (gitignored). Takes about real time.
-5. **Check the printed summary** (each gate's outcome) against what was asked, then send the MP4 with SendUserFile.
+5. **Check the printed summary** (each gate's outcome) against what was asked.
+6. **Edit in Remotion** when Pierre wants a finished promo (hook, captions, zooms, end card, music) — see below. Otherwise send the raw MP4 with SendUserFile.
+
+## Promo edit (Remotion)
+
+Two layers: `render-demo` films the real game; Remotion (`video/`, composition `Promo`) edits it. For a promo:
+
+1. Render the gameplay **into Remotion's public dir**, usually without the scenario's own `intro`/`outro`/`caption` (Remotion does those better):
+   `npm run render-demo -- demo/scenarios/<name>.json --out video/public/clips/<name>.mp4`
+   This also writes `video/public/clips/<name>.timing.json`: each gate's `cueAt` (Jane starts) and `resolvedAt` + `outcome` + `points`, `gameEndAt`, end screens' `from` — all in clip seconds.
+2. **Write `video/props/<name>.json`** (committed). Time captions and zooms off the timing file, never by guessing: e.g. a "listen…" caption at a gate's `cueAt`, a payoff on its `resolvedAt`.
+   ```json
+   {
+     "format": "9:16",
+     "clip": "clips/<name>.mp4",
+     "clipSeconds": 21.5,
+     "clipStart": 0.5,
+     "hook": { "text": "Same syllable. Four meanings.", "sub": "mā · má · mǎ · mà" },
+     "captions": [
+       { "text": "Listen…", "from": 0.9, "to": 2.6 },
+       { "text": "4 for 4. Perfect.", "from": 18.3, "to": 21.3, "tone": "highlight", "position": "bottom" }
+     ],
+     "zooms": [{ "from": 12.2, "to": 14.4, "scale": 1.1, "originY": 0.55 }],
+     "endCard": { "title": "FlappyTone", "subtitle": "Learn Mandarin tones with your voice", "cta": "flappytone.com" }
+   }
+   ```
+   Fields are typed in `video/src/Promo.tsx` (`PromoProps`): `clipStart`/`clipEnd` trim; caption `position` `top|middle|bottom`, `tone` `ink|accent|highlight`; `music` (path under `video/public`), `musicVolume` (0.35), `clipVolume` (1). `format` must match the clip's.
+3. **Check stills** before the full render: `npx remotion still Promo video/out/<name>-f.png --props=video/props/<name>.json --frame=<n>` (30 fps) and Read them — captions must not cover the word card at the top or the bird.
+4. **Render:** `npm run video:render -- video/out/<name>.mp4 --props=video/props/<name>.json` (≈5× clip length). Send it.
+
+`npm run video:studio` opens Remotion Studio for Pierre to scrub and tweak props himself. Need a new kind of shot (split screen, side-by-side tones)? Add a composition in `video/src/` rather than bending `Promo`; the remotion-dev skills (`npx skills add remotion-dev/skills`) cover the API.
 
 ## Scenario
 
@@ -77,6 +107,7 @@ Pairs (two syllables) work too, e.g. `haowan32` 好玩. Hanzi is Traditional (ha
 ## Limits
 
 - Clips come from the live clips Worker (`VITE_CLIPS_BASE_URL` in `.env.local`) on a guest ticket, like a guest player. A clip that fails is skipped with a warning — check the "N clips" count in the output.
-- The intro/outro cards and caption are demo-only overlays (`demo-video.html`), not game UI.
+- The scenario's intro/outro cards and caption are demo-only overlays (`demo-video.html`), not game UI; for promos prefer the Remotion hook/end card.
+- Remotion is free for individuals and companies up to 3 people; past that it needs a company license.
 - Natural speech style is not supported (fallback catalog is textbook only).
 - Dev-only: `demo-video.html` is not a build input. After touching `src/dev/demoVideo/`, run `npm run build` and the rule-7 grep.

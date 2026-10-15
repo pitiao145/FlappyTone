@@ -168,6 +168,18 @@ try {
       await ffmpeg([...inputs, "-filter_complex", graph, "-map", "0:v", "-map", "[a]",
         "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", out]).done;
     }
+    // Timing sidecar for editing (Remotion captions synced to gates), in video seconds.
+    const timing = {
+      clip: basename(out),
+      width: outW,
+      height: outH,
+      fps,
+      durationSeconds: i / fps,
+      introSeconds: summary.introSeconds,
+      clips: clips.length,
+      ...summary.marks,
+    };
+    writeFileSync(out.replace(/\.mp4$/, ".timing.json"), JSON.stringify(timing, null, 2) + "\n");
     console.log(`${out}  (${outW}×${outH}, ${(i / fps).toFixed(1)}s, ${clips.length} clips)`);
   }
   const s = await page.evaluate(() => (globalThis as any).demo.summary());

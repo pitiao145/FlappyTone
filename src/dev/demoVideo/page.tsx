@@ -118,6 +118,13 @@ interface State {
   audioOn: Map<number, boolean>;
   cues: CueAudio[];
   lastCuedX: number;
+  /** Video-time marks for an editor (Remotion): each gate's cue and verdict, each end screen. */
+  marks: {
+    gates: { hanzi: string; pinyin: string; cueAt: number | null; resolvedAt: number | null; outcome: string | null; points: number }[];
+    gameEndAt: number | null;
+    endScreens: { screen: string; from: number }[];
+    outroFrom: number | null;
+  };
   scriptLen: number;
   endScreens: { screen: EndScreen; frames: number }[];
   introFrames: number;
@@ -252,6 +259,12 @@ function setup(raw: unknown): { fps: number; w: number; h: number; scale: number
     audioOn,
     cues: [],
     lastCuedX: -Infinity,
+    marks: {
+      gates: script.map((g) => ({ hanzi: g.word.hanzi, pinyin: g.word.pinyin, cueAt: null, resolvedAt: null, outcome: null, points: 0 })),
+      gameEndAt: null,
+      endScreens: [],
+      outroFrom: null,
+    },
     scriptLen: script.length,
     endScreens: (sc.end ?? []).map((e) => ({ screen: e, frames: Math.round((e.seconds ?? 3) * fps) })),
     introFrames: sc.intro ? Math.round((sc.intro.seconds ?? 1.6) * fps) : 0,
@@ -359,16 +372,35 @@ function render(i: number): boolean {
   // The moment the game would play Jane's clip for this gate (Game.tsx's tick).
   if (snap.cue && snap.cue.xStart > st.lastCuedX) {
     st.lastCuedX = snap.cue.xStart;
+    const gm = st.marks.gates.find((g) => g.cueAt === null);
+    if (gm) gm.cueAt = videoMs / 1000;
     const w = snap.cue.word;
     if (w && st.audioOn.get(snap.cue.xStart)) {
       st.cues.push({ wordId: w.id, speakerId: w.speakerId, updatedAt: w.updatedAt, atMs: videoMs + snap.cue.playDelayMs });
     }
   }
 
+  // Each newly resolved gate, stamped with its verdict.
+  for (let k = 0; k < snap.gateLog.length && k < st.marks.gates.length; k++) {
+    const gm = st.marks.gates[k];
+    if (gm.resolvedAt === null) {
+      gm.resolvedAt = videoMs / 1000;
+      gm.outcome = snap.gateLog[k].outcome;
+      gm.points = snap.lastOutcome?.points ?? 0;
+    }
+  }
+  if (end && !st.marks.endScreens.some((e) => e.screen === end!.screen.screen)) {
+    st.marks.endScreens.push({ screen: end.screen.screen, from: videoMs / 1000 });
+  }
+  if (card && st.marks.outroFrom === null) st.marks.outroFrom = videoMs / 1000;
+
   drawWorld(ctx, st.w, st.h, snap, now);
   paint(st, { snap, flash: end ? null : flashOf(snap, now), card, end });
   stepAnimations(st, videoMs);
-  if (st.gameEndFrame === null && (snap.over || snap.gateLog.length >= st.scriptLen)) st.gameEndFrame = gi;
+  if (st.gameEndFrame === null && (snap.over || snap.gateLog.length >= st.scriptLen)) {
+    st.gameEndFrame = gi;
+    st.marks.gameEndAt = videoMs / 1000;
+  }
   return true;
 }
 
@@ -407,6 +439,8 @@ function summary(): unknown {
       hearts: s.hearts,
       gates: s.gateLog.map((g) => ({ tones: g.tones.join("-"), outcome: g.outcome, toneAcc: g.toneAccuracy })),
       cues: S!.cues,
+      marks: S!.marks,
+      introSeconds: S!.introFrames / S!.fps,
     }
   );
 }
