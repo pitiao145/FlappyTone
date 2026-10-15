@@ -30,6 +30,10 @@ export interface ScenarioGate {
   flight?: Flight;
   /** Play Jane's clip at this gate's demo cue. Defaults to the scenario's `audio`. */
   audio?: boolean;
+  /** Freeze for the listen cue before this gate. Default true; false keeps flying while the clip plays. */
+  listen?: boolean;
+  /** Gap before this gate, as `Scenario.gap`. Defaults to the scenario's. */
+  gap?: number;
 }
 
 export interface Card {

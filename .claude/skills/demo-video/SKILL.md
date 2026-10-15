@@ -73,6 +73,8 @@ Two layers: `render-demo` films the real game; Remotion (`video/`, composition `
 
 Other fields: `audio` (true — Jane's clip at every cue; a gate's own `audio` wins), `fps` (60), `demo` (true — the listen-then-fly cue; with it off no clips play either), `hud` (true), `corridor` (`narrow|normal|wide`), `gap` (0.5 × the game's rest gap; 1 = as played), `tailSeconds` (0.8), `music` (path; looped and cut to length), `musicVolume` (0.35 under clips, else 1).
 
+Per gate: `listen: false` keeps the bird flying while Jane's clip plays (no freeze; `audio` still decides if the clip plays), and `gap` overrides the scenario's `gap` for the space before that gate.
+
 ## Results screens (`end`)
 
 Shown after the run, in order, before the outro. Each is the game's own component fed this run's real stats — nothing is made up. To change the numbers, change the flights. Map Pierre's words:

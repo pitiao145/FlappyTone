@@ -208,7 +208,10 @@ function setup(raw: unknown): { fps: number; w: number; h: number; scale: number
     word: findWord(catalog, g.word),
     flight: g.flight ?? "perfect",
     audio: g.audio ?? audioDefault,
+    gap: g.gap,
   }));
+  // Words whose listen cue keeps the world moving: the clip still plays.
+  const noListen = new Set(sc.gates.filter((g) => g.listen === false).map((g) => findWord(catalog, g.word).id));
   const flights = new Map<number, Flight>();
   const audioOn = new Map<number, boolean>();
 
@@ -218,7 +221,9 @@ function setup(raw: unknown): { fps: number; w: number; h: number; scale: number
     corridor: sc.corridor ?? "normal",
     cueStyle: sc.demo === false ? "off" : "pause",
     // As in the game once the clip is loaded: the freeze lasts the recording.
-    cueDurationMsFor: (word) => (word ? word.clipS * 1000 : 500),
+    // A no-listen gate gets a duration that ends the freeze before it starts.
+    cueDurationMsFor: (word) =>
+      word && noListen.has(word.id) ? -1e6 : word ? word.clipS * 1000 : 500,
     deferFill: true,
     rand: () => 0.5,
   });
@@ -233,10 +238,10 @@ function setup(raw: unknown): { fps: number; w: number; h: number; scale: number
       next < script.length &&
       this.gates.filter((g: Gate) => this.gateEnd(g) >= this.worldX).length < 2
     ) {
-      const { word, flight, audio } = script[next++];
+      const { word, flight, audio, gap } = script[next++];
       // The game's own gap, scaled: a clip has no time for empty sky.
       const last: Gate | undefined = this.gates[this.gates.length - 1];
-      const restPx = (this.difficulty.scrollSpeed * this.difficulty.restMs * restScale) / 1000;
+      const restPx = (this.difficulty.scrollSpeed * this.difficulty.restMs * (gap ?? restScale)) / 1000;
       const x = last ? Math.max(this.gateEnd(last) + restPx, this.worldX + restPx) : this.nextSpawnX();
       const gate = makeGate(word, x, this.difficulty);
       this.gates.push(gate);
