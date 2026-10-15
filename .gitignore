@@ -45,7 +45,8 @@ docs/
 .env*.local
 
 .worktrees/
-.claude/
+.claude/*
+!.claude/skills/
 
 # Wrangler's local dev/build state for the clips Worker.
 workers/clips/.wrangler/
@@ -68,3 +69,6 @@ public/ref/*.wav
 # Regenerable from fixtures/tonepairs/wav/, and never part of a prod build.
 public/dev-fixtures/
 .env*
+
+# Rendered demo videos (npm run render-demo). Re-renderable from demo/scenarios/.
+demo/out/

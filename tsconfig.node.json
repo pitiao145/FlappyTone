@@ -21,6 +21,7 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": [
+    "src/dev/render-demo.ts",
     "vite.config.ts",
     "src/dev/prerender.ts",
     "src/dev/prettyUrls.ts",

@@ -1,0 +1,13 @@
+{
+  "format": "9:16",
+  "caption": "Your voice flies the bird",
+  "intro": { "title": "FlappyTone", "subtitle": "Learn Mandarin tones with your voice", "seconds": 1.6 },
+  "gates": [
+    { "word": "ma1b", "flight": "perfect" },
+    { "word": "ma2", "flight": "good" },
+    { "word": "ma3b", "flight": "perfect" },
+    { "word": "ma4b", "flight": "wall" },
+    { "word": "haowan32", "flight": "perfect" }
+  ],
+  "outro": { "title": "flappytone.com", "subtitle": "Play free in your browser", "seconds": 2.2 }
+}
