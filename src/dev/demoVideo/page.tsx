@@ -21,12 +21,17 @@ import type { Word } from "../../game/words.ts";
 import { catalogFromFallback } from "../../data/words.ts";
 import { drawWorld } from "../../render/world.ts";
 import { GameHud, type OutcomeFlash } from "../../ui/GameHud.tsx";
+import { GameOver } from "../../ui/GameOver.tsx";
+import { PauseMenu } from "../../ui/PauseMenu.tsx";
+import { renderShareCard } from "../../share/renderCard.ts";
+import { recordRun } from "../../game/runHistory.ts";
 import type { PitchState } from "../../pitch/types.ts";
 import {
   flightChao,
   frameSize,
   validateScenario,
   type Card,
+  type EndScreen,
   type Flight,
   type Scenario,
 } from "./scenario.ts";
@@ -49,6 +54,56 @@ interface View {
   snap: RunSnapshot | null;
   flash: OutcomeFlash | null;
   card: { card: Card; opacity: number } | null;
+  /** A results screen over the finished run, and how far it has faded in. */
+  end: { screen: EndScreen; opacity: number } | null;
+}
+
+/** Results screens hold still; there is nothing to click in a video. */
+const noop = () => {};
+
+function EndView({ screen, snap, shareUrl }: { screen: EndScreen; snap: RunSnapshot; shareUrl: string | null }) {
+  if (screen.screen === "share") {
+    return (
+      <div className="demo-end demo-share">{shareUrl && <img src={shareUrl} alt="" />}</div>
+    );
+  }
+  if (screen.screen === "pause") {
+    return (
+      <div className="overlay pause-menu">
+        <PauseMenu
+          mode="game"
+          score={snap.score}
+          runNumber={null}
+          stats={snap.stats}
+          settingsOpen={false}
+          onToggleSettings={noop}
+          onResume={noop}
+          onRestart={noop}
+          onQuit={noop}
+        />
+      </div>
+    );
+  }
+  // The real game-over screen. Mode "drill" keeps it off the network: in
+  // "game" it would fetch the live leaderboard and pop the high-score modal.
+  return (
+    <div className="demo-end">
+      <GameOver
+        stats={snap.stats}
+        busy={false}
+        onRetry={noop}
+        onFineTune={noop}
+        onVisualiser={noop}
+        settings={null}
+        suggestion={null}
+        onRecalibrate={noop}
+        mode="drill"
+        challengeScore={null}
+        onUpgrade={noop}
+        onViewFullLeaderboard={noop}
+      />
+    </div>
+  );
 }
 
 interface State {
@@ -64,6 +119,7 @@ interface State {
   cues: CueAudio[];
   lastCuedX: number;
   scriptLen: number;
+  endScreens: { screen: EndScreen; frames: number }[];
   introFrames: number;
   outroFrames: number;
   gameEndFrame: number | null;
@@ -76,6 +132,8 @@ interface State {
 let S: State | null = null;
 const root = createRoot(document.getElementById("root")!);
 let canvasEl: HTMLCanvasElement | null = null;
+/** The share card, rendered once the run is over (it is async). */
+let shareUrl: string | null = null;
 
 function findWord(words: Word[], key: string): Word {
   const w = words.find((x) => x.id === key) ?? words.find((x) => x.hanzi === key);
@@ -108,7 +166,12 @@ function Frame({ v, w, h, scale, caption, hud }: { v: View; w: number; h: number
             onPause={() => {}}
           />
         )}
-        {caption && <div className="demo-caption">{caption}</div>}
+        {caption && !v.end && <div className="demo-caption">{caption}</div>}
+        {v.end && v.snap && (
+          <div style={{ position: "absolute", inset: 0, opacity: v.end.opacity }}>
+            <EndView screen={v.end.screen} snap={v.snap} shareUrl={shareUrl} />
+          </div>
+        )}
         {v.card && (
           <div className="demo-card" style={{ opacity: v.card.opacity }}>
             <h1>{v.card.card.title}</h1>
@@ -190,6 +253,7 @@ function setup(raw: unknown): { fps: number; w: number; h: number; scale: number
     cues: [],
     lastCuedX: -Infinity,
     scriptLen: script.length,
+    endScreens: (sc.end ?? []).map((e) => ({ screen: e, frames: Math.round((e.seconds ?? 3) * fps) })),
     introFrames: sc.intro ? Math.round((sc.intro.seconds ?? 1.6) * fps) : 0,
     outroFrames: sc.outro ? Math.round((sc.outro.seconds ?? 2.2) * fps) : 0,
     gameEndFrame: null,
@@ -197,7 +261,7 @@ function setup(raw: unknown): { fps: number; w: number; h: number; scale: number
     lastSmoothed: 3,
     animBirth: new Map(),
   };
-  paint(S, { snap: null, flash: null, card: null });
+  paint(S, { snap: null, flash: null, card: null, end: null });
   S.ctx = canvasEl!.getContext("2d")!;
   return { fps, w, h, scale };
 }
@@ -261,7 +325,7 @@ function render(i: number): boolean {
 
   if (i < st.introFrames) {
     drawWorld(ctx, st.w, st.h, st.run.snapshot(), 10_000);
-    paint(st, { snap: null, flash: null, card: { card: sc.intro!, opacity: 1 } });
+    paint(st, { snap: null, flash: null, card: { card: sc.intro!, opacity: 1 }, end: null });
     stepAnimations(st, videoMs);
     return true;
   }
@@ -271,13 +335,24 @@ function render(i: number): boolean {
   const now = 10_000 + gi * dt;
 
   let card: View["card"] = null;
+  let end: View["end"] = null;
+  const fadeIn = (k: number) => Math.min(1, k / (fps * 0.3));
   if (st.gameEndFrame === null || gi - st.gameEndFrame < st.tailFrames) {
     if (!st.run.snapshot().over) st.run.tickFrame(dt, now);
     st.run.tickAudio(voice(st.run.snapshot(), st), now);
   } else {
-    const oi = gi - st.gameEndFrame - st.tailFrames;
-    if (oi >= st.outroFrames) return false;
-    card = { card: sc.outro!, opacity: Math.min(1, oi / (fps * 0.35)) };
+    let k = gi - st.gameEndFrame - st.tailFrames;
+    for (const e of st.endScreens) {
+      if (k < e.frames) {
+        end = { screen: e.screen, opacity: fadeIn(k) };
+        break;
+      }
+      k -= e.frames;
+    }
+    if (!end) {
+      if (k >= st.outroFrames) return false;
+      card = { card: sc.outro!, opacity: fadeIn(k) };
+    }
   }
   const snap = st.run.snapshot();
 
@@ -291,10 +366,37 @@ function render(i: number): boolean {
   }
 
   drawWorld(ctx, st.w, st.h, snap, now);
-  paint(st, { snap, flash: flashOf(snap, now), card });
+  paint(st, { snap, flash: end ? null : flashOf(snap, now), card, end });
   stepAnimations(st, videoMs);
   if (st.gameEndFrame === null && (snap.over || snap.gateLog.length >= st.scriptLen)) st.gameEndFrame = gi;
   return true;
+}
+
+/**
+ * Readies the results screens once the run is over, as GameApp does before
+ * GameOver mounts: the run goes into this (throwaway) browser profile's
+ * history, so "best" is this run, and the share card is rendered (async).
+ */
+async function prepareEnd(): Promise<void> {
+  const st = S;
+  if (!st || st.endScreens.length === 0) return;
+  const snap = st.run.snapshot();
+  const history = recordRun(snap, snap.stats.hearts <= 0 ? "out_of_hearts" : "finished");
+  const share = st.endScreens.find((e) => e.screen.screen === "share");
+  if (!share) return;
+  const blob = await renderShareCard(snap.stats, history, share.screen.name ?? "");
+  shareUrl = URL.createObjectURL(blob);
+  await new Promise<void>((ok) => {
+    const img = new Image();
+    img.onload = () => ok();
+    img.onerror = () => ok();
+    img.src = shareUrl!;
+  });
+}
+
+/** True once the run is over and the next frame belongs to the end screens. */
+function gameDone(): boolean {
+  return S !== null && S.gameEndFrame !== null;
 }
 
 function summary(): unknown {
@@ -311,8 +413,15 @@ function summary(): unknown {
 
 declare global {
   interface Window {
-    demo: { setup: typeof setup; render: typeof render; summary: typeof summary; ready: Promise<void> };
+    demo: {
+      setup: typeof setup;
+      render: typeof render;
+      summary: typeof summary;
+      prepareEnd: typeof prepareEnd;
+      gameDone: typeof gameDone;
+      ready: Promise<void>;
+    };
   }
 }
 
-window.demo = { setup, render, summary, ready: document.fonts.ready.then(() => undefined) };
+window.demo = { setup, render, summary, prepareEnd, gameDone, ready: document.fonts.ready.then(() => undefined) };

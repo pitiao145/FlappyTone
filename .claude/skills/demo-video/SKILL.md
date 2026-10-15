@@ -14,6 +14,7 @@ Renders an MP4 of the real game with a **scripted voice** in place of the mic: a
    - words, in order, how each is flown (flights below), and whether Jane's clip plays for it
    - intro / outro card text, caption
    - listen cue on or off, gap between gates, music file
+   - results screens after the run, if any (below)
 2. **Write** `demo/scenarios/<short-name>.json` (committed; schema in `src/dev/demoVideo/scenario.ts`).
 3. **Preview stills first:** `npm run render-demo -- demo/scenarios/<name>.json --stills 60,300,600` and Read the PNGs. Fix overlaps or bad words before the full render.
 4. **Render:** `npm run render-demo -- demo/scenarios/<name>.json` → `demo/out/<name>.mp4` (gitignored). Takes about real time.
@@ -32,11 +33,29 @@ Renders an MP4 of the real game with a **scripted voice** in place of the mic: a
     { "word": "ma4b", "flight": "wall", "audio": false },
     { "word": "haowan32", "flight": "perfect" }
   ],
+  "end": [
+    { "screen": "gameover", "seconds": 3.5 },
+    { "screen": "share", "seconds": 3, "name": "Pierre" }
+  ],
   "outro": { "title": "flappytone.com", "subtitle": "Play free in your browser" }
 }
 ```
 
 Other fields: `audio` (true — Jane's clip at every cue; a gate's own `audio` wins), `fps` (60), `demo` (true — the listen-then-fly cue; with it off no clips play either), `hud` (true), `corridor` (`narrow|normal|wide`), `gap` (0.5 × the game's rest gap; 1 = as played), `tailSeconds` (0.8), `music` (path; looped and cut to length), `musicVolume` (0.35 under clips, else 1).
+
+## Results screens (`end`)
+
+Shown after the run, in order, before the outro. Each is the game's own component fed this run's real stats — nothing is made up. To change the numbers, change the flights. Map Pierre's words:
+
+| he says | `screen` | what it is |
+|---|---|---|
+| score card, share card, "can you beat me" | `share` | the share image the game exports; `name` puts "PIERRE SCORED" on it |
+| results, game over, end screen, final score | `gameover` | game-over screen: score, best, combo, tone-accuracy tiles |
+| stats mid-run, pause, accuracy breakdown | `pause` | pause menu over the frozen last frame, with the breakdown |
+
+`seconds` defaults to 3. Game-over's coach card ("Tone 3 gates are landing like Tone 2") only appears once a tone has 2+ scored gates (`MIN_SCORED_GATES_FOR_TAKEAWAY`) — give that tone enough gates if he wants it. Progress-screen history (trends, streaks) is not available: it would need invented runs.
+
+## Flights
 
 | flight | what it shows | usual result |
 |---|---|---|

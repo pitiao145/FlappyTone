@@ -38,6 +38,22 @@ export interface Card {
   seconds?: number;
 }
 
+/**
+ * A results screen shown after the run, before the outro. Each is the game's
+ * own component fed the run's real stats — nothing is invented.
+ * - gameover: the game-over screen (score, tone-accuracy tiles, coach card).
+ * - pause:    the pause menu over the frozen world, with the run's breakdown.
+ * - share:    the share card image the game exports.
+ */
+export interface EndScreen {
+  screen: "gameover" | "pause" | "share";
+  seconds?: number;
+  /** share only: the name on the card ("" keeps "I SCORED"). */
+  name?: string;
+}
+
+export const END_SCREENS = ["gameover", "pause", "share"] as const;
+
 export interface Scenario {
   format?: Format;
   fps?: number;
@@ -53,6 +69,8 @@ export interface Scenario {
   caption?: string;
   intro?: Card;
   gates: ScenarioGate[];
+  /** Results screens after the run, in order. */
+  end?: EndScreen[];
   outro?: Card;
   /** Seconds of flight kept after the last gate resolves. Default 0.8. */
   tailSeconds?: number;
@@ -87,6 +105,9 @@ export function validateScenario(s: unknown): Scenario {
     if (g.flight && !FLIGHTS.includes(g.flight)) {
       throw new Error(`gates[${i}].flight "${g.flight}" — use one of ${FLIGHTS.join(", ")}`);
     }
+  }
+  for (const [i, e] of (sc.end ?? []).entries()) {
+    if (!END_SCREENS.includes(e.screen)) throw new Error(`end[${i}].screen "${e.screen}" — use one of ${END_SCREENS.join(", ")}`);
   }
   if (sc.format && !["9:16", "1:1", "16:9"].includes(sc.format)) throw new Error(`format "${sc.format}" — use 9:16, 1:1 or 16:9`);
   return sc;

@@ -1,0 +1,16 @@
+{
+  "format": "9:16",
+  "intro": { "title": "FlappyTone", "subtitle": "Learn Mandarin tones with your voice", "seconds": 1.2 },
+  "gates": [
+    { "word": "ma1b", "flight": "perfect" },
+    { "word": "ma2", "flight": "perfect" },
+    { "word": "ma3b", "flight": "wobble" },
+    { "word": "ma4b", "flight": "perfect" }
+  ],
+  "end": [
+    { "screen": "pause", "seconds": 2.5 },
+    { "screen": "gameover", "seconds": 3.5 },
+    { "screen": "share", "seconds": 3, "name": "Pierre" }
+  ],
+  "outro": { "title": "flappytone.com", "subtitle": "Play free in your browser" }
+}

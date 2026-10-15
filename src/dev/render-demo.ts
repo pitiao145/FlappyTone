@@ -106,7 +106,15 @@ try {
   await page.waitForFunction(() => (globalThis as any).demo !== undefined, null, { timeout: 60_000 });
   await page.evaluate(() => (globalThis as any).demo.ready);
   const { fps } = await page.evaluate((s) => (globalThis as any).demo.setup(s), scenario);
-  const step = (n: number): Promise<boolean> => page.evaluate((k) => (globalThis as any).demo.render(k), n);
+  let prepared = false;
+  const step = async (n: number): Promise<boolean> => {
+    // The share card renders asynchronously; have it ready before the first end frame.
+    if (!prepared && (await page.evaluate(() => (globalThis as any).demo.gameDone()))) {
+      prepared = true;
+      await page.evaluate(() => (globalThis as any).demo.prepareEnd());
+    }
+    return page.evaluate((k) => (globalThis as any).demo.render(k), n);
+  };
   const shot = (): Promise<Buffer> => page.screenshot({ type: "png", clip: { x: 0, y: 0, width: w, height: h } });
 
   if (stills) {
