@@ -22,6 +22,7 @@
   },
   "include": [
     "src/dev/render-demo.ts",
+    "src/dev/demoVideo/scenario.ts",
     "vite.config.ts",
     "src/dev/prerender.ts",
     "src/dev/prettyUrls.ts",

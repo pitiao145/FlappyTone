@@ -28,6 +28,8 @@ export interface ScenarioGate {
   /** A word id (`ma3b`) or its hanzi (`馬`), from the bundled catalog. */
   word: string;
   flight?: Flight;
+  /** Play Jane's clip at this gate's demo cue. Defaults to the scenario's `audio`. */
+  audio?: boolean;
 }
 
 export interface Card {
@@ -54,6 +56,10 @@ export interface Scenario {
   outro?: Card;
   /** Seconds of flight kept after the last gate resolves. Default 0.8. */
   tailSeconds?: number;
+  /** Jane's clips at each demo cue (default true); a gate's own `audio` wins. */
+  audio?: boolean;
+  /** Music volume under the clips, 0–1. Default 0.35 when clips play, else 1. */
+  musicVolume?: number;
   /** Path to an audio file to lay under the video (looped/trimmed to length). */
   music?: string;
 }
