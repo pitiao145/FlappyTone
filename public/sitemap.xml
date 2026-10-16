@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  One page, one entry. lastmod is a hardcoded real date and must be edited by
+  The landing page plus the two legal pages. lastmod is a hardcoded real date and must be edited by
   hand when the landing content actually changes. Do not generate it from the
   build date: a sitemap that claims a change on every deploy teaches Google to
   distrust lastmod and then ignore it entirely.
@@ -9,5 +9,13 @@
   <url>
     <loc>https://flappytone.com/</loc>
     <lastmod>2026-08-07</lastmod>
+  </url>
+  <url>
+    <loc>https://flappytone.com/privacy-policy</loc>
+    <lastmod>2026-09-08</lastmod>
+  </url>
+  <url>
+    <loc>https://flappytone.com/terms-of-service</loc>
+    <lastmod>2026-09-08</lastmod>
   </url>
 </urlset>

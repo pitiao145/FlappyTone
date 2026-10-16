@@ -1,14 +1,13 @@
 User-agent: *
 Allow: /
-# Jane's recording booth. Also noindex via X-Robots-Tag in vercel.json and a
-# meta tag in record.html.
-Disallow: /record
 
-# The game itself — a JS shell with no indexable content. The landing page at /
-# carries the SEO. Also noindex via X-Robots-Tag and a meta tag in app.html.
-Disallow: /app
-
-# /assets/ is deliberately NOT disallowed — Google needs the JS and CSS to
-# render the page.
+# /app (the game: a JS shell with no indexable content) and /record (Jane's
+# recording booth) are kept out of the index with noindex — a meta tag in
+# app.html/record.html plus X-Robots-Tag in vercel.json. They are deliberately
+# NOT Disallowed here: a crawler blocked by robots.txt never fetches the page,
+# so it never sees the noindex and can still list the bare URL.
+#
+# /assets/ is deliberately not disallowed either — Google needs the JS and CSS
+# to render the page.
 
 Sitemap: https://flappytone.com/sitemap.xml
