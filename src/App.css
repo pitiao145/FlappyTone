@@ -9762,3 +9762,108 @@ button.switch-track.switch-on {
   height: 16px;
   vertical-align: -2px;
 }
+
+.theme-card-pro {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.theme-pro-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink);
+  background: linear-gradient(135deg, #f6d77a, #e0a526);
+  color: #4a3300;
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.theme-card.is-pro {
+  background: linear-gradient(180deg, var(--surface), rgba(224, 165, 38, 0.12));
+}
+
+.level-xp {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: #6b4a00;
+}
+
+/* Game over: the run's XP and level, with a pop on level-up. */
+.go-xp {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px var(--space-3);
+  margin: var(--space-3) 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.go-xp-gain {
+  grid-row: span 2;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink);
+  background: linear-gradient(135deg, #f6d77a, #e0a526);
+  color: #4a3300;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.go-xp-level {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.go-xp-bar {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--ink);
+  background: var(--line);
+  overflow: hidden;
+}
+
+.go-xp-bar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #f2c75c, #e0a526);
+}
+
+.go-xp-sub {
+  grid-column: 1 / -1;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.go-xp.is-level-up {
+  animation: go-xp-pop 520ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.go-xp.is-level-up .go-xp-level {
+  color: var(--accent);
+}
+
+@keyframes go-xp-pop {
+  from {
+    transform: scale(0.92);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .go-xp.is-level-up {
+    animation: none;
+  }
+}

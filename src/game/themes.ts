@@ -4,11 +4,11 @@ import type { Tier } from "./tiers.ts";
  * Game-canvas themes: the registry of what a player can pick, and whether
  * they may. No React, no `src/data/` — the renderer and Settings both read it.
  *
- * Gating: a guest only ever gets Paper (`free`). An account (free or Pro)
- * unlocks the rest with XP (`{ kind: "xp", xp: N }`). The XP numbers are
- * placeholders until the XP layer exists (`playerXp`, game/xp.ts). Like the
- * speech style, this is UX gating only, never a security boundary: a theme is
- * a look, not content.
+ * Gating: a guest only ever gets Paper (`free`). An account gets Pixel Flappy
+ * (`account`), earns more by level (`level`, from XP — game/xp.ts), and Pro
+ * gets the Pro-only themes on the day they buy (`pro`, no XP on top: one lock
+ * per theme). Like the speech style, this is UX gating only, never a
+ * security boundary: a theme is a look, not content.
  */
 
 export type ThemeId = "classic" | "pixel-flappy" | "taroko" | "alishan" | "tea-terraces";
@@ -16,8 +16,12 @@ export type ThemeId = "classic" | "pixel-flappy" | "taroko" | "alishan" | "tea-t
 export type ThemeUnlock =
   /** Everyone, guests included. */
   | { kind: "free" }
-  /** An account (free or Pro) at this total XP. Never a guest. */
-  | { kind: "xp"; xp: number };
+  /** Any account (free or Pro). */
+  | { kind: "account" }
+  /** Any account at this level. */
+  | { kind: "level"; level: number }
+  /** Pro only, straight away. */
+  | { kind: "pro" };
 
 export interface ThemeInfo {
   id: ThemeId;
@@ -43,25 +47,25 @@ export const THEMES: readonly ThemeInfo[] = [
     id: "pixel-flappy",
     label: "Pixel Flappy",
     blurb: "Pixel mountains and the Taipei skyline.",
-    unlock: { kind: "xp", xp: 0 },
+    unlock: { kind: "account" },
   },
   {
     id: "taroko",
     label: "Taroko",
     blurb: "Marble gorge. Cliffs, river and a shrine.",
-    unlock: { kind: "xp", xp: 250 },
+    unlock: { kind: "level", level: 3 },
   },
   {
     id: "alishan",
     label: "Alishan",
     blurb: "Sunrise above the sea of clouds.",
-    unlock: { kind: "xp", xp: 750 },
+    unlock: { kind: "pro" },
   },
   {
     id: "tea-terraces",
     label: "Tea terraces",
     blurb: "Terraced tea hills and the Taipei basin.",
-    unlock: { kind: "xp", xp: 1500 },
+    unlock: { kind: "pro" },
   },
 
 ];
@@ -87,13 +91,21 @@ export function themeInfo(id: ThemeId): ThemeInfo {
 /** Who the player is and what they have earned. */
 export interface ThemeProgress {
   tier: Tier;
-  xp: number;
+  level: number;
 }
 
 export function isThemeUnlocked(id: ThemeId, progress: ThemeProgress): boolean {
   const { unlock } = themeInfo(id);
-  if (unlock.kind === "free") return true;
-  return progress.tier !== "guest" && progress.xp >= unlock.xp;
+  switch (unlock.kind) {
+    case "free":
+      return true;
+    case "account":
+      return progress.tier !== "guest";
+    case "level":
+      return progress.tier !== "guest" && progress.level >= unlock.level;
+    case "pro":
+      return progress.tier === "pro";
+  }
 }
 
 /**

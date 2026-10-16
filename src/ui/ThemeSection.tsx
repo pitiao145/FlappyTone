@@ -11,14 +11,22 @@ import {
   type ThemeProgress,
 } from "../game/themes.ts";
 import type { Tier } from "../game/tiers.ts";
-import { playerXp } from "../game/xp.ts";
+import { levelFor, levelThreshold, playerXp, type LevelInfo } from "../game/xp.ts";
 import { ThemeGateLoop, themeSegments } from "./ThemeGateLoop.tsx";
 
 const CARD_SIZE = { w: 200, h: 130 };
 const MODAL_SIZE = { w: 320, h: 240 };
 
-function xpNeeded(t: ThemeInfo): number {
-  return t.unlock.kind === "xp" ? t.unlock.xp : 0;
+/** Why a locked theme is locked, for this player. */
+function lockReason(t: ThemeInfo, progress: ThemeProgress): "guest" | "pro" | "level" | null {
+  if (isThemeUnlocked(t.id, progress)) return null;
+  if (t.unlock.kind === "pro") return "pro";
+  if (progress.tier === "guest") return "guest";
+  return "level";
+}
+
+function ProBadge() {
+  return <span className="theme-pro-badge">★ Pro</span>;
 }
 
 function LockIcon() {
@@ -42,12 +50,14 @@ function XpBar({ xp, need }: { xp: number; need: number }) {
 function ThemeModal({
   info,
   progress,
+  xp,
   equipped,
   onEquip,
   onClose,
 }: {
   info: ThemeInfo;
   progress: ThemeProgress;
+  xp: number;
   equipped: boolean;
   onEquip: () => void;
   onClose: () => void;
@@ -55,7 +65,8 @@ function ThemeModal({
   const titleId = useId();
   const segments = useMemo(() => themeSegments(info.id), [info.id]);
   const unlocked = isThemeUnlocked(info.id, progress);
-  const need = xpNeeded(info);
+  const reason = lockReason(info, progress);
+  const needLevel = info.unlock.kind === "level" ? info.unlock.level : 0;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -79,7 +90,9 @@ function ThemeModal({
         <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
           ×
         </button>
-        <h2 id={titleId} className="theme-modal-title">{info.label}</h2>
+        <h2 id={titleId} className="theme-modal-title">
+          {info.label} {info.unlock.kind === "pro" && <ProBadge />}
+        </h2>
         <div className={`theme-modal-stage${unlocked ? "" : " is-locked"}`}>
           <ThemeGateLoop segments={segments} size={MODAL_SIZE} className="theme-modal-canvas" />
         </div>
@@ -88,17 +101,21 @@ function ThemeModal({
           <button type="button" className="primary theme-modal-cta" disabled={equipped} onClick={onEquip}>
             {equipped ? "Equipped ✓" : "Equip theme"}
           </button>
-        ) : progress.tier === "guest" ? (
+        ) : reason === "pro" ? (
+          <p className="theme-modal-locked">
+            <LockIcon /> Pro only. Included with Pro, no XP needed.
+          </p>
+        ) : reason === "guest" ? (
           <p className="theme-modal-locked">
             <LockIcon /> Create a free account to start earning XP and unlock this theme.
           </p>
         ) : (
           <div className="theme-modal-locked">
             <p>
-              <LockIcon /> Unlocks at <strong>{need.toLocaleString()} XP</strong> —{" "}
-              {(need - progress.xp).toLocaleString()} to go.
+              <LockIcon /> Unlocks at <strong>Level {needLevel}</strong> —{" "}
+              {(levelThreshold(needLevel) - xp).toLocaleString()} XP to go.
             </p>
-            <XpBar xp={progress.xp} need={need} />
+            <XpBar xp={xp} need={levelThreshold(needLevel)} />
           </div>
         )}
       </div>
@@ -108,12 +125,14 @@ function ThemeModal({
 }
 
 /**
- * Settings → Themes: a card per theme with a still preview, an XP pill, and a
- * modal with the theme's world flying. Guests get Paper only; accounts unlock
- * the rest with XP (placeholder numbers, game/themes.ts + game/xp.ts).
+ * Settings → Themes: a card per theme with a still preview, the player's
+ * level, and a modal with the theme's world flying. Guests get Paper only;
+ * accounts unlock by level; Pro-only themes are badged so free players see
+ * they need Pro (game/themes.ts, game/xp.ts).
  */
 export function ThemeSection({ tier, icon }: { tier: Tier; icon: React.ReactNode }) {
-  const progress: ThemeProgress = { tier, xp: playerXp() };
+  const lvl: LevelInfo = levelFor(playerXp());
+  const progress: ThemeProgress = { tier, level: lvl.level };
   const [stored, setStored] = useState<ThemeId>(() => loadTheme());
   const [open, setOpen] = useState<ThemeId | null>(null);
   const themes = visibleThemes();
@@ -138,8 +157,8 @@ export function ThemeSection({ tier, icon }: { tier: Tier; icon: React.ReactNode
       <div className="setting-card-head">
         {icon}
         <h3>Themes</h3>
-        <span className="theme-xp-pill" title="Your XP">
-          ★ {tier === "guest" ? "—" : progress.xp.toLocaleString()} XP
+        <span className="theme-xp-pill" title={`${lvl.xp.toLocaleString()} XP`}>
+          Lv {lvl.level}
         </span>
       </div>
       <p className="theme-collection-count">
@@ -147,18 +166,19 @@ export function ThemeSection({ tier, icon }: { tier: Tier; icon: React.ReactNode
           {unlockedCount}/{themes.length}
         </strong>{" "}
         worlds unlocked
-        {tier === "guest" && " · create a free account to earn XP and unlock more"}
+        {tier === "guest" && " · create a free account to keep your XP and unlock more"}
       </p>
       <div className="theme-grid">
         {themes.map((t) => {
           const unlocked = isThemeUnlocked(t.id, progress);
           const isOn = t.id === equipped;
-          const need = xpNeeded(t);
+          const reason = lockReason(t, progress);
+          const needLevel = t.unlock.kind === "level" ? t.unlock.level : 0;
           return (
             <button
               key={t.id}
               type="button"
-              className={`theme-card${unlocked ? "" : " is-locked"}${isOn ? " is-equipped" : ""}`}
+              className={`theme-card${unlocked ? "" : " is-locked"}${isOn ? " is-equipped" : ""}${t.unlock.kind === "pro" ? " is-pro" : ""}`}
               onClick={() => setOpen(t.id)}
               aria-label={`${t.label}${isOn ? ", equipped" : unlocked ? ", unlocked" : ", locked"}. Preview`}
             >
@@ -170,6 +190,11 @@ export function ThemeSection({ tier, icon }: { tier: Tier; icon: React.ReactNode
                   </span>
                 )}
                 {isOn && <span className="theme-card-badge">Equipped</span>}
+                {t.unlock.kind === "pro" && (
+                  <span className="theme-card-pro">
+                    <ProBadge />
+                  </span>
+                )}
               </span>
               <span className="theme-card-name">{t.label}</span>
               <span className="theme-card-status">
@@ -177,11 +202,13 @@ export function ThemeSection({ tier, icon }: { tier: Tier; icon: React.ReactNode
                   ? isOn
                     ? "In use"
                     : "Unlocked · tap to try"
-                  : tier === "guest"
-                    ? "Account only"
-                    : `${need.toLocaleString()} XP`}
+                  : reason === "pro"
+                    ? "Pro only"
+                    : reason === "guest"
+                      ? "Free account"
+                      : `Level ${needLevel}`}
               </span>
-              {!unlocked && tier !== "guest" && <XpBar xp={progress.xp} need={need} />}
+              {reason === "level" && <XpBar xp={lvl.xp} need={levelThreshold(needLevel)} />}
             </button>
           );
         })}
@@ -191,6 +218,7 @@ export function ThemeSection({ tier, icon }: { tier: Tier; icon: React.ReactNode
         <ThemeModal
           info={openInfo}
           progress={progress}
+          xp={lvl.xp}
           equipped={openInfo.id === equipped}
           onEquip={() => equip(openInfo.id)}
           onClose={() => setOpen(null)}

@@ -11,6 +11,7 @@ import {
   type AccuracyPeriod,
 } from "../game/accuracyPeriod.ts";
 import { streakStatus } from "../game/streak.ts";
+import { levelFor, totalXp } from "../game/xp.ts";
 import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
 import { fetchTrendRows } from "../data/runlog.ts";
@@ -195,6 +196,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
   const toneAccuracy = accuracy.tones;
   const comboAccuracy = accuracy.combos;
   const streak = useMemo(() => streakStatus(), [version]);
+  const lvl = useMemo(() => levelFor(totalXp(history)), [history]);
 
   // Mock accuracy-over-time data for the Pro teaser chart — generated once so
   // switching tabs/tones doesn't re-randomise. No real time-series exists yet.
@@ -294,13 +296,24 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
           <div className="sticker-card level-card">
             <div className="level-head">
               <span className="level-label">Level</span>
-              <span className="soon-badge">Soon</span>
+              <span className="level-xp">{lvl.xp.toLocaleString()} XP</span>
             </div>
-            <span className="level-big">Level 4</span>
-            <span className="level-bar">
-              <span className="level-bar-fill" style={{ width: "45%" }} />
+            <span className="level-big">Level {lvl.level}</span>
+            <span
+              className="level-bar"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={lvl.levelSpan}
+              aria-valuenow={lvl.intoLevel}
+            >
+              <span className="level-bar-fill" style={{ width: `${(lvl.intoLevel / lvl.levelSpan) * 100}%` }} />
             </span>
-            <span className="level-sub">Earn XP &amp; rank up</span>
+            <span className="level-sub">
+              {lvl.toNext.toLocaleString()} XP to level {lvl.level + 1} · accurate tones earn the most
+            </span>
+            {tier === "guest" && (
+              <span className="streak-warning">⚠️ Sign up to keep your XP and unlock themes.</span>
+            )}
           </div>
         </div>
 

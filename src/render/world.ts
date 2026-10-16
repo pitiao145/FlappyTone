@@ -159,8 +159,8 @@ export function refreshMotionPreference(): void {
  * The game-canvas theme, read once per run like the motion preference. Until
  * a run passes the player's progress, draw as a guest would (Paper).
  */
-let THEME: ThemeId = effectiveTheme(loadTheme(), { tier: "guest", xp: 0 });
-let PROGRESS: ThemeProgress = { tier: "guest", xp: 0 };
+let THEME: ThemeId = effectiveTheme(loadTheme(), { tier: "guest", level: 1 });
+let PROGRESS: ThemeProgress = { tier: "guest", level: 1 };
 
 /**
  * A host that must not follow the player's choice (the Lab draws paper).

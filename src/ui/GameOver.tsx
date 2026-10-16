@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { levelFor, runXp, totalXp } from "../game/xp.ts";
+import { THEMES } from "../game/themes.ts";
 import {
   MIN_SCORED_GATES_FOR_TAKEAWAY,
   takeaway,
@@ -102,6 +104,29 @@ export function GameOver({
   // record shows as score === bestScore.
   const history = useMemo(() => loadRunHistory(), []);
   const isNewBest = stats.score > 0 && stats.score >= history.bestScore;
+
+  /**
+   * XP this run earned, and whether it crossed a level. Only the modes
+   * `recordRun` counts (game, drill, pairs) earn XP, so only they show it.
+   * `history` already includes this run, so "before" is total − this run.
+   */
+  const xpGain = useMemo(() => {
+    if (mode !== "game" && mode !== "drill" && mode !== "pairs") return null;
+    const gained = runXp(stats);
+    const after = levelFor(totalXp(history));
+    const before = levelFor(Math.max(0, after.xp - gained));
+    const unlocked =
+      tier === "guest"
+        ? []
+        : THEMES.filter(
+            (t) =>
+              !t.hidden &&
+              t.unlock.kind === "level" &&
+              t.unlock.level > before.level &&
+              t.unlock.level <= after.level,
+          );
+    return { gained, after, levelUp: after.level > before.level, unlocked };
+  }, [mode, stats, history, tier]);
 
   /**
    * The weak tone the coach card is about — the same entry `takeaway()`
@@ -438,6 +463,26 @@ export function GameOver({
           {playAgainButton}
         </div>
       </header>
+
+      {xpGain && (
+        <section className={`go-xp${xpGain.levelUp ? " is-level-up" : ""}`} aria-live="polite">
+          <span className="go-xp-gain">+{xpGain.gained.toLocaleString()} XP</span>
+          <span className="go-xp-level">
+            {xpGain.levelUp ? `Level up! Level ${xpGain.after.level}` : `Level ${xpGain.after.level}`}
+          </span>
+          <span className="go-xp-bar" aria-hidden="true">
+            <span
+              className="go-xp-bar-fill"
+              style={{ width: `${(xpGain.after.intoLevel / xpGain.after.levelSpan) * 100}%` }}
+            />
+          </span>
+          <span className="go-xp-sub">
+            {xpGain.unlocked.length > 0
+              ? `New theme unlocked: ${xpGain.unlocked.map((t) => t.label).join(", ")}`
+              : `${xpGain.after.toNext.toLocaleString()} XP to level ${xpGain.after.level + 1}${tier === "guest" ? " · sign up to keep it" : ""}`}
+          </span>
+        </section>
+      )}
 
       <div className="go-grid">
         {/* ---- 3. coach card */}

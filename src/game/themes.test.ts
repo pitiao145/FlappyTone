@@ -10,20 +10,20 @@ import {
 } from "./themes.ts";
 
 describe("themes", () => {
-  it("a guest only gets Paper, whatever their XP", () => {
+  it("a guest only gets Paper, whatever their level", () => {
     for (const t of THEMES) {
-      expect(isThemeUnlocked(t.id, { tier: "guest", xp: 1e9 })).toBe(t.id === "classic");
+      expect(isThemeUnlocked(t.id, { tier: "guest", level: 99 })).toBe(t.id === "classic");
     }
-    expect(effectiveTheme("taroko", { tier: "guest", xp: 1e9 })).toBe("classic");
+    expect(effectiveTheme("taroko", { tier: "guest", level: 99 })).toBe("classic");
   });
 
-  it("an account unlocks themes by XP; a locked choice falls back to the default", () => {
+  it("an account unlocks themes by level; a locked choice falls back to the default", () => {
     expect(isThemeId("neon")).toBe(false);
-    expect(isThemeUnlocked(DEFAULT_THEME, { tier: "free", xp: 0 })).toBe(true);
-    expect(isThemeUnlocked("tea-terraces", { tier: "pro", xp: 0 })).toBe(false);
-    expect(isThemeUnlocked("tea-terraces", { tier: "pro", xp: 1e9 })).toBe(true);
-    expect(effectiveTheme("tea-terraces", { tier: "free", xp: 0 })).toBe(DEFAULT_THEME);
-    expect(effectiveTheme("classic", { tier: "free", xp: 0 })).toBe("classic");
+    expect(isThemeUnlocked(DEFAULT_THEME, { tier: "free", level: 1 })).toBe(true);
+    expect(isThemeUnlocked("taroko", { tier: "free", level: 2 })).toBe(false);
+    expect(isThemeUnlocked("taroko", { tier: "free", level: 3 })).toBe(true);
+    expect(effectiveTheme("taroko", { tier: "free", level: 1 })).toBe(DEFAULT_THEME);
+    expect(effectiveTheme("classic", { tier: "free", level: 1 })).toBe("classic");
   });
 
   it("every visible theme is in the picker and has its own renderer", () => {
@@ -39,11 +39,18 @@ describe("themes", () => {
     expect(picker).toContain("taroko");
   });
 
+  it("Pro-only themes: Pro at any level, never free at any level", () => {
+    for (const id of ["alishan", "tea-terraces"] as const) {
+      expect(isThemeUnlocked(id, { tier: "pro", level: 1 })).toBe(true);
+      expect(isThemeUnlocked(id, { tier: "free", level: 99 })).toBe(false);
+    }
+  });
+
   it("keeps hidden themes out of the picker and never draws one", () => {
     const picker = visibleThemes().map((t) => t.id);
     for (const t of THEMES.filter((t) => t.hidden)) {
       expect(picker).not.toContain(t.id);
-      expect(effectiveTheme(t.id, { tier: "pro", xp: 1e9 })).toBe(DEFAULT_THEME);
+      expect(effectiveTheme(t.id, { tier: "pro", level: 99 })).toBe(DEFAULT_THEME);
     }
   });
 });
