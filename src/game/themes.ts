@@ -34,7 +34,7 @@ export interface ThemeInfo {
 export const THEMES: readonly ThemeInfo[] = [
   {
     id: "pixel-flappy",
-    label: "Taipei",
+    label: "Pixel Flappy",
     blurb: "Pixel mountains and the Taipei skyline.",
     unlock: { kind: "free" },
   },
