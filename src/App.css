@@ -6462,8 +6462,15 @@ button.switch-track.switch-on {
 
 /* Pinned to the top of the canvas, level with the mobile home logo, and
    stretched across whatever width the logo leaves. */
+/* Static, so the pinned banner below anchors to .playhome-canvas (where the
+   logo sits), not to this centred, narrower overlay. */
+.playhome-overlay {
+  position: static;
+}
+
 .playhome-overlay .update-banner {
   position: absolute;
+  box-sizing: border-box;
   top: var(--space-3);
   left: var(--space-3);
   right: var(--space-3);
