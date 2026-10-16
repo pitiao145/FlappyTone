@@ -31,8 +31,10 @@ import { ToneAverages } from "./ToneAverages.tsx";
 import { TonePairs } from "./TonePairs.tsx";
 import { TuningPanel } from "./TuningPanel.tsx";
 import { WordGates } from "./WordGates.tsx";
+import { ThemePreview } from "./ThemePreview.tsx";
+import { lockWorldTheme } from "../render/world.ts";
 
-type Tab = "play" | "words" | "averages" | "visualiser" | "tonepairs" | "pairgates";
+type Tab = "play" | "words" | "averages" | "visualiser" | "tonepairs" | "pairgates" | "themes";
 
 const TABS: Array<{ id: Tab; label: string; hint: string }> = [
   { id: "play", label: "Play", hint: "Fly one gate or a full run while moving the tuning sliders" },
@@ -41,6 +43,7 @@ const TABS: Array<{ id: Tab; label: string; hint: string }> = [
   { id: "averages", label: "Averages", hint: "The averaged tone shapes the classifier reads against" },
   { id: "visualiser", label: "Visualiser", hint: "The player-facing visualiser, for testing the recogniser" },
   { id: "tonepairs", label: "Tone pairs", hint: "Measured pair fixtures against the textbook sandhi shapes" },
+  { id: "themes", label: "Themes", hint: "Any canvas theme with any word's gate, paused or scrolling" },
 ];
 
 /**
@@ -74,6 +77,13 @@ interface Props {
  */
 export function Lab({ onBack }: Props) {
   const [tab, setTab] = useState<Tab>("play");
+
+  // The Lab draws paper whatever theme the player picked; the Themes tab
+  // passes its theme explicitly. Released when the Lab closes.
+  useEffect(() => {
+    lockWorldTheme("classic");
+    return () => lockWorldTheme(null);
+  }, []);
   const [settings] = useState<CalibrationSettings>(() => loadSettings() ?? FALLBACK_SETTINGS);
   const [corridorWidth, setCorridorWidth] = useState<CorridorWidth>(loadCorridorWidth);
 
@@ -156,6 +166,9 @@ export function Lab({ onBack }: Props) {
         {tab === "words" && <WordGates words={styled} />}
         {tab === "averages" && <ToneAverages words={styled} />}
         {tab === "tonepairs" && <TonePairs />}
+        {tab === "themes" && (
+          <ThemePreview words={[...styled, ...pairs.filter((p) => !styled.some((w) => w.id === p.id))]} corridorWidth={corridorWidth} />
+        )}
         {tab === "visualiser" && (
           <div className="lab-pane lab-pane-stage">
             <Visualiser settings={settings} canvasWidth={360} canvasHeight={640} />

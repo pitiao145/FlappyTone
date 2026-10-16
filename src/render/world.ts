@@ -161,8 +161,19 @@ export function refreshMotionPreference(): void {
  */
 let THEME: ThemeId = effectiveTheme(loadTheme(), { xp: null });
 
+/**
+ * A host that must not follow the player's choice (the Lab draws paper).
+ * While set, `refreshThemePreference` keeps this theme; null releases it.
+ */
+let LOCKED: ThemeId | null = null;
+
 export function refreshThemePreference(): void {
-  THEME = effectiveTheme(loadTheme(), { xp: null });
+  THEME = LOCKED ?? effectiveTheme(loadTheme(), { xp: null });
+}
+
+export function lockWorldTheme(id: ThemeId | null): void {
+  LOCKED = id;
+  refreshThemePreference();
 }
 
 /** For hosts that draw a specific theme (dev previews, demo video). */
@@ -416,6 +427,8 @@ export function drawGate(
   height: number,
   gate: RunSnapshot["gates"][number],
   active: boolean,
+  /** Draw in this theme instead of the current one (the Lab's theme preview). */
+  theme: ThemeId = THEME,
 ): void {
   const { x0, x1, tone, shape, tolChao } = gate;
   if (x1 < 0 || x0 > width) return;
@@ -435,7 +448,7 @@ export function drawGate(
   //    pixel's cell grid snapped toward the channel). Opaque in every theme
   //    but paper, so the grid survives only inside the open channel.
   const t = tuning();
-  THEME_RENDERERS[THEME].drawWalls({
+  THEME_RENDERERS[theme].drawWalls({
     ctx,
     height,
     x0,
