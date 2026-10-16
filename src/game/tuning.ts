@@ -491,6 +491,24 @@ export interface Tuning {
   /** River foam and boulders. */
   tarokoTileRiver: number;
 
+  // ---- alishan theme (render only)
+  /** Parallax factor per backdrop layer: offset = worldX * k. */
+  alishanKStreaks: number;
+  alishanKRange: number;
+  alishanKCypress: number;
+  /** Cloud sea bands, far to near: nearer is faster. */
+  alishanKCloud1: number;
+  alishanKCloud2: number;
+  alishanKCloud3: number;
+  alishanKCloud4: number;
+  alishanKCloud5: number;
+  /** Seamless tile widths, as multiples of the canvas width. */
+  alishanTileStreaks: number;
+  /** One Yushan massif per tile. */
+  alishanTileRange: number;
+  alishanTileCypress: number;
+  alishanTileClouds: number;
+
   // ---- audio prefetch
   /**
    * Speculative clip prefetch depth, in words per tone.
@@ -689,6 +707,18 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   tarokoTileRidges: 2,
   tarokoTileShrine: 3,
   tarokoTileRiver: 1,
+  alishanKStreaks: 0.03,
+  alishanKRange: 0.05,
+  alishanKCypress: 0.08,
+  alishanKCloud1: 0.1,
+  alishanKCloud2: 0.18,
+  alishanKCloud3: 0.3,
+  alishanKCloud4: 0.45,
+  alishanKCloud5: 0.6,
+  alishanTileStreaks: 1.5,
+  alishanTileRange: 3,
+  alishanTileCypress: 2,
+  alishanTileClouds: 2,
   prefetchWordsPerTone: 6,
   warmupMaxMs: 3500,
   // Raised from 400 so the session noise measurement (skip + measure) always

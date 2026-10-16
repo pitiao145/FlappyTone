@@ -188,3 +188,52 @@ export const TAROKO = {
   /** Cue veil colour. */
   veilRgb: "238, 243, 236",
 } as const;
+
+/**
+ * The "Alishan" theme (brief 08): dawn sky, sea of clouds, cypress walls.
+ * Mirrors `--al-*` in tokens.css.
+ */
+export const ALISHAN = {
+  sky: [
+    [0, "#4d5f9e"],
+    [0.25, "#8b78b0"],
+    [0.45, "#e39aa6"],
+    [0.6, "#f8c79a"],
+    [0.69, "#ffe3ae"],
+    [1, "#f6dcd8"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  streakRgb: "255, 240, 230",
+  sunCore: "#fff2c0",
+  sunGlowRgb: "255, 240, 184",
+  rangeFar: "#8571ad",
+  rangeNear: "#5f5190",
+  cypress: "#363070",
+  /** Cloud sea, far to near. */
+  clouds: ["#fff1dc", "#f9dcc8", "#f1c4bd", "#e6b4b8", "#f6dcd8"] as readonly string[],
+  cloudHighlightRgb: "255, 251, 224",
+  /** Bottom wall gradient, 0.544H → H. */
+  wallBottom: [
+    [0, "#2f2a66"],
+    [0.4, "#4b4180"],
+    [0.75, "#9a7fb0"],
+    [1, "#f4d6d6"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  /** Top wall gradient, 0 → 0.519H. */
+  wallTop: [
+    [0, "#2a2560"],
+    [0.6, "#433a82"],
+    [1, "#6a5a9c"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  treeTexture: "#1f1b52",
+  glowBottomRgb: "106, 90, 156",
+  glowTopRgb: "127, 111, 176",
+  mistRgb: "246, 220, 216",
+  mistBandRgb: "255, 217, 208",
+  outline: "#231f55",
+  rim: "#f2b04a",
+  gridRgb: "58, 47, 85",
+  gridLabel: "#fff8ee",
+  gridLabelStroke: "#2a2560",
+  /** Cue veil colour: the bottom cloud band, so the bottom is seamless. */
+  veilRgb: "246, 220, 216",
+} as const;

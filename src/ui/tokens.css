@@ -96,6 +96,41 @@
   --tk-rim: #c9722a;
   --tk-grid-label: #f7f1e3;
 
+  /* ---- theme: alishan (game canvas, brief 08). Read by
+     render/palette.ts's ALISHAN; its literals mirror these. */
+  --al-sky-1: #4d5f9e;
+  --al-sky-2: #8b78b0;
+  --al-sky-3: #e39aa6;
+  --al-sky-4: #f8c79a;
+  --al-sky-5: #ffe3ae;
+  --al-sky-6: #f6dcd8;
+  --al-streak: #fff0e6;
+  --al-sun-core: #fff2c0;
+  --al-sun-glow: #fff0b8;
+  --al-range-far: #8571ad;
+  --al-range-near: #5f5190;
+  --al-cypress: #363070;
+  --al-cloud-1: #fff1dc;
+  --al-cloud-2: #f9dcc8;
+  --al-cloud-3: #f1c4bd;
+  --al-cloud-4: #e6b4b8;
+  --al-cloud-5: #f6dcd8;
+  --al-cloud-highlight: #fffbe0;
+  --al-wall-1: #2f2a66;
+  --al-wall-2: #4b4180;
+  --al-wall-3: #9a7fb0;
+  --al-wall-4: #f4d6d6;
+  --al-wall-top-1: #2a2560;
+  --al-wall-top-2: #433a82;
+  --al-wall-top-3: #6a5a9c;
+  --al-tree-texture: #1f1b52;
+  --al-glow-top: #7f6fb0;
+  --al-mist-band: #ffd9d0;
+  --al-outline: #231f55;
+  --al-rim: #f2b04a;
+  --al-grid: #3a2f55;
+  --al-grid-label: #fff8ee;
+
   /* ---- ink */
   --ink: #241d15;
   --ink-muted: #6b6151;

@@ -41,7 +41,7 @@ export const TAROKO_GRID: GridStyle = {
 // ------------------------------------------------------------- pure shapes
 
 /** Deterministic PRNG (mulberry32), so a layer looks the same every session. */
-function rng(seed: number): () => number {
+export function rng(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -88,9 +88,9 @@ export function ridgeY(
 
 // ----------------------------------------------------------- canvas setup
 
-type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+export type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
-function makeCanvas(w: number, h: number): { canvas: AnyCanvas; ctx: Ctx2D } | null {
+export function makeCanvas(w: number, h: number): { canvas: AnyCanvas; ctx: Ctx2D } | null {
   if (w <= 0 || h <= 0) return null;
   let canvas: AnyCanvas;
   if (typeof OffscreenCanvas !== "undefined") canvas = new OffscreenCanvas(w, h);
@@ -140,7 +140,7 @@ function band(
 }
 
 /** Draw `fn` at x and at x ± tileW, so a shape across the join wraps. */
-function wrapped(tileW: number, fn: (dx: number) => void): void {
+export function wrapped(tileW: number, fn: (dx: number) => void): void {
   fn(-tileW);
   fn(0);
   fn(tileW);
@@ -335,7 +335,7 @@ function backdropFor(width: number, height: number, dpr: number): BackdropCache 
   return backdrop;
 }
 
-function stops(
+export function stops(
   g: CanvasGradient,
   list: ReadonlyArray<readonly [number, string]>,
 ): CanvasGradient {

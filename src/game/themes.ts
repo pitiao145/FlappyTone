@@ -49,7 +49,6 @@ export const THEMES: readonly ThemeInfo[] = [
     label: "Alishan",
     blurb: "Sunrise above the sea of clouds.",
     unlock: { kind: "free" },
-    hidden: true,
   },
   {
     id: "tea-terraces",
