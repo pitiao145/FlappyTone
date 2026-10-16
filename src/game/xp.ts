@@ -28,18 +28,25 @@ export const XP_PER_GATE = 2;
 /** XP for a gate at 100% tone accuracy, on top of `XP_PER_GATE`. */
 export const XP_PER_ACCURACY = 8;
 
+/** A finite, non-negative number, else 0: a damaged local store must not make XP NaN. */
+function safe(v: unknown): number {
+  return typeof v === "number" && Number.isFinite(v) && v > 0 ? v : 0;
+}
+
 /** XP from a heard-gate count and its summed tone accuracy. */
 export function xpFrom(gates: number, accSum: number): number {
-  return Math.round(XP_PER_GATE * Math.max(0, gates) + XP_PER_ACCURACY * Math.max(0, accSum));
+  const g = safe(gates);
+  // Accuracy is at most 1 per gate; more is a damaged or edited store.
+  return Math.round(XP_PER_GATE * g + XP_PER_ACCURACY * Math.min(safe(accSum), g));
 }
 
 /** A player's total XP, from their lifetime totals. */
 export function totalXp(store: Pick<RunHistoryStore, "lifetimePerTone" | "lifetimePerCombo">): number {
   let gates = 0;
   let acc = 0;
-  for (const s of [...Object.values(store.lifetimePerTone), ...Object.values(store.lifetimePerCombo)]) {
-    gates += s.attempts;
-    acc += s.accSum;
+  for (const s of [...Object.values(store.lifetimePerTone ?? {}), ...Object.values(store.lifetimePerCombo ?? {})]) {
+    gates += safe(s?.attempts);
+    acc += Math.min(safe(s?.accSum), safe(s?.attempts));
   }
   return xpFrom(gates, acc);
 }
@@ -48,9 +55,9 @@ export function totalXp(store: Pick<RunHistoryStore, "lifetimePerTone" | "lifeti
 export function runXp(stats: Pick<RunStats, "perTone" | "perCombo">): number {
   let gates = 0;
   let acc = 0;
-  for (const s of [...Object.values(stats.perTone), ...Object.values(stats.perCombo ?? {})]) {
-    gates += s.gates;
-    acc += s.accSum;
+  for (const s of [...Object.values(stats.perTone ?? {}), ...Object.values(stats.perCombo ?? {})]) {
+    gates += safe(s?.gates);
+    acc += Math.min(safe(s?.accSum), safe(s?.gates));
   }
   return xpFrom(gates, acc);
 }

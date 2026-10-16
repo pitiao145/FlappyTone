@@ -1042,6 +1042,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     if (!run) return;
     const now = inventoryNow();
     if (now) run.setWords(resolvedPool(now, tier, mode, proficiency, levelChoice));
+    // The theme was picked from the same early "guest" read; re-pick it, or
+    // an account's first run after a cold load draws Paper.
+    refreshThemePreference({ tier, level: levelFor(playerXp()).level });
   }, [tier, runGen, mode, proficiency, levelChoice]);
 
   /**

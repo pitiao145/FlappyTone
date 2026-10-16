@@ -37,4 +37,14 @@ describe("xp", () => {
     expect(xpFrom(20, 14)).toBe(152);
     expect(levelThreshold(3)).toBeGreaterThan(700);
   });
+
+  it("survives a damaged store: no NaN, accuracy capped at one per gate", () => {
+    const store = {
+      lifetimePerTone: { 1: { attempts: "x", accSum: 3 }, 2: null, 3: tone(2, 50), 4: tone(Number.NaN, 1) },
+      lifetimePerCombo: { "3-2": { attempts: -5, accSum: -5 } },
+    } as never;
+    expect(totalXp(store)).toBe(xpFrom(2, 2));
+    expect(levelFor(totalXp(store)).toNext).not.toBeNaN();
+    expect(xpFrom(Number.NaN, Number.POSITIVE_INFINITY)).toBe(0);
+  });
 });

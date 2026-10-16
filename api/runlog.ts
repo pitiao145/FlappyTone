@@ -24,17 +24,25 @@ import { json } from "./_json.js";
 
 /** Mirrors `api/score.ts`. */
 const MAX_SCORE = 1_000_000;
-/** Far above any real run's scored gates. */
-const MAX_GATES = 500;
+/** A run's heard gates. The biggest real run so far is 23 (Oct 2026). */
+const MAX_GATES = 100;
 /** Four tones + 16 combos is every key there is. */
 const MAX_KEYS = 20;
 const MAX_WORDS = 200;
 const MAX_BACK_DAYS = 7;
 /** A free account keeps its latest 5 runs; Pro keeps every row. */
 export const FREE_RING = 5;
-/** Adoption bounds: far above any real guest's local totals. */
-const MAX_ADOPT_RUNS = 10_000;
-const MAX_ADOPT_ATTEMPTS = 100_000;
+/** Adoption bounds: a guest is capped at 3 runs a day, so this is years of play. */
+const MAX_ADOPT_RUNS = 5_000;
+const MAX_ADOPT_ATTEMPTS = 50_000;
+/**
+ * Pro has no daily run cap (`api/run.ts`), so this is the only bound on how
+ * many runs a day can add to the stats (and so to XP, `src/game/xp.ts`). Far
+ * above real play: the most any account has logged in one day is 17.
+ * Free accounts are capped at 10 starts a day by `api/run.ts`, but their
+ * `run_log` is trimmed to 5 rows, so it cannot be counted here.
+ */
+export const MAX_PRO_RUNS_PER_DAY = 100;
 
 const MODES = ["game", "tutorial", "single", "drill", "learn", "pairs"];
 const OUTCOMES = ["finished", "out_of_hearts", "quit", "restart"];
@@ -90,6 +98,11 @@ function parsePerKey(pk: unknown, maxGates: number): Record<string, KeyStat> | n
   return out;
 }
 
+/** Heard gates across every key. Must not exceed the run's own gate count. */
+function heardGates(per_key: Record<string, KeyStat>): number {
+  return Object.values(per_key).reduce((sum, k) => sum + k.gates, 0);
+}
+
 function parseWords(raw: unknown): string[] | null {
   if (raw === undefined) return [];
   if (!Array.isArray(raw) || raw.length > MAX_WORDS) return null;
@@ -115,6 +128,9 @@ export function parseRun(raw: unknown): RunLogEntry | null {
   }
   const per_key = parsePerKey(r.per_key, MAX_GATES);
   if (!per_key) return null;
+  // Each key is bounded on its own, so without this a run could claim
+  // MAX_GATES perfect gates in every one of MAX_KEYS keys.
+  if (heardGates(per_key) > gates) return null;
   const wordIds = parseWords(r.wordIds);
   if (!wordIds) return null;
   return { runId, mode: r.mode, score, gates, outcome: r.outcome, tone_acc: acc as number | null, per_key, wordIds };
@@ -152,6 +168,7 @@ export function parseAdoption(raw: unknown): Adoption | null {
   if (last !== null && !(typeof last === "string" && DATE_RE.test(last) && validDay(last, 3650))) return null;
   const per_key = parsePerKey(a.per_key, MAX_ADOPT_ATTEMPTS);
   if (!per_key) return null;
+  if (heardGates(per_key) > a.gates) return null;
   if (Array.isArray(a.wordIds) && a.wordIds.length > 5000) return null;
   const words = Array.isArray(a.wordIds) ? a.wordIds : [];
   if (!words.every((w) => typeof w === "string" && WORD_RE.test(w))) return null;
@@ -218,6 +235,21 @@ export async function POST(request: Request): Promise<Response> {
   if (user.is_anonymous) return json(403, { error: "Guests keep their progress on their device." });
 
   if (adoption) {
+    // One adoption per account. `adoptions` is keyed (user, adopt id), so a
+    // fresh id per request would otherwise add a guest's totals again and
+    // again. Same id = a retry, which `adopt_guest` already answers.
+    // Accepted cost: guest progress on a second device is not added.
+    const { data: prior, error: priorError } = await supabase
+      .from("adoptions")
+      .select("adopt_id")
+      .eq("user_id", user.id)
+      .limit(1)
+      .maybeSingle();
+    if (priorError) {
+      console.error("[runlog] adoption lookup failed", priorError);
+      return json(502, { error: "Could not save progress." });
+    }
+    if (prior && prior.adopt_id !== adoption.adoptId) return json(200, { applied: false });
     const { data, error } = await supabase.rpc("adopt_guest", {
       p_user: user.id,
       p_adopt: adoption.adoptId,
@@ -247,6 +279,18 @@ export async function POST(request: Request): Promise<Response> {
   const flags = runFlags(r.mode, r.outcome);
   // A free account stores only the runs its stats count; Pro logs every mode (spec C).
   if (!pro && !flags.stats) return json(200, { applied: false });
+  if (pro && flags.stats) {
+    const { count, error: countError } = await supabase
+      .from("run_log")
+      .select("run_id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("day", day as string);
+    if (countError) {
+      console.error("[runlog] day count failed", countError);
+      return json(502, { error: "Could not record run." });
+    }
+    if ((count ?? 0) >= MAX_PRO_RUNS_PER_DAY) return json(429, { error: "Too many runs today." });
+  }
 
   const { data, error } = await supabase.rpc("record_run", {
     p_user: user.id,

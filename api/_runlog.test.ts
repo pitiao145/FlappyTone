@@ -28,6 +28,10 @@ async function load(opts: {
   entitlement?: { has_access: boolean } | null;
   rpcError?: unknown;
   rpcResult?: boolean;
+  /** An existing adoption row for this user, if any. */
+  priorAdoption?: { adopt_id: string } | null;
+  /** run_log rows already logged for the run's day. */
+  dayCount?: number;
 } = {}) {
   const user = "user" in opts ? opts.user : { id: "user-1", is_anonymous: false };
   const entitlement = "entitlement" in opts ? opts.entitlement : { has_access: true };
@@ -35,15 +39,26 @@ async function load(opts: {
     data: opts.rpcError ? null : (opts.rpcResult ?? true),
     error: opts.rpcError ?? null,
   }));
-  const ent: any = {
-    select: vi.fn(() => ent),
-    eq: vi.fn(() => ent),
-    maybeSingle: vi.fn(async () => ({ data: entitlement, error: null })),
+  // One chain per table; `then` answers a head/count query, `maybeSingle` a row.
+  const chain = (row: unknown, count = 0): any => {
+    const c: any = {
+      select: vi.fn(() => c),
+      eq: vi.fn(() => c),
+      limit: vi.fn(() => c),
+      maybeSingle: vi.fn(async () => ({ data: row, error: null })),
+      then: (resolve: (v: unknown) => void) => resolve({ count, error: null }),
+    };
+    return c;
+  };
+  const tables: Record<string, any> = {
+    entitlements: chain(entitlement),
+    adoptions: chain(opts.priorAdoption ?? null),
+    run_log: chain(null, opts.dayCount ?? 0),
   };
   vi.doMock("@supabase/supabase-js", () => ({
     createClient: vi.fn(() => ({
       auth: { getUser: vi.fn(async () => ({ data: { user }, error: null })) },
-      from: vi.fn(() => ent),
+      from: vi.fn((t: string) => tables[t]),
       rpc,
     })),
   }));
@@ -235,5 +250,51 @@ describe("POST /api/runlog", () => {
       const { POST } = await load({ user: { id: "u", is_anonymous: true } });
       expect((await POST(req({ body: { kind: "adopt", adopt } }))).status).toBe(403);
     });
+  });
+
+  it("rejects a run whose keys claim more heard gates than the run has", async () => {
+    const { POST, rpc } = await load();
+    const run = { ...goodRun, gates: 3 };
+    expect((await POST(req({ body: { ...goodBody, run } }))).status).toBe(400);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("rejects a run over the gate cap", async () => {
+    const { POST } = await load();
+    const run = { ...goodRun, gates: 101, per_key: { "1": { gates: 101, accSum: 101, unheard: 0, best: 1 } } };
+    expect((await POST(req({ body: { ...goodBody, run } }))).status).toBe(400);
+  });
+
+  it("caps a Pro account's counted runs per day", async () => {
+    const { POST, rpc, MAX_PRO_RUNS_PER_DAY } = await load({ dayCount: 100 });
+    expect(MAX_PRO_RUNS_PER_DAY).toBe(100);
+    expect((await POST(req())).status).toBe(429);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("adds guest progress only once per account", async () => {
+    const adopt = {
+      adoptId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+      runs: 2,
+      gates: 4,
+      best: 100,
+      streakCurrent: 0,
+      streakBest: 0,
+      streakLastDay: null,
+      per_key: { "2": { gates: 4, accSum: 3, unheard: 0, best: 0.9 } },
+      wordIds: [],
+    };
+    const other = await load({ priorAdoption: { adopt_id: "99999999-bbbb-4ccc-8ddd-eeeeeeeeeeee" } });
+    const res = await other.POST(req({ body: { kind: "adopt", adopt } }));
+    expect(await res.json()).toEqual({ applied: false });
+    expect(other.rpc).not.toHaveBeenCalled();
+
+    const retry = await load({ priorAdoption: { adopt_id: adopt.adoptId } });
+    await retry.POST(req({ body: { kind: "adopt", adopt } }));
+    expect(retry.rpc).toHaveBeenCalledWith("adopt_guest", expect.anything());
+
+    const inflated = await load();
+    const bad = { ...adopt, per_key: { "1": { gates: 4, accSum: 4, unheard: 0, best: 1 }, "2": { gates: 4, accSum: 4, unheard: 0, best: 1 } } };
+    expect((await inflated.POST(req({ body: { kind: "adopt", adopt: bad } }))).status).toBe(400);
   });
 });

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { levelFor, runXp, totalXp } from "../game/xp.ts";
+import { useSessionVersion } from "../data/sessionVersion.ts";
 import { THEMES } from "../game/themes.ts";
 import {
   MIN_SCORED_GATES_FOR_TAKEAWAY,
@@ -102,7 +103,11 @@ export function GameOver({
   // Read once on mount. GameApp's onRunOver has already called recordRun()
   // synchronously before routing here, so bestScore includes this run — a new
   // record shows as score === bestScore.
-  const history = useMemo(() => loadRunHistory(), []);
+  // Re-read when the account's server stats land (`version` ticks): on a new
+  // device the cache only holds this run until then, so XP/level would read
+  // as level 1.
+  const version = useSessionVersion();
+  const history = useMemo(() => loadRunHistory(), [version]);
   const isNewBest = stats.score > 0 && stats.score >= history.bestScore;
 
   /**
