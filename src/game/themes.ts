@@ -35,6 +35,11 @@ export interface ThemeInfo {
 /** Display order in Settings. */
 export const THEMES: readonly ThemeInfo[] = [
   {
+    id: "classic",
+    label: "Paper",
+    blurb: "The original calm paper look.",
+    unlock: { kind: "free" },
+  },  {
     id: "pixel-flappy",
     label: "Pixel Flappy",
     blurb: "Pixel mountains and the Taipei skyline.",
@@ -58,12 +63,7 @@ export const THEMES: readonly ThemeInfo[] = [
     blurb: "Terraced tea hills and the Taipei basin.",
     unlock: { kind: "xp", xp: 1500 },
   },
-  {
-    id: "classic",
-    label: "Paper",
-    blurb: "The original calm paper look.",
-    unlock: { kind: "free" },
-  },
+
 ];
 
 /** What a player gets with no choice saved, once it is unlocked for them. */

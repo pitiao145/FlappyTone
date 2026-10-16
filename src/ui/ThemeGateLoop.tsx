@@ -34,6 +34,8 @@ const MOBILE_QUERY = "(max-width: 719px)";
 /** Slower than a run: the canvas is small, and this is a teaser, not a level. */
 const SPEED = 120;
 const REST_S = 1.2;
+/** Where a still frame puts the landmark: right of the bird and its gate. */
+const LANDMARK_X = 0.78;
 
 interface Props {
   segments?: readonly LoopSegment[];
@@ -91,8 +93,11 @@ export function ThemeGateLoop({ segments = SHOWCASE, size, still = false, classN
       let i = 0;
       while (s >= segS(i)) s -= segS(i++);
       const seg = segs[i];
-      const worldX = frozen ? 0 : ((now - start) / 1000) * SPEED;
       const renderer = THEME_RENDERERS[seg.theme];
+      // A still frame shows the theme's landmark, clear of the gate.
+      const worldX = frozen
+        ? (renderer.showcaseWorldX?.(W, W * LANDMARK_X) ?? 0)
+        : ((now - start) / 1000) * SPEED;
 
       renderer.drawBackdrop(ctx, W, H, worldX);
       drawChaoGrid(ctx, W, H, renderer.gridStyle);

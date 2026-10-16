@@ -1,4 +1,13 @@
 /**
+ * A landmark at `frac` of a layer tile `tileMult × width` wide, scrolled at
+ * parallax factor `k`, lands on screen at frac·tile − worldX·k (mod tile).
+ */
+function landmarkWorldX(width: number, screenX: number, tileMult: number, frac: number, k: number): number {
+  const tile = width * tileMult;
+  return k > 0 ? ((((frac * tile - screenX) % tile) + tile) % tile) / k : 0;
+}
+
+/**
  * One renderer record per game-canvas theme (src/game/themes.ts is the
  * registry of what a player can pick). `world.ts` draws through this record
  * and never branches on a theme id itself, so a new theme is a record here
@@ -14,9 +23,10 @@ import type { ThemeId } from "../game/themes.ts";
 import { ALISHAN_GRID, drawAlishanBackdrop, drawAlishanWalls } from "./alishanTheme.ts";
 import { ALISHAN, PIXEL_FLAPPY, rgb, TAROKO, TEA_TERRACES } from "./palette.ts";
 import { drawBackdrop as drawPixelBackdrop, drawGround, drawPixelWalls } from "./pixelTheme.ts";
+import { tuning } from "../game/tuning.ts";
 import { BACKDROP, PAPER_GRID, PIXEL_GRID, type GridStyle } from "./scene.ts";
 import { bottomWallPath, topWallPath, type Pt } from "./smoothPath.ts";
-import { drawTeaTerracesBackdrop, drawTeaTerracesWalls, TEA_TERRACES_GRID } from "./teaTerracesTheme.ts";
+import { drawTeaTerracesBackdrop, drawTeaTerracesWalls, TEA_TERRACES_GRID, TOWER_AT } from "./teaTerracesTheme.ts";
 import { drawTarokoBackdrop, drawTarokoWalls, TAROKO_GRID } from "./tarokoTheme.ts";
 
 export interface WallArgs {
@@ -43,6 +53,11 @@ export interface ThemeRenderer {
   /** A gate's walls, inside [x0, x1] only. */
   drawWalls(args: WallArgs): void;
   gridStyle: GridStyle;
+  /**
+   * The worldX that puts the theme's landmark (Taipei 101, the shrine, Yushan)
+   * at `screenX` on a `width`-wide canvas. Settings' still preview cards use it.
+   */
+  showcaseWorldX?(width: number, screenX: number): number;
   /** "r, g, b" of the cue veil. A function: paper's token resolves at runtime. */
   veilRgb(): string;
 }
@@ -72,6 +87,7 @@ const pixelFlappy: ThemeRenderer = {
     drawPixelWalls(ctx, height, x0, x1, xStart, { top, bottom }, shape, cacheKey);
   },
   gridStyle: PIXEL_GRID,
+  showcaseWorldX: (w, x) => landmarkWorldX(w, x, tuning().pixelTileSkyline, 0.62, tuning().pixelKSkyline),
   veilRgb: () => PIXEL_FLAPPY.backdropRgb,
 };
 
@@ -79,6 +95,7 @@ const taroko: ThemeRenderer = {
   drawBackdrop: drawTarokoBackdrop,
   drawWalls: drawTarokoWalls,
   gridStyle: TAROKO_GRID,
+  showcaseWorldX: (w, x) => landmarkWorldX(w, x, tuning().tarokoTileShrine, 0.5, tuning().tarokoKShrine),
   veilRgb: () => TAROKO.veilRgb,
 };
 
@@ -86,6 +103,8 @@ const alishan: ThemeRenderer = {
   drawBackdrop: drawAlishanBackdrop,
   drawWalls: drawAlishanWalls,
   gridStyle: ALISHAN_GRID,
+  // The far massif's peak (Yushan), next to the screen-fixed sun.
+  showcaseWorldX: (w, x) => landmarkWorldX(w, x, tuning().alishanTileRange, 0.62, tuning().alishanKRange),
   veilRgb: () => ALISHAN.veilRgb,
 };
 
@@ -93,6 +112,7 @@ const teaTerraces: ThemeRenderer = {
   drawBackdrop: drawTeaTerracesBackdrop,
   drawWalls: drawTeaTerracesWalls,
   gridStyle: TEA_TERRACES_GRID,
+  showcaseWorldX: (w, x) => landmarkWorldX(w, x, tuning().teaTileBasin, TOWER_AT, tuning().teaKBasin),
   veilRgb: () => TEA_TERRACES.veilRgb,
 };
 
