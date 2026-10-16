@@ -1,4 +1,5 @@
 import { Composition } from "remotion";
+import { Thumbnail, type ThumbnailProps } from "./Thumbnail.tsx";
 import { Story, storyFrames, type StoryProps } from "./Story.tsx";
 import { FPS, Promo, SIZE, sections, type PromoProps } from "./Promo.tsx";
 
@@ -15,6 +16,15 @@ const defaults: PromoProps = {
 export function Root() {
   return (
     <>
+    <Composition
+      id="Thumbnail"
+      component={Thumbnail}
+      fps={FPS}
+      width={1080}
+      height={1920}
+      durationInFrames={1}
+      defaultProps={{ image: "clips/thumb-bg.png", title: "Fly with your voice", subtitle: "Learn Mandarin tones" } as ThumbnailProps}
+    />
     <Composition
       id="Story"
       component={Story}

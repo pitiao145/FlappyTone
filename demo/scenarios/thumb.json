@@ -1,0 +1,35 @@
+{
+ "format": "9:16",
+ "theme": "pixel-flappy",
+ "themeLabel": false,
+ "hud": false,
+ "demo": false,
+ "audio": false,
+ "gap": 0.3,
+ "gates": [
+  {
+   "word": "麻",
+   "flight": "perfect"
+  },
+  {
+   "word": "罵",
+   "flight": "perfect"
+  },
+  {
+   "word": "馬",
+   "flight": "perfect"
+  },
+  {
+   "word": "媽",
+   "flight": "perfect"
+  },
+  {
+   "word": "麻",
+   "flight": "perfect"
+  },
+  {
+   "word": "罵",
+   "flight": "perfect"
+  }
+ ]
+}

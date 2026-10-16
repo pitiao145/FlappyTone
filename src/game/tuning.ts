@@ -94,6 +94,24 @@ export const DEFAULT_POLYLINES: Record<Tone, Polyline> = {
 };
 
 
+/** Backdrop layers that scroll at their own speed (brief 06). */
+export interface PixelParallax {
+  clouds: number;
+  far: number;
+  near: number;
+  skyline: number;
+  lowland: number;
+}
+
+/** Shipped parallax factors, farther = slower. Walls and ground are 1.0. */
+export const PIXEL_PARALLAX: Readonly<PixelParallax> = Object.freeze({
+  clouds: 0.03,
+  far: 0.05,
+  near: 0.12,
+  skyline: 0.25,
+  lowland: 0.6,
+});
+
 export interface Tuning {
   // ---- pacing
   /** Base world scroll speed in px/s before ramp (PRD §6). */
@@ -443,6 +461,70 @@ export interface Tuning {
   /** Seconds of movement kept in the trail. */
   trailSeconds: number;
 
+  // ---- pixel flappy theme (render only)
+  /** One art pixel = `max(2, round(H / pixelCellDivisor))` logical px. */
+  pixelCellDivisor: number;
+  /** Parallax factor per backdrop layer: offset = worldX * k (PIXEL_PARALLAX). */
+  pixelKClouds: number;
+  pixelKFar: number;
+  pixelKNear: number;
+  pixelKSkyline: number;
+  pixelKLowland: number;
+  /** Seamless tile widths, as multiples of the canvas width. */
+  pixelTileClouds: number;
+  pixelTileRidges: number;
+  /** Skyline tile: one Taipei 101 per tile, so it passes by only now and then. */
+  pixelTileSkyline: number;
+
+  // ---- taroko theme (render only)
+  /** Parallax factor per backdrop layer: offset = worldX * k. */
+  tarokoKClouds: number;
+  tarokoKFar: number;
+  tarokoKNear: number;
+  tarokoKShrine: number;
+  tarokoKRiverDetail: number;
+  /** Seamless tile widths, as multiples of the canvas width. */
+  tarokoTileClouds: number;
+  tarokoTileRidges: number;
+  /** One shrine per tile, so it passes by only now and then. */
+  tarokoTileShrine: number;
+  /** River foam and boulders. */
+  tarokoTileRiver: number;
+
+  // ---- alishan theme (render only)
+  /** Parallax factor per backdrop layer: offset = worldX * k. */
+  alishanKStreaks: number;
+  alishanKRange: number;
+  alishanKCypress: number;
+  /** Cloud sea bands, far to near: nearer is faster. */
+  alishanKCloud1: number;
+  alishanKCloud2: number;
+  alishanKCloud3: number;
+  alishanKCloud4: number;
+  alishanKCloud5: number;
+  /** Seamless tile widths, as multiples of the canvas width. */
+  alishanTileStreaks: number;
+  /** One Yushan massif per tile. */
+  alishanTileRange: number;
+  alishanTileCypress: number;
+  alishanTileClouds: number;
+
+  // ---- tea terraces theme (render only)
+  /** Parallax factor per backdrop layer: offset = worldX * k. */
+  teaKClouds: number;
+  teaKFarHills: number;
+  teaKNearHills: number;
+  teaKGondola: number;
+  /** Taipei basin, Taipei 101 and the haze over them. */
+  teaKBasin: number;
+  teaKRows: number;
+  /** Seamless tile widths, as multiples of the canvas width. */
+  teaTileClouds: number;
+  teaTileHills: number;
+  teaTileGondola: number;
+  /** One Taipei 101 per tile. */
+  teaTileBasin: number;
+
   // ---- audio prefetch
   /**
    * Speculative clip prefetch depth, in words per tone.
@@ -623,6 +705,46 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   easeTauMs: 35,
   driftChaoPerSec: 5.33,
   trailSeconds: 1.0,
+  pixelCellDivisor: 124,
+  pixelKClouds: PIXEL_PARALLAX.clouds,
+  pixelKFar: PIXEL_PARALLAX.far,
+  pixelKNear: PIXEL_PARALLAX.near,
+  pixelKSkyline: PIXEL_PARALLAX.skyline,
+  pixelKLowland: PIXEL_PARALLAX.lowland,
+  pixelTileClouds: 1.5,
+  pixelTileRidges: 2,
+  pixelTileSkyline: 3,
+  tarokoKClouds: 0.03,
+  tarokoKFar: 0.05,
+  tarokoKNear: 0.12,
+  tarokoKShrine: 0.25,
+  tarokoKRiverDetail: 0.9,
+  tarokoTileClouds: 1.5,
+  tarokoTileRidges: 2,
+  tarokoTileShrine: 3,
+  tarokoTileRiver: 1,
+  alishanKStreaks: 0.03,
+  alishanKRange: 0.05,
+  alishanKCypress: 0.08,
+  alishanKCloud1: 0.1,
+  alishanKCloud2: 0.18,
+  alishanKCloud3: 0.3,
+  alishanKCloud4: 0.45,
+  alishanKCloud5: 0.6,
+  alishanTileStreaks: 1.5,
+  alishanTileRange: 3,
+  alishanTileCypress: 2,
+  alishanTileClouds: 2,
+  teaKClouds: 0.03,
+  teaKFarHills: 0.05,
+  teaKNearHills: 0.12,
+  teaKGondola: 0.2,
+  teaKBasin: 0.25,
+  teaKRows: 0.6,
+  teaTileClouds: 1.5,
+  teaTileHills: 2,
+  teaTileGondola: 2,
+  teaTileBasin: 3,
   prefetchWordsPerTone: 6,
   warmupMaxMs: 3500,
   // Raised from 400 so the session noise measurement (skip + measure) always

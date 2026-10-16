@@ -32,6 +32,131 @@
   --canvas-backdrop: #eee4cc;
   --canvas-backdrop-rgb: 238, 228, 204;
 
+  /* ---- theme: pixel-flappy (game canvas, brief 06). Read by
+     render/palette.ts's PIXEL_FLAPPY; its literals mirror these. */
+  --pf-sky-1: #86d0f2;
+  --pf-sky-2: #9ad9f6;
+  --pf-sky-3: #aee2f8;
+  --pf-sky-4: #c3ebfa;
+  --pf-sky-5: #d7f2fb;
+  --pf-sun: #fff3b8;
+  --pf-cloud: #ffffff;
+  --pf-cloud-shade: #d8eef9;
+  --pf-ridge-far: #a6d8e8;
+  --pf-ridge-near: #86c4da;
+  --pf-skyline: #6fb0d8;
+  --pf-window: #d4f0fb;
+  --pf-tower-lit: #5fa8d3;
+  --pf-tower-shade: #4a8fbf;
+  --pf-tower-belt: #2f6f9f;
+  --pf-lowland: #a8dc72;
+  --pf-lowland-edge: #8ccb55;
+  --pf-tuft: #6ab030;
+  --pf-wall-base: #2b6e2a;
+  --pf-wall-forest: #1f5a24;
+  --pf-rim-1: #d3ee86;
+  --pf-rim-2: #86cf47;
+  --pf-rim-3: #58ae3a;
+  --pf-rim-4: #3a8f30;
+  --pf-outline: #1d3a17;
+  --pf-grass: #7cc23a;
+  --pf-grass-hi: #a5de52;
+  --pf-grass-notch: #6ab030;
+  --pf-sand: #dccf8a;
+
+  /* ---- theme: taroko (game canvas, brief 07). Read by
+     render/palette.ts's TAROKO; its literals mirror these. */
+  --tk-sky-1: #8cc4e4;
+  --tk-sky-2: #cfe7f0;
+  --tk-sky-3: #eef3ec;
+  --tk-cloud: #ffffff;
+  --tk-peak-far: #b4c5ce;
+  --tk-peak-near: #92a9b6;
+  --tk-haze: #eef3ec;
+  --tk-bluff: #7c786d;
+  --tk-bluff-crest: #5f9b4b;
+  --tk-hall: #8a2f22;
+  --tk-post: #a3341f;
+  --tk-roof: #c0392b;
+  --tk-roof-edge: #7a1f16;
+  --tk-finial: #e8b84a;
+  --tk-river-top: #46c6ba;
+  --tk-river-bottom: #1c8f95;
+  --tk-boulder: #8b877a;
+  --tk-wall-light: #8d887a;
+  --tk-wall-mid-low: #5e5c53;
+  --tk-wall-dark: #3a3b36;
+  --tk-wall-mid-high: #65625a;
+  --tk-wall-light-high: #928d7f;
+  --tk-strata-light: #ece6d6;
+  --tk-strata-dark: #2c2b27;
+  --tk-fringe-dark: #4d8a42;
+  --tk-fringe-light: #6aa352;
+  --tk-outline: #2a2925;
+  --tk-rim: #c9722a;
+  --tk-grid-label: #f7f1e3;
+
+  /* ---- theme: alishan (game canvas, brief 08). Read by
+     render/palette.ts's ALISHAN; its literals mirror these. */
+  --al-sky-1: #4d5f9e;
+  --al-sky-2: #8b78b0;
+  --al-sky-3: #e39aa6;
+  --al-sky-4: #f8c79a;
+  --al-sky-5: #ffe3ae;
+  --al-sky-6: #f6dcd8;
+  --al-streak: #fff0e6;
+  --al-sun-core: #fff2c0;
+  --al-sun-glow: #fff0b8;
+  --al-range-far: #8571ad;
+  --al-range-near: #5f5190;
+  --al-cypress: #363070;
+  --al-cloud-1: #fff1dc;
+  --al-cloud-2: #f9dcc8;
+  --al-cloud-3: #f1c4bd;
+  --al-cloud-4: #e6b4b8;
+  --al-cloud-5: #f6dcd8;
+  --al-cloud-highlight: #fffbe0;
+  --al-wall-1: #2f2a66;
+  --al-wall-2: #4b4180;
+  --al-wall-3: #9a7fb0;
+  --al-wall-4: #f4d6d6;
+  --al-wall-top-1: #2a2560;
+  --al-wall-top-2: #433a82;
+  --al-wall-top-3: #6a5a9c;
+  --al-tree-texture: #1f1b52;
+  --al-glow-top: #7f6fb0;
+  --al-mist-band: #ffd9d0;
+  --al-outline: #231f55;
+  --al-rim: #f2b04a;
+  --al-grid: #3a2f55;
+  --al-grid-label: #fff8ee;
+
+  /* ---- theme: tea terraces (game canvas, brief 09). Read by
+     render/palette.ts's TEA_TERRACES; its literals mirror these. */
+  --tt-sky-1: #a9ddf0;
+  --tt-sky-2: #d4efe6;
+  --tt-sky-3: #eaf6dd;
+  --tt-sun-core: #fffdf0;
+  --tt-far-hills: #c2e3d2;
+  --tt-near-hills: #a1d3b6;
+  --tt-cable: #4b5a52;
+  --tt-pylon: #3a4a42;
+  --tt-cabin-warm: #f2d68a;
+  --tt-basin: #a9cdd2;
+  --tt-tower: #a6cad4;
+  --tt-tower-stroke: #6f97a6;
+  --tt-tower-shade: #7fa9b8;
+  --tt-rows-base: #7fc06a;
+  --tt-rows-dark: #74bd5f;
+  --tt-rows-light: #8fd07a;
+  --tt-wall-light: #66b052;
+  --tt-wall-deep: #2e7a3c;
+  --tt-lip: #b4e592;
+  --tt-shadow: #1f5e2b;
+  --tt-outline: #1c4a22;
+  --tt-rim: #c9722a;
+  --tt-grid-label: #f7f1e3;
+
   /* ---- ink */
   --ink: #241d15;
   --ink-muted: #6b6151;

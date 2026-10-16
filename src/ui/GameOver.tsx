@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { levelFor, runXp, totalXp } from "../game/xp.ts";
+import { useSessionVersion } from "../data/sessionVersion.ts";
+import { THEMES } from "../game/themes.ts";
 import {
   MIN_SCORED_GATES_FOR_TAKEAWAY,
   takeaway,
@@ -100,8 +103,49 @@ export function GameOver({
   // Read once on mount. GameApp's onRunOver has already called recordRun()
   // synchronously before routing here, so bestScore includes this run — a new
   // record shows as score === bestScore.
-  const history = useMemo(() => loadRunHistory(), []);
+  // Re-read when the account's server stats land (`version` ticks): on a new
+  // device the cache only holds this run until then, so XP/level would read
+  // as level 1.
+  const version = useSessionVersion();
+  const history = useMemo(() => loadRunHistory(), [version]);
   const isNewBest = stats.score > 0 && stats.score >= history.bestScore;
+
+  /**
+   * XP this run earned, and whether it crossed a level. Only the modes
+   * `recordRun` counts (game, drill, pairs) earn XP, so only they show it.
+   * `history` already includes this run, so "before" is total − this run.
+   */
+  const xpGain = useMemo(() => {
+    if (mode !== "game" && mode !== "drill" && mode !== "pairs") return null;
+    const gained = runXp(stats);
+    let heard = 0;
+    let acc = 0;
+    for (const t of [...Object.values(stats.perTone), ...Object.values(stats.perCombo ?? {})]) {
+      heard += t.gates;
+      acc += t.accSum;
+    }
+    const after = levelFor(totalXp(history));
+    const before = levelFor(Math.max(0, after.xp - gained));
+    const unlocked =
+      tier === "guest"
+        ? []
+        : THEMES.filter(
+            (t) =>
+              !t.hidden &&
+              "level" in t.unlock &&
+              (t.unlock.kind !== "pro" || tier === "pro") &&
+              t.unlock.level > before.level &&
+              t.unlock.level <= after.level,
+          );
+    return {
+      gained,
+      heard,
+      accPct: heard > 0 ? Math.round((acc / heard) * 100) : null,
+      after,
+      levelUp: after.level > before.level,
+      unlocked,
+    };
+  }, [mode, stats, history, tier]);
 
   /**
    * The weak tone the coach card is about — the same entry `takeaway()`
@@ -420,6 +464,12 @@ export function GameOver({
           <p className="go-best">
             Best {history.bestScore.toLocaleString()} · ×{stats.bestMultiplier}
           </p>
+          {xpGain && (
+            <p className="go-xp-chip">
+              <span>+{xpGain.gained.toLocaleString()} XP</span>
+              {xpGain.levelUp && <span className="go-xp-chip-up">Level {xpGain.after.level}!</span>}
+            </p>
+          )}
           {challengeScore != null && (
             <p className="go-challenge">
               {stats.score >= challengeScore
@@ -438,6 +488,29 @@ export function GameOver({
           {playAgainButton}
         </div>
       </header>
+
+      {xpGain && (
+        <section className={`go-xp${xpGain.levelUp ? " is-level-up" : ""}`} aria-live="polite">
+          <span className="go-xp-gain">+{xpGain.gained.toLocaleString()} XP</span>
+          <span className="go-xp-level">
+            {xpGain.levelUp ? `Level up! Level ${xpGain.after.level}` : `Level ${xpGain.after.level}`}
+          </span>
+          <span className="go-xp-bar" aria-hidden="true">
+            <span
+              className="go-xp-bar-fill"
+              style={{ width: `${(xpGain.after.intoLevel / xpGain.after.levelSpan) * 100}%` }}
+            />
+          </span>
+          <span className="go-xp-sub">
+            {xpGain.heard > 0
+              ? `From ${xpGain.heard} heard ${xpGain.heard === 1 ? "gate" : "gates"} at ${xpGain.accPct}% tone accuracy. `
+              : "No gate was heard, so no XP this run. "}
+            {xpGain.unlocked.length > 0
+              ? `New theme unlocked: ${xpGain.unlocked.map((t) => t.label).join(", ")}`
+              : `${xpGain.after.toNext.toLocaleString()} XP to level ${xpGain.after.level + 1}${tier === "guest" ? " · sign up to keep it" : ""}`}
+          </span>
+        </section>
+      )}
 
       <div className="go-grid">
         {/* ---- 3. coach card */}

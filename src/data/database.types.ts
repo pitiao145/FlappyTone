@@ -47,6 +47,24 @@ export type Database = {
           },
         ]
       }
+      counted_runs: {
+        Row: {
+          count: number
+          day: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          day: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          day?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_runs: {
         Row: {
           count: number
@@ -645,6 +663,10 @@ export type Database = {
       board_period: {
         Args: { p_limit?: number; p_period: string }
         Returns: Json
+      }
+      claim_counted_run: {
+        Args: { p_day: string; p_limit: number; p_user: string }
+        Returns: boolean
       }
       merge_words: { Args: { p_a: string[]; p_b: string[] }; Returns: string[] }
       record_run: {

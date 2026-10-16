@@ -1,4 +1,4 @@
-import { rgba, rgbTuple, solid } from "./palette.ts";
+import { PIXEL_FLAPPY, rgb, rgba, rgbTuple, solid } from "./palette.ts";
 
 /** The accent mixed `amount` of the way toward `toward` (255 = white, 0 = black). */
 function mixAccent(amount: number, toward: number): string {
@@ -47,10 +47,57 @@ export const BACKDROP = solid("backdrop");
  * near-equal to an active one (0.10) — so the reference grid and the obstacle
  * read at the same value and neither one resolved. Guides recede; walls do not.
  */
+export interface GridStyle {
+  /** "r, g, b" of the guide lines. */
+  strokeRgb: string;
+  alpha: number;
+  /** Chao 3, the rest line, reads stronger. */
+  restAlpha: number;
+  lineWidth: number;
+  dash: number[];
+  /** "r, g, b" of the axis labels. */
+  labelRgb: string;
+  labelAlpha: number;
+  labelRestAlpha: number;
+  /** Optional outline behind the label text, for busy backdrops. */
+  labelStroke?: string;
+  labelStrokeWidth?: number;
+}
+
+/** The paper look the visualiser and the classic theme use. */
+// Getters: the token resolves from the live stylesheet, not at module load.
+export const PAPER_GRID: GridStyle = {
+  get strokeRgb() {
+    return rgb("grid");
+  },
+  alpha: 0.42,
+  restAlpha: 0.65,
+  lineWidth: 1,
+  dash: [],
+  get labelRgb() {
+    return rgb("grid");
+  },
+  labelAlpha: 0.6,
+  labelRestAlpha: 0.85,
+};
+
+/** Pixel Flappy: dark-green dashes over the sky (brief 06). */
+export const PIXEL_GRID: GridStyle = {
+  strokeRgb: PIXEL_FLAPPY.outlineRgb,
+  alpha: 0.26,
+  restAlpha: 0.36,
+  lineWidth: 2,
+  dash: [6, 6],
+  labelRgb: PIXEL_FLAPPY.outlineRgb,
+  labelAlpha: 0.7,
+  labelRestAlpha: 0.85,
+};
+
 export function drawChaoGrid(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
+  style: GridStyle = PAPER_GRID,
 ): void {
   ctx.font = `${Math.round(height * 0.02)}px system-ui, sans-serif`;
   ctx.textBaseline = "middle";
@@ -58,15 +105,21 @@ export function drawChaoGrid(
     const y = chaoToY(chao, height);
     // Chao 3 is the rest line the dot returns to — the one guide worth reading.
     const isRest = chao === 3;
-    ctx.strokeStyle = isRest
-      ? rgba("grid", 0.65)
-      : rgba("grid", 0.42);
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = `rgba(${style.strokeRgb}, ${isRest ? style.restAlpha : style.alpha})`;
+    ctx.lineWidth = style.lineWidth;
+    ctx.setLineDash(style.dash);
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
     ctx.stroke();
-    ctx.fillStyle = rgba("grid", isRest ? 0.85 : 0.6);
+    ctx.setLineDash([]);
+    if (style.labelStroke) {
+      ctx.strokeStyle = style.labelStroke;
+      ctx.lineWidth = style.labelStrokeWidth ?? 3;
+      ctx.lineJoin = "round";
+      ctx.strokeText(String(chao), 8, y);
+    }
+    ctx.fillStyle = `rgba(${style.labelRgb}, ${isRest ? style.labelRestAlpha : style.labelAlpha})`;
     ctx.fillText(String(chao), 8, y);
   }
 }

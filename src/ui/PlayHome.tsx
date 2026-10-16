@@ -2,6 +2,7 @@ import { SITE_HREF } from "./appLink.ts";
 import { brand } from "../brand.ts";
 import { track } from "../analytics/client.ts";
 import { UpdateBanner } from "./UpdateBanner.tsx";
+import { ThemeGateLoop } from "./ThemeGateLoop.tsx";
 
 /** "drill", "learn" and "pairs" are only ever started from ModeSelect, never
  * from a button here — kept in this union anyway since GameApp's
@@ -25,8 +26,8 @@ interface Props {
   onStart: (intent: PlayIntent) => void;
   /** Opens the Modes picker. No mic needed — only starting a run there does. */
   onModes: () => void;
-  /** Opens Settings scrolled to the Speech style control (the current update banner's link). */
-  onOpenSpeechStyle: () => void;
+  /** Opens Settings scrolled to the Themes section (the current update banner's link). */
+  onOpenThemes: () => void;
   /** Dev builds only: opens the magic-link login. Needs no mic, so it does not
    * go through `onStart`'s gesture path. */
   onDevLogin: () => void;
@@ -52,7 +53,7 @@ export function PlayHome({
   error: externalError,
   onStart,
   onModes,
-  onOpenSpeechStyle,
+  onOpenThemes,
   onDevLogin,
   canvasWidth,
   canvasHeight,
@@ -74,23 +75,18 @@ export function PlayHome({
         </a>
         <div className="screen playhome-overlay">
           {/* What's new. One banner at a time: swap the props when the next
-              update ships. The link needs a saved calibration, since Settings
-              only shows the speech-style control to a calibrated player. */}
+              update ships. */}
           <UpdateBanner
-            id="speech-style"
-            onEvent={(action) => track({ type: "update_banner", id: "speech-style", surface: "play_home", action })}
+            id="themes"
+            onEvent={(action) => track({ type: "update_banner", id: "themes", surface: "play_home", action })}
             label="New"
-            title="Choose your speech style"
-            body="Practise with standard, clear pronunciation or faster spoken speech."
-            actionLabel={calibrated ? "Try it in Settings" : undefined}
-            onAction={onOpenSpeechStyle}
+            title="New themes available!"
+            actionLabel="See themes"
+            onAction={onOpenThemes}
           />
 
-          <img
-            src="/Bird-hor-no-halo.png"
-            alt="Flappytone mascot"
-            className="playhome-mascot"
-          />
+          {/* The bird flying one gate per tone, a different theme each. */}
+          <ThemeGateLoop />
           {challengeScore != null && (
             <p className="prompt challenge-score">
               <strong>{challengeName ?? "Someone"} scored {challengeScore.toLocaleString()}.</strong>

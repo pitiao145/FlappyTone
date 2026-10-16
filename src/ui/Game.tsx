@@ -28,6 +28,7 @@ import {
 } from "../audio/session.ts";
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { getTier, tierReady, useTier } from "../data/tier.ts";
+import { levelFor, playerXp } from "../game/xp.ts";
 import { postShapes } from "../data/shapes.ts";
 import { postRunLog } from "../data/runlog.ts";
 import { buildRunLogEntry } from "../game/runTrend.ts";
@@ -51,7 +52,7 @@ import {
 import { sessionNoiseMeter, startingNoiseFloor } from "../game/sessionNoise.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
-import { drawWorld, refreshMotionPreference } from "../render/world.ts";
+import { drawWorld, refreshMotionPreference, refreshThemePreference } from "../render/world.ts";
 import { JumpingPip } from "./bird/index.ts";
 import { PauseMenu } from "./PauseMenu.tsx";
 import { GameHud, type OutcomeFlash } from "./GameHud.tsx";
@@ -419,6 +420,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // Game remounts per run, so this picks up the latest saved corridor
     // width — and the latest motion preference, which the renderer caches.
     refreshMotionPreference();
+    refreshThemePreference({ tier: getTier(), level: levelFor(playerXp()).level });
 
     const corridor = loadCorridorWidth();
     // The tutorial is call-and-response by design — a player's general
@@ -1040,6 +1042,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     if (!run) return;
     const now = inventoryNow();
     if (now) run.setWords(resolvedPool(now, tier, mode, proficiency, levelChoice));
+    // The theme was picked from the same early "guest" read; re-pick it, or
+    // an account's first run after a cold load draws Paper.
+    refreshThemePreference({ tier, level: levelFor(playerXp()).level });
   }, [tier, runGen, mode, proficiency, levelChoice]);
 
   /**

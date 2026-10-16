@@ -14,10 +14,10 @@ import {
   corridorToleranceAt,
   type GateShape,
 } from "../game/gates.ts";
-import { loadReduceMotion } from "../game/settings.ts";
+import { loadReduceMotion, loadTheme } from "../game/settings.ts";
+import { effectiveTheme, type ThemeId, type ThemeProgress } from "../game/themes.ts";
 import { tuning } from "../game/tuning.ts";
 import {
-  BACKDROP,
   chaoToY,
   drawChaoGrid,
   drawPip,
@@ -27,6 +27,8 @@ import {
 } from "./scene.ts";
 import type { TrailSample } from "./scene.ts";
 import { rgb, rgba, rgbTuple } from "./palette.ts";
+import { appendSmooth, type Pt } from "./smoothPath.ts";
+import { THEME_RENDERERS } from "./themeRenderers.ts";
 
 /** The token mixed `amount` toward white — a highlight of the same hue. */
 function lighten(token: Parameters<typeof rgb>[0], amount: number): string {
@@ -52,38 +54,6 @@ function corridorSteps(widthPx: number): number {
     MAX_CORRIDOR_STEPS,
     Math.max(MIN_CORRIDOR_STEPS, Math.round(widthPx / CORRIDOR_SAMPLE_PX)),
   );
-}
-
-interface Pt {
-  x: number;
-  y: number;
-}
-
-/**
- * Appends a smoothed run of points to the current path — quadratics through
- * segment midpoints, each sample its own control point.
- *
- * The drawn wall must stay the wall the player hits, and it does: the curve
- * departs from the sampled polyline by at most half a segment, which at
- * CORRIDOR_SAMPLE_PX is about one pixel. What it removes is the faceting and
- * the miter spikes at the polyline's corners, not the shape.
- *
- * Does not call beginPath or moveTo — the caller owns the path, because these
- * runs are stitched into closed wall polygons.
- */
-function appendSmooth(ctx: CanvasRenderingContext2D, pts: readonly Pt[]): void {
-  if (pts.length === 0) return;
-  ctx.lineTo(pts[0].x, pts[0].y);
-  for (let i = 1; i < pts.length - 1; i++) {
-    ctx.quadraticCurveTo(
-      pts[i].x,
-      pts[i].y,
-      (pts[i].x + pts[i + 1].x) / 2,
-      (pts[i].y + pts[i + 1].y) / 2,
-    );
-  }
-  const last = pts[pts.length - 1];
-  ctx.quadraticCurveTo(last.x, last.y, last.x, last.y);
 }
 
 // Colour prefixes — the caller appends `${alpha})`. Perfect, collision and the
@@ -185,6 +155,34 @@ export function refreshMotionPreference(): void {
   REDUCED_MOTION = loadReduceMotion() ?? osReducedMotion();
 }
 
+/**
+ * The game-canvas theme, read once per run like the motion preference. Until
+ * a run passes the player's progress, draw as a guest would (Paper).
+ */
+let THEME: ThemeId = effectiveTheme(loadTheme(), { tier: "guest", level: 1 });
+let PROGRESS: ThemeProgress = { tier: "guest", level: 1 };
+
+/**
+ * A host that must not follow the player's choice (the Lab draws paper).
+ * While set, `refreshThemePreference` keeps this theme; null releases it.
+ */
+let LOCKED: ThemeId | null = null;
+
+export function refreshThemePreference(progress: ThemeProgress = PROGRESS): void {
+  PROGRESS = progress;
+  THEME = LOCKED ?? effectiveTheme(loadTheme(), progress);
+}
+
+export function lockWorldTheme(id: ThemeId | null): void {
+  LOCKED = id;
+  refreshThemePreference();
+}
+
+/** For hosts that draw a specific theme (dev previews, demo video). */
+export function setWorldTheme(id: ThemeId): void {
+  THEME = id;
+}
+
 export function drawWorld(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -205,8 +203,11 @@ export function drawWorld(
    */
   now: number,
 ): void {
-  ctx.fillStyle = BACKDROP;
-  ctx.fillRect(0, 0, width, height);
+  // Reduced motion freezes the parallax and the ground notches; a cue pause
+  // freezes them on its own, since worldX does not advance during one.
+  const sceneryX = REDUCED_MOTION ? 0 : snap.worldX;
+  const theme = THEME_RENDERERS[THEME];
+  theme.drawBackdrop(ctx, width, height, sceneryX);
 
   // The shake displaces the world, not the backdrop — a shaking background
   // would show seams at the canvas edges.
@@ -214,7 +215,7 @@ export function drawWorld(
   ctx.save();
   if (shake) ctx.translate(shake.x, shake.y);
 
-  drawChaoGrid(ctx, width, height);
+  drawChaoGrid(ctx, width, height, theme.gridStyle);
 
   const dotX = width * birdXFrac();
 
@@ -223,6 +224,9 @@ export function drawWorld(
     // Approaching gates (still in or before their "listen" phase) stay dim.
     drawGate(ctx, width, height, gate, gate.x0 <= dotX);
   }
+
+  // A foreground layer (pixel's ground) is a floor over the walls.
+  theme.drawForeground?.(ctx, width, height, sceneryX);
 
   if (!snap.cuePaused) drawCueDemo(ctx, height, snap, now);
 
@@ -291,7 +295,8 @@ function drawCueVeil(
 ): void {
   if (!snap.cuePaused || !snap.cue) return;
   const fadeIn = Math.min(1, (now - snap.cue.atMs) / 150);
-  ctx.fillStyle = `rgba(${rgb("backdrop")}, ${0.6 * fadeIn})`;
+  const veil = THEME_RENDERERS[THEME].veilRgb();
+  ctx.fillStyle = `rgba(${veil}, ${0.6 * fadeIn})`;
   ctx.fillRect(0, 0, width, height);
 
   const gate = snap.gates.find((g) => g.xStart === snap.cue!.xStart);
@@ -424,6 +429,8 @@ export function drawGate(
   height: number,
   gate: RunSnapshot["gates"][number],
   active: boolean,
+  /** Draw in this theme instead of the current one (the Lab's theme preview). */
+  theme: ThemeId = THEME,
 ): void {
   const { x0, x1, tone, shape, tolChao } = gate;
   if (x1 < 0 || x0 > width) return;
@@ -439,27 +446,24 @@ export function drawGate(
 
   ctx.save();
 
-  // 1. The wall — opaque enough to swallow the grid behind it, so the guide
-  //    lines survive only inside the open channel. (Doesn't itself separate
-  //    from the canvas — canvas and wall share the same backdrop colour by
-  //    design — the channel tint and rim below are what carry the shape.)
-  ctx.fillStyle = active
-    ? `rgba(${rgb("backdrop")}, 0.97)`
-    : `rgba(${rgb("backdrop")}, 0.82)`;
+  // 1. The wall, painted by the theme inside the exact wall polygons (or on
+  //    pixel's cell grid snapped toward the channel). Opaque in every theme
+  //    but paper, so the grid survives only inside the open channel.
+  const t = tuning();
+  THEME_RENDERERS[theme].drawWalls({
+    ctx,
+    height,
+    x0,
+    x1,
+    xStart: gate.xStart,
+    top,
+    bottom,
+    shape,
+    cacheKey: `${tolChao}|${steps}|${t.timingSlackS}|${t.maxTimingWidenFactor}|${t.slackSmoothS}`,
+    active,
+  });
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(x0, 0);
-  appendSmooth(ctx, top);
-  ctx.lineTo(x1, 0);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(x0, height);
-  appendSmooth(ctx, bottom);
-  ctx.lineTo(x1, height);
-  ctx.closePath();
-  ctx.fill();
 
   // 2. The channel, lit from within. Clipped to the corridor so the glow can
   //    be generous without bleeding into the wall.

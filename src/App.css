@@ -3760,7 +3760,7 @@
 }
 
 /* Ghost chip for a word past the free tier's per-tone limit — dashed border,
-   muted ink, matching `.progress-screen .level-card`'s locked-teaser
+   muted ink, the locked-teaser
    language. Still tappable: it surfaces the upgrade path, not a dead end. */
 .word-chip.is-locked {
   border-style: dashed;
@@ -6460,6 +6460,41 @@ button.switch-track.switch-on {
   height: auto;
 }
 
+/* Pinned to the top of the canvas, level with the mobile home logo, and
+   stretched across whatever width the logo leaves. */
+/* Static, so the pinned banner below anchors to .playhome-canvas (where the
+   logo sits), not to this centred, narrower overlay. */
+.playhome-overlay {
+  position: static;
+}
+
+.playhome-overlay .update-banner {
+  position: absolute;
+  box-sizing: border-box;
+  top: var(--space-3);
+  left: var(--space-3);
+  right: var(--space-3);
+  width: auto;
+  max-width: none;
+  z-index: 2;
+}
+
+@media (max-width: 719px) {
+  .playhome-overlay .update-banner {
+    /* Logo: 60px image + its padding, then the same gap again. */
+    left: calc(var(--space-3) * 2 + var(--space-1) * 2 + 60px);
+    min-height: calc(60px + var(--space-1) * 2);
+  }
+}
+
+.game-stage .playhome-loop {
+  height: auto;
+  display: block;
+  width: min(420px, 100%);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+}
+
 .playhome-menu {
   width: 100%;
   max-width: 220px;
@@ -6480,6 +6515,10 @@ button.switch-track.switch-on {
 @media (max-width: 719px) {
   .playhome-mascot {
     width: min(220px, 55%);
+  }
+
+  .game-stage .playhome-loop {
+    width: min(240px, 62%);
   }
 
   .playhome-menu {
@@ -7276,31 +7315,14 @@ button.switch-track.switch-on {
   gap: 10px;
 }
 
-/* Locked Pro teaser — muted next to the live streak card. */
-.progress-screen .level-card {
-  background: color-mix(in srgb, var(--surface-panel) 50%, var(--surface));
-  border-style: dashed;
-  border-color: color-mix(in srgb, var(--ink) 28%, transparent);
-  box-shadow: none;
-  cursor: default;
+/* Live level card: a normal sticker card like the streak card, with a gold
+   XP bar (same gold as the XP chips on game over and in Themes). */
+.progress-screen .level-card .level-bar-fill {
+  background: linear-gradient(90deg, #f2c75c, #e0a526);
 }
 
 .progress-screen .level-card .level-big {
-  color: var(--ink-soft);
-}
-
-.progress-screen .level-card .level-sub,
-.progress-screen .level-card .level-label {
-  color: var(--ink-dim);
-}
-
-.progress-screen .level-card .level-bar {
-  border-color: color-mix(in srgb, var(--ink) 22%, transparent);
-  background: rgba(36, 29, 21, 0.05);
-}
-
-.progress-screen .level-card .level-bar-fill {
-  background: var(--ink-dim);
+  color: var(--ink);
 }
 
 .streak-flame {
@@ -9536,4 +9558,456 @@ button.switch-track.switch-on {
   font: inherit;
   text-decoration: underline;
   cursor: pointer;
+}
+
+/* Settings → Themes: a collection grid, a bit gamified (sticker cards, XP
+   pill, progress bars). Gold is local to this section. */
+#setting-theme {
+  --theme-gold: #e0a526;
+  --theme-gold-ink: #6b4a00;
+}
+
+.theme-xp-pill {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink);
+  background: var(--theme-gold);
+  color: var(--theme-gold-ink);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  box-shadow: 2px 2px 0 var(--ink);
+  white-space: nowrap;
+}
+
+.theme-collection-count {
+  margin: var(--space-2) 0 var(--space-3);
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.settings-screen button.theme-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  min-height: 0;
+  padding: var(--space-2);
+  text-align: left;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.settings-screen button.theme-card:hover:not(:disabled) {
+  border-color: var(--ink);
+  transform: translate(-1px, -2px);
+  box-shadow: 4px 5px 0 var(--ink);
+}
+
+.settings-screen button.theme-card:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+.theme-card.is-equipped {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.theme-card-art {
+  position: relative;
+  display: block;
+  border-radius: calc(var(--radius-md) - 4px);
+  overflow: hidden;
+}
+
+.theme-card-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Locked themes stay in full colour, so the reward is visible. Only a soft
+   shade behind the lock icon keeps it readable on a light sky. */
+.theme-card.is-locked .theme-card-lock {
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 60%);
+}
+
+.theme-card-lock {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.theme-card-lock svg {
+  width: 30px;
+  height: 30px;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
+}
+
+.theme-card-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.theme-card-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.theme-card-status {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.theme-card.is-locked .theme-card-status {
+  color: var(--theme-gold-ink);
+  font-weight: 600;
+}
+
+.theme-xpbar {
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--ink);
+  background: var(--line);
+  overflow: hidden;
+}
+
+.theme-xpbar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f2c75c, #e0a526);
+}
+
+.theme-modal {
+  --theme-gold: #e0a526;
+  --theme-gold-ink: #6b4a00;
+  text-align: center;
+}
+
+.theme-modal-title {
+  font-family: var(--font-display);
+  margin: 0 0 var(--space-3);
+}
+
+.theme-modal-stage {
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.theme-modal-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.theme-modal-blurb {
+  margin: var(--space-3) 0;
+  color: var(--ink-muted);
+}
+
+.theme-modal-cta {
+  width: 100%;
+}
+
+.theme-modal-locked {
+  color: var(--theme-gold-ink);
+}
+
+.theme-modal-locked p {
+  margin: 0 0 var(--space-2);
+}
+
+.theme-modal-locked svg {
+  width: 16px;
+  height: 16px;
+  vertical-align: -2px;
+}
+
+.theme-card-pro {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.theme-pro-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink);
+  background: linear-gradient(135deg, #f6d77a, #e0a526);
+  color: #4a3300;
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.theme-card.is-pro {
+  background: linear-gradient(180deg, var(--surface), rgba(224, 165, 38, 0.12));
+}
+
+.level-xp {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: #6b4a00;
+}
+
+/* Game over: the run's XP and level, with a pop on level-up. */
+.go-xp {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px var(--space-3);
+  margin: var(--space-3) 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.go-xp-gain {
+  grid-row: span 2;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink);
+  background: linear-gradient(135deg, #f6d77a, #e0a526);
+  color: #4a3300;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.go-xp-level {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.go-xp-bar {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--ink);
+  background: var(--line);
+  overflow: hidden;
+}
+
+.go-xp-bar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #f2c75c, #e0a526);
+}
+
+.go-xp-sub {
+  grid-column: 1 / -1;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.go-xp.is-level-up {
+  animation: go-xp-pop 520ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.go-xp.is-level-up .go-xp-level {
+  color: var(--accent);
+}
+
+@keyframes go-xp-pop {
+  from {
+    transform: scale(0.92);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .go-xp.is-level-up {
+    animation: none;
+  }
+}
+
+/* The run's XP, right under the score so it is seen first. */
+.go-xp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0;
+}
+
+.go-xp-chip > span:first-child {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink);
+  background: linear-gradient(135deg, #f6d77a, #e0a526);
+  color: #4a3300;
+  font-weight: 800;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.go-xp-chip-up {
+  font-weight: 800;
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------------------
+   HUD over themed scenes. The canvas themes (Pixel, Taroko, Alishan, Tea)
+   put light skies, a dark sky (Alishan) and dark walls under the HUD, so
+   nothing may sit on the scene bare: each top-row item and the tutorial cue
+   gets a paper pill, like the toasts. Applies on Paper too, for one look. */
+.hud-top .score,
+.hud-top .hearts,
+.hud-top .combo,
+.hud-status {
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(var(--surface-rgb), 0.86);
+  box-shadow: 0 1px 3px rgba(36, 29, 21, 0.18);
+}
+
+.hud-top .hearts {
+  padding: 5px 8px;
+}
+
+.hud-status {
+  color: var(--ink);
+}
+
+.hud .hud-button {
+  border-radius: 50%;
+  background: rgba(var(--surface-rgb), 0.86);
+  box-shadow: 0 1px 3px rgba(36, 29, 21, 0.18);
+  opacity: 1;
+  margin: 0;
+}
+
+.points-pop {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(var(--surface-rgb), 0.9);
+  font-weight: 800;
+}
+
+/* ---------------------------------------------------------------------------
+   Tone badges: bigger, solid underneath (a tint over the surface, never over
+   the scene), and a pop on entry. "Couldn't hear that" stays calm — no
+   colour, no bounce — because it must never read as a penalty (PRD §6). */
+.toast {
+  padding: 9px 20px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  background: rgba(var(--surface-rgb), 0.92);
+  color: var(--ink);
+  border: 1.5px solid rgba(36, 29, 21, 0.25);
+  box-shadow: 0 3px 10px rgba(36, 29, 21, 0.2);
+}
+
+.praise-toast {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, var(--good), var(--accent));
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  animation: badge-pop 1.3s cubic-bezier(0.2, 1.5, 0.4, 1) forwards;
+}
+
+.praise-toast::before {
+  content: "✨ ";
+}
+
+.mismatch-toast {
+  font-size: 1.1rem;
+  font-weight: 800;
+  background: linear-gradient(rgba(var(--danger-rgb), 0.16), rgba(var(--danger-rgb), 0.16)),
+    rgba(var(--surface-rgb), 0.96);
+  color: var(--ink);
+  border: 2px solid var(--danger);
+  box-shadow: 3px 3px 0 var(--danger);
+  animation: badge-nudge 1.3s ease-out forwards;
+}
+
+@keyframes badge-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) translateY(8px);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1.12) translateY(0);
+  }
+  30%,
+  75% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96) translateY(-6px);
+  }
+}
+
+@keyframes badge-nudge {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  20% {
+    transform: translateX(-3px);
+  }
+  25% {
+    transform: translateX(3px);
+  }
+  30%,
+  75% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.phase-banner {
+  font-size: 1.05rem;
+  font-weight: 700;
+  background: rgba(var(--surface-rgb), 0.92);
+  box-shadow: 0 2px 6px rgba(36, 29, 21, 0.18);
+}
+
+/* No motion: the badge simply shows for as long as the HUD keeps it. */
+@media (prefers-reduced-motion: reduce) {
+  .praise-toast,
+  .mismatch-toast {
+    animation: none;
+  }
 }

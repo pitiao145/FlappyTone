@@ -1,3 +1,35 @@
-{ "format": "9:16", "gap": 0.4, "tailSeconds": 0.6,
-  "gates": [ { "word": "書", "flight": "perfect" }, { "word": "學", "flight": "wall", "audio": false, "listen": false }, { "word": "好", "flight": "ok", "audio": false, "listen": false } ],
-  "end": [ { "screen": "gameover", "seconds": 3.5 }, { "screen": "pause", "seconds": 3.5 } ] }
+{
+  "format": "9:16",
+  "gap": 0.4,
+  "tailSeconds": 0.6,
+  "gates": [
+    {
+      "word": "書",
+      "flight": "perfect"
+    },
+    {
+      "word": "學",
+      "flight": "wall",
+      "audio": false,
+      "listen": false
+    },
+    {
+      "word": "好",
+      "flight": "ok",
+      "audio": false,
+      "listen": false
+    }
+  ],
+  "end": [
+    {
+      "screen": "gameover",
+      "seconds": 3.5
+    },
+    {
+      "screen": "pause",
+      "seconds": 3.5
+    }
+  ],
+  "theme": "pixel-flappy",
+  "themeLabel": false
+}

@@ -100,3 +100,187 @@ export function solid(token: Token): string {
 export function resetPalette(): void {
   resolved = null;
 }
+
+/**
+ * The "pixel-flappy" game-canvas theme (brief 06): Taiwan pixel-art backdrop
+ * and mountain walls. Opaque hex colours, mirrored as `--pf-*` in tokens.css.
+ * Kept as literals rather than resolved from CSS: every colour here is baked
+ * into an offscreen tile once, so there is no per-frame alpha to interpolate,
+ * and the pure builders must run without a DOM (tests).
+ */
+export const PIXEL_FLAPPY = {
+  sky: ["#86d0f2", "#9ad9f6", "#aee2f8", "#c3ebfa", "#d7f2fb"],
+  /** Band lower edges, as fractions of H (the last band runs to the bottom). */
+  skyStops: [0.198, 0.358, 0.507, 0.643],
+  /** The theme's backdrop for the cue veil: the lowest sky band. */
+  backdropRgb: "215, 242, 251",
+  sun: "#fff3b8",
+  cloud: "#ffffff",
+  cloudShade: "#d8eef9",
+  ridgeFar: "#a6d8e8",
+  ridgeNear: "#86c4da",
+  skyline: "#6fb0d8",
+  window: "#d4f0fb",
+  towerLit: "#5fa8d3",
+  towerShade: "#4a8fbf",
+  towerBelt: "#2f6f9f",
+  lowland: "#a8dc72",
+  lowlandEdge: "#8ccb55",
+  tuft: "#6ab030",
+  wallBase: "#2b6e2a",
+  wallForest: "#1f5a24",
+  /** Lit rim bands, nearest the channel first: d1, d2, d3–4, d5–6. */
+  rim: ["#d3ee86", "#86cf47", "#58ae3a", "#3a8f30"],
+  outline: "#1d3a17",
+  outlineRgb: "29, 58, 23",
+  grass: "#7cc23a",
+  grassHi: "#a5de52",
+  grassNotch: "#6ab030",
+  sand: "#dccf8a",
+} as const;
+
+/**
+ * The "Taroko" theme (brief 07): marble gorge, turquoise river, red shrine.
+ * Mirrors `--tk-*` in tokens.css.
+ */
+export const TAROKO = {
+  /** Sky gradient stops, as [fraction of H, colour]; flat below the last. */
+  sky: [
+    [0, "#8cc4e4"],
+    [0.55, "#cfe7f0"],
+    [0.85, "#eef3ec"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  cloud: "#ffffff",
+  peakFar: "#b4c5ce",
+  peakNear: "#92a9b6",
+  haze: "#eef3ec",
+  hazeRgb: "238, 243, 236",
+  bluff: "#7c786d",
+  bluffCrest: "#5f9b4b",
+  hall: "#8a2f22",
+  post: "#a3341f",
+  roof: "#c0392b",
+  roofEdge: "#7a1f16",
+  finial: "#e8b84a",
+  riverTop: "#46c6ba",
+  riverBottom: "#1c8f95",
+  boulder: "#8b877a",
+  /** Bottom wall gradient, 0.544H → H. */
+  wallBottom: [
+    [0, "#8d887a"],
+    [0.5, "#5e5c53"],
+    [1, "#3a3b36"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  /** Top wall gradient, 0 → 0.519H. */
+  wallTop: [
+    [0, "#3a3b36"],
+    [0.6, "#65625a"],
+    [1, "#928d7f"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  strataLight: "#ece6d6",
+  strataDark: "#2c2b27",
+  fringeDark: "#4d8a42",
+  fringeLight: "#6aa352",
+  outline: "#2a2925",
+  outlineRgb: "42, 41, 37",
+  rim: "#c9722a",
+  gridLabel: "#f7f1e3",
+  /** Cue veil colour. */
+  veilRgb: "238, 243, 236",
+} as const;
+
+/**
+ * The "Alishan" theme (brief 08): dawn sky, sea of clouds, cypress walls.
+ * Mirrors `--al-*` in tokens.css.
+ */
+export const ALISHAN = {
+  sky: [
+    [0, "#4d5f9e"],
+    [0.25, "#8b78b0"],
+    [0.45, "#e39aa6"],
+    [0.6, "#f8c79a"],
+    [0.69, "#ffe3ae"],
+    [1, "#f6dcd8"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  streakRgb: "255, 240, 230",
+  sunCore: "#fff2c0",
+  sunGlowRgb: "255, 240, 184",
+  rangeFar: "#8571ad",
+  rangeNear: "#5f5190",
+  cypress: "#363070",
+  /** Cloud sea, far to near. */
+  clouds: ["#fff1dc", "#f9dcc8", "#f1c4bd", "#e6b4b8", "#f6dcd8"] as readonly string[],
+  cloudHighlightRgb: "255, 251, 224",
+  /** Bottom wall gradient, 0.544H → H. */
+  wallBottom: [
+    [0, "#2f2a66"],
+    [0.4, "#4b4180"],
+    [0.75, "#9a7fb0"],
+    [1, "#f4d6d6"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  /** Top wall gradient, 0 → 0.519H. */
+  wallTop: [
+    [0, "#2a2560"],
+    [0.6, "#433a82"],
+    [1, "#6a5a9c"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  treeTexture: "#1f1b52",
+  glowBottomRgb: "106, 90, 156",
+  glowTopRgb: "127, 111, 176",
+  mistRgb: "246, 220, 216",
+  mistBandRgb: "255, 217, 208",
+  outline: "#231f55",
+  rim: "#f2b04a",
+  gridRgb: "58, 47, 85",
+  gridLabel: "#fff8ee",
+  gridLabelStroke: "#2a2560",
+  /** Cue veil colour: the bottom cloud band, so the bottom is seamless. */
+  veilRgb: "246, 220, 216",
+} as const;
+
+/**
+ * The "Tea terraces" theme (brief 09): Maokong tea hills, the Taipei basin,
+ * terraced green walls. Mirrors `--tt-*` in tokens.css.
+ */
+export const TEA_TERRACES = {
+  sky: [
+    [0, "#a9ddf0"],
+    [0.5, "#d4efe6"],
+    [0.8, "#eaf6dd"],
+    [1, "#eaf6dd"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  sunCore: "#fffdf0",
+  sunGlowRgb: "255, 255, 255",
+  cloudRgb: "255, 255, 255",
+  farHills: "#c2e3d2",
+  nearHills: "#a1d3b6",
+  cable: "#4b5a52",
+  pylon: "#3a4a42",
+  cabins: ["#ffffff", "#f2d68a"] as readonly string[],
+  basin: "#a9cdd2",
+  tower: "#a6cad4",
+  towerStroke: "#6f97a6",
+  towerShadeRgb: "127, 169, 184",
+  hazeRgb: "234, 246, 221",
+  rowsBase: "#7fc06a",
+  rowsDark: "#74bd5f",
+  rowsLight: "#8fd07a",
+  /** Bottom wall gradient, 0.544H → H. */
+  wallBottom: [
+    [0, "#66b052"],
+    [1, "#2e7a3c"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  /** Top wall gradient, 0 → 0.519H. */
+  wallTop: [
+    [0, "#2e7a3c"],
+    [1, "#66b052"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  lip: "#b4e592",
+  shadowRgb: "31, 94, 43",
+  outline: "#1c4a22",
+  outlineRgb: "28, 74, 34",
+  rim: "#c9722a",
+  gridLabel: "#f7f1e3",
+  /** Cue veil colour. */
+  veilRgb: "234, 246, 221",
+} as const;

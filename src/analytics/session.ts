@@ -300,6 +300,7 @@ export type SettingKey =
   | "pinyin"
   | "tone_marks"
   | "speech_style"
+  | "theme"
   | "sharing";
 
 /**

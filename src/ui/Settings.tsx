@@ -47,6 +47,7 @@ import type { SpeechStyle } from "../game/words.ts";
 import type { Proficiency } from "../game/tiers.ts";
 import { useTier } from "../data/tier.ts";
 import { Choice } from "./Choice.tsx";
+import { ThemeSection } from "./ThemeSection.tsx";
 import { MicrophoneIcon } from "./toneIcons.tsx";
 import { Switch } from "./Switch.tsx";
 
@@ -135,6 +136,23 @@ function LevelIcon() {
   );
 }
 
+function PaletteIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-1.3-1.1-1.6-1.1-2.7 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5C21 6.4 17 3 12 3Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <circle cx="7.5" cy="11" r="1.3" fill="currentColor" />
+      <circle cx="10" cy="7" r="1.3" fill="currentColor" />
+      <circle cx="15" cy="7.5" r="1.3" fill="currentColor" />
+    </svg>
+  );
+}
+
 function BookIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -166,7 +184,7 @@ interface Props {
   /** Called after sign-out resolves, so the router can land on Play home. */
   onSignedOut?: () => void;
   /** Scrolls the named section into view on arrival (e.g. from a Play-home update banner). */
-  focus?: "speechStyle" | null;
+  focus?: "speechStyle" | "theme" | null;
 }
 
 /**
@@ -233,6 +251,8 @@ export function Settings({
   useEffect(() => {
     if (focus === "speechStyle") {
       document.getElementById("setting-speech-style")?.scrollIntoView({ block: "center" });
+    } else if (focus === "theme") {
+      document.getElementById("setting-theme")?.scrollIntoView({ block: "start" });
     }
   }, [focus]);
   const [proficiency, setProficiency] = useState<Proficiency>(() => loadProficiency());
@@ -412,7 +432,14 @@ export function Settings({
         </p>
       </section>
 
-
+      <ThemeSection
+        tier={tier}
+        icon={
+          <SettingIcon>
+            <PaletteIcon />
+          </SettingIcon>
+        }
+      />
 
       {settings && (
         <section className="setting setting-card">

@@ -34,6 +34,8 @@ export interface ScenarioGate {
   listen?: boolean;
   /** Gap before this gate, as `Scenario.gap`. Defaults to the scenario's. */
   gap?: number;
+  /** Canvas theme from this gate's listen cue on (a `ThemeId`, e.g. "taroko"). Shows a small name label. */
+  theme?: string;
 }
 
 export interface Card {
@@ -63,6 +65,10 @@ export interface Scenario {
   fps?: number;
   /** The listen-then-fly demo before each gate. Default true, as in the game. */
   demo?: boolean;
+  /** Canvas theme for every gate without its own `theme` (a `ThemeId`). Default: the game's default. */
+  theme?: string;
+  /** Show the theme name label. Default true. */
+  themeLabel?: boolean;
   /** Draw score, combo, hearts and the word label. Default true. */
   hud?: boolean;
   /** Corridor width, as the setting. Default "normal". */
