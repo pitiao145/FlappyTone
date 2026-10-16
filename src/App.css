@@ -9873,3 +9873,140 @@ button.switch-track.switch-on {
   font-weight: 800;
   color: var(--accent);
 }
+
+/* ---------------------------------------------------------------------------
+   HUD over themed scenes. The canvas themes (Pixel, Taroko, Alishan, Tea)
+   put light skies, a dark sky (Alishan) and dark walls under the HUD, so
+   nothing may sit on the scene bare: each top-row item and the tutorial cue
+   gets a paper pill, like the toasts. Applies on Paper too, for one look. */
+.hud-top .score,
+.hud-top .hearts,
+.hud-top .combo,
+.hud-status {
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(var(--surface-rgb), 0.86);
+  box-shadow: 0 1px 3px rgba(36, 29, 21, 0.18);
+}
+
+.hud-top .hearts {
+  padding: 5px 8px;
+}
+
+.hud-status {
+  color: var(--ink);
+}
+
+.hud .hud-button {
+  border-radius: 50%;
+  background: rgba(var(--surface-rgb), 0.86);
+  box-shadow: 0 1px 3px rgba(36, 29, 21, 0.18);
+  opacity: 1;
+  margin: 0;
+}
+
+.points-pop {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(var(--surface-rgb), 0.9);
+  font-weight: 800;
+}
+
+/* ---------------------------------------------------------------------------
+   Tone badges: bigger, solid underneath (a tint over the surface, never over
+   the scene), and a pop on entry. "Couldn't hear that" stays calm — no
+   colour, no bounce — because it must never read as a penalty (PRD §6). */
+.toast {
+  padding: 9px 20px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  background: rgba(var(--surface-rgb), 0.92);
+  color: var(--ink);
+  border: 1.5px solid rgba(36, 29, 21, 0.25);
+  box-shadow: 0 3px 10px rgba(36, 29, 21, 0.2);
+}
+
+.praise-toast {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, var(--good), var(--accent));
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  animation: badge-pop 1.3s cubic-bezier(0.2, 1.5, 0.4, 1) forwards;
+}
+
+.praise-toast::before {
+  content: "✨ ";
+}
+
+.mismatch-toast {
+  font-size: 1.1rem;
+  font-weight: 800;
+  background: linear-gradient(rgba(var(--danger-rgb), 0.16), rgba(var(--danger-rgb), 0.16)),
+    rgba(var(--surface-rgb), 0.96);
+  color: var(--ink);
+  border: 2px solid var(--danger);
+  box-shadow: 3px 3px 0 var(--danger);
+  animation: badge-nudge 1.3s ease-out forwards;
+}
+
+@keyframes badge-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) translateY(8px);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1.12) translateY(0);
+  }
+  30%,
+  75% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96) translateY(-6px);
+  }
+}
+
+@keyframes badge-nudge {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  20% {
+    transform: translateX(-3px);
+  }
+  25% {
+    transform: translateX(3px);
+  }
+  30%,
+  75% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.phase-banner {
+  font-size: 1.05rem;
+  font-weight: 700;
+  background: rgba(var(--surface-rgb), 0.92);
+  box-shadow: 0 2px 6px rgba(36, 29, 21, 0.18);
+}
+
+/* No motion: the badge simply shows for as long as the HUD keeps it. */
+@media (prefers-reduced-motion: reduce) {
+  .praise-toast,
+  .mismatch-toast {
+    animation: none;
+  }
+}
