@@ -32,6 +32,38 @@
   --canvas-backdrop: #eee4cc;
   --canvas-backdrop-rgb: 238, 228, 204;
 
+  /* ---- theme: pixel-flappy (game canvas, brief 06). Read by
+     render/palette.ts's PIXEL_FLAPPY; its literals mirror these. */
+  --pf-sky-1: #86d0f2;
+  --pf-sky-2: #9ad9f6;
+  --pf-sky-3: #aee2f8;
+  --pf-sky-4: #c3ebfa;
+  --pf-sky-5: #d7f2fb;
+  --pf-sun: #fff3b8;
+  --pf-cloud: #ffffff;
+  --pf-cloud-shade: #d8eef9;
+  --pf-ridge-far: #a6d8e8;
+  --pf-ridge-near: #86c4da;
+  --pf-skyline: #6fb0d8;
+  --pf-window: #d4f0fb;
+  --pf-tower-lit: #5fa8d3;
+  --pf-tower-shade: #4a8fbf;
+  --pf-tower-belt: #2f6f9f;
+  --pf-lowland: #a8dc72;
+  --pf-lowland-edge: #8ccb55;
+  --pf-tuft: #6ab030;
+  --pf-wall-base: #2b6e2a;
+  --pf-wall-forest: #1f5a24;
+  --pf-rim-1: #d3ee86;
+  --pf-rim-2: #86cf47;
+  --pf-rim-3: #58ae3a;
+  --pf-rim-4: #3a8f30;
+  --pf-outline: #1d3a17;
+  --pf-grass: #7cc23a;
+  --pf-grass-hi: #a5de52;
+  --pf-grass-notch: #6ab030;
+  --pf-sand: #dccf8a;
+
   /* ---- ink */
   --ink: #241d15;
   --ink-muted: #6b6151;

@@ -17,7 +17,6 @@ import {
 import { loadReduceMotion } from "../game/settings.ts";
 import { tuning } from "../game/tuning.ts";
 import {
-  BACKDROP,
   chaoToY,
   drawChaoGrid,
   drawPip,
@@ -26,7 +25,8 @@ import {
   type PipState,
 } from "./scene.ts";
 import type { TrailSample } from "./scene.ts";
-import { rgb, rgba, rgbTuple } from "./palette.ts";
+import { PIXEL_FLAPPY, rgb, rgba, rgbTuple } from "./palette.ts";
+import { drawBackdrop, drawGround, drawPixelWalls } from "./pixelTheme.ts";
 
 /** The token mixed `amount` toward white — a highlight of the same hue. */
 function lighten(token: Parameters<typeof rgb>[0], amount: number): string {
@@ -205,8 +205,10 @@ export function drawWorld(
    */
   now: number,
 ): void {
-  ctx.fillStyle = BACKDROP;
-  ctx.fillRect(0, 0, width, height);
+  // Reduced motion freezes the parallax and the ground notches; a cue pause
+  // freezes them on its own, since worldX does not advance during one.
+  const sceneryX = REDUCED_MOTION ? 0 : snap.worldX;
+  drawBackdrop(ctx, width, height, sceneryX);
 
   // The shake displaces the world, not the backdrop — a shaking background
   // would show seams at the canvas edges.
@@ -214,7 +216,7 @@ export function drawWorld(
   ctx.save();
   if (shake) ctx.translate(shake.x, shake.y);
 
-  drawChaoGrid(ctx, width, height);
+  drawChaoGrid(ctx, width, height, "pixel");
 
   const dotX = width * birdXFrac();
 
@@ -223,6 +225,9 @@ export function drawWorld(
     // Approaching gates (still in or before their "listen" phase) stay dim.
     drawGate(ctx, width, height, gate, gate.x0 <= dotX);
   }
+
+  // The ground is a floor over the walls, streaming 1:1 with them.
+  drawGround(ctx, width, height, sceneryX);
 
   if (!snap.cuePaused) drawCueDemo(ctx, height, snap, now);
 
@@ -291,7 +296,7 @@ function drawCueVeil(
 ): void {
   if (!snap.cuePaused || !snap.cue) return;
   const fadeIn = Math.min(1, (now - snap.cue.atMs) / 150);
-  ctx.fillStyle = `rgba(${rgb("backdrop")}, ${0.6 * fadeIn})`;
+  ctx.fillStyle = `rgba(${PIXEL_FLAPPY.backdropRgb}, ${0.6 * fadeIn})`;
   ctx.fillRect(0, 0, width, height);
 
   const gate = snap.gates.find((g) => g.xStart === snap.cue!.xStart);
@@ -439,27 +444,22 @@ export function drawGate(
 
   ctx.save();
 
-  // 1. The wall — opaque enough to swallow the grid behind it, so the guide
-  //    lines survive only inside the open channel. (Doesn't itself separate
-  //    from the canvas — canvas and wall share the same backdrop colour by
-  //    design — the channel tint and rim below are what carry the shape.)
-  ctx.fillStyle = active
-    ? `rgba(${rgb("backdrop")}, 0.97)`
-    : `rgba(${rgb("backdrop")}, 0.82)`;
+  // 1. The wall: pixel mountains, fully opaque, so the grid and sky survive
+  //    only inside the open channel. Painted on a cell grid snapped toward
+  //    the channel (never thinner than the edge collision reads).
+  const t = tuning();
+  drawPixelWalls(
+    ctx,
+    height,
+    x0,
+    x1,
+    gate.xStart,
+    { top, bottom },
+    shape,
+    `${tolChao}|${steps}|${t.timingSlackS}|${t.maxTimingWidenFactor}|${t.slackSmoothS}`,
+  );
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(x0, 0);
-  appendSmooth(ctx, top);
-  ctx.lineTo(x1, 0);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(x0, height);
-  appendSmooth(ctx, bottom);
-  ctx.lineTo(x1, height);
-  ctx.closePath();
-  ctx.fill();
 
   // 2. The channel, lit from within. Clipped to the corridor so the glow can
   //    be generous without bleeding into the wall.

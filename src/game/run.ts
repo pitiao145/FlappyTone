@@ -355,6 +355,8 @@ export interface RunSnapshot {
   phase: RunPhase;
   /** True while the world is frozen for a "pause"-style demo — the renderer dims the scene. */
   cuePaused: boolean;
+  /** World scroll position in px. The backdrop's parallax reads it; render only. */
+  worldX: number;
   score: number;
   hearts: number;
   comboMult: number;
@@ -992,6 +994,7 @@ export class Run {
       cue: this.cue,
       phase: active ? "active" : this.cue ? "listen" : null,
       cuePaused: this.inCuePause(this.nowMs),
+      worldX: this.worldX,
       upcoming: upcoming
         ? {
             tone: upcoming.tone,

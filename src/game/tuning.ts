@@ -94,6 +94,24 @@ export const DEFAULT_POLYLINES: Record<Tone, Polyline> = {
 };
 
 
+/** Backdrop layers that scroll at their own speed (brief 06). */
+export interface PixelParallax {
+  clouds: number;
+  far: number;
+  near: number;
+  skyline: number;
+  lowland: number;
+}
+
+/** Shipped parallax factors, farther = slower. Walls and ground are 1.0. */
+export const PIXEL_PARALLAX: Readonly<PixelParallax> = Object.freeze({
+  clouds: 0.03,
+  far: 0.05,
+  near: 0.12,
+  skyline: 0.25,
+  lowland: 0.6,
+});
+
 export interface Tuning {
   // ---- pacing
   /** Base world scroll speed in px/s before ramp (PRD §6). */
@@ -443,6 +461,21 @@ export interface Tuning {
   /** Seconds of movement kept in the trail. */
   trailSeconds: number;
 
+  // ---- pixel flappy theme (render only)
+  /** One art pixel = `max(2, round(H / pixelCellDivisor))` logical px. */
+  pixelCellDivisor: number;
+  /** Parallax factor per backdrop layer: offset = worldX * k (PIXEL_PARALLAX). */
+  pixelKClouds: number;
+  pixelKFar: number;
+  pixelKNear: number;
+  pixelKSkyline: number;
+  pixelKLowland: number;
+  /** Seamless tile widths, as multiples of the canvas width. */
+  pixelTileClouds: number;
+  pixelTileRidges: number;
+  /** Skyline tile: one Taipei 101 per tile, so it passes by only now and then. */
+  pixelTileSkyline: number;
+
   // ---- audio prefetch
   /**
    * Speculative clip prefetch depth, in words per tone.
@@ -623,6 +656,15 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   easeTauMs: 35,
   driftChaoPerSec: 5.33,
   trailSeconds: 1.0,
+  pixelCellDivisor: 124,
+  pixelKClouds: PIXEL_PARALLAX.clouds,
+  pixelKFar: PIXEL_PARALLAX.far,
+  pixelKNear: PIXEL_PARALLAX.near,
+  pixelKSkyline: PIXEL_PARALLAX.skyline,
+  pixelKLowland: PIXEL_PARALLAX.lowland,
+  pixelTileClouds: 1.5,
+  pixelTileRidges: 2,
+  pixelTileSkyline: 3,
   prefetchWordsPerTone: 6,
   warmupMaxMs: 3500,
   // Raised from 400 so the session noise measurement (skip + measure) always

@@ -100,3 +100,41 @@ export function solid(token: Token): string {
 export function resetPalette(): void {
   resolved = null;
 }
+
+/**
+ * The "pixel-flappy" game-canvas theme (brief 06): Taiwan pixel-art backdrop
+ * and mountain walls. Opaque hex colours, mirrored as `--pf-*` in tokens.css.
+ * Kept as literals rather than resolved from CSS: every colour here is baked
+ * into an offscreen tile once, so there is no per-frame alpha to interpolate,
+ * and the pure builders must run without a DOM (tests).
+ */
+export const PIXEL_FLAPPY = {
+  sky: ["#86d0f2", "#9ad9f6", "#aee2f8", "#c3ebfa", "#d7f2fb"],
+  /** Band lower edges, as fractions of H (the last band runs to the bottom). */
+  skyStops: [0.198, 0.358, 0.507, 0.643],
+  /** The theme's backdrop for the cue veil: the lowest sky band. */
+  backdropRgb: "215, 242, 251",
+  sun: "#fff3b8",
+  cloud: "#ffffff",
+  cloudShade: "#d8eef9",
+  ridgeFar: "#a6d8e8",
+  ridgeNear: "#86c4da",
+  skyline: "#6fb0d8",
+  window: "#d4f0fb",
+  towerLit: "#5fa8d3",
+  towerShade: "#4a8fbf",
+  towerBelt: "#2f6f9f",
+  lowland: "#a8dc72",
+  lowlandEdge: "#8ccb55",
+  tuft: "#6ab030",
+  wallBase: "#2b6e2a",
+  wallForest: "#1f5a24",
+  /** Lit rim bands, nearest the channel first: d1, d2, d3–4, d5–6. */
+  rim: ["#d3ee86", "#86cf47", "#58ae3a", "#3a8f30"],
+  outline: "#1d3a17",
+  outlineRgb: "29, 58, 23",
+  grass: "#7cc23a",
+  grassHi: "#a5de52",
+  grassNotch: "#6ab030",
+  sand: "#dccf8a",
+} as const;

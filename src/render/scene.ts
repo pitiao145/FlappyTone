@@ -1,4 +1,4 @@
-import { rgba, rgbTuple, solid } from "./palette.ts";
+import { PIXEL_FLAPPY, rgba, rgbTuple, solid } from "./palette.ts";
 
 /** The accent mixed `amount` of the way toward `toward` (255 = white, 0 = black). */
 function mixAccent(amount: number, toward: number): string {
@@ -51,22 +51,34 @@ export function drawChaoGrid(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
+  /**
+   * "pixel" is the game's Pixel Flappy theme: dark-green dashes over the sky
+   * (brief 06). The default is the paper look the visualiser still uses.
+   */
+  style: "paper" | "pixel" = "paper",
 ): void {
   ctx.font = `${Math.round(height * 0.02)}px system-ui, sans-serif`;
   ctx.textBaseline = "middle";
+  const pixel = style === "pixel";
   for (let chao = 1; chao <= 5; chao++) {
     const y = chaoToY(chao, height);
     // Chao 3 is the rest line the dot returns to — the one guide worth reading.
     const isRest = chao === 3;
-    ctx.strokeStyle = isRest
-      ? rgba("grid", 0.65)
-      : rgba("grid", 0.42);
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = pixel
+      ? `rgba(${PIXEL_FLAPPY.outlineRgb}, ${isRest ? 0.36 : 0.26})`
+      : isRest
+        ? rgba("grid", 0.65)
+        : rgba("grid", 0.42);
+    ctx.lineWidth = pixel ? 2 : 1;
+    ctx.setLineDash(pixel ? [6, 6] : []);
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
     ctx.stroke();
-    ctx.fillStyle = rgba("grid", isRest ? 0.85 : 0.6);
+    ctx.setLineDash([]);
+    ctx.fillStyle = pixel
+      ? `rgba(${PIXEL_FLAPPY.outlineRgb}, ${isRest ? 0.85 : 0.7})`
+      : rgba("grid", isRest ? 0.85 : 0.6);
     ctx.fillText(String(chao), 8, y);
   }
 }
