@@ -51,7 +51,7 @@ import {
 import { sessionNoiseMeter, startingNoiseFloor } from "../game/sessionNoise.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
-import { drawWorld, refreshMotionPreference } from "../render/world.ts";
+import { drawWorld, refreshMotionPreference, refreshThemePreference } from "../render/world.ts";
 import { JumpingPip } from "./bird/index.ts";
 import { PauseMenu } from "./PauseMenu.tsx";
 import { GameHud, type OutcomeFlash } from "./GameHud.tsx";
@@ -419,6 +419,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // Game remounts per run, so this picks up the latest saved corridor
     // width — and the latest motion preference, which the renderer caches.
     refreshMotionPreference();
+    refreshThemePreference();
 
     const corridor = loadCorridorWidth();
     // The tutorial is call-and-response by design — a player's general

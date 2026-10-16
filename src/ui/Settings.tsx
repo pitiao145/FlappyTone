@@ -47,6 +47,8 @@ import type { SpeechStyle } from "../game/words.ts";
 import type { Proficiency } from "../game/tiers.ts";
 import { useTier } from "../data/tier.ts";
 import { Choice } from "./Choice.tsx";
+import { loadTheme, saveTheme } from "../game/settings.ts";
+import { isThemeUnlocked, themeInfo, THEMES, type ThemeId } from "../game/themes.ts";
 import { MicrophoneIcon } from "./toneIcons.tsx";
 import { Switch } from "./Switch.tsx";
 
@@ -238,6 +240,7 @@ export function Settings({
   const [proficiency, setProficiency] = useState<Proficiency>(() => loadProficiency());
   const tier = useTier();
   const [speechStyle, setSpeechStyle] = useState<SpeechStyle>(() => loadSpeechStyle());
+  const [theme, setTheme] = useState<ThemeId>(() => loadTheme());
   const [width, setWidth] = useState<CorridorWidth>(loadCorridorWidth);
   // "off" is disabled below (broken), so a previously-persisted "off" is
   // coerced back to "pause" rather than silently staying selected.
@@ -488,6 +491,24 @@ export function Settings({
           <p className="param-help">
             {WIDTH_HELP[width]} Takes effect next run.
           </p>
+        </section>
+
+        <section id="setting-theme">
+          <h4>Theme</h4>
+          {/* Every theme is free today. Themes will unlock with XP; a locked
+              one still shows, greyed out (isThemeUnlocked, game/themes.ts). */}
+          <Choice
+            options={THEMES.map((t) => t.id)}
+            value={theme}
+            label={(v) => themeInfo(v).label}
+            disabled={(v) => !isThemeUnlocked(v, { xp: null })}
+            onChange={(v) => {
+              setTheme(v);
+              saveTheme(v);
+              track({ type: "setting_changed", key: "theme", value: v });
+            }}
+          />
+          <p className="param-help">{themeInfo(theme).blurb} Takes effect next run.</p>
         </section>
 
         <section>

@@ -14,9 +14,11 @@ import {
   corridorToleranceAt,
   type GateShape,
 } from "../game/gates.ts";
-import { loadReduceMotion } from "../game/settings.ts";
+import { loadReduceMotion, loadTheme } from "../game/settings.ts";
+import { effectiveTheme, type ThemeId } from "../game/themes.ts";
 import { tuning } from "../game/tuning.ts";
 import {
+  BACKDROP,
   chaoToY,
   drawChaoGrid,
   drawPip,
@@ -185,6 +187,21 @@ export function refreshMotionPreference(): void {
   REDUCED_MOTION = loadReduceMotion() ?? osReducedMotion();
 }
 
+/**
+ * The game-canvas theme, read once per run like the motion preference. No XP
+ * exists yet, so `xp: null`; when it does, pass the player's progress here.
+ */
+let THEME: ThemeId = effectiveTheme(loadTheme(), { xp: null });
+
+export function refreshThemePreference(): void {
+  THEME = effectiveTheme(loadTheme(), { xp: null });
+}
+
+/** For hosts that draw a specific theme (dev previews, demo video). */
+export function setWorldTheme(id: ThemeId): void {
+  THEME = id;
+}
+
 export function drawWorld(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -208,7 +225,12 @@ export function drawWorld(
   // Reduced motion freezes the parallax and the ground notches; a cue pause
   // freezes them on its own, since worldX does not advance during one.
   const sceneryX = REDUCED_MOTION ? 0 : snap.worldX;
-  drawBackdrop(ctx, width, height, sceneryX);
+  const pixel = THEME === "pixel-flappy";
+  if (pixel) drawBackdrop(ctx, width, height, sceneryX);
+  else {
+    ctx.fillStyle = BACKDROP;
+    ctx.fillRect(0, 0, width, height);
+  }
 
   // The shake displaces the world, not the backdrop — a shaking background
   // would show seams at the canvas edges.
@@ -216,7 +238,7 @@ export function drawWorld(
   ctx.save();
   if (shake) ctx.translate(shake.x, shake.y);
 
-  drawChaoGrid(ctx, width, height, "pixel");
+  drawChaoGrid(ctx, width, height, pixel ? "pixel" : "paper");
 
   const dotX = width * birdXFrac();
 
@@ -227,7 +249,7 @@ export function drawWorld(
   }
 
   // The ground is a floor over the walls, streaming 1:1 with them.
-  drawGround(ctx, width, height, sceneryX);
+  if (pixel) drawGround(ctx, width, height, sceneryX);
 
   if (!snap.cuePaused) drawCueDemo(ctx, height, snap, now);
 
@@ -296,7 +318,8 @@ function drawCueVeil(
 ): void {
   if (!snap.cuePaused || !snap.cue) return;
   const fadeIn = Math.min(1, (now - snap.cue.atMs) / 150);
-  ctx.fillStyle = `rgba(${PIXEL_FLAPPY.backdropRgb}, ${0.6 * fadeIn})`;
+  const veil = THEME === "pixel-flappy" ? PIXEL_FLAPPY.backdropRgb : rgb("backdrop");
+  ctx.fillStyle = `rgba(${veil}, ${0.6 * fadeIn})`;
   ctx.fillRect(0, 0, width, height);
 
   const gate = snap.gates.find((g) => g.xStart === snap.cue!.xStart);
@@ -448,7 +471,7 @@ export function drawGate(
   //    only inside the open channel. Painted on a cell grid snapped toward
   //    the channel (never thinner than the edge collision reads).
   const t = tuning();
-  drawPixelWalls(
+  if (THEME === "pixel-flappy") drawPixelWalls(
     ctx,
     height,
     x0,
@@ -460,6 +483,25 @@ export function drawGate(
   );
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
+  if (THEME === "classic") {
+    // Paper: the wall shares the backdrop colour; the channel tint and rims
+    // below carry the shape.
+    ctx.fillStyle = active
+      ? `rgba(${rgb("backdrop")}, 0.97)`
+      : `rgba(${rgb("backdrop")}, 0.82)`;
+    ctx.beginPath();
+    ctx.moveTo(x0, 0);
+    appendSmooth(ctx, top);
+    ctx.lineTo(x1, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x0, height);
+    appendSmooth(ctx, bottom);
+    ctx.lineTo(x1, height);
+    ctx.closePath();
+    ctx.fill();
+  }
 
   // 2. The channel, lit from within. Clipped to the corridor so the glow can
   //    be generous without bleeding into the wall.

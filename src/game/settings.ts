@@ -17,6 +17,7 @@ import {
 import { CUE_STYLES, WORD_MIXES, type CueStyle, type WordMix } from "./run.ts";
 import type { Proficiency, Tier } from "./tiers.ts";
 import type { LevelChoice, SpeechStyle } from "./words.ts";
+import { DEFAULT_THEME, isThemeId, type ThemeId } from "./themes.ts";
 export type { LevelChoice } from "./words.ts";
 import { type VoicePref } from "./voice.ts";
 
@@ -517,4 +518,27 @@ export function saveSpeechStyle(style: SpeechStyle): void {
  */
 export function effectiveSpeechStyle(tier: Tier): SpeechStyle {
   return tier === "guest" ? "textbook" : loadSpeechStyle();
+}
+
+// ---------------------------------------------------------------- theme
+
+const THEME_KEY = "toneflap.theme.v1";
+
+/**
+ * The stored game-canvas theme. Device-local, not synced. Read it through
+ * `effectiveTheme` (src/game/themes.ts) when deciding what to draw, so a
+ * theme the player has not unlocked falls back to the default.
+ */
+export function loadTheme(): ThemeId {
+  // Guarded: the renderer reads this where tests have no localStorage.
+  try {
+    const raw = localStorage.getItem(THEME_KEY);
+    return isThemeId(raw) ? raw : DEFAULT_THEME;
+  } catch {
+    return DEFAULT_THEME;
+  }
+}
+
+export function saveTheme(id: ThemeId): void {
+  localStorage.setItem(THEME_KEY, id);
 }
