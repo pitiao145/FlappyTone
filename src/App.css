@@ -6460,6 +6460,15 @@ button.switch-track.switch-on {
   height: auto;
 }
 
+.game-stage .playhome-loop {
+  height: auto;
+  display: block;
+  width: min(340px, 85%);
+  aspect-ratio: 340 / 200;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+}
+
 .playhome-menu {
   width: 100%;
   max-width: 220px;
@@ -6478,8 +6487,9 @@ button.switch-track.switch-on {
    back so the buttons stay on screen with the BrowserHint banner present
    (caught in review 13 Sep 2026: everything was clipped below the fold). */
 @media (max-width: 719px) {
-  .playhome-mascot {
-    width: min(220px, 55%);
+  .playhome-mascot,
+  .game-stage .playhome-loop {
+    width: min(260px, 70%);
   }
 
   .playhome-menu {

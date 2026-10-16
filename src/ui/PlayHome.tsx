@@ -2,6 +2,7 @@ import { SITE_HREF } from "./appLink.ts";
 import { brand } from "../brand.ts";
 import { track } from "../analytics/client.ts";
 import { UpdateBanner } from "./UpdateBanner.tsx";
+import { ThemeGateLoop } from "./ThemeGateLoop.tsx";
 
 /** "drill", "learn" and "pairs" are only ever started from ModeSelect, never
  * from a button here — kept in this union anyway since GameApp's
@@ -86,11 +87,8 @@ export function PlayHome({
             onAction={onOpenSpeechStyle}
           />
 
-          <img
-            src="/Bird-hor-no-halo.png"
-            alt="Flappytone mascot"
-            className="playhome-mascot"
-          />
+          {/* The bird flying one gate per tone, a different theme each. */}
+          <ThemeGateLoop />
           {challengeScore != null && (
             <p className="prompt challenge-score">
               <strong>{challengeName ?? "Someone"} scored {challengeScore.toLocaleString()}.</strong>
