@@ -118,6 +118,12 @@ export function GameOver({
   const xpGain = useMemo(() => {
     if (mode !== "game" && mode !== "drill" && mode !== "pairs") return null;
     const gained = runXp(stats);
+    let heard = 0;
+    let acc = 0;
+    for (const t of [...Object.values(stats.perTone), ...Object.values(stats.perCombo ?? {})]) {
+      heard += t.gates;
+      acc += t.accSum;
+    }
     const after = levelFor(totalXp(history));
     const before = levelFor(Math.max(0, after.xp - gained));
     const unlocked =
@@ -131,7 +137,14 @@ export function GameOver({
               t.unlock.level > before.level &&
               t.unlock.level <= after.level,
           );
-    return { gained, after, levelUp: after.level > before.level, unlocked };
+    return {
+      gained,
+      heard,
+      accPct: heard > 0 ? Math.round((acc / heard) * 100) : null,
+      after,
+      levelUp: after.level > before.level,
+      unlocked,
+    };
   }, [mode, stats, history, tier]);
 
   /**
@@ -451,6 +464,12 @@ export function GameOver({
           <p className="go-best">
             Best {history.bestScore.toLocaleString()} · ×{stats.bestMultiplier}
           </p>
+          {xpGain && (
+            <p className="go-xp-chip">
+              <span>+{xpGain.gained.toLocaleString()} XP</span>
+              {xpGain.levelUp && <span className="go-xp-chip-up">Level {xpGain.after.level}!</span>}
+            </p>
+          )}
           {challengeScore != null && (
             <p className="go-challenge">
               {stats.score >= challengeScore
@@ -483,6 +502,9 @@ export function GameOver({
             />
           </span>
           <span className="go-xp-sub">
+            {xpGain.heard > 0
+              ? `From ${xpGain.heard} heard ${xpGain.heard === 1 ? "gate" : "gates"} at ${xpGain.accPct}% tone accuracy. `
+              : "No gate was heard, so no XP this run. "}
             {xpGain.unlocked.length > 0
               ? `New theme unlocked: ${xpGain.unlocked.map((t) => t.label).join(", ")}`
               : `${xpGain.after.toNext.toLocaleString()} XP to level ${xpGain.after.level + 1}${tier === "guest" ? " · sign up to keep it" : ""}`}

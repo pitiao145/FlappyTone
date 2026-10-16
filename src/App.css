@@ -9850,3 +9850,26 @@ button.switch-track.switch-on {
     animation: none;
   }
 }
+
+/* The run's XP, right under the score so it is seen first. */
+.go-xp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0;
+}
+
+.go-xp-chip > span:first-child {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink);
+  background: linear-gradient(135deg, #f6d77a, #e0a526);
+  color: #4a3300;
+  font-weight: 800;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.go-xp-chip-up {
+  font-weight: 800;
+  color: var(--accent);
+}
