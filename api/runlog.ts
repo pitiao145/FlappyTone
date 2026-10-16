@@ -36,13 +36,13 @@ export const FREE_RING = 5;
 const MAX_ADOPT_RUNS = 5_000;
 const MAX_ADOPT_ATTEMPTS = 50_000;
 /**
- * Pro has no daily run cap (`api/run.ts`), so this is the only bound on how
- * many runs a day can add to the stats (and so to XP, `src/game/xp.ts`). Far
- * above real play: the most any account has logged in one day is 17.
- * Free accounts are capped at 10 starts a day by `api/run.ts`, but their
- * `run_log` is trimmed to 5 rows, so it cannot be counted here.
+ * How many runs a day may add to an account's stats (and so to its XP,
+ * `src/game/xp.ts`), counted in `counted_runs` (migration 0032). Not the
+ * play cap (`api/run.ts`): quits count for stats but not for that cap, so
+ * free gets room above its 10 finished runs. The most any account has
+ * logged in one day is 17 (Oct 2026).
  */
-export const MAX_PRO_RUNS_PER_DAY = 100;
+export const MAX_COUNTED_RUNS_PER_DAY = { free: 30, pro: 100 } as const;
 
 const MODES = ["game", "tutorial", "single", "drill", "learn", "pairs"];
 const OUTCOMES = ["finished", "out_of_hearts", "quit", "restart"];
@@ -279,17 +279,30 @@ export async function POST(request: Request): Promise<Response> {
   const flags = runFlags(r.mode, r.outcome);
   // A free account stores only the runs its stats count; Pro logs every mode (spec C).
   if (!pro && !flags.stats) return json(200, { applied: false });
-  if (pro && flags.stats) {
-    const { count, error: countError } = await supabase
-      .from("run_log")
-      .select("run_id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("day", day as string);
-    if (countError) {
-      console.error("[runlog] day count failed", countError);
-      return json(502, { error: "Could not record run." });
+  if (flags.stats) {
+    // A retry of a run already logged takes no new slot; record_run answers it.
+    let retry = false;
+    if (r.runId) {
+      const { data: seen } = await supabase
+        .from("run_log")
+        .select("run_id")
+        .eq("user_id", user.id)
+        .eq("run_id", r.runId)
+        .maybeSingle();
+      retry = Boolean(seen);
     }
-    if ((count ?? 0) >= MAX_PRO_RUNS_PER_DAY) return json(429, { error: "Too many runs today." });
+    if (!retry) {
+      const { data: ok, error: claimError } = await supabase.rpc("claim_counted_run", {
+        p_user: user.id,
+        p_day: day as string,
+        p_limit: MAX_COUNTED_RUNS_PER_DAY[pro ? "pro" : "free"],
+      });
+      if (claimError) {
+        console.error("[runlog] claim failed", claimError);
+        return json(502, { error: "Could not record run." });
+      }
+      if (ok !== true) return json(429, { error: "Too many runs today." });
+    }
   }
 
   const { data, error } = await supabase.rpc("record_run", {

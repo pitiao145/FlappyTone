@@ -30,15 +30,18 @@ async function load(opts: {
   rpcResult?: boolean;
   /** An existing adoption row for this user, if any. */
   priorAdoption?: { adopt_id: string } | null;
-  /** run_log rows already logged for the run's day. */
-  dayCount?: number;
+  /** claim_counted_run's answer (default: a slot is free). */
+  claim?: boolean;
+  /** The run id is already in run_log (a retry). */
+  seen?: boolean;
 } = {}) {
   const user = "user" in opts ? opts.user : { id: "user-1", is_anonymous: false };
   const entitlement = "entitlement" in opts ? opts.entitlement : { has_access: true };
-  const rpc = vi.fn(async (_fn: string, _args: Record<string, unknown>) => ({
-    data: opts.rpcError ? null : (opts.rpcResult ?? true),
-    error: opts.rpcError ?? null,
-  }));
+  const rpc = vi.fn(async (fn: string, _args: Record<string, unknown>) =>
+    fn === "claim_counted_run"
+      ? { data: opts.claim ?? true, error: null }
+      : { data: opts.rpcError ? null : (opts.rpcResult ?? true), error: opts.rpcError ?? null },
+  );
   // One chain per table; `then` answers a head/count query, `maybeSingle` a row.
   const chain = (row: unknown, count = 0): any => {
     const c: any = {
@@ -53,7 +56,7 @@ async function load(opts: {
   const tables: Record<string, any> = {
     entitlements: chain(entitlement),
     adoptions: chain(opts.priorAdoption ?? null),
-    run_log: chain(null, opts.dayCount ?? 0),
+    run_log: chain(opts.seen ? { run_id: RUN_ID } : null),
   };
   vi.doMock("@supabase/supabase-js", () => ({
     createClient: vi.fn(() => ({
@@ -165,7 +168,7 @@ describe("POST /api/runlog", () => {
   it("keeps every row for Pro (no ring)", async () => {
     const { POST, rpc } = await load();
     await POST(req());
-    expect(rpc.mock.calls[0][1].p_ring).toBeNull();
+    expect(rpc.mock.calls.find((c) => c[0] !== "claim_counted_run")![1].p_ring).toBeNull();
   });
 
   it("a retried run reports applied:false and still succeeds", async () => {
@@ -187,14 +190,14 @@ describe("POST /api/runlog", () => {
   it("logs a Pro tutorial run without stats or streak", async () => {
     const { POST, rpc } = await load();
     await POST(req({ body: { day: "2026-09-28", run: { ...goodRun, mode: "tutorial", tone_acc: null, per_key: {} } } }));
-    expect(rpc.mock.calls[0][1]).toMatchObject({ p_stats: false, p_streak: false });
+    expect(rpc.mock.calls.find((c) => c[0] !== "claim_counted_run")![1]).toMatchObject({ p_stats: false, p_streak: false });
   });
 
   it("accepts a pre-brief-05 body (no runId, unheard, best or words)", async () => {
     const { POST, rpc } = await load();
     const old = { mode: "game", score: 10, gates: 1, outcome: "quit", tone_acc: 0.5, per_key: { "1": { gates: 1, accSum: 0.5 } } };
     expect((await POST(req({ body: { day: "2026-09-28", run: old } }))).status).toBe(200);
-    const args = rpc.mock.calls[0][1];
+    const args = rpc.mock.calls.find((c) => c[0] !== "claim_counted_run")![1];
     expect(args.p_run).toMatch(/^[0-9a-f-]{36}$/);
     expect(args.p_per_key).toEqual({ "1": { gates: 1, accSum: 0.5, unheard: 0, best: 0 } });
   });
@@ -203,7 +206,7 @@ describe("POST /api/runlog", () => {
     const { POST, rpc } = await load();
     const body = { day: "2026-09-28", run: { ...goodRun, played_at: "2020-01-01T00:00:00Z", user_id: "evil" } };
     expect((await POST(req({ body }))).status).toBe(200);
-    const args = rpc.mock.calls[0][1];
+    const args = rpc.mock.calls.find((c) => c[0] !== "claim_counted_run")![1];
     expect(args.p_user).toBe("user-1");
     expect(JSON.stringify(args)).not.toContain("2020-01-01");
   });
@@ -265,11 +268,20 @@ describe("POST /api/runlog", () => {
     expect((await POST(req({ body: { ...goodBody, run } }))).status).toBe(400);
   });
 
-  it("caps a Pro account's counted runs per day", async () => {
-    const { POST, rpc, MAX_PRO_RUNS_PER_DAY } = await load({ dayCount: 100 });
-    expect(MAX_PRO_RUNS_PER_DAY).toBe(100);
-    expect((await POST(req())).status).toBe(429);
-    expect(rpc).not.toHaveBeenCalled();
+  it("caps counted runs per day, per tier", async () => {
+    for (const [entitlement, limit] of [[{ has_access: true }, 100], [{ has_access: false }, 30]] as const) {
+      const full = await load({ entitlement, claim: false });
+      expect((await full.POST(req())).status).toBe(429);
+      expect(full.rpc).toHaveBeenCalledWith("claim_counted_run", expect.objectContaining({ p_limit: limit }));
+      expect(full.rpc).not.toHaveBeenCalledWith("record_run", expect.anything());
+    }
+  });
+
+  it("a retry of a logged run takes no new slot", async () => {
+    const { POST, rpc } = await load({ seen: true, claim: false });
+    expect((await POST(req())).status).toBe(200);
+    expect(rpc).not.toHaveBeenCalledWith("claim_counted_run", expect.anything());
+    expect(rpc).toHaveBeenCalledWith("record_run", expect.anything());
   });
 
   it("adds guest progress only once per account", async () => {
