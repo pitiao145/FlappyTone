@@ -53,7 +53,6 @@ export function PlayHome({
   error: externalError,
   onStart,
   onModes,
-  onOpenSpeechStyle,
   onDevLogin,
   canvasWidth,
   canvasHeight,
@@ -75,16 +74,12 @@ export function PlayHome({
         </a>
         <div className="screen playhome-overlay">
           {/* What's new. One banner at a time: swap the props when the next
-              update ships. The link needs a saved calibration, since Settings
-              only shows the speech-style control to a calibrated player. */}
+              update ships. */}
           <UpdateBanner
-            id="speech-style"
-            onEvent={(action) => track({ type: "update_banner", id: "speech-style", surface: "play_home", action })}
+            id="themes"
+            onEvent={(action) => track({ type: "update_banner", id: "themes", surface: "play_home", action })}
             label="New"
-            title="Choose your speech style"
-            body="Practise with standard, clear pronunciation or faster spoken speech."
-            actionLabel={calibrated ? "Try it in Settings" : undefined}
-            onAction={onOpenSpeechStyle}
+            title="New themes available!"
           />
 
           {/* The bird flying one gate per tone, a different theme each. */}

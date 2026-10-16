@@ -6,7 +6,8 @@ interface Props {
   /** Short tag on the left, e.g. "New". */
   label: string;
   title: string;
-  body: string;
+  /** Omit for a title-only banner. */
+  body?: string;
   /** Omit to render the banner without a link. */
   actionLabel?: string;
   onAction?: () => void;
@@ -68,7 +69,7 @@ export function UpdateBanner({
       <span className="badge badge-new">{label}</span>
       <div className="update-banner-text">
         <strong>{title}</strong>
-        <span>{body}</span>
+        {body && <span>{body}</span>}
       </div>
       {dismissible && (
         <button type="button" className="close-x" onClick={dismiss} aria-label="Dismiss update">
