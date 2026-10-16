@@ -26,8 +26,8 @@ interface Props {
   onStart: (intent: PlayIntent) => void;
   /** Opens the Modes picker. No mic needed — only starting a run there does. */
   onModes: () => void;
-  /** Opens Settings scrolled to the Speech style control (the current update banner's link). */
-  onOpenSpeechStyle: () => void;
+  /** Opens Settings scrolled to the Themes section (the current update banner's link). */
+  onOpenThemes: () => void;
   /** Dev builds only: opens the magic-link login. Needs no mic, so it does not
    * go through `onStart`'s gesture path. */
   onDevLogin: () => void;
@@ -53,6 +53,7 @@ export function PlayHome({
   error: externalError,
   onStart,
   onModes,
+  onOpenThemes,
   onDevLogin,
   canvasWidth,
   canvasHeight,
@@ -80,6 +81,8 @@ export function PlayHome({
             onEvent={(action) => track({ type: "update_banner", id: "themes", surface: "play_home", action })}
             label="New"
             title="New themes available!"
+            actionLabel="See themes"
+            onAction={onOpenThemes}
           />
 
           {/* The bird flying one gate per tone, a different theme each. */}

@@ -70,8 +70,8 @@ export const THEMES: readonly ThemeInfo[] = [
 
 ];
 
-/** What a player gets with no choice saved, once it is unlocked for them. */
-export const DEFAULT_THEME: ThemeId = "pixel-flappy";
+/** What everyone gets with no choice saved: Paper. Other themes are picked in Settings. */
+export const DEFAULT_THEME: ThemeId = "classic";
 /** Always unlocked: the fallback for a locked or hidden choice. */
 export const BASE_THEME: ThemeId = "classic";
 

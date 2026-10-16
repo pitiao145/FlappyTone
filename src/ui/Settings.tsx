@@ -184,7 +184,7 @@ interface Props {
   /** Called after sign-out resolves, so the router can land on Play home. */
   onSignedOut?: () => void;
   /** Scrolls the named section into view on arrival (e.g. from a Play-home update banner). */
-  focus?: "speechStyle" | null;
+  focus?: "speechStyle" | "theme" | null;
 }
 
 /**
@@ -251,6 +251,8 @@ export function Settings({
   useEffect(() => {
     if (focus === "speechStyle") {
       document.getElementById("setting-speech-style")?.scrollIntoView({ block: "center" });
+    } else if (focus === "theme") {
+      document.getElementById("setting-theme")?.scrollIntoView({ block: "start" });
     }
   }, [focus]);
   const [proficiency, setProficiency] = useState<Proficiency>(() => loadProficiency());
