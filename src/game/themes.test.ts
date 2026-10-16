@@ -39,11 +39,14 @@ describe("themes", () => {
     expect(picker).toContain("taroko");
   });
 
-  it("Pro-only themes: Pro at any level, never free at any level", () => {
+  it("Pro-only themes need Pro and a level; never free at any level", () => {
     for (const id of ["alishan", "tea-terraces"] as const) {
-      expect(isThemeUnlocked(id, { tier: "pro", level: 1 })).toBe(true);
+      expect(isThemeUnlocked(id, { tier: "pro", level: 1 })).toBe(false);
+      expect(isThemeUnlocked(id, { tier: "pro", level: 99 })).toBe(true);
       expect(isThemeUnlocked(id, { tier: "free", level: 99 })).toBe(false);
     }
+    expect(isThemeUnlocked("alishan", { tier: "pro", level: 5 })).toBe(true);
+    expect(isThemeUnlocked("tea-terraces", { tier: "pro", level: 7 })).toBe(false);
   });
 
   it("keeps hidden themes out of the picker and never draws one", () => {

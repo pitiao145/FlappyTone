@@ -20,7 +20,7 @@ const MODAL_SIZE = { w: 320, h: 240 };
 /** Why a locked theme is locked, for this player. */
 function lockReason(t: ThemeInfo, progress: ThemeProgress): "guest" | "pro" | "level" | null {
   if (isThemeUnlocked(t.id, progress)) return null;
-  if (t.unlock.kind === "pro") return "pro";
+  if (t.unlock.kind === "pro" && progress.tier !== "pro") return "pro";
   if (progress.tier === "guest") return "guest";
   return "level";
 }
@@ -66,7 +66,7 @@ function ThemeModal({
   const segments = useMemo(() => themeSegments(info.id), [info.id]);
   const unlocked = isThemeUnlocked(info.id, progress);
   const reason = lockReason(info, progress);
-  const needLevel = info.unlock.kind === "level" ? info.unlock.level : 0;
+  const needLevel = "level" in info.unlock ? info.unlock.level : 0;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -103,7 +103,7 @@ function ThemeModal({
           </button>
         ) : reason === "pro" ? (
           <p className="theme-modal-locked">
-            <LockIcon /> Pro only. Included with Pro, no XP needed.
+            <LockIcon /> Pro only. With Pro, it unlocks at <strong>Level {needLevel}</strong>.
           </p>
         ) : reason === "guest" ? (
           <p className="theme-modal-locked">
@@ -173,7 +173,7 @@ export function ThemeSection({ tier, icon }: { tier: Tier; icon: React.ReactNode
           const unlocked = isThemeUnlocked(t.id, progress);
           const isOn = t.id === equipped;
           const reason = lockReason(t, progress);
-          const needLevel = t.unlock.kind === "level" ? t.unlock.level : 0;
+          const needLevel = "level" in t.unlock ? t.unlock.level : 0;
           return (
             <button
               key={t.id}
@@ -203,7 +203,7 @@ export function ThemeSection({ tier, icon }: { tier: Tier; icon: React.ReactNode
                     ? "In use"
                     : "Unlocked · tap to try"
                   : reason === "pro"
-                    ? "Pro only"
+                    ? `Pro · Level ${needLevel}`
                     : reason === "guest"
                       ? "Free account"
                       : `Level ${needLevel}`}

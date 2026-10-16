@@ -121,7 +121,8 @@ export function GameOver({
         : THEMES.filter(
             (t) =>
               !t.hidden &&
-              t.unlock.kind === "level" &&
+              "level" in t.unlock &&
+              (t.unlock.kind !== "pro" || tier === "pro") &&
               t.unlock.level > before.level &&
               t.unlock.level <= after.level,
           );

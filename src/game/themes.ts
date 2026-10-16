@@ -5,9 +5,9 @@ import type { Tier } from "./tiers.ts";
  * they may. No React, no `src/data/` — the renderer and Settings both read it.
  *
  * Gating: a guest only ever gets Paper (`free`). An account gets Pixel Flappy
- * (`account`), earns more by level (`level`, from XP — game/xp.ts), and Pro
- * gets the Pro-only themes on the day they buy (`pro`, no XP on top: one lock
- * per theme). Like the speech style, this is UX gating only, never a
+ * (`account`), earns more by level (`level`, from XP — game/xp.ts). Pro-only
+ * themes (`pro`) need Pro AND a level: a free account never gets them, a Pro
+ * player still earns them. Like the speech style, this is UX gating only, never a
  * security boundary: a theme is a look, not content.
  */
 
@@ -20,8 +20,8 @@ export type ThemeUnlock =
   | { kind: "account" }
   /** Any account at this level. */
   | { kind: "level"; level: number }
-  /** Pro only, straight away. */
-  | { kind: "pro" };
+  /** Pro only, and at this level: a free account can never get it. */
+  | { kind: "pro"; level: number };
 
 export interface ThemeInfo {
   id: ThemeId;
@@ -59,13 +59,13 @@ export const THEMES: readonly ThemeInfo[] = [
     id: "alishan",
     label: "Alishan",
     blurb: "Sunrise above the sea of clouds.",
-    unlock: { kind: "pro" },
+    unlock: { kind: "pro", level: 5 },
   },
   {
     id: "tea-terraces",
     label: "Tea terraces",
     blurb: "Terraced tea hills and the Taipei basin.",
-    unlock: { kind: "pro" },
+    unlock: { kind: "pro", level: 8 },
   },
 
 ];
@@ -104,7 +104,7 @@ export function isThemeUnlocked(id: ThemeId, progress: ThemeProgress): boolean {
     case "level":
       return progress.tier !== "guest" && progress.level >= unlock.level;
     case "pro":
-      return progress.tier === "pro";
+      return progress.tier === "pro" && progress.level >= unlock.level;
   }
 }
 
