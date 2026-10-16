@@ -1,0 +1,11 @@
+{
+  "format": "9:16",
+  "gap": 0.6,
+  "gates": [
+    { "word": "ma1b", "flight": "perfect", "theme": "pixel-flappy" },
+    { "word": "haowan32", "flight": "perfect", "theme": "taroko" },
+    { "word": "馬", "flight": "perfect", "theme": "alishan" },
+    { "word": "meiguo32", "flight": "perfect", "theme": "tea-terraces" },
+    { "word": "ma4b", "flight": "perfect", "theme": "classic" }
+  ]
+}

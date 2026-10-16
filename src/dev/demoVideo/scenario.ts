@@ -34,6 +34,8 @@ export interface ScenarioGate {
   listen?: boolean;
   /** Gap before this gate, as `Scenario.gap`. Defaults to the scenario's. */
   gap?: number;
+  /** Canvas theme from this gate's listen cue on (a `ThemeId`, e.g. "taroko"). Shows a small name label. */
+  theme?: string;
 }
 
 export interface Card {

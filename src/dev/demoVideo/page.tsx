@@ -19,7 +19,8 @@ import { Run, birdXFrac, type RunSnapshot } from "../../game/run.ts";
 import { corridorChaoAt, corridorToleranceAt, makeGate, type Gate } from "../../game/gates.ts";
 import type { Word } from "../../game/words.ts";
 import { catalogFromFallback } from "../../data/words.ts";
-import { drawWorld } from "../../render/world.ts";
+import { drawWorld, setWorldTheme } from "../../render/world.ts";
+import { THEMES, type ThemeId } from "../../game/themes.ts";
 import { GameHud, type OutcomeFlash } from "../../ui/GameHud.tsx";
 import { GameOver } from "../../ui/GameOver.tsx";
 import { PauseMenu } from "../../ui/PauseMenu.tsx";
@@ -148,7 +149,7 @@ function findWord(words: Word[], key: string): Word {
   return w;
 }
 
-function Frame({ v, w, h, scale, caption, hud }: { v: View; w: number; h: number; scale: number; caption?: string; hud: boolean }) {
+function Frame({ v, w, h, scale, caption, hud, themeLabel }: { v: View; w: number; h: number; scale: number; caption?: string; hud: boolean; themeLabel?: string | null }) {
   return (
     <div className="screen game-screen" style={{ padding: 0, minHeight: 0 }}>
       <div className="stage game-stage" style={{ width: w, height: h }}>
@@ -174,6 +175,7 @@ function Frame({ v, w, h, scale, caption, hud }: { v: View; w: number; h: number
           />
         )}
         {caption && !v.end && <div className="demo-caption">{caption}</div>}
+        {themeLabel && !v.end && !v.card && <div className="demo-theme-label">{themeLabel}</div>}
         {v.end && v.snap && (
           <div style={{ position: "absolute", inset: 0, opacity: v.end.opacity }}>
             <EndView screen={v.end.screen} snap={v.snap} shareUrl={shareUrl} />
@@ -190,9 +192,20 @@ function Frame({ v, w, h, scale, caption, hud }: { v: View; w: number; h: number
   );
 }
 
+/** The theme of the latest cued gate (the first gate's before any cue), applied to the world. */
+function themeLabelNow(st: State): string | null {
+  const cued = st.marks.gates.filter((g) => g.cueAt !== null).length;
+  const g = st.sc.gates[Math.max(0, cued - 1)];
+  if (!g?.theme) return null;
+  const info = THEMES.find((t) => t.id === g.theme);
+  if (!info) throw new Error(`theme "${g.theme}" — use one of ${THEMES.map((t) => t.id).join(", ")}`);
+  setWorldTheme(info.id as ThemeId);
+  return info.label;
+}
+
 function paint(st: State, v: View): void {
   flushSync(() =>
-    root.render(<Frame v={v} w={st.w} h={st.h} scale={st.scale} caption={st.sc.caption} hud={st.sc.hud !== false} />),
+    root.render(<Frame v={v} w={st.w} h={st.h} scale={st.scale} caption={st.sc.caption} hud={st.sc.hud !== false} themeLabel={themeLabelNow(st)} />),
   );
 }
 
