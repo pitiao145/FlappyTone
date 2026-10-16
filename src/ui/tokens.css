@@ -131,6 +131,32 @@
   --al-grid: #3a2f55;
   --al-grid-label: #fff8ee;
 
+  /* ---- theme: tea terraces (game canvas, brief 09). Read by
+     render/palette.ts's TEA_TERRACES; its literals mirror these. */
+  --tt-sky-1: #a9ddf0;
+  --tt-sky-2: #d4efe6;
+  --tt-sky-3: #eaf6dd;
+  --tt-sun-core: #fffdf0;
+  --tt-far-hills: #c2e3d2;
+  --tt-near-hills: #a1d3b6;
+  --tt-cable: #4b5a52;
+  --tt-pylon: #3a4a42;
+  --tt-cabin-warm: #f2d68a;
+  --tt-basin: #a9cdd2;
+  --tt-tower: #a6cad4;
+  --tt-tower-stroke: #6f97a6;
+  --tt-tower-shade: #7fa9b8;
+  --tt-rows-base: #7fc06a;
+  --tt-rows-dark: #74bd5f;
+  --tt-rows-light: #8fd07a;
+  --tt-wall-light: #66b052;
+  --tt-wall-deep: #2e7a3c;
+  --tt-lip: #b4e592;
+  --tt-shadow: #1f5e2b;
+  --tt-outline: #1c4a22;
+  --tt-rim: #c9722a;
+  --tt-grid-label: #f7f1e3;
+
   /* ---- ink */
   --ink: #241d15;
   --ink-muted: #6b6151;

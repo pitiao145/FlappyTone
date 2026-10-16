@@ -55,7 +55,6 @@ export const THEMES: readonly ThemeInfo[] = [
     label: "Tea terraces",
     blurb: "Terraced tea hills and the Taipei basin.",
     unlock: { kind: "free" },
-    hidden: true,
   },
   {
     id: "classic",

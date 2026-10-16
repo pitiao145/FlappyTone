@@ -237,3 +237,50 @@ export const ALISHAN = {
   /** Cue veil colour: the bottom cloud band, so the bottom is seamless. */
   veilRgb: "246, 220, 216",
 } as const;
+
+/**
+ * The "Tea terraces" theme (brief 09): Maokong tea hills, the Taipei basin,
+ * terraced green walls. Mirrors `--tt-*` in tokens.css.
+ */
+export const TEA_TERRACES = {
+  sky: [
+    [0, "#a9ddf0"],
+    [0.5, "#d4efe6"],
+    [0.8, "#eaf6dd"],
+    [1, "#eaf6dd"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  sunCore: "#fffdf0",
+  sunGlowRgb: "255, 255, 255",
+  cloudRgb: "255, 255, 255",
+  farHills: "#c2e3d2",
+  nearHills: "#a1d3b6",
+  cable: "#4b5a52",
+  pylon: "#3a4a42",
+  cabins: ["#ffffff", "#f2d68a"] as readonly string[],
+  basin: "#a9cdd2",
+  tower: "#a6cad4",
+  towerStroke: "#6f97a6",
+  towerShadeRgb: "127, 169, 184",
+  hazeRgb: "234, 246, 221",
+  rowsBase: "#7fc06a",
+  rowsDark: "#74bd5f",
+  rowsLight: "#8fd07a",
+  /** Bottom wall gradient, 0.544H → H. */
+  wallBottom: [
+    [0, "#66b052"],
+    [1, "#2e7a3c"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  /** Top wall gradient, 0 → 0.519H. */
+  wallTop: [
+    [0, "#2e7a3c"],
+    [1, "#66b052"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  lip: "#b4e592",
+  shadowRgb: "31, 94, 43",
+  outline: "#1c4a22",
+  outlineRgb: "28, 74, 34",
+  rim: "#c9722a",
+  gridLabel: "#f7f1e3",
+  /** Cue veil colour. */
+  veilRgb: "234, 246, 221",
+} as const;

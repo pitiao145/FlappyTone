@@ -12,10 +12,11 @@
 import type { GateShape } from "../game/gates.ts";
 import type { ThemeId } from "../game/themes.ts";
 import { ALISHAN_GRID, drawAlishanBackdrop, drawAlishanWalls } from "./alishanTheme.ts";
-import { ALISHAN, PIXEL_FLAPPY, rgb, TAROKO } from "./palette.ts";
+import { ALISHAN, PIXEL_FLAPPY, rgb, TAROKO, TEA_TERRACES } from "./palette.ts";
 import { drawBackdrop as drawPixelBackdrop, drawGround, drawPixelWalls } from "./pixelTheme.ts";
 import { BACKDROP, PAPER_GRID, PIXEL_GRID, type GridStyle } from "./scene.ts";
 import { bottomWallPath, topWallPath, type Pt } from "./smoothPath.ts";
+import { drawTeaTerracesBackdrop, drawTeaTerracesWalls, TEA_TERRACES_GRID } from "./teaTerracesTheme.ts";
 import { drawTarokoBackdrop, drawTarokoWalls, TAROKO_GRID } from "./tarokoTheme.ts";
 
 export interface WallArgs {
@@ -88,6 +89,13 @@ const alishan: ThemeRenderer = {
   veilRgb: () => ALISHAN.veilRgb,
 };
 
+const teaTerraces: ThemeRenderer = {
+  drawBackdrop: drawTeaTerracesBackdrop,
+  drawWalls: drawTeaTerracesWalls,
+  gridStyle: TEA_TERRACES_GRID,
+  veilRgb: () => TEA_TERRACES.veilRgb,
+};
+
 /**
  * Every ThemeId has a record. A theme still `hidden` in the registry may
  * point at classic until its brief lands; `effectiveTheme` never selects a
@@ -98,5 +106,5 @@ export const THEME_RENDERERS: Record<ThemeId, ThemeRenderer> = {
   "pixel-flappy": pixelFlappy,
   taroko,
   alishan,
-  "tea-terraces": classic,
+  "tea-terraces": teaTerraces,
 };

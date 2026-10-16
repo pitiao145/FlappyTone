@@ -509,6 +509,22 @@ export interface Tuning {
   alishanTileCypress: number;
   alishanTileClouds: number;
 
+  // ---- tea terraces theme (render only)
+  /** Parallax factor per backdrop layer: offset = worldX * k. */
+  teaKClouds: number;
+  teaKFarHills: number;
+  teaKNearHills: number;
+  teaKGondola: number;
+  /** Taipei basin, Taipei 101 and the haze over them. */
+  teaKBasin: number;
+  teaKRows: number;
+  /** Seamless tile widths, as multiples of the canvas width. */
+  teaTileClouds: number;
+  teaTileHills: number;
+  teaTileGondola: number;
+  /** One Taipei 101 per tile. */
+  teaTileBasin: number;
+
   // ---- audio prefetch
   /**
    * Speculative clip prefetch depth, in words per tone.
@@ -719,6 +735,16 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   alishanTileRange: 3,
   alishanTileCypress: 2,
   alishanTileClouds: 2,
+  teaKClouds: 0.03,
+  teaKFarHills: 0.05,
+  teaKNearHills: 0.12,
+  teaKGondola: 0.2,
+  teaKBasin: 0.25,
+  teaKRows: 0.6,
+  teaTileClouds: 1.5,
+  teaTileHills: 2,
+  teaTileGondola: 2,
+  teaTileBasin: 3,
   prefetchWordsPerTone: 6,
   warmupMaxMs: 3500,
   // Raised from 400 so the session noise measurement (skip + measure) always
