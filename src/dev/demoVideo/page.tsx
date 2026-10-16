@@ -195,12 +195,12 @@ function Frame({ v, w, h, scale, caption, hud, themeLabel }: { v: View; w: numbe
 /** The theme of the latest cued gate (the first gate's before any cue), applied to the world. */
 function themeLabelNow(st: State): string | null {
   const cued = st.marks.gates.filter((g) => g.cueAt !== null).length;
-  const g = st.sc.gates[Math.max(0, cued - 1)];
-  if (!g?.theme) return null;
-  const info = THEMES.find((t) => t.id === g.theme);
-  if (!info) throw new Error(`theme "${g.theme}" — use one of ${THEMES.map((t) => t.id).join(", ")}`);
+  const id = st.sc.gates[Math.max(0, cued - 1)]?.theme ?? st.sc.theme;
+  if (!id) return null;
+  const info = THEMES.find((t) => t.id === id);
+  if (!info) throw new Error(`theme "${id}" — use one of ${THEMES.map((t) => t.id).join(", ")}`);
   setWorldTheme(info.id as ThemeId);
-  return info.label;
+  return st.sc.themeLabel === false ? null : info.label;
 }
 
 function paint(st: State, v: View): void {

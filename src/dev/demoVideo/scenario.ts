@@ -65,6 +65,10 @@ export interface Scenario {
   fps?: number;
   /** The listen-then-fly demo before each gate. Default true, as in the game. */
   demo?: boolean;
+  /** Canvas theme for every gate without its own `theme` (a `ThemeId`). Default: the game's default. */
+  theme?: string;
+  /** Show the theme name label. Default true. */
+  themeLabel?: boolean;
   /** Draw score, combo, hearts and the word label. Default true. */
   hud?: boolean;
   /** Corridor width, as the setting. Default "normal". */
