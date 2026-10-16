@@ -6460,9 +6460,24 @@ button.switch-track.switch-on {
   height: auto;
 }
 
+/* Pinned to the top of the canvas, level with the mobile home logo, and
+   stretched across whatever width the logo leaves. */
 .playhome-overlay .update-banner {
-  margin-top: calc(-1 * var(--space-6));
-  margin-bottom: var(--space-2);
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  right: var(--space-3);
+  width: auto;
+  max-width: none;
+  z-index: 2;
+}
+
+@media (max-width: 719px) {
+  .playhome-overlay .update-banner {
+    /* Logo: 60px image + its padding, then the same gap again. */
+    left: calc(var(--space-3) * 2 + var(--space-1) * 2 + 60px);
+    min-height: calc(60px + var(--space-1) * 2);
+  }
 }
 
 .game-stage .playhome-loop {
