@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { REST_CHAO } from "../game/dynamics.ts";
 import { corridorChaoAt, shapeForTone, toleranceChao, type Tone } from "../game/gates.ts";
 import type { ThemeId } from "../game/themes.ts";
@@ -16,12 +16,13 @@ const SEGMENTS: readonly { tone: Tone; theme: ThemeId }[] = [
   { tone: 4, theme: "tea-terraces" },
 ];
 
-const W = 340;
-const H = 200;
+/** Landscape on desktop; portrait on a phone, like the game's own canvas. */
+const DESKTOP = { w: 340, h: 200 };
+const MOBILE = { w: 300, h: 400 };
+const MOBILE_QUERY = "(max-width: 719px)";
 /** Slower than a run: the strip is small, and this is a teaser, not a level. */
 const SPEED = 120;
 const REST_S = 1.2;
-const BIRD_X = W * 0.3;
 
 /**
  * The Play home's idle animation: the bird flies a perfect line through one
@@ -31,8 +32,19 @@ const BIRD_X = W * 0.3;
  */
 export function ThemeGateLoop() {
   const ref = useRef<HTMLCanvasElement>(null);
+  const [mobile, setMobile] = useState(() => window.matchMedia(MOBILE_QUERY).matches);
 
   useEffect(() => {
+    const mq = window.matchMedia(MOBILE_QUERY);
+    const on = () => setMobile(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+
+  const { w: W, h: H } = mobile ? MOBILE : DESKTOP;
+
+  useEffect(() => {
+    const BIRD_X = W * 0.3;
     const canvas = ref.current;
     if (!canvas) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -91,7 +103,7 @@ export function ThemeGateLoop() {
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [W, H]);
 
-  return <canvas ref={ref} className="playhome-loop" aria-hidden="true" />;
+  return <canvas ref={ref} className="playhome-loop" style={{ aspectRatio: `${W} / ${H}` }} aria-hidden="true" />;
 }
