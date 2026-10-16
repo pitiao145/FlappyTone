@@ -3760,7 +3760,7 @@
 }
 
 /* Ghost chip for a word past the free tier's per-tone limit — dashed border,
-   muted ink, matching `.progress-screen .level-card`'s locked-teaser
+   muted ink, the locked-teaser
    language. Still tappable: it surfaces the upgrade path, not a dead end. */
 .word-chip.is-locked {
   border-style: dashed;
@@ -7315,31 +7315,14 @@ button.switch-track.switch-on {
   gap: 10px;
 }
 
-/* Locked Pro teaser — muted next to the live streak card. */
-.progress-screen .level-card {
-  background: color-mix(in srgb, var(--surface-panel) 50%, var(--surface));
-  border-style: dashed;
-  border-color: color-mix(in srgb, var(--ink) 28%, transparent);
-  box-shadow: none;
-  cursor: default;
+/* Live level card: a normal sticker card like the streak card, with a gold
+   XP bar (same gold as the XP chips on game over and in Themes). */
+.progress-screen .level-card .level-bar-fill {
+  background: linear-gradient(90deg, #f2c75c, #e0a526);
 }
 
 .progress-screen .level-card .level-big {
-  color: var(--ink-soft);
-}
-
-.progress-screen .level-card .level-sub,
-.progress-screen .level-card .level-label {
-  color: var(--ink-dim);
-}
-
-.progress-screen .level-card .level-bar {
-  border-color: color-mix(in srgb, var(--ink) 22%, transparent);
-  background: rgba(36, 29, 21, 0.05);
-}
-
-.progress-screen .level-card .level-bar-fill {
-  background: var(--ink-dim);
+  color: var(--ink);
 }
 
 .streak-flame {
