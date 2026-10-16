@@ -1,0 +1,2 @@
+{ "format": "9:16", "demo": false, "audio": false, "corridor": "narrow", "gap": 0.3, "tailSeconds": 0.6,
+  "gates": [ { "word": "媽", "flight": "perfect" }, { "word": "麻", "flight": "perfect" }, { "word": "罵", "flight": "perfect" } ] }

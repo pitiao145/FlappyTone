@@ -1,0 +1,70 @@
+{
+  "scenes": [
+    {
+      "kind": "pip",
+      "seconds": 3
+    },
+    {
+      "kind": "video",
+      "seconds": 5.5,
+      "src": "clips/panel-tones.mp4"
+    },
+    {
+      "kind": "video",
+      "seconds": 6,
+      "src": "clips/panel-visualiser.mp4"
+    },
+    {
+      "kind": "video",
+      "src": "assets/flappybird.mp4",
+      "seconds": 3.4,
+      "fit": "cover"
+    },
+    {
+      "kind": "video",
+      "src": "clips/promo-maa.mp4",
+      "seconds": 6.9
+    },
+    {
+      "kind": "video",
+      "src": "assets/pierre-gameplay.mp4",
+      "seconds": 8,
+      "fit": "cover"
+    },
+    {
+      "kind": "video",
+      "src": "clips/promo-updown.mp4",
+      "seconds": 4.9,
+      "zooms": [
+        {
+          "from": 0.6,
+          "to": 4.3,
+          "scale": 1.3,
+          "originX": 0.2,
+          "originY": 0.55
+        }
+      ]
+    },
+    {
+      "kind": "video",
+      "src": "clips/promo-run.mp4",
+      "seconds": 16.25
+    },
+    {
+      "kind": "video",
+      "seconds": 5.5,
+      "src": "clips/panel-pro.mp4"
+    },
+    {
+      "kind": "video",
+      "src": "clips/promo-pair.mp4",
+      "seconds": 6.5
+    },
+    {
+      "kind": "end",
+      "seconds": 3,
+      "title": "Free to play",
+      "subtitle": "flappytone.com"
+    }
+  ]
+}

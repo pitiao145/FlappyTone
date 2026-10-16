@@ -1,0 +1,63 @@
+{
+  "format": "9:16",
+  "clip": "clips/tones-promo.mp4",
+  "clipSeconds": 35.8,
+  "clipStart": 0.4,
+  "hook": {
+    "text": "Mandarin tones. As a game."
+  },
+  "captions": [
+    {
+      "text": "Every tone has a shape.",
+      "from": 0.7,
+      "to": 3.6
+    },
+    {
+      "text": "The corridor is the tone.",
+      "from": 3.7,
+      "to": 7.9,
+      "tone": "accent"
+    },
+    {
+      "text": "Your voice is the controller. Higher pitch, higher bird.",
+      "from": 8.1,
+      "to": 12.1
+    },
+    {
+      "text": "Stay in the corridor = points.",
+      "from": 12.5,
+      "to": 16.3,
+      "tone": "highlight"
+    },
+    {
+      "text": "Leave it = crash.",
+      "from": 16.7,
+      "to": 20.8,
+      "tone": "accent"
+    },
+    {
+      "text": "It also hears which tone you made.",
+      "from": 25.8,
+      "to": 29.3,
+      "position": "bottom"
+    },
+    {
+      "text": "See which tone needs work.",
+      "from": 29.3,
+      "to": 32.8,
+      "position": "bottom"
+    }
+  ],
+  "zooms": [
+    {
+      "from": 3.6,
+      "to": 5.8,
+      "scale": 1.2,
+      "originY": 0.55
+    }
+  ],
+  "endCard": {
+    "title": "Free to play · flappytone.com",
+    "subtitle": "For learners who can hear tones but can't say them."
+  }
+}

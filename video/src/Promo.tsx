@@ -23,8 +23,8 @@ import {
 import { loadFont as loadFraunces } from "@remotion/google-fonts/Fraunces";
 import { loadFont as loadHanken } from "@remotion/google-fonts/HankenGrotesk";
 
-const { fontFamily: DISPLAY } = loadFraunces("normal", { weights: ["600"], subsets: ["latin"] });
-const { fontFamily: SANS } = loadHanken("normal", { weights: ["500", "600", "700"], subsets: ["latin"] });
+export const { fontFamily: DISPLAY } = loadFraunces("normal", { weights: ["600"], subsets: ["latin"] });
+export const { fontFamily: SANS } = loadHanken("normal", { weights: ["500", "600", "700"], subsets: ["latin"] });
 
 /** The game's tokens (src/ui/tokens.css), so the edit and the game read as one brand. */
 export const BRAND = {
@@ -161,7 +161,7 @@ const CAPTION_BG: Record<NonNullable<Caption["tone"]>, { bg: string; fg: string 
   highlight: { bg: BRAND.beak, fg: "#fff" },
 };
 
-function CaptionPill({ c, len }: { c: Caption; len: number }) {
+export function CaptionPill({ c, len }: { c: Caption; len: number }) {
   const f = useCurrentFrame();
   const { fps, height } = useVideoConfig();
   const inS = spring({ frame: f, fps, config: { damping: 13, mass: 0.7 } });

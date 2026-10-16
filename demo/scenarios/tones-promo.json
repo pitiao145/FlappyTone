@@ -1,0 +1,17 @@
+{
+  "format": "9:16",
+  "gates": [
+    { "word": "媽", "flight": "perfect", "listen": false, "gap": 0.6 },
+    { "word": "麻", "flight": "perfect", "listen": false, "gap": 0.6 },
+    { "word": "罵", "flight": "perfect", "listen": false, "gap": 0.6 },
+    { "word": "馬", "flight": "perfect" },
+    { "word": "書", "flight": "perfect" },
+    { "word": "學", "flight": "wall", "audio": false },
+    { "word": "好", "flight": "good" }
+  ],
+  "end": [
+    { "screen": "gameover", "seconds": 3.5 },
+    { "screen": "pause", "seconds": 3.5 },
+    { "screen": "share", "seconds": 3, "name": "Pierre" }
+  ]
+}

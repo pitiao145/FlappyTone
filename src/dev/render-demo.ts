@@ -42,7 +42,11 @@ const flag = (name: string): string | undefined => {
   const i = args.indexOf(`--${name}`);
   return i >= 0 ? args[i + 1] : undefined;
 };
-const scenario = validateScenario(JSON.parse(readFileSync(scenarioPath, "utf8")));
+const rawScenario = JSON.parse(readFileSync(scenarioPath, "utf8"));
+// A panel scenario ({ "panel": "tones" | "visualiser" | "pro" }) films an app
+// screen that is not a run (src/dev/demoVideo/panel.tsx); anything else is a run.
+const isPanel = typeof rawScenario.panel === "string";
+const scenario = isPanel ? rawScenario : validateScenario(rawScenario);
 const name = basename(scenarioPath).replace(/\.json$/, "");
 const out = resolve(flag("out") ?? `demo/out/${name}.mp4`);
 const stills = flag("stills")?.split(",").map(Number);
@@ -102,7 +106,7 @@ try {
   });
   const page = await context.newPage();
   page.on("pageerror", (e) => console.error("page error:", e.message));
-  await page.goto(`${base}demo-video.html`);
+  await page.goto(`${base}${isPanel ? "demo-panel.html" : "demo-video.html"}`);
   await page.waitForFunction(() => (globalThis as any).demo !== undefined, null, { timeout: 60_000 });
   await page.evaluate(() => (globalThis as any).demo.ready);
   const { fps } = await page.evaluate((s) => (globalThis as any).demo.setup(s), scenario);

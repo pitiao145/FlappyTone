@@ -1,0 +1,168 @@
+{
+  "scenes": [
+    {
+      "kind": "pip",
+      "seconds": 3,
+      "captions": [
+        {
+          "text": "Tones are hard to learn.",
+          "from": 0.3,
+          "to": 3,
+          "position": "top"
+        }
+      ]
+    },
+    {
+      "kind": "video",
+      "seconds": 5.5,
+      "captions": [
+        {
+          "text": "Textbook tones ≠ real tones.",
+          "from": 0.2,
+          "to": 5.5,
+          "position": "top",
+          "tone": "accent"
+        }
+      ],
+      "src": "clips/panel-tones.mp4"
+    },
+    {
+      "kind": "video",
+      "seconds": 6,
+      "captions": [
+        {
+          "text": "Can't hear the difference? You're not alone.",
+          "from": 0.2,
+          "to": 3.4,
+          "position": "top"
+        },
+        {
+          "text": "But there is a solution.",
+          "from": 3.5,
+          "to": 6,
+          "position": "bottom",
+          "tone": "highlight"
+        }
+      ],
+      "src": "clips/panel-visualiser.mp4"
+    },
+    {
+      "kind": "video",
+      "src": "assets/flappybird.mp4",
+      "seconds": 3.4,
+      "fit": "cover",
+      "captions": [
+        {
+          "text": "Remember Flappy Bird?",
+          "from": 0.2,
+          "to": 3.4,
+          "position": "top"
+        }
+      ]
+    },
+    {
+      "kind": "video",
+      "src": "clips/promo-maa.mp4",
+      "seconds": 6.9,
+      "captions": [
+        {
+          "text": "FlappyTone turns tones into obstacles you fly through.",
+          "from": 0.2,
+          "to": 6.9,
+          "position": "bottom"
+        }
+      ]
+    },
+    {
+      "kind": "video",
+      "src": "assets/pierre-gameplay.mp4",
+      "seconds": 8,
+      "fit": "cover",
+      "captions": [
+        {
+          "text": "Control the bird with your voice.",
+          "from": 0.3,
+          "to": 8,
+          "position": "top",
+          "tone": "accent"
+        }
+      ]
+    },
+    {
+      "kind": "video",
+      "src": "clips/promo-updown.mp4",
+      "seconds": 4.9,
+      "zooms": [
+        {
+          "from": 0.6,
+          "to": 4.3,
+          "scale": 1.3,
+          "originX": 0.2,
+          "originY": 0.55
+        }
+      ],
+      "captions": [
+        {
+          "text": "Higher pitch = bird up. Lower pitch = bird down.",
+          "from": 0.2,
+          "to": 4.9,
+          "position": "top"
+        }
+      ]
+    },
+    {
+      "kind": "video",
+      "src": "clips/promo-run.mp4",
+      "seconds": 16.25,
+      "captions": [
+        {
+          "text": "Fly through gates shaped like real tones.",
+          "from": 0.2,
+          "to": 4.75,
+          "position": "bottom"
+        },
+        {
+          "text": "Practice daily. Build muscle memory.",
+          "from": 4.8,
+          "to": 9.2,
+          "position": "bottom",
+          "tone": "accent"
+        }
+      ]
+    },
+    {
+      "kind": "video",
+      "seconds": 5.5,
+      "captions": [
+        {
+          "text": "See your weak spots. Track your progress over time.",
+          "from": 0.2,
+          "to": 5,
+          "position": "top",
+          "tone": "highlight"
+        }
+      ],
+      "src": "clips/panel-pro.mp4"
+    },
+    {
+      "kind": "video",
+      "src": "clips/promo-pair.mp4",
+      "seconds": 6.5,
+      "captions": [
+        {
+          "text": "Then move on to tone pairs.",
+          "from": 0.2,
+          "to": 6.5,
+          "position": "bottom",
+          "tone": "accent"
+        }
+      ]
+    },
+    {
+      "kind": "end",
+      "seconds": 3,
+      "title": "Free to play",
+      "subtitle": "flappytone.com"
+    }
+  ]
+}
