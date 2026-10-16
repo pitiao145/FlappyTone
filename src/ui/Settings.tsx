@@ -47,8 +47,7 @@ import type { SpeechStyle } from "../game/words.ts";
 import type { Proficiency } from "../game/tiers.ts";
 import { useTier } from "../data/tier.ts";
 import { Choice } from "./Choice.tsx";
-import { loadTheme, saveTheme } from "../game/settings.ts";
-import { isThemeUnlocked, themeInfo, visibleThemes, type ThemeId } from "../game/themes.ts";
+import { ThemeSection } from "./ThemeSection.tsx";
 import { MicrophoneIcon } from "./toneIcons.tsx";
 import { Switch } from "./Switch.tsx";
 
@@ -133,6 +132,23 @@ function LevelIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function PaletteIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-1.3-1.1-1.6-1.1-2.7 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5C21 6.4 17 3 12 3Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <circle cx="7.5" cy="11" r="1.3" fill="currentColor" />
+      <circle cx="10" cy="7" r="1.3" fill="currentColor" />
+      <circle cx="15" cy="7.5" r="1.3" fill="currentColor" />
     </svg>
   );
 }
@@ -240,7 +256,6 @@ export function Settings({
   const [proficiency, setProficiency] = useState<Proficiency>(() => loadProficiency());
   const tier = useTier();
   const [speechStyle, setSpeechStyle] = useState<SpeechStyle>(() => loadSpeechStyle());
-  const [theme, setTheme] = useState<ThemeId>(() => loadTheme());
   const [width, setWidth] = useState<CorridorWidth>(loadCorridorWidth);
   // "off" is disabled below (broken), so a previously-persisted "off" is
   // coerced back to "pause" rather than silently staying selected.
@@ -415,7 +430,14 @@ export function Settings({
         </p>
       </section>
 
-
+      <ThemeSection
+        tier={tier}
+        icon={
+          <SettingIcon>
+            <PaletteIcon />
+          </SettingIcon>
+        }
+      />
 
       {settings && (
         <section className="setting setting-card">
@@ -491,24 +513,6 @@ export function Settings({
           <p className="param-help">
             {WIDTH_HELP[width]} Takes effect next run.
           </p>
-        </section>
-
-        <section id="setting-theme">
-          <h4>Theme</h4>
-          {/* Every theme is free today. Themes will unlock with XP; a locked
-              one still shows, greyed out (isThemeUnlocked, game/themes.ts). */}
-          <Choice
-            options={visibleThemes().map((t) => t.id)}
-            value={theme}
-            label={(v) => themeInfo(v).label}
-            disabled={(v) => !isThemeUnlocked(v, { xp: null })}
-            onChange={(v) => {
-              setTheme(v);
-              saveTheme(v);
-              track({ type: "setting_changed", key: "theme", value: v });
-            }}
-          />
-          <p className="param-help">{themeInfo(theme).blurb} Takes effect next run.</p>
         </section>
 
         <section>

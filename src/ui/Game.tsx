@@ -28,6 +28,7 @@ import {
 } from "../audio/session.ts";
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { getTier, tierReady, useTier } from "../data/tier.ts";
+import { playerXp } from "../game/xp.ts";
 import { postShapes } from "../data/shapes.ts";
 import { postRunLog } from "../data/runlog.ts";
 import { buildRunLogEntry } from "../game/runTrend.ts";
@@ -419,7 +420,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // Game remounts per run, so this picks up the latest saved corridor
     // width — and the latest motion preference, which the renderer caches.
     refreshMotionPreference();
-    refreshThemePreference();
+    refreshThemePreference({ tier: getTier(), xp: playerXp() });
 
     const corridor = loadCorridorWidth();
     // The tutorial is call-and-response by design — a player's general

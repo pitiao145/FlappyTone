@@ -1,20 +1,22 @@
+import type { Tier } from "./tiers.ts";
+
 /**
  * Game-canvas themes: the registry of what a player can pick, and whether
  * they may. No React, no `src/data/` — the renderer and Settings both read it.
  *
- * Every theme carries an `unlock` rule from day one, because themes will be
- * earned through the gamification layer (XP). Today there is no XP, so every
- * theme is `free`. When XP lands, a theme becomes `{ kind: "xp", xp: N }` and
- * the caller passes the player's progress into `isThemeUnlocked` — no change
- * to the renderer or the stored setting. Like the speech style, this is UX
- * gating only, never a security boundary: a theme is a look, not content.
+ * Gating: a guest only ever gets Paper (`free`). An account (free or Pro)
+ * unlocks the rest with XP (`{ kind: "xp", xp: N }`). The XP numbers are
+ * placeholders until the XP layer exists (`playerXp`, game/xp.ts). Like the
+ * speech style, this is UX gating only, never a security boundary: a theme is
+ * a look, not content.
  */
 
 export type ThemeId = "classic" | "pixel-flappy" | "taroko" | "alishan" | "tea-terraces";
 
 export type ThemeUnlock =
+  /** Everyone, guests included. */
   | { kind: "free" }
-  /** Earned at a total XP. Not used yet: the XP layer does not exist. */
+  /** An account (free or Pro) at this total XP. Never a guest. */
   | { kind: "xp"; xp: number };
 
 export interface ThemeInfo {
@@ -36,25 +38,25 @@ export const THEMES: readonly ThemeInfo[] = [
     id: "pixel-flappy",
     label: "Pixel Flappy",
     blurb: "Pixel mountains and the Taipei skyline.",
-    unlock: { kind: "free" },
+    unlock: { kind: "xp", xp: 0 },
   },
   {
     id: "taroko",
     label: "Taroko",
     blurb: "Marble gorge. Cliffs, river and a shrine.",
-    unlock: { kind: "free" },
+    unlock: { kind: "xp", xp: 250 },
   },
   {
     id: "alishan",
     label: "Alishan",
     blurb: "Sunrise above the sea of clouds.",
-    unlock: { kind: "free" },
+    unlock: { kind: "xp", xp: 750 },
   },
   {
     id: "tea-terraces",
     label: "Tea terraces",
     blurb: "Terraced tea hills and the Taipei basin.",
-    unlock: { kind: "free" },
+    unlock: { kind: "xp", xp: 1500 },
   },
   {
     id: "classic",
@@ -64,7 +66,10 @@ export const THEMES: readonly ThemeInfo[] = [
   },
 ];
 
+/** What a player gets with no choice saved, once it is unlocked for them. */
 export const DEFAULT_THEME: ThemeId = "pixel-flappy";
+/** Always unlocked: the fallback for a locked or hidden choice. */
+export const BASE_THEME: ThemeId = "classic";
 
 export function isThemeId(v: unknown): v is ThemeId {
   return THEMES.some((t) => t.id === v);
@@ -79,23 +84,25 @@ export function themeInfo(id: ThemeId): ThemeInfo {
   return THEMES.find((t) => t.id === id) ?? THEMES[0];
 }
 
-/** What the player has earned. `xp` is null until the XP layer exists. */
+/** Who the player is and what they have earned. */
 export interface ThemeProgress {
-  xp: number | null;
+  tier: Tier;
+  xp: number;
 }
 
 export function isThemeUnlocked(id: ThemeId, progress: ThemeProgress): boolean {
   const { unlock } = themeInfo(id);
   if (unlock.kind === "free") return true;
-  return progress.xp !== null && progress.xp >= unlock.xp;
+  return progress.tier !== "guest" && progress.xp >= unlock.xp;
 }
 
 /**
- * The theme the game actually draws: the stored choice if it is still
- * unlocked, else the default. The stored value is never overwritten, so a
- * choice comes back if the theme is unlocked again.
+ * The theme the game actually draws: the stored choice if it is visible and
+ * unlocked, else the default if that is unlocked, else Paper. The stored
+ * value is never overwritten, so a choice comes back once it is unlocked
+ * again (a guest who signs back in).
  */
 export function effectiveTheme(stored: ThemeId, progress: ThemeProgress): ThemeId {
-  if (themeInfo(stored).hidden) return DEFAULT_THEME;
-  return isThemeUnlocked(stored, progress) ? stored : DEFAULT_THEME;
+  if (!themeInfo(stored).hidden && isThemeUnlocked(stored, progress)) return stored;
+  return isThemeUnlocked(DEFAULT_THEME, progress) ? DEFAULT_THEME : BASE_THEME;
 }

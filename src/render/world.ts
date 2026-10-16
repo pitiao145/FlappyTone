@@ -15,7 +15,7 @@ import {
   type GateShape,
 } from "../game/gates.ts";
 import { loadReduceMotion, loadTheme } from "../game/settings.ts";
-import { effectiveTheme, type ThemeId } from "../game/themes.ts";
+import { effectiveTheme, type ThemeId, type ThemeProgress } from "../game/themes.ts";
 import { tuning } from "../game/tuning.ts";
 import {
   chaoToY,
@@ -156,10 +156,11 @@ export function refreshMotionPreference(): void {
 }
 
 /**
- * The game-canvas theme, read once per run like the motion preference. No XP
- * exists yet, so `xp: null`; when it does, pass the player's progress here.
+ * The game-canvas theme, read once per run like the motion preference. Until
+ * a run passes the player's progress, draw as a guest would (Paper).
  */
-let THEME: ThemeId = effectiveTheme(loadTheme(), { xp: null });
+let THEME: ThemeId = effectiveTheme(loadTheme(), { tier: "guest", xp: 0 });
+let PROGRESS: ThemeProgress = { tier: "guest", xp: 0 };
 
 /**
  * A host that must not follow the player's choice (the Lab draws paper).
@@ -167,8 +168,9 @@ let THEME: ThemeId = effectiveTheme(loadTheme(), { xp: null });
  */
 let LOCKED: ThemeId | null = null;
 
-export function refreshThemePreference(): void {
-  THEME = LOCKED ?? effectiveTheme(loadTheme(), { xp: null });
+export function refreshThemePreference(progress: ThemeProgress = PROGRESS): void {
+  PROGRESS = progress;
+  THEME = LOCKED ?? effectiveTheme(loadTheme(), progress);
 }
 
 export function lockWorldTheme(id: ThemeId | null): void {

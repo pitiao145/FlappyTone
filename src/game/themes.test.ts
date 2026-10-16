@@ -10,14 +10,20 @@ import {
 } from "./themes.ts";
 
 describe("themes", () => {
-  it("every theme is free today, and the default is unlocked", () => {
-    for (const t of THEMES) expect(isThemeUnlocked(t.id, { xp: null })).toBe(true);
-    expect(isThemeUnlocked(DEFAULT_THEME, { xp: null })).toBe(true);
+  it("a guest only gets Paper, whatever their XP", () => {
+    for (const t of THEMES) {
+      expect(isThemeUnlocked(t.id, { tier: "guest", xp: 1e9 })).toBe(t.id === "classic");
+    }
+    expect(effectiveTheme("taroko", { tier: "guest", xp: 1e9 })).toBe("classic");
   });
 
-  it("falls back to the default for an unknown or locked choice", () => {
+  it("an account unlocks themes by XP; a locked choice falls back to the default", () => {
     expect(isThemeId("neon")).toBe(false);
-    expect(effectiveTheme("classic", { xp: 0 })).toBe("classic");
+    expect(isThemeUnlocked(DEFAULT_THEME, { tier: "free", xp: 0 })).toBe(true);
+    expect(isThemeUnlocked("tea-terraces", { tier: "pro", xp: 0 })).toBe(false);
+    expect(isThemeUnlocked("tea-terraces", { tier: "pro", xp: 1e9 })).toBe(true);
+    expect(effectiveTheme("tea-terraces", { tier: "free", xp: 0 })).toBe(DEFAULT_THEME);
+    expect(effectiveTheme("classic", { tier: "free", xp: 0 })).toBe("classic");
   });
 
   it("every visible theme is in the picker and has its own renderer", () => {
@@ -37,7 +43,7 @@ describe("themes", () => {
     const picker = visibleThemes().map((t) => t.id);
     for (const t of THEMES.filter((t) => t.hidden)) {
       expect(picker).not.toContain(t.id);
-      expect(effectiveTheme(t.id, { xp: null })).toBe(DEFAULT_THEME);
+      expect(effectiveTheme(t.id, { tier: "pro", xp: 1e9 })).toBe(DEFAULT_THEME);
     }
   });
 });
