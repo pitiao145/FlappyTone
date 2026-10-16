@@ -10,7 +10,7 @@
  * gating only, never a security boundary: a theme is a look, not content.
  */
 
-export type ThemeId = "classic" | "pixel-flappy";
+export type ThemeId = "classic" | "pixel-flappy" | "taroko" | "alishan" | "tea-terraces";
 
 export type ThemeUnlock =
   | { kind: "free" }
@@ -22,6 +22,12 @@ export interface ThemeInfo {
   label: string;
   blurb: string;
   unlock: ThemeUnlock;
+  /**
+   * Registered but not finished: kept out of the Settings picker, and a
+   * stored choice of it draws the default. A brief flips this off when the
+   * theme's renderer lands.
+   */
+  hidden?: boolean;
 }
 
 /** Display order in Settings. */
@@ -31,6 +37,26 @@ export const THEMES: readonly ThemeInfo[] = [
     label: "Taipei",
     blurb: "Pixel mountains and the Taipei skyline.",
     unlock: { kind: "free" },
+  },
+  {
+    id: "taroko",
+    label: "Taroko",
+    blurb: "Marble gorge. Cliffs, river and a shrine.",
+    unlock: { kind: "free" },
+  },
+  {
+    id: "alishan",
+    label: "Alishan",
+    blurb: "Sunrise above the sea of clouds.",
+    unlock: { kind: "free" },
+    hidden: true,
+  },
+  {
+    id: "tea-terraces",
+    label: "Tea terraces",
+    blurb: "Terraced tea hills and the Taipei basin.",
+    unlock: { kind: "free" },
+    hidden: true,
   },
   {
     id: "classic",
@@ -44,6 +70,11 @@ export const DEFAULT_THEME: ThemeId = "pixel-flappy";
 
 export function isThemeId(v: unknown): v is ThemeId {
   return THEMES.some((t) => t.id === v);
+}
+
+/** The themes the Settings picker offers, in display order. */
+export function visibleThemes(): readonly ThemeInfo[] {
+  return THEMES.filter((t) => !t.hidden);
 }
 
 export function themeInfo(id: ThemeId): ThemeInfo {
@@ -67,5 +98,6 @@ export function isThemeUnlocked(id: ThemeId, progress: ThemeProgress): boolean {
  * choice comes back if the theme is unlocked again.
  */
 export function effectiveTheme(stored: ThemeId, progress: ThemeProgress): ThemeId {
+  if (themeInfo(stored).hidden) return DEFAULT_THEME;
   return isThemeUnlocked(stored, progress) ? stored : DEFAULT_THEME;
 }

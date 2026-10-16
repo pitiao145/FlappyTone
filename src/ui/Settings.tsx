@@ -48,7 +48,7 @@ import type { Proficiency } from "../game/tiers.ts";
 import { useTier } from "../data/tier.ts";
 import { Choice } from "./Choice.tsx";
 import { loadTheme, saveTheme } from "../game/settings.ts";
-import { isThemeUnlocked, themeInfo, THEMES, type ThemeId } from "../game/themes.ts";
+import { isThemeUnlocked, themeInfo, visibleThemes, type ThemeId } from "../game/themes.ts";
 import { MicrophoneIcon } from "./toneIcons.tsx";
 import { Switch } from "./Switch.tsx";
 
@@ -498,7 +498,7 @@ export function Settings({
           {/* Every theme is free today. Themes will unlock with XP; a locked
               one still shows, greyed out (isThemeUnlocked, game/themes.ts). */}
           <Choice
-            options={THEMES.map((t) => t.id)}
+            options={visibleThemes().map((t) => t.id)}
             value={theme}
             label={(v) => themeInfo(v).label}
             disabled={(v) => !isThemeUnlocked(v, { xp: null })}

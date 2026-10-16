@@ -476,6 +476,21 @@ export interface Tuning {
   /** Skyline tile: one Taipei 101 per tile, so it passes by only now and then. */
   pixelTileSkyline: number;
 
+  // ---- taroko theme (render only)
+  /** Parallax factor per backdrop layer: offset = worldX * k. */
+  tarokoKClouds: number;
+  tarokoKFar: number;
+  tarokoKNear: number;
+  tarokoKShrine: number;
+  tarokoKRiverDetail: number;
+  /** Seamless tile widths, as multiples of the canvas width. */
+  tarokoTileClouds: number;
+  tarokoTileRidges: number;
+  /** One shrine per tile, so it passes by only now and then. */
+  tarokoTileShrine: number;
+  /** River foam and boulders. */
+  tarokoTileRiver: number;
+
   // ---- audio prefetch
   /**
    * Speculative clip prefetch depth, in words per tone.
@@ -665,6 +680,15 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   pixelTileClouds: 1.5,
   pixelTileRidges: 2,
   pixelTileSkyline: 3,
+  tarokoKClouds: 0.03,
+  tarokoKFar: 0.05,
+  tarokoKNear: 0.12,
+  tarokoKShrine: 0.25,
+  tarokoKRiverDetail: 0.9,
+  tarokoTileClouds: 1.5,
+  tarokoTileRidges: 2,
+  tarokoTileShrine: 3,
+  tarokoTileRiver: 1,
   prefetchWordsPerTone: 6,
   warmupMaxMs: 3500,
   // Raised from 400 so the session noise measurement (skip + measure) always

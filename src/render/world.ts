@@ -18,7 +18,6 @@ import { loadReduceMotion, loadTheme } from "../game/settings.ts";
 import { effectiveTheme, type ThemeId } from "../game/themes.ts";
 import { tuning } from "../game/tuning.ts";
 import {
-  BACKDROP,
   chaoToY,
   drawChaoGrid,
   drawPip,
@@ -27,8 +26,9 @@ import {
   type PipState,
 } from "./scene.ts";
 import type { TrailSample } from "./scene.ts";
-import { PIXEL_FLAPPY, rgb, rgba, rgbTuple } from "./palette.ts";
-import { drawBackdrop, drawGround, drawPixelWalls } from "./pixelTheme.ts";
+import { rgb, rgba, rgbTuple } from "./palette.ts";
+import { appendSmooth, type Pt } from "./smoothPath.ts";
+import { THEME_RENDERERS } from "./themeRenderers.ts";
 
 /** The token mixed `amount` toward white — a highlight of the same hue. */
 function lighten(token: Parameters<typeof rgb>[0], amount: number): string {
@@ -54,38 +54,6 @@ function corridorSteps(widthPx: number): number {
     MAX_CORRIDOR_STEPS,
     Math.max(MIN_CORRIDOR_STEPS, Math.round(widthPx / CORRIDOR_SAMPLE_PX)),
   );
-}
-
-interface Pt {
-  x: number;
-  y: number;
-}
-
-/**
- * Appends a smoothed run of points to the current path — quadratics through
- * segment midpoints, each sample its own control point.
- *
- * The drawn wall must stay the wall the player hits, and it does: the curve
- * departs from the sampled polyline by at most half a segment, which at
- * CORRIDOR_SAMPLE_PX is about one pixel. What it removes is the faceting and
- * the miter spikes at the polyline's corners, not the shape.
- *
- * Does not call beginPath or moveTo — the caller owns the path, because these
- * runs are stitched into closed wall polygons.
- */
-function appendSmooth(ctx: CanvasRenderingContext2D, pts: readonly Pt[]): void {
-  if (pts.length === 0) return;
-  ctx.lineTo(pts[0].x, pts[0].y);
-  for (let i = 1; i < pts.length - 1; i++) {
-    ctx.quadraticCurveTo(
-      pts[i].x,
-      pts[i].y,
-      (pts[i].x + pts[i + 1].x) / 2,
-      (pts[i].y + pts[i + 1].y) / 2,
-    );
-  }
-  const last = pts[pts.length - 1];
-  ctx.quadraticCurveTo(last.x, last.y, last.x, last.y);
 }
 
 // Colour prefixes — the caller appends `${alpha})`. Perfect, collision and the
@@ -225,12 +193,8 @@ export function drawWorld(
   // Reduced motion freezes the parallax and the ground notches; a cue pause
   // freezes them on its own, since worldX does not advance during one.
   const sceneryX = REDUCED_MOTION ? 0 : snap.worldX;
-  const pixel = THEME === "pixel-flappy";
-  if (pixel) drawBackdrop(ctx, width, height, sceneryX);
-  else {
-    ctx.fillStyle = BACKDROP;
-    ctx.fillRect(0, 0, width, height);
-  }
+  const theme = THEME_RENDERERS[THEME];
+  theme.drawBackdrop(ctx, width, height, sceneryX);
 
   // The shake displaces the world, not the backdrop — a shaking background
   // would show seams at the canvas edges.
@@ -238,7 +202,7 @@ export function drawWorld(
   ctx.save();
   if (shake) ctx.translate(shake.x, shake.y);
 
-  drawChaoGrid(ctx, width, height, pixel ? "pixel" : "paper");
+  drawChaoGrid(ctx, width, height, theme.gridStyle);
 
   const dotX = width * birdXFrac();
 
@@ -248,8 +212,8 @@ export function drawWorld(
     drawGate(ctx, width, height, gate, gate.x0 <= dotX);
   }
 
-  // The ground is a floor over the walls, streaming 1:1 with them.
-  if (pixel) drawGround(ctx, width, height, sceneryX);
+  // A foreground layer (pixel's ground) is a floor over the walls.
+  theme.drawForeground?.(ctx, width, height, sceneryX);
 
   if (!snap.cuePaused) drawCueDemo(ctx, height, snap, now);
 
@@ -318,7 +282,7 @@ function drawCueVeil(
 ): void {
   if (!snap.cuePaused || !snap.cue) return;
   const fadeIn = Math.min(1, (now - snap.cue.atMs) / 150);
-  const veil = THEME === "pixel-flappy" ? PIXEL_FLAPPY.backdropRgb : rgb("backdrop");
+  const veil = THEME_RENDERERS[THEME].veilRgb();
   ctx.fillStyle = `rgba(${veil}, ${0.6 * fadeIn})`;
   ctx.fillRect(0, 0, width, height);
 
@@ -467,41 +431,24 @@ export function drawGate(
 
   ctx.save();
 
-  // 1. The wall: pixel mountains, fully opaque, so the grid and sky survive
-  //    only inside the open channel. Painted on a cell grid snapped toward
-  //    the channel (never thinner than the edge collision reads).
+  // 1. The wall, painted by the theme inside the exact wall polygons (or on
+  //    pixel's cell grid snapped toward the channel). Opaque in every theme
+  //    but paper, so the grid survives only inside the open channel.
   const t = tuning();
-  if (THEME === "pixel-flappy") drawPixelWalls(
+  THEME_RENDERERS[THEME].drawWalls({
     ctx,
     height,
     x0,
     x1,
-    gate.xStart,
-    { top, bottom },
+    xStart: gate.xStart,
+    top,
+    bottom,
     shape,
-    `${tolChao}|${steps}|${t.timingSlackS}|${t.maxTimingWidenFactor}|${t.slackSmoothS}`,
-  );
+    cacheKey: `${tolChao}|${steps}|${t.timingSlackS}|${t.maxTimingWidenFactor}|${t.slackSmoothS}`,
+    active,
+  });
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
-  if (THEME === "classic") {
-    // Paper: the wall shares the backdrop colour; the channel tint and rims
-    // below carry the shape.
-    ctx.fillStyle = active
-      ? `rgba(${rgb("backdrop")}, 0.97)`
-      : `rgba(${rgb("backdrop")}, 0.82)`;
-    ctx.beginPath();
-    ctx.moveTo(x0, 0);
-    appendSmooth(ctx, top);
-    ctx.lineTo(x1, 0);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(x0, height);
-    appendSmooth(ctx, bottom);
-    ctx.lineTo(x1, height);
-    ctx.closePath();
-    ctx.fill();
-  }
 
   // 2. The channel, lit from within. Clipped to the corridor so the glow can
   //    be generous without bleeding into the wall.

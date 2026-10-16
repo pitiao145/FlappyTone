@@ -398,7 +398,7 @@ export function wallMask(
 
 // ----------------------------------------------------------------- blitting
 
-type AnyCanvas = HTMLCanvasElement | OffscreenCanvas;
+export type AnyCanvas = HTMLCanvasElement | OffscreenCanvas;
 
 function toCanvas(art: Art): AnyCanvas | null {
   if (art.w <= 0 || art.h <= 0) return null;
@@ -421,7 +421,7 @@ function toCanvas(art: Art): AnyCanvas | null {
 }
 
 /** The context's device-pixel transform, or the identity where unsupported. */
-function deviceTransform(ctx: CanvasRenderingContext2D): DOMMatrix | { a: number; d: number; e: number; f: number } {
+export function deviceTransform(ctx: CanvasRenderingContext2D): DOMMatrix | { a: number; d: number; e: number; f: number } {
   const m = typeof ctx.getTransform === "function" ? ctx.getTransform() : null;
   return m && typeof m.a === "number" ? m : { a: 1, d: 1, e: 0, f: 0 };
 }
@@ -498,7 +498,7 @@ function backdropFor(width: number, height: number, dpr: number): BackdropCache 
 }
 
 /** Repeat a tile across the canvas from a device-px offset. */
-function tileAcross(
+export function tileAcross(
   ctx: CanvasRenderingContext2D,
   img: AnyCanvas,
   tileDev: number,

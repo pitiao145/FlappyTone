@@ -138,3 +138,53 @@ export const PIXEL_FLAPPY = {
   grassNotch: "#6ab030",
   sand: "#dccf8a",
 } as const;
+
+/**
+ * The "Taroko" theme (brief 07): marble gorge, turquoise river, red shrine.
+ * Mirrors `--tk-*` in tokens.css.
+ */
+export const TAROKO = {
+  /** Sky gradient stops, as [fraction of H, colour]; flat below the last. */
+  sky: [
+    [0, "#8cc4e4"],
+    [0.55, "#cfe7f0"],
+    [0.85, "#eef3ec"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  cloud: "#ffffff",
+  peakFar: "#b4c5ce",
+  peakNear: "#92a9b6",
+  haze: "#eef3ec",
+  hazeRgb: "238, 243, 236",
+  bluff: "#7c786d",
+  bluffCrest: "#5f9b4b",
+  hall: "#8a2f22",
+  post: "#a3341f",
+  roof: "#c0392b",
+  roofEdge: "#7a1f16",
+  finial: "#e8b84a",
+  riverTop: "#46c6ba",
+  riverBottom: "#1c8f95",
+  boulder: "#8b877a",
+  /** Bottom wall gradient, 0.544H → H. */
+  wallBottom: [
+    [0, "#8d887a"],
+    [0.5, "#5e5c53"],
+    [1, "#3a3b36"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  /** Top wall gradient, 0 → 0.519H. */
+  wallTop: [
+    [0, "#3a3b36"],
+    [0.6, "#65625a"],
+    [1, "#928d7f"],
+  ] as ReadonlyArray<readonly [number, string]>,
+  strataLight: "#ece6d6",
+  strataDark: "#2c2b27",
+  fringeDark: "#4d8a42",
+  fringeLight: "#6aa352",
+  outline: "#2a2925",
+  outlineRgb: "42, 41, 37",
+  rim: "#c9722a",
+  gridLabel: "#f7f1e3",
+  /** Cue veil colour. */
+  veilRgb: "238, 243, 236",
+} as const;
