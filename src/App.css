@@ -11115,3 +11115,71 @@ button.switch-track.switch-on {
   flex-basis: 100%;
   margin-top: var(--space-2);
 }
+
+.tc-cal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+}
+
+.tc-cal p {
+  margin: 0;
+}
+
+.tc-cal-step {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+}
+
+.tc-cal-say {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  line-height: 1.1;
+}
+
+.tc-cal-retry {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.tc-stage-say {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  font-weight: 700;
+}
+
+.tc-stage-say span {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.tc-stage-say b {
+  font-size: 1.2rem;
+}
+
+@media (max-width: 760px) {
+  /* The board comes first on a phone; the tone picker follows. */
+  .tc-main {
+    order: -1;
+    border-bottom: 2px solid var(--ink);
+  }
+  .tc-picker {
+    border-bottom: none;
+    border-radius: 0 0 calc(var(--radius-lg) - 2px) calc(var(--radius-lg) - 2px);
+  }
+}

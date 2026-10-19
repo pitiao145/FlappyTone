@@ -24,7 +24,7 @@ import { scaleForDpr } from "../../render/canvas.ts";
 import { drawVisualiser } from "../../render/visualiser.ts";
 import { micErrorCopy } from "../../ui/micErrors.ts";
 import { scoreAttempt, SPAN_MS, targetWord, type AttemptResult } from "./board.ts";
-import type { RefMode, ToneRef } from "./toneRefs.ts";
+import { refFor, type RefMode, type ToneRef } from "./toneRefs.ts";
 import {
   clearQuickCal,
   loadQuickCal,
@@ -124,6 +124,10 @@ export function startChecker(
   // ---- calibration state
   let board = savedBoard();
   let calStep: CalStep | null = null;
+  const calTargets = {
+    high: targetWord(refFor("1"), "real"),
+    low: targetWord(refFor("3"), "real"),
+  };
   let calTracker: PitchTracker | null = null;
   let takeF0s: number[] = [];
   let takeRms: number[] = [];
@@ -260,9 +264,12 @@ export function startChecker(
     }
 
     if (ctx) {
+      // During setup the board shows the tone being asked for (a level Tone 1,
+      // then a low Tone 3), so a beginner sees what "high" and "low" mean.
+      const shown = calStep ? calTargets[calStep] : word;
       drawVisualiser(ctx, width, height, {
-        tone: word.tone,
-        word,
+        tone: shown.tone,
+        word: shown,
         live: calStep ? null : live,
         finished: calStep ? [] : finished,
         spanMs: SPAN_MS,

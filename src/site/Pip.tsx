@@ -45,8 +45,11 @@ export function PipCta({
   body,
   secondary,
   intent,
+  preview = "flight",
 }: {
   path: string;
+  /** The loop on the right: the bird flying (default) or the visualiser. */
+  preview?: "flight" | "visualiser";
   /** Where the game should land (`?intent=`); the default is Play. */
   intent?: AppIntent;
   title: string;
@@ -73,7 +76,7 @@ export function PipCta({
             </a>
           </div>
         </div>
-        <CtaFlight />
+        <CtaFlight kind={preview} />
       </aside>
       {secondary && (
         <a className="read-next" href={secondary.href}>
@@ -94,7 +97,24 @@ export function PipCta({
  * `preload="none"` with a poster, played only once the card is on screen, so
  * the page's load never waits on it. Reduced motion keeps the poster.
  */
-function CtaFlight() {
+const PREVIEWS = {
+  flight: {
+    webm: "/cta/bird-loop.webm",
+    mp4: "/cta/bird-loop.mp4",
+    poster: "/cta/bird-loop.jpg",
+    label: "The bird flying through tunnels shaped like Mandarin tones.",
+  },
+  // The landing page's visualiser clip (public/visualiser/), scaled to 440 px.
+  visualiser: {
+    webm: "/cta/visualiser-loop.webm",
+    mp4: "/cta/visualiser-loop.mp4",
+    poster: "/cta/visualiser-poster.jpg",
+    label: "The tone visualiser: repeated attempts at a tone stacking on the target line.",
+  },
+} as const;
+
+function CtaFlight({ kind }: { kind: keyof typeof PREVIEWS }) {
+  const v = PREVIEWS[kind];
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const video = ref.current;
@@ -121,11 +141,11 @@ function CtaFlight() {
         loop
         playsInline
         preload="none"
-        poster="/cta/bird-loop.jpg"
-        aria-label="The bird flying through tunnels shaped like Mandarin tones."
+        poster={v.poster}
+        aria-label={v.label}
       >
-        <source src="/cta/bird-loop.webm" type="video/webm" />
-        <source src="/cta/bird-loop.mp4" type="video/mp4" />
+        <source src={v.webm} type="video/webm" />
+        <source src={v.mp4} type="video/mp4" />
       </video>
     </div>
   );

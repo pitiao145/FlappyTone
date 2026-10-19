@@ -116,7 +116,6 @@ function Visualizer() {
   const [calRetry, setCalRetry] = useState(false);
   const [calProgress, setCalProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [fromApp, setFromApp] = useState(false);
   const [result, setResult] = useState<AttemptView | null>(null);
   const [boardDrawn, setBoardDrawn] = useState(false);
   const reporter = useReporter();
@@ -220,8 +219,7 @@ function Visualizer() {
               setCalRetry(retry);
             },
             onCalProgress: setCalProgress,
-            onReady(app) {
-              setFromApp(app);
+            onReady() {
               setPhase("ready");
               reporter.action("calibrated");
             },
@@ -326,6 +324,15 @@ function Visualizer() {
       <div className="tc-main">
         <div className="tc-stage" ref={stageRef}>
           <canvas ref={canvasRef} className="tc-canvas" aria-hidden="true" />
+          {phase === "cal" && (
+            <div className="tc-stage-say" aria-hidden="true">
+              <span>Step {calStep === "high" ? 1 : 2}/2</span>
+              Say{" "}
+              <b style={{ color: TONE_LINE_COLOR[calStep === "high" ? 1 : 3] }}>
+                {calStep === "high" ? "mā" : "mǎ"}
+              </b>
+            </div>
+          )}
           {!boardDrawn && (
             <svg
               className="tc-idle"
@@ -352,31 +359,37 @@ function Visualizer() {
           {phase === "error" && <p className="tc-error">{error}</p>}
           {phase === "cal" && (
             <div className="tc-cal">
+              <div className="tc-cal-step">
+                Step {calStep === "high" ? 1 : 2} of 2 · Fitting the board to your voice
+              </div>
+              {calRetry && (
+                <p className="tc-cal-retry">Couldn't hear that clearly. Let's try again.</p>
+              )}
+              <p className="tc-cal-say">
+                Say{" "}
+                <b style={{ color: TONE_LINE_COLOR[calStep === "high" ? 1 : 3] }}>
+                  {calStep === "high" ? "mā" : "mǎ"}
+                </b>{" "}
+                <span lang="zh-Hant-TW">{calStep === "high" ? "媽" : "馬"}</span>
+              </p>
               <p>
-                <strong>Quick setup, step {calStep === "high" ? 1 : 2} of 2.</strong>{" "}
-                {calRetry && "Couldn't hear that clearly, let's try again. "}
-                {calStep === "high" ? (
-                  <>
-                    Say <b style={{ color: TONE_LINE_COLOR[1] }}>mā</b>: high and
-                    level, held for a second.
-                  </>
-                ) : (
-                  <>
-                    Now say <b style={{ color: TONE_LINE_COLOR[3] }}>mǎ</b>: low,
-                    the lowest you comfortably can.
-                  </>
-                )}
+                {calStep === "high"
+                  ? "High and steady, like holding a note. Hold it for about a second, following the flat line."
+                  : "Low: let your voice dip as low as is comfortable, following the line down."}
               </p>
               <div className="tc-meter" aria-hidden="true">
                 <span style={{ width: `${Math.round(calProgress * 100)}%` }} />
               </div>
+              <p className="tc-note">
+                Every voice is different, so we measure yours first. Two short
+                sounds, about 10 seconds, only once on this device.
+              </p>
             </div>
           )}
           {phase === "ready" && !result && (
             <p>
               Your turn: say {ref.label.toLowerCase()} (
               <span lang="zh-Hant-TW">{ref.example}</span>).
-              {fromApp && " Using your FlappyTone calibration."}
             </p>
           )}
           {phase === "ready" && result && (
@@ -539,6 +552,7 @@ export function ToneVisualizer() {
         <PipCta
           path={PATH}
           intent="visualiser"
+          preview="visualiser"
           title="Practise real words, then play"
           body="In FlappyTone you hear each word from our native speaker, practise it in the full visualizer, and your progress is saved with a free account. Then the game turns it into flight: your voice steers the bird through tunnels shaped like each tone."
           secondary={{ href: "/chinese-tones", label: "Read the tone guide" }}
