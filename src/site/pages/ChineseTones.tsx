@@ -1,6 +1,7 @@
 import { PipCta } from "../Pip.tsx";
 import { TONE_LINE_COLOR } from "../../ui/toneColors.ts";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
+import { OG_IMAGE } from "../siteFiles.ts";
 import { ToneChart } from "../ToneChart.tsx";
 import { PlayButton, SeeButton } from "../WordButtons.tsx";
 import { markSyllable, parsePinyin, toZhuyin } from "../zhuyin.ts";
@@ -406,7 +407,10 @@ export function chineseTonesJsonLd(route: SiteRoute): object[] {
       url,
       mainEntityOfPage: url,
       inLanguage: "en",
+      datePublished: "2026-10-19",
       dateModified: route.lastmod,
+      image: OG_IMAGE,
+      author: { "@type": "Organization", name: "FlappyTone", url: absoluteUrl("/") },
       about: { "@type": "Thing", name: "Mandarin Chinese tones" },
       publisher: {
         "@type": "Organization",

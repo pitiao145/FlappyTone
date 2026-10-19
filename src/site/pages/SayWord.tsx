@@ -15,6 +15,7 @@ import type {
   WordPageAction,
 } from "../../analytics/session.ts";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
+import { OG_IMAGE } from "../siteFiles.ts";
 import { SAY_CLIPS, SAY_CLIPS_SPOKEN } from "../sayClips.ts";
 import type { ExampleClip } from "../exampleClips.ts";
 import { corridorChaoAt } from "../../game/gates.ts";
@@ -285,6 +286,18 @@ function SayWordPage({ word }: { word: SayWord }) {
         </section>
 
         <section>
+          <h2>Common mistakes</h2>
+          <ul className="say-mistakes">
+            {word.mistakes.map((m) => (
+              <li key={m.wrong}>
+                <span className="say-mistake-wrong">{m.wrong}</span>
+                <span className="say-mistake-fix">{m.fix}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section>
           <h2>Common phrases and replies</h2>
           <ul className="say-uses">
             {word.uses.map((u) => (
@@ -391,7 +404,10 @@ export function sayWordJsonLd(word: SayWord, route: SiteRoute): object[] {
       url,
       mainEntityOfPage: url,
       inLanguage: "en",
+      datePublished: "2026-10-19",
       dateModified: route.lastmod,
+      image: OG_IMAGE,
+      author: { "@type": "Organization", name: "FlappyTone", url: absoluteUrl("/") },
       about: {
         "@type": "Thing",
         name: `${word.hanzi} (${word.pinyin}), ${word.phrase} in Mandarin Chinese`,
@@ -449,10 +465,41 @@ export function SayIndex() {
                 <span className="say-index-pinyin">
                   <TonePinyin text={w.pinyin} />
                 </span>
+                <span className="say-index-teaser">{w.teaser}</span>
               </a>
             </li>
           ))}
         </ul>
+        <section>
+          <h2>What each page has</h2>
+          <ul className="site-rules">
+            <li>
+              The word in Traditional characters, pinyin with tone marks, and
+              注音.
+            </li>
+            <li>
+              Two recordings by our native speaker: standard (slow and clear)
+              and spoken (normal speed), drawn side by side so you can see what
+              changes.
+            </li>
+            <li>
+              Tone changes that the spelling hides, like 你好 said ní hǎo or
+              不客氣 said bú kèqì.
+            </li>
+            <li>Common mistakes, everyday replies, and Taiwan usage.</li>
+          </ul>
+        </section>
+        <section>
+          <h2>Why the recordings sound different from the pinyin</h2>
+          <p>
+            Pinyin writes each syllable's own tone. In real speech, tones
+            change next to each other: two tone 3s in a row become a rise and a
+            dip, 不 rises before a tone 4, and many second syllables go light.
+            The spoken recordings are also shorter and their pitch moves less.
+            Hearing both versions helps you understand people at normal speed,
+            not just in a classroom.
+          </p>
+        </section>
         <p>
           New to tones? Start with{" "}
           <a href={HUB}>the four Mandarin tones, explained</a>, or try your own

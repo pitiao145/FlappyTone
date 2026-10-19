@@ -55,6 +55,10 @@ export interface SayWord {
   cardNote?: string;
   /** "Standard and spoken": what the two recordings show. */
   real: string[];
+  /** One line for the /say index card. */
+  teaser: string;
+  /** "Common mistakes": what learners get wrong, and the fix. */
+  mistakes: { wrong: string; fix: string }[];
   /** One line per syllable. */
   syllables: { hanzi: string; pinyin: string; text: string }[];
   uses: SayExample[];
@@ -88,6 +92,12 @@ export const SAY_WORDS: SayWord[] = [
     real: [
       "In the standard recording, the first 謝 falls from the top of her voice to the bottom. The second 謝 stays down there, short and almost flat. That matches the dictionary: tone 4, then a neutral tone.",
       "The spoken recording is shorter, about half a second. The fall starts in the middle of her voice, not at the top, and the second syllable is just the end of the same fall. Say 謝謝 as one fall, not as two separate tone 4s.",
+    ],
+    teaser: "Two syllables, one fall: why the second 謝 is light.",
+    mistakes: [
+      { wrong: "Saying both syllables as full falls: xiè xiè.", fix: "Fall once on the first 謝, then let the second stay low and short." },
+      { wrong: "Lifting the second syllable back up, so it sounds like a question.", fix: "Keep it at the bottom of your voice, where the first one ended." },
+      { wrong: "Saying x like the English sh or s.", fix: "Tongue tip behind the lower teeth, lips slightly spread, then a soft sh." },
     ],
     syllables: [
       {
@@ -152,6 +162,12 @@ export const SAY_WORDS: SayWord[] = [
       "In 你好, two tone 3s meet, so the first one changes to a rise: ní hǎo. This happens to every 3+3 pair in Mandarin.",
       "In the spoken recording, 好 drops low and only comes back to the middle. At the end of 你好, keep 好 low with a short lift, not a big rise.",
     ],
+    teaser: "Written nǐ hǎo, said ní hǎo: the most common tone change.",
+    mistakes: [
+      { wrong: "Saying two full dips: nǐ hǎo with both syllables going down and up.", fix: "Make 你 rise (ní), then dip on 好." },
+      { wrong: "Ending 好 with a big rise, so hello sounds like a question.", fix: "Keep 好 low, with only a small lift at the end." },
+      { wrong: "Saying hao like the English how with a hard h.", fix: "The h is breathier, from further back in the throat." },
+    ],
     syllables: [
       {
         hanzi: "你",
@@ -210,6 +226,12 @@ export const SAY_WORDS: SayWord[] = [
       "In the standard recording, 再 falls from the top of her voice to the bottom. 見 starts a little lower and falls to the bottom again.",
       "In the spoken recording, 再 hardly falls. It stays level in the upper middle of her voice, and only 見 falls. The whole word takes about 0.6 seconds.",
     ],
+    teaser: "Two falling tones, and why the second starts lower.",
+    mistakes: [
+      { wrong: "Two identical falls from the top of your voice.", fix: "Start 見 a little lower than 再." },
+      { wrong: "Saying zai with an English z.", fix: "z is closer to the ds in reads." },
+      { wrong: "Saying jian like the English name Jan.", fix: "ian sounds like yen: ji-yen, in one syllable." },
+    ],
     syllables: [
       {
         hanzi: "再",
@@ -263,6 +285,12 @@ export const SAY_WORDS: SayWord[] = [
       "In the spoken recording, it still drops to the bottom, but the rise only comes back to the middle. The low part matters most; the rise is short.",
       "Before another tone 3, 請 rises instead: 請你 (qǐng nǐ) is said qíng nǐ.",
     ],
+    teaser: "A low tone 3 that goes before the verb.",
+    mistakes: [
+      { wrong: "Putting 請 at the end of the sentence, like English please.", fix: "Put it before the verb: 請坐, 請等一下." },
+      { wrong: "Starting low and only rising, which sounds like tone 2.", fix: "Drop first, then lift. The low part matters most." },
+      { wrong: "Saying q as an English k or kw.", fix: "q is close to the ch in cheese, with the tongue tip low." },
+    ],
     syllables: [
       {
         hanzi: "請",
@@ -314,6 +342,12 @@ export const SAY_WORDS: SayWord[] = [
       "In normal speech the middle 不 is short and light, so many dictionaries write duìbuqǐ. Say 對 and 起 clearly and keep 不 quick.",
       "The word ends low, on 起. If you end it high, it sounds like a question.",
     ],
+    teaser: "對不起 ends low. When to say 不好意思 instead.",
+    mistakes: [
+      { wrong: "Ending 起 high, so the apology sounds like a question.", fix: "Let 起 drop low at the end." },
+      { wrong: "Stressing 不 as much as 對 and 起.", fix: "Keep 不 short and light in normal speech." },
+      { wrong: "Using 對不起 for every small thing.", fix: "For small things, 不好意思 is more natural in Taiwan." },
+    ],
     syllables: [
       { hanzi: "對", pinyin: "duì", text: "Tone 4: a fall from high. ui sounds like way." },
       { hanzi: "不", pinyin: "bù / bu", text: "Tone 4 in careful speech, light and quick in normal speech. u as in boo." },
@@ -363,6 +397,12 @@ export const SAY_WORDS: SayWord[] = [
       "In the standard recording, 不 rises from the middle of her voice, 客 falls from the top to the middle, and 氣 rises a little and falls again.",
       "The spoken recording takes about 0.7 seconds. The whole word stays in the upper middle of her voice, with small bumps instead of three big falls.",
     ],
+    teaser: "Written bù kèqì, said bú kèqì: the 不 rule.",
+    mistakes: [
+      { wrong: "Saying bù with a fall before 客.", fix: "Before a tone 4, 不 rises: bú kè qì." },
+      { wrong: "Giving all three syllables the same big fall.", fix: "Keep it light and quick, mostly in the upper part of your voice." },
+      { wrong: "Using 不客氣 to answer an apology.", fix: "Answer sorry with 沒關係 or 沒事." },
+    ],
     syllables: [
       { hanzi: "不", pinyin: "bù → bú", text: "Written tone 4, said tone 2 because a tone 4 follows. Short and rising." },
       { hanzi: "客", pinyin: "kè", text: "Tone 4: fall from high. k with a puff of air, e like the u in fun said further back." },
@@ -410,6 +450,12 @@ export const SAY_WORDS: SayWord[] = [
       "In the standard recording, 沒 starts low and rises, 關 stays high, and 係 drops back to the middle, short and light.",
       "In the spoken recording, she rises into 關 and stays up. 係 is quick and does not drop. A heavy drop at the end can sound unfriendly.",
     ],
+    teaser: "沒關係 answers sorry; 沒問題 answers a request.",
+    mistakes: [
+      { wrong: "Using 沒關係 when someone asks you for a favour.", fix: "Say 沒問題 (méi wèn tí) for yes, no problem." },
+      { wrong: "Dropping heavily on the last syllable.", fix: "Rise into 關 and stay up; keep 係 short." },
+      { wrong: "Saying guan like gwan with a flat a.", fix: "uan sounds like wan; the g is unaspirated, like a soft k." },
+    ],
     syllables: [
       { hanzi: "沒", pinyin: "méi", text: "Tone 2: start in the middle and rise. ei like the ay in may." },
       { hanzi: "關", pinyin: "guān", text: "Tone 1: high and level. uan sounds like wan." },
@@ -454,6 +500,12 @@ export const SAY_WORDS: SayWord[] = [
     real: [
       "In the standard recording, 元 starts low, dips a little, then rises to the top of her voice. The small dip at the start is normal for tone 2.",
       "In the spoken recording, it is shorter and the rise ends in the upper middle of her voice, but it is still low first, then up. Said flat, as English speakers often say yuan, the tone is gone.",
+    ],
+    teaser: "One syllable, a rising tone and the ü vowel.",
+    mistakes: [
+      { wrong: "Saying you-ahn, in two syllables.", fix: "One syllable: ü (rounded ee), then en." },
+      { wrong: "Saying it flat, with no tone.", fix: "Start low, then rise clearly in the second half." },
+      { wrong: "Saying yuan for every price.", fix: "In speech, prices use 塊 (kuài): 十塊." },
     ],
     syllables: [
       {

@@ -120,9 +120,9 @@ const BASE_ROUTES: readonly SiteRoute[] = [
   {
     path: "/tools/tone-visualizer",
     lang: "en",
-    title: "Mandarin Tone Visualizer & Pronunciation Checker (Free) — FlappyTone",
+    title: "Mandarin Tone Visualizer & Pronunciation Checker (Free)",
     description:
-      "Free Chinese tone checker: say a Mandarin tone and see your pitch drawn over a native speaker's real tone shape or the textbook one, with a tone accuracy score. No sign-up.",
+      "Free Chinese tone checker: say a Mandarin tone and see your pitch drawn over a native speaker's tone shape or the textbook one, with a score. No sign-up.",
     lastmod: "2026-10-19",
     pageType: "tool",
     angle: "learner",
@@ -148,7 +148,7 @@ const BASE_ROUTES: readonly SiteRoute[] = [
  * short, so the route table stays free of page text.
  */
 const SAY_META: readonly [slug: string, title: string, description: string][] = [
-  ["thank-you", "How to Say Thank You in Chinese (謝謝 xièxie) — with Audio", "How to say thank you and thanks in Chinese: 謝謝 xièxie, with a native speaker's recording, pinyin, 注音 and how the light second syllable really sounds. Practise it free."],
+  ["thank-you", "How to Say Thank You in Chinese (謝謝 xièxie) — with Audio", "How to say thank you in Chinese: 謝謝 xièxie. Hear a native speaker say it slowly and at normal speed, with pinyin, 注音 and tone tips. Practise it free."],
   ["hello", "How to Say Hello in Chinese (你好 nǐ hǎo) — with Audio", "How to say hello in Chinese: 你好 nǐ hǎo is said ní hǎo. Hear each syllable from a native speaker, see why the first tone changes, and practise it free."],
   ["goodbye", "How to Say Goodbye in Chinese (再見 zàijiàn) — with Audio", "How to say goodbye and bye in Chinese: 再見 zàijiàn, plus 拜拜. A native speaker's recording, pinyin, 注音 and how the two falls really sound. Practise free."],
   ["please", "How to Say Please in Chinese (請 qǐng) — with Audio", "How to say please in Chinese: 請 qǐng, a third tone that goes before the verb. Hear a native speaker, see the dip, learn 請問 and 請坐, and practise it free."],

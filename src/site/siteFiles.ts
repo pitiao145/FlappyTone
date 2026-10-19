@@ -26,12 +26,31 @@ export function indexableRoutes(
  * description, canonical, robots (noindex) and hreflang alternates. The
  * `x-default` points at the English version of the pair.
  */
+/** The site-wide social preview image (also used by index.html). */
+export const OG_IMAGE = "https://flappytone.com/og.png?v=2";
+
 export function headTags(route: SiteRoute): string {
   const tags = [
     `<title>${esc(route.title)}</title>`,
     `<meta name="description" content="${esc(route.description)}" />`,
     `<link rel="canonical" href="${absoluteUrl(route.path)}" />`,
   ];
+  // Social previews (Open Graph / X). One shared image; title, description
+  // and URL are the page's own.
+  const og = absoluteUrl(route.path);
+  tags.push(
+    `<meta property="og:type" content="${route.pageType === "word" ? "article" : "website"}" />`,
+    `<meta property="og:site_name" content="FlappyTone" />`,
+    `<meta property="og:title" content="${esc(route.title)}" />`,
+    `<meta property="og:description" content="${esc(route.description)}" />`,
+    `<meta property="og:url" content="${og}" />`,
+    `<meta property="og:image" content="${OG_IMAGE}" />`,
+    `<meta property="og:image:width" content="1200" />`,
+    `<meta property="og:image:height" content="630" />`,
+    `<meta property="og:image:alt" content="The FlappyTone bird flying through a tunnel shaped like a Mandarin tone." />`,
+    `<meta property="og:locale" content="${route.lang === "zh-tw" ? "zh_TW" : "en_US"}" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
+  );
   if (route.noindex) tags.push(`<meta name="robots" content="noindex" />`);
   if (route.alternate) {
     const other = routeFor(route.alternate);

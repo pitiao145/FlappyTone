@@ -11698,3 +11698,36 @@ button.switch-track.switch-on {
 .site-page > .legal-body {
   padding-bottom: 64px;
 }
+
+.say-page ul.say-mistakes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.say-page ul.say-mistakes li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--line);
+}
+
+.say-page .say-mistake-wrong {
+  color: var(--ink-muted);
+}
+
+.say-page .say-mistake-fix {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.say-page .say-index-teaser {
+  margin-top: 4px;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
