@@ -43,7 +43,7 @@ export function makeToolUsedReporter(
     }
   };
 }
-const DEFAULT_INPUT = "ni3 hao3, lv4 cha2";
+const DEFAULT_INPUT = "wo3 xi3huan1 xue2 zhong1wen2";
 
 function CopyButton({ text, label }: { text: string; label: string }) {
   const [copied, setCopied] = useState(false);
