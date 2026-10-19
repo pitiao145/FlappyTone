@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { appHref, type AppIntent } from "../ui/appLink.ts";
 
 /**
@@ -63,7 +64,6 @@ export function PipCta({
         >
           <path d="M0 60 C 40 60, 60 96, 110 96 S 190 70, 230 34 S 290 20, 320 22" />
         </svg>
-        <Pip size={84} tilt={-18} className="pip-cta-bird" />
         <div className="pip-cta-text">
           <h2>{title}</h2>
           <p>{body}</p>
@@ -73,6 +73,7 @@ export function PipCta({
             </a>
           </div>
         </div>
+        <CtaFlight />
       </aside>
       {secondary && (
         <a className="read-next" href={secondary.href}>
@@ -83,5 +84,49 @@ export function PipCta({
         </a>
       )}
     </>
+  );
+}
+
+/**
+ * The CTA's preview: the bird flying three clean corridors in the Pixel Flappy
+ * theme, a muted ~100 kB loop rendered by `npm run render-demo --
+ * demo/scenarios/cta-loop.json` (then scaled to 360 px into public/cta/).
+ * `preload="none"` with a poster, played only once the card is on screen, so
+ * the page's load never waits on it. Reduced motion keeps the poster.
+ */
+function CtaFlight() {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const video = ref.current;
+    if (!video || typeof IntersectionObserver === "undefined") return;
+    try {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    } catch {
+      // ignore
+    }
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) void video.play().catch(() => {});
+      else video.pause();
+    });
+    io.observe(video);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div className="pip-cta-preview">
+      <video
+        ref={ref}
+        width={360}
+        height={360}
+        muted
+        loop
+        playsInline
+        preload="none"
+        poster="/cta/bird-loop.jpg"
+        aria-label="The bird flying through tunnels shaped like Mandarin tones."
+      >
+        <source src="/cta/bird-loop.webm" type="video/webm" />
+        <source src="/cta/bird-loop.mp4" type="video/mp4" />
+      </video>
+    </div>
   );
 }

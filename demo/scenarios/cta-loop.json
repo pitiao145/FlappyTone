@@ -1,0 +1,16 @@
+{
+  "format": "1:1",
+  "fps": 30,
+  "theme": "pixel-flappy",
+  "themeLabel": false,
+  "hud": false,
+  "demo": false,
+  "audio": false,
+  "gap": 0.35,
+  "tailSeconds": 0.4,
+  "gates": [
+    { "word": "ma1b", "flight": "perfect" },
+    { "word": "ni3", "flight": "perfect" },
+    { "word": "ma4b", "flight": "perfect" }
+  ]
+}

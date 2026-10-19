@@ -8,6 +8,13 @@ interface Props {
    * always wants it, so this is really only for the prerender entry.
    */
   onPlay?: () => void;
+  /**
+   * Route-table pages (`src/site/`): section links point back into the landing
+   * page (`/#how-it-works`) instead of this page, and Play is a real link
+   * (`appHref`, so it carries `?src=`) rather than a handler.
+   */
+  linkBase?: string;
+  playHref?: string;
 }
 
 function IconMenu() {
@@ -39,7 +46,7 @@ function IconClose() {
  *
  * Items come from `brand.sections`, so adding a section adds its link.
  */
-export function Nav({ onPlay }: Props) {
+export function Nav({ onPlay, linkBase = "", playHref }: Props) {
   const items = brand.sections.filter((s) => s.inNav);
   const [navMenuOpen, setNavMenuOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
@@ -86,20 +93,29 @@ export function Nav({ onPlay }: Props) {
   return (
     <nav ref={navRef} className={`landing-nav nav-landing${navMenuOpen ? " nav-menu-open" : ""}`}>
       <div className="nav-inner">
-        <a className="nav-brand" href="#top">
+        <a className="nav-brand" href={linkBase ? linkBase : "#top"}>
           <img className="nav-logo" src="/favicon.svg" alt="" width={60} height={60} />
           <span className="nav-name">FLAPPYTONE</span>
         </a>
 
         <div className="landing-nav-links">
           {items.map((s) => (
-            <a key={s.id} href={`#${s.id}`}>
+            <a key={s.id} href={`${linkBase}#${s.id}`}>
               {s.navLabel ?? s.title}
             </a>
           ))}
         </div>
 
         <div className="nav-actions">
+          {playHref && (
+            <div className="nav-cta">
+              <div className="nav-cta-shady">
+                <a className="nav-cta-btn" href={playHref}>
+                  Play
+                </a>
+              </div>
+            </div>
+          )}
           {onPlay && (
             <div className="nav-cta">
               <div className="nav-cta-shady">
@@ -135,7 +151,7 @@ export function Nav({ onPlay }: Props) {
           <div className="nav-mobile-menu" id={navMenuId} ref={mobileMenuRef}>
             {items.map((s) => (
               <div key={s.id} className="nav-shady">
-                <a className="nav-shady-btn" href={`#${s.id}`} onClick={closeNavMenu}>
+                <a className="nav-shady-btn" href={`${linkBase}#${s.id}`} onClick={closeNavMenu}>
                   {s.navLabel ?? s.title}
                 </a>
               </div>
