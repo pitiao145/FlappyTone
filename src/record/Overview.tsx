@@ -42,6 +42,7 @@ const DISABLED_LIST_PREFIX = "hsk";
 const LIST_LABELS: Record<string, string> = {
   "core-120": "Core 120",
   "tonepairs-v1": "Tone pairs",
+  "seo-words": "Word pages",
   tocfl1: "TOCFL 1",
   tocfl2: "TOCFL 2",
   tocfl3: "TOCFL 3",
@@ -49,7 +50,7 @@ const LIST_LABELS: Record<string, string> = {
   hsk2: "HSK 2",
   hsk3: "HSK 3",
 };
-const LIST_ORDER = ["core-120", "tonepairs-v1", "tocfl1", "tocfl2", "tocfl3", "hsk1", "hsk2", "hsk3"];
+const LIST_ORDER = ["core-120", "tonepairs-v1", "seo-words", "tocfl1", "tocfl2", "tocfl3", "hsk1", "hsk2", "hsk3"];
 
 /** A style suffix on the list label, since a pill is now (list × style). */
 function listLabel(id: string, style: BoothStyle): string {
