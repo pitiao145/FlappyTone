@@ -1,10 +1,10 @@
 import { useRef, useState } from "react";
-import { appHref } from "../../ui/appLink.ts";
 import { ContourSpark } from "../../ui/ContourSpark.tsx";
 import { TONE_LINE_COLOR } from "../../ui/toneColors.ts";
 import { captureGameEvent } from "../../analytics/posthog.ts";
 import type { AnalyticsEvent } from "../../analytics/session.ts";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
+import { Pip, PipCta } from "../Pip.tsx";
 import {
   inputDirection,
   markSyllable,
@@ -38,13 +38,14 @@ export function makeToolUsedReporter(
 }
 const DEFAULT_INPUT = "ni3 hao3, lv4 cha2";
 
-function CopyButton({ text }: { text: string }) {
+function CopyButton({ text, label }: { text: string; label: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
       type="button"
-      className="secondary site-copy"
+      className="tm-copy"
       disabled={!text}
+      aria-label={`Copy ${label}`}
       onClick={() => {
         void navigator.clipboard
           ?.writeText(text)
@@ -60,17 +61,29 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function Output({ label, value, lang }: { label: string; value: string; lang?: string }) {
+function Result({
+  label,
+  value,
+  lang,
+  big,
+}: {
+  label: string;
+  value: string;
+  lang?: string;
+  big?: boolean;
+}) {
   return (
-    <div className="site-tool-output">
-      <div className="label">{label}</div>
-      <output className="value" lang={lang}>
-        {value || " "}
+    <div className={big ? "tm-result tm-result-big" : "tm-result"}>
+      <div className="tm-result-label">{label}</div>
+      <output className="tm-result-value" lang={lang}>
+        {value || "\u00a0"}
       </output>
-      <CopyButton text={value} />
+      <CopyButton text={value} label={label.toLowerCase()} />
     </div>
   );
 }
+
+const EXAMPLES = ["ni3 hao3", "xie4xie5", "lv4 cha2", "Zhong1guo2", "nǐ hǎo"];
 
 /** The converter: numbered or marked pinyin in, marks, numbers and 注音 out. */
 function Converter() {
@@ -78,110 +91,131 @@ function Converter() {
   const report = useRef<(input: string) => void>(null);
   report.current ??= makeToolUsedReporter(captureGameEvent);
   const syllables = syllablesOf(input);
+  const toNumbersMode = inputDirection(input) === "to-numbers";
+  const change = (next: string) => {
+    setInput(next);
+    report.current?.(next);
+  };
+
+  const marks = <Result label="Tone marks" value={toMarks(input)} big={!toNumbersMode} />;
+  const numbers = <Result label="Numbers" value={toNumbers(input)} big={toNumbersMode} />;
 
   return (
-    <div className="site-tool">
-      <label className="label" htmlFor="tone-marks-input">
-        Pinyin with numbers (ni3 hao3) or with marks (nǐ hǎo)
-      </label>
-      <textarea
-        id="tone-marks-input"
-        rows={3}
-        value={input}
-        spellCheck={false}
-        autoCapitalize="off"
-        autoCorrect="off"
-        onChange={(e) => {
-          const next = e.target.value;
-          setInput(next);
-          report.current?.(next);
-        }}
-      />
-      <Output label="Tone marks" value={toMarks(input)} />
-      <Output label="Numbers" value={toNumbers(input)} />
-      <Output label="注音 (Zhuyin)" value={toZhuyin(input)} lang="zh-Hant-TW" />
-      {syllables.length > 0 && (
-        <ul className="site-tool-shapes" aria-label="Tone shape of each syllable">
-          {syllables.slice(0, 40).map((s, i) => (
-            <li key={i} style={{ color: TONE_LINE_COLOR[s.tone] }}>
-              {s.tone === 0 ? (
-                <span className="neutral-dot" aria-hidden="true">
-                  ·
-                </span>
-              ) : (
-                <ContourSpark tone={s.tone} />
-              )}
-              <span className="pinyin">{markSyllable(s)}</span>
-              <span className="zhuyin" lang="zh-Hant-TW">
-                {zhuyinSyllable(s)}
-              </span>
-            </li>
+    <section className="tm-tool" aria-label="Pinyin tone marks converter">
+      <Pip size={72} tilt={-10} className="tm-tool-pip" />
+      <div className="tm-input">
+        <label className="tm-input-label" htmlFor="tone-marks-input">
+          Type pinyin with tone numbers, or paste pinyin with marks
+        </label>
+        <textarea
+          id="tone-marks-input"
+          rows={4}
+          value={input}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          onChange={(e) => change(e.target.value)}
+        />
+        <div className="tm-examples">
+          <span>Try</span>
+          {EXAMPLES.map((ex) => (
+            <button key={ex} type="button" onClick={() => change(ex)}>
+              {ex}
+            </button>
           ))}
-        </ul>
-      )}
-    </div>
+        </div>
+        <p className="tm-direction" aria-live="polite">
+          {toNumbersMode ? "Reading tone marks, writing numbers." : "Reading tone numbers, writing marks."}
+        </p>
+      </div>
+      <div className="tm-output">
+        {toNumbersMode ? numbers : marks}
+        <Result label="注音 (Zhuyin)" value={toZhuyin(input)} lang="zh-Hant-TW" />
+        {toNumbersMode ? marks : numbers}
+        {syllables.length > 0 && (
+          <ul className="tm-shapes" aria-label="Tone shape of each syllable">
+            {syllables.slice(0, 40).map((s, i) => (
+              <li key={i} style={{ color: TONE_LINE_COLOR[s.tone] }}>
+                {s.tone === 0 ? (
+                  <span className="tm-neutral" aria-hidden="true">
+                    ·
+                  </span>
+                ) : (
+                  <ContourSpark tone={s.tone} width={44} height={22} />
+                )}
+                <span className="tm-shape-pinyin">{markSyllable(s)}</span>
+                <span className="tm-shape-zhuyin" lang="zh-Hant-TW">
+                  {zhuyinSyllable(s)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
   );
 }
 
 export function ToneMarks() {
   return (
-    <div className="screen legal-screen site-page">
+    <div className="screen legal-screen site-page site-wide">
       <article className="legal-body">
-        <h1>Pinyin tone marks converter</h1>
-        <p className="site-answer">
-          Type pinyin with tone numbers (ni3 hao3) and get the tone marks (nǐ hǎo), the 注音
-          (ㄋㄧˇ ㄏㄠˇ) and the shape of each tone. Paste marked pinyin to convert it back to
-          numbers. Free, and nothing you type leaves your browser.
-        </p>
+        <header className="tm-head">
+          <h1>Pinyin tone marks converter</h1>
+          <p className="site-answer">
+            Type ni3 hao3, get nǐ hǎo and ㄋㄧˇ ㄏㄠˇ. Paste marked pinyin to turn it back into
+            numbers. Nothing you type leaves your browser.
+          </p>
+        </header>
 
         <Converter />
 
-        <h2>How to type it</h2>
-        <ul className="site-rules">
-          <li>
-            Put the tone number right after each syllable: <code>zhong1 guo2</code> or{" "}
-            <code>zhong1guo2</code>.
-          </li>
-          <li>
-            Use <code>5</code> or <code>0</code> for the neutral tone (<code>ma5</code>), or no
-            number at all.
-          </li>
-          <li>
-            Type ü as <code>v</code> or <code>ü</code>: <code>lv4</code> and <code>nü3</code> both
-            work. After j, q, x and y a plain <code>u</code> is already ü (<code>xue2</code> →
-            xué).
-          </li>
-          <li>
-            An apostrophe separates syllables that could run together: <code>xi1'an1</code> →
-            xī'ān.
-          </li>
-        </ul>
+        <div className="tm-notes">
+          <section>
+            <h2>How to type it</h2>
+            <ul className="site-rules">
+              <li>
+                Put the tone number right after each syllable: <code>zhong1 guo2</code> or{" "}
+                <code>zhong1guo2</code>.
+              </li>
+              <li>
+                Use <code>5</code> or <code>0</code> for the neutral tone (<code>ma5</code>), or no
+                number at all.
+              </li>
+              <li>
+                Type ü as <code>v</code>, the input-method habit: <code>lv4</code> and{" "}
+                <code>nü3</code> both work. After j, q, x and y a plain <code>u</code> is already ü
+                (<code>xue2</code> → xué).
+              </li>
+              <li>
+                An apostrophe separates syllables that could run together: <code>xi1'an1</code> →
+                xī'ān.
+              </li>
+            </ul>
+          </section>
+          <section>
+            <h2>Where the tone mark goes</h2>
+            <p>
+              Every syllable has one mark, on one vowel. If there is an a or an e, the mark goes
+              there (hǎo, xiè). In ou, it goes on the o (dōu). Otherwise it goes on the last vowel,
+              which is why it is liú but guì. ü keeps its dots and takes the mark on top (lǜ). The
+              neutral tone has no mark in pinyin; in 注音 it is a dot written before the syllable
+              (˙ㄇㄜ).
+            </p>
+            <p>
+              The four marks are small pictures of the pitch: ˉ high and level, ˊ rising, ˇ
+              dipping, ˋ falling. See them drawn from real recordings in the{" "}
+              <a href="/chinese-tones">guide to the four Chinese tones</a>.
+            </p>
+          </section>
+        </div>
 
-        <h2>Where the tone mark goes</h2>
-        <p>
-          Every syllable has one mark, on one vowel. The rule is short: if there is an a or an e,
-          the mark goes there (hǎo, xiè). In ou, it goes on the o (dōu). Otherwise it goes on the
-          last vowel, which is why it is liú but guì. ü keeps its dots and takes the mark on top
-          (lǜ). The neutral tone has no mark in pinyin; in 注音 it is a dot written before the
-          syllable (˙ㄇㄜ).
-        </p>
-        <p>
-          The four marks are small pictures of the pitch: ˉ high and level, ˊ rising, ˇ dipping, ˋ
-          falling. See them drawn from real recordings in the{" "}
-          <a href="/chinese-tones">guide to the four Chinese tones</a>.
-        </p>
-
-        <h2>Say them, not only type them</h2>
-        <p>
-          Knowing where the mark goes is the easy part. FlappyTone lets you practise the tones out
-          loud: your voice steers a bird through a corridor shaped like the tone, so you can see
-          whether your pitch makes the right shape.
-        </p>
-        <p className="site-ctas">
-          <a className="primary" href={appHref(undefined, PATH)}>
-            Practise the tones with your voice
-          </a>
-        </p>
+        <PipCta
+          path={PATH}
+          title="Now say them out loud"
+          body="Typing the mark is the easy part. In FlappyTone your voice flies Pip through a tunnel shaped like the tone, so you see right away if your pitch made the shape."
+          secondary={{ href: "/chinese-tones", label: "Read the tone guide" }}
+        />
       </article>
     </div>
   );

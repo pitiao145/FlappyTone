@@ -1,4 +1,4 @@
-import { appHref } from "../../ui/appLink.ts";
+import { PipCta } from "../Pip.tsx";
 import { TONE_LINE_COLOR } from "../../ui/toneColors.ts";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
 import { ToneChart } from "../ToneChart.tsx";
@@ -149,7 +149,6 @@ function ExampleList({ tone, examples }: { tone: number; examples: Example[] }) 
 }
 
 export function ChineseTones() {
-  const play = appHref(undefined, PATH);
   return (
     <div className="screen legal-screen site-page">
       <article className="legal-body">
@@ -245,24 +244,12 @@ export function ChineseTones() {
           ))}
         </section>
 
-        <section id="practise">
-          <h2>Practise the tones out loud</h2>
-          <p>
-            Reading about tones helps, but you learn them by saying them. FlappyTone is a free
-            browser game that turns your voice into a line on the screen: you steer a bird through a
-            corridor shaped like the tone, and you see straight away whether your pitch made the
-            right shape. It checks the pitch shape only, not the syllable, and your microphone audio
-            stays on your device.
-          </p>
-          <p className="site-ctas">
-            <a className="primary" href={play}>
-              Practise the tones with your voice
-            </a>
-            <a className="secondary" href={TOOL}>
-              Type tone marks: ni3 → nǐ
-            </a>
-          </p>
-        </section>
+        <PipCta
+          path={PATH}
+          title="Practise the tones out loud"
+          body="Reading about tones helps, but you learn them by saying them. In FlappyTone your voice flies Pip through a tunnel shaped like the tone, so you see right away if your pitch made the right shape. It checks the pitch shape, not the syllable, and your microphone audio stays on your device."
+          secondary={{ href: TOOL, label: "Type tone marks: ni3 → nǐ" }}
+        />
       </article>
     </div>
   );
