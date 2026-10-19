@@ -73,6 +73,8 @@ function SayWordPage({ word }: { word: SayWord }) {
     );
     report.current(a);
   };
+  const practiseId =
+    word.practiseWordId === undefined ? word.cards[0].id : word.practiseWordId;
   const siblings = word.siblings
     .map(sayWordFor)
     .filter((w): w is SayWord => !!w);
@@ -192,17 +194,20 @@ function SayWordPage({ word }: { word: SayWord }) {
             >
               Practise {word.toneTargetLabel}, free
             </a>
-            <a
-              className="site-play say-practise-word"
-              href={appHref("visualiser", path)}
-              onClick={() => track("practise_word")}
-            >
-              Practise this exact word
-            </a>
+            {practiseId && (
+              <a
+                className="site-play say-practise-word"
+                href={appHref("visualiser", path, practiseId)}
+                onClick={() => track("practise_word")}
+              >
+                Practise this exact word
+              </a>
+            )}
           </div>
           <p className="say-practise-note">
             The free tone visualizer needs no account. Practising real words
-            with recordings is in the FlappyTone app, free with an account.
+            with recordings is in the FlappyTone app, free with an account
+            {practiseId ? "" : " (three-syllable words are coming to it)"}.
           </p>
         </section>
 

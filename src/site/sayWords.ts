@@ -63,6 +63,12 @@ export interface SayWord {
   /** The /tools/tone-visualizer target for "Practise this tone". */
   toneTarget: ToneTarget;
   toneTargetLabel: string;
+  /**
+   * The word "Practise this exact word" opens in the app's visualiser
+   * (`?word=`). Defaults to the first card; `null` when the visualiser has no
+   * place for it (3 syllables).
+   */
+  practiseWordId?: string | null;
   /** Slugs of 2–3 sibling pages for "More words". */
   siblings: string[];
 }
@@ -338,6 +344,7 @@ export const SAY_WORDS: SayWord[] = [
     ],
     toneTarget: "3",
     toneTargetLabel: "tone 3 (the final 起)",
+    practiseWordId: null,
     siblings: ["no-problem", "thank-you", "please"],
   },
   {
@@ -386,6 +393,7 @@ export const SAY_WORDS: SayWord[] = [
     ],
     toneTarget: "4",
     toneTargetLabel: "tone 4",
+    practiseWordId: null,
     siblings: ["thank-you", "no-problem", "sorry"],
   },
   {
@@ -433,6 +441,7 @@ export const SAY_WORDS: SayWord[] = [
     ],
     toneTarget: "2",
     toneTargetLabel: "tone 2",
+    practiseWordId: null,
     siblings: ["sorry", "youre-welcome", "thank-you"],
   },
   {

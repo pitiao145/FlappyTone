@@ -147,7 +147,13 @@ describe("say routes", () => {
         expect(html).toContain(escape(q.acceptedAnswer.text));
       }
       expect(html).toContain(`/tools/tone-visualizer?tone=${w.toneTarget}`);
-      expect(html).toContain(`/app?intent=visualiser&amp;src=${path}`);
+      const pid =
+        w.practiseWordId === undefined ? w.cards[0].id : w.practiseWordId;
+      if (pid) {
+        expect(html).toContain(`/app?intent=visualiser&amp;word=${pid}&amp;src=${path}`);
+      } else {
+        expect(html).not.toContain("Practise this exact word");
+      }
     }
   });
 });
