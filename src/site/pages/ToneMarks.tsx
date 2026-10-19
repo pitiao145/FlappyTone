@@ -125,14 +125,14 @@ function Converter() {
   // input, numbers for marked input. Echoing the input back says nothing.
   const converted = toNumbersMode ? (
     <Result
-      label="Numbers"
+      label="Pinyin with tone numbers"
       value={toNumbers(input)}
       display={colored(input, numberSyllable)}
       big
     />
   ) : (
     <Result
-      label="Tone marks"
+      label="Pinyin with tone marks"
       value={toMarks(input)}
       display={colored(input, markSyllable)}
       big
@@ -175,28 +175,33 @@ function Converter() {
       <div className="tm-output">
         {converted}
         <Result
-          label="注音 (Zhuyin)"
+          label="Zhuyin (注音)"
           value={toZhuyin(input)}
           lang="zh-Hant-TW"
         />
         {syllables.length > 0 && (
-          <ul className="tm-shapes" aria-label="Tone shape of each syllable">
-            {syllables.slice(0, 40).map((s, i) => (
-              <li key={i} style={{ color: TONE_LINE_COLOR[s.tone] }}>
-                {s.tone === 0 ? (
-                  <span className="tm-neutral" aria-hidden="true">
-                    ·
+          <>
+            <div className="tm-result-label tm-shapes-label">
+              Tone shape of each syllable
+            </div>
+            <ul className="tm-shapes">
+              {syllables.slice(0, 40).map((s, i) => (
+                <li key={i} style={{ color: TONE_LINE_COLOR[s.tone] }}>
+                  {s.tone === 0 ? (
+                    <span className="tm-neutral" aria-hidden="true">
+                      ·
+                    </span>
+                  ) : (
+                    <ContourSpark tone={s.tone} width={44} height={22} />
+                  )}
+                  <span className="tm-shape-pinyin">{markSyllable(s)}</span>
+                  <span className="tm-shape-zhuyin" lang="zh-Hant-TW">
+                    {zhuyinSyllable(s)}
                   </span>
-                ) : (
-                  <ContourSpark tone={s.tone} width={44} height={22} />
-                )}
-                <span className="tm-shape-pinyin">{markSyllable(s)}</span>
-                <span className="tm-shape-zhuyin" lang="zh-Hant-TW">
-                  {zhuyinSyllable(s)}
-                </span>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </div>
     </div>

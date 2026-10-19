@@ -9242,8 +9242,13 @@ button.switch-track.switch-on {
 
 .tm-result-label {
   grid-area: label;
-  font-size: 0.85rem;
-  color: var(--ink-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.tm-shapes-label {
+  padding-top: var(--space-3);
 }
 
 .tm-result-value {
@@ -9279,7 +9284,7 @@ button.switch-track.switch-on {
 
 .tm-shapes {
   list-style: none;
-  padding: var(--space-4) 0 0;
+  padding: var(--space-2) 0 0;
   margin: 0;
   display: flex;
   flex-wrap: wrap;
