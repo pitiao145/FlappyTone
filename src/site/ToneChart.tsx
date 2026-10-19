@@ -31,13 +31,24 @@ export function ToneChart() {
       >
         {[1, 2, 3, 4, 5].map((c) => (
           <g key={c}>
-            <line className="grid" x1={LEFT} x2={W - RIGHT} y1={y(c)} y2={y(c)} />
+            <line
+              className="grid"
+              x1={LEFT}
+              x2={W - RIGHT}
+              y1={y(c)}
+              y2={y(c)}
+            />
             <text className="axis" x={LEFT - 8} y={y(c) + 4} textAnchor="end">
               {c}
             </text>
           </g>
         ))}
-        <text className="axis" x={(LEFT + W - RIGHT) / 2} y={H - 4} textAnchor="middle">
+        <text
+          className="axis"
+          x={(LEFT + W - RIGHT) / 2}
+          y={H - 4}
+          textAnchor="middle"
+        >
           time →
         </text>
         {TONES.map((t) => {
@@ -63,13 +74,17 @@ export function ToneChart() {
       </svg>
       <figcaption>
         {TONES.map((t) => (
-          <span key={t} className="legend" style={{ color: TONE_LINE_COLOR[t] }}>
+          <span
+            key={t}
+            className="legend"
+            style={{ color: TONE_LINE_COLOR[t] }}
+          >
             ● Tone {t}
           </span>
         ))}
         <span className="note">
-          Averaged from a native Taiwan Mandarin speaker's recordings. 5 = top of her range, 1 =
-          bottom.
+          Averaged from a native Taiwan Mandarin speaker's recordings. 5 = top
+          of her range, 1 = bottom.
         </span>
       </figcaption>
     </figure>

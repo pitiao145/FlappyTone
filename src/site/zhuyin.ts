@@ -27,33 +27,111 @@ export type PinyinPiece = { syllable: PinyinSyllable } | { text: string };
 // ------------------------------------------------------------------ tables
 
 const INITIALS: Record<string, string> = {
-  b: "ㄅ", p: "ㄆ", m: "ㄇ", f: "ㄈ", d: "ㄉ", t: "ㄊ", n: "ㄋ", l: "ㄌ",
-  g: "ㄍ", k: "ㄎ", h: "ㄏ", j: "ㄐ", q: "ㄑ", x: "ㄒ",
-  zh: "ㄓ", ch: "ㄔ", sh: "ㄕ", r: "ㄖ", z: "ㄗ", c: "ㄘ", s: "ㄙ",
+  b: "ㄅ",
+  p: "ㄆ",
+  m: "ㄇ",
+  f: "ㄈ",
+  d: "ㄉ",
+  t: "ㄊ",
+  n: "ㄋ",
+  l: "ㄌ",
+  g: "ㄍ",
+  k: "ㄎ",
+  h: "ㄏ",
+  j: "ㄐ",
+  q: "ㄑ",
+  x: "ㄒ",
+  zh: "ㄓ",
+  ch: "ㄔ",
+  sh: "ㄕ",
+  r: "ㄖ",
+  z: "ㄗ",
+  c: "ㄘ",
+  s: "ㄙ",
 };
 
 /** Finals after an initial (ü written `v`). */
 const FINALS: Record<string, string> = {
-  a: "ㄚ", o: "ㄛ", e: "ㄜ", ai: "ㄞ", ei: "ㄟ", ao: "ㄠ", ou: "ㄡ",
-  an: "ㄢ", en: "ㄣ", ang: "ㄤ", eng: "ㄥ", ong: "ㄨㄥ",
-  i: "ㄧ", ia: "ㄧㄚ", ie: "ㄧㄝ", iao: "ㄧㄠ", iu: "ㄧㄡ", ian: "ㄧㄢ", in: "ㄧㄣ",
-  iang: "ㄧㄤ", ing: "ㄧㄥ", iong: "ㄩㄥ",
-  u: "ㄨ", ua: "ㄨㄚ", uo: "ㄨㄛ", uai: "ㄨㄞ", ui: "ㄨㄟ", uan: "ㄨㄢ", un: "ㄨㄣ", uang: "ㄨㄤ",
-  v: "ㄩ", ve: "ㄩㄝ",
+  a: "ㄚ",
+  o: "ㄛ",
+  e: "ㄜ",
+  ai: "ㄞ",
+  ei: "ㄟ",
+  ao: "ㄠ",
+  ou: "ㄡ",
+  an: "ㄢ",
+  en: "ㄣ",
+  ang: "ㄤ",
+  eng: "ㄥ",
+  ong: "ㄨㄥ",
+  i: "ㄧ",
+  ia: "ㄧㄚ",
+  ie: "ㄧㄝ",
+  iao: "ㄧㄠ",
+  iu: "ㄧㄡ",
+  ian: "ㄧㄢ",
+  in: "ㄧㄣ",
+  iang: "ㄧㄤ",
+  ing: "ㄧㄥ",
+  iong: "ㄩㄥ",
+  u: "ㄨ",
+  ua: "ㄨㄚ",
+  uo: "ㄨㄛ",
+  uai: "ㄨㄞ",
+  ui: "ㄨㄟ",
+  uan: "ㄨㄢ",
+  un: "ㄨㄣ",
+  uang: "ㄨㄤ",
+  v: "ㄩ",
+  ve: "ㄩㄝ",
 };
 
 /** After j/q/x a written `u` is ü. */
-const JQX_FINALS: Record<string, string> = { u: "ㄩ", ue: "ㄩㄝ", uan: "ㄩㄢ", un: "ㄩㄣ" };
+const JQX_FINALS: Record<string, string> = {
+  u: "ㄩ",
+  ue: "ㄩㄝ",
+  uan: "ㄩㄢ",
+  un: "ㄩㄣ",
+};
 
 /** Syllables with no initial, in their y-/w- spellings. */
 const ZERO_INITIAL: Record<string, string> = {
-  a: "ㄚ", o: "ㄛ", e: "ㄜ", ai: "ㄞ", ei: "ㄟ", ao: "ㄠ", ou: "ㄡ",
-  an: "ㄢ", en: "ㄣ", ang: "ㄤ", eng: "ㄥ", er: "ㄦ",
-  yi: "ㄧ", ya: "ㄧㄚ", yo: "ㄧㄛ", ye: "ㄧㄝ", yao: "ㄧㄠ", you: "ㄧㄡ", yan: "ㄧㄢ",
-  yin: "ㄧㄣ", yang: "ㄧㄤ", ying: "ㄧㄥ", yong: "ㄩㄥ",
-  wu: "ㄨ", wa: "ㄨㄚ", wo: "ㄨㄛ", wai: "ㄨㄞ", wei: "ㄨㄟ", wan: "ㄨㄢ", wen: "ㄨㄣ",
-  wang: "ㄨㄤ", weng: "ㄨㄥ",
-  yu: "ㄩ", yue: "ㄩㄝ", yuan: "ㄩㄢ", yun: "ㄩㄣ",
+  a: "ㄚ",
+  o: "ㄛ",
+  e: "ㄜ",
+  ai: "ㄞ",
+  ei: "ㄟ",
+  ao: "ㄠ",
+  ou: "ㄡ",
+  an: "ㄢ",
+  en: "ㄣ",
+  ang: "ㄤ",
+  eng: "ㄥ",
+  er: "ㄦ",
+  yi: "ㄧ",
+  ya: "ㄧㄚ",
+  yo: "ㄧㄛ",
+  ye: "ㄧㄝ",
+  yao: "ㄧㄠ",
+  you: "ㄧㄡ",
+  yan: "ㄧㄢ",
+  yin: "ㄧㄣ",
+  yang: "ㄧㄤ",
+  ying: "ㄧㄥ",
+  yong: "ㄩㄥ",
+  wu: "ㄨ",
+  wa: "ㄨㄚ",
+  wo: "ㄨㄛ",
+  wai: "ㄨㄞ",
+  wei: "ㄨㄟ",
+  wan: "ㄨㄢ",
+  wen: "ㄨㄣ",
+  wang: "ㄨㄤ",
+  weng: "ㄨㄥ",
+  yu: "ㄩ",
+  yue: "ㄩㄝ",
+  yuan: "ㄩㄢ",
+  yun: "ㄩㄣ",
 };
 
 const GKH = "a e ai ei ao ou an en ang eng ong u ua uo uai ui uan un uang";
@@ -71,14 +149,19 @@ const VALID_FINALS: Record<string, string> = {
   // `ue` is the common typed spelling of `üe` here (lue4); normalised to `ve`.
   n: "a e ai ei ao ou an en ang eng ong i ie iao iu ian in iang ing u uo uan v ve ue",
   l: "a e ai ei ao ou an ang eng ong i ia ie iao iu ian in iang ing u uo uan un v ve ue",
-  g: GKH, k: GKH, h: GKH,
-  j: JQX, q: JQX, x: JQX,
+  g: GKH,
+  k: GKH,
+  h: GKH,
+  j: JQX,
+  q: JQX,
+  x: JQX,
   zh: "a e ai ei ao ou an en ang eng ong i u ua uo uai ui uan un uang",
   ch: "a e ai ao ou an en ang eng ong i u ua uo uai ui uan un uang",
   sh: "a e ai ei ao ou an en ang eng i u ua uo uai ui uan un uang",
   r: "e ao ou an en ang eng ong i u ua uo ui uan un",
   z: "a e ai ei ao ou an en ang eng ong i u uo ui uan un",
-  c: ZCS, s: ZCS,
+  c: ZCS,
+  s: ZCS,
 };
 
 const VALID = new Set<string>(Object.keys(ZERO_INITIAL));
@@ -126,7 +209,8 @@ export function zhuyinSyllable({ base, tone }: PinyinSyllable): string {
     const [ini, fin] = splitInitial(base);
     let rest: string | undefined;
     if ("zh ch sh r z c s".split(" ").includes(ini) && fin === "i") rest = "";
-    else if ("jqx".includes(ini) && ini !== "") rest = JQX_FINALS[fin] ?? FINALS[fin];
+    else if ("jqx".includes(ini) && ini !== "")
+      rest = JQX_FINALS[fin] ?? FINALS[fin];
     else rest = FINALS[fin];
     body = (INITIALS[ini] ?? "") + (rest ?? "");
   }
@@ -144,7 +228,8 @@ export function markIndex(base: string): number {
   if (e >= 0) return e;
   const ou = base.indexOf("ou");
   if (ou >= 0) return ou;
-  for (let i = base.length - 1; i >= 0; i--) if ("iouv".includes(base[i])) return i;
+  for (let i = base.length - 1; i >= 0; i--)
+    if ("iouv".includes(base[i])) return i;
   return -1;
 }
 
@@ -217,7 +302,8 @@ export function parsePinyin(input: string): PinyinPiece[] {
     lens.forEach((len, k) => {
       const typed = plain.slice(at, at + len);
       const base = typed === "lue" || typed === "nue" ? `${typed[0]}ve` : typed;
-      let tone: PinyinTone = marks.slice(at, at + len).find((t) => t !== undefined) ?? 0;
+      let tone: PinyinTone =
+        marks.slice(at, at + len).find((t) => t !== undefined) ?? 0;
       if (k === lens.length - 1 && m[2] !== undefined && tone === 0) {
         tone = (m[2] === "5" ? 0 : Number(m[2])) as PinyinTone;
       }
@@ -230,7 +316,9 @@ export function parsePinyin(input: string): PinyinPiece[] {
 }
 
 export function syllablesOf(input: string): PinyinSyllable[] {
-  return parsePinyin(input).flatMap((p) => ("syllable" in p ? [p.syllable] : []));
+  return parsePinyin(input).flatMap((p) =>
+    "syllable" in p ? [p.syllable] : [],
+  );
 }
 
 function render(input: string, f: (s: PinyinSyllable) => string): string {

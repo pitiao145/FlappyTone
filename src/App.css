@@ -8843,6 +8843,100 @@ button.switch-track.switch-on {
   border-color: var(--ink-soft);
 }
 
+.site-examples .site-example-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: var(--space-2);
+}
+
+.screen .site-example-actions .site-play {
+  margin-top: 0;
+}
+
+.screen .site-see svg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.word-viewer {
+  width: min(440px, calc(100vw - 32px));
+  padding: var(--space-6);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 8px 8px 0 var(--ink);
+}
+
+.word-viewer::backdrop {
+  background: rgba(var(--ink-rgb), 0.45);
+}
+
+.word-viewer-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.word-viewer-head .hanzi {
+  font-size: 2.4rem;
+}
+
+.word-viewer-head .pinyin {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.word-viewer-head .english {
+  color: var(--ink-muted);
+}
+
+.word-viewer-chart {
+  width: 100%;
+  height: auto;
+  margin: var(--space-3) 0;
+  background: var(--surface-panel);
+  border-radius: var(--radius-md);
+}
+
+.word-viewer-chart .grid {
+  stroke: var(--line);
+}
+
+.word-viewer-chart .axis {
+  fill: var(--ink-muted);
+  font-size: 11px;
+}
+
+.word-viewer-chart .ghost {
+  fill: none;
+  stroke: var(--ink-soft);
+  stroke-width: 2;
+  stroke-dasharray: 5 6;
+}
+
+.word-viewer-chart .trail {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.word-viewer-note {
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+}
+
+.word-viewer-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
 .screen .site-play:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 2px;

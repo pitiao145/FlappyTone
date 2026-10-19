@@ -15,7 +15,9 @@ function esc(s: string): string {
 }
 
 /** Routes that may be indexed: in the sitemap and llms.txt. */
-export function indexableRoutes(routes: readonly SiteRoute[] = ROUTES): SiteRoute[] {
+export function indexableRoutes(
+  routes: readonly SiteRoute[] = ROUTES,
+): SiteRoute[] {
   return routes.filter((r) => !r.noindex);
 }
 
@@ -34,11 +36,16 @@ export function headTags(route: SiteRoute): string {
   if (route.alternate) {
     const other = routeFor(route.alternate);
     if (other) {
-      const en = route.lang === "en" ? route : other.lang === "en" ? other : route;
+      const en =
+        route.lang === "en" ? route : other.lang === "en" ? other : route;
       for (const r of [route, other]) {
-        tags.push(`<link rel="alternate" hreflang="${r.lang}" href="${absoluteUrl(r.path)}" />`);
+        tags.push(
+          `<link rel="alternate" hreflang="${r.lang}" href="${absoluteUrl(r.path)}" />`,
+        );
       }
-      tags.push(`<link rel="alternate" hreflang="x-default" href="${absoluteUrl(en.path)}" />`);
+      tags.push(
+        `<link rel="alternate" hreflang="x-default" href="${absoluteUrl(en.path)}" />`,
+      );
     }
   }
   return tags.join("\n    ");
@@ -66,7 +73,9 @@ export function jsonLdTags(data: readonly object[]): string {
 export function sitemapXml(routes: readonly SiteRoute[] = ROUTES): string {
   const urls = indexableRoutes(routes)
     .map((r) => {
-      const alt = r.alternate ? routes.find((x) => x.path === r.alternate) : undefined;
+      const alt = r.alternate
+        ? routes.find((x) => x.path === r.alternate)
+        : undefined;
       const links = alt
         ? [r, alt]
             .map(

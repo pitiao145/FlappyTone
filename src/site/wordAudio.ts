@@ -36,7 +36,8 @@ function getTicket(): Promise<string | null> {
   return ticket;
 }
 
-function clipUrl(id: string): Promise<string | null> {
+/** A blob URL for the word's clip, fetched once; `null` on any failure. */
+export function clipUrl(id: string): Promise<string | null> {
   let p = urls.get(id);
   if (!p) {
     p = getTicket()

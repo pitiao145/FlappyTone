@@ -11,7 +11,8 @@ import {
   zhuyinSyllable,
 } from "./zhuyin.ts";
 
-const zy = (base: string, tone: 0 | 1 | 2 | 3 | 4 = 1) => zhuyinSyllable({ base, tone });
+const zy = (base: string, tone: 0 | 1 | 2 | 3 | 4 = 1) =>
+  zhuyinSyllable({ base, tone });
 
 describe("toMarks", () => {
   it("converts the brief's examples", () => {
@@ -51,7 +52,14 @@ describe("toNumbers", () => {
   });
 
   it("round-trips", () => {
-    for (const s of ["ni3 hao3", "zhong1 guo2", "lü4", "xue2 sheng1", "peng2 you5", "er4"]) {
+    for (const s of [
+      "ni3 hao3",
+      "zhong1 guo2",
+      "lü4",
+      "xue2 sheng1",
+      "peng2 you5",
+      "er4",
+    ]) {
       expect(toNumbers(toMarks(s))).toBe(s);
     }
     for (const s of ["nǐ hǎo", "Běi jīng", "nǚ ér"]) {
@@ -68,46 +76,116 @@ describe("zhuyin", () => {
 
   it("covers every initial", () => {
     const cases: [string, string][] = [
-      ["ba", "ㄅㄚ"], ["pa", "ㄆㄚ"], ["ma", "ㄇㄚ"], ["fa", "ㄈㄚ"],
-      ["da", "ㄉㄚ"], ["ta", "ㄊㄚ"], ["na", "ㄋㄚ"], ["la", "ㄌㄚ"],
-      ["ge", "ㄍㄜ"], ["ke", "ㄎㄜ"], ["he", "ㄏㄜ"],
-      ["ji", "ㄐㄧ"], ["qi", "ㄑㄧ"], ["xi", "ㄒㄧ"],
-      ["zha", "ㄓㄚ"], ["cha", "ㄔㄚ"], ["sha", "ㄕㄚ"], ["re", "ㄖㄜ"],
-      ["za", "ㄗㄚ"], ["ca", "ㄘㄚ"], ["sa", "ㄙㄚ"],
+      ["ba", "ㄅㄚ"],
+      ["pa", "ㄆㄚ"],
+      ["ma", "ㄇㄚ"],
+      ["fa", "ㄈㄚ"],
+      ["da", "ㄉㄚ"],
+      ["ta", "ㄊㄚ"],
+      ["na", "ㄋㄚ"],
+      ["la", "ㄌㄚ"],
+      ["ge", "ㄍㄜ"],
+      ["ke", "ㄎㄜ"],
+      ["he", "ㄏㄜ"],
+      ["ji", "ㄐㄧ"],
+      ["qi", "ㄑㄧ"],
+      ["xi", "ㄒㄧ"],
+      ["zha", "ㄓㄚ"],
+      ["cha", "ㄔㄚ"],
+      ["sha", "ㄕㄚ"],
+      ["re", "ㄖㄜ"],
+      ["za", "ㄗㄚ"],
+      ["ca", "ㄘㄚ"],
+      ["sa", "ㄙㄚ"],
     ];
     for (const [b, z] of cases) expect(zy(b)).toBe(z);
   });
 
   it("covers every final", () => {
     const cases: [string, string][] = [
-      ["ba", "ㄅㄚ"], ["bo", "ㄅㄛ"], ["de", "ㄉㄜ"], ["bai", "ㄅㄞ"], ["bei", "ㄅㄟ"],
-      ["bao", "ㄅㄠ"], ["dou", "ㄉㄡ"], ["ban", "ㄅㄢ"], ["ben", "ㄅㄣ"], ["bang", "ㄅㄤ"],
-      ["beng", "ㄅㄥ"], ["dong", "ㄉㄨㄥ"], ["bi", "ㄅㄧ"], ["dia", "ㄉㄧㄚ"], ["bie", "ㄅㄧㄝ"],
-      ["biao", "ㄅㄧㄠ"], ["diu", "ㄉㄧㄡ"], ["bian", "ㄅㄧㄢ"], ["bin", "ㄅㄧㄣ"],
-      ["liang", "ㄌㄧㄤ"], ["bing", "ㄅㄧㄥ"], ["xiong", "ㄒㄩㄥ"], ["bu", "ㄅㄨ"],
-      ["gua", "ㄍㄨㄚ"], ["duo", "ㄉㄨㄛ"], ["guai", "ㄍㄨㄞ"], ["dui", "ㄉㄨㄟ"],
-      ["duan", "ㄉㄨㄢ"], ["dun", "ㄉㄨㄣ"], ["guang", "ㄍㄨㄤ"],
-      ["lv", "ㄌㄩ"], ["nve", "ㄋㄩㄝ"], ["ju", "ㄐㄩ"], ["que", "ㄑㄩㄝ"],
-      ["xuan", "ㄒㄩㄢ"], ["jun", "ㄐㄩㄣ"],
+      ["ba", "ㄅㄚ"],
+      ["bo", "ㄅㄛ"],
+      ["de", "ㄉㄜ"],
+      ["bai", "ㄅㄞ"],
+      ["bei", "ㄅㄟ"],
+      ["bao", "ㄅㄠ"],
+      ["dou", "ㄉㄡ"],
+      ["ban", "ㄅㄢ"],
+      ["ben", "ㄅㄣ"],
+      ["bang", "ㄅㄤ"],
+      ["beng", "ㄅㄥ"],
+      ["dong", "ㄉㄨㄥ"],
+      ["bi", "ㄅㄧ"],
+      ["dia", "ㄉㄧㄚ"],
+      ["bie", "ㄅㄧㄝ"],
+      ["biao", "ㄅㄧㄠ"],
+      ["diu", "ㄉㄧㄡ"],
+      ["bian", "ㄅㄧㄢ"],
+      ["bin", "ㄅㄧㄣ"],
+      ["liang", "ㄌㄧㄤ"],
+      ["bing", "ㄅㄧㄥ"],
+      ["xiong", "ㄒㄩㄥ"],
+      ["bu", "ㄅㄨ"],
+      ["gua", "ㄍㄨㄚ"],
+      ["duo", "ㄉㄨㄛ"],
+      ["guai", "ㄍㄨㄞ"],
+      ["dui", "ㄉㄨㄟ"],
+      ["duan", "ㄉㄨㄢ"],
+      ["dun", "ㄉㄨㄣ"],
+      ["guang", "ㄍㄨㄤ"],
+      ["lv", "ㄌㄩ"],
+      ["nve", "ㄋㄩㄝ"],
+      ["ju", "ㄐㄩ"],
+      ["que", "ㄑㄩㄝ"],
+      ["xuan", "ㄒㄩㄢ"],
+      ["jun", "ㄐㄩㄣ"],
     ];
     for (const [b, z] of cases) expect(zy(b)).toBe(z);
   });
 
   it("writes zhi/chi/shi/ri/zi/ci/si as the initial alone", () => {
-    expect(["zhi", "chi", "shi", "ri", "zi", "ci", "si"].map((b) => zy(b))).toEqual([
-      "ㄓ", "ㄔ", "ㄕ", "ㄖ", "ㄗ", "ㄘ", "ㄙ",
-    ]);
+    expect(
+      ["zhi", "chi", "shi", "ri", "zi", "ci", "si"].map((b) => zy(b)),
+    ).toEqual(["ㄓ", "ㄔ", "ㄕ", "ㄖ", "ㄗ", "ㄘ", "ㄙ"]);
   });
 
   it("handles y-/w- spellings, er and standalone vowels", () => {
     const cases: [string, string][] = [
-      ["yi", "ㄧ"], ["ya", "ㄧㄚ"], ["ye", "ㄧㄝ"], ["yao", "ㄧㄠ"], ["you", "ㄧㄡ"],
-      ["yan", "ㄧㄢ"], ["yin", "ㄧㄣ"], ["yang", "ㄧㄤ"], ["ying", "ㄧㄥ"], ["yong", "ㄩㄥ"],
-      ["wu", "ㄨ"], ["wa", "ㄨㄚ"], ["wo", "ㄨㄛ"], ["wai", "ㄨㄞ"], ["wei", "ㄨㄟ"],
-      ["wan", "ㄨㄢ"], ["wen", "ㄨㄣ"], ["wang", "ㄨㄤ"], ["weng", "ㄨㄥ"],
-      ["yu", "ㄩ"], ["yue", "ㄩㄝ"], ["yuan", "ㄩㄢ"], ["yun", "ㄩㄣ"],
-      ["er", "ㄦ"], ["a", "ㄚ"], ["o", "ㄛ"], ["e", "ㄜ"], ["ai", "ㄞ"], ["ei", "ㄟ"],
-      ["ao", "ㄠ"], ["ou", "ㄡ"], ["an", "ㄢ"], ["en", "ㄣ"], ["ang", "ㄤ"], ["eng", "ㄥ"],
+      ["yi", "ㄧ"],
+      ["ya", "ㄧㄚ"],
+      ["ye", "ㄧㄝ"],
+      ["yao", "ㄧㄠ"],
+      ["you", "ㄧㄡ"],
+      ["yan", "ㄧㄢ"],
+      ["yin", "ㄧㄣ"],
+      ["yang", "ㄧㄤ"],
+      ["ying", "ㄧㄥ"],
+      ["yong", "ㄩㄥ"],
+      ["wu", "ㄨ"],
+      ["wa", "ㄨㄚ"],
+      ["wo", "ㄨㄛ"],
+      ["wai", "ㄨㄞ"],
+      ["wei", "ㄨㄟ"],
+      ["wan", "ㄨㄢ"],
+      ["wen", "ㄨㄣ"],
+      ["wang", "ㄨㄤ"],
+      ["weng", "ㄨㄥ"],
+      ["yu", "ㄩ"],
+      ["yue", "ㄩㄝ"],
+      ["yuan", "ㄩㄢ"],
+      ["yun", "ㄩㄣ"],
+      ["er", "ㄦ"],
+      ["a", "ㄚ"],
+      ["o", "ㄛ"],
+      ["e", "ㄜ"],
+      ["ai", "ㄞ"],
+      ["ei", "ㄟ"],
+      ["ao", "ㄠ"],
+      ["ou", "ㄡ"],
+      ["an", "ㄢ"],
+      ["en", "ㄣ"],
+      ["ang", "ㄤ"],
+      ["eng", "ㄥ"],
     ];
     for (const [b, z] of cases) expect(zy(b)).toBe(z);
   });

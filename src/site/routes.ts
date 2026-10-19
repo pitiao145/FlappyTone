@@ -12,7 +12,8 @@
  */
 
 export type RouteLang = "en" | "zh-tw";
-export type PageType = "landing" | "hub" | "tool" | "word" | "teacher" | "legal";
+export type PageType =
+  "landing" | "hub" | "tool" | "word" | "teacher" | "legal";
 export type PageAngle = "learner" | "teacher" | "general";
 
 /**
@@ -49,7 +50,8 @@ export interface SiteRoute {
   render: RenderExport;
 }
 
-export type RenderExport = "renderLanding" | "renderTerms" | "renderPrivacy" | "renderSitePage";
+export type RenderExport =
+  "renderLanding" | "renderTerms" | "renderPrivacy" | "renderSitePage";
 
 export const SITE_ORIGIN = "https://flappytone.com";
 

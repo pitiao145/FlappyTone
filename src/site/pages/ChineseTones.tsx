@@ -164,7 +164,51 @@ function PlayButton({ id, label }: { id: string; label: string }) {
   );
 }
 
-function ExampleList({ examples }: { examples: Example[] }) {
+/** Every example's catalog id: each has a published recording (exampleClips.test.ts). */
+export const HUB_EXAMPLE_IDS = SECTIONS.flatMap((s) =>
+  s.examples.map(([id]) => id),
+);
+
+type Viewer = typeof import("../WordViewer.tsx");
+
+function SeeButton({ word }: { word: import("../WordViewer.tsx").ViewerWord }) {
+  const [mod, setMod] = useState<Viewer | null>(null);
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        className="site-play site-see"
+        aria-label={`See the pitch of ${word.hanzi} ${word.pinyin}`}
+        onClick={() => {
+          // Lazy: the viewer (and its audio) loads on this tap only.
+          import("../WordViewer.tsx")
+            .then((m) => {
+              setMod(m);
+              setOpen(true);
+            })
+            .catch(() => {});
+        }}
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M3 14c3 0 4-6 8-6s4 8 10 8" />
+        </svg>
+        <span>See it</span>
+      </button>
+      {open && mod && (
+        <mod.WordViewer word={word} onClose={() => setOpen(false)} />
+      )}
+    </>
+  );
+}
+
+function ExampleList({
+  examples,
+  tone,
+}: {
+  examples: Example[];
+  tone: ToneSection["tone"];
+}) {
   return (
     <ul className="site-examples">
       {examples.map(([id, hanzi, pinyin, english]) => (
@@ -190,7 +234,10 @@ function ExampleList({ examples }: { examples: Example[] }) {
             {toZhuyin(pinyin)}
           </span>
           <span className="english">{english}</span>
-          <PlayButton id={id} label={`${hanzi} ${pinyin}`} />
+          <span className="site-example-actions">
+            <PlayButton id={id} label={`${hanzi} ${pinyin}`} />
+            <SeeButton word={{ id, hanzi, pinyin, english, tone }} />
+          </span>
         </li>
       ))}
     </ul>
@@ -250,7 +297,7 @@ export function ChineseTones() {
                 <p>{s.real}</p>
               </div>
             )}
-            <ExampleList examples={s.examples} />
+            <ExampleList examples={s.examples} tone={s.tone} />
           </section>
         ))}
 
