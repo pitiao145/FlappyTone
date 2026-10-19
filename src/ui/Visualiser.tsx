@@ -135,6 +135,8 @@ interface Props {
    * opens with the word shown locked, and `onLocked` offers the upgrade from its button.
    */
   focusWordId?: string | null;
+  /** The locked-word card's "Create free account": straight to signup (guest). */
+  onCreateAccount?: () => void;
 }
 
 /**
@@ -146,7 +148,7 @@ interface Props {
  * corridor at the same time, and when that fails there is no way to tell which
  * half went wrong. Here there is only one half.
  */
-export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked, focusWordId }: Props) {
+export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked, focusWordId, onCreateAccount }: Props) {
   const tier = useTier();
   const limits = tierLimits()[tier];
   // The recording style the visualiser plays, draws and scores in (spec
@@ -1335,7 +1337,9 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked, focu
                 ? "is locked. Create a free account to practise it with its recording."
                 : "is in the full word list."}
             </span>
-            <button type="button" className="vis-locked-word-cta" onClick={() => showLocked("visualiser-word-link")}>
+            <button type="button" className="vis-locked-word-cta" onClick={() =>
+                tier === "guest" && onCreateAccount ? onCreateAccount() : showLocked("visualiser-word-link")
+              }>
               {tier === "guest" ? "Create free account" : "Unlock it"}
             </button>
             <button type="button" className="vis-locked-word-close" aria-label="Dismiss" onClick={() => setLockedFocus(null)}>

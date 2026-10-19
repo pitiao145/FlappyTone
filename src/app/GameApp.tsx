@@ -1321,6 +1321,7 @@ export default function GameApp() {
             canvasHeight={GAME_CANVAS_H}
             onLocked={(feature) => openEarlyBird("visualiser", feature)}
             focusWordId={focusWord}
+            onCreateAccount={() => setScreen("profile")}
           />
         )}
 
