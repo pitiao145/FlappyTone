@@ -75,3 +75,5 @@ demo/out/
 video/public/clips/
 video/out/
 video/public/assets/
+video/public/audio/
+video/public/sfx/

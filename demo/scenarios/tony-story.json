@@ -1,0 +1,9 @@
+{
+  "format": "9:16",
+  "fps": 30,
+  "gap": 0.3,
+  "gates": [
+    { "word": "shuiguo33", "flight": "perfect" },
+    { "word": "shuijiao44", "flight": "perfect" }
+  ]
+}
