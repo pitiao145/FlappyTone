@@ -16,7 +16,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Landing } from "../ui/Landing.tsx";
 import { LegalPage } from "../ui/LegalPage.tsx";
 import { termsOfServiceMd, privacyPolicyMd } from "../ui/legalContent.ts";
-import { SitePage } from "../site/pages.tsx";
+import { SITE_PAGES, SitePage } from "../site/pages.tsx";
+import { routeFor } from "../site/routes.ts";
 
 const noop = () => {};
 
@@ -74,4 +75,11 @@ export function renderPrivacy(): string {
  */
 export function renderSitePage(path: string): string {
   return renderToStaticMarkup(<SitePage path={path} />);
+}
+
+/** The route's schema.org objects (`SitePageDef.jsonLd`), or none. */
+export function siteJsonLd(path: string): object[] {
+  const route = routeFor(path);
+  const def = SITE_PAGES[path];
+  return route && def?.jsonLd ? def.jsonLd(route) : [];
 }

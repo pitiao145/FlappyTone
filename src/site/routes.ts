@@ -92,16 +92,26 @@ export const ROUTES: readonly SiteRoute[] = [
     render: "renderTerms",
   },
   {
-    // Placeholder that proves the pipeline. S2 fills it and drops `noindex`.
     path: "/chinese-tones",
     lang: "en",
-    title: "Chinese Tones: Hear Them, Say Them, See Them — FlappyTone",
+    title: "Chinese Tones: The 4 Mandarin Tones Explained",
     description:
-      "The four Mandarin tones explained, with a way to practise them out loud and see your own pitch.",
+      "The four Mandarin Chinese tones and the neutral tone, drawn from a native speaker's voice, with examples, sandhi rules and FAQs. Practise them out loud free.",
     lastmod: "2026-10-19",
     pageType: "hub",
     angle: "learner",
-    noindex: true,
+    shell: "site",
+    render: "renderSitePage",
+  },
+  {
+    path: "/tools/tone-marks",
+    lang: "en",
+    title: "Pinyin Tone Marks Converter (ni3 → nǐ) — FlappyTone",
+    description:
+      "Free pinyin tone marks converter: type ni3 hao3, get nǐ hǎo, 注音 (Zhuyin) and each tone's shape, or turn marks back into numbers. Then practise them out loud.",
+    lastmod: "2026-10-19",
+    pageType: "tool",
+    angle: "learner",
     shell: "site",
     render: "renderSitePage",
   },

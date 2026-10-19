@@ -43,7 +43,7 @@ import { dirname, join, resolve as resolvePath } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Plugin } from "vite";
 import { ROUTES, routeFor, type SiteRoute } from "../site/routes.ts";
-import { headTags, llmsTxt, sitemapXml } from "../site/siteFiles.ts";
+import { headTags, jsonLdTags, llmsTxt, sitemapXml } from "../site/siteFiles.ts";
 
 const ROOT_DIV = '<div id="root"></div>';
 const HEAD_MARK = "<!--SITE_HEAD-->";
@@ -55,6 +55,7 @@ type PrerenderModule = {
   renderTerms: () => string;
   renderPrivacy: () => string;
   renderSitePage: (path: string) => string;
+  siteJsonLd: (path: string) => object[];
 };
 
 /** Build `prerenderEntry.tsx` for Node once and import it. */
@@ -109,11 +110,18 @@ function renderRoute(mod: PrerenderModule, route: SiteRoute): string {
 }
 
 /** The shell with one route's lang, head and (optionally) body filled in. */
-export function fillShell(html: string, route: SiteRoute, markup?: string): string {
+export function fillShell(
+  html: string,
+  route: SiteRoute,
+  markup?: string,
+  jsonLd: readonly object[] = [],
+): string {
   if (!html.includes(HEAD_MARK) || !html.includes(LANG_MARK) || !html.includes(ROOT_DIV)) {
     throw new Error(`prerender: ${SITE_SHELL} is missing a marker`);
   }
-  let out = html.replace(LANG_MARK, route.lang).replace(HEAD_MARK, headTags(route));
+  const head = jsonLd.length ? `${headTags(route)}\n    ${jsonLdTags(jsonLd)}` : headTags(route);
+  // A function replacer: a `$` in the JSON-LD must not read as a pattern.
+  let out = html.replace(LANG_MARK, route.lang).replace(HEAD_MARK, () => head);
   if (markup !== undefined) out = out.replace(ROOT_DIV, `<div id="root">${markup}</div>`);
   return out;
 }
@@ -177,7 +185,10 @@ export function prerenderLanding(): Plugin {
       for (const route of ROUTES.filter((r) => r.shell === "site")) {
         const file = siteOutFile(outDir, route);
         await mkdir(dirname(file), { recursive: true });
-        await writeFile(file, fillShell(shell, route, renderRoute(m, route)));
+        await writeFile(
+          file,
+          fillShell(shell, route, renderRoute(m, route), m.siteJsonLd(route.path)),
+        );
       }
       // The bare shell has no route of its own; serving it would be an
       // empty duplicate page.

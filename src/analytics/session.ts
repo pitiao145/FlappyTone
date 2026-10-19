@@ -274,6 +274,12 @@ export type AnalyticsEvent =
       platform: "ios" | "android" | "other";
       action: "detected" | "shown" | "dismissed" | "open_external_clicked" | "copy_link_clicked";
     }
+  /**
+   * A route-table tool page was used (`src/site/pages/ToneMarks.tsx`): at most
+   * once per page load. Never carries the typed text — only which tool and
+   * which way it converted.
+   */
+  | { type: "tool_used"; tool: "tone-marks"; direction: "to-marks" | "to-numbers" }
   /** FeedbackWidget.tsx's submit, once it resolves ok. Never carries the free-text message — screen/rating/tier only. */
   | { type: "feedback_submitted"; screen: string; rating: number | null; tier: string };
 
@@ -374,6 +380,7 @@ export function eventTier(type: AnalyticsEvent["type"]): AnalyticsTier {
     case "feedback_submitted":
     case "update_banner":
     case "inapp_prompt":
+    case "tool_used":
       return "global";
   }
 }

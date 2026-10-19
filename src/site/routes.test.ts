@@ -3,7 +3,7 @@ import indexHtml from "../../index.html?raw";
 import privacyHtml from "../../privacy-policy.html?raw";
 import termsHtml from "../../terms-of-service.html?raw";
 import { ROUTES, routeFor } from "./routes.ts";
-import { headTags, llmsTxt, sitemapXml } from "./siteFiles.ts";
+import { headTags, jsonLdTags, llmsTxt, sitemapXml } from "./siteFiles.ts";
 import { SITE_PAGES } from "./pages.tsx";
 import { seoSource, pageViewProps } from "./pageAnalytics.ts";
 import { appHref, setAppLinkSource } from "../ui/appLink.ts";
@@ -43,14 +43,19 @@ describe("generated files", () => {
     expect(xml).toContain("<loc>https://flappytone.com/</loc>\n    <lastmod>2026-08-07</lastmod>");
     expect(xml).toContain("https://flappytone.com/privacy-policy</loc>\n    <lastmod>2026-09-08");
     expect(xml).toContain("https://flappytone.com/terms-of-service</loc>\n    <lastmod>2026-09-08");
-    expect(xml).not.toContain("chinese-tones");
-    expect(llmsTxt()).not.toContain("chinese-tones");
+    expect(xml).toContain("https://flappytone.com/chinese-tones</loc>\n    <lastmod>2026-10-19");
+    expect(xml).toContain("https://flappytone.com/tools/tone-marks</loc>");
+    expect(llmsTxt()).toContain("https://flappytone.com/chinese-tones");
+    expect(llmsTxt()).toContain("https://flappytone.com/tools/tone-marks");
+    const hidden = sitemapXml([{ ...routeFor("/chinese-tones")!, noindex: true }]);
+    expect(hidden).not.toContain("chinese-tones");
   });
 
   it("head tags carry canonical, noindex and hreflang pairs", () => {
     const hub = routeFor("/chinese-tones")!;
     expect(headTags(hub)).toContain('<link rel="canonical" href="https://flappytone.com/chinese-tones" />');
-    expect(headTags(hub)).toContain('<meta name="robots" content="noindex" />');
+    expect(headTags(hub)).not.toContain("noindex");
+    expect(headTags({ ...hub, noindex: true })).toContain('<meta name="robots" content="noindex" />');
     const pair = [
       { ...hub, path: "/a", alternate: "/zh-tw/a", noindex: false },
       { ...hub, path: "/zh-tw/a", lang: "zh-tw" as const, alternate: "/a", noindex: false },
@@ -80,5 +85,13 @@ describe("attribution", () => {
       angle: "learner",
       page_path: "/chinese-tones",
     });
+  });
+});
+
+describe("json-ld", () => {
+  it("escapes < so a string cannot close the script", () => {
+    expect(jsonLdTags([{ a: "</script>" }])).toBe(
+      '<script type="application/ld+json">{"a":"\\u003c/script>"}</script>',
+    );
   });
 });

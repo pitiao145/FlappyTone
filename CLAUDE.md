@@ -91,7 +91,7 @@ hreflang (`siteFiles.ts`' `headTags`), then deletes `dist/site.html`. The same
 table generates `sitemap.xml` and `llms.txt` at build time (`siteFiles.ts`;
 no file in `public/`; `noindex` routes are left out) and drives
 `prettyUrls.ts` for dev/preview. **Adding a page:** a `ROUTES` record + its
-component in `SITE_PAGES` (`src/site/pages.tsx`). Every claim in `llms.txt`
+component in `SITE_PAGES` (`src/site/pages.tsx`); its optional `jsonLd` export is written into the route's `<head>` as `application/ld+json` at prerender. `src/site/zhuyin.ts` is the shared pinyin ↔ tone marks ↔ 注音 module (pure, tested). Every claim in `llms.txt`
 must be true in the code.
 
 **Page analytics and attribution.** A route-table page passes its

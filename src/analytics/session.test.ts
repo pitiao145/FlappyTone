@@ -281,6 +281,7 @@ describe("eventTier", () => {
     "feedback_submitted",
     "update_banner",
     "inapp_prompt",
+    "tool_used",
   ];
 
   for (const type of GAMEPLAY) {
@@ -338,6 +339,7 @@ describe("APP_EVENTS", () => {
       "feedback_submitted",
       "update_banner",
       "inapp_prompt",
+      "tool_used",
     ]);
     for (const type of allTypes) {
       expect(APP_EVENTS.has(type), `APP_EVENTS is missing "${type}"`).toBe(true);

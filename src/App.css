@@ -8706,6 +8706,204 @@ button.switch-track.switch-on {
   margin: var(--space-2) 0;
 }
 
+/* ---- Route-table content pages (src/site/pages/): hub + tools. Built on
+   the legal-page prose layout above. ---- */
+
+.site-page .site-answer {
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.site-page section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.site-page ul.site-rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: 1.2em;
+  color: var(--ink-muted);
+  line-height: 1.6;
+}
+
+.site-page code {
+  background: var(--surface-panel);
+  border-radius: 4px;
+  padding: 0 4px;
+  color: var(--ink);
+}
+
+.site-tone-chart {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.site-tone-chart svg {
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+}
+
+.site-tone-chart .grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.site-tone-chart .axis {
+  fill: var(--ink-muted);
+  font-size: 11px;
+}
+
+.site-tone-chart figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  font-size: 0.85rem;
+}
+
+.site-tone-chart .legend {
+  font-weight: 600;
+}
+
+.site-tone-chart .note {
+  flex-basis: 100%;
+  color: var(--ink-muted);
+}
+
+.site-examples {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-2);
+}
+
+.site-examples li,
+.site-tool-shapes li {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  background: var(--surface-panel);
+  border-radius: 8px;
+  padding: var(--space-2) var(--space-3);
+}
+
+.site-examples .hanzi {
+  font-size: 1.6rem;
+  color: var(--ink);
+}
+
+.site-examples .pinyin {
+  font-weight: 600;
+}
+
+.site-examples .zhuyin,
+.site-examples .english,
+.site-tool-shapes .zhuyin {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.site-faq h3 {
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.site-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.site-ctas a {
+  text-decoration: none;
+}
+
+.site-page .site-ctas a.primary,
+.site-page .site-ctas a.secondary {
+  color: inherit;
+}
+
+.site-tool {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--surface-panel);
+  border-radius: 12px;
+  padding: var(--space-4);
+}
+
+.site-tool .label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.site-tool textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 1.1rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  resize: vertical;
+}
+
+.site-tool-output {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "label copy" "value copy";
+  align-items: center;
+  gap: 2px var(--space-3);
+}
+
+.site-tool-output .label {
+  grid-area: label;
+}
+
+.site-tool-output .value {
+  grid-area: value;
+  font-size: 1.25rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.site-tool-output .site-copy {
+  grid-area: copy;
+}
+
+.site-tool-shapes {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.site-tool-shapes li {
+  background: var(--surface);
+  align-items: center;
+}
+
+.site-tool-shapes .pinyin {
+  font-weight: 600;
+}
+
+.site-tool-shapes .neutral-dot {
+  height: 26px;
+  line-height: 26px;
+  font-size: 1.6rem;
+}
+
 /* ---- High-score celebration (HighScoreModal + Confetti) ---- */
 
 .confetti-canvas {

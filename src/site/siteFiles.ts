@@ -45,6 +45,19 @@ export function headTags(route: SiteRoute): string {
 }
 
 /**
+ * `<script type="application/ld+json">` tags for a route's structured data.
+ * `<` is escaped so no string inside can close the script element.
+ */
+export function jsonLdTags(data: readonly object[]): string {
+  return data
+    .map(
+      (d) =>
+        `<script type="application/ld+json">${JSON.stringify(d).replace(/</g, "\\u003c")}</script>`,
+    )
+    .join("\n    ");
+}
+
+/**
  * lastmod is each route's hand-set date and must be edited by hand when that
  * page's content actually changes. Do not generate it from the build date: a
  * sitemap that claims a change on every deploy teaches Google to distrust

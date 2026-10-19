@@ -161,6 +161,7 @@ export const APP_EVENTS = new Set<string>([
   "feedback_submitted",
   "update_banner",
   "inapp_prompt",
+  "tool_used",
 ]);
 
 /** The only `$`-prefixed properties allowed through on a gameplay event. */
