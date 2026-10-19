@@ -3,10 +3,10 @@ import { initAnalytics, track, trackCalibration, trackFirstSeoTouch, trackInAppB
 import { seoSource } from "../site/pageAnalytics.ts";
 import { detectInAppBrowser } from "../lib/inAppBrowser";
 import { InAppBrowserPrompt } from "../ui/InAppBrowserPrompt";
-import { useTier } from "../data/tier.ts";
+import { getTier, tierReady, useTier } from "../data/tier.ts";
 import { initPostHog } from "../analytics/posthog.ts";
 import type { TrackedScreen } from "../analytics/session.ts";
-import { adoptInventory, inventorySpeaker, loadInventory } from "../audio/inventory";
+import { adoptInventory, inventoryNow, inventorySpeaker, loadInventory } from "../audio/inventory";
 import { getPlayTicket, invalidatePlayTicket } from "../audio/clipToken";
 import { MicError } from "../audio/mic";
 import { ensurePlaybackCtx } from "../audio/reference";
@@ -70,6 +70,7 @@ import { Settings } from "../ui/Settings";
 import { SilentModeGate } from "../ui/SilentModeGate.tsx";
 import { TutorialDone } from "../ui/TutorialDone.tsx";
 import { Visualiser } from "../ui/Visualiser";
+import { LockedWordView } from "../ui/LockedWordView.tsx";
 import { micErrorCopy } from "../ui/micErrors";
 import { parseChallengeName } from "../share/shareName.ts";
 import { GameNav, type NavTab } from "./GameNav.tsx";
@@ -411,6 +412,27 @@ export default function GameApp() {
     () => initialIntent() !== "visualiser" || getMicSession() !== null,
   );
   const [focusWord] = useState(initialWord);
+  /**
+   * A guest arriving from a /say/* word page ("Practise this exact word")
+   * cannot practise that word, so instead of the tap gate and the volume
+   * screen (two steps to reach a locked word) they land straight on a locked
+   * view of it with a signup card. "pending" until the real tier is known.
+   */
+  const [focusGate, setFocusGate] = useState<"pending" | "locked" | "open">(() =>
+    focusWord && initialIntent() === "visualiser" ? "pending" : "open",
+  );
+  useEffect(() => {
+    if (focusGate !== "pending") return;
+    let live = true;
+    void tierReady()
+      .catch(() => {})
+      .then(() => {
+        if (live) setFocusGate(getTier() === "guest" ? "locked" : "open");
+      });
+    return () => {
+      live = false;
+    };
+  }, [focusGate]);
   const [stats, setStats] = useState<RunStats | null>(null);
   /**
    * The target score a `?c=<score>` share link asked this session to beat.
@@ -1325,7 +1347,21 @@ export default function GameApp() {
           />
         )}
 
-        {screen === "visualiser" && !(settings && visualiserMicReady) && (
+        {screen === "visualiser" && !(settings && visualiserMicReady) && focusGate === "locked" && (
+          <LockedWordView
+            width={CANVAS_W}
+            height={GAME_CANVAS_H}
+            word={inventoryNow()?.find((w) => w.id === focusWord) ?? null}
+            onCreateAccount={() => setScreen("profile")}
+            onTryAnyway={() => setFocusGate("open")}
+          />
+        )}
+
+        {screen === "visualiser" && !(settings && visualiserMicReady) && focusGate === "pending" && (
+          <div className="screen stage game-stage" style={{ width: CANVAS_W, height: GAME_CANVAS_H }} />
+        )}
+
+        {screen === "visualiser" && !(settings && visualiserMicReady) && focusGate === "open" && (
           // Reached via `?intent=visualiser` from the landing page, which
           // arrives here with no click behind it (hard rule 4) — `<Visualiser>`
           // itself assumes the mic is already open, so it can't be mounted
