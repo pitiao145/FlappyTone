@@ -9019,6 +9019,21 @@ button.switch-track.switch-on {
   outline-offset: 2px;
 }
 
+.site-examples .said {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.site-examples .said strong {
+  color: var(--ink);
+}
+
+.legal-body #tone-sandhi h3 {
+  color: var(--ink);
+  font-size: 1.1rem;
+  margin-top: var(--space-4);
+}
+
 .site-examples .hanzi {
   font-size: 1.6rem;
   color: var(--ink);

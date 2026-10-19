@@ -10,7 +10,26 @@ const TOOL = "/tools/tone-marks";
 
 /** An example word: Traditional hanzi, marked pinyin, English. 注音 is derived. */
 /** Catalog id (for its clip), hanzi, marked pinyin, English. */
-type Example = [id: string, hanzi: string, pinyin: string, english: string];
+type Example = [
+  id: string,
+  hanzi: string,
+  pinyin: string,
+  english: string,
+  /** How it is said, when sandhi makes it differ from the written pinyin. */
+  said?: string,
+];
+
+/** Live two-syllable examples for the sandhi and Taiwan sections (guest-playable clips). */
+const SANDHI_33: Example[] = [["keyi33", "可以", "kě yǐ", "can, may", "ké yǐ"]];
+const SANDHI_HALF3: Example[] = [
+  ["xihuan31", "喜歡", "xǐ huān", "to like"],
+  ["meiguo32", "美國", "měi guó", "America"],
+];
+const SANDHI_YI: Example[] = [
+  ["yixia24", "一下", "yī xià", "a bit", "yí xià"],
+  ["yiqi13", "一起", "yī qǐ", "together", "yì qǐ"],
+];
+const TAIWAN_FULL: Example[] = [["pengyou23", "朋友", "péng yǒu", "friend"]];
 
 interface ToneSection {
   id: string;
@@ -165,9 +184,13 @@ function PlayButton({ id, label }: { id: string; label: string }) {
 }
 
 /** Every example's catalog id: each has a published recording (exampleClips.test.ts). */
-export const HUB_EXAMPLE_IDS = SECTIONS.flatMap((s) =>
-  s.examples.map(([id]) => id),
-);
+export const HUB_EXAMPLE_IDS = [
+  ...SECTIONS.flatMap((s) => s.examples),
+  ...SANDHI_33,
+  ...SANDHI_HALF3,
+  ...SANDHI_YI,
+  ...TAIWAN_FULL,
+].map(([id]) => id);
 
 type Viewer = typeof import("../WordViewer.tsx");
 
@@ -211,7 +234,7 @@ function ExampleList({
 }) {
   return (
     <ul className="site-examples">
-      {examples.map(([id, hanzi, pinyin, english]) => (
+      {examples.map(([id, hanzi, pinyin, english, said]) => (
         <li key={id}>
           <span className="hanzi" lang="zh-Hant-TW">
             {hanzi}
@@ -234,6 +257,11 @@ function ExampleList({
             {toZhuyin(pinyin)}
           </span>
           <span className="english">{english}</span>
+          {said && (
+            <span className="said">
+              said <strong>{said}</strong>
+            </span>
+          )}
           <span className="site-example-actions">
             <PlayButton id={id} label={`${hanzi} ${pinyin}`} />
             <SeeButton word={{ id, hanzi, pinyin, english, tone }} />
@@ -302,47 +330,96 @@ export function ChineseTones() {
         ))}
 
         <section id="tone-sandhi">
-          <h2>Tone pairs and tone sandhi</h2>
+          <h2>Tone sandhi: how tones change next to each other</h2>
           <p>
-            In real speech, tones change when they meet. This is called tone
-            sandhi. Dictionaries and pinyin keep the original tone, so you have
-            to know the rules to say a word the way native speakers do. Three
-            rules cover almost every case a beginner meets:
+            Dictionaries and pinyin always write a word's own tone. In speech,
+            some tones change when another tone follows them. This is called
+            tone sandhi (變調). Four rules cover almost everything a learner
+            meets, and every example below is a real recording: tap “See it” to
+            watch the pitch the speaker actually made.
           </p>
-          <ul className="site-rules">
-            <li>
-              <strong>Tone 3 + tone 3 → tone 2 + tone 3.</strong> 你好 is
-              written nǐ hǎo but said ní hǎo. Before any other tone, a third
-              tone stays low and does not rise: 美國 měi guó, 小時 xiǎo shí.
-            </li>
-            <li>
-              <strong>一 (yī, one).</strong> Alone it is tone 1. Before a tone 4
-              it becomes tone 2: 一定 is said yí dìng, 一樣 yí yàng. Before
-              tones 1, 2 and 3 it becomes tone 4: 一起 yì qǐ, 一些 yì xiē.
-            </li>
-            <li>
-              <strong>不 (bù, not).</strong> Normally tone 4. Before another
-              tone 4 it becomes tone 2: 不錯 is said bú cuò, 不要 bú yào.
-            </li>
-          </ul>
+
+          <h3>1. Third tone + third tone → second tone + third tone</h3>
           <p>
-            Two-syllable words are where these rules matter most, and where
-            learners who are fine with single syllables start to slip. Practise
-            them as whole words, not as two separate tones.
+            When two third tones meet, the first one rises like a tone 2. 你好
+            is written nǐ hǎo and said ní hǎo. In our recording of 可以, the
+            first syllable climbs to about 4.3 before the second one dips to the
+            floor. Studies of everyday Taiwan Mandarin find the changed tone is
+            very close to a real tone 2, though not always identical, so saying
+            it as a tone 2 is the right target.
+          </p>
+          <ExampleList examples={SANDHI_33} tone={2} />
+
+          <h3>2. Third tone before any other tone stays low (半三聲)</h3>
+          <p>
+            Before a tone 1, 2, 4 or a neutral syllable, a third tone drops low
+            and stays there. It never makes the full dip-and-rise you learn for
+            a single syllable. Chao numbers write this “half third tone” as 21
+            instead of 214. In 喜歡, the first syllable sinks to about 1.5 and
+            holds; the rise you hear belongs to 歡.
+          </p>
+          <ExampleList examples={SANDHI_HALF3} tone={3} />
+
+          <h3>3. 一 (yī, one) changes with the next tone</h3>
+          <p>
+            Alone, at the end of a word, when counting and in ordinals (第一),
+            一 keeps tone 1. Before a tone 4 it becomes tone 2: 一下 is said yí
+            xià, and the recording rises before it falls. Before tones 1, 2 and
+            3 it becomes tone 4: 一起 is said yì qǐ, a fall from the top.
+          </p>
+          <ExampleList examples={SANDHI_YI} tone={4} />
+
+          <h3>4. 不 (bù, not) becomes tone 2 before tone 4</h3>
+          <p>
+            不 is tone 4, except before another tone 4, where it becomes tone 2:
+            不錯 is said bú cuò, 不是 bú shì, 不要 bú yào. Before any other tone
+            it stays bù: 不好 bù hǎo, 不來 bù lái.
+          </p>
+
+          <p>
+            FlappyTone's tunnels are measured from these recordings, so a tone
+            pair's tunnel already has the change built in. Fly 可以 as ké yǐ and
+            you stay inside it. The game shows the spoken tones above each word,
+            next to the written pinyin.
           </p>
         </section>
 
         <section id="taiwan-vs-mainland">
           <h2>Taiwan vs mainland Mandarin tones</h2>
           <p>
-            The four tones are the same system in Taiwan and in mainland China,
-            but there are small differences. Taiwan Mandarin uses the neutral
-            tone less, so some words keep a full tone in Taiwan where the
-            mainland makes them light. A few words have a different standard
-            tone, and the third tone is more often said low without a rise.
-            Taiwan writes Traditional characters and teaches pronunciation with
-            注音 (Bopomofo) rather than only pinyin. The recordings and examples
-            on FlappyTone are Taiwan Mandarin.
+            Taiwan's 國語 and mainland China's 普通話 use the same four tones
+            and the same sandhi rules. The differences are in which words get
+            which tone, and in how some tones are usually said:
+          </p>
+          <ul className="site-rules">
+            <li>
+              <strong>Fewer neutral tones in Taiwan.</strong> Many two-syllable
+              words that end light on the mainland keep a full tone in Taiwan:
+              朋友 péngyǒu, 學生 xuéshēng, 先生 xiānshēng. In our recording of
+              朋友, 友 makes a full third-tone dip, not a short light syllable.
+            </li>
+            <li>
+              <strong>Some words have a different standard tone.</strong> 星期
+              (week) is xīngqí in Taiwan and xīngqī on the mainland. 垃圾
+              (garbage) is lèsè in Taiwan and lājī on the mainland. 和 (and) is
+              often said hàn in Taiwan.
+            </li>
+            <li>
+              <strong>The third tone is usually low.</strong> Taiwan speakers
+              use the low 21 form in most positions, keeping the rise mostly for
+              a word said alone or with emphasis.
+            </li>
+            <li>
+              <strong>Writing.</strong> Taiwan uses Traditional characters and
+              teaches pronunciation with 注音 (Bopomofo); the mainland uses
+              Simplified characters and pinyin.
+            </li>
+          </ul>
+          <ExampleList examples={TAIWAN_FULL} tone={3} />
+          <p>
+            Both are standard, and speakers of each understand the other without
+            trouble. FlappyTone's recordings are Taiwan Mandarin, so the tunnels
+            follow Taiwan's tones and Taiwan's rhythm.
           </p>
         </section>
 
