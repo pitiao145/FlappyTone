@@ -16,6 +16,8 @@ interface ToneSection {
   title: string;
   shape: string;
   mistake: string;
+  /** What the measured recordings show, against the textbook number. */
+  real?: string;
   examples: Example[];
 }
 
@@ -30,6 +32,7 @@ const SECTIONS: ToneSection[] = [
       "Start high in your voice and hold it flat, like singing one long note. Chao numbers write it 55: it starts at 5 and stays at 5. It is not louder than the other tones, only higher and steadier.",
     mistake:
       "Starting at a normal speaking pitch, so it sounds flat but low, or letting it sag at the end as if finishing an English sentence. Keep it up to the last moment.",
+    real: "In our native speaker's recordings, tone 1 sits at about 4.6, between 4 and 5, not at the very top. It stays there at everyday speed too. Aim for high and steady, not for your highest note.",
     examples: [
       ["媽", "mā", "mother"],
       ["書", "shū", "book"],
@@ -44,6 +47,7 @@ const SECTIONS: ToneSection[] = [
       "Start in the middle of your range and rise to the top, like a surprised “what?” in English. Chao 35. Native speakers often hold the start for a moment and then rise smoothly through the rest of the syllable.",
     mistake:
       "Dipping too deep before the rise, which makes it sound like tone 3, or rising too little, which makes it sound like tone 1. The turn should be early and shallow.",
+    real: "Real tone 2 is not a straight line from 3 to 5. our speaker starts near 2.8, dips a little to about 2.3 in the first third, then climbs to near 5. At everyday speed it often stops around 4.5.",
     examples: [
       ["茶", "chá", "tea"],
       ["錢", "qián", "money"],
@@ -58,6 +62,7 @@ const SECTIONS: ToneSection[] = [
       "Drop to the bottom of your range and stay low. Said alone or at the end of a phrase it comes back up, so the full shape is a dip: chao 214. Inside a phrase it usually stays low and never rises (the “half third tone”).",
     mistake:
       "Treating it as a rising tone with a small dip. The low part is what makes it tone 3; the rise is optional. Many learners also do the full dip-and-rise on every third tone, which sounds slow and exaggerated in normal speech.",
+    real: "The textbook 214 ends at 4. In our speaker's careful recordings the dip reaches about 1.6 halfway through and the rise goes almost to 5. At everyday speed the dip is shallower (about 1.9) and the rise stops near 4, and inside a phrase there is often no rise at all.",
     examples: [
       ["馬", "mǎ", "horse"],
       ["好", "hǎo", "good"],
@@ -72,6 +77,7 @@ const SECTIONS: ToneSection[] = [
       "Start high and fall fast to the bottom, like a firm “no!” or “stop!”. Chao 51. It is usually the shortest of the four tones.",
     mistake:
       "Not falling far enough, so it sounds like a soft tone 1, or starting too low, so there is no room to fall. Start at the top and commit to the drop.",
+    real: "The textbook 51 starts at the top. Our speaker's tone 4 peaks a little later, at about 4.5, then falls to about 1.4. At everyday speed it falls less, to about 1.9, so the speed of the drop matters more than how far it goes.",
     examples: [
       ["罵", "mà", "to scold"],
       ["大", "dà", "big"],
@@ -127,7 +133,13 @@ export const FAQ: Faq[] = [
   },
 ];
 
-function ExampleList({ tone, examples }: { tone: number; examples: Example[] }) {
+function ExampleList({
+  tone,
+  examples,
+}: {
+  tone: number;
+  examples: Example[];
+}) {
   return (
     <ul className="site-examples">
       {examples.map(([hanzi, pinyin, english]) => (
@@ -135,7 +147,10 @@ function ExampleList({ tone, examples }: { tone: number; examples: Example[] }) 
           <span className="hanzi" lang="zh-Hant-TW">
             {hanzi}
           </span>
-          <span className="pinyin" style={{ color: TONE_LINE_COLOR[tone as 0 | 1 | 2 | 3 | 4] }}>
+          <span
+            className="pinyin"
+            style={{ color: TONE_LINE_COLOR[tone as 0 | 1 | 2 | 3 | 4] }}
+          >
             {pinyin}
           </span>
           <span className="zhuyin" lang="zh-Hant-TW">
@@ -155,30 +170,37 @@ export function ChineseTones() {
         <h1>Chinese tones: the 4 Mandarin tones, explained</h1>
         <p className="site-answer">
           <strong>
-            Mandarin Chinese has four tones plus a light neutral tone. Each tone is a pitch shape
-            (high and level, rising, dipping, or falling), and changing the shape changes the word:
-            mā (媽, mother), má (麻, hemp), mǎ (馬, horse) and mà (罵, to scold) are four different
-            words.
+            Mandarin Chinese has four tones plus a light neutral tone. Each tone
+            is a pitch shape (high and level, rising, dipping, or falling), and
+            changing the shape changes the word: mā (媽, mother), má (麻, hemp),
+            mǎ (馬, horse) and mà (罵, to scold) are four different words.
           </strong>
         </p>
         <p>
-          This page shows what each tone looks like, the mistake learners make most often with it,
-          and how tones change when two of them meet. The examples use Traditional characters, with
-          pinyin and 注音 (Zhuyin), as they are taught in Taiwan.
+          This page shows what each tone looks like, the mistake learners make
+          most often with it, and how tones change when two of them meet. The
+          examples use Traditional characters, with pinyin and 注音 (Zhuyin), as
+          they are taught in Taiwan.
         </p>
 
         <h2>The four tones on one chart</h2>
         <p>
-          Linguists describe tone height on a scale from 1 (the bottom of your voice) to 5 (the
-          top). This chart is not drawn by hand: each line is the average pitch of many real words
-          recorded by a native Taiwan Mandarin speaker, sampled across the length of the syllable.
+          Linguists describe tone height on a scale from 1 (the bottom of your
+          voice) to 5 (the top). This chart is not drawn by hand: each line is
+          the average pitch of many real words recorded by a native Taiwan
+          Mandarin speaker, sampled across the length of the syllable.
         </p>
         <ToneChart />
         <p>
-          Two things stand out. First, the tones are relative to your own voice, so a deep voice and
-          a high voice draw the same shapes at different pitches. Second, tones 2 and 3 both dip and
-          rise in a careful citation form; what separates them is how low the dip goes and how early
-          the rise starts.
+          Textbooks give each tone a fixed number (tone 1 = 55, tone 2 = 35,
+          tone 3 = 214, tone 4 = 51). Real speech is close to that, but not the
+          same, and FlappyTone's tunnels follow real speech. Each tone below
+          says what the textbook teaches and what the recordings show. Two
+          things stand out on the chart. First, the tones are relative to your
+          own voice, so a deep voice and a high voice draw the same shapes at
+          different pitches. Second, tones 2 and 3 both dip and rise in a
+          careful citation form; what separates them is how low the dip goes and
+          how early the rise starts.
         </p>
 
         {SECTIONS.map((s) => (
@@ -188,6 +210,12 @@ export function ChineseTones() {
             <p>
               <strong>Common mistake:</strong> {s.mistake}
             </p>
+            {s.real && (
+              <div className="site-real">
+                <h3>In real speech</h3>
+                <p>{s.real}</p>
+              </div>
+            )}
             <ExampleList tone={s.tone} examples={s.examples} />
           </section>
         ))}
@@ -195,42 +223,45 @@ export function ChineseTones() {
         <section id="tone-sandhi">
           <h2>Tone pairs and tone sandhi</h2>
           <p>
-            In real speech, tones change when they meet. This is called tone sandhi. Dictionaries
-            and pinyin keep the original tone, so you have to know the rules to say a word the way
-            native speakers do. Three rules cover almost every case a beginner meets:
+            In real speech, tones change when they meet. This is called tone
+            sandhi. Dictionaries and pinyin keep the original tone, so you have
+            to know the rules to say a word the way native speakers do. Three
+            rules cover almost every case a beginner meets:
           </p>
           <ul className="site-rules">
             <li>
-              <strong>Tone 3 + tone 3 → tone 2 + tone 3.</strong> 你好 is written nǐ hǎo but said
-              ní hǎo. Before any other tone, a third tone stays low and does not rise: 美國 měi guó,
-              小時 xiǎo shí.
+              <strong>Tone 3 + tone 3 → tone 2 + tone 3.</strong> 你好 is
+              written nǐ hǎo but said ní hǎo. Before any other tone, a third
+              tone stays low and does not rise: 美國 měi guó, 小時 xiǎo shí.
             </li>
             <li>
-              <strong>一 (yī, one).</strong> Alone it is tone 1. Before a tone 4 it becomes tone 2:
-              一定 is said yí dìng, 一樣 yí yàng. Before tones 1, 2 and 3 it becomes tone 4: 一起
-              yì qǐ, 一些 yì xiē.
+              <strong>一 (yī, one).</strong> Alone it is tone 1. Before a tone 4
+              it becomes tone 2: 一定 is said yí dìng, 一樣 yí yàng. Before
+              tones 1, 2 and 3 it becomes tone 4: 一起 yì qǐ, 一些 yì xiē.
             </li>
             <li>
-              <strong>不 (bù, not).</strong> Normally tone 4. Before another tone 4 it becomes tone
-              2: 不錯 is said bú cuò, 不要 bú yào.
+              <strong>不 (bù, not).</strong> Normally tone 4. Before another
+              tone 4 it becomes tone 2: 不錯 is said bú cuò, 不要 bú yào.
             </li>
           </ul>
           <p>
-            Two-syllable words are where these rules matter most, and where learners who are fine
-            with single syllables start to slip. Practise them as whole words, not as two separate
-            tones.
+            Two-syllable words are where these rules matter most, and where
+            learners who are fine with single syllables start to slip. Practise
+            them as whole words, not as two separate tones.
           </p>
         </section>
 
         <section id="taiwan-vs-mainland">
           <h2>Taiwan vs mainland Mandarin tones</h2>
           <p>
-            The four tones are the same system in Taiwan and in mainland China, but there are small
-            differences. Taiwan Mandarin uses the neutral tone less, so some words keep a full tone
-            in Taiwan where the mainland makes them light. A few words have a different standard
-            tone, and the third tone is more often said low without a rise. Taiwan writes Traditional
-            characters and teaches pronunciation with 注音 (Bopomofo) rather than only pinyin. The
-            recordings and examples on FlappyTone are Taiwan Mandarin.
+            The four tones are the same system in Taiwan and in mainland China,
+            but there are small differences. Taiwan Mandarin uses the neutral
+            tone less, so some words keep a full tone in Taiwan where the
+            mainland makes them light. A few words have a different standard
+            tone, and the third tone is more often said low without a rise.
+            Taiwan writes Traditional characters and teaches pronunciation with
+            注音 (Bopomofo) rather than only pinyin. The recordings and examples
+            on FlappyTone are Taiwan Mandarin.
           </p>
         </section>
 
@@ -268,7 +299,11 @@ export function chineseTonesJsonLd(route: SiteRoute): object[] {
       inLanguage: "en",
       dateModified: route.lastmod,
       about: { "@type": "Thing", name: "Mandarin Chinese tones" },
-      publisher: { "@type": "Organization", name: "FlappyTone", url: absoluteUrl("/") },
+      publisher: {
+        "@type": "Organization",
+        name: "FlappyTone",
+        url: absoluteUrl("/"),
+      },
     },
     {
       "@context": "https://schema.org",

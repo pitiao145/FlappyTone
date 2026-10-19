@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { ContourSpark } from "../../ui/ContourSpark.tsx";
 import { TONE_LINE_COLOR } from "../../ui/toneColors.ts";
 import { captureGameEvent } from "../../analytics/posthog.ts";
@@ -8,6 +8,9 @@ import { Pip, PipCta } from "../Pip.tsx";
 import {
   inputDirection,
   markSyllable,
+  numberSyllable,
+  parsePinyin,
+  type PinyinSyllable,
   syllablesOf,
   toMarks,
   toNumbers,
@@ -30,7 +33,11 @@ export function makeToolUsedReporter(
     if (sent || !input.trim()) return;
     sent = true;
     try {
-      send({ type: "tool_used", tool: "tone-marks", direction: inputDirection(input) });
+      send({
+        type: "tool_used",
+        tool: "tone-marks",
+        direction: inputDirection(input),
+      });
     } catch {
       // Analytics never breaks the page.
     }
@@ -64,11 +71,15 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 function Result({
   label,
   value,
+  display,
   lang,
   big,
 }: {
   label: string;
+  /** The text copied. */
   value: string;
+  /** What is shown, when it is more than the plain text (coloured syllables). */
+  display?: ReactNode;
   lang?: string;
   big?: boolean;
 }) {
@@ -76,10 +87,23 @@ function Result({
     <div className={big ? "tm-result tm-result-big" : "tm-result"}>
       <div className="tm-result-label">{label}</div>
       <output className="tm-result-value" lang={lang}>
-        {value || "\u00a0"}
+        {display ?? (value || "\u00a0")}
       </output>
       <CopyButton text={value} label={label.toLowerCase()} />
     </div>
+  );
+}
+
+/** Each syllable in its tone's colour; text between syllables stays plain. */
+function colored(input: string, f: (s: PinyinSyllable) => string): ReactNode {
+  return parsePinyin(input).map((p, i) =>
+    "syllable" in p ? (
+      <span key={i} style={{ color: TONE_LINE_COLOR[p.syllable.tone] }}>
+        {f(p.syllable)}
+      </span>
+    ) : (
+      <span key={i}>{p.text}</span>
+    ),
   );
 }
 
@@ -97,11 +121,29 @@ function Converter() {
     report.current?.(next);
   };
 
-  const marks = <Result label="Tone marks" value={toMarks(input)} big={!toNumbersMode} />;
-  const numbers = <Result label="Numbers" value={toNumbers(input)} big={toNumbersMode} />;
-
+  // The right side shows only what the input is not: marks for numbered
+  // input, numbers for marked input. Echoing the input back says nothing.
+  const converted = toNumbersMode ? (
+    <Result
+      label="Numbers"
+      value={toNumbers(input)}
+      display={colored(input, numberSyllable)}
+      big
+    />
+  ) : (
+    <Result
+      label="Tone marks"
+      value={toMarks(input)}
+      display={colored(input, markSyllable)}
+      big
+    />
+  );
   return (
-    <section className="tm-tool" aria-label="Pinyin tone marks converter">
+    <div
+      className="tm-tool"
+      role="group"
+      aria-label="Pinyin tone marks converter"
+    >
       <Pip size={72} tilt={-10} className="tm-tool-pip" />
       <div className="tm-input">
         <label className="tm-input-label" htmlFor="tone-marks-input">
@@ -125,13 +167,18 @@ function Converter() {
           ))}
         </div>
         <p className="tm-direction" aria-live="polite">
-          {toNumbersMode ? "Reading tone marks, writing numbers." : "Reading tone numbers, writing marks."}
+          {toNumbersMode
+            ? "Reading tone marks, writing numbers."
+            : "Reading tone numbers, writing marks."}
         </p>
       </div>
       <div className="tm-output">
-        {toNumbersMode ? numbers : marks}
-        <Result label="注音 (Zhuyin)" value={toZhuyin(input)} lang="zh-Hant-TW" />
-        {toNumbersMode ? marks : numbers}
+        {converted}
+        <Result
+          label="注音 (Zhuyin)"
+          value={toZhuyin(input)}
+          lang="zh-Hant-TW"
+        />
         {syllables.length > 0 && (
           <ul className="tm-shapes" aria-label="Tone shape of each syllable">
             {syllables.slice(0, 40).map((s, i) => (
@@ -152,7 +199,7 @@ function Converter() {
           </ul>
         )}
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -163,8 +210,8 @@ export function ToneMarks() {
         <header className="tm-head">
           <h1>Pinyin tone marks converter</h1>
           <p className="site-answer">
-            Type ni3 hao3, get nǐ hǎo and ㄋㄧˇ ㄏㄠˇ. Paste marked pinyin to turn it back into
-            numbers. Nothing you type leaves your browser.
+            Type ni3 hao3, get nǐ hǎo and ㄋㄧˇ ㄏㄠˇ. Paste marked pinyin to
+            turn it back into numbers. Nothing you type leaves your browser.
           </p>
         </header>
 
@@ -175,36 +222,39 @@ export function ToneMarks() {
             <h2>How to type it</h2>
             <ul className="site-rules">
               <li>
-                Put the tone number right after each syllable: <code>zhong1 guo2</code> or{" "}
-                <code>zhong1guo2</code>.
+                Put the tone number right after each syllable:{" "}
+                <code>zhong1 guo2</code> or <code>zhong1guo2</code>.
               </li>
               <li>
-                Use <code>5</code> or <code>0</code> for the neutral tone (<code>ma5</code>), or no
-                number at all.
+                Use <code>5</code> or <code>0</code> for the neutral tone (
+                <code>ma5</code>), or no number at all.
               </li>
               <li>
-                Type ü as <code>v</code>, the input-method habit: <code>lv4</code> and{" "}
-                <code>nü3</code> both work. After j, q, x and y a plain <code>u</code> is already ü
-                (<code>xue2</code> → xué).
+                Type ü as <code>v</code>, the input-method habit:{" "}
+                <code>lv4</code> and <code>nü3</code> both work. After j, q, x
+                and y a plain <code>u</code> is already ü (<code>xue2</code> →
+                xué).
               </li>
               <li>
-                An apostrophe separates syllables that could run together: <code>xi1'an1</code> →
-                xī'ān.
+                An apostrophe separates syllables that could run together:{" "}
+                <code>xi1'an1</code> → xī'ān.
               </li>
             </ul>
           </section>
           <section>
             <h2>Where the tone mark goes</h2>
             <p>
-              Every syllable has one mark, on one vowel. If there is an a or an e, the mark goes
-              there (hǎo, xiè). In ou, it goes on the o (dōu). Otherwise it goes on the last vowel,
-              which is why it is liú but guì. ü keeps its dots and takes the mark on top (lǜ). The
-              neutral tone has no mark in pinyin; in 注音 it is a dot written before the syllable
-              (˙ㄇㄜ).
+              Every syllable has one mark, on one vowel. If there is an a or an
+              e, the mark goes there (hǎo, xiè). In ou, it goes on the o (dōu).
+              Otherwise it goes on the last vowel, which is why it is liú but
+              guì. ü keeps its dots and takes the mark on top (lǜ). The neutral
+              tone has no mark in pinyin; in 注音 it is a dot written before the
+              syllable (˙ㄇㄜ).
             </p>
             <p>
-              The four marks are small pictures of the pitch: ˉ high and level, ˊ rising, ˇ
-              dipping, ˋ falling. See them drawn from real recordings in the{" "}
+              The four marks are small pictures of the pitch: ˉ high and level,
+              ˊ rising, ˇ dipping, ˋ falling. See them drawn from real
+              recordings in the{" "}
               <a href="/chinese-tones">guide to the four Chinese tones</a>.
             </p>
           </section>
@@ -235,7 +285,11 @@ export function toneMarksJsonLd(route: SiteRoute): object[] {
       inLanguage: "en",
       isAccessibleForFree: true,
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-      publisher: { "@type": "Organization", name: "FlappyTone", url: absoluteUrl("/") },
+      publisher: {
+        "@type": "Organization",
+        name: "FlappyTone",
+        url: absoluteUrl("/"),
+      },
     },
   ];
 }

@@ -5,7 +5,15 @@ import { appHref } from "../ui/appLink.ts";
  * `public/Bird-*-no-halo.png`, but in the prerendered HTML and a few hundred
  * bytes instead of a 70 kB image. `tilt` rotates it (negative = climbing).
  */
-export function Pip({ size = 64, tilt = 0, className }: { size?: number; tilt?: number; className?: string }) {
+export function Pip({
+  size = 64,
+  tilt = 0,
+  className,
+}: {
+  size?: number;
+  tilt?: number;
+  className?: string;
+}) {
   return (
     <svg
       className={className ? `pip ${className}` : "pip"}
@@ -42,25 +50,35 @@ export function PipCta({
   secondary?: { href: string; label: string };
 }) {
   return (
-    <aside className="pip-cta">
-      <svg className="pip-cta-flight" viewBox="0 0 320 120" aria-hidden="true" preserveAspectRatio="none">
-        <path d="M0 60 C 40 60, 60 96, 110 96 S 190 70, 230 34 S 290 20, 320 22" />
-      </svg>
-      <Pip size={84} tilt={-18} className="pip-cta-bird" />
-      <div className="pip-cta-text">
-        <h2>{title}</h2>
-        <p>{body}</p>
-        <div className="pip-cta-actions">
-          <a className="sticker-button" href={appHref(undefined, path)}>
-            Play FlappyTone free
-          </a>
-          {secondary && (
-            <a className="pip-cta-link" href={secondary.href}>
-              {secondary.label}
+    <>
+      <aside className="pip-cta">
+        <svg
+          className="pip-cta-flight"
+          viewBox="0 0 320 120"
+          aria-hidden="true"
+          preserveAspectRatio="none"
+        >
+          <path d="M0 60 C 40 60, 60 96, 110 96 S 190 70, 230 34 S 290 20, 320 22" />
+        </svg>
+        <Pip size={84} tilt={-18} className="pip-cta-bird" />
+        <div className="pip-cta-text">
+          <h2>{title}</h2>
+          <p>{body}</p>
+          <div className="pip-cta-actions">
+            <a className="sticker-button" href={appHref(undefined, path)}>
+              Play FlappyTone free
             </a>
-          )}
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+      {secondary && (
+        <a className="read-next" href={secondary.href}>
+          <span className="read-next-label">Read next</span>
+          <span className="read-next-title">
+            {secondary.label} <span aria-hidden="true">→</span>
+          </span>
+        </a>
+      )}
+    </>
   );
 }

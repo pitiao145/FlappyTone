@@ -8714,10 +8714,11 @@ button.switch-track.switch-on {
   font-size: 1.05rem;
 }
 
-.site-page section {
+.site-page article > section {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  margin-top: var(--space-6);
 }
 
 .site-page ul.site-rules {
@@ -8779,11 +8780,25 @@ button.switch-track.switch-on {
   list-style: none;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: var(--space-2);
 }
 
 .site-examples li,
+.site-examples li {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  background: var(--surface-panel);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.site-examples li > span {
+  display: block;
+}
+
 .site-examples .hanzi {
   font-size: 1.6rem;
   color: var(--ink);
@@ -8797,6 +8812,18 @@ button.switch-track.switch-on {
 .site-examples .english {
   font-size: 0.85rem;
   color: var(--ink-muted);
+}
+
+.site-real {
+  border-left: 4px solid var(--accent);
+  padding: var(--space-2) var(--space-4);
+  background: rgba(var(--accent-rgb), 0.07);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.legal-body .site-real h3 {
+  color: var(--accent);
+  font-size: 0.95rem;
 }
 
 .site-faq h3 {
@@ -8830,7 +8857,8 @@ button.switch-track.switch-on {
 .tm-tool {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
   border: 2px solid var(--ink);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -8838,10 +8866,12 @@ button.switch-track.switch-on {
   margin: var(--space-4) 0 var(--space-2);
 }
 
+/* Pip perches on the top edge, fully inside the box's width so it never
+   sits over the rounded corner or the offset shadow. */
 .tm-tool-pip {
   position: absolute;
-  top: -44px;
-  right: 28px;
+  top: -50px;
+  right: 64px;
 }
 
 .tm-input {
@@ -8852,6 +8882,11 @@ button.switch-track.switch-on {
   border-right: 2px solid var(--ink);
   background: var(--surface-panel);
   border-radius: calc(var(--radius-lg) - 2px) 0 0 calc(var(--radius-lg) - 2px);
+}
+
+.tm-tool > .tm-input,
+.tm-tool > .tm-output {
+  min-width: 0;
 }
 
 .tm-input-label {
@@ -9003,6 +9038,8 @@ button.switch-track.switch-on {
 }
 
 .tm-notes section {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
 }
 
@@ -9023,8 +9060,8 @@ button.switch-track.switch-on {
   .tm-tool-pip {
     width: 56px;
     height: 56px;
-    top: -36px;
-    right: 16px;
+    top: -40px;
+    right: 40px;
   }
   .tm-notes {
     grid-template-columns: 1fr;
@@ -9123,15 +9160,41 @@ button.switch-track.switch-on {
   box-shadow: 1px 1px 0 var(--ink);
 }
 
-.legal-body a.sticker-button:focus-visible,
-.legal-body a.pip-cta-link:focus-visible {
+.legal-body a.sticker-button:focus-visible {
   outline: 3px solid var(--accent-ink);
   outline-offset: 3px;
 }
 
-.legal-body a.pip-cta-link {
-  color: var(--accent-ink);
-  font-weight: 600;
+.legal-body a.read-next {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-self: flex-start;
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.legal-body a.read-next:hover .read-next-title {
+  text-decoration: underline;
+}
+
+.legal-body a.read-next:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.read-next-label {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.read-next-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
 }
 
 @media (max-width: 560px) {
