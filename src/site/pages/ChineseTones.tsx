@@ -29,6 +29,9 @@ const SANDHI_YI: Example[] = [
   ["yixia24", "一下", "yī xià", "a bit", "yí xià"],
   ["yiqi13", "一起", "yī qǐ", "together", "yì qǐ"],
 ];
+const SANDHI_BU: Example[] = [
+  ["bucuo44", "不錯", "bù cuò", "not bad", "bú cuò"],
+];
 const TAIWAN_FULL: Example[] = [["pengyou23", "朋友", "péng yǒu", "friend"]];
 
 interface ToneSection {
@@ -189,6 +192,7 @@ export const HUB_EXAMPLE_IDS = [
   ...SANDHI_33,
   ...SANDHI_HALF3,
   ...SANDHI_YI,
+  ...SANDHI_BU,
   ...TAIWAN_FULL,
 ].map(([id]) => id);
 
@@ -373,8 +377,10 @@ export function ChineseTones() {
           <p>
             不 is tone 4, except before another tone 4, where it becomes tone 2:
             不錯 is said bú cuò, 不是 bú shì, 不要 bú yào. Before any other tone
-            it stays bù: 不好 bù hǎo, 不來 bù lái.
+            it stays bù: 不好 bù hǎo, 不來 bù lái. In our recording of 不錯, 不
+            rises from about 2 to the top before 錯 falls.
           </p>
+          <ExampleList examples={SANDHI_BU} tone={4} />
 
           <p>
             FlappyTone's tunnels are measured from these recordings, so a tone

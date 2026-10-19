@@ -270,4 +270,18 @@ export const EXAMPLE_CLIPS: Record<string, ExampleClip> = {
     durationS: 1.4554,
     clipS: 1.9007,
   },
+  bucuo44: {
+    polyline: [
+      [0, 2.106],
+      [0.2733, 1.924],
+      [0.4317, 3.19],
+      [0.6855, 4.951],
+      [0.82, 4.6],
+      [0.9176, 2.832],
+      [1, 1.935],
+    ],
+    onsetS: 0.232,
+    durationS: 1.0927,
+    clipS: 1.4527,
+  },
 };
