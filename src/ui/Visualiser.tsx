@@ -132,7 +132,7 @@ interface Props {
   /**
    * A word to open on (`/app?intent=visualiser&word=<id>`, from a /say/* word
    * page). Selected if this tier may practise it; otherwise its tone or pair
-   * opens with the word shown locked, and `onLocked` offers the upgrade once.
+   * opens with the word shown locked, and `onLocked` offers the upgrade from its button.
    */
   focusWordId?: string | null;
 }
@@ -821,8 +821,8 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked, focu
       setLockedFocus(null);
     } else {
       setSelectedWord(null);
+      // The banner is the prompt; the upgrade modal opens only from its button.
       setLockedFocus(base);
-      showLocked("visualiser-word-link");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusWordId, tierKnown, tier, words, listWords, pairWords, selectedLevels]);

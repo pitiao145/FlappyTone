@@ -11423,7 +11423,7 @@ button.switch-track.switch-on {
   font-weight: 700;
 }
 
-.vis-locked-word-cta {
+.visualiser-screen .vis-locked-word-cta {
   grid-area: cta;
   justify-self: start;
   font: inherit;
@@ -11437,7 +11437,7 @@ button.switch-track.switch-on {
   cursor: pointer;
 }
 
-.vis-locked-word-close {
+.visualiser-screen .vis-locked-word-close {
   grid-area: close;
   align-self: start;
   width: 28px;
@@ -11448,6 +11448,7 @@ button.switch-track.switch-on {
   line-height: 1;
   background: none;
   border: none;
+  box-shadow: none;
   border-radius: var(--radius-pill);
   color: var(--ink-muted);
   cursor: pointer;
