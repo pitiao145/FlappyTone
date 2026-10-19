@@ -208,6 +208,26 @@ function Converter() {
   );
 }
 
+/** The page's FAQ: rendered below the tool and sent as FAQPage JSON-LD. */
+export const TONE_MARKS_FAQ: { q: string; a: string }[] = [
+  {
+    q: "What is the difference between pinyin with numbers and with tone marks?",
+    a: "They say the same thing. Numbers (ni3 hao3) are easy to type on any keyboard; tone marks (nǐ hǎo) are what textbooks, dictionaries and signs use. Learners often type numbers and convert them.",
+  },
+  {
+    q: "Why is the third tone mark ˇ and not a dip and a rise?",
+    a: "The mark is a simple picture of the textbook tone 3, which dips and comes back up. In real speech tone 3 often only dips, especially before another syllable, and two tone 3s in a row change: nǐ hǎo is said ní hǎo.",
+  },
+  {
+    q: "Do I write tone marks on the neutral tone?",
+    a: "No. A neutral-tone syllable has no mark in pinyin (xièxie, māma). In 注音 it gets a dot before the syllable (˙ㄒㄧㄝ).",
+  },
+  {
+    q: "Does this converter work with Zhuyin (注音)?",
+    a: "It shows the 注音 for whatever pinyin you type, with the tone marks ˊ ˇ ˋ and the neutral dot. It does not convert 注音 back to pinyin.",
+  },
+];
+
 export function ToneMarks() {
   return (
     <div className="screen legal-screen site-page site-wide">
@@ -263,6 +283,50 @@ export function ToneMarks() {
               <a href="/chinese-tones">guide to the four Chinese tones</a>.
             </p>
           </section>
+          <section>
+            <h2>How to type tone marks on your own keyboard</h2>
+            <ul className="site-rules">
+              <li>
+                <strong>Mac:</strong> add the ABC – Extended keyboard in System
+                Settings → Keyboard → Input Sources. Then Option + a gives ˉ
+                (ā), Option + e gives ˊ (á), Option + v gives ˇ (ǎ) and Option +
+                ` gives ˋ (à): press the shortcut, then the vowel.
+              </li>
+              <li>
+                <strong>Windows:</strong> there is no simple built-in shortcut.
+                Type with numbers here and copy the result.
+              </li>
+              <li>
+                <strong>Phone:</strong> long-press a vowel on the keyboard. Most
+                keyboards offer ā, á and à, but not always ǎ, so copy that one
+                from here. For 注音, add the Zhuyin keyboard (Chinese,
+                Traditional).
+              </li>
+            </ul>
+          </section>
+          <section>
+            <h2>Pinyin or 注音?</h2>
+            <p>
+              Pinyin uses the Latin alphabet and is the standard in mainland
+              China and in most textbooks abroad. 注音 (Zhuyin, also called
+              Bopomofo) uses its own symbols and is what children learn in
+              Taiwan. They describe the same sounds and the same four tones, so
+              this page shows both. If you plan to live or study in Taiwan,
+              learning to read 注音 is worth a few hours: it is on many signs,
+              in children's books and on phone keyboards.
+            </p>
+          </section>
+          <section>
+            <h2>Questions</h2>
+            {TONE_MARKS_FAQ.map((f) => (
+              <details key={f.q} className="site-faq" open>
+                <summary>
+                  <h3>{f.q}</h3>
+                </summary>
+                <p>{f.a}</p>
+              </details>
+            ))}
+          </section>
         </div>
 
         <PipCta
@@ -295,6 +359,15 @@ export function toneMarksJsonLd(route: SiteRoute): object[] {
         name: "FlappyTone",
         url: absoluteUrl("/"),
       },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: TONE_MARKS_FAQ.map((f) => ({
+        "@type": "Question",
+        name: f.q,
+        acceptedAnswer: { "@type": "Answer", text: f.a },
+      })),
     },
   ];
 }
