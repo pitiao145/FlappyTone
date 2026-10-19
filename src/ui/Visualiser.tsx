@@ -1326,11 +1326,14 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked, focu
       <div className="visualiser-body">
         {lockedFocus && (
           <div className="vis-locked-word" role="status">
+            <span className="vis-locked-word-hanzi" lang="zh-Hant-TW">
+              {lockedFocus.hanzi}
+            </span>
             <span className="vis-locked-word-text">
-              🔒 <strong lang="zh-Hant-TW">{lockedFocus.hanzi}</strong> {lockedFocus.pinyin}
+              <strong>{lockedFocus.pinyin}</strong>{" "}
               {tier === "guest"
-                ? " — create a free account to practise this word with its recording."
-                : " is in the full word list."}
+                ? "is locked. Create a free account to practise it with its recording."
+                : "is in the full word list."}
             </span>
             <button type="button" className="vis-locked-word-cta" onClick={() => showLocked("visualiser-word-link")}>
               {tier === "guest" ? "Create free account" : "Unlock it"}

@@ -11380,42 +11380,81 @@ button.switch-track.switch-on {
   }
 }
 
-/* Visualiser: the word a /say/* page linked to, when this tier can't practise it. */
+/* Visualiser: the word a /say/* page linked to, when this tier can't practise
+   it. Floats over the top of the board (out of the flex flow, which is a row
+   on desktop), so it never reshapes the visualiser's layout. */
 .vis-locked-word {
-  display: flex;
+  position: absolute;
+  top: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  width: max-content;
+  max-width: min(520px, calc(100% - 2 * var(--space-3)));
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "word text close"
+    "word cta  close";
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  margin-bottom: var(--space-2);
-  background: var(--surface-panel);
+  column-gap: var(--space-3);
+  row-gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  background: var(--surface);
   border: 1.5px solid var(--ink);
   border-radius: var(--radius-md);
-  font-size: 0.9rem;
+  box-shadow: 0 3px 0 var(--ink);
   color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.vis-locked-word-hanzi {
+  grid-area: word;
+  font-size: 2rem;
+  line-height: 1;
 }
 
 .vis-locked-word-text {
-  flex: 1;
+  grid-area: text;
+}
+
+.vis-locked-word-text strong {
+  font-weight: 700;
 }
 
 .vis-locked-word-cta {
+  grid-area: cta;
+  justify-self: start;
   font: inherit;
   font-weight: 700;
   font-size: 0.85rem;
-  padding: 6px 12px;
-  border: none;
+  padding: 6px 14px;
+  border: 1.5px solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--accent);
   color: var(--accent-ink);
   cursor: pointer;
-  white-space: nowrap;
 }
 
 .vis-locked-word-close {
+  grid-area: close;
+  align-self: start;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   font: inherit;
   font-size: 1.1rem;
+  line-height: 1;
   background: none;
   border: none;
+  border-radius: var(--radius-pill);
   color: var(--ink-muted);
   cursor: pointer;
+}
+
+.vis-locked-word-cta:focus-visible,
+.vis-locked-word-close:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
