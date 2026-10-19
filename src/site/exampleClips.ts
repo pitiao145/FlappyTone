@@ -37,20 +37,20 @@ export const EXAMPLE_CLIPS: Record<string, ExampleClip> = {
     durationS: 0.9434,
     clipS: 1.3033,
   },
-  shan1: {
+  hua1: {
     polyline: [
-      [0, 4.47],
-      [1, 4.47],
+      [0, 4.458],
+      [1, 4.458],
     ],
     onsetS: 0.232,
-    durationS: 0.986,
-    clipS: 1.346,
+    durationS: 1.1354,
+    clipS: 1.4953,
   },
-  cha2: {
+  ren2: {
     polyline: [
-      [0, 3.217],
-      [0.386, 1.954],
-      [1, 4.986],
+      [0, 2.571],
+      [0.3251, 2.178],
+      [1, 5],
     ],
     onsetS: 0.232,
     durationS: 1.05,
@@ -98,16 +98,16 @@ export const EXAMPLE_CLIPS: Record<string, ExampleClip> = {
     durationS: 0.986,
     clipS: 1.346,
   },
-  shui3: {
+  ni3: {
     polyline: [
-      [0, 3.418],
-      [0.5185, 1.43],
-      [0.7673, 2.855],
-      [1, 5],
+      [0, 2.988],
+      [0.6389, 1.659],
+      [0.8268, 3.256],
+      [1, 4.694],
     ],
     onsetS: 0.232,
-    durationS: 1.0287,
-    clipS: 1.3887,
+    durationS: 1.1354,
+    clipS: 1.4953,
   },
   ma4b: {
     polyline: [
@@ -129,15 +129,15 @@ export const EXAMPLE_CLIPS: Record<string, ExampleClip> = {
     durationS: 0.538,
     clipS: 0.898,
   },
-  kan4: {
+  kuai4: {
     polyline: [
-      [0, 4.007],
-      [0.1711, 4.72],
-      [1, 1.133],
+      [0, 4.246],
+      [0.1505, 4.714],
+      [1, 1.218],
     ],
-    onsetS: 0.232,
-    durationS: 0.6234,
-    clipS: 0.9833,
+    onsetS: 0.211,
+    durationS: 0.7087,
+    clipS: 1.026,
   },
   shenme20: {
     polyline: [

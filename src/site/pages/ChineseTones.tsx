@@ -38,7 +38,7 @@ const SECTIONS: ToneSection[] = [
     examples: [
       ["ma1b", "媽", "mā", "mother"],
       ["shu1", "書", "shū", "book"],
-      ["shan1", "山", "shān", "mountain"],
+      ["hua1", "花", "huā", "flower"],
     ],
   },
   {
@@ -51,7 +51,7 @@ const SECTIONS: ToneSection[] = [
       "Dipping too deep before the rise, which makes it sound like tone 3, or rising too little, which makes it sound like tone 1. The turn should be early and shallow.",
     real: "Real tone 2 is not a straight line from 3 to 5. our speaker starts near 2.8, dips a little to about 2.3 in the first third, then climbs to near 5. At everyday speed it often stops around 4.5.",
     examples: [
-      ["cha2", "茶", "chá", "tea"],
+      ["ren2", "人", "rén", "person"],
       ["qian2", "錢", "qián", "money"],
       ["xue2", "學", "xué", "to study"],
     ],
@@ -68,7 +68,7 @@ const SECTIONS: ToneSection[] = [
     examples: [
       ["ma3b", "馬", "mǎ", "horse"],
       ["hao3", "好", "hǎo", "good"],
-      ["shui3", "水", "shuǐ", "water"],
+      ["ni3", "你", "nǐ", "you"],
     ],
   },
   {
@@ -83,7 +83,7 @@ const SECTIONS: ToneSection[] = [
     examples: [
       ["ma4b", "罵", "mà", "to scold"],
       ["da4", "大", "dà", "big"],
-      ["kan4", "看", "kàn", "to look"],
+      ["kuai4", "快", "kuài", "fast"],
     ],
   },
   {
@@ -361,7 +361,7 @@ export function ChineseTones() {
         <PipCta
           path={PATH}
           title="Practise the tones out loud"
-          body="Reading about tones helps, but you learn them by saying them. In FlappyTone your voice flies Pip through a tunnel shaped like the tone, so you see right away if your pitch made the right shape. It checks the pitch shape, not the syllable, and your microphone audio stays on your device."
+          body="Reading about tones helps, but you learn them by saying them. In FlappyTone your voice flies the bird through a tunnel shaped like the tone, so you see right away if your pitch made the right shape. It checks the pitch shape, not the syllable, and your microphone audio stays on your device."
           secondary={{ href: TOOL, label: "Type tone marks: ni3 → nǐ" }}
         />
       </article>

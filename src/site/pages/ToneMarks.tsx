@@ -263,7 +263,7 @@ export function ToneMarks() {
         <PipCta
           path={PATH}
           title="Now say them out loud"
-          body="Typing the mark is the easy part. In FlappyTone your voice flies Pip through a tunnel shaped like the tone, so you see right away if your pitch made the shape."
+          body="Typing the mark is the easy part. In FlappyTone your voice flies the bird through a tunnel shaped like the tone, so you see right away if your pitch made the shape."
           secondary={{ href: "/chinese-tones", label: "Read the tone guide" }}
         />
       </article>

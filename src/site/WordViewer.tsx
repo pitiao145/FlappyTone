@@ -155,7 +155,7 @@ export function WordViewer({
       <p className="word-viewer-note">
         {failed
           ? "The recording didn't load. The line is still the shape she said."
-          : "Pip flies the pitch of the recording. In the game, your own voice flies it."}
+          : "The bird flies the pitch of the recording. In FlappyTone, your own voice flies it."}
       </p>
       <div className="word-viewer-actions">
         <button
