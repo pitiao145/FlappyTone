@@ -40,8 +40,8 @@ describe("hub example clips", () => {
     // is in a sampler list or in no tocfl* list. 山/茶/水/看 failed this once.
     for (const id of HUB_EXAMPLE_IDS) {
       const lists = rows.find((r) => r.id === id)?.lists ?? [];
-      const sampler = lists.some((l) => l.startsWith("sampler-"));
-      const leveled = lists.some((l) => /^tocfl\d$/.test(l));
+      const sampler = lists.some((l: string) => l.startsWith("sampler-"));
+      const leveled = lists.some((l: string) => /^tocfl\d$/.test(l));
       expect(sampler || !leveled, `${id} ${lists.join(",")}`).toBe(true);
     }
   });
