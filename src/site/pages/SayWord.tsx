@@ -199,6 +199,9 @@ function SayWordPage({ word }: { word: SayWord }) {
   return (
     <div className="screen legal-screen site-page say-page">
       <article className="legal-body">
+        <a className="say-back" href={INDEX}>
+          <span aria-hidden="true">←</span> All words
+        </a>
         <h1>{word.h1}</h1>
         <p className="site-answer">
           <strong>{word.answer}</strong>
@@ -398,6 +401,14 @@ export function sayWordJsonLd(word: SayWord, route: SiteRoute): object[] {
         name: "FlappyTone",
         url: absoluteUrl("/"),
       },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Common words", item: absoluteUrl(INDEX) },
+        { "@type": "ListItem", position: 2, name: word.phrase, item: url },
+      ],
     },
     {
       "@context": "https://schema.org",

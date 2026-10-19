@@ -11677,3 +11677,19 @@ button.switch-track.switch-on {
     gap: 0;
   }
 }
+
+.say-page .say-back {
+  align-self: flex-start;
+  display: inline-flex;
+  gap: 6px;
+  margin-bottom: var(--space-2);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+
+.say-page .say-back:hover,
+.say-page .say-back:focus-visible {
+  color: var(--ink);
+}
