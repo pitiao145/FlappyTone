@@ -3,6 +3,7 @@ import { Thumbnail, type ThumbnailProps } from "./Thumbnail.tsx";
 import { Story, storyFrames, type StoryProps } from "./Story.tsx";
 import { CharacterSheet } from "./CharacterSheet.tsx";
 import { TONY_STORY_FRAMES, TonyStory } from "./TonyStory.tsx";
+import { HowTo, howToFrames, type HowToProps } from "./HowTo.tsx";
 import { FPS, Promo, SIZE, sections, type PromoProps } from "./Promo.tsx";
 
 /** Studio's default props. A real promo passes its own: `--props=video/props/<name>.json`. */
@@ -19,6 +20,16 @@ export function Root() {
   return (
     <>
     <Composition id="TonyStory" component={TonyStory} fps={FPS} width={1080} height={1920} durationInFrames={TONY_STORY_FRAMES} defaultProps={{ captions: true, voices: true, sfx: true }} />
+    <Composition
+      id="HowTo"
+      component={HowTo}
+      fps={FPS}
+      width={1080}
+      height={1920}
+      durationInFrames={300}
+      defaultProps={{ scenes: [{ kind: "intro", seconds: 3, title: "FlappyTone" }] } as HowToProps}
+      calculateMetadata={({ props }) => ({ durationInFrames: howToFrames(props) })}
+    />
     <Composition id="CharacterSheet" component={CharacterSheet} fps={FPS} width={1080} height={1920} durationInFrames={90} />
     <Composition
       id="Thumbnail"

@@ -1,0 +1,201 @@
+{
+  "scenes": [
+    {
+      "kind": "intro",
+      "seconds": 3,
+      "title": "How to practise your tones while having fun"
+    },
+    {
+      "kind": "clip",
+      "src": "clips/howto-phone.mp4",
+      "aspect": 0.4621,
+      "start": 2.5,
+      "end": 7.6,
+      "step": 1,
+      "caption": "Go to flappytone.com and press Play"
+    },
+    {
+      "kind": "clip",
+      "src": "clips/howto-phone.mp4",
+      "aspect": 0.4621,
+      "start": 12.0,
+      "end": 22.9,
+      "step": 2,
+      "caption": "Tap Share, then Add to Home Screen",
+      "blur": [
+        {
+          "from": 12.45,
+          "to": 17.95,
+          "at": [
+            12.4,
+            12.5,
+            16.3,
+            16.35,
+            16.9,
+            17.0,
+            17.95
+          ],
+          "top": [
+            0.45,
+            0.5,
+            0.5,
+            0.17,
+            0.17,
+            0.2,
+            0.2
+          ],
+          "bottom": [
+            0.85,
+            0.68,
+            0.68,
+            0.71,
+            0.71,
+            0.37,
+            0.37
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "clip",
+      "src": "clips/howto-gameplay.mp4",
+      "aspect": 0.5626,
+      "start": 0,
+      "end": 9,
+      "step": 3,
+      "caption": "Calibrate to your voice for best results",
+      "src_w": 782,
+      "src_h": 1390,
+      "crop": {
+        "x": 72,
+        "w": 640
+      },
+      "cam": {
+        "x": 414,
+        "y": 562,
+        "w": 360,
+        "h": 360
+      }
+    },
+    {
+      "kind": "clip",
+      "src": "clips/howto-gameplay.mp4",
+      "aspect": 0.5626,
+      "start": 20,
+      "end": 31,
+      "step": 4,
+      "caption": "Play and practise your tones at the same time",
+      "src_w": 782,
+      "src_h": 1390,
+      "crop": {
+        "x": 72,
+        "w": 640
+      },
+      "cam": {
+        "x": 414,
+        "y": 562,
+        "w": 360,
+        "h": 360
+      }
+    },
+    {
+      "kind": "clip",
+      "src": "clips/howto-gameplay.mp4",
+      "aspect": 0.5626,
+      "start": 101,
+      "end": 110,
+      "step": 5,
+      "caption": "Celebrate your results",
+      "src_w": 782,
+      "src_h": 1390,
+      "crop": {
+        "x": 72,
+        "w": 640
+      },
+      "cam": {
+        "x": 414,
+        "y": 562,
+        "w": 360,
+        "h": 360
+      }
+    },
+    {
+      "kind": "card",
+      "seconds": 2.2,
+      "title": "That easy. Really."
+    },
+    {
+      "kind": "outro",
+      "seconds": 3.5,
+      "title": "flappytone.com",
+      "subtitle": "Play free in your browser"
+    }
+  ],
+  "sfx": [
+    {
+      "src": "sfx/sparkle.wav",
+      "at": 0.3
+    },
+    {
+      "src": "sfx/whoosh.wav",
+      "at": 2.9,
+      "volume": 0.4
+    },
+    {
+      "src": "sfx/pop.wav",
+      "at": 7.2
+    },
+    {
+      "src": "sfx/whoosh.wav",
+      "at": 8.0,
+      "volume": 0.4
+    },
+    {
+      "src": "sfx/pop.wav",
+      "at": 8.4
+    },
+    {
+      "src": "sfx/pop.wav",
+      "at": 14.0
+    },
+    {
+      "src": "sfx/ding.wav",
+      "at": 17.8,
+      "volume": 0.5
+    },
+    {
+      "src": "sfx/whoosh.wav",
+      "at": 18.9,
+      "volume": 0.4
+    },
+    {
+      "src": "sfx/whoosh.wav",
+      "at": 27.9,
+      "volume": 0.4
+    },
+    {
+      "src": "sfx/whoosh.wav",
+      "at": 38.9,
+      "volume": 0.4
+    },
+    {
+      "src": "sfx/tada.wav",
+      "at": 40.0
+    },
+    {
+      "src": "sfx/whoosh.wav",
+      "at": 47.9,
+      "volume": 0.4
+    },
+    {
+      "src": "sfx/boing.wav",
+      "at": 48.3,
+      "volume": 0.5
+    },
+    {
+      "src": "sfx/plane.wav",
+      "at": 51.0,
+      "volume": 0.5
+    }
+  ]
+}
