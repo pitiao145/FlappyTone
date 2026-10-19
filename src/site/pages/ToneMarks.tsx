@@ -231,9 +231,9 @@ export function ToneMarks() {
               </li>
               <li>
                 Type ü as <code>v</code>, the input-method habit:{" "}
-                <code>lv4</code> and <code>nü3</code> both work. After j, q, x
-                and y a plain <code>u</code> is already ü (<code>xue2</code> →
-                xué).
+                <code>lv4</code> and <code>nü3</code> and <code>nu:3</code> all
+                work. After j, q, x and y a plain <code>u</code> is already ü (
+                <code>xue2</code> → xué).
               </li>
               <li>
                 An apostrophe separates syllables that could run together:{" "}

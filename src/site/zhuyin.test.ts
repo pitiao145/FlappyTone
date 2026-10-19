@@ -221,3 +221,12 @@ describe("parsing", () => {
     expect(markSyllable({ base: "lv", tone: 0 })).toBe("lü");
   });
 });
+
+describe("u: spelling", () => {
+  it("reads u: as ü", () => {
+    expect(toMarks("nu:3")).toBe("nǚ");
+    expect(toMarks("lu:4 nu:e4")).toBe("lǜ nüè");
+    expect(toNumbers(toMarks("Nu:3"))).toBe("nü3");
+    expect(toZhuyin("nu:3")).toBe("ㄋㄩˇ");
+  });
+});

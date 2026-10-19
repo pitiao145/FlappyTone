@@ -272,7 +272,8 @@ const RUN = /([a-züà-üĀ-ǜ]+)([0-5])?/g;
  * neutral. Lowercases its input.
  */
 export function parsePinyin(input: string): PinyinPiece[] {
-  const text = input.normalize("NFC").toLowerCase();
+  // `u:` is the CC-CEDICT spelling of ü (nu:3 = nǚ); read it as ü.
+  const text = input.normalize("NFC").toLowerCase().replace(/u:/g, "ü");
   const pieces: PinyinPiece[] = [];
   let last = 0;
   const pushText = (t: string) => {
