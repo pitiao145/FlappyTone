@@ -117,6 +117,18 @@ export const ROUTES: readonly SiteRoute[] = [
     shell: "site",
     render: "renderSitePage",
   },
+  {
+    path: "/tools/tone-checker",
+    lang: "en",
+    title: "Chinese Pronunciation Checker: Check Your Tones Free — FlappyTone",
+    description:
+      "Free Chinese pronunciation checker for Mandarin tones: hear a native speaker, say the word, and see your pitch drawn over the recording with a tone accuracy score. No sign-up.",
+    lastmod: "2026-10-19",
+    pageType: "tool",
+    angle: "learner",
+    shell: "site",
+    render: "renderSitePage",
+  },
 ];
 
 export function routeFor(path: string): SiteRoute | undefined {

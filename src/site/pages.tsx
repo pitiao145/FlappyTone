@@ -16,6 +16,7 @@ import type { ReactElement } from "react";
 import type { SiteRoute } from "./routes.ts";
 import { ChineseTones, chineseTonesJsonLd } from "./pages/ChineseTones.tsx";
 import { ToneMarks, toneMarksJsonLd } from "./pages/ToneMarks.tsx";
+import { ToneChecker, toneCheckerJsonLd } from "./pages/ToneChecker.tsx";
 
 export interface SitePageDef {
   Page: () => ReactElement;
@@ -26,6 +27,7 @@ export interface SitePageDef {
 export const SITE_PAGES: Record<string, SitePageDef> = {
   "/chinese-tones": { Page: ChineseTones, jsonLd: chineseTonesJsonLd },
   "/tools/tone-marks": { Page: ToneMarks, jsonLd: toneMarksJsonLd },
+  "/tools/tone-checker": { Page: ToneChecker, jsonLd: toneCheckerJsonLd },
 };
 
 /** The page for `path`, inside the `.app > .app-main > .frame` wrappers. */

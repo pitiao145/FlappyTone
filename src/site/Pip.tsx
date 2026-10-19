@@ -1,4 +1,4 @@
-import { appHref } from "../ui/appLink.ts";
+import { appHref, type AppIntent } from "../ui/appLink.ts";
 
 /**
  * Pip, the game's bird, as inline SVG: the same shapes and colours as
@@ -43,8 +43,11 @@ export function PipCta({
   title,
   body,
   secondary,
+  intent,
 }: {
   path: string;
+  /** Where the game should land (`?intent=`); the default is Play. */
+  intent?: AppIntent;
   title: string;
   body: string;
   secondary?: { href: string; label: string };
@@ -65,7 +68,7 @@ export function PipCta({
           <h2>{title}</h2>
           <p>{body}</p>
           <div className="pip-cta-actions">
-            <a className="sticker-button" href={appHref(undefined, path)}>
+            <a className="sticker-button" href={appHref(intent, path)}>
               Play FlappyTone free
             </a>
           </div>

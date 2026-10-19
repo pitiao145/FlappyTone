@@ -26,7 +26,7 @@ const PATH = "/tools/tone-marks";
  * without a DOM.
  */
 export function makeToolUsedReporter(
-  send: (e: Extract<AnalyticsEvent, { type: "tool_used" }>) => void,
+  send: (e: Extract<AnalyticsEvent, { type: "tool_used"; tool: "tone-marks" }>) => void,
 ): (input: string) => void {
   let sent = false;
   return (input) => {

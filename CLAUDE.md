@@ -60,7 +60,7 @@ src/
   record/     the /record entry: the recording booth (talks to the clips Worker, not Vercel api/).
   analytics/  what a play session sends home. session.ts is pure; client.ts/posthog.ts are the impure part.
   share/      share-card rendering. Never throws (same contract as src/data/).
-  site/       the route table (routes.ts), sitemap/llms.txt/head generation (siteFiles.ts), page analytics + ?src= (pageAnalytics.ts), and the shared-shell pages (pages.tsx, main.tsx, pages/). NO audio/pitch.
+  site/       the route table (routes.ts), sitemap/llms.txt/head generation (siteFiles.ts), page analytics + ?src= (pageAnalytics.ts), and the shared-shell pages (pages.tsx, main.tsx, pages/). NO audio/pitch — except checker/engine.ts, lazy-loaded (see "Three entries" rule 1).
   dev/        the Lab (dev-only tuning instance) + CLI analysis/build/pipeline scripts.
 api/          Vercel functions: newsletter, score, run, webhook-ls, shapes, runlog — see above.
 workers/clips/  Cloudflare Worker (`flappytone-clips-api`, clips.flappytone.com): mints play tickets, serves clip audio from R2. Separate deploy target and toolchain (`npm -w workers/clips`), not part of the Vercel `api/` count.
@@ -105,16 +105,32 @@ on `landed`, and strips it. Like `?intent=`, it never starts anything.
 
 Four rules hold the split together:
 
-1. **The marketing page must not import `src/audio/` or `src/pitch/`.** Check after touching `Landing.tsx` or anything it imports:
+1. **The marketing page must not import `src/audio/` or `src/pitch/`.** The same rule holds for every route-table page and `src/site/`, with **one named exception: the tone checker's engine, `src/site/checker/engine.ts`**, which `/tools/tone-checker` loads only with a dynamic `import()` on the Start tap (never statically, never with the page). Check after touching `Landing.tsx`, `src/site/` or anything they import:
    ```bash
    npm run build
-   grep -l getUserMedia dist/assets/*.js     # must list only app/record chunks (app-*, MicStatus-*), never main-*, site-* or a legal chunk
+   npm run check:mic-chunks   # getUserMedia only in mic-*.js (vite.config.ts names it); no page but /app and /record loads it up front
+   grep -l getUserMedia dist/assets/*.js     # must list only mic-*.js
    ```
-   (`PitchTracker` is minified away, so grepping for it proves nothing.) The same rule holds for every route-table page and `src/site/`.
+   (`PitchTracker` is minified away, so grepping for it proves nothing.)
    `ToneAverageCard` and `ContourSpark` legitimately pull `game/gates` and `game/words` for the tone charts; that is data and geometry, not the engine.
 2. **Crossing between `/` and `/app` is a real navigation, and a click gesture does not survive it.** `ensureMic()` needs the gesture (hard rule 4); the landing page passes `?intent=visualiser` instead, and the player's first tap on `/app` is the gesture. Do not try to auto-start from the intent — it fails silently on iOS Safari. `src/ui/appLink.ts` is the only thing that knows the game's URL. **`?intent=visualiser` must work on a session that has never calibrated** — a share link is by definition someone's first visit (this broke once; see DECISIONS.md). Re-check against a cleared `localStorage` session, not just a calibrated one, whenever you touch this path.
 3. **Only route-table pages are prerendered** (`/app`/`/record` never). `src/dev/prerender.ts` bakes each into its HTML for crawlers, and `prerenderEntry.tsx`'s wrapper markup (`.app > .app-main > .frame`) must stay identical to what the client renders (`LandingApp`, the legal apps, `SitePage`) or crawler markup and React's markup diverge.
 4. **`Nav.tsx` is the marketing site's bar; the game has its own (`src/app/GameNav.tsx`).** Do not reintroduce a shared nav.
+
+**The public tone checker (`/tools/tone-checker`, `src/site/checker/`).** The
+in-app visualiser's engine on a free, no-signup page: `engine.ts` composes the
+same shared modules (mic session, `PitchTracker`, `sessionNoise`,
+`ContourRecorder`, `toneAccuracyDetail`, `classifyToneV2`, `drawVisualiser`)
+and never imports `Visualiser.tsx`. Textbook only. Its word list
+(`checkerWords.ts`, 24 words, copied geometry with a sync test, every word
+guest-playable) is **outside `TIER_LIMITS.wordsPerTone`** on purpose, for this
+page only. Calibration: the game's own (`loadSettings()`) if the device has
+one, else a ~10 s quick one (one mā, one mǎ, `quickCal.ts`) stored under
+**`flappytone.quickcal.v1`** — it never writes the app's
+`toneflap.settings.v3`, and /app never reads it. `?word=<id>` preselects a
+list word. Analytics: `tool_used {tool:"tone-checker", action}` (each action
+once per load) and `tool_summary {attempts, words}` on `pagehide`, global
+tier, counts only.
 
 **Site pages: lessons from S2** (`docs/briefs/reports/12-…md` has the detail).
 Prose CSS targets `article > section`, never bare `section` (it beat a tool's

@@ -282,6 +282,7 @@ describe("eventTier", () => {
     "update_banner",
     "inapp_prompt",
     "tool_used",
+    "tool_summary",
   ];
 
   for (const type of GAMEPLAY) {
@@ -340,6 +341,7 @@ describe("APP_EVENTS", () => {
       "update_banner",
       "inapp_prompt",
       "tool_used",
+      "tool_summary",
     ]);
     for (const type of allTypes) {
       expect(APP_EVENTS.has(type), `APP_EVENTS is missing "${type}"`).toBe(true);

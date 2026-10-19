@@ -34,6 +34,7 @@
     "verify-clips": "node --experimental-strip-types src/dev/verify-clips.ts",
     "process-clips": "node --experimental-strip-types src/dev/process-clips.ts",
     "render-demo": "node --experimental-strip-types src/dev/render-demo.ts",
+    "check:mic-chunks": "node --experimental-strip-types src/dev/check-mic-chunks.ts",
     "video:studio": "remotion studio",
     "video:render": "remotion render Promo"
   },

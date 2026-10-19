@@ -55,6 +55,14 @@ export default defineConfig({
         // once per route and then deletes dist/site.html.
         site: resolve(import.meta.dirname, 'site.html'),
       },
+      output: {
+        // The getUserMedia code gets one stable chunk name, `mic-*.js`, shared
+        // by /app, /record and the tone checker's lazy engine — so
+        // `npm run check:mic-chunks` (and CLAUDE.md's grep) can name it.
+        manualChunks(id) {
+          if (id.endsWith('/src/audio/mic.ts')) return 'mic'
+        },
+      },
     },
   },
   // workers/clips is its own npm workspace with its own vitest config/runner

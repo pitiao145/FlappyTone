@@ -280,6 +280,17 @@ export type AnalyticsEvent =
    * which way it converted.
    */
   | { type: "tool_used"; tool: "tone-marks"; direction: "to-marks" | "to-numbers" }
+  /**
+   * The public tone checker (`src/site/checker/`): each action at most once per
+   * page load. No accuracy, no pitch, no word, nothing typed.
+   */
+  | {
+      type: "tool_used";
+      tool: "tone-checker";
+      action: "started" | "mic_denied" | "calibrated" | "first_attempt";
+    }
+  /** The tone checker's visit, once on `pagehide`: counts only. */
+  | { type: "tool_summary"; tool: "tone-checker"; attempts: number; words: number }
   /** FeedbackWidget.tsx's submit, once it resolves ok. Never carries the free-text message — screen/rating/tier only. */
   | { type: "feedback_submitted"; screen: string; rating: number | null; tier: string };
 
@@ -381,6 +392,7 @@ export function eventTier(type: AnalyticsEvent["type"]): AnalyticsTier {
     case "update_banner":
     case "inapp_prompt":
     case "tool_used":
+    case "tool_summary":
       return "global";
   }
 }

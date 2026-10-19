@@ -1251,6 +1251,36 @@ FlappyTone specifically — check the current value with `project-get` before
 assuming either way, and raise any change with Pierre first since it's
 project-wide.
 
+## Public tone checker: a separate page, its own words, a quick calibration (19 Oct 2026)
+
+`/tools/tone-checker` (SEO S3) is the in-app visualiser's engine on a public,
+no-signup page. Decisions (Pierre's, plus what the build forced):
+
+- **Separate page, same engine, no fork.** Sending a search visitor into /app
+  costs a navigation, a calibration funnel and a guest visualiser cap of 0
+  words. Forking `Visualiser.tsx` would make two engines drift. The engine
+  pieces were already standalone modules, so `src/site/checker/engine.ts`
+  composes them; nothing was extracted and the Visualiser is unchanged.
+- **Its own 24-word list, outside `wordsPerTone`.** The guest cap exists to
+  make the in-app visualiser a reason to sign up; a public sample with zero
+  words would be no sample. Scoped to this page (`checkerWords.ts`); `tiers.ts`
+  is untouched. Every word must pass the Worker's guest TOCFL gate.
+- **A ~10 s calibration (one mā, one mǎ), not the app's flow.** The board's
+  halves come from the same anchors and function as the real calibration
+  (`computeRangeHalvesFromExtremes`: T1 level up, T3 floor down); the centre,
+  which the app measures from a talk step, is the geometric midpoint of the two
+  medians. It is stored in its own key (`flappytone.quickcal.v1`) so a rough
+  board never replaces a real one in /app. The game's calibration is used
+  when the device has one.
+- **The mic chunk is lazy, and the rule says so by name.** "Three entries"
+  rule 1 allowed no `getUserMedia` in any site chunk. The checker needs it, so
+  the exception is one module loaded by dynamic `import()`, and
+  `vite.config.ts` gives the mic code a stable chunk (`mic-*.js`) so
+  `npm run check:mic-chunks` can prove no page but /app and /record loads it up
+  front. The import starts on pointerdown; if it is not ready by the click, the
+  page asks for one more tap rather than opening the mic after an `await`
+  (iOS loses the gesture).
+
 ## SEO pages: a route table, not one Vite entry per page (19 Oct 2026)
 
 The SEO plan adds many indexable pages (a hub, tools, word pages, a

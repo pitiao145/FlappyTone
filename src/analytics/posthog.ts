@@ -162,6 +162,7 @@ export const APP_EVENTS = new Set<string>([
   "update_banner",
   "inapp_prompt",
   "tool_used",
+  "tool_summary",
 ]);
 
 /** The only `$`-prefixed properties allowed through on a gameplay event. */
@@ -316,7 +317,7 @@ export function captureGameEvent(event: AnalyticsEvent): void {
   if (eventTier(event.type) === "gameplay" && !gameplayConsent) return;
   const { type, ...rest } = event;
   capturePostHogEvent(type, rest as Record<string, string | number | boolean>, {
-    instant: type === "run_end",
+    instant: type === "run_end" || type === "tool_summary",
   });
 }
 
