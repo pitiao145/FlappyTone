@@ -6,6 +6,7 @@ import { HUB_EXAMPLE_IDS } from "./pages/ChineseTones.tsx";
 type Row = {
   id: string;
   status: string;
+  lists?: string[];
   polyline: unknown;
   onset_s: number;
   duration_s: number;
