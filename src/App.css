@@ -8977,8 +8977,41 @@ button.switch-track.switch-on {
 
 .word-viewer-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
   margin-top: var(--space-3);
+}
+
+/* Into the app's visualiser: the one sticker-style action in the viewer. */
+.word-viewer-try {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px 4px 6px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--beak);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.word-viewer-try:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.word-viewer-try:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+.word-viewer-try:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .screen .site-play:focus-visible {

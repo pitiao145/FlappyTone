@@ -4,6 +4,7 @@ import { TONE_LINE_COLOR } from "../ui/toneColors.ts";
 import { EXAMPLE_CLIPS } from "./exampleClips.ts";
 import { Pip } from "./Pip.tsx";
 import { clipUrl } from "./wordAudio.ts";
+import { appHref } from "../ui/appLink.ts";
 
 const W = 360;
 const H = 200;
@@ -158,6 +159,13 @@ export function WordViewer({
           : "The bird flies the pitch of the recording. In FlappyTone, your own voice flies it."}
       </p>
       <div className="word-viewer-actions">
+        <a
+          className="word-viewer-try"
+          href={appHref("visualiser", "/chinese-tones")}
+        >
+          <Pip size={26} tilt={-12} />
+          Try it
+        </a>
         <button
           type="button"
           className="site-play"
