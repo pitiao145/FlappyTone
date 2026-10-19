@@ -11693,3 +11693,8 @@ button.switch-track.switch-on {
 .say-page .say-back:focus-visible {
   color: var(--ink);
 }
+
+/* Route-table pages: room between the last block (CTA / Read next) and the footer. */
+.site-page > .legal-body {
+  padding-bottom: 64px;
+}
