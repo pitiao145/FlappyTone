@@ -2,13 +2,15 @@ import { PipCta } from "../Pip.tsx";
 import { TONE_LINE_COLOR } from "../../ui/toneColors.ts";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
 import { ToneChart } from "../ToneChart.tsx";
-import { toZhuyin } from "../zhuyin.ts";
+import { useState } from "react";
+import { markSyllable, parsePinyin, toZhuyin } from "../zhuyin.ts";
 
 const PATH = "/chinese-tones";
 const TOOL = "/tools/tone-marks";
 
 /** An example word: Traditional hanzi, marked pinyin, English. 注音 is derived. */
-type Example = [hanzi: string, pinyin: string, english: string];
+/** Catalog id (for its clip), hanzi, marked pinyin, English. */
+type Example = [id: string, hanzi: string, pinyin: string, english: string];
 
 interface ToneSection {
   id: string;
@@ -34,9 +36,9 @@ const SECTIONS: ToneSection[] = [
       "Starting at a normal speaking pitch, so it sounds flat but low, or letting it sag at the end as if finishing an English sentence. Keep it up to the last moment.",
     real: "In our native speaker's recordings, tone 1 sits at about 4.6, between 4 and 5, not at the very top. It stays there at everyday speed too. Aim for high and steady, not for your highest note.",
     examples: [
-      ["媽", "mā", "mother"],
-      ["書", "shū", "book"],
-      ["山", "shān", "mountain"],
+      ["ma1b", "媽", "mā", "mother"],
+      ["shu1", "書", "shū", "book"],
+      ["shan1", "山", "shān", "mountain"],
     ],
   },
   {
@@ -49,9 +51,9 @@ const SECTIONS: ToneSection[] = [
       "Dipping too deep before the rise, which makes it sound like tone 3, or rising too little, which makes it sound like tone 1. The turn should be early and shallow.",
     real: "Real tone 2 is not a straight line from 3 to 5. our speaker starts near 2.8, dips a little to about 2.3 in the first third, then climbs to near 5. At everyday speed it often stops around 4.5.",
     examples: [
-      ["茶", "chá", "tea"],
-      ["錢", "qián", "money"],
-      ["學", "xué", "to study"],
+      ["cha2", "茶", "chá", "tea"],
+      ["qian2", "錢", "qián", "money"],
+      ["xue2", "學", "xué", "to study"],
     ],
   },
   {
@@ -64,9 +66,9 @@ const SECTIONS: ToneSection[] = [
       "Treating it as a rising tone with a small dip. The low part is what makes it tone 3; the rise is optional. Many learners also do the full dip-and-rise on every third tone, which sounds slow and exaggerated in normal speech.",
     real: "The textbook 214 ends at 4. In our speaker's careful recordings the dip reaches about 1.6 halfway through and the rise goes almost to 5. At everyday speed the dip is shallower (about 1.9) and the rise stops near 4, and inside a phrase there is often no rise at all.",
     examples: [
-      ["馬", "mǎ", "horse"],
-      ["好", "hǎo", "good"],
-      ["水", "shuǐ", "water"],
+      ["ma3b", "馬", "mǎ", "horse"],
+      ["hao3", "好", "hǎo", "good"],
+      ["shui3", "水", "shuǐ", "water"],
     ],
   },
   {
@@ -79,9 +81,9 @@ const SECTIONS: ToneSection[] = [
       "Not falling far enough, so it sounds like a soft tone 1, or starting too low, so there is no room to fall. Start at the top and commit to the drop.",
     real: "The textbook 51 starts at the top. Our speaker's tone 4 peaks a little later, at about 4.5, then falls to about 1.4. At everyday speed it falls less, to about 1.9, so the speed of the drop matters more than how far it goes.",
     examples: [
-      ["罵", "mà", "to scold"],
-      ["大", "dà", "big"],
-      ["看", "kàn", "to look"],
+      ["ma4b", "罵", "mà", "to scold"],
+      ["da4", "大", "dà", "big"],
+      ["kan4", "看", "kàn", "to look"],
     ],
   },
   {
@@ -93,9 +95,9 @@ const SECTIONS: ToneSection[] = [
     mistake:
       "Giving a neutral syllable a full tone. 什麼 is “shén me”, not “shén mè”. Keep it short and let it follow the syllable before it.",
     examples: [
-      ["什麼", "shén me", "what"],
-      ["你們", "nǐ men", "you (plural)"],
-      ["包子", "bāo zi", "steamed bun"],
+      ["shenme20", "什麼", "shén me", "what"],
+      ["nimen30", "你們", "nǐ men", "you (plural)"],
+      ["baozi10", "包子", "bāo zi", "steamed bun"],
     ],
   },
 ];
@@ -133,30 +135,62 @@ export const FAQ: Faq[] = [
   },
 ];
 
-function ExampleList({
-  tone,
-  examples,
-}: {
-  tone: number;
-  examples: Example[];
-}) {
+function PlayButton({ id, label }: { id: string; label: string }) {
+  const [state, setState] = useState<"idle" | "playing" | "failed">("idle");
+  return (
+    <button
+      type="button"
+      className="site-play"
+      data-state={state}
+      aria-label={`Play ${label}`}
+      onClick={() => {
+        setState("playing");
+        // Lazy: no audio code in the page's initial chunk, and never the mic.
+        import("../wordAudio.ts")
+          .then((m) => m.playWord(id))
+          .then((ok) => setState(ok ? "idle" : "failed"))
+          .catch(() => setState("failed"));
+      }}
+    >
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        {state === "playing" ? (
+          <path d="M4 9h3l5-4v14l-5-4H4zM15 9a4 4 0 0 1 0 6M17.5 6.5a7.5 7.5 0 0 1 0 11" />
+        ) : (
+          <path d="M8 5v14l11-7z" />
+        )}
+      </svg>
+      <span>{state === "failed" ? "No audio" : "Listen"}</span>
+    </button>
+  );
+}
+
+function ExampleList({ examples }: { examples: Example[] }) {
   return (
     <ul className="site-examples">
-      {examples.map(([hanzi, pinyin, english]) => (
-        <li key={hanzi}>
+      {examples.map(([id, hanzi, pinyin, english]) => (
+        <li key={id}>
           <span className="hanzi" lang="zh-Hant-TW">
             {hanzi}
           </span>
-          <span
-            className="pinyin"
-            style={{ color: TONE_LINE_COLOR[tone as 0 | 1 | 2 | 3 | 4] }}
-          >
-            {pinyin}
+          <span className="pinyin">
+            {parsePinyin(pinyin).map((p, i) =>
+              "syllable" in p ? (
+                <span
+                  key={i}
+                  style={{ color: TONE_LINE_COLOR[p.syllable.tone] }}
+                >
+                  {markSyllable(p.syllable)}
+                </span>
+              ) : (
+                <span key={i}>{p.text}</span>
+              ),
+            )}
           </span>
           <span className="zhuyin" lang="zh-Hant-TW">
             {toZhuyin(pinyin)}
           </span>
           <span className="english">{english}</span>
+          <PlayButton id={id} label={`${hanzi} ${pinyin}`} />
         </li>
       ))}
     </ul>
@@ -216,7 +250,7 @@ export function ChineseTones() {
                 <p>{s.real}</p>
               </div>
             )}
-            <ExampleList tone={s.tone} examples={s.examples} />
+            <ExampleList examples={s.examples} />
           </section>
         ))}
 
@@ -268,10 +302,12 @@ export function ChineseTones() {
         <section id="faq">
           <h2>Can't hear the tones? Common questions</h2>
           {FAQ.map((f) => (
-            <div key={f.q} className="site-faq">
-              <h3>{f.q}</h3>
+            <details key={f.q} className="site-faq" open>
+              <summary>
+                <h3>{f.q}</h3>
+              </summary>
               <p>{f.a}</p>
-            </div>
+            </details>
           ))}
         </section>
 

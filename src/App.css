@@ -8780,7 +8780,8 @@ button.switch-track.switch-on {
   list-style: none;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, 156px);
+  justify-content: center;
   gap: var(--space-2);
 }
 
@@ -8795,8 +8796,56 @@ button.switch-track.switch-on {
   padding: var(--space-3) var(--space-4);
 }
 
+.site-examples li {
+  align-items: center;
+  text-align: center;
+}
+
 .site-examples li > span {
   display: block;
+}
+
+.screen .site-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-2);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 5px 12px 5px 9px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.screen .site-play svg path {
+  fill: currentColor;
+}
+
+.screen .site-play[data-state="playing"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.screen .site-play[data-state="playing"] svg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.screen .site-play[data-state="failed"] {
+  color: var(--ink-muted);
+  border-color: var(--ink-soft);
+}
+
+.screen .site-play:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .site-examples .hanzi {
@@ -8826,9 +8875,52 @@ button.switch-track.switch-on {
   font-size: 0.95rem;
 }
 
-.site-faq h3 {
+#faq > h2 {
+  margin-bottom: var(--space-3);
+}
+
+.site-faq {
+  border-top: 1px solid var(--line);
+  padding: var(--space-3) 0;
+}
+
+.site-faq summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+  list-style: none;
+}
+
+.site-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.site-faq summary::after {
+  content: "+";
+  flex: none;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--ink-muted);
+}
+
+.site-faq[open] summary::after {
+  content: "−";
+}
+
+.site-faq summary:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.legal-body .site-faq h3 {
   color: var(--ink);
   font-size: 1.05rem;
+}
+
+.site-faq p {
+  margin-top: var(--space-2);
 }
 
 /* Tool pages run wide on desktop: the tool is a workbench, not an article.
@@ -9014,6 +9106,11 @@ button.switch-track.switch-on {
   align-items: center;
   gap: 2px;
   min-width: 48px;
+}
+
+.tm-shapes .contour-spark {
+  color: inherit;
+  opacity: 1;
 }
 
 .tm-shape-pinyin {
