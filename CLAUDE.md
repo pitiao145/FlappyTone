@@ -116,6 +116,17 @@ Four rules hold the split together:
 3. **Only route-table pages are prerendered** (`/app`/`/record` never). `src/dev/prerender.ts` bakes each into its HTML for crawlers, and `prerenderEntry.tsx`'s wrapper markup (`.app > .app-main > .frame`) must stay identical to what the client renders (`LandingApp`, the legal apps, `SitePage`) or crawler markup and React's markup diverge.
 4. **`Nav.tsx` is the marketing site's bar; the game has its own (`src/app/GameNav.tsx`).** Do not reintroduce a shared nav.
 
+**Site pages: lessons from S2** (`docs/briefs/reports/12-…md` has the detail).
+Prose CSS targets `article > section`, never bare `section` (it beat a tool's
+grid once). Tools are wide (`.site-wide`). Audio on a site page goes through
+the lazy `src/site/wordAudio.ts` (guest ticket, one clip per tap), never
+`src/audio/`; a page's clip geometry is copied into a small tested file, never
+the whole `wordsFallback.json`. **Before shipping an example word with audio,
+check it returns 200 for a guest ticket** — the bundled fallback's `min_tier`
+can be stale. The Worker's CORS only allows `localhost:5173` in dev. Public
+copy says "the bird" or FlappyTone, never "Pip" (internal name), and does not
+name Jane ("our native speaker").
+
 One analytics consequence: **`landed` means "opened `/app`", not "visited the site"** — a visit to the marketing page is a `$pageview` instead.
 
 ## Commands
