@@ -1,42 +1,30 @@
 /**
- * The tone checker's microphone engine — the ONE site module allowed to touch
+ * The tone visualizer's microphone engine — the ONE site module allowed to touch
  * Web Audio (CLAUDE.md, "Three entries" rule 1). The page imports it only
  * with `import("./checker/engine.ts")` on the first Start tap, so it is a
  * separate chunk and never in the page's initial JS.
  *
  * Same engine as the in-app visualiser, composed from the same shared
  * modules (mic session, PitchTracker, sessionNoise, ContourRecorder, tone
- * accuracy, classifier v2, drawVisualiser); `src/ui/Visualiser.tsx` itself is
- * not imported and not changed. Textbook style only.
+ * accuracy, classifier v2, drawVisualiser — via `board.ts`); `src/ui/Visualiser.tsx`
+ * itself is not imported and not changed. No clip audio.
  *
  * Pitch runs only while the page is open: frames go to the tracker and are
  * dropped; nothing is recorded or sent (hard rule: no audio leaves the device).
  */
 
-import {
-  acquireMicStream,
-  ensureMic,
-  getMicSession,
-  releaseMicStream,
-  setFrameSink,
-  stopMic,
-} from "../../audio/session.ts";
+import { ensureMic, getMicSession, setFrameSink, stopMic } from "../../audio/session.ts";
 import { MicError } from "../../audio/mic.ts";
-import { ContourRecorder, type Contour } from "../../game/contours.ts";
-import type { Tone } from "../../game/gates.ts";
-import { spokenTones } from "../../game/sandhi.ts";
+import { ContourRecorder } from "../../game/contours.ts";
 import { loadSettings } from "../../game/settings.ts";
 import { sessionNoiseMeter, startingNoiseFloor } from "../../game/sessionNoise.ts";
-import { classifyToneV2 } from "../../game/toneClassifierV2.ts";
-import { referenceFromWord, toneAccuracyDetail } from "../../game/toneAccuracy.ts";
 import { tuning } from "../../game/tuning.ts";
-import type { Word } from "../../game/words.ts";
 import { PitchTracker } from "../../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../../render/canvas.ts";
 import { drawVisualiser } from "../../render/visualiser.ts";
 import { micErrorCopy } from "../../ui/micErrors.ts";
-import { playWord } from "../wordAudio.ts";
-import type { CheckerWord } from "./checkerWords.ts";
+import { scoreAttempt, SPAN_MS, targetWord, type AttemptResult } from "./board.ts";
+import type { RefMode, ToneRef } from "./toneRefs.ts";
 import {
   clearQuickCal,
   loadQuickCal,
@@ -46,9 +34,7 @@ import {
 } from "./quickCal.ts";
 
 export { micErrorCopy };
-
-/** The same span the in-app visualiser draws (`Visualiser.tsx`'s SPAN_MS). */
-const SPAN_MS = 1600;
+export type { AttemptResult };
 /** Kept attempts on screen, as in the visualiser. */
 const MAX_KEPT = 3;
 /** A calibration take ends after this much voiced sound… */
@@ -66,13 +52,6 @@ const SEED_F0 = 168;
 
 export type CalStep = "high" | "low";
 
-export interface AttemptResult {
-  /** 0..1, against the word's own recording; null = couldn't hear that. */
-  accuracy: number | null;
-  /** v2's read, single syllables only. */
-  read: { tone: Tone | "none"; confidence: number } | null;
-}
-
 export interface CheckerEvents {
   /** A calibration take is wanted (`retry` after a take that failed). */
   onCalStep(step: CalStep, retry: boolean): void;
@@ -86,9 +65,8 @@ export interface CheckerEvents {
 }
 
 export interface Checker {
-  setWord(w: CheckerWord): void;
-  /** Plays the word; the mic is deaf (and on iOS released) while it plays. */
-  listen(w: CheckerWord): Promise<boolean>;
+  /** The line to practise against, and which version of it. */
+  setTarget(ref: ToneRef, mode: RefMode): void;
   clear(): void;
   recalibrate(): void;
   /** From a tap, after `onPaused`. */
@@ -115,38 +93,6 @@ export function micErrorMessage(err: unknown): string {
   return micErrorCopy(micErrorKind(err));
 }
 
-/** A `Word` for the shared renderer/scorer, from a checker list entry. */
-export function wordOf(w: CheckerWord): Word {
-  return {
-    id: w.id,
-    hanzi: w.hanzi,
-    pinyin: w.pinyin,
-    speakerId: "jane",
-    english: w.english,
-    tone: w.tone,
-    tones: w.tones,
-    syllables: w.tones.length,
-    clipKey: "",
-    durationS: w.durationS,
-    onsetS: w.onsetS,
-    clipS: w.clipS,
-    polyline: w.polyline,
-    minTier: "free",
-    updatedAt: "",
-    listIds: [],
-  };
-}
-
-/** What a finished utterance scored against `word` — pure, see engine.test.ts. */
-export function scoreAttempt(contour: Contour, word: Word): AttemptResult {
-  const accuracy =
-    toneAccuracyDetail(contour.points, spokenTones(word), referenceFromWord(word), "textbook")
-      ?.accuracy ?? null;
-  // The classifier misreads a two-syllable contour (same rule as the app).
-  const r = word.syllables === 1 && accuracy !== null ? classifyToneV2(contour) : null;
-  return { accuracy, read: r ? { tone: r.tone, confidence: r.confidence } : null };
-}
-
 /** The game's own calibration if this device has one, else the quick one. */
 function savedBoard(): { cal: QuickCal; fromApp: boolean } | null {
   const app = loadSettings();
@@ -162,14 +108,14 @@ function savedBoard(): { cal: QuickCal; fromApp: boolean } | null {
 export function startChecker(
   canvas: HTMLCanvasElement,
   size: { width: number; height: number },
-  initial: CheckerWord,
+  initial: { ref: ToneRef; mode: RefMode },
   events: CheckerEvents,
 ): Checker {
   let width = size.width;
   let height = size.height;
   let ctx = scaleForDpr(canvas, width, height);
-  let word = wordOf(initial);
-  let deaf = false;
+  let mode = initial.mode;
+  let word = targetWord(initial.ref, mode);
   let destroyed = false;
 
   const measureNoise = sessionNoiseMeter();
@@ -237,7 +183,7 @@ export function startChecker(
   };
 
   const onFrame = (frame: Float32Array, sampleRate: number) => {
-    if (deaf || destroyed) return;
+    if (destroyed) return;
     const measured = measureNoise(frame, sampleRate);
     if (measured !== null) {
       roomFloor = measured;
@@ -303,7 +249,7 @@ export function startChecker(
     if (latest && latest.startedAtMs !== scoredAt) {
       scoredAt = latest.startedAtMs;
       hadLive = false;
-      events.onAttempt(scoreAttempt(latest, word));
+      events.onAttempt(scoreAttempt(latest, word, mode));
     } else if (live) {
       if ((head?.tMs ?? 0) >= UNCLEAR_MIN_MS) hadLive = true;
     } else if (hadLive) {
@@ -339,27 +285,12 @@ export function startChecker(
   else beginCal("high", false);
 
   return {
-    setWord(w) {
-      word = wordOf(w);
+    setTarget(ref, m) {
+      mode = m;
+      word = targetWord(ref, m);
       recorder.clear();
       scoredAt = -1;
       hadLive = false;
-    },
-    async listen(w) {
-      deaf = true;
-      recorder.clear();
-      scoredAt = -1;
-      hadLive = false;
-      // iOS plays through the earpiece while the mic is held: release it so
-      // the clip comes out of the loud speaker (same dance as the game's cue).
-      releaseMicStream();
-      try {
-        return await playWord(w.id);
-      } finally {
-        await acquireMicStream();
-        recorder.clear();
-        deaf = false;
-      }
     },
     clear() {
       recorder.clear();

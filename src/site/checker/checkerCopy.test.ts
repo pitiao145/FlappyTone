@@ -23,8 +23,8 @@ describe("attemptView", () => {
   });
 });
 
-describe("tone checker analytics", () => {
-  const ALLOWED_KEYS = new Set(["type", "tool", "action", "attempts", "words"]);
+describe("tone visualizer analytics", () => {
+  const ALLOWED_KEYS = new Set(["type", "tool", "action", "attempts", "targets"]);
 
   it("sends each action once, then counts only, all global tier", () => {
     const sent: AnalyticsEvent[] = [];
@@ -33,16 +33,16 @@ describe("tone checker analytics", () => {
     r.action("started");
     r.action("started");
     r.action("calibrated");
-    r.attempt("ni3");
-    r.attempt("ni3");
-    r.attempt("hao3");
+    r.attempt("3");
+    r.attempt("3");
+    r.attempt("3-3");
     r.summary();
     r.summary();
     expect(sent).toEqual([
-      { type: "tool_used", tool: "tone-checker", action: "started" },
-      { type: "tool_used", tool: "tone-checker", action: "calibrated" },
-      { type: "tool_used", tool: "tone-checker", action: "first_attempt" },
-      { type: "tool_summary", tool: "tone-checker", attempts: 3, words: 2 },
+      { type: "tool_used", tool: "tone-visualizer", action: "started" },
+      { type: "tool_used", tool: "tone-visualizer", action: "calibrated" },
+      { type: "tool_used", tool: "tone-visualizer", action: "first_attempt" },
+      { type: "tool_summary", tool: "tone-visualizer", attempts: 3, targets: 2 },
     ]);
     for (const e of sent) {
       expect(eventTier(e.type)).toBe("global");
@@ -51,7 +51,7 @@ describe("tone checker analytics", () => {
       for (const [k, v] of Object.entries(e)) {
         expect(ALLOWED_KEYS.has(k), k).toBe(true);
         if (typeof v === "string") {
-          expect(["tool_used", "tool_summary", "tone-checker", "started", "mic_denied", "calibrated", "first_attempt"]).toContain(v);
+          expect(["tool_used", "tool_summary", "tone-visualizer", "started", "mic_denied", "calibrated", "first_attempt"]).toContain(v);
         }
       }
     }

@@ -118,11 +118,11 @@ export const ROUTES: readonly SiteRoute[] = [
     render: "renderSitePage",
   },
   {
-    path: "/tools/tone-checker",
+    path: "/tools/tone-visualizer",
     lang: "en",
-    title: "Chinese Pronunciation Checker: Check Your Tones Free — FlappyTone",
+    title: "Mandarin Tone Visualizer & Pronunciation Checker (Free) — FlappyTone",
     description:
-      "Free Chinese pronunciation checker for Mandarin tones: hear a native speaker, say the word, and see your pitch drawn over the recording with a tone accuracy score. No sign-up.",
+      "Free Chinese tone checker: say a Mandarin tone and see your pitch drawn over a native speaker's real tone shape or the textbook one, with a tone accuracy score. No sign-up.",
     lastmod: "2026-10-19",
     pageType: "tool",
     angle: "learner",

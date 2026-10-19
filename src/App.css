@@ -10832,7 +10832,7 @@ button.switch-track.switch-on {
   }
 }
 
-/* ---- the tone checker (/tools/tone-checker) ---- */
+/* ---- the tone visualizer (/tools/tone-visualizer) ---- */
 
 .tc-tool {
   position: relative;
@@ -10895,9 +10895,6 @@ button.switch-track.switch-on {
   box-shadow: 2px 2px 0 var(--ink);
 }
 
-.tc-chip-pinyin {
-  font-weight: 700;
-}
 
 .tc-main {
   display: flex;
@@ -10907,28 +10904,9 @@ button.switch-track.switch-on {
   min-width: 0;
 }
 
-.tc-word {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-3);
-}
 
-.tc-hanzi {
-  font-size: 2.6rem;
-  line-height: 1;
-  color: var(--ink);
-}
 
-.tc-pinyin {
-  font-family: var(--font-display);
-  font-size: 1.6rem;
-  font-weight: 700;
-}
 
-.tc-english {
-  color: var(--ink-muted);
-}
 
 .tc-stage {
   position: relative;
@@ -11073,4 +11051,67 @@ button.switch-track.switch-on {
   .tc-main {
     padding: var(--space-4);
   }
+}
+
+.tc-toggle {
+  display: inline-flex;
+  align-self: flex-start;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.screen .tc-toggle button {
+  font: inherit;
+  font-weight: 700;
+  padding: 6px 16px;
+  border: none;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.screen .tc-toggle button + button {
+  border-left: 2px solid var(--ink);
+}
+
+.screen .tc-toggle .tc-toggle-on {
+  background: var(--ink);
+  color: var(--surface);
+}
+
+.tc-ref-card {
+  border-left: 4px solid;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.tc-ref-title {
+  font-weight: 700;
+}
+
+.tc-ref-example {
+  font-weight: 400;
+  color: var(--ink-muted);
+}
+
+.tc-ref-card p {
+  margin: 4px 0 0;
+  font-size: 0.95rem;
+}
+
+.legal-body a.tc-app-link,
+.legal-body a.tc-result-cta {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.legal-body a.tc-app-link {
+  margin-top: auto;
+}
+
+.legal-body a.tc-result-cta {
+  flex-basis: 100%;
+  margin-top: var(--space-2);
 }

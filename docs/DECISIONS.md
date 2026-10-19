@@ -1251,9 +1251,9 @@ FlappyTone specifically — check the current value with `project-get` before
 assuming either way, and raise any change with Pierre first since it's
 project-wide.
 
-## Public tone checker: a separate page, its own words, a quick calibration (19 Oct 2026)
+## Public tone visualizer: a separate page, reference shapes, a quick calibration (19 Oct 2026)
 
-`/tools/tone-checker` (SEO S3) is the in-app visualiser's engine on a public,
+`/tools/tone-visualizer` (SEO S3) is the in-app visualiser's engine on a public,
 no-signup page. Decisions (Pierre's, plus what the build forced):
 
 - **Separate page, same engine, no fork.** Sending a search visitor into /app
@@ -1261,10 +1261,16 @@ no-signup page. Decisions (Pierre's, plus what the build forced):
   words. Forking `Visualiser.tsx` would make two engines drift. The engine
   pieces were already standalone modules, so `src/site/checker/engine.ts`
   composes them; nothing was extracted and the Visualiser is unchanged.
-- **Its own 24-word list, outside `wordsPerTone`.** The guest cap exists to
-  make the in-app visualiser a reason to sign up; a public sample with zero
-  words would be no sample. Scoped to this page (`checkerWords.ts`); `tiers.ts`
-  is untouched. Every word must pass the Worker's guest TOCFL gate.
+- **Reference shapes, not words (Pierre).** A first version had 24 words
+  with audio, more than a free account's visualiser gives (5 per tone), so
+  signing up would have given less. Now the page practises tones against two
+  lines the visitor picks: our speaker's natural-speed average, or the
+  textbook Chao letters stretched to the same length. That shows the product's
+  core idea (textbook vs real speech) and leaves words and audio to the app.
+  Two sandhi pairs (3+3, 3+4) are teasers. `TIER_LIMITS` is untouched.
+- **Scored against the line you pick.** Against the textbook line the T2/T3
+  cue is off (`t23Cue = false`): it measures likeness to our speaker, and with
+  it a perfect textbook 214 scored 0.84.
 - **A ~10 s calibration (one mā, one mǎ), not the app's flow.** The board's
   halves come from the same anchors and function as the real calibration
   (`computeRangeHalvesFromExtremes`: T1 level up, T3 floor down); the centre,

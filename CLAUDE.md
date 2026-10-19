@@ -105,7 +105,7 @@ on `landed`, and strips it. Like `?intent=`, it never starts anything.
 
 Four rules hold the split together:
 
-1. **The marketing page must not import `src/audio/` or `src/pitch/`.** The same rule holds for every route-table page and `src/site/`, with **one named exception: the tone checker's engine, `src/site/checker/engine.ts`**, which `/tools/tone-checker` loads only with a dynamic `import()` on the Start tap (never statically, never with the page). Check after touching `Landing.tsx`, `src/site/` or anything they import:
+1. **The marketing page must not import `src/audio/` or `src/pitch/`.** The same rule holds for every route-table page and `src/site/`, with **one named exception: the tone visualizer's engine, `src/site/checker/engine.ts`**, which `/tools/tone-visualizer` loads only with a dynamic `import()` on the Start tap (never statically, never with the page). Check after touching `Landing.tsx`, `src/site/` or anything they import:
    ```bash
    npm run build
    npm run check:mic-chunks   # getUserMedia only in mic-*.js (vite.config.ts names it); no page but /app and /record loads it up front
@@ -117,20 +117,23 @@ Four rules hold the split together:
 3. **Only route-table pages are prerendered** (`/app`/`/record` never). `src/dev/prerender.ts` bakes each into its HTML for crawlers, and `prerenderEntry.tsx`'s wrapper markup (`.app > .app-main > .frame`) must stay identical to what the client renders (`LandingApp`, the legal apps, `SitePage`) or crawler markup and React's markup diverge.
 4. **`Nav.tsx` is the marketing site's bar; the game has its own (`src/app/GameNav.tsx`).** Do not reintroduce a shared nav.
 
-**The public tone checker (`/tools/tone-checker`, `src/site/checker/`).** The
-in-app visualiser's engine on a free, no-signup page: `engine.ts` composes the
-same shared modules (mic session, `PitchTracker`, `sessionNoise`,
-`ContourRecorder`, `toneAccuracyDetail`, `classifyToneV2`, `drawVisualiser`)
-and never imports `Visualiser.tsx`. Textbook only. Its word list
-(`checkerWords.ts`, 24 words, copied geometry with a sync test, every word
-guest-playable) is **outside `TIER_LIMITS.wordsPerTone`** on purpose, for this
-page only. Calibration: the game's own (`loadSettings()`) if the device has
-one, else a ~10 s quick one (one mā, one mǎ, `quickCal.ts`) stored under
-**`flappytone.quickcal.v1`** — it never writes the app's
-`toneflap.settings.v3`, and /app never reads it. `?word=<id>` preselects a
-list word. Analytics: `tool_used {tool:"tone-checker", action}` (each action
-once per load) and `tool_summary {attempts, words}` on `pagehide`, global
-tier, counts only.
+**The public tone visualizer (`/tools/tone-visualizer`, `src/site/checker/`).**
+The in-app visualiser's engine on a free, no-signup page, with **no word
+audio** (hearing real words is what the app adds). The visitor picks a tone
+(1–4) or a sandhi pair (3+3, 3+4) and a version to practise and be scored
+against: **Real speech** = our speaker's natural-speed average
+(`AVERAGED_TONE_SHAPE.natural` / `AVERAGED_PAIR_SHAPE.natural`, 3+3 reads the
+spoken "2-3"), or **Textbook** = the Chao letters (55/35/214/51) over the same
+duration (`toneRefs.ts`). `board.ts` (no mic) holds the shared renderer/scorer
+and draws the idle board; `engine.ts` is the mic chunk and never imports
+`Visualiser.tsx`. Textbook scoring passes `t23Cue = false` to
+`toneAccuracyDetail` (the cue measures likeness to real speech). Calibration:
+the game's own (`loadSettings()`) if the device has one, else a ~10 s quick
+one (one mā, one mǎ, `quickCal.ts`) under **`flappytone.quickcal.v1`** — never
+`toneflap.settings.v3`, never read by /app. `?tone=<1-4|3-3|3-4>&mode=textbook`
+preselect. Analytics: `tool_used {tool:"tone-visualizer", action}` (each once
+per load) and `tool_summary {attempts, targets}` on `pagehide`, global tier,
+counts only.
 
 **Site pages: lessons from S2** (`docs/briefs/reports/12-…md` has the detail).
 Prose CSS targets `article > section`, never bare `section` (it beat a tool's

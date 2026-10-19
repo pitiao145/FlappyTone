@@ -1,26 +1,31 @@
 import { useEffect, useRef, useState } from "react";
 import { captureGameEvent } from "../../analytics/posthog.ts";
 import { TONE_LINE_COLOR } from "../../ui/toneColors.ts";
+import { appHref } from "../../ui/appLink.ts";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
 import { Pip, PipCta } from "../Pip.tsx";
 import {
-  CHECKER_WORDS,
-  checkerWordFor,
-  DEFAULT_CHECKER_WORD,
-  type CheckerWord,
-} from "../checker/checkerWords.ts";
+  DEFAULT_REF,
+  modeFor,
+  polylineOf,
+  refFor,
+  TONE_REFS,
+  type RefMode,
+  type ToneRef,
+} from "../checker/toneRefs.ts";
 import {
   attemptView,
   makeCheckerReporter,
   type AttemptView,
   type CheckerReporter,
 } from "../checker/checkerCopy.ts";
-// Types only: erased at build, so the engine stays out of this chunk.
+// Types only: erased at build, so neither chunk lands in this one.
 import type { CalStep, Checker } from "../checker/engine.ts";
 
-const PATH = "/tools/tone-checker";
+const PATH = "/tools/tone-visualizer";
 
 type EngineModule = typeof import("../checker/engine.ts");
+type BoardModule = typeof import("../checker/board.ts");
 
 /**
  * The engine chunk — the only site code that touches the microphone. Loaded on
@@ -40,6 +45,13 @@ function loadEngine(): Promise<EngineModule> {
   return enginePromise;
 }
 
+/** The board renderer (no mic): loaded after mount to draw the idle board. */
+let boardPromise: Promise<BoardModule> | null = null;
+function loadBoard(): Promise<BoardModule> {
+  boardPromise ??= import("../checker/board.ts");
+  return boardPromise;
+}
+
 type Phase =
   | "idle"
   | "loading"
@@ -50,44 +62,38 @@ type Phase =
   | "ready"
   | "paused";
 
-const TONES = [1, 2, 3, 4] as const;
-const SINGLE = CHECKER_WORDS.filter((w) => w.tones.length === 1);
-const PAIRS = CHECKER_WORDS.filter((w) => w.tones.length > 1);
+const SINGLE = TONE_REFS.filter((r) => r.tones.length === 1);
+const PAIRS = TONE_REFS.filter((r) => r.tones.length > 1);
 
-/** The word's measured shape as a static SVG path — the idle board. */
-function shapePath(w: CheckerWord, width: number, height: number): string {
-  const y = (chao: number) => height - ((chao - 1) / 4) * height;
-  return w.polyline
-    .map(([t, c], i) => `${i ? "L" : "M"}${(t * width).toFixed(1)} ${y(c).toFixed(1)}`)
+/**
+ * The prerendered stand-in until the real renderer draws: the same line, on
+ * the board's own axes (time from the bird's rest point, chao 1–5 over the
+ * playable band). Replaced by the canvas as soon as `board.ts` loads.
+ */
+function shapePath(ref: ToneRef, mode: RefMode): string {
+  const x = (t: number) => 18 + t * 80 * (ref.durationS / 1.6);
+  const y = (c: number) => 80 - ((c - 1) / 4) * 60;
+  return polylineOf(ref, mode)
+    .map(([t, c], i) => `${i ? "L" : "M"}${x(t).toFixed(2)} ${y(c).toFixed(2)}`)
     .join(" ");
 }
 
-function ColoredPinyin({ w }: { w: CheckerWord }) {
-  const parts = w.pinyin.split(" ");
-  return (
-    <>
-      {parts.map((p, i) => (
-        <span key={i} style={{ color: TONE_LINE_COLOR[w.tones[i] ?? w.tone] }}>
-          {i ? " " : ""}
-          {p}
-        </span>
-      ))}
-    </>
-  );
-}
-
 const FAQ = [
+  {
+    q: "What is the difference between Real speech and Textbook?",
+    a: "Textbook is the classic tone chart: Tone 1 high and level (55), Tone 2 rising (35), Tone 3 dipping and rising (214), Tone 4 falling (51). Real speech is the average shape of many words recorded by our native Taiwan Mandarin speaker at everyday speed. They often differ: real Tone 3 rarely rises as high as the chart says, and two third tones in a row are not said as written. Pick the one you want to practise; you are scored against that line.",
+  },
   {
     q: "Does it work on my phone?",
     a: "Yes. It runs in the browser on iPhone (Safari) and Android (Chrome). Tap Start and allow the microphone. Hold the phone about a hand's length from your mouth, in a quiet room.",
   },
   {
     q: "Why do I have to calibrate first?",
-    a: "Everyone's voice sits at a different height. You say one high, level mā and one low mǎ, and the checker sizes the board to your voice. That takes about ten seconds, and it is saved on this device. If you have played FlappyTone on this device, it uses that calibration instead.",
+    a: "Everyone's voice sits at a different height. You say one high, level mā and one low mǎ, and the visualizer sizes the board to your voice. That takes about ten seconds, and it is saved on this device. If you have played FlappyTone on this device, it uses that calibration instead.",
   },
   {
     q: "Why does it say “couldn't hear that”?",
-    a: "The sound was too short or too quiet to measure a tone, so it gives no score instead of a wrong one. Say the word a little longer and a little louder, closer to the microphone. A creaky, very low third tone can also drop out; that is normal, just try again.",
+    a: "The sound was too short or too quiet to measure a tone, so it gives no score instead of a wrong one. Say it a little longer and a little louder, closer to the microphone. A creaky, very low third tone can also drop out; that is normal, just try again.",
   },
   {
     q: "Is my voice recorded or uploaded?",
@@ -101,11 +107,10 @@ function useReporter(): CheckerReporter {
   return ref.current;
 }
 
-/** The checker: pick a word, listen, say it, see your line over ours. */
-function Checker() {
-  const [word, setWord] = useState<CheckerWord>(() =>
-    checkerWordFor(DEFAULT_CHECKER_WORD),
-  );
+/** The tool: pick a tone and a version, say it, see your line over it. */
+function Visualizer() {
+  const [ref, setRef] = useState<ToneRef>(() => refFor(DEFAULT_REF));
+  const [mode, setMode] = useState<RefMode>("real");
   const [phase, setPhase] = useState<Phase>("idle");
   const [calStep, setCalStep] = useState<CalStep>("high");
   const [calRetry, setCalRetry] = useState(false);
@@ -113,30 +118,52 @@ function Checker() {
   const [error, setError] = useState<string | null>(null);
   const [fromApp, setFromApp] = useState(false);
   const [result, setResult] = useState<AttemptView | null>(null);
-  const [listening, setListening] = useState(false);
+  const [boardDrawn, setBoardDrawn] = useState(false);
   const reporter = useReporter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const checkerRef = useRef<Checker | null>(null);
-  const wordRef = useRef(word);
+  const targetRef = useRef({ ref, mode });
 
-  const pick = (w: CheckerWord) => {
-    wordRef.current = w;
-    setWord(w);
+  const running = phase === "cal" || phase === "ready" || phase === "paused";
+
+  const choose = (nextRef: ToneRef, nextMode: RefMode) => {
+    targetRef.current = { ref: nextRef, mode: nextMode };
+    setRef(nextRef);
+    setMode(nextMode);
     setResult(null);
-    checkerRef.current?.setWord(w);
+    checkerRef.current?.setTarget(nextRef, nextMode);
   };
 
-  // `?word=<id>` (deep links from word pages). Read after mount so the
-  // prerendered markup (default word) and the first client render agree.
+  // `?tone=3-3&mode=textbook`. Read after mount so the prerendered markup
+  // (Tone 3, real speech) and the first client render agree.
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("word");
-    if (!id) return;
-    const w = checkerWordFor(id);
-    wordRef.current = w;
+    const q = new URLSearchParams(window.location.search);
+    if (!q.has("tone") && !q.has("mode")) return;
+    const next = { ref: refFor(q.get("tone")), mode: modeFor(q.get("mode")) };
+    targetRef.current = next;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the URL is read once, after hydration
-    setWord(w);
+    setRef(next.ref);
+    setMode(next.mode);
   }, []);
+
+  // The idle board, drawn by the app's own renderer (grid, corridor, bird).
+  // Once the mic runs, the engine draws every frame instead.
+  useEffect(() => {
+    if (running) return;
+    let alive = true;
+    void loadBoard().then((b) => {
+      const canvas = canvasRef.current;
+      const stage = stageRef.current;
+      if (!alive || !canvas || !stage) return;
+      const r = stage.getBoundingClientRect();
+      b.drawIdle(canvas, Math.round(r.width), Math.round(r.height), ref, mode);
+      setBoardDrawn(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [ref, mode, running]);
 
   // Leaving the page stops the mic, and sends the visit's counts once.
   useEffect(() => {
@@ -159,7 +186,13 @@ function Checker() {
     if (!stage || typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(() => {
       const r = stage.getBoundingClientRect();
-      checkerRef.current?.resize(Math.round(r.width), Math.round(r.height));
+      const w = Math.round(r.width);
+      const h = Math.round(r.height);
+      if (checkerRef.current) checkerRef.current.resize(w, h);
+      else if (canvasRef.current) {
+        const t = targetRef.current;
+        void loadBoard().then((b) => b.drawIdle(canvasRef.current!, w, h, t.ref, t.mode));
+      }
     });
     ro.observe(stage);
     return () => ro.disconnect();
@@ -179,7 +212,7 @@ function Checker() {
         checkerRef.current = mod.startChecker(
           canvas,
           { width: Math.round(r.width), height: Math.round(r.height) },
-          wordRef.current,
+          targetRef.current,
           {
             onCalStep(step, retry) {
               setPhase("cal");
@@ -193,9 +226,9 @@ function Checker() {
               reporter.action("calibrated");
             },
             onAttempt(r) {
-              const w = wordRef.current;
-              reporter.attempt(w.id);
-              setResult(attemptView(r, w.tone, w.tones.length));
+              const t = targetRef.current.ref;
+              reporter.attempt(t.id);
+              setResult(attemptView(r, t.tones[0], t.tones.length));
             },
             onPaused() {
               setPhase("paused");
@@ -226,83 +259,81 @@ function Checker() {
     loadEngine().then(
       () => setPhase("tap-again"),
       () => {
-        setError("Couldn't load the checker. Check your connection and try again.");
+        setError("Couldn't load the visualizer. Check your connection and try again.");
         setPhase("error");
       },
     );
   };
 
-  const listen = async () => {
-    setListening(true);
-    try {
-      if (checkerRef.current) await checkerRef.current.listen(word);
-      else await (await import("../wordAudio.ts")).playWord(word.id);
-    } finally {
-      setListening(false);
-    }
-  };
-
-  const running = phase === "cal" || phase === "ready" || phase === "paused";
   const startLabel =
     phase === "tap-again" ? "Allow the microphone" : phase === "error" ? "Try again" : "Start";
+  const color = TONE_LINE_COLOR[ref.tones[0]];
 
   return (
-    <div className="tc-tool" role="group" aria-label="Chinese tone checker">
+    <div className="tc-tool" role="group" aria-label="Mandarin tone visualizer">
       <Pip size={72} tilt={-10} className="tm-tool-pip" />
       <div className="tc-picker">
-        <div className="tc-picker-label">Pick a word</div>
-        {TONES.map((t) => (
-          <div key={t} className="tc-row">
-            <span className="tc-row-label" style={{ color: TONE_LINE_COLOR[t] }}>
-              Tone {t}
+        <div className="tc-picker-label">Pick a tone</div>
+        <div className="tc-row">
+          {SINGLE.map((r) => (
+            <RefChip key={r.id} r={r} selected={r.id === ref.id} pick={() => choose(r, mode)} />
+          ))}
+        </div>
+        <div className="tc-picker-label">Tone pairs (tone sandhi)</div>
+        <div className="tc-row">
+          {PAIRS.map((r) => (
+            <RefChip key={r.id} r={r} selected={r.id === ref.id} pick={() => choose(r, mode)} />
+          ))}
+        </div>
+
+        <div className="tc-picker-label">Practise against</div>
+        <div className="tc-toggle" role="radiogroup" aria-label="Reference line">
+          {(["real", "textbook"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={mode === m}
+              className={mode === m ? "tc-toggle-on" : undefined}
+              onClick={() => choose(ref, m)}
+            >
+              {m === "real" ? "Real speech" : "Textbook"}
+            </button>
+          ))}
+        </div>
+
+        <div className="tc-ref-card" style={{ borderColor: color }}>
+          <div className="tc-ref-title">
+            <span style={{ color }}>{ref.label}</span>{" "}
+            <span className="tc-ref-example" lang="zh-Hant-TW">
+              e.g. {ref.example}
             </span>
-            {SINGLE.filter((w) => w.tone === t).map((w) => (
-              <WordChip key={w.id} w={w} selected={w.id === word.id} pick={pick} />
-            ))}
           </div>
-        ))}
-        {PAIRS.length > 0 && (
-          <div className="tc-row">
-            <span className="tc-row-label">Two syllables</span>
-            {PAIRS.map((w) => (
-              <WordChip key={w.id} w={w} selected={w.id === word.id} pick={pick} />
-            ))}
-          </div>
-        )}
+          <p>
+            {mode === "real"
+              ? "The line is our native speaker's average at everyday speed. "
+              : "The line is the textbook tone chart, stretched to the same length. "}
+            {ref.diff}
+          </p>
+        </div>
+
+        <a className="tc-app-link" href={appHref("visualiser", PATH)}>
+          Hear real words and practise them in the full visualizer{" "}
+          <span aria-hidden="true">→</span>
+        </a>
       </div>
 
       <div className="tc-main">
-        <div className="tc-word">
-          <span className="tc-hanzi" lang="zh-Hant-TW">
-            {word.hanzi}
-          </span>
-          <span className="tc-pinyin">
-            <ColoredPinyin w={word} />
-          </span>
-          <span className="tc-english">{word.english}</span>
-          <button
-            type="button"
-            className="tc-button"
-            onClick={() => void listen()}
-            disabled={listening}
-          >
-            {listening ? "Playing…" : "Listen"}
-          </button>
-        </div>
-
         <div className="tc-stage" ref={stageRef}>
           <canvas ref={canvasRef} className="tc-canvas" aria-hidden="true" />
-          {!running && (
+          {!boardDrawn && (
             <svg
               className="tc-idle"
-              viewBox="0 0 300 120"
+              viewBox="0 0 100 100"
               preserveAspectRatio="none"
               aria-hidden="true"
             >
-              <path
-                d={shapePath(word, 300, 120)}
-                style={{ stroke: TONE_LINE_COLOR[word.tone] }}
-              />
+              <path d={shapePath(ref, mode)} style={{ stroke: color }} />
             </svg>
           )}
         </div>
@@ -310,20 +341,19 @@ function Checker() {
         <div className="tc-status" aria-live="polite">
           {phase === "idle" && (
             <p>
-              The line is how our native speaker says {word.hanzi}. Tap Start,
-              then say the word and see your line drawn over it.
+              Tap Start, then say any syllable in {ref.label.toLowerCase()} (or{" "}
+              <span lang="zh-Hant-TW">{ref.example}</span>) and see your pitch drawn
+              over the line.
             </p>
           )}
-          {phase === "loading" && <p>Loading the checker…</p>}
+          {phase === "loading" && <p>Loading the visualizer…</p>}
           {phase === "tap-again" && <p>Ready. Tap once more to allow the microphone.</p>}
           {phase === "opening" && <p>Allow the microphone when your browser asks.</p>}
           {phase === "error" && <p className="tc-error">{error}</p>}
           {phase === "cal" && (
             <div className="tc-cal">
               <p>
-                <strong>
-                  Quick setup, step {calStep === "high" ? 1 : 2} of 2.
-                </strong>{" "}
+                <strong>Quick setup, step {calStep === "high" ? 1 : 2} of 2.</strong>{" "}
                 {calRetry && "Couldn't hear that clearly, let's try again. "}
                 {calStep === "high" ? (
                   <>
@@ -344,8 +374,8 @@ function Checker() {
           )}
           {phase === "ready" && !result && (
             <p>
-              Your turn: say <b lang="zh-Hant-TW">{word.hanzi}</b>{" "}
-              <ColoredPinyin w={word} />.
+              Your turn: say {ref.label.toLowerCase()} (
+              <span lang="zh-Hant-TW">{ref.example}</span>).
               {fromApp && " Using your FlappyTone calibration."}
             </p>
           )}
@@ -357,7 +387,19 @@ function Checker() {
               <span className="tc-headline">{result.headline}</span>
               {result.read && <span className="tc-read">{result.read}</span>}
               {result.percent !== null && (
-                <span className="tc-note">Tone accuracy against our recording.</span>
+                <span className="tc-note">
+                  Tone accuracy against the {mode === "real" ? "real-speech" : "textbook"} line.
+                </span>
+              )}
+              {result.tier === "good" && (
+                <a className="tc-result-cta" href={appHref(undefined, PATH)}>
+                  Now fly it: your voice steers the bird in FlappyTone →
+                </a>
+              )}
+              {(result.tier === "ok" || result.tier === "bad") && (
+                <a className="tc-result-cta" href={appHref("visualiser", PATH)}>
+                  Practise it with real words and our speaker's audio →
+                </a>
               )}
             </div>
           )}
@@ -421,65 +463,63 @@ function Checker() {
   );
 }
 
-function WordChip({
-  w,
-  selected,
-  pick,
-}: {
-  w: CheckerWord;
-  selected: boolean;
-  pick: (w: CheckerWord) => void;
-}) {
+function RefChip({ r, selected, pick }: { r: ToneRef; selected: boolean; pick: () => void }) {
   return (
     <button
       type="button"
       className={selected ? "tc-chip tc-chip-on" : "tc-chip"}
       aria-pressed={selected}
-      onClick={() => pick(w)}
+      onClick={pick}
     >
-      <span lang="zh-Hant-TW">{w.hanzi}</span>{" "}
-      <span className="tc-chip-pinyin">
-        <ColoredPinyin w={w} />
-      </span>
+      {r.tones.map((t, i) => (
+        <span key={i} style={{ color: TONE_LINE_COLOR[t] }}>
+          {i ? " + " : ""}
+          {r.tones.length > 1 ? t : `Tone ${t}`}
+        </span>
+      ))}
     </button>
   );
 }
 
-export function ToneChecker() {
+export function ToneVisualizer() {
   return (
     <div className="screen legal-screen site-page site-wide">
       <article className="legal-body">
         <header className="tm-head">
-          <h1>Chinese pronunciation checker for tones</h1>
+          <h1>Mandarin tone visualizer</h1>
           <p className="site-answer">
-            Pick a word, hear our native speaker say it, then say it yourself.
-            Your pitch is drawn over the recording's tone shape, with a tone
-            accuracy score and which tone it sounded like. Free, no sign-up.
+            See your Chinese tones as you say them. Pick a tone, choose the
+            textbook shape or how a native speaker really says it, and your pitch
+            is drawn over that line with a tone accuracy score. A free Chinese
+            pronunciation checker for tones, no sign-up.
           </p>
         </header>
 
-        <Checker />
+        <Visualizer />
 
         <div className="tm-notes">
           <section>
             <h2>How it works</h2>
             <p>
               Mandarin tones are pitch shapes: high and level, rising, dipping,
-              falling. The coloured line is the shape our native speaker made
-              in the recording. When you speak, the checker measures
-              the pitch of your voice many times a second and draws it as your
-              own line on the same board, so you can see where your tone goes
-              flat, starts too high or falls too early.
+              falling. While you speak, the visualizer measures the pitch of your
+              voice many times a second and draws it as your own line on the same
+              board as the reference, so you can see where your tone goes flat,
+              starts too high or falls too early.
             </p>
             <p>
-              The percentage is tone accuracy: how close your shape is to the
-              recording's, whatever your speed. The tone read says which of the
-              four tones your shape sounded most like. It checks the tone only,
-              not the consonants or vowels.
+              The percentage is tone accuracy: how close your shape is to the line
+              you picked, whatever your speed. For single tones it also says which
+              of the four tones your shape sounded most like. It checks the tone
+              only, not the consonants or vowels.
             </p>
+            <h2>Textbook vs real speech</h2>
             <p>
-              Everything runs in your browser. Your voice is not recorded or
-              sent anywhere. New to tones? Start with the{" "}
+              Tone charts teach 55, 35, 214 and 51. Real speech is softer and
+              faster: the third tone usually stays low, and pairs change shape
+              (two third tones become a rising tone plus a third tone). Switch
+              between the two lines to see the difference, then practise the one
+              you need. More in the{" "}
               <a href="/chinese-tones">guide to the four Chinese tones</a>.
             </p>
           </section>
@@ -499,8 +539,8 @@ export function ToneChecker() {
         <PipCta
           path={PATH}
           intent="visualiser"
-          title="Practise every word, then play"
-          body="This checker has 24 words. FlappyTone has hundreds of recorded words, and the game turns them into flight: your voice steers the bird through tunnels shaped like each tone."
+          title="Practise real words, then play"
+          body="In FlappyTone you hear each word from our native speaker, practise it in the full visualizer, and your progress is saved with a free account. Then the game turns it into flight: your voice steers the bird through tunnels shaped like each tone."
           secondary={{ href: "/chinese-tones", label: "Read the tone guide" }}
         />
       </article>
@@ -508,12 +548,12 @@ export function ToneChecker() {
   );
 }
 
-export function toneCheckerJsonLd(route: SiteRoute): object[] {
+export function toneVisualizerJsonLd(route: SiteRoute): object[] {
   return [
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      name: "Chinese Tone Checker",
+      name: "Mandarin Tone Visualizer",
       url: absoluteUrl(route.path),
       description: route.description,
       applicationCategory: "EducationalApplication",

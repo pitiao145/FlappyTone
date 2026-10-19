@@ -281,16 +281,16 @@ export type AnalyticsEvent =
    */
   | { type: "tool_used"; tool: "tone-marks"; direction: "to-marks" | "to-numbers" }
   /**
-   * The public tone checker (`src/site/checker/`): each action at most once per
+   * The public tone visualizer (`src/site/checker/`): each action at most once per
    * page load. No accuracy, no pitch, no word, nothing typed.
    */
   | {
       type: "tool_used";
-      tool: "tone-checker";
+      tool: "tone-visualizer";
       action: "started" | "mic_denied" | "calibrated" | "first_attempt";
     }
-  /** The tone checker's visit, once on `pagehide`: counts only. */
-  | { type: "tool_summary"; tool: "tone-checker"; attempts: number; words: number }
+  /** The tone visualizer's visit, once on `pagehide`: counts only. */
+  | { type: "tool_summary"; tool: "tone-visualizer"; attempts: number; targets: number }
   /** FeedbackWidget.tsx's submit, once it resolves ok. Never carries the free-text message — screen/rating/tier only. */
   | { type: "feedback_submitted"; screen: string; rating: number | null; tier: string };
 

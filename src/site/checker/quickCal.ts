@@ -1,5 +1,5 @@
 /**
- * The tone checker's ~10 s calibration: one "mā" (high, level) and one "mǎ"
+ * The tone visualizer's ~10 s calibration: one "mā" (high, level) and one "mǎ"
  * (low) instead of the app's full flow. Pure math + its own storage key — no
  * Web Audio, so it is tested offline and safe in the page's initial chunk.
  *

@@ -1,5 +1,5 @@
 /**
- * The tone checker's words and its analytics reporter — pure, no audio, so
+ * The tone visualizer's words and its analytics reporter — pure, no audio, so
  * the page's initial chunk can import it and tests run without a DOM.
  */
 
@@ -59,27 +59,27 @@ export function attemptView(
 
 type CheckerAction = Extract<
   AnalyticsEvent,
-  { type: "tool_used"; tool: "tone-checker" }
+  { type: "tool_used"; tool: "tone-visualizer" }
 >["action"];
 
 export interface CheckerReporter {
   /** Each action at most once per page load. */
   action(a: CheckerAction): void;
-  /** One scored or unclear attempt on a word from the fixed list. */
-  attempt(wordId: string): void;
-  /** Once, on `pagehide`; nothing if the checker was never started. */
+  /** One scored or unclear attempt, on a target (tone/pair) id. */
+  attempt(targetId: string): void;
+  /** Once, on `pagehide`; nothing if the visualizer was never started. */
   summary(): void;
 }
 
 /**
  * The `tool_used` / `tool_summary` reporter. Carries only fixed action names
- * and counts: never an accuracy, a pitch, a word id or anything typed.
+ * and counts: never an accuracy, a pitch, the tone picked or anything typed.
  */
 export function makeCheckerReporter(
   send: (e: AnalyticsEvent) => void,
 ): CheckerReporter {
   const sent = new Set<CheckerAction>();
-  const words = new Set<string>();
+  const targets = new Set<string>();
   let attempts = 0;
   let summarised = false;
   const safe = (e: AnalyticsEvent) => {
@@ -92,13 +92,13 @@ export function makeCheckerReporter(
   const action = (a: CheckerAction) => {
     if (sent.has(a)) return;
     sent.add(a);
-    safe({ type: "tool_used", tool: "tone-checker", action: a });
+    safe({ type: "tool_used", tool: "tone-visualizer", action: a });
   };
   return {
     action,
-    attempt(wordId) {
+    attempt(targetId) {
       attempts += 1;
-      words.add(wordId);
+      targets.add(targetId);
       action("first_attempt");
     },
     summary() {
@@ -106,9 +106,9 @@ export function makeCheckerReporter(
       summarised = true;
       safe({
         type: "tool_summary",
-        tool: "tone-checker",
+        tool: "tone-visualizer",
         attempts,
-        words: words.size,
+        targets: targets.size,
       });
     },
   };

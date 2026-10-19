@@ -146,6 +146,12 @@ export function toneAccuracyDetail(
   tones: Tone[],
   referenceOverride?: number[] | null,
   style: SpeechStyle = "textbook",
+  /**
+   * `false` skips the T2/T3 cue. The cue measures "how like our speaker's T2
+   * or T3", so it only fits a reference that is her speech; the public tone
+   * visualizer turns it off when scoring against the textbook Chao line.
+   */
+  t23Cue = true,
 ): ToneAccuracyDetail | null {
   const reference = referenceOverride === undefined ? referenceFor(tones, style) : referenceOverride;
   if (utterance.length < 2) return null;
@@ -209,7 +215,7 @@ export function toneAccuracyDetail(
   let weights = t.toneAccShapeWeight + t.toneAccMovementWeight + t.toneAccHeightWeight;
 
   let t23: number | null = null;
-  if (tones.length === 1 && (tones[0] === 2 || tones[0] === 3)) {
+  if (t23Cue && tones.length === 1 && (tones[0] === 2 || tones[0] === 3)) {
     const cue = t2t3CueOf({ points: utterance, startedAtMs: 0, endedAtMs: null }, AVERAGED_TONE_SHAPE[style]);
     if (cue !== null) {
       // The cue is -1 at the T2 average and +1 at the T3 average; pointed at
