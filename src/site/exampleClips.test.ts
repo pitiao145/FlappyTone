@@ -34,4 +34,15 @@ describe("hub example clips", () => {
       });
     }
   });
+
+  it("every example word plays for a guest ticket (Worker's TOCFL level gate)", () => {
+    // Mirrors workers/clips/src/routes/clip.ts: a guest gets a word only if it
+    // is in a sampler list or in no tocfl* list. 山/茶/水/看 failed this once.
+    for (const id of HUB_EXAMPLE_IDS) {
+      const lists = rows.find((r) => r.id === id)?.lists ?? [];
+      const sampler = lists.some((l) => l.startsWith("sampler-"));
+      const leveled = lists.some((l) => /^tocfl\d$/.test(l));
+      expect(sampler || !leveled, `${id} ${lists.join(",")}`).toBe(true);
+    }
+  });
 });

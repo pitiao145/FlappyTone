@@ -122,8 +122,9 @@ grid once). Tools are wide (`.site-wide`). Audio on a site page goes through
 the lazy `src/site/wordAudio.ts` (guest ticket, one clip per tap), never
 `src/audio/`; a page's clip geometry is copied into a small tested file, never
 the whole `wordsFallback.json`. **Before shipping an example word with audio,
-check it returns 200 for a guest ticket** — the bundled fallback's `min_tier`
-can be stale. The Worker's CORS only allows `localhost:5173` in dev. Public
+check it returns 200 for a guest ticket** — the Worker gives a guest only words
+in a `sampler-*` list or in no `tocfl*` list (TOCFL level gate, `routes/clip.ts`);
+`exampleClips.test.ts` mirrors that rule. The Worker's CORS only allows `localhost:5173` in dev. Public
 copy says "the bird" or FlappyTone, never "Pip" (internal name), and does not
 name Jane ("our native speaker").
 
