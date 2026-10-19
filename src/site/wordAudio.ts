@@ -36,34 +36,46 @@ function getTicket(): Promise<string | null> {
   return ticket;
 }
 
+export type ClipStyle = "textbook" | "natural";
+
 /** A blob URL for the word's clip, fetched once; `null` on any failure. */
-export function clipUrl(id: string): Promise<string | null> {
-  let p = urls.get(id);
+export function clipUrl(
+  id: string,
+  style: ClipStyle = "textbook",
+): Promise<string | null> {
+  const key = `${style}:${id}`;
+  let p = urls.get(key);
   if (!p) {
     p = getTicket()
       .then((t) =>
         t
-          ? fetch(`${BASE}/clip/${SPEAKER}/${encodeURIComponent(id)}`, {
-              headers: { Authorization: `Bearer ${t}` },
-            })
+          ? fetch(
+              `${BASE}/clip/${SPEAKER}/${encodeURIComponent(id)}${style === "natural" ? "?style=natural" : ""}`,
+              {
+                headers: { Authorization: `Bearer ${t}` },
+              },
+            )
           : null,
       )
       .then((r) => (r && r.ok ? r.blob() : null))
       .then((b) => (b ? URL.createObjectURL(b) : null))
       .catch(() => null);
-    urls.set(id, p);
+    urls.set(key, p);
     // A failure is not cached: the next tap tries again.
     void p.then((u) => {
-      if (!u) urls.delete(id);
+      if (!u) urls.delete(key);
     });
   }
   return p;
 }
 
-/** Plays the word's textbook clip. Resolves when it ends; `false` on any failure. */
-export async function playWord(id: string): Promise<boolean> {
+/** Plays the word's clip (textbook unless asked). Resolves when it ends; `false` on any failure. */
+export async function playWord(
+  id: string,
+  style: ClipStyle = "textbook",
+): Promise<boolean> {
   if (!BASE) return false;
-  const url = await clipUrl(id);
+  const url = await clipUrl(id, style);
   if (!url) return false;
   try {
     playing?.pause();

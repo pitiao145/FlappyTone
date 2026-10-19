@@ -53,7 +53,7 @@ export interface SayWord {
   cards: SayCard[];
   /** Shown under the card (e.g. "full recording coming"). */
   cardNote?: string;
-  /** "How the tones really sound": textbook vs everyday recording. */
+  /** "Standard and spoken": what the two recordings show. */
   real: string[];
   /** One line per syllable. */
   syllables: { hanzi: string; pinyin: string; text: string }[];
@@ -65,10 +65,9 @@ export interface SayWord {
   toneTargetLabel: string;
   /**
    * The word "Practise this exact word" opens in the app's visualiser
-   * (`?word=`). Defaults to the first card; `null` when the visualiser has no
-   * place for it (3 syllables).
+   * (`?word=`). Defaults to the first card.
    */
-  practiseWordId?: string | null;
+  practiseWordId?: string;
   /** Slugs of 2–3 sibling pages for "More words". */
   siblings: string[];
 }
@@ -82,13 +81,13 @@ export const SAY_WORDS: SayWord[] = [
     pinyin: "xiè xie",
     english: "thank you; thanks",
     answer:
-      "Thank you in Chinese is 謝謝, written xièxie in pinyin and ㄒㄧㄝˋ ˙ㄒㄧㄝ in 注音. The first 謝 is a falling fourth tone, and the second is a short, light neutral tone that stays low, so it sounds like one fall: shyeh-shyeh, with the weight on the first half.",
+      "Thank you in Chinese is 謝謝, written xièxie in pinyin and ㄒㄧㄝˋ ˙ㄒㄧㄝ in 注音. The first 謝 is a falling fourth tone, and the second is a short, light neutral tone that stays low, so 謝謝 sounds like one fall, with the weight on the first syllable.",
     cards: [
       { id: "xiexie40", hanzi: "謝謝", pinyin: "xiè xie", english: "thank you", tone: 4 },
     ],
     real: [
-      "Textbooks write the first syllable as a full tone 4 (chao 51: from the top of your voice to the bottom) and the second with no tone mark at all. Our native speaker's slow recording matches that closely: the first 謝 starts near the top and falls to the low part of her range, and the second 謝 stays down there, short and almost flat.",
-      "At everyday speed the whole word lasts about half a second. The fall starts lower, around the middle of her voice instead of the top, and the second syllable is only the tail of the same fall. That is why learners who say both syllables as two full, separate fourth tones (xiè xiè) sound stiff, and why 謝謝 heard in a café often sounds like one quick downward glide.",
+      "In the standard recording, the first 謝 falls from the top of her voice to the bottom. The second 謝 stays down there, short and almost flat. That matches the dictionary: tone 4, then a neutral tone.",
+      "The spoken recording is shorter, about half a second. The fall starts in the middle of her voice, not at the top, and the second syllable is just the end of the same fall. Say 謝謝 as one fall, not as two separate tone 4s.",
     ],
     syllables: [
       {
@@ -103,17 +102,17 @@ export const SAY_WORDS: SayWord[] = [
       },
     ],
     uses: [
-      { hanzi: "謝謝你", pinyin: "xiè xie nǐ", english: "thank you (to one person)", note: "Adds you; warm but still everyday." },
+      { hanzi: "謝謝你", pinyin: "xiè xie nǐ", english: "thank you (to one person)", note: "Thanks to one person." },
       { hanzi: "謝謝大家", pinyin: "xiè xie dà jiā", english: "thank you, everyone", note: "To a group, at the end of a talk or a class." },
       { hanzi: "多謝", pinyin: "duō xiè", english: "many thanks", note: "Short and friendly; common in Taiwan." },
       { hanzi: "不客氣", pinyin: "bú kè qì", english: "you're welcome", note: "The usual reply, see the page on you're welcome." },
     ],
     taiwan:
-      "In Taiwan you will also hear 謝啦 (xiè la), a casual thanks between friends, and the everyday reply to 謝謝 is often 不會 (bú huì), literally \"not at all\", rather than 不客氣. The second 謝 is light in Taiwan too.",
+      "In Taiwan you will also hear 謝啦 (xiè la), a casual thanks between friends, and people often answer 謝謝 with 不會 (bú huì, not at all) instead of 不客氣. The second 謝 is light in Taiwan too.",
     faq: [
       {
         q: "Is it xièxie or xièxiè?",
-        a: "Dictionaries write xièxie: the second syllable is a neutral tone, short and low. Saying two full fourth tones is understood, but sounds slow and careful, like spelling the word out.",
+        a: "Dictionaries write xièxie: the second syllable is a neutral tone, short and low. Two full tone 4s are understood, but sound slow and stiff.",
       },
       {
         q: "How do you reply to 謝謝?",
@@ -147,11 +146,11 @@ export const SAY_WORDS: SayWord[] = [
       { id: "hao3", hanzi: "好", pinyin: "hǎo", english: "good", tone: 3 },
     ],
     cardNote:
-      "These are the two syllables said on their own, each a full third tone. A recording of 你好 as one word is coming.",
+      "These are 你 and 好 recorded on their own. A recording of 你好 as one word is coming soon.",
     real: [
-      "On its own, each syllable is a third tone: in our native speaker's slow recordings both 你 and 好 dip to the bottom of her range and then rise back up near the top. That is the dipping shape textbooks write as 214.",
-      "Put them together and the first one changes. Two dips in a row are hard to say, so the first third tone becomes a rise (ní). This is the most regular tone change in Mandarin, the 3+3 rule, and native speakers do it without thinking.",
-      "The second 好 changes too, in a smaller way. At everyday speed her 好 dips low and only climbs part of the way back, ending around the middle of her voice. A low dip with a short tail, not a big swoop, is what a natural nǐ hǎo ends with.",
+      "Said alone, 你 and 好 are both tone 3. In the standard recordings each one drops to the bottom of her voice and comes back up near the top.",
+      "In 你好, two tone 3s meet, so the first one changes to a rise: ní hǎo. This happens to every 3+3 pair in Mandarin.",
+      "In the spoken recording, 好 drops low and only comes back to the middle. At the end of 你好, keep 好 low with a short lift, not a big rise.",
     ],
     syllables: [
       {
@@ -188,7 +187,7 @@ export const SAY_WORDS: SayWord[] = [
       },
       {
         q: "Should 好 rise at the end?",
-        a: "Only a little. Said alone and slowly it rises back up, but at the end of 你好 in normal speech it stays low and ends in the middle of your voice. A big final rise sounds like a question.",
+        a: "Only a little. Said alone and slowly it rises back up, but at the end of 你好 in normal speech it stays low and ends in the middle of your voice. A big rise at the end sounds like a question.",
       },
     ],
     toneTarget: "3-3",
@@ -203,13 +202,13 @@ export const SAY_WORDS: SayWord[] = [
     pinyin: "zài jiàn",
     english: "goodbye; see you",
     answer:
-      "Goodbye in Chinese is 再見, written zàijiàn in pinyin and ㄗㄞˋ ㄐㄧㄢˋ in 注音. Both syllables are tone 4, a falling tone, but the second fall starts lower than the first, so the word steps down twice: zài, then jiàn.",
+      "Goodbye in Chinese is 再見, written zàijiàn in pinyin and ㄗㄞˋ ㄐㄧㄢˋ in 注音. Both syllables are tone 4, a falling tone, but the second fall starts lower than the first, and the second fall starts a little lower than the first.",
     cards: [
       { id: "zaijian44", hanzi: "再見", pinyin: "zài jiàn", english: "goodbye", tone: 4 },
     ],
     real: [
-      "Two fourth tones in a row do not change by rule, but they do not sound identical either. In our native speaker's slow recording, 再 falls from near the top of her voice to the bottom, and 見 starts again from a little lower (around 4 instead of 5) and falls to the bottom again.",
-      "At everyday speed the first syllable almost stops falling: her 再 stays fairly level in the upper middle of her voice, and only 見 makes a clear fall. The whole word takes about 0.6 seconds. So a natural 再見 sounds like a short level step and then one drop, not two hammer blows.",
+      "In the standard recording, 再 falls from the top of her voice to the bottom. 見 starts a little lower and falls to the bottom again.",
+      "In the spoken recording, 再 hardly falls. It stays level in the upper middle of her voice, and only 見 falls. The whole word takes about 0.6 seconds.",
     ],
     syllables: [
       {
@@ -238,11 +237,11 @@ export const SAY_WORDS: SayWord[] = [
       },
       {
         q: "Should both syllables fall the same way?",
-        a: "No. Let the second fall start a bit lower. Two identical falls from the very top sound angry. At normal speed the first barely falls at all.",
+        a: "No. Let the second fall start a bit lower. Two big falls from the top sound harsh. At normal speed the first one hardly falls.",
       },
       {
         q: "Is 拜拜 Chinese?",
-        a: "It comes from English bye-bye, but it is fully part of everyday Mandarin, especially in Taiwan. It is written 拜拜 and usually said bāi bāi or bái bai.",
+        a: "It comes from English bye-bye, but it is normal Mandarin now, especially in Taiwan. It is written 拜拜 and usually said bāi bāi or bái bai.",
       },
     ],
     toneTarget: "4",
@@ -260,9 +259,9 @@ export const SAY_WORDS: SayWord[] = [
       "Please in Chinese is 請, written qǐng in pinyin and ㄑㄧㄥˇ in 注音. It is a third tone, which dips low before it rises, and it goes in front of a verb (請坐, please sit) rather than at the end of a sentence like English please.",
     cards: [{ id: "qing3", hanzi: "請", pinyin: "qǐng", english: "please", tone: 3 }],
     real: [
-      "In our native speaker's slow recording 請 starts in the upper middle of her voice, falls to the bottom in the first half of the syllable, and then climbs all the way to the top. That is the full dipping tone, chao 214.",
-      "At everyday speed the dip is the part that stays: she still goes down to the bottom, but the rise only comes back to about the middle of her range. If you only remember one thing about a third tone, make it low. The rise at the end is the part native speakers drop first.",
-      "Before another third tone, 請 changes like any tone 3: 請你 (qǐng nǐ) is said qíng nǐ, with 請 rising.",
+      "In the standard recording, 請 starts in the upper middle of her voice, drops to the bottom, then rises to the top. That is the full tone 3.",
+      "In the spoken recording, it still drops to the bottom, but the rise only comes back to the middle. The low part matters most; the rise is short.",
+      "Before another tone 3, 請 rises instead: 請你 (qǐng nǐ) is said qíng nǐ.",
     ],
     syllables: [
       {
@@ -306,14 +305,14 @@ export const SAY_WORDS: SayWord[] = [
     said: "duì bu qǐ",
     english: "sorry; excuse me",
     answer:
-      "Sorry in Chinese is 對不起, written duìbuqǐ in pinyin and ㄉㄨㄟˋ ㄅㄨˋ ㄑㄧˇ in 注音. 對 falls (tone 4), 不 is a quick, light syllable in everyday speech, and 起 dips low (tone 3), so the word goes down, passes through, and ends low.",
+      "Sorry in Chinese is 對不起, written duìbuqǐ in pinyin and ㄉㄨㄟˋ ㄅㄨˋ ㄑㄧˇ in 注音. 對 falls (tone 4), 不 is a quick, light syllable in everyday speech, and 起 dips low (tone 3), so the word ends low.",
     cards: [
       { id: "duibuqi403", hanzi: "對不起", pinyin: "duì bù qǐ", english: "sorry", tone: 4 },
     ],
     real: [
-      "The recording here is our native speaker's slow, textbook take, and in it all three syllables are full: 對 falls from the top of her voice to the middle, 不 comes back up and falls again (a full tone 4, as Taiwan dictionaries write it), and 起 drops to the bottom of her range before lifting to the middle.",
-      "In everyday speech the middle syllable shrinks. Many dictionaries write it duìbuqǐ with a neutral 不, because at normal speed it is short and unstressed, carried along between the two strong syllables. Keep 對 and 起 clear and let 不 be quick.",
-      "Notice where the word ends: low. 起 is a third tone, and a third tone at the end of a phrase dips and only lifts a little. An apology that ends high sounds like a question.",
+      "In the standard recording, all three syllables are full. 對 falls from the top to the middle, 不 comes back up and falls again, and 起 drops to the bottom of her voice, then lifts to the middle.",
+      "In normal speech the middle 不 is short and light, so many dictionaries write duìbuqǐ. Say 對 and 起 clearly and keep 不 quick.",
+      "The word ends low, on 起. If you end it high, it sounds like a question.",
     ],
     syllables: [
       { hanzi: "對", pinyin: "duì", text: "Tone 4: a fall from high. ui sounds like way." },
@@ -327,7 +326,7 @@ export const SAY_WORDS: SayWord[] = [
       { hanzi: "沒關係", pinyin: "méi guān xi", english: "it's okay", note: "The usual reply to 對不起." },
     ],
     taiwan:
-      "Taiwan speakers use 不好意思 for most small apologies and save 對不起 for real ones. Taiwan dictionaries write 不 in 對不起 with a full fourth tone, and careful Taiwan speech keeps more of it than northern mainland speech does.",
+      "Taiwan speakers use 不好意思 for most small apologies and save 對不起 for real ones. Taiwan dictionaries write 不 in 對不起 with a full tone 4, and careful Taiwan speech keeps more of it than northern mainland speech does.",
     faq: [
       {
         q: "What is the difference between 對不起 and 不好意思?",
@@ -344,8 +343,7 @@ export const SAY_WORDS: SayWord[] = [
     ],
     toneTarget: "3",
     toneTargetLabel: "tone 3 (the final 起)",
-    practiseWordId: null,
-    siblings: ["no-problem", "thank-you", "please"],
+        siblings: ["no-problem", "thank-you", "please"],
   },
   {
     slug: "youre-welcome",
@@ -361,8 +359,9 @@ export const SAY_WORDS: SayWord[] = [
       { id: "bukeqi444", hanzi: "不客氣", pinyin: "bù kè qì", english: "you're welcome", tone: 2 },
     ],
     real: [
-      "不 has its own tone rule: before a fourth tone it becomes a rising tone. Our native speaker's slow recording shows it clearly. 不 climbs from the middle of her voice, 客 then falls from the very top to the middle, and 氣 rises back up and falls again.",
-      "At everyday speed the word takes about 0.7 seconds, and the three syllables nearly melt into one: the whole word stays in the upper middle of her voice, with small bumps instead of three big falls. Learners who give each syllable a full, separate fall sound like they are reading a list.",
+      "不 changes before a tone 4: it rises instead of falling. So 不客氣 is said bú kè qì.",
+      "In the standard recording, 不 rises from the middle of her voice, 客 falls from the top to the middle, and 氣 rises a little and falls again.",
+      "The spoken recording takes about 0.7 seconds. The whole word stays in the upper middle of her voice, with small bumps instead of three big falls.",
     ],
     syllables: [
       { hanzi: "不", pinyin: "bù → bú", text: "Written tone 4, said tone 2 because a tone 4 follows. Short and rising." },
@@ -376,7 +375,7 @@ export const SAY_WORDS: SayWord[] = [
       { hanzi: "別客氣", pinyin: "bié kè qì", english: "don't be so polite", note: "Also used when offering food or help." },
     ],
     taiwan:
-      "In Taiwan, 不會 (bú huì) is often the first answer to 謝謝, and 不客氣 sounds a little more formal. Both are fine. Note that 不 is said bú in both, because 會 and 客 are fourth tones.",
+      "In Taiwan, 不會 (bú huì) is often the first answer to 謝謝, and 不客氣 sounds a little more formal. Both are fine. 不 is said bú in both, because 會 and 客 are tone 4.",
     faq: [
       {
         q: "Why is 不 said bú here?",
@@ -393,8 +392,7 @@ export const SAY_WORDS: SayWord[] = [
     ],
     toneTarget: "4",
     toneTargetLabel: "tone 4",
-    practiseWordId: null,
-    siblings: ["thank-you", "no-problem", "sorry"],
+        siblings: ["thank-you", "no-problem", "sorry"],
   },
   {
     slug: "no-problem",
@@ -409,8 +407,8 @@ export const SAY_WORDS: SayWord[] = [
       { id: "meiguanxi210", hanzi: "沒關係", pinyin: "méi guān xi", english: "it's okay", tone: 2 },
     ],
     real: [
-      "In our native speaker's slow recording 沒 starts low and rises, 關 holds high near the top of her voice, and 係 drops back toward the middle, short and unstressed. That is the textbook pattern: rise, hold, light.",
-      "At everyday speed (about 0.9 seconds) she rises into 關 and simply stays up there: 係 is quick and does not fall. The phrase sounds like one rise to a high, steady level. Ending it with a heavy drop makes it sound grudging.",
+      "In the standard recording, 沒 starts low and rises, 關 stays high, and 係 drops back to the middle, short and light.",
+      "In the spoken recording, she rises into 關 and stays up. 係 is quick and does not drop. A heavy drop at the end can sound unfriendly.",
     ],
     syllables: [
       { hanzi: "沒", pinyin: "méi", text: "Tone 2: start in the middle and rise. ei like the ay in may." },
@@ -424,7 +422,7 @@ export const SAY_WORDS: SayWord[] = [
       { hanzi: "沒關係，慢慢來", pinyin: "méi guān xi, màn màn lái", english: "it's okay, take your time", note: "A kind answer to someone who is late or slow." },
     ],
     taiwan:
-      "Taiwan dictionaries give 係 in 關係 a full fourth tone (guānxì), and some Taiwan speakers keep it; at everyday speed it is short either way. 沒事 and 不會 are very common casual replies in Taiwan.",
+      "Taiwan dictionaries give 係 in 關係 a full tone 4 (guānxì), and some Taiwan speakers keep it; in normal speech it is short either way. 沒事 and 不會 are very common casual replies in Taiwan.",
     faq: [
       {
         q: "What is the difference between 沒關係 and 沒問題?",
@@ -435,14 +433,13 @@ export const SAY_WORDS: SayWord[] = [
         a: "Mainland dictionaries mark it neutral (guānxi); Taiwan's marks it tone 4 (guānxì). In the phrase 沒關係 it is short and unstressed in both places.",
       },
       {
-        q: "How do I say it sounds friendly, not cold?",
-        a: "Keep it light and let it end up high on 關. A slow, falling 沒關係 can sound like you are hiding that you mind.",
+        q: "How do I make it sound friendly?",
+        a: "Keep it light and let it end up high on 關. A slow 沒關係 that drops at the end can sound annoyed.",
       },
     ],
     toneTarget: "2",
     toneTargetLabel: "tone 2",
-    practiseWordId: null,
-    siblings: ["sorry", "youre-welcome", "thank-you"],
+        siblings: ["sorry", "youre-welcome", "thank-you"],
   },
   {
     slug: "yuan",
@@ -455,8 +452,8 @@ export const SAY_WORDS: SayWord[] = [
       "Yuan is pronounced yuán: one syllable, said like yü-en, with a rising second tone, and written 元 (ㄩㄢˊ in 注音). It is not you-wan or yoo-ann: the yu is the rounded ü vowel, as in German über or French tu.",
     cards: [{ id: "yuan2", hanzi: "元", pinyin: "yuán", english: "yuan", tone: 2 }],
     real: [
-      "In our native speaker's slow recording 元 starts low in her voice, sinks a little further for the first third of the syllable, and then rises steadily to the top. That small dip before the rise is normal for a tone 2; it does not make it a tone 3.",
-      "At everyday speed it is shorter (about 0.7 seconds) and the rise ends around 4 instead of 5, but the shape is the same: low first, then up. Saying it flat, as English speakers often do with yuan, removes the tone completely.",
+      "In the standard recording, 元 starts low, dips a little, then rises to the top of her voice. The small dip at the start is normal for tone 2.",
+      "In the spoken recording, it is shorter and the rise ends in the upper middle of her voice, but it is still low first, then up. Said flat, as English speakers often say yuan, the tone is gone.",
     ],
     syllables: [
       {

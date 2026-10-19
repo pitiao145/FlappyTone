@@ -133,3 +133,111 @@ export const SAY_CLIPS: Record<string, ExampleClip> = {
     clipS: 1.346,
   },
 };
+
+
+/**
+ * The same words' SPOKEN (natural-style) recordings, for the Standard vs
+ * Spoken comparison. Copied from `word_clips` (style 'natural', default
+ * speaker) on 20 Oct 2026; the bundled fallback is textbook-only, so this is
+ * not checked against it. 對不起 has no spoken take yet.
+ */
+export const SAY_CLIPS_SPOKEN: Record<string, ExampleClip> = {
+  bukeqi444: {
+    polyline: [
+      [0, 3.438],
+      [0.1538, 3.419],
+      [0.1839, 3.439],
+      [0.2709, 3.464],
+      [0.3311, 4.165],
+      [0.4247, 4.045],
+      [0.6053, 4.322],
+      [0.8128, 4.024],
+      [1, 3.069],
+    ],
+    onsetS: 0.232,
+    durationS: 0.7087,
+    clipS: 1.0687,
+  },
+  hao3: {
+    polyline: [
+      [0, 3.636],
+      [0.5315, 1.461],
+      [0.7796, 1.956],
+      [1, 2.743],
+    ],
+    onsetS: 0.232,
+    durationS: 0.602,
+    clipS: 0.962,
+  },
+  meiguanxi210: {
+    polyline: [
+      [0, 2.58],
+      [0.162, 2.747],
+      [0.3496, 4.061],
+      [0.4884, 4.153],
+      [0.8586, 4.067],
+      [0.8818, 4.182],
+      [1, 4.205],
+    ],
+    onsetS: 0.232,
+    durationS: 0.922,
+    clipS: 1.282,
+  },
+  ni3: {
+    polyline: [
+      [0, 3.562],
+      [0.6845, 1.662],
+      [0.8556, 2.421],
+      [1, 3.017],
+    ],
+    onsetS: 0.232,
+    durationS: 0.6234,
+    clipS: 0.9833,
+  },
+  qing3: {
+    polyline: [
+      [0, 3.821],
+      [0.5418, 1.913],
+      [0.7827, 2.675],
+      [1, 3.885],
+    ],
+    onsetS: 0.232,
+    durationS: 0.7087,
+    clipS: 1.0687,
+  },
+  xiexie40: {
+    polyline: [
+      [0, 3.709],
+      [0.22, 3.671],
+      [0.5215, 2.822],
+      [0.7752, 1.809],
+      [1, 1.809],
+    ],
+    onsetS: 0.232,
+    durationS: 0.4954,
+    clipS: 0.8553,
+  },
+  yuan2: {
+    polyline: [
+      [0, 3.374],
+      [0.4816, 2.247],
+      [1, 4.262],
+    ],
+    onsetS: 0.211,
+    durationS: 0.7087,
+    clipS: 1.0473,
+  },
+  zaijian44: {
+    polyline: [
+      [0, 3.618],
+      [0.2775, 3.558],
+      [0.3118, 3.554],
+      [0.5134, 3.736],
+      [0.7871, 1.771],
+      [1, 1.771],
+    ],
+    onsetS: 0.232,
+    durationS: 0.6234,
+    clipS: 0.8767,
+  },
+};

@@ -15,7 +15,10 @@ import type {
   WordPageAction,
 } from "../../analytics/session.ts";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
-import { SAY_CLIPS } from "../sayClips.ts";
+import { SAY_CLIPS, SAY_CLIPS_SPOKEN } from "../sayClips.ts";
+import type { ExampleClip } from "../exampleClips.ts";
+import { corridorChaoAt } from "../../game/gates.ts";
+import { ToneMarkIcon } from "../../ui/toneIcons.tsx";
 import { SAY_WORDS, sayWordFor, type SayWord } from "../sayWords.ts";
 import { PlayButton, SeeButton } from "../WordButtons.tsx";
 import { markSyllable, parsePinyin, toZhuyin } from "../zhuyin.ts";
@@ -63,6 +66,121 @@ function TonePinyin({ text }: { text: string }) {
   );
 }
 
+/** Each syllable's tone mark, in its tone colour, with the tone's name. */
+function ToneMarks({ text }: { text: string }) {
+  const syllables = parsePinyin(text).flatMap((p) =>
+    "syllable" in p ? [p.syllable] : [],
+  );
+  return (
+    <span className="say-tonemarks">
+      {syllables.map((syl, i) => (
+        <span
+          key={i}
+          className="say-tonemark"
+          style={{ color: TONE_LINE_COLOR[syl.tone] }}
+        >
+          <ToneMarkIcon tone={syl.tone} className="say-tonemark-icon" />
+          <span>{syl.tone === 0 ? "neutral" : `tone ${syl.tone}`}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+const CW = 300;
+const CH = 120;
+const CPAD = 10;
+
+/** One recording's pitch line, its width in proportion to its length. */
+function MiniContour({
+  clip,
+  scale,
+  color,
+}: {
+  clip: ExampleClip;
+  /** Seconds the full width stands for (the longer of the two takes). */
+  scale: number;
+  color: string;
+}) {
+  const w = (CW - 2 * CPAD) * (clip.durationS / scale);
+  const pts = Array.from({ length: 61 }, (_, i) => {
+    const t = i / 60;
+    const chao = corridorChaoAt(clip, t);
+    return `${(CPAD + t * w).toFixed(1)},${(CPAD + ((5 - chao) / 4) * (CH - 2 * CPAD)).toFixed(1)}`;
+  }).join(" ");
+  return (
+    <svg className="say-mini" viewBox={`0 0 ${CW} ${CH}`} aria-hidden="true">
+      {[1, 2, 3, 4, 5].map((c) => (
+        <line
+          key={c}
+          x1={CPAD}
+          x2={CW - CPAD}
+          y1={CPAD + ((5 - c) / 4) * (CH - 2 * CPAD)}
+          y2={CPAD + ((5 - c) / 4) * (CH - 2 * CPAD)}
+        />
+      ))}
+      <polyline points={pts} style={{ stroke: color }} />
+    </svg>
+  );
+}
+
+/** The standard and spoken recordings of one word, side by side. */
+function StyleCompare({
+  card,
+  labelled,
+}: {
+  card: import("../sayWords.ts").SayCard;
+  labelled: boolean;
+}) {
+  const standard = SAY_CLIPS[card.id];
+  const spoken = SAY_CLIPS_SPOKEN[card.id];
+  const scale = Math.max(standard.durationS, spoken?.durationS ?? 0);
+  const color = TONE_LINE_COLOR[card.tone];
+  const take = (
+    label: string,
+    note: string,
+    clip: ExampleClip | undefined,
+    style: "textbook" | "natural",
+  ) => (
+    <div className="say-take">
+      <div className="say-take-head">
+        <strong>{label}</strong>
+        <span>{note}</span>
+      </div>
+      {clip ? (
+        <>
+          <MiniContour clip={clip} scale={scale} color={color} />
+          <div className="say-take-foot">
+            <PlayButton
+              id={card.id}
+              style={style}
+              label={`${card.hanzi}, ${label.toLowerCase()}`}
+              text={`Play ${label.toLowerCase()}`}
+            />
+            <span className="say-take-len">{clip.durationS.toFixed(2)} s</span>
+          </div>
+        </>
+      ) : (
+        <p className="say-take-missing">Recording coming soon.</p>
+      )}
+    </div>
+  );
+  return (
+    <div className="say-compare">
+      {labelled && (
+        <p className="say-compare-label">
+          <span lang="zh-Hant-TW">{card.hanzi}</span>{" "}
+          <TonePinyin text={card.pinyin} />
+        </p>
+      )}
+      <div className="say-compare-row">
+        {take("Standard", "slow and clear", standard, "textbook")}
+        {take("Spoken", "normal speed", spoken, "natural")}
+      </div>
+    </div>
+  );
+}
+
 function SayWordPage({ word }: { word: SayWord }) {
   const path = sayPath(word.slug);
   const report = useRef<((a: WordPageAction) => void) | null>(null);
@@ -73,8 +191,7 @@ function SayWordPage({ word }: { word: SayWord }) {
     );
     report.current(a);
   };
-  const practiseId =
-    word.practiseWordId === undefined ? word.cards[0].id : word.practiseWordId;
+  const practiseId = word.practiseWordId ?? word.cards[0].id;
   const siblings = word.siblings
     .map(sayWordFor)
     .filter((w): w is SayWord => !!w);
@@ -95,6 +212,7 @@ function SayWordPage({ word }: { word: SayWord }) {
             <span className="say-pinyin">
               <TonePinyin text={word.pinyin} />
             </span>
+            <ToneMarks text={word.pinyin} />
             <span className="say-zhuyin" lang="zh-Hant-TW">
               {toZhuyin(word.pinyin)}
             </span>
@@ -134,7 +252,15 @@ function SayWordPage({ word }: { word: SayWord }) {
         </div>
 
         <section>
-          <h2>How the tones really sound</h2>
+          <h2>Standard and spoken</h2>
+          <p>
+            Our native speaker recorded {word.hanzi} twice: standard, slow and
+            clear like a textbook, and spoken, at normal speed. Both lines are
+            drawn on the same time scale.
+          </p>
+          {word.cards.map((c) => (
+            <StyleCompare key={c.id} card={c} labelled={word.cards.length > 1} />
+          ))}
           {word.real.map((p) => (
             <p key={p}>{p}</p>
           ))}
@@ -182,10 +308,7 @@ function SayWordPage({ word }: { word: SayWord }) {
 
         <section className="say-practise">
           <h2>Practise it out loud</h2>
-          <p>
-            Hearing a word is half of it. Say it and watch your own pitch
-            line drawn over the real shape.
-          </p>
+          <p>Say it and see your pitch drawn over the recording.</p>
           <div className="say-practise-actions">
             <a
               className="sticker-button"
@@ -205,9 +328,9 @@ function SayWordPage({ word }: { word: SayWord }) {
             )}
           </div>
           <p className="say-practise-note">
-            The free tone visualizer needs no account. Practising real words
-            with recordings is in the FlappyTone app, free with an account
-            {practiseId ? "" : " (three-syllable words are coming to it)"}.
+            The tone visualizer is free and needs no account. Practising real
+            words with their recordings is in the FlappyTone app, free with an
+            account.
           </p>
         </section>
 
@@ -295,15 +418,14 @@ export function SayIndex() {
         <h1>How to say common words in Chinese</h1>
         <p className="site-answer">
           <strong>
-            The words you need first, each with a native speaker's recording,
-            pinyin, 注音 (Zhuyin) and an honest note on how the tones sound at
-            everyday speed, which is often not how the textbook writes them.
+            The first words most learners need, each with a native speaker's
+            recording, pinyin and 注音 (Zhuyin). Each page also compares the
+            slow standard pronunciation with how the word sounds at normal
+            speed.
           </strong>
         </p>
         <p>
-          Every page uses Traditional characters and Taiwan Mandarin. Tap a
-          word for its recording, the shape of its tones, common replies and a
-          way to practise it out loud.
+          All pages use Traditional characters and Taiwan Mandarin.
         </p>
         <ul className="say-index">
           {SAY_WORDS.map((w) => (

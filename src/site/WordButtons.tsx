@@ -12,9 +12,15 @@ export function PlayButton({
   id,
   label,
   onPlay,
+  style = "textbook",
+  text = "Listen",
 }: {
   id: string;
   label: string;
+  /** Which recording: standard (textbook) or spoken (natural). */
+  style?: "textbook" | "natural";
+  /** The button's visible label. */
+  text?: string;
   /** Called on each tap, before the clip loads (analytics). */
   onPlay?: () => void;
 }) {
@@ -30,7 +36,7 @@ export function PlayButton({
         setState("playing");
         // Lazy: no audio code in the page's initial chunk, and never the mic.
         import("./wordAudio.ts")
-          .then((m) => m.playWord(id))
+          .then((m) => m.playWord(id, style))
           .then((ok) => setState(ok ? "idle" : "failed"))
           .catch(() => setState("failed"));
       }}
@@ -42,7 +48,7 @@ export function PlayButton({
           <path d="M8 5v14l11-7z" />
         )}
       </svg>
-      <span>{state === "failed" ? "No audio" : "Listen"}</span>
+      <span>{state === "failed" ? "No audio" : text}</span>
     </button>
   );
 }

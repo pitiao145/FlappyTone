@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import fallback from "../data/wordsFallback.json";
 import { hasSimplified, simplifiedIn } from "../dev/simplified.ts";
 import { SAY_SLUGS } from "../analytics/session.ts";
-import { SAY_CLIPS } from "./sayClips.ts";
+import { SAY_CLIPS, SAY_CLIPS_SPOKEN } from "./sayClips.ts";
 import { SAY_WORDS } from "./sayWords.ts";
 import { SAY_ROUTES, routeFor } from "./routes.ts";
 import { SITE_PAGES } from "./pages.tsx";
@@ -73,6 +73,14 @@ describe("say word data ↔ catalog", () => {
         durationS: r.duration_s,
         clipS: r.clip_s,
       });
+    }
+  });
+
+  it("spoken clips belong to page recordings and look sane", () => {
+    for (const [id, c] of Object.entries(SAY_CLIPS_SPOKEN)) {
+      expect(cardIds, id).toContain(id);
+      expect(c.durationS).toBeGreaterThan(0);
+      expect(c.clipS).toBeGreaterThan(c.durationS);
     }
   });
 
@@ -147,13 +155,8 @@ describe("say routes", () => {
         expect(html).toContain(escape(q.acceptedAnswer.text));
       }
       expect(html).toContain(`/tools/tone-visualizer?tone=${w.toneTarget}`);
-      const pid =
-        w.practiseWordId === undefined ? w.cards[0].id : w.practiseWordId;
-      if (pid) {
-        expect(html).toContain(`/app?intent=visualiser&amp;word=${pid}&amp;src=${path}`);
-      } else {
-        expect(html).not.toContain("Practise this exact word");
-      }
+      const pid = w.practiseWordId ?? w.cards[0].id;
+      expect(html).toContain(`/app?intent=visualiser&amp;word=${pid}&amp;src=${path}`);
     }
   });
 });
