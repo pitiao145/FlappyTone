@@ -72,6 +72,7 @@ beforeEach(() => {
     "t2word.wav": "RIFFfake-t2",
     "t3word.wav": "RIFFfake-t3",
     "sampler.wav": "RIFFfake-sampler",
+    "seoword.wav": "RIFFfake-seo",
   });
   env = fakeEnv({ CLIPS: clips as unknown as R2Bucket });
   wordsQuery.calls = 0;
@@ -99,6 +100,12 @@ beforeEach(() => {
       speaker_id: "jane",
       clip_key: "sampler.wav",
       words: { min_tier: "free", word_lists: [{ list_id: "sampler-beginner" }] },
+    },
+    {
+      word_id: "seoword",
+      speaker_id: "jane",
+      clip_key: "seoword.wav",
+      words: { min_tier: "free", word_lists: [{ list_id: "tocfl3" }, { list_id: "sampler-seo" }] },
     },
   ].map((r) => ({ style: "textbook", ...r }));
   wordsQuery.rows.push(
@@ -284,6 +291,10 @@ describe("TOCFL level gate (coarse — the ticket carries only tier, not the run
     expect((await get("/clip/jane/t3word?v=1", await ticketFor("guest"), env)).status).toBe(403);
     expect((await get("/clip/jane/t3word?v=1", await ticketFor("free"), env)).status).toBe(403);
     expect((await get("/clip/jane/t3word?v=1", await ticketFor("pro"), env)).status).toBe(200);
+  });
+
+  it("a TOCFL-levelled word in sampler-seo (word pages) plays for a guest", async () => {
+    expect((await get("/clip/jane/seoword?v=1", await ticketFor("guest"), env)).status).toBe(200);
   });
 
   it("a sampler-tagged word is reachable by every tier, regardless of TOCFL level union", async () => {

@@ -163,6 +163,7 @@ export const APP_EVENTS = new Set<string>([
   "inapp_prompt",
   "tool_used",
   "tool_summary",
+  "word_page_action",
 ]);
 
 /** The only `$`-prefixed properties allowed through on a gameplay event. */

@@ -20,6 +20,7 @@ import { appHref } from "../ui/appLink.ts";
 import { ChineseTones, chineseTonesJsonLd } from "./pages/ChineseTones.tsx";
 import { ToneMarks, toneMarksJsonLd } from "./pages/ToneMarks.tsx";
 import { ToneVisualizer, toneVisualizerJsonLd } from "./pages/ToneVisualizer.tsx";
+import { SayIndex, sayIndexJsonLd, sayPageDefs } from "./pages/SayWord.tsx";
 
 export interface SitePageDef {
   Page: () => ReactElement;
@@ -31,6 +32,8 @@ export const SITE_PAGES: Record<string, SitePageDef> = {
   "/chinese-tones": { Page: ChineseTones, jsonLd: chineseTonesJsonLd },
   "/tools/tone-marks": { Page: ToneMarks, jsonLd: toneMarksJsonLd },
   "/tools/tone-visualizer": { Page: ToneVisualizer, jsonLd: toneVisualizerJsonLd },
+  "/say": { Page: SayIndex, jsonLd: sayIndexJsonLd },
+  ...sayPageDefs(),
 };
 
 /** The page for `path`, inside the `.app > .app-main > .frame` wrappers. */

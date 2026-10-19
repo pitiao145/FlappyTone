@@ -2,7 +2,7 @@ import { PipCta } from "../Pip.tsx";
 import { TONE_LINE_COLOR } from "../../ui/toneColors.ts";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
 import { ToneChart } from "../ToneChart.tsx";
-import { useState } from "react";
+import { PlayButton, SeeButton } from "../WordButtons.tsx";
 import { markSyllable, parsePinyin, toZhuyin } from "../zhuyin.ts";
 
 const PATH = "/chinese-tones";
@@ -157,35 +157,6 @@ export const FAQ: Faq[] = [
   },
 ];
 
-function PlayButton({ id, label }: { id: string; label: string }) {
-  const [state, setState] = useState<"idle" | "playing" | "failed">("idle");
-  return (
-    <button
-      type="button"
-      className="site-play"
-      data-state={state}
-      aria-label={`Play ${label}`}
-      onClick={() => {
-        setState("playing");
-        // Lazy: no audio code in the page's initial chunk, and never the mic.
-        import("../wordAudio.ts")
-          .then((m) => m.playWord(id))
-          .then((ok) => setState(ok ? "idle" : "failed"))
-          .catch(() => setState("failed"));
-      }}
-    >
-      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-        {state === "playing" ? (
-          <path d="M4 9h3l5-4v14l-5-4H4zM15 9a4 4 0 0 1 0 6M17.5 6.5a7.5 7.5 0 0 1 0 11" />
-        ) : (
-          <path d="M8 5v14l11-7z" />
-        )}
-      </svg>
-      <span>{state === "failed" ? "No audio" : "Listen"}</span>
-    </button>
-  );
-}
-
 /** Every example's catalog id: each has a published recording (exampleClips.test.ts). */
 export const HUB_EXAMPLE_IDS = [
   ...SECTIONS.flatMap((s) => s.examples),
@@ -195,39 +166,6 @@ export const HUB_EXAMPLE_IDS = [
   ...SANDHI_BU,
   ...TAIWAN_FULL,
 ].map(([id]) => id);
-
-type Viewer = typeof import("../WordViewer.tsx");
-
-function SeeButton({ word }: { word: import("../WordViewer.tsx").ViewerWord }) {
-  const [mod, setMod] = useState<Viewer | null>(null);
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        className="site-play site-see"
-        aria-label={`See the pitch of ${word.hanzi} ${word.pinyin}`}
-        onClick={() => {
-          // Lazy: the viewer (and its audio) loads on this tap only.
-          import("../WordViewer.tsx")
-            .then((m) => {
-              setMod(m);
-              setOpen(true);
-            })
-            .catch(() => {});
-        }}
-      >
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <path d="M3 14c3 0 4-6 8-6s4 8 10 8" />
-        </svg>
-        <span>See it</span>
-      </button>
-      {open && mod && (
-        <mod.WordViewer word={word} onClose={() => setOpen(false)} />
-      )}
-    </>
-  );
-}
 
 function ExampleList({
   examples,
@@ -294,6 +232,11 @@ export function ChineseTones() {
           most often with it, and how tones change when two of them meet. The
           examples use Traditional characters, with pinyin and 注音 (Zhuyin), as
           they are taught in Taiwan.
+        </p>
+        <p>
+          Looking for one word? See{" "}
+          <a href="/say">how to say hello, thank you and other common words</a>
+          , each with a recording.
         </p>
 
         <h2>The four tones on one chart</h2>

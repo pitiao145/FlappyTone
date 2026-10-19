@@ -55,7 +55,7 @@ export type RenderExport =
 
 export const SITE_ORIGIN = "https://flappytone.com";
 
-export const ROUTES: readonly SiteRoute[] = [
+const BASE_ROUTES: readonly SiteRoute[] = [
   {
     path: "/",
     lang: "en",
@@ -129,7 +129,50 @@ export const ROUTES: readonly SiteRoute[] = [
     shell: "site",
     render: "renderSitePage",
   },
+  {
+    path: "/say",
+    lang: "en",
+    title: "How to Say Common Words in Chinese (with Audio) — FlappyTone",
+    description:
+      "How to say hello, thank you, sorry, goodbye and more in Chinese, each with a native speaker's recording, pinyin, 注音 and how the tones really sound.",
+    lastmod: "2026-10-19",
+    pageType: "hub",
+    angle: "learner",
+    shell: "site",
+    render: "renderSitePage",
+  },
 ];
+
+/**
+ * The /say/* word pages (`src/site/sayWords.ts` holds their copy). Kept here,
+ * short, so the route table stays free of page text.
+ */
+const SAY_META: readonly [slug: string, title: string, description: string][] = [
+  ["thank-you", "How to Say Thank You in Chinese (謝謝 xièxie) — with Audio", "How to say thank you and thanks in Chinese: 謝謝 xièxie, with a native speaker's recording, pinyin, 注音 and how the light second syllable really sounds. Practise it free."],
+  ["hello", "How to Say Hello in Chinese (你好 nǐ hǎo) — with Audio", "How to say hello in Chinese: 你好 nǐ hǎo is said ní hǎo. Hear each syllable from a native speaker, see why the first tone changes, and practise it free."],
+  ["goodbye", "How to Say Goodbye in Chinese (再見 zàijiàn) — with Audio", "How to say goodbye and bye in Chinese: 再見 zàijiàn, plus 拜拜. A native speaker's recording, pinyin, 注音 and how the two falls really sound. Practise free."],
+  ["please", "How to Say Please in Chinese (請 qǐng) — with Audio", "How to say please in Chinese: 請 qǐng, a third tone that goes before the verb. Hear a native speaker, see the dip, learn 請問 and 請坐, and practise it free."],
+  ["sorry", "How to Say Sorry in Chinese (對不起 duìbuqǐ) — with Audio", "How to say sorry in Chinese: 對不起 duìbuqǐ, and when to say 不好意思 instead. A native speaker's recording, pinyin, 注音 and tone tips. Practise free."],
+  ["youre-welcome", "How to Say You're Welcome in Chinese (不客氣) — with Audio", "How to say you're welcome in Chinese: 不客氣 is said bú kèqì. Hear a native speaker, learn why 不 rises, and the Taiwan reply 不會. Practise it free."],
+  ["no-problem", "How to Say No Problem in Chinese (沒關係) — with Audio", "How to say no problem and it's okay in Chinese: 沒關係 méi guānxi, and how it differs from 沒問題. A native speaker's recording and tone tips. Practise free."],
+  ["yuan", "How to Pronounce Yuan in Chinese (元 yuán) — with Audio", "How to pronounce yuan, the Chinese currency unit: 元 yuán, a rising tone with the ü vowel. Hear a native speaker, see the tone shape, and practise it free."],
+];
+
+export const SAY_ROUTES: readonly SiteRoute[] = SAY_META.map(
+  ([slug, title, description]) => ({
+    path: `/say/${slug}`,
+    lang: "en",
+    title,
+    description,
+    lastmod: "2026-10-19",
+    pageType: "word",
+    angle: "learner",
+    shell: "site",
+    render: "renderSitePage",
+  }),
+);
+
+export const ROUTES: readonly SiteRoute[] = [...BASE_ROUTES, ...SAY_ROUTES];
 
 export function routeFor(path: string): SiteRoute | undefined {
   const clean = path.length > 1 ? path.replace(/\/+$/, "") : path;

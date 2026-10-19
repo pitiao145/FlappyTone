@@ -91,7 +91,7 @@ hreflang (`siteFiles.ts`' `headTags`), then deletes `dist/site.html`. The same
 table generates `sitemap.xml` and `llms.txt` at build time (`siteFiles.ts`;
 no file in `public/`; `noindex` routes are left out) and drives
 `prettyUrls.ts` for dev/preview. **Adding a page:** a `ROUTES` record + its
-component in `SITE_PAGES` (`src/site/pages.tsx`); its optional `jsonLd` export is written into the route's `<head>` as `application/ld+json` at prerender. `src/site/zhuyin.ts` is the shared pinyin ↔ tone marks ↔ 注音 module (pure, tested). Every claim in `llms.txt`
+component in `SITE_PAGES` (`src/site/pages.tsx`); its optional `jsonLd` export is written into the route's `<head>` as `application/ld+json` at prerender. `src/site/zhuyin.ts` is the shared pinyin ↔ tone marks ↔ 注音 module (pure, tested). **Word pages** (`/say/<slug>` + the `/say` index): one record in `src/site/sayWords.ts` (copy) + `SAY_META` in `routes.ts` (title/description) + clip geometry in `sayClips.ts` + the slug in `session.ts`' `SAY_SLUGS`; `sayWords.test.tsx` checks all four agree and every word is guest-playable. Every claim in `llms.txt`
 must be true in the code.
 
 **Page analytics and attribution.** A route-table page passes its
@@ -142,7 +142,9 @@ the lazy `src/site/wordAudio.ts` (guest ticket, one clip per tap), never
 `src/audio/`; a page's clip geometry is copied into a small tested file, never
 the whole `wordsFallback.json`. **Before shipping an example word with audio,
 check it returns 200 for a guest ticket** — the Worker gives a guest only words
-in a `sampler-*` list or in no `tocfl*` list (TOCFL level gate, `routes/clip.ts`);
+in a sampler list it names (`SAMPLER_LIST_IDS`: `sampler-beginner`, `sampler-intermediate`,
+`sampler-seo`) or in no `tocfl*` list (TOCFL level gate, `routes/clip.ts`). `sampler-seo` holds
+the /say/* words and feeds no game pool; a new sampler list needs a Worker deploy;
 `exampleClips.test.ts` mirrors that rule. The Worker's CORS only allows `localhost:5173` in dev. Public
 copy says "the bird" or FlappyTone, never "Pip" (internal name), and does not
 name Jane ("our native speaker").

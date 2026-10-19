@@ -82,6 +82,20 @@ export interface SeoPageViewProps {
   page_path: string;
 }
 
+/** The /say/* word pages' slugs (`src/site/sayWords.ts`), restated as a closed set. */
+export const SAY_SLUGS = [
+  "thank-you",
+  "hello",
+  "goodbye",
+  "please",
+  "sorry",
+  "youre-welcome",
+  "no-problem",
+  "yuan",
+] as const;
+export type SaySlug = (typeof SAY_SLUGS)[number];
+export type WordPageAction = "listen" | "see_it" | "practise_tone" | "practise_word";
+
 export type AnalyticsEvent =
   /**
    * `ref` is the closed set of `?ref=` values this app itself ever generates
@@ -289,6 +303,11 @@ export type AnalyticsEvent =
       tool: "tone-visualizer";
       action: "started" | "mic_denied" | "calibrated" | "first_attempt";
     }
+  /**
+   * A /say/<slug> word page (`src/site/pages/SayWord.tsx`): each action at
+   * most once per page load. The slug is the page's own, from a closed set.
+   */
+  | { type: "word_page_action"; slug: SaySlug; action: WordPageAction }
   /** The tone visualizer's visit, once on `pagehide`: counts only. */
   | { type: "tool_summary"; tool: "tone-visualizer"; attempts: number; targets: number }
   /** FeedbackWidget.tsx's submit, once it resolves ok. Never carries the free-text message — screen/rating/tier only. */
@@ -393,6 +412,7 @@ export function eventTier(type: AnalyticsEvent["type"]): AnalyticsTier {
     case "inapp_prompt":
     case "tool_used":
     case "tool_summary":
+    case "word_page_action":
       return "global";
   }
 }

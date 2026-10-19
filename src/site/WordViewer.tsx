@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { corridorChaoAt } from "../game/gates.ts";
 import { TONE_LINE_COLOR } from "../ui/toneColors.ts";
-import { EXAMPLE_CLIPS } from "./exampleClips.ts";
+import { EXAMPLE_CLIPS, type ExampleClip } from "./exampleClips.ts";
 import { Pip } from "./Pip.tsx";
 import { clipUrl } from "./wordAudio.ts";
 import { appHref } from "../ui/appLink.ts";
@@ -32,12 +32,18 @@ export interface ViewerWord {
  */
 export function WordViewer({
   word,
+  clip: givenClip,
+  from = "/chinese-tones",
   onClose,
 }: {
   word: ViewerWord;
+  /** The word's measured clip; defaults to the hub's `EXAMPLE_CLIPS`. */
+  clip?: ExampleClip;
+  /** The page path, for the "Try it" link's `?src=`. */
+  from?: string;
   onClose: () => void;
 }) {
-  const clip = EXAMPLE_CLIPS[word.id];
+  const clip = givenClip ?? EXAMPLE_CLIPS[word.id];
   const dialog = useRef<HTMLDialogElement>(null);
   const trail = useRef<SVGPolylineElement>(null);
   const bird = useRef<SVGGElement>(null);
@@ -161,7 +167,7 @@ export function WordViewer({
       <div className="word-viewer-actions">
         <a
           className="word-viewer-try"
-          href={appHref("visualiser", "/chinese-tones")}
+          href={appHref("visualiser", from)}
         >
           <Pip size={26} tilt={-12} />
           Try it

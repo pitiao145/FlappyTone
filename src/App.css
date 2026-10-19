@@ -11183,3 +11183,199 @@ button.switch-track.switch-on {
     border-radius: 0 0 calc(var(--radius-lg) - 2px) calc(var(--radius-lg) - 2px);
   }
 }
+
+/* ---- /say/* word pages (src/site/pages/SayWord.tsx) ---- */
+
+.say-page .say-card {
+  margin-top: var(--space-4);
+  background: var(--surface-panel);
+  border-radius: var(--radius-md);
+  padding: var(--space-5) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+}
+
+.say-page .say-card-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.say-page .say-hanzi {
+  font-size: 3.4rem;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.say-page .say-pinyin {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.say-page .say-zhuyin {
+  color: var(--ink-muted);
+  font-size: 1.1rem;
+}
+
+.say-page .say-english,
+.say-page .say-said,
+.say-page .say-card-note {
+  color: var(--ink-muted);
+  font-size: 0.95rem;
+}
+
+.say-page .say-said strong {
+  color: var(--ink);
+}
+
+.say-page .say-card-note {
+  max-width: 34em;
+  margin: 0;
+}
+
+.say-page ul.say-recordings {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-5);
+}
+
+.say-page ul.say-recordings li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.say-page .say-rec-label {
+  font-weight: 600;
+}
+
+.say-page .say-recordings .site-example-actions {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.say-page ul.say-syllables,
+.say-page ul.say-uses,
+.say-page ul.say-more {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.say-page ul.say-syllables li {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: baseline;
+  gap: var(--space-3);
+  color: var(--ink-muted);
+  line-height: 1.6;
+}
+
+.say-page .say-syl {
+  font-size: 1.6rem;
+  color: var(--ink);
+}
+
+.say-page .say-syl-pinyin {
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.say-page ul.say-uses li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-3);
+  row-gap: 2px;
+  background: var(--surface-panel);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.say-page .say-use-hanzi {
+  font-size: 1.3rem;
+  color: var(--ink);
+}
+
+.say-page .say-use-pinyin {
+  font-weight: 600;
+}
+
+.say-page .say-use-english {
+  color: var(--ink);
+}
+
+.say-page .say-use-note {
+  flex-basis: 100%;
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+}
+
+.say-page .say-practise-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.screen .say-practise-word {
+  margin-top: 0;
+  padding: 8px 16px;
+  text-decoration: none;
+}
+
+.say-page .say-practise-note {
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+}
+
+.say-page ul.say-index {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+.say-page ul.say-index a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-4) var(--space-3);
+  background: var(--surface-panel);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--ink);
+  text-align: center;
+}
+
+.say-page .say-index-phrase {
+  font-weight: 700;
+}
+
+.say-page .say-index-hanzi {
+  font-size: 2rem;
+}
+
+@media (max-width: 480px) {
+  .say-page ul.say-syllables li {
+    grid-template-columns: auto 1fr;
+  }
+  .say-page ul.say-syllables li > span:last-child {
+    grid-column: 1 / -1;
+  }
+}

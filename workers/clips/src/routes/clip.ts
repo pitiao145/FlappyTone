@@ -79,7 +79,7 @@ const TIER_LEVEL_UNION: Record<string, ReadonlySet<number>> = {
 };
 
 /** Sampler words are always playable, whatever the ticket's tier — guest needs them. */
-const SAMPLER_LIST_IDS = new Set(["sampler-beginner", "sampler-intermediate"]);
+const SAMPLER_LIST_IDS = new Set(["sampler-beginner", "sampler-intermediate", "sampler-seo"]);
 
 interface WordRow {
   clipKey: string | null;
