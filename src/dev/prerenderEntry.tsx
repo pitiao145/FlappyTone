@@ -16,6 +16,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Landing } from "../ui/Landing.tsx";
 import { LegalPage } from "../ui/LegalPage.tsx";
 import { termsOfServiceMd, privacyPolicyMd } from "../ui/legalContent.ts";
+import { SitePage } from "../site/pages.tsx";
 
 const noop = () => {};
 
@@ -64,4 +65,13 @@ export function renderPrivacy(): string {
       </div>
     </div>,
   );
+}
+
+/**
+ * Every `shell: "site"` route in `src/site/routes.ts`. `SitePage` holds the
+ * wrappers, and `src/site/main.tsx` renders the same component on the client,
+ * so the identity rule above holds by construction.
+ */
+export function renderSitePage(path: string): string {
+  return renderToStaticMarkup(<SitePage path={path} />);
 }

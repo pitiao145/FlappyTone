@@ -70,6 +70,18 @@ export type MicFailureReason =
   | "no-audioworklet"
   | "unknown";
 
+/**
+ * Properties a route-table page adds to its own `$pageview` (global tier).
+ * Closed and reviewed like `AnalyticsEvent`: the page's own metadata from
+ * `src/site/routes.ts`, never anything typed.
+ */
+export interface SeoPageViewProps {
+  page_type: "landing" | "hub" | "tool" | "word" | "teacher" | "legal";
+  lang: "en" | "zh-tw";
+  angle: "learner" | "teacher" | "general";
+  page_path: string;
+}
+
 export type AnalyticsEvent =
   /**
    * `ref` is the closed set of `?ref=` values this app itself ever generates
@@ -78,7 +90,17 @@ export type AnalyticsEvent =
    * PostHog's own `$current_url`/`$referrer` are stripped from every
    * gameplay event, `landed` included, by `before_send`'s allowlist.
    */
-  | { type: "landed"; ref?: "share" }
+  | {
+      type: "landed";
+      ref?: "share";
+      /**
+       * The route-table page (`src/site/routes.ts`) whose CTA brought the
+       * player here, from `?src=`. Validated against the table, so always one
+       * of its paths. Absent on a direct visit.
+       */
+      seoPage?: string;
+      seoAngle?: "learner" | "teacher" | "general";
+    }
   | { type: "mic"; ok: true }
   | { type: "mic"; ok: false; reason: MicFailureReason }
   | { type: "calib_step"; step: CalibStep }

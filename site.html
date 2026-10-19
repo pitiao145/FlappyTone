@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="%SITE_LANG%">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500;1,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="theme-color" content="#100d0e" />
+    <!-- The shared shell for every `shell: "site"` route in src/site/routes.ts.
+         src/dev/prerender.ts writes one dist/<path>/index.html per route,
+         replacing the head marker below with that route's title, description,
+         canonical, robots and hreflang tags. Never served as-is in production
+         (dist/site.html is deleted after the copies are written). -->
+    <!--SITE_HEAD-->
+  </head>
+  <body>
+    <!-- Filled at build time by src/dev/prerender.ts; React remounts over it. -->
+    <div id="root"></div>
+    <script type="module" src="/src/site/main.tsx"></script>
+  </body>
+</html>

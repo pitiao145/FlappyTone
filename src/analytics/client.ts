@@ -27,6 +27,7 @@ import {
   setCalibrationProperties,
   setDeviceProperty,
   setInAppBrowserProperty,
+  setFirstSeoTouch,
   setPostHogConsent,
   setSpeechStyleProperty,
 } from "./posthog.ts";
@@ -68,6 +69,15 @@ export function trackCalibration(cal: CalibrationSettings): void {
 export function trackSpeechStyle(style: SpeechStyle): void {
   try {
     setSpeechStyleProperty(style);
+  } catch {
+    // ignore
+  }
+}
+
+/** First-touch SEO attribution (`$set_once` person properties). */
+export function trackFirstSeoTouch(page: string, angle: string): void {
+  try {
+    setFirstSeoTouch(page, angle);
   } catch {
     // ignore
   }

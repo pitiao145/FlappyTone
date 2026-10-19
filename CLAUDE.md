@@ -60,11 +60,13 @@ src/
   record/     the /record entry: the recording booth (talks to the clips Worker, not Vercel api/).
   analytics/  what a play session sends home. session.ts is pure; client.ts/posthog.ts are the impure part.
   share/      share-card rendering. Never throws (same contract as src/data/).
+  site/       the route table (routes.ts), sitemap/llms.txt/head generation (siteFiles.ts), page analytics + ?src= (pageAnalytics.ts), and the shared-shell pages (pages.tsx, main.tsx, pages/). NO audio/pitch.
   dev/        the Lab (dev-only tuning instance) + CLI analysis/build/pipeline scripts.
 api/          Vercel functions: newsletter, score, run, webhook-ls, shapes, runlog — see above.
 workers/clips/  Cloudflare Worker (`flappytone-clips-api`, clips.flappytone.com): mints play tickets, serves clip audio from R2. Separate deploy target and toolchain (`npm -w workers/clips`), not part of the Vercel `api/` count.
 supabase/     numbered SQL migrations, applied through the Supabase MCP. The schema's source of truth.
-LandingApp.tsx  the / entry's shell: landing + terms, and nothing else.
+LandingApp.tsx  the / entry's shell: the landing page, and nothing else.
+site.html       the shared HTML shell for `shell: "site"` routes (copied per route at build).
 fixtures/     WAV files for offline tests — see docs/TESTING.md
 docs/         PRD.md, TESTING.md, DECISIONS.md, and reference/design docs
 ```
@@ -74,19 +76,44 @@ docs/         PRD.md, TESTING.md, DECISIONS.md, and reference/design docs
 `index.html` → `src/main.tsx` → `LandingApp` is the marketing site at `/`.
 `app.html` → `src/app/main.tsx` → `GameApp` is the game at `/app`.
 `record.html` → `src/record/` is the booth at `/record`. All three are declared
-in `vite.config.ts`'s `rollupOptions.input` and reached through rewrites in
-`vercel.json`; only `/` is indexable.
+in `vite.config.ts`'s `rollupOptions.input`; `/app` and `/record` are noindex.
+
+**Indexable pages come from the route table, `src/site/routes.ts`** (one
+`SiteRoute` per page: path, lang `en`/`zh-tw`, title, description, hand-set
+`lastmod`, `pageType`, `angle`, optional `alternate`/`noindex`, `shell`,
+render export). EN lives at the root, Traditional Chinese under `/zh-tw/`.
+Two shells: `own` — `/`, `/privacy-policy`, `/terms-of-service` keep their own
+HTML entries (legal ones reached through `vercel.json` rewrites); `site` —
+every other page shares `site.html` + `src/site/main.tsx`, and
+`src/dev/prerender.ts` writes it to `dist/<path>/index.html` per route with
+that route's `<html lang>`, title, description, canonical, `noindex` and
+hreflang (`siteFiles.ts`' `headTags`), then deletes `dist/site.html`. The same
+table generates `sitemap.xml` and `llms.txt` at build time (`siteFiles.ts`;
+no file in `public/`; `noindex` routes are left out) and drives
+`prettyUrls.ts` for dev/preview. **Adding a page:** a `ROUTES` record + its
+component in `SITE_PAGES` (`src/site/pages.tsx`). Every claim in `llms.txt`
+must be true in the code.
+
+**Page analytics and attribution.** A route-table page passes its
+`SeoPageViewProps` (`page_type`, `lang`, `angle`, `page_path`, closed type in
+`session.ts`) to `initPostHog`, which merges them into that load's
+`$pageview` only (global tier, never a super property). Each page's entry calls
+`setAppLinkSource(path)`, so every `appLink.ts` link carries `?src=<path>`;
+`GameApp` validates it against the table (`seoSource`), stamps
+`first_seo_page`/`first_seo_angle` with `$set_once`, puts `seoPage`/`seoAngle`
+on `landed`, and strips it. Like `?intent=`, it never starts anything.
 
 Four rules hold the split together:
 
 1. **The marketing page must not import `src/audio/` or `src/pitch/`.** Check after touching `Landing.tsx` or anything it imports:
    ```bash
    npm run build
-   grep -l PitchTracker dist/assets/*.js     # must list only the app + record chunks
+   grep -l getUserMedia dist/assets/*.js     # must list only app/record chunks (app-*, MicStatus-*), never main-*, site-* or a legal chunk
    ```
+   (`PitchTracker` is minified away, so grepping for it proves nothing.) The same rule holds for every route-table page and `src/site/`.
    `ToneAverageCard` and `ContourSpark` legitimately pull `game/gates` and `game/words` for the tone charts; that is data and geometry, not the engine.
 2. **Crossing between `/` and `/app` is a real navigation, and a click gesture does not survive it.** `ensureMic()` needs the gesture (hard rule 4); the landing page passes `?intent=visualiser` instead, and the player's first tap on `/app` is the gesture. Do not try to auto-start from the intent — it fails silently on iOS Safari. `src/ui/appLink.ts` is the only thing that knows the game's URL. **`?intent=visualiser` must work on a session that has never calibrated** — a share link is by definition someone's first visit (this broke once; see DECISIONS.md). Re-check against a cleared `localStorage` session, not just a calibrated one, whenever you touch this path.
-3. **Only `index.html` is prerendered.** `src/dev/prerender.ts` bakes the landing into it for crawlers, and `prerenderEntry.tsx`'s wrapper markup (`.app > .app-main > .frame`) must stay identical to `LandingApp`'s or crawler markup and React's markup diverge.
+3. **Only route-table pages are prerendered** (`/app`/`/record` never). `src/dev/prerender.ts` bakes each into its HTML for crawlers, and `prerenderEntry.tsx`'s wrapper markup (`.app > .app-main > .frame`) must stay identical to what the client renders (`LandingApp`, the legal apps, `SitePage`) or crawler markup and React's markup diverge.
 4. **`Nav.tsx` is the marketing site's bar; the game has its own (`src/app/GameNav.tsx`).** Do not reintroduce a shared nav.
 
 One analytics consequence: **`landed` means "opened `/app`", not "visited the site"** — a visit to the marketing page is a `$pageview` instead.

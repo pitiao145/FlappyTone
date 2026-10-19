@@ -1251,6 +1251,27 @@ FlappyTone specifically — check the current value with `project-get` before
 assuming either way, and raise any change with Pierre first since it's
 project-wide.
 
+## SEO pages: a route table, not one Vite entry per page (19 Oct 2026)
+
+The SEO plan adds many indexable pages (a hub, tools, word pages, a
+Traditional Chinese set under `/zh-tw/`). The existing pattern — one HTML file
++ one `rollupOptions.input` + one `vercel.json` rewrite + one
+`PRERENDER_ENTRIES` row + a hand-edited sitemap per page — means five edits
+per page and five places to drift (the sitemap and hreflang worst of all). So
+every indexable page is one record in `src/site/routes.ts`, and prerender,
+sitemap, llms.txt, head tags, dev URLs, page analytics and `?src=` all read it.
+Content pages share one HTML shell and one client entry, copied to
+`dist/<path>/index.html` per route; the folders need no Vercel rewrite. No
+router or SSG dependency: the copy loop is ~30 lines in `prerender.ts`.
+
+`/` and the legal pages stay on their own entries (`shell: "own"`): their
+output was required to stay byte-identical, and moving them onto the shared
+shell would change their head, chunking and URLs for no gain. Their head tags
+are still hand-written in their HTML; `routes.test.ts` fails if they drift from
+the table. The legal pages still have no PostHog (they had none before).
+`?src=` is accepted only for a path in the table, so `first_seo_page` is a
+closed set, never a raw URL.
+
 ## Landing/game split (Aug 2026)
 
 The single-page app was split into three Vite entries (`/`, `/app`,

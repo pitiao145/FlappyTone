@@ -3,7 +3,9 @@ import { initAnalytics } from "./analytics/client";
 import { initPostHog } from "./analytics/posthog.ts";
 import { loadShareData } from "./game/settings";
 import { Landing } from "./ui/Landing";
-import { goToApp } from "./ui/appLink.ts";
+import { goToApp, setAppLinkSource } from "./ui/appLink.ts";
+import { routeFor } from "./site/routes.ts";
+import { pageViewProps } from "./site/pageAnalytics.ts";
 import "./App.css";
 
 /**
@@ -31,7 +33,11 @@ export default function LandingApp() {
    */
   useEffect(() => {
     initAnalytics();
-    initPostHog(loadShareData());
+    // `/` is a route-table page: its `$pageview` carries the page metadata and
+    // its CTAs carry `?src=/` (see src/site/routes.ts).
+    const route = routeFor("/");
+    if (route) setAppLinkSource(route.path);
+    initPostHog(loadShareData(), route ? pageViewProps(route) : undefined);
   }, []);
 
   return (

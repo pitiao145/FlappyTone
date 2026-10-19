@@ -36,7 +36,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        // The marketing site. The only prerendered entry.
+        // The marketing site's home page (route "/" in src/site/routes.ts).
         main: resolve(import.meta.dirname, 'index.html'),
         // The game. A separate entry so the marketing page does not carry the
         // audio/pitch/game engine. Reached at /app via the rewrite in
@@ -50,6 +50,10 @@ export default defineConfig({
         // either, same reasoning as `app`/`record`.
         'terms-of-service': resolve(import.meta.dirname, 'terms-of-service.html'),
         'privacy-policy': resolve(import.meta.dirname, 'privacy-policy.html'),
+        // The shared shell for every `shell: "site"` route in
+        // src/site/routes.ts. prerender.ts copies it to dist/<path>/index.html
+        // once per route and then deletes dist/site.html.
+        site: resolve(import.meta.dirname, 'site.html'),
       },
     },
   },

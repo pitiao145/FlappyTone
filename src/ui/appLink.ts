@@ -23,8 +23,27 @@ export const APP_PATH = "/app";
  */
 export type AppIntent = "visualiser" | "leaderboard" | "pairs" | "pricing";
 
-export function appHref(intent?: AppIntent): string {
-  return intent ? `${APP_PATH}?intent=${intent}` : APP_PATH;
+/**
+ * The route-table page (`src/site/routes.ts`) a CTA was clicked on, set once
+ * by that page's entry (`setAppLinkSource`). Every link built here then
+ * carries `?src=<path>`, which GameApp reads once on arrival for first-touch
+ * attribution and strips. Unset on /app itself, so in-game links carry none.
+ */
+let linkSource: string | undefined;
+
+export function setAppLinkSource(path: string): void {
+  linkSource = path;
+}
+
+/** `src` overrides the page source (for markup rendered before any entry runs, e.g. prerender). */
+export function appHref(intent?: AppIntent, src: string | undefined = linkSource): string {
+  const params = new URLSearchParams();
+  if (intent) params.set("intent", intent);
+  if (src) params.set("src", src);
+  // `/` is legal in a query value; left unescaped so the URL reads
+  // `/app?src=/chinese-tones`.
+  const q = params.toString().replace(/%2F/g, "/");
+  return q ? `${APP_PATH}?${q}` : APP_PATH;
 }
 
 /**
