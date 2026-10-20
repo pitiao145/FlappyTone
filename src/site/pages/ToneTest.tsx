@@ -578,6 +578,9 @@ function Reveal({
       )}
       <div className="tt-profile-card">
         <div className="tt-photo tt-photo-full">
+          <span className="tt-photo-tone" aria-hidden="true">
+            <ContourSpark tone={word.tone} width={240} height={110} />
+          </span>
           <Pip size={104} tilt={match ? -14 : 0} className={match ? "tt-pip-hop" : undefined} />
           {profile && (
             <span className="tt-prop" aria-hidden="true">

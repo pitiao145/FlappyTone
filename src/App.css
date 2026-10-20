@@ -12089,3 +12089,22 @@ button.switch-track.switch-on {
   .tt-burst { display: none; }
   .screen .tt-corner { transition: none; }
 }
+
+/* Reveal fixes: white type on the photo beats the site's prose colour,
+   the italic title keeps its last letter, the tone shape sits behind the bird. */
+.legal-body .tt-profile p,
+.legal-body .tt-profile .tt-name-pinyin { color: #fff; }
+.legal-body .tt-profile .tt-bio { color: rgba(255, 255, 255, 0.9); }
+.tt-profile { background: linear-gradient(to top, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0)); }
+.screen .tt-match-title { padding: 0 0.15em; }
+.tt-photo-tone {
+  position: absolute;
+  inset: 14% 8% 30%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  opacity: 0.35;
+  pointer-events: none;
+}
+.tt-photo-tone .contour-spark { width: 100%; height: 100%; }
+.tt-photo-tone polyline { stroke-width: 4; }
