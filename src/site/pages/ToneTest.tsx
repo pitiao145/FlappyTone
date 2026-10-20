@@ -42,7 +42,6 @@ function loadAudio(): Promise<AudioModule> {
   return audioPromise;
 }
 
-const MARK: Record<Tone, string> = { 1: "ˉ", 2: "ˊ", 3: "ˇ", 4: "ˋ" };
 const NAME: Record<Tone, string> = { 1: "high, level", 2: "rising", 3: "low, dipping", 4: "falling" };
 /** How long the card takes to fly into its corner before the reveal (ms). */
 const FLY_MS = 220;
@@ -58,7 +57,7 @@ const prefersReducedMotion = () =>
 const FAQ = [
   {
     q: "How does the Chinese tones test work?",
-    a: "You hear one Mandarin word at a time, recorded by our native Taiwan Mandarin speaker. The word is hidden, so only the pitch can tell you the tone. Swipe the card into the corner of the tone you heard (or tap the corner, or press 1 to 4). After ten words you get a score, your result per tone, and which tones you mix up.",
+    a: "Toneder works like a dating app for tones. You hear one Mandarin word at a time, recorded by our native Taiwan Mandarin speaker. The word is hidden, so only the pitch can tell you the tone. Swipe the card into the corner of the tone you heard (or tap the corner, or press 1 to 4). After ten words you get a score, your result per tone, and which tones you mix up.",
   },
   {
     q: "What is the difference between Standard and Spoken?",
@@ -366,7 +365,16 @@ function ToneGame() {
   const showCorners = phase === "card" || phase === "flying" || phase === "intro";
 
   return (
-    <div className="tt-tool" role="group" aria-label="Chinese tones listening test">
+    <div className="tt-tool" role="group" aria-label="Toneder, a Chinese tones listening test">
+      <div className="tt-bar">
+        <span className="tt-logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-7 1 2 1 3 3 4 0-4-1-6 0-9z" />
+          </svg>
+          toneder
+        </span>
+        {styleToggle}
+      </div>
       <div className="tt-stage" ref={stageRef}>
         {showCorners &&
           TONES.map((t) => {
@@ -390,11 +398,9 @@ function ToneGame() {
                 onClick={() => answer(t)}
                 aria-label={`Tone ${t}, ${NAME[t]} (key ${t})`}
               >
-                <span className="tt-corner-mark" aria-hidden="true">
-                  {MARK[t]}
-                </span>
                 <span className="tt-corner-num">Tone {t}</span>
-                <ContourSpark tone={t} width={48} height={22} />
+                <span className="tt-corner-name">{NAME[t]}</span>
+                <ContourSpark tone={t} width={120} height={52} />
               </button>
             );
           })}
@@ -402,8 +408,8 @@ function ToneGame() {
         {(phase === "intro" || phase === "loading") && (
           <div className="tt-card tt-card-intro">
             <Pip size={72} tilt={-8} />
-            <p className="tt-card-title">Hear a word. Swipe it to its tone.</p>
-            {styleToggle}
+            <p className="tt-card-title">Ten words want to meet you.</p>
+            <p className="tt-note">Listen to each one and swipe it to the tone it matches.</p>
             <button type="button" className="sticker-button tt-start" onClick={start}>
               Start the test
             </button>
@@ -420,22 +426,40 @@ function ToneGame() {
             onPointerUp={onUp}
             onPointerCancel={onUp}
           >
-            <span className="tt-count">
-              {round.index + 1} / {round.cards.length}
-            </span>
-            <Pip size={64} tilt={-6} className={playing ? "tt-pip-sing" : undefined} />
-            <button
-              type="button"
-              className="tt-play"
-              onClick={() => void playCurrent()}
-              aria-label="Play the word again"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </button>
-            <p className="tt-card-title">Which tone?</p>
-            <p className="tt-note">Drag me to a corner</p>
+            <div className="tt-photo">
+              <div className="tt-dots" aria-hidden="true">
+                {round.cards.map((_, i) => (
+                  <span key={i} className={i === round.index ? "tt-dot-on" : undefined} />
+                ))}
+              </div>
+              {/* The "photo": the bird in front of a heavily blurred tone line. */}
+              <span className="tt-photo-line" aria-hidden="true">
+                <ContourSpark tone={card.tone} width={220} height={120} />
+              </span>
+              <Pip size={110} tilt={-6} className={playing ? "tt-pip-sing" : undefined} />
+              <div className="tt-profile">
+                {/* The "name" is the word itself, blurred until the reveal. */}
+                <p className="tt-name" aria-hidden="true">
+                  <span lang="zh-Hant-TW">{card.hanzi}</span>, {card.pinyin}
+                </p>
+                <p className="tt-bio">
+                  {round.index + 1} of {round.cards.length} · Which tone am I?
+                </p>
+              </div>
+            </div>
+            <div className="tt-actions">
+              <button
+                type="button"
+                className="tt-play"
+                onClick={() => void playCurrent()}
+                aria-label="Play the word again"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </button>
+              <span className="tt-note">Swipe me to my tone</span>
+            </div>
           </div>
         )}
 
@@ -489,7 +513,6 @@ function ToneGame() {
                 {shared ? "Shared!" : "Share my score"}
               </button>
             </div>
-            {styleToggle}
             <a
               className="tc-result-cta"
               href={`/tools/tone-visualizer?tone=${result.weakest ?? 3}`}
@@ -567,12 +590,13 @@ export function ToneTest() {
     <div className="screen legal-screen site-page site-wide">
       <article className="legal-body">
         <header className="tm-head">
-          <h1>Chinese tones test</h1>
+          <h1>Chinese tones test: Toneder</h1>
           <p className="site-answer">
-            Can you hear the four Mandarin tones? Listen to ten words from a native
-            speaker and swipe each one to its tone: high and level, rising, dipping or
-            falling. Free, no sign-up, no microphone. You get a score and the tones you
-            mix up.
+            Can you hear the four Mandarin tones? Toneder is like Tinder, but for
+            tones: ten words from a native speaker want to meet you, and you swipe
+            each one to the tone it matches (high and level, rising, dipping or
+            falling). Free, no sign-up, no microphone. You get a score and the tones
+            you mix up.
           </p>
         </header>
 
@@ -642,7 +666,7 @@ export function toneTestJsonLd(route: SiteRoute): object[] {
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      name: "Chinese Tones Test",
+      name: "Toneder: Chinese Tones Test",
       url: absoluteUrl(route.path),
       description: route.description,
       applicationCategory: "EducationalApplication",
