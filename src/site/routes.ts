@@ -130,6 +130,18 @@ const BASE_ROUTES: readonly SiteRoute[] = [
     render: "renderSitePage",
   },
   {
+    path: "/tools/tone-test",
+    lang: "en",
+    title: "Chinese Tones Test: Can You Hear the 4 Tones?",
+    description:
+      "Free Mandarin tones listening test: hear 10 words from a native speaker, swipe each to its tone, see which tones you mix up. No sign-up, no mic. Try it now.",
+    lastmod: "2026-10-20",
+    pageType: "tool",
+    angle: "learner",
+    shell: "site",
+    render: "renderSitePage",
+  },
+  {
     path: "/say",
     lang: "en",
     title: "How to Say Common Words in Chinese (with Audio) — FlappyTone",

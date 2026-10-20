@@ -135,6 +135,16 @@ preselect. Analytics: `tool_used {tool:"tone-visualizer", action}` (each once
 per load) and `tool_summary {attempts, targets}` on `pagehide`, global tier,
 counts only.
 
+**The public tone listening test (`/tools/tone-test`, `src/site/toneTest/`,
+`pages/ToneTest.tsx`).** The one perception drill, and only on this public
+page (Pierre, 20 Oct 2026; not in the game). No mic, no `src/audio/`: a card
+plays a hidden word through `wordAudio.ts`, the visitor swipes it to a corner
+(T1 top-left, T2 top-right, T3 bottom-left, T4 bottom-right). 40 words
+(`TEST_WORDS`, 10 per tone, guest-playable, both styles; `toneTest.test.ts`
+checks the catalog and the guest rule), rounds of 10, Standard (textbook) or
+Spoken (natural). Analytics: `tool_used {tool:"tone-test", action}` once per
+round, `tool_summary` counts on `pagehide`.
+
 **Site pages: lessons from S2** (`docs/briefs/reports/12-…md` has the detail).
 Prose CSS targets `article > section`, never bare `section` (it beat a tool's
 grid once). Tools are wide (`.site-wide`). Audio on a site page goes through
@@ -299,7 +309,7 @@ Ground truth is `fixtures/captures/jane_*.wav` (native Taiwanese speaker, direct
 
 ## Out of scope
 
-Speech recognition or syllable verification (beyond the standalone tone-shape classifier) · tone sandhi as an explicit, taught concept (a pair's corridor is measured shape-agnostic from the speaker's own contour — see "Tone pairs" above — but nothing surfaces the *rule* to a player) · connected speech / sentences / anything past two syllables · native app builds · listening/perception drills · payments/billing of our own (Lemon Squeezy is merchant of record; `api/webhook-ls.ts` only reacts to its webhook) · voice-clip storage beyond the current R2/Worker pipeline.
+Speech recognition or syllable verification (beyond the standalone tone-shape classifier) · tone sandhi as an explicit, taught concept (a pair's corridor is measured shape-agnostic from the speaker's own contour — see "Tone pairs" above — but nothing surfaces the *rule* to a player) · connected speech / sentences / anything past two syllables · native app builds · listening/perception drills inside the game (the one exception is the public `/tools/tone-test` page, below) · payments/billing of our own (Lemon Squeezy is merchant of record; `api/webhook-ls.ts` only reacts to its webhook) · voice-clip storage beyond the current R2/Worker pipeline.
 
 ## Before accounts go live — Supabase settings, not code
 

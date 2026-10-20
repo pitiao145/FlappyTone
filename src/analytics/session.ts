@@ -310,6 +310,24 @@ export type AnalyticsEvent =
   | { type: "word_page_action"; slug: SaySlug; action: WordPageAction }
   /** The tone visualizer's visit, once on `pagehide`: counts only. */
   | { type: "tool_summary"; tool: "tone-visualizer"; attempts: number; targets: number }
+  /**
+   * The tone listening test (`src/site/pages/ToneTest.tsx`): `started` and
+   * `round_done` once per round, the summary once on `pagehide`. Counts and a
+   * closed style only, never a word.
+   */
+  | { type: "tool_used"; tool: "tone-test"; action: "started" | "round_done" }
+  | {
+      type: "tool_summary";
+      tool: "tone-test";
+      rounds: number;
+      cards: number;
+      correct: number;
+      t1Correct: number;
+      t2Correct: number;
+      t3Correct: number;
+      t4Correct: number;
+      style: "standard" | "spoken" | "mixed";
+    }
   /** FeedbackWidget.tsx's submit, once it resolves ok. Never carries the free-text message — screen/rating/tier only. */
   | { type: "feedback_submitted"; screen: string; rating: number | null; tier: string };
 

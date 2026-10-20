@@ -1251,6 +1251,26 @@ FlappyTone specifically — check the current value with `project-get` before
 assuming either way, and raise any change with Pierre first since it's
 project-wide.
 
+## Tone listening test: one perception drill, public page only (20 Oct 2026)
+
+Listening drills were out of scope: the product teaches tones by saying
+them. Pierre lifted that for one public SEO tool, `/tools/tone-test`
+("chinese tones test", "can't hear chinese tones"), because a no-mic quiz is
+an easy first step and a shareable link. The game gets no listening mode.
+
+- **Swipe, not buttons (Pierre).** A card with the hidden word, four tone
+  corners placed like the marks (the two that end high on top). Release past
+  30% of the way to a corner, or flick; a drag too straight up/down/sideways
+  picks nothing. Taps on a corner and keys 1–4 also answer.
+- **Next is a tap, never automatic.** Each card's clip then starts inside a
+  tap, so iOS never blocks it; `wordAudio.ts` keeps one shared `<audio>`,
+  unlocked by a silent play inside the Start tap, for the fetch gap.
+- **Words are copied, not the catalog.** 40 single-syllable words, all
+  guest-playable and recorded in both styles, so no DB or list change was
+  needed. A clip that fails is replaced by a spare of the same tone.
+- **Standard / Spoken** = textbook / natural recordings. Spoken is harder;
+  the score is one number either way.
+
 ## Public tone visualizer: a separate page, reference shapes, a quick calibration (19 Oct 2026)
 
 `/tools/tone-visualizer` (SEO S3) is the in-app visualiser's engine on a public,

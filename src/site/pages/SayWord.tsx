@@ -503,7 +503,8 @@ export function SayIndex() {
         <p>
           New to tones? Start with{" "}
           <a href={HUB}>the four Mandarin tones, explained</a>, or try your own
-          voice in the <a href={VISUALIZER}>free tone visualizer</a>.
+          voice in the <a href={VISUALIZER}>free tone visualizer</a>. Can you hear
+          the tones? Take the <a href="/tools/tone-test">Chinese tones test</a>.
         </p>
         <PipCta
           path={INDEX}

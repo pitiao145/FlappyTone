@@ -375,6 +375,11 @@ export function ChineseTones() {
 
         <section id="faq">
           <h2>Can't hear the tones? Common questions</h2>
+          <p>
+            Test your ear first: the free{" "}
+            <a href="/tools/tone-test">Chinese tones test</a> plays ten words and
+            shows which tones you mix up.
+          </p>
           {FAQ.map((f) => (
             <details key={f.q} className="site-faq" open>
               <summary>

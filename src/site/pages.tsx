@@ -20,6 +20,7 @@ import { appHref } from "../ui/appLink.ts";
 import { ChineseTones, chineseTonesJsonLd } from "./pages/ChineseTones.tsx";
 import { ToneMarks, toneMarksJsonLd } from "./pages/ToneMarks.tsx";
 import { ToneVisualizer, toneVisualizerJsonLd } from "./pages/ToneVisualizer.tsx";
+import { ToneTest, toneTestJsonLd } from "./pages/ToneTest.tsx";
 import { SayIndex, sayIndexJsonLd, sayPageDefs } from "./pages/SayWord.tsx";
 
 export interface SitePageDef {
@@ -32,6 +33,7 @@ export const SITE_PAGES: Record<string, SitePageDef> = {
   "/chinese-tones": { Page: ChineseTones, jsonLd: chineseTonesJsonLd },
   "/tools/tone-marks": { Page: ToneMarks, jsonLd: toneMarksJsonLd },
   "/tools/tone-visualizer": { Page: ToneVisualizer, jsonLd: toneVisualizerJsonLd },
+  "/tools/tone-test": { Page: ToneTest, jsonLd: toneTestJsonLd },
   "/say": { Page: SayIndex, jsonLd: sayIndexJsonLd },
   ...sayPageDefs(),
 };

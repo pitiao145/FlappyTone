@@ -11731,3 +11731,189 @@ button.switch-track.switch-on {
   color: var(--ink-muted);
   line-height: 1.4;
 }
+
+/* ── /tools/tone-test: the listening card game ─────────────────────── */
+.tt-tool {
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.tt-stage {
+  position: relative;
+  height: min(620px, 78svh);
+  min-height: 460px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-lg);
+  background: var(--surface-panel);
+  box-shadow: 8px 8px 0 var(--ink);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-3);
+}
+
+.screen .tt-corner {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 84px;
+  padding: 8px 10px;
+  font: inherit;
+  border: 2px solid currentColor;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  cursor: pointer;
+  transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+}
+.screen .tt-corner:disabled {
+  cursor: default;
+}
+.tt-top { top: 12px; }
+.tt-bottom { bottom: 12px; }
+.tt-left { left: 12px; }
+.tt-right { right: 12px; }
+.screen .tt-corner .contour-spark { color: inherit; }
+.tt-corner-mark { font-size: 1.8rem; line-height: 1; font-weight: 700; }
+.tt-corner-num { font-weight: 700; color: var(--ink); font-size: 0.9rem; }
+.screen .tt-hot,
+.screen .tt-ring {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 4px currentColor;
+}
+
+.tt-card {
+  position: relative;
+  z-index: 1;
+  width: min(300px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: 6px 6px 0 var(--ink);
+  text-align: center;
+}
+.tt-card-word {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+  min-height: 250px;
+  justify-content: center;
+  will-change: transform;
+}
+.tt-card-word:active { cursor: grabbing; }
+.tt-card-intro { width: min(340px, 100%); }
+.tt-card p { margin: 0; }
+.tt-card-title { font-weight: 700; font-size: 1.15rem; color: var(--ink); }
+.tt-note { font-size: 0.85rem; color: var(--ink-muted); }
+.tt-count {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+.screen .tt-play {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  background: var(--accent, #338773);
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.tt-play svg { width: 30px; height: 30px; fill: var(--surface); }
+.tt-start { margin-top: var(--space-2); }
+.screen .tt-style { align-self: center; font-size: 0.85rem; }
+
+.tt-pip-sing { animation: tt-bob 500ms ease-in-out infinite alternate; }
+@keyframes tt-bob { to { transform: translateY(-6px) rotate(-10deg); } }
+
+.tt-reveal { width: min(330px, 100%); }
+.tt-match-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--ink);
+  animation: tt-pop 420ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+.tt-miss-title { font-weight: 600; color: var(--ink); }
+.tt-hanzi { font-size: 3.2rem; line-height: 1.1; color: var(--ink); }
+.tt-pinyin { font-size: 1.3rem; font-weight: 700; }
+.tt-english { color: var(--ink-muted); }
+.tt-shape { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.9rem; }
+.screen .tt-shape .contour-spark { color: inherit; }
+.tt-reveal-actions,
+.tt-done-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: var(--space-2);
+}
+.tt-pip-hop { animation: tt-hop 600ms ease-out both; }
+@keyframes tt-hop {
+  0% { transform: translateY(20px) scale(0.6); }
+  60% { transform: translateY(-14px) rotate(-16deg); }
+  100% { transform: rotate(-16deg); }
+}
+@keyframes tt-pop {
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.tt-burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.tt-burst span {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  opacity: 0;
+  animation: tt-burst 700ms ease-out forwards;
+  --a: calc(var(--i) * 30deg);
+}
+@keyframes tt-burst {
+  0% { transform: rotate(var(--a)) translateY(0) scale(1); opacity: 1; }
+  100% { transform: rotate(var(--a)) translateY(-130px) scale(0.3); opacity: 0; }
+}
+
+.tt-score { font-size: 3.4rem; font-weight: 800; line-height: 1; color: var(--ink); }
+.tt-score span { font-size: 1.6rem; color: var(--ink-muted); }
+.tt-per-tone {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+  font-size: 0.95rem;
+}
+.tt-mixup { font-weight: 600; color: var(--ink); }
+.tt-done { width: min(360px, 100%); }
+.tt-keys { font-size: 0.8rem; color: var(--ink-muted); text-align: center; }
+@media (hover: none) { .tt-keys { display: none; } }
+
+@media (max-width: 480px) {
+  .screen .tt-corner { min-width: 70px; padding: 6px 8px; }
+  .tt-card { width: min(250px, 100%); padding: var(--space-4) var(--space-3); }
+  .tt-hanzi { font-size: 2.6rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tt-pip-sing, .tt-pip-hop, .tt-match-title { animation: none; }
+  .tt-burst { display: none; }
+  .screen .tt-corner { transition: none; }
+}

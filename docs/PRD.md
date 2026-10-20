@@ -23,7 +23,7 @@ The four Mandarin tone marks (ˉ ˊ ˇ ˋ) are literally pitch-contour diagrams.
 - Speech recognition / syllable verification (ASR)
 - Tone sandhi as an explicit, taught concept; connected speech past two syllables; sentences
 - Native/mobile app build
-- Tone perception (listening) drills
+- Tone perception (listening) drills inside the game. The public SEO page `/tools/tone-test` (a 10-word listening quiz, no mic) is the one exception (20 Oct 2026, see DECISIONS.md).
 
 **Two-syllable words ("tone pairs") shipped and are player-reachable** (no
 longer a non-goal, no longer Lab-only exploration): a `pairs` run mode from

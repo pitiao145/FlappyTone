@@ -21,6 +21,7 @@ const SPEAKER = "jane";
 let ticket: Promise<string | null> | null = null;
 const urls = new Map<string, Promise<string | null>>();
 let playing: HTMLAudioElement | null = null;
+let finish: (() => void) | null = null;
 
 function getTicket(): Promise<string | null> {
   ticket ??= fetch(`${BASE}/token`, { method: "POST" })
@@ -69,6 +70,37 @@ export function clipUrl(
   return p;
 }
 
+/**
+ * One shared element: iOS Safari lets an element play without a tap once it
+ * has played inside one, so `unlockAudio()` (called inside a tap) lets later
+ * clips start after a fetch.
+ */
+function element(): HTMLAudioElement {
+  playing ??= new Audio();
+  return playing;
+}
+
+/** A silent play inside a tap, so clips can start later without one (iOS). */
+export function unlockAudio(): void {
+  try {
+    const a = element();
+    a.src =
+      "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+    void a.play().catch(() => {});
+  } catch {
+    // Nothing to unlock.
+  }
+}
+
+/** Stops the clip playing now, if any. */
+export function stopWord(): void {
+  try {
+    playing?.pause();
+  } catch {
+    // Already stopped.
+  }
+}
+
 /** Plays the word's clip (textbook unless asked). Resolves when it ends; `false` on any failure. */
 export async function playWord(
   id: string,
@@ -78,15 +110,30 @@ export async function playWord(
   const url = await clipUrl(id, style);
   if (!url) return false;
   try {
-    playing?.pause();
-    const audio = new Audio(url);
-    playing = audio;
-    await audio.play();
-    await new Promise<void>((done) => {
-      audio.onended = () => done();
-      audio.onpause = () => done();
-      audio.onerror = () => done();
+    const audio = element();
+    finish?.(); // a clip still playing resolves now
+    audio.pause();
+    audio.src = url;
+    // A pause only ends this clip once it has started: the previous clip's
+    // pause event can still be queued.
+    let started = false;
+    const ended = new Promise<void>((done) => {
+      finish = () => {
+        finish = null;
+        done();
+      };
+      const end = finish;
+      audio.onplaying = () => {
+        started = true;
+      };
+      audio.onended = end;
+      audio.onerror = end;
+      audio.onpause = () => {
+        if (started) end();
+      };
     });
+    await audio.play();
+    await ended;
     return true;
   } catch {
     return false;
