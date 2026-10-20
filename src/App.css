@@ -12108,3 +12108,29 @@ button.switch-track.switch-on {
 }
 .tt-photo-tone .contour-spark { width: 100%; height: 100%; }
 .tt-photo-tone polyline { stroke-width: 4; }
+
+/* Recordings switch, dating-app style: a soft track, the chosen one a white pill. */
+.tt-style {
+  display: inline-flex;
+  padding: 4px;
+  gap: 2px;
+  border-radius: var(--radius-pill);
+  background: rgba(36, 29, 21, 0.08);
+}
+.screen .tt-style button {
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 7px 16px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.screen .tt-style button[aria-checked="true"] {
+  background: var(--surface);
+  color: #fd297b;
+  box-shadow: 0 2px 8px rgba(36, 29, 21, 0.15);
+}
+.screen .tt-style button:focus-visible { outline: 2px solid #fd297b; outline-offset: 2px; }

@@ -344,7 +344,7 @@ function ToneGame() {
   };
 
   const styleToggle = (
-    <div className="tc-toggle tt-style" role="radiogroup" aria-label="Recordings">
+    <div className="tt-style" role="radiogroup" aria-label="Recordings">
       {(["standard", "spoken"] as const).map((s) => (
         <button
           key={s}
