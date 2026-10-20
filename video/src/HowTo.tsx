@@ -51,6 +51,12 @@ type Scene =
       cam?: { x: number; y: number; w: number; h: number };
       volume?: number;
       blur?: Blur[];
+      /** Push-ins, clip seconds; x/y are fractions of the frame to zoom toward. */
+      zooms?: { from: number; to: number; scale: number; x: number; y: number }[];
+      /** Finger taps, clip seconds, at fractions of the frame. */
+      taps?: { at: number; x: number; y: number }[];
+      /** Confetti bursts, clip seconds. */
+      confetti?: number[];
     };
 
 export interface HowToProps {
@@ -105,6 +111,7 @@ function Title({ text, sub, y }: { text: string; sub?: string; y: number }) {
 function Intro({ s, len }: { s: Extract<Scene, { kind: "intro" }>; len: number }) {
   return (
     <AbsoluteFill style={{ background: BRAND.surface, opacity: useFade(len) }}>
+      <BackBirds />
       <Title text={s.title} y={330} />
       <FlyingPip size={340} />
     </AbsoluteFill>
@@ -114,7 +121,9 @@ function Intro({ s, len }: { s: Extract<Scene, { kind: "intro" }>; len: number }
 function Card({ s, len }: { s: Extract<Scene, { kind: "card" }>; len: number }) {
   return (
     <AbsoluteFill style={{ background: BRAND.surface, opacity: useFade(len) }}>
+      <BackBirds />
       <Title text={s.title} y={820} />
+      <Confetti since={useCurrentFrame() / FPS - 0.2} />
     </AbsoluteFill>
   );
 }
@@ -127,6 +136,67 @@ function Outro({ s, len }: { s: Extract<Scene, { kind: "outro" }>; len: number }
       <FlyingPip away={away ** 1.6} size={260} />
       <Title text={s.title} sub={s.subtitle} y={560} />
     </AbsoluteFill>
+  );
+}
+
+const CONFETTI_COLORS = ["#1c7a63", "#c98a3c", "#e0b84a", "#d9604c", "#5b8fd6", "#8a63c9"];
+
+/** A burst from the top of the frame: deterministic pieces, gravity, spin. */
+function Confetti({ since }: { since: number }) {
+  if (since < 0 || since > 2.6) return null;
+  return (
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
+      {Array.from({ length: 90 }, (_, i) => {
+        const r = (n: number) => { const x = Math.sin(i * 127.1 + n * 311.7) * 43758.5453; return x - Math.floor(x); };
+        const x0 = W / 2 + (r(1) - 0.5) * 200;
+        const vx = (r(2) - 0.5) * 1500;
+        const vy = -600 - r(3) * 500;
+        const t = since;
+        const x = x0 + vx * t;
+        const y = 650 + vy * t + 1500 * t * t;
+        const rot = (r(4) - 0.5) * 1400 * t;
+        const op = interpolate(t, [0, 1.8, 2.6], [1, 1, 0], { extrapolateRight: "clamp" });
+        return <div key={i} style={{ position: "absolute", left: x, top: y, width: 14 + r(5) * 12, height: 8 + r(6) * 8, background: CONFETTI_COLORS[i % 6],
+          borderRadius: 3, opacity: op, transform: `rotate(${rot}deg)` }} />;
+      })}
+    </AbsoluteFill>
+  );
+}
+
+/** Small birds drifting across the background, behind the clip. */
+function BackBirds() {
+  const f = useCurrentFrame();
+  const birds = [
+    { y: 330, speed: 2.2, size: 70, phase: 0 },
+    { y: 1250, speed: 1.6, size: 56, phase: 700 },
+    { y: 1700, speed: 2.8, size: 64, phase: 300 },
+    { y: 820, speed: 1.9, size: 50, phase: 1100 },
+  ];
+  return (
+    <>
+      {birds.map((b, i) => {
+        const span = W + 300;
+        const x = ((f * b.speed + b.phase) % span) - 150;
+        const y = b.y + Math.sin((f + b.phase) / 9) * 18;
+        return <Img key={i} src={staticFile("brand/bird.png")} style={{ position: "absolute", left: x, top: y, width: b.size, opacity: 0.55,
+          transform: `rotate(${Math.cos((f + b.phase) / 9) * -10}deg) scaleY(${1 + Math.sin(f / 2.2 + i) * 0.06})` }} />;
+      })}
+    </>
+  );
+}
+
+/** A tap: a dot that presses in, then a ring that spreads. */
+function Tap({ since, x, y }: { since: number; x: number; y: number }) {
+  if (since < -0.35 || since > 0.7) return null;
+  const dot = interpolate(since, [-0.35, -0.1, 0, 0.3, 0.5], [0, 1, 0.8, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const ring = interpolate(since, [0, 0.6], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  return (
+    <>
+      <div style={{ position: "absolute", left: x - 34, top: y - 34, width: 68, height: 68, borderRadius: 34, background: "rgba(255,255,255,0.75)",
+        border: "4px solid rgba(28,122,99,0.9)", opacity: dot, transform: `scale(${0.6 + 0.4 * dot})`, boxShadow: "0 4px 18px rgba(0,0,0,0.25)" }} />
+      {since >= 0 && <div style={{ position: "absolute", left: x - 70, top: y - 70, width: 140, height: 140, borderRadius: 70,
+        border: "6px solid rgba(28,122,99,0.85)", opacity: 1 - ring, transform: `scale(${0.4 + ring})` }} />}
+    </>
   );
 }
 
@@ -146,6 +216,14 @@ function Clip({ s, len, nextCont }: { s: Extract<Scene, { kind: "clip" }>; len: 
   const left = (W - boxW) / 2;
   const top = BAND + (H - BAND - 40 - h) / 2;
   const capIn = s.cont ? 1 : spring({ frame: f - 2, fps, config: { damping: 13 } });
+  const badge = s.cont ? 1 : spring({ frame: f - 6, fps, config: { damping: 7, mass: 0.6 } });
+  const enter = s.cont ? 1 : spring({ frame: f, fps, config: { damping: 14, mass: 0.8 } });
+  // A slow drift, plus any push-in (eased in and out over 0.5s).
+  let zoom = 1 + 0.03 * (f / len), zx = 0.5, zy = 0.5;
+  for (const z of s.zooms ?? []) {
+    const k2 = interpolate(t, [z.from, z.from + 0.5, z.to - 0.5, z.to], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+    if (k2 > 0) { zoom *= 1 + (z.scale - 1) * (k2 * k2 * (3 - 2 * k2)); zx = z.x; zy = z.y; }
+  }
   const startFrom = Math.round(s.start * fps);
   const video = (filter?: string, muted = false) => (
     <div style={full}>
@@ -156,15 +234,18 @@ function Clip({ s, len, nextCont }: { s: Extract<Scene, { kind: "clip" }>; len: 
   const cam = s.cam;
   return (
     <AbsoluteFill style={{ background: BRAND.surface, opacity: useFade(len, !s.cont, !nextCont) }}>
+      <BackBirds />
       <div style={{ position: "absolute", top: 70, left: 60, right: 60, height: BAND - 110, display: "flex", alignItems: "center", justifyContent: "center", gap: 28,
         opacity: capIn, transform: `translateY(${(1 - capIn) * 30}px)` }}>
         {s.step && (
           <div style={{ flex: "none", width: 96, height: 96, borderRadius: 48, background: BRAND.accent, color: BRAND.surface, fontFamily: SANS, fontWeight: 700, fontSize: 56,
-            display: "flex", alignItems: "center", justifyContent: "center" }}>{s.step}</div>
+            display: "flex", alignItems: "center", justifyContent: "center", transform: `scale(${badge}) rotate(${(1 - badge) * -40}deg)` }}>{s.step}</div>
         )}
         <div style={{ fontFamily: DISPLAY, fontWeight: 600, fontSize: 60, lineHeight: 1.12, color: BRAND.ink }}>{s.caption}</div>
       </div>
-      <div style={{ position: "absolute", left, top, width: boxW, height: h, borderRadius: 36, overflow: "hidden", boxShadow: "0 20px 60px rgba(36,29,21,0.28)" }}>
+      <div style={{ position: "absolute", left, top, width: boxW, height: h, borderRadius: 36, overflow: "hidden", boxShadow: "0 20px 60px rgba(36,29,21,0.28)",
+        transform: `translateY(${(1 - enter) * 120}px) scale(${0.9 + 0.1 * enter}) rotate(${(1 - enter) * 2}deg)` }}>
+       <div style={{ position: "absolute", inset: 0, transform: `scale(${zoom})`, transformOrigin: `${zx * 100}% ${zy * 100}%` }}>
         {video()}
         {(s.blur ?? []).filter((b) => t >= b.from && t <= b.to).map((b, i) => {
           const y0 = interpolate(t, b.at, b.top, { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
@@ -175,7 +256,10 @@ function Clip({ s, len, nextCont }: { s: Extract<Scene, { kind: "clip" }>; len: 
             </div>
           );
         })}
+        {(s.taps ?? []).map((p, i) => <Tap key={i} since={t - p.at} x={p.x * boxW} y={p.y * h} />)}
+       </div>
       </div>
+      {(s.confetti ?? []).map((c, i) => <Confetti key={i} since={t - c} />)}
       {cam && (() => {
         // Drawn 12% larger than the region, right-aligned and centred on it, so it hides the original cam.
         const z = k * 1.12;

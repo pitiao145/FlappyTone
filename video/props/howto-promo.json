@@ -12,7 +12,14 @@
       "start": 2.5,
       "end": 7.6,
       "step": 1,
-      "caption": "Go to flappytone.com and tap Play"
+      "caption": "Go to flappytone.com and tap Play",
+      "taps": [
+        {
+          "at": 6.3,
+          "x": 0.74,
+          "y": 0.1
+        }
+      ]
     },
     {
       "kind": "clip",
@@ -54,6 +61,32 @@
             0.37
           ]
         }
+      ],
+      "taps": [
+        {
+          "at": 12.05,
+          "x": 0.42,
+          "y": 0.6
+        },
+        {
+          "at": 17.9,
+          "x": 0.47,
+          "y": 0.915
+        },
+        {
+          "at": 20.7,
+          "x": 0.875,
+          "y": 0.11
+        }
+      ],
+      "zooms": [
+        {
+          "from": 17.2,
+          "to": 19.6,
+          "scale": 1.18,
+          "x": 0.5,
+          "y": 0.9
+        }
       ]
     },
     {
@@ -63,7 +96,14 @@
       "start": 0.3,
       "end": 3.5,
       "step": 3,
-      "caption": "First time? A quick calibration tunes the game to your voice"
+      "caption": "First time? A quick calibration tunes the game to your voice",
+      "taps": [
+        {
+          "at": 2.6,
+          "x": 0.5,
+          "y": 0.635
+        }
+      ]
     },
     {
       "kind": "clip",
@@ -73,7 +113,16 @@
       "end": 13.0,
       "step": 3,
       "caption": "First time? A quick calibration tunes the game to your voice",
-      "cont": true
+      "cont": true,
+      "zooms": [
+        {
+          "from": 8.0,
+          "to": 13.0,
+          "scale": 1.2,
+          "x": 0.5,
+          "y": 0.3
+        }
+      ]
     },
     {
       "kind": "clip",
@@ -83,7 +132,16 @@
       "end": 34.0,
       "step": 3,
       "caption": "First time? A quick calibration tunes the game to your voice",
-      "cont": true
+      "cont": true,
+      "zooms": [
+        {
+          "from": 27.0,
+          "to": 32.0,
+          "scale": 1.15,
+          "x": 0.3,
+          "y": 0.45
+        }
+      ]
     },
     {
       "kind": "clip",
@@ -92,16 +150,46 @@
       "start": 62.0,
       "end": 76.0,
       "step": 4,
-      "caption": "Listen, then say the word to fly through the tunnel"
+      "caption": "Listen, then say the word to fly through the tunnel",
+      "zooms": [
+        {
+          "from": 66.0,
+          "to": 71.0,
+          "scale": 1.15,
+          "x": 0.3,
+          "y": 0.35
+        }
+      ]
     },
     {
       "kind": "clip",
       "src": "clips/howto-gameplay2.mp4",
       "aspect": 0.45808736717827625,
-      "start": 96.0,
+      "start": 95.5,
       "end": 104.0,
       "step": 5,
-      "caption": "Too hard? Make the tunnel wider in settings"
+      "caption": "Too hard? Make the tunnel wider in settings",
+      "taps": [
+        {
+          "at": 95.9,
+          "x": 0.88,
+          "y": 0.04
+        },
+        {
+          "at": 100.5,
+          "x": 0.5,
+          "y": 0.52
+        }
+      ],
+      "zooms": [
+        {
+          "from": 99.3,
+          "to": 104.0,
+          "scale": 1.35,
+          "x": 0.5,
+          "y": 0.52
+        }
+      ]
     },
     {
       "kind": "clip",
@@ -110,7 +198,23 @@
       "start": 148.0,
       "end": 162.0,
       "step": 6,
-      "caption": "Keep flying and have fun"
+      "caption": "Keep flying and have fun",
+      "zooms": [
+        {
+          "from": 150.5,
+          "to": 155.0,
+          "scale": 1.55,
+          "x": 0.9,
+          "y": 0.92
+        },
+        {
+          "from": 158.0,
+          "to": 162.0,
+          "scale": 1.55,
+          "x": 0.9,
+          "y": 0.92
+        }
+      ]
     },
     {
       "kind": "clip",
@@ -119,16 +223,40 @@
       "start": 202.0,
       "end": 209.0,
       "step": 7,
-      "caption": "See your tone breakdown"
+      "caption": "See your tone breakdown",
+      "confetti": [
+        202.2
+      ],
+      "zooms": [
+        {
+          "from": 202.0,
+          "to": 204.8,
+          "scale": 1.25,
+          "x": 0.3,
+          "y": 0.08
+        }
+      ]
     },
     {
       "kind": "clip",
       "src": "clips/howto-gameplay2.mp4",
       "aspect": 0.45808736717827625,
-      "start": 213.0,
+      "start": 211.5,
       "end": 218.0,
       "step": 8,
-      "caption": "Share your score"
+      "caption": "Share your score",
+      "taps": [
+        {
+          "at": 212.0,
+          "x": 0.78,
+          "y": 0.12
+        },
+        {
+          "at": 214.6,
+          "x": 0.47,
+          "y": 0.88
+        }
+      ]
     },
     {
       "kind": "clip",
@@ -137,7 +265,19 @@
       "start": 0.0,
       "end": 2.8,
       "step": 9,
-      "caption": "Earn XP and level up"
+      "caption": "Earn XP and level up",
+      "confetti": [
+        0.3
+      ],
+      "zooms": [
+        {
+          "from": 0.0,
+          "to": 2.8,
+          "scale": 1.2,
+          "x": 0.5,
+          "y": 0.45
+        }
+      ]
     },
     {
       "kind": "clip",
@@ -146,7 +286,23 @@
       "start": 22.0,
       "end": 28.0,
       "step": 10,
-      "caption": "Level up to unlock new worlds"
+      "caption": "Level up to unlock new worlds",
+      "zooms": [
+        {
+          "from": 23.3,
+          "to": 25.4,
+          "scale": 1.12,
+          "x": 0.5,
+          "y": 0.45
+        },
+        {
+          "from": 26.3,
+          "to": 28.0,
+          "scale": 1.12,
+          "x": 0.5,
+          "y": 0.45
+        }
+      ]
     },
     {
       "kind": "card",
