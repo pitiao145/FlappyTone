@@ -39,6 +39,8 @@ type Scene =
       end: number;
       step?: number;
       caption: string;
+      /** Continues the previous clip's section: hard cut, caption already in place. */
+      cont?: boolean;
       /** Clip's width / height. */
       aspect: number;
       /** Source pixel size and a horizontal crop of it (x, w), for footage with side bars. */
@@ -66,9 +68,11 @@ const H = 1920;
 const BAND = 300;
 const FADE = 6;
 
-function useFade(len: number) {
+function useFade(len: number, fadeIn = true, fadeOut = true) {
   const f = useCurrentFrame();
-  return interpolate(f, [0, FADE, len - FADE, len], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const a = fadeIn ? interpolate(f, [0, FADE], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 1;
+  const b = fadeOut ? interpolate(f, [len - FADE, len], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 1;
+  return Math.min(a, b);
 }
 
 /** Pip on a looping path; `away` sends it off the top right. */
@@ -126,7 +130,7 @@ function Outro({ s, len }: { s: Extract<Scene, { kind: "outro" }>; len: number }
   );
 }
 
-function Clip({ s, len }: { s: Extract<Scene, { kind: "clip" }>; len: number }) {
+function Clip({ s, len, nextCont }: { s: Extract<Scene, { kind: "clip" }>; len: number; nextCont: boolean }) {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const t = s.start + f / fps;
@@ -141,7 +145,7 @@ function Clip({ s, len }: { s: Extract<Scene, { kind: "clip" }>; len: number }) 
     : { position: "absolute" as const, inset: 0 };
   const left = (W - boxW) / 2;
   const top = BAND + (H - BAND - 40 - h) / 2;
-  const capIn = spring({ frame: f - 2, fps, config: { damping: 13 } });
+  const capIn = s.cont ? 1 : spring({ frame: f - 2, fps, config: { damping: 13 } });
   const startFrom = Math.round(s.start * fps);
   const video = (filter?: string, muted = false) => (
     <div style={full}>
@@ -151,7 +155,7 @@ function Clip({ s, len }: { s: Extract<Scene, { kind: "clip" }>; len: number }) 
   );
   const cam = s.cam;
   return (
-    <AbsoluteFill style={{ background: BRAND.surface, opacity: useFade(len) }}>
+    <AbsoluteFill style={{ background: BRAND.surface, opacity: useFade(len, !s.cont, !nextCont) }}>
       <div style={{ position: "absolute", top: 70, left: 60, right: 60, height: BAND - 110, display: "flex", alignItems: "center", justifyContent: "center", gap: 28,
         opacity: capIn, transform: `translateY(${(1 - capIn) * 30}px)` }}>
         {s.step && (
@@ -201,7 +205,7 @@ export function HowTo({ scenes, sfx }: HowToProps) {
             {s.kind === "intro" && <Intro s={s} len={len} />}
             {s.kind === "card" && <Card s={s} len={len} />}
             {s.kind === "outro" && <Outro s={s} len={len} />}
-            {s.kind === "clip" && <Clip s={s} len={len} />}
+            {s.kind === "clip" && <Clip s={s} len={len} nextCont={(() => { const n = scenes[i + 1]; return !!n && n.kind === "clip" && !!n.cont; })()} />}
           </Sequence>
         );
       })}

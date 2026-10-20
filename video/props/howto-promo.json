@@ -12,14 +12,14 @@
       "start": 2.5,
       "end": 7.6,
       "step": 1,
-      "caption": "Go to flappytone.com and press Play"
+      "caption": "Go to flappytone.com and tap Play"
     },
     {
       "kind": "clip",
       "src": "clips/howto-phone.mp4",
       "aspect": 0.4621,
       "start": 12.0,
-      "end": 22.9,
+      "end": 21.0,
       "step": 2,
       "caption": "Tap Share, then Add to Home Screen",
       "blur": [
@@ -58,66 +58,95 @@
     },
     {
       "kind": "clip",
-      "src": "clips/howto-gameplay.mp4",
-      "aspect": 0.5626,
-      "start": 0,
-      "end": 9,
+      "src": "clips/howto-gameplay2.mp4",
+      "aspect": 0.45808736717827625,
+      "start": 0.3,
+      "end": 3.5,
       "step": 3,
-      "caption": "Calibrate to your voice for best results",
-      "src_w": 782,
-      "src_h": 1390,
-      "crop": {
-        "x": 72,
-        "w": 640
-      },
-      "cam": {
-        "x": 414,
-        "y": 562,
-        "w": 360,
-        "h": 360
-      }
+      "caption": "First time? A quick calibration tunes the game to your voice"
     },
     {
       "kind": "clip",
-      "src": "clips/howto-gameplay.mp4",
-      "aspect": 0.5626,
-      "start": 20,
-      "end": 31,
+      "src": "clips/howto-gameplay2.mp4",
+      "aspect": 0.45808736717827625,
+      "start": 8.0,
+      "end": 13.0,
+      "step": 3,
+      "caption": "First time? A quick calibration tunes the game to your voice",
+      "cont": true
+    },
+    {
+      "kind": "clip",
+      "src": "clips/howto-gameplay2.mp4",
+      "aspect": 0.45808736717827625,
+      "start": 24.0,
+      "end": 34.0,
+      "step": 3,
+      "caption": "First time? A quick calibration tunes the game to your voice",
+      "cont": true
+    },
+    {
+      "kind": "clip",
+      "src": "clips/howto-gameplay2.mp4",
+      "aspect": 0.45808736717827625,
+      "start": 62.0,
+      "end": 76.0,
       "step": 4,
-      "caption": "Play and practise your tones at the same time",
-      "src_w": 782,
-      "src_h": 1390,
-      "crop": {
-        "x": 72,
-        "w": 640
-      },
-      "cam": {
-        "x": 414,
-        "y": 562,
-        "w": 360,
-        "h": 360
-      }
+      "caption": "Listen, then say the word to fly through the tunnel"
     },
     {
       "kind": "clip",
-      "src": "clips/howto-gameplay.mp4",
-      "aspect": 0.5626,
-      "start": 101,
-      "end": 110,
+      "src": "clips/howto-gameplay2.mp4",
+      "aspect": 0.45808736717827625,
+      "start": 96.0,
+      "end": 104.0,
       "step": 5,
-      "caption": "Celebrate your results",
-      "src_w": 782,
-      "src_h": 1390,
-      "crop": {
-        "x": 72,
-        "w": 640
-      },
-      "cam": {
-        "x": 414,
-        "y": 562,
-        "w": 360,
-        "h": 360
-      }
+      "caption": "Too hard? Make the tunnel wider in settings"
+    },
+    {
+      "kind": "clip",
+      "src": "clips/howto-gameplay2.mp4",
+      "aspect": 0.45808736717827625,
+      "start": 148.0,
+      "end": 162.0,
+      "step": 6,
+      "caption": "Keep flying and have fun"
+    },
+    {
+      "kind": "clip",
+      "src": "clips/howto-gameplay2.mp4",
+      "aspect": 0.45808736717827625,
+      "start": 202.0,
+      "end": 209.0,
+      "step": 7,
+      "caption": "See your tone breakdown"
+    },
+    {
+      "kind": "clip",
+      "src": "clips/howto-gameplay2.mp4",
+      "aspect": 0.45808736717827625,
+      "start": 213.0,
+      "end": 218.0,
+      "step": 8,
+      "caption": "Share your score"
+    },
+    {
+      "kind": "clip",
+      "src": "clips/howto-gamify.mp4",
+      "aspect": 0.45808736717827625,
+      "start": 0.0,
+      "end": 2.8,
+      "step": 9,
+      "caption": "Earn XP and level up"
+    },
+    {
+      "kind": "clip",
+      "src": "clips/howto-gamify.mp4",
+      "aspect": 0.45808736717827625,
+      "start": 22.0,
+      "end": 28.0,
+      "step": 10,
+      "caption": "Level up to unlock new worlds"
     },
     {
       "kind": "card",
@@ -129,73 +158,6 @@
       "seconds": 3.5,
       "title": "flappytone.com",
       "subtitle": "Play free in your browser"
-    }
-  ],
-  "sfx": [
-    {
-      "src": "sfx/sparkle.wav",
-      "at": 0.3
-    },
-    {
-      "src": "sfx/whoosh.wav",
-      "at": 2.9,
-      "volume": 0.4
-    },
-    {
-      "src": "sfx/pop.wav",
-      "at": 7.2
-    },
-    {
-      "src": "sfx/whoosh.wav",
-      "at": 8.0,
-      "volume": 0.4
-    },
-    {
-      "src": "sfx/pop.wav",
-      "at": 8.4
-    },
-    {
-      "src": "sfx/pop.wav",
-      "at": 14.0
-    },
-    {
-      "src": "sfx/ding.wav",
-      "at": 17.8,
-      "volume": 0.5
-    },
-    {
-      "src": "sfx/whoosh.wav",
-      "at": 18.9,
-      "volume": 0.4
-    },
-    {
-      "src": "sfx/whoosh.wav",
-      "at": 27.9,
-      "volume": 0.4
-    },
-    {
-      "src": "sfx/whoosh.wav",
-      "at": 38.9,
-      "volume": 0.4
-    },
-    {
-      "src": "sfx/tada.wav",
-      "at": 40.0
-    },
-    {
-      "src": "sfx/whoosh.wav",
-      "at": 47.9,
-      "volume": 0.4
-    },
-    {
-      "src": "sfx/boing.wav",
-      "at": 48.3,
-      "volume": 0.5
-    },
-    {
-      "src": "sfx/plane.wav",
-      "at": 51.0,
-      "volume": 0.5
     }
   ]
 }
