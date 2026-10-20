@@ -11849,20 +11849,11 @@ button.switch-track.switch-on {
   aspect-ratio: 3 / 3.6;
   display: grid;
   place-items: center;
-  background: linear-gradient(160deg, #cfe5dc 0%, #9ccbb8 55%, #338773 100%);
+  /* A night-jade "photo": dark enough that white text and the bird read. */
+  background:
+    radial-gradient(circle at 50% 42%, #2f7d68 0%, #17463c 55%, #0d2b25 100%);
   overflow: hidden;
 }
-.tt-photo-line {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  filter: blur(14px);
-  opacity: 0.9;
-}
-.tt-photo-line .contour-spark { width: 90%; height: auto; }
-.tt-photo-line polyline { stroke-width: 10; }
 .tt-photo .pip { position: relative; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.25)); }
 .tt-dots {
   position: absolute;
@@ -11989,7 +11980,103 @@ button.switch-track.switch-on {
 }
 @media (hover: none) { .tt-keys { display: none; } }
 
+/* The big tone shape, centred in its quadrant behind the label. */
+.tt-corner-shape {
+  position: absolute;
+  inset: 22% 14%;
+  display: grid;
+  place-items: center;
+  opacity: 0.32;
+  pointer-events: none;
+}
+.tt-corner-shape .contour-spark { width: 100%; height: 100%; }
+.tt-corner-shape polyline { stroke-width: 3.5; }
+.screen .tt-hot .tt-corner-shape,
+.screen .tt-ring .tt-corner-shape { opacity: 0.7; }
+.tt-corner-num, .tt-corner-name { position: relative; }
+
+.tt-logo { gap: 6px; font-weight: 700; }
+.tt-logo b { font-weight: 900; }
+.tt-logo svg.tt-logo-bird { width: 34px; height: 34px; fill: initial; }
+
+/* Hidden card: white type on the dark photo. */
+.tt-name { color: #fff; text-shadow: 0 0 10px rgba(255, 255, 255, 0.6); }
+.tt-bio { color: rgba(255, 255, 255, 0.92); }
+.tt-card-word .tt-actions { background: var(--surface); border-top: 1px solid rgba(36, 29, 21, 0.12); }
+.tt-card-word .tt-note { color: var(--ink); font-weight: 600; }
+
+/* The reveal: the profile, unblurred. */
+.tt-reveal {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: min(300px, 100%);
+}
+.tt-reveal p { margin: 0; }
+.tt-miss-title { text-align: center; }
+.tt-profile-card {
+  width: 100%;
+  border: 2px solid var(--ink);
+  border-radius: 22px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: 0 14px 30px rgba(36, 29, 21, 0.28), 4px 4px 0 var(--ink);
+}
+.tt-photo-full { aspect-ratio: 3 / 2.6; }
+.tt-match .tt-photo-full {
+  background: radial-gradient(circle at 50% 42%, #ff8a7a 0%, #fd297b 60%, #a3134f 100%);
+}
+.tt-prop {
+  position: absolute;
+  right: 18%;
+  top: 22%;
+  font-size: 3rem;
+  line-height: 1;
+  transform: rotate(10deg);
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+}
+.tt-name-shown { font-size: 1.9rem; font-weight: 800; line-height: 1.1; }
+.tt-name-pinyin { font-size: 1.2rem; font-weight: 600; }
+.tt-profile-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px 14px;
+  text-align: left;
+}
+.tt-bio-line { color: var(--ink); font-size: 0.98rem; }
+.tt-profile-body .tt-reveal-actions { align-self: stretch; justify-content: space-between; margin-top: 4px; }
+.screen .tt-next {
+  font: inherit;
+  font-weight: 800;
+  padding: 8px 22px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--tt-grad);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(253, 41, 123, 0.35);
+}
+.screen .tt-next:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.screen .tt-match-title,
+.screen .tt-logo {
+  -webkit-text-fill-color: transparent;
+}
+.screen .tt-match-title {
+  font-family: inherit;
+  font-size: 2.1rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  font-style: italic;
+}
+
 @media (max-width: 480px) {
+  .tt-reveal { width: min(270px, 100%); }
+  .tt-prop { font-size: 2.4rem; }
   .screen .tt-corner { padding: 10px 10px; }
   .tt-corner-name { display: none; }
   .tt-card { width: min(260px, 100%); padding: var(--space-4) var(--space-3); }

@@ -5,6 +5,7 @@ import { ContourSpark } from "../../ui/ContourSpark.tsx";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
 import { Pip, PipCta } from "../Pip.tsx";
 import { toZhuyin } from "../zhuyin.ts";
+import { PROFILES } from "../toneTest/profiles.ts";
 import {
   buildRound,
   CORNER,
@@ -57,7 +58,7 @@ const prefersReducedMotion = () =>
 const FAQ = [
   {
     q: "How does the Chinese tones test work?",
-    a: "Toneder works like a dating app for tones. You hear one Mandarin word at a time, recorded by our native Taiwan Mandarin speaker. The word is hidden, so only the pitch can tell you the tone. Swipe the card into the corner of the tone you heard (or tap the corner, or press 1 to 4). After ten words you get a score, your result per tone, and which tones you mix up.",
+    a: "TONEder works like a dating app for tones. You hear one Mandarin word at a time, recorded by our native Taiwan Mandarin speaker. The word is hidden, so only the pitch can tell you the tone. Swipe the card into the corner of the tone you heard (or tap the corner, or press 1 to 4). After ten words you get a score, your result per tone, and which tones you mix up.",
   },
   {
     q: "What is the difference between Standard and Spoken?",
@@ -365,13 +366,28 @@ function ToneGame() {
   const showCorners = phase === "card" || phase === "flying" || phase === "intro";
 
   return (
-    <div className="tt-tool" role="group" aria-label="Toneder, a Chinese tones listening test">
+    <div className="tt-tool" role="group" aria-label="TONEder, a Chinese tones listening test">
       <div className="tt-bar">
         <span className="tt-logo" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-7 1 2 1 3 3 4 0-4-1-6 0-9z" />
+          <svg viewBox="0 0 100 100" className="tt-logo-bird">
+            <circle cx="44" cy="52" r="36" fill="#338773" />
+            <circle cx="54" cy="34" r="7" fill="#f3efe2" />
+            <circle cx="56" cy="34" r="3.4" fill="#241d15" />
+            <path d="M78 46 L98 52 L78 58 z" fill="#c98a3c" />
+            <path
+              d="M42 46c2 8 12 12 12 24a12 12 0 0 1-24 0c0-6 4-10 6-14 2 4 2 6 6 8 0-8-2-12 0-18z"
+              fill="url(#tt-flame)"
+            />
+            <defs>
+              <linearGradient id="tt-flame" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0" stopColor="#ff655b" />
+                <stop offset="1" stopColor="#fd297b" />
+              </linearGradient>
+            </defs>
           </svg>
-          toneder
+          <span>
+            <b>TONE</b>der
+          </span>
         </span>
         {styleToggle}
       </div>
@@ -398,9 +414,11 @@ function ToneGame() {
                 onClick={() => answer(t)}
                 aria-label={`Tone ${t}, ${NAME[t]} (key ${t})`}
               >
+                <span className="tt-corner-shape" aria-hidden="true">
+                  <ContourSpark tone={t} width={200} height={90} />
+                </span>
                 <span className="tt-corner-num">Tone {t}</span>
                 <span className="tt-corner-name">{NAME[t]}</span>
-                <ContourSpark tone={t} width={120} height={52} />
               </button>
             );
           })}
@@ -432,10 +450,6 @@ function ToneGame() {
                   <span key={i} className={i === round.index ? "tt-dot-on" : undefined} />
                 ))}
               </div>
-              {/* The "photo": the bird in front of a heavily blurred tone line. */}
-              <span className="tt-photo-line" aria-hidden="true">
-                <ContourSpark tone={card.tone} width={220} height={120} />
-              </span>
               <Pip size={110} tilt={-6} className={playing ? "tt-pip-sing" : undefined} />
               <div className="tt-profile">
                 {/* The "name" is the word itself, blurred until the reveal. */}
@@ -545,8 +559,9 @@ function Reveal({
 }) {
   const match = answer.picked === answer.tone;
   const color = TONE_LINE_COLOR[word.tone];
+  const profile = PROFILES[word.id];
   return (
-    <div className={match ? "tt-card tt-reveal tt-match" : "tt-card tt-reveal"} role="status">
+    <div className={match ? "tt-reveal tt-match" : "tt-reveal"} role="status">
       {match && (
         <div className="tt-burst" aria-hidden="true">
           {Array.from({ length: 12 }, (_, i) => (
@@ -558,28 +573,42 @@ function Reveal({
         <p className="tt-match-title">It's a match!</p>
       ) : (
         <p className="tt-miss-title">
-          That was <b style={{ color }}>Tone {word.tone}</b> (you swiped Tone {answer.picked})
+          That was <b style={{ color }}>Tone {word.tone}</b>. You swiped Tone {answer.picked}.
         </p>
       )}
-      <Pip size={match ? 64 : 48} tilt={match ? -16 : 0} className={match ? "tt-pip-hop" : undefined} />
-      <p className="tt-hanzi" lang="zh-Hant-TW">
-        {word.hanzi}
-      </p>
-      <p className="tt-pinyin" style={{ color }}>
-        {word.pinyin} <span lang="zh-Hant-TW">{toZhuyin(word.pinyin)}</span>
-      </p>
-      <p className="tt-english">{word.english}</p>
-      <span className="tt-shape" style={{ color }}>
-        <ContourSpark tone={word.tone} width={72} height={30} />
-        Tone {word.tone}: {NAME[word.tone]}
-      </span>
-      <div className="tt-reveal-actions">
-        <button type="button" className="tc-button" onClick={onHear}>
-          Hear it again
-        </button>
-        <button type="button" className="sticker-button" onClick={onNext} autoFocus>
-          {last ? "See my score" : "Next"}
-        </button>
+      <div className="tt-profile-card">
+        <div className="tt-photo tt-photo-full">
+          <Pip size={104} tilt={match ? -14 : 0} className={match ? "tt-pip-hop" : undefined} />
+          {profile && (
+            <span className="tt-prop" aria-hidden="true">
+              {profile.prop}
+            </span>
+          )}
+          <div className="tt-profile">
+            <p className="tt-name-shown">
+              <span lang="zh-Hant-TW">{word.hanzi}</span>{" "}
+              <span className="tt-name-pinyin">{word.pinyin}</span>
+            </p>
+            <p className="tt-bio">
+              <span lang="zh-Hant-TW">{toZhuyin(word.pinyin)}</span> · means “{word.english}”
+            </p>
+          </div>
+        </div>
+        <div className="tt-profile-body">
+          {profile && <p className="tt-bio-line">{profile.bio}</p>}
+          <span className="tt-shape" style={{ color }}>
+            <ContourSpark tone={word.tone} width={64} height={28} />
+            Tone {word.tone}: {NAME[word.tone]}
+          </span>
+          <div className="tt-reveal-actions">
+            <button type="button" className="tc-button" onClick={onHear}>
+              Hear it again
+            </button>
+            <button type="button" className="tt-next" onClick={onNext} autoFocus>
+              {last ? "See my score" : "Next"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -590,9 +619,9 @@ export function ToneTest() {
     <div className="screen legal-screen site-page site-wide">
       <article className="legal-body">
         <header className="tm-head">
-          <h1>Chinese tones test: Toneder</h1>
+          <h1>Chinese tones test: TONEder</h1>
           <p className="site-answer">
-            Can you hear the four Mandarin tones? Toneder is like Tinder, but for
+            Can you hear the four Mandarin tones? TONEder is like Tinder, but for
             tones: ten words from a native speaker want to meet you, and you swipe
             each one to the tone it matches (high and level, rising, dipping or
             falling). Free, no sign-up, no microphone. You get a score and the tones
@@ -666,7 +695,7 @@ export function toneTestJsonLd(route: SiteRoute): object[] {
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      name: "Toneder: Chinese Tones Test",
+      name: "TONEder: Chinese Tones Test",
       url: absoluteUrl(route.path),
       description: route.description,
       applicationCategory: "EducationalApplication",
