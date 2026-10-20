@@ -24,7 +24,7 @@ export function ThumbHowTo() {
       </div>
       <div style={{ position: "absolute", left: 500, top: 1150, width: 540, height: 540, borderRadius: 280, overflow: "hidden",
         border: "14px solid #fff", boxShadow: "0 30px 70px rgba(36,29,21,0.4)" }}>
-        <Img src={staticFile("thumb/face.png")} style={{ width: "112%", height: "112%", marginLeft: "-4%", marginTop: "-2%", objectFit: "cover" }} />
+        <Img src={staticFile("thumb/face.png")} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
       </div>
       <div style={{ position: "absolute", left: 50, top: 1610, padding: "18px 34px", whiteSpace: "nowrap", borderRadius: 999, background: BRAND.beak, color: "#fff",
         fontFamily: SANS, fontWeight: 700, fontSize: 50, transform: "rotate(-5deg)", boxShadow: "0 12px 30px rgba(0,0,0,0.25)" }}>
