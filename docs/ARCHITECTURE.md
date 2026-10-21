@@ -266,6 +266,8 @@ Gameplay, product-usage, and traffic analytics all go through PostHog (`src/anal
 
 **PostHog project is shared across several of Pierre's apps** (id 426310, "Default project") — check settings like `anonymize_ips` before assuming they're FlappyTone-specific, and raise any project-wide change with Pierre first.
 
+**Dashboards and the production filter.** "FlappyTone — Gameplay Analytics" (1988249) and "FlappyTone — SEO & tools" (2237482, https://us.posthog.com/project/426310/dashboard/2237482; per-page/per-angle funnels, tools, word pages, cross-links). To keep only FlappyTone production: events that carry `$host` (`$pageview`) filter on `properties.$host = 'flappytone.com'`; events that do not (`landed`, `tool_*`, `word_page_action`, `screen_viewed`, `signup_*`, gameplay) filter on `person.properties.$initial_host = 'flappytone.com'` — never on `$host`. Pierre's own production visits are not excluded (no internal flag yet).
+
 **Node-only CLI scripts must be listed in `tsconfig.app.json`'s `exclude` and `tsconfig.node.json`'s `include`** — skipping this leaks `@types/node` into the DOM project. For the same reason `session.ts` restates `MicErrorKind` instead of importing it, keeping Web Audio out of the payload module's graph.
 
 ## Supabase auth settings (not code)
