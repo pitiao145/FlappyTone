@@ -357,23 +357,40 @@ function ToneGame() {
     }
   };
 
+  // Icon pills like a dating app's top switch: a book for the slow textbook
+  // recordings, a speech bubble for everyday speech. The label under it
+  // names the one chosen.
   const styleToggle = (
-    <div className="tt-style" role="radiogroup" aria-label="Recordings">
-      {(["standard", "spoken"] as const).map((s) => (
-        <button
-          key={s}
-          type="button"
-          role="radio"
-          aria-checked={style === s}
-          className={style === s ? "tc-toggle-on" : undefined}
-          onClick={() => {
-            styleRef.current = s;
-            setStyle(s);
-          }}
-        >
-          {s === "standard" ? "Standard (slow)" : "Spoken (everyday speed)"}
-        </button>
-      ))}
+    <div className="tt-style-wrap">
+      <div className="tt-style" role="radiogroup" aria-label="Recordings">
+        {(["standard", "spoken"] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            role="radio"
+            aria-checked={style === s}
+            aria-label={s === "standard" ? "Standard: slow, clear recordings" : "Spoken: everyday speed"}
+            title={s === "standard" ? "Standard (slow)" : "Spoken (everyday speed)"}
+            onClick={() => {
+              styleRef.current = s;
+              setStyle(s);
+            }}
+          >
+            {s === "standard" ? (
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v15H5.5A1.5 1.5 0 0 0 4 20.5zM20 5.5c0-.8-.7-1.5-1.5-1.5H13v15h5.5c.6 0 1.1.3 1.5.6z" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-9l-5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm4 5.5a1.5 1.5 0 1 0 0 .01zm4 0a1.5 1.5 0 1 0 0 .01zm4 0a1.5 1.5 0 1 0 0 .01z" />
+              </svg>
+            )}
+          </button>
+        ))}
+      </div>
+      <span className="tt-style-label">
+        {style === "standard" ? "Standard · slow and clear" : "Spoken · everyday speed"}
+      </span>
     </div>
   );
 
@@ -617,7 +634,6 @@ function Reveal({
           <div className="tt-profile">
             <p className="tt-name-shown">
               <span lang="zh-Hant-TW">{word.hanzi}</span>
-              <span className="tt-age">{word.tone}</span>
             </p>
             <p className="tt-bio">{word.pinyin} · <span lang="zh-Hant-TW">{toZhuyin(word.pinyin)}</span></p>
           </div>
