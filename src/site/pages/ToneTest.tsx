@@ -8,6 +8,8 @@ import { toZhuyin } from "../zhuyin.ts";
 import { PROFILES } from "../toneTest/profiles.ts";
 import {
   buildRound,
+  loadLastRound,
+  saveLastRound,
   CORNER,
   keyTone,
   makeToneTestReporter,
@@ -45,7 +47,9 @@ function loadAudio(): Promise<AudioModule> {
 
 const NAME: Record<Tone, string> = { 1: "high, level", 2: "rising", 3: "low, dipping", 4: "falling" };
 /** How long the card takes to fly into its corner before the reveal (ms). */
-const FLY_MS = 220;
+const FLY_MS = 280;
+/** How long the MATCH / NOPE stamp shows on the card before it flies (ms). */
+const STAMP_MS = 420;
 /** Tries per card slot before the round gives up on audio. */
 const MAX_FAILS = 3;
 
@@ -98,6 +102,7 @@ function ToneGame() {
   const [phase, setPhase] = useState<Phase>("intro");
   const [round, setRound] = useState<Round | null>(null);
   const [hot, setHot] = useState<Tone | null>(null);
+  const [stamp, setStamp] = useState<"match" | "nope" | null>(null);
   const [ring, setRing] = useState<Tone | null>(null);
   const [last, setLast] = useState<Answer | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -163,8 +168,10 @@ function ToneGame() {
     if (el) {
       el.style.transition = "";
       el.style.transform = "";
+      el.style.opacity = "";
     }
     setHot(null);
+    setStamp(null);
   };
 
   /** Inside the tap: unlock audio first (iOS), then the round. */
@@ -172,7 +179,8 @@ function ToneGame() {
     audioLoaded?.unlockAudio();
     reporter.style(styleRef.current);
     reporter.started();
-    const { cards, spares } = buildRound();
+    const { cards, spares } = buildRound(Math.random, undefined, loadLastRound());
+    saveLastRound(cards.map((w) => w.id));
     const r: Round = { cards, spares, index: 0, answers: [] };
     roundRef.current = r;
     setRound(r);
@@ -196,18 +204,24 @@ function ToneGame() {
     setRound(nr);
     setLast(a);
     setHot(picked);
+    setStamp(picked === w.tone ? "match" : "nope");
+    setPhase("flying");
     const el = cardRef.current;
     const stage = stageRef.current;
-    if (el && stage && !prefersReducedMotion()) {
-      const s = stage.getBoundingClientRect();
-      const c = CORNER[picked];
-      el.style.transition = `transform ${FLY_MS}ms ease-in, opacity ${FLY_MS}ms ease-in`;
-      el.style.transform = `translate(${c.x * s.width * 0.42}px, ${c.y * s.height * 0.42}px) rotate(${c.x * 18}deg) scale(0.4)`;
-      setPhase("flying");
-      window.setTimeout(() => setPhase("answered"), FLY_MS);
-    } else {
-      setPhase("answered");
-    }
+    const reduced = prefersReducedMotion();
+    // The stamp lands on the card first, then the card flies to its corner.
+    window.setTimeout(() => {
+      if (el && stage && !reduced) {
+        const s = stage.getBoundingClientRect();
+        const c = CORNER[picked];
+        el.style.transition = `transform ${FLY_MS}ms ease-in, opacity ${FLY_MS}ms ease-in`;
+        el.style.transform = `translate(${c.x * s.width * 0.45}px, ${c.y * s.height * 0.45}px) rotate(${c.x * 22}deg) scale(0.45)`;
+        el.style.opacity = "0";
+        window.setTimeout(() => setPhase("answered"), FLY_MS);
+      } else {
+        setPhase("answered");
+      }
+    }, STAMP_MS);
   };
 
   const next = () => {
@@ -444,6 +458,11 @@ function ToneGame() {
             onPointerUp={onUp}
             onPointerCancel={onUp}
           >
+            {stamp && (
+              <span className={`tt-stamp tt-stamp-${stamp}`} aria-hidden="true">
+                {stamp === "match" ? "MATCH" : "NOPE"}
+              </span>
+            )}
             <div className="tt-photo">
               <div className="tt-dots" aria-hidden="true">
                 {round.cards.map((_, i) => (
@@ -462,6 +481,7 @@ function ToneGame() {
               </div>
             </div>
             <div className="tt-actions">
+              <span className="tt-note">Swipe me to my tone</span>
               <button
                 type="button"
                 className="tt-play"
@@ -469,10 +489,10 @@ function ToneGame() {
                 aria-label="Play the word again"
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M8 5v14l11-7z" />
+                  <path d="M9 6.5v11a1 1 0 0 0 1.5.86l9-5.5a1 1 0 0 0 0-1.72l-9-5.5A1 1 0 0 0 9 6.5z" />
                 </svg>
               </button>
-              <span className="tt-note">Swipe me to my tone</span>
+              <span className="tt-note tt-note-right">Tap to hear again</span>
             </div>
           </div>
         )}
@@ -561,20 +581,27 @@ function Reveal({
   const color = TONE_LINE_COLOR[word.tone];
   const profile = PROFILES[word.id];
   return (
-    <div className={match ? "tt-reveal tt-match" : "tt-reveal"} role="status">
-      {match && (
-        <div className="tt-burst" aria-hidden="true">
-          {Array.from({ length: 12 }, (_, i) => (
-            <span key={i} style={{ "--i": i, background: TONE_LINE_COLOR[TONES[i % 4]] } as CSSProperties} />
-          ))}
-        </div>
-      )}
+    <div className={match ? "tt-reveal tt-match" : "tt-reveal tt-nomatch"} role="status">
       {match ? (
-        <p className="tt-match-title">It's a match!</p>
+        <div className="tt-match-head">
+          <div className="tt-burst" aria-hidden="true">
+            {Array.from({ length: 12 }, (_, i) => (
+              <span key={i} style={{ "--i": i, background: TONE_LINE_COLOR[TONES[i % 4]] } as CSSProperties} />
+            ))}
+          </div>
+          <p className="tt-match-title">It's a match!</p>
+          <p className="tt-match-sub">
+            You heard <b style={{ color }}>Tone {word.tone}</b>. Your ear and {word.hanzi} like each other.
+          </p>
+        </div>
       ) : (
-        <p className="tt-miss-title">
-          That was <b style={{ color }}>Tone {word.tone}</b>. You swiped Tone {answer.picked}.
-        </p>
+        <div className="tt-miss-head">
+          <span className="tt-miss-x" aria-hidden="true">✕</span>
+          <p className="tt-miss-title">No match this time</p>
+          <p className="tt-match-sub">
+            That was <b style={{ color }}>Tone {word.tone}</b>. You swiped Tone {answer.picked}.
+          </p>
+        </div>
       )}
       <div className="tt-profile-card">
         <div className="tt-photo tt-photo-full">
@@ -589,20 +616,27 @@ function Reveal({
           )}
           <div className="tt-profile">
             <p className="tt-name-shown">
-              <span lang="zh-Hant-TW">{word.hanzi}</span>{" "}
-              <span className="tt-name-pinyin">{word.pinyin}</span>
+              <span lang="zh-Hant-TW">{word.hanzi}</span>
+              <span className="tt-age">{word.tone}</span>
             </p>
-            <p className="tt-bio">
-              <span lang="zh-Hant-TW">{toZhuyin(word.pinyin)}</span> · means “{word.english}”
-            </p>
+            <p className="tt-bio">{word.pinyin} · <span lang="zh-Hant-TW">{toZhuyin(word.pinyin)}</span></p>
           </div>
         </div>
         <div className="tt-profile-body">
-          {profile && <p className="tt-bio-line">{profile.bio}</p>}
-          <span className="tt-shape" style={{ color }}>
-            <ContourSpark tone={word.tone} width={64} height={28} />
-            Tone {word.tone}: {NAME[word.tone]}
-          </span>
+          <ul className="tt-facts">
+            <li>
+              <span aria-hidden="true">📖</span> Means “{word.english}”
+            </li>
+            <li style={{ color }}>
+              <ContourSpark tone={word.tone} width={40} height={18} /> Tone {word.tone}, {NAME[word.tone]}
+            </li>
+          </ul>
+          {profile && (
+            <section className="tt-about">
+              <h3>About me</h3>
+              <p>{profile.bio}</p>
+            </section>
+          )}
           <div className="tt-reveal-actions">
             <button type="button" className="tc-button" onClick={onHear}>
               Hear it again

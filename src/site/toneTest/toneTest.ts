@@ -88,21 +88,44 @@ function shuffle<T>(xs: T[], rand: () => number): T[] {
 export function buildRound(
   rand: () => number = Math.random,
   words: readonly TestWord[] = TEST_WORDS,
+  /** Ids from the last round: drawn only if a tone runs out of fresh words. */
+  avoid: ReadonlySet<string> = new Set(),
 ): { cards: TestWord[]; spares: TestWord[] } {
   const per = Math.floor(ROUND_SIZE / TONES.length);
   const extra = shuffle([...TONES], rand).slice(0, ROUND_SIZE - per * TONES.length);
   const cards: TestWord[] = [];
   const spares: TestWord[] = [];
   for (const t of TONES) {
-    const pool = shuffle(
-      words.filter((w) => w.tone === t),
-      rand,
-    );
+    const ofTone = words.filter((w) => w.tone === t);
+    const pool = [
+      ...shuffle(ofTone.filter((w) => !avoid.has(w.id)), rand),
+      ...shuffle(ofTone.filter((w) => avoid.has(w.id)), rand),
+    ];
     const n = per + (extra.includes(t) ? 1 : 0);
     cards.push(...pool.slice(0, n));
     spares.push(...pool.slice(n));
   }
   return { cards: shuffle(cards, rand), spares };
+}
+
+const LAST_KEY = "flappytone.tonetest.last.v1";
+
+/** The last round's word ids on this device (empty if storage is blocked). */
+export function loadLastRound(): Set<string> {
+  try {
+    const v = JSON.parse(localStorage.getItem(LAST_KEY) ?? "[]");
+    return new Set(Array.isArray(v) ? v.filter((x) => typeof x === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
+
+export function saveLastRound(ids: readonly string[]): void {
+  try {
+    localStorage.setItem(LAST_KEY, JSON.stringify(ids));
+  } catch {
+    // A convenience only.
+  }
 }
 
 /** A replacement for a card whose clip failed: same tone if possible. Removes it from `spares`. */

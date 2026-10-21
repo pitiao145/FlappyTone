@@ -91,6 +91,13 @@ describe("buildRound", () => {
       expect(cards.length + spares.length).toBe(TEST_WORDS.length);
     }
   });
+  it("avoids the last round's words", () => {
+    for (let s = 1; s < 100; s++) {
+      const first = buildRound(rng(s)).cards.map((w) => w.id);
+      const next = buildRound(rng(s + 1000), TEST_WORDS, new Set(first)).cards;
+      expect(next.some((w) => first.includes(w.id))).toBe(false);
+    }
+  });
   it("varies between rounds", () => {
     const a = buildRound(rng(1)).cards.map((w) => w.id).join();
     const b = buildRound(rng(2)).cards.map((w) => w.id).join();
