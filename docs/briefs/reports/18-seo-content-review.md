@@ -141,3 +141,11 @@ Merged/dropped: /say index #1–#2 merged into sorry (same 對不起 error); tem
 ## Needs Pierre's eyes
 - The brief 17 report has the 對不起 MOE reading backwards; the fix direction is now "neutral 不".
 - Brief 19 scope split above.
+
+## Follow-up applied (2026-10-22, Pierre's request: fix the findings with solid evidence)
+- Fixed: high #1–#4, #6; med #14 (thank-you length), #19 (請 "In Taiwan"); lows 歡 rise, "Our", tone-test ˉ and tone 2 wording, /say JSON-LD headline (now the route title), aria "visualizer".
+- Visualizer CTAs made generic ("Practise in the full visualizer"); /say "Practise this exact word" CTA and the "free with an account" note removed (closes #7, #8 copy part). `practiseWordId` field removed.
+- Check script: now reads CC-CEDICT "also pr. [...]" variants, so 拜拜 bāi bāi passes (0 mismatches). The earlier "matched the wrong entry" diagnosis was wrong: all entries were kept, the variant only lives in the definition.
+- Not changed: #12 headline pinyin "duì bù qǐ" — it must equal the catalog row `duibuqi403`, which labels the careful recording. Changing it is a catalog data change (ask first).
+- Hello: the whole-word 你好 clip (textbook take recorded) gets added later; lines 159/163/206 stay until then.
+- Left in the app: `?word=` deep link + `LockedWordView` no longer have a site entry point; remove or reuse later.

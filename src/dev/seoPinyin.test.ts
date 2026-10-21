@@ -55,3 +55,12 @@ describe("checkPair", () => {
     expect(checkPair({ ...p, pinyin: "mā" }, dict, new Map([["媽", new Set(["ma3"])]])).ok).toBe(false);
   });
 });
+
+describe("parseCedict", () => {
+  it("keeps every entry and the 'also pr.' variants", () => {
+    const d = parseCedict(
+      "拜拜 拜拜 [bai2 bai2] /bye-bye/also pr. [bai1 bai1] etc/\n拜拜 拜拜 [bai4 bai5] /to worship/\n",
+    );
+    expect([...d.get("拜拜")!].sort()).toEqual(["bai1 bai1", "bai2 bai2", "bai4 bai0"]);
+  });
+});

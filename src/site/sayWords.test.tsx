@@ -155,8 +155,7 @@ describe("say routes", () => {
         expect(html).toContain(escape(q.acceptedAnswer.text));
       }
       expect(html).toContain(`/tools/tone-visualizer?tone=${w.toneTarget}`);
-      const pid = w.practiseWordId ?? w.cards[0].id;
-      expect(html).toContain(`/app?intent=visualiser&amp;word=${pid}&amp;src=${path}`);
+      expect(html).not.toContain("word=");
     }
   });
 });

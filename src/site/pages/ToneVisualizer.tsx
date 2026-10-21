@@ -316,7 +316,7 @@ function Visualizer() {
         </div>
 
         <a className="tc-app-link" href={appHref("visualiser", PATH)}>
-          Hear real words and practise them in the full visualizer{" "}
+          Practise in the full visualizer{" "}
           <span aria-hidden="true">→</span>
         </a>
       </div>
@@ -411,7 +411,7 @@ function Visualizer() {
               )}
               {(result.tier === "ok" || result.tier === "bad") && (
                 <a className="tc-result-cta" href={appHref("visualiser", PATH)}>
-                  Practise it with real words and our speaker's audio →
+                  Practise in the full visualizer →
                 </a>
               )}
             </div>
@@ -553,8 +553,8 @@ export function ToneVisualizer() {
           path={PATH}
           intent="visualiser"
           preview="visualiser"
-          title="Practise real words, then play"
-          body="In FlappyTone you hear each word from our native speaker, practise it in the full visualizer, and your progress is saved with a free account. Then the game turns it into flight: your voice steers the bird through tunnels shaped like each tone."
+          title="Practise, then play"
+          body="Practise in the full visualizer, then let the game turn it into flight: your voice steers the bird through tunnels shaped like each tone."
           secondary={{ href: "/chinese-tones", label: "Read the tone guide" }}
         />
       </article>

@@ -91,16 +91,19 @@ export type Dict = Map<string, Set<string>>;
 
 const key = (s: PinyinSyllable) => `${s.base}${s.tone}`;
 
-/** Parse CC-CEDICT text into Traditional headword → readings ("xie4 xie0"). */
+/** Parse CC-CEDICT text into Traditional headword → readings ("xie4 xie0"), "also pr." variants included. */
 export function parseCedict(text: string): Dict {
   const dict: Dict = new Map();
   for (const line of text.split("\n")) {
     if (line.startsWith("#")) continue;
     const m = /^(\S+) \S+ \[([^\]]+)\]/.exec(line);
     if (!m) continue;
-    const reading = syllablesOf(m[2]).map(key).join(" ");
     const set = dict.get(m[1]) ?? new Set<string>();
-    set.add(reading);
+    set.add(syllablesOf(m[2]).map(key).join(" "));
+    // Variant readings live in the definition: "/also pr. [bai1 bai1]/".
+    for (const v of line.matchAll(/also pr\. \[([^\]]+)\]/g)) {
+      set.add(syllablesOf(v[1]).map(key).join(" "));
+    }
     dict.set(m[1], set);
   }
   return dict;

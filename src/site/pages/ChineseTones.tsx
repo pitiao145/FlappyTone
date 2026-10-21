@@ -72,7 +72,7 @@ const SECTIONS: ToneSection[] = [
       "Start in the middle of your range and rise to the top, like a surprised “what?” in English. Chao 35. Native speakers often hold the start for a moment and then rise smoothly through the rest of the syllable.",
     mistake:
       "Dipping too deep before the rise, which makes it sound like tone 3, or rising too little, which makes it sound like tone 1. The turn should be early and shallow.",
-    real: "Real tone 2 is not a straight line from 3 to 5. our speaker starts near 2.8, dips a little to about 2.3 in the first third, then climbs to near 5. At everyday speed it often stops around 4.5.",
+    real: "Real tone 2 is not a straight line from 3 to 5. Our speaker starts near 2.8, dips a little to about 2.3 in the first third, then climbs to near 5. At everyday speed it often stops around 4.5.",
     examples: [
       ["ren2", "人", "rén", "person"],
       ["qian2", "錢", "qián", "money"],
@@ -304,7 +304,7 @@ export function ChineseTones() {
             and stays there. It never makes the full dip-and-rise you learn for
             a single syllable. Chao numbers write this “half third tone” as 21
             instead of 214. In 喜歡, the first syllable sinks to about 1.5 and
-            holds; the rise you hear belongs to 歡.
+            holds; the jump up you hear is 歡 starting high and level.
           </p>
           <ExampleList examples={SANDHI_HALF3} tone={3} />
 

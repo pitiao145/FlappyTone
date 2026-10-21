@@ -74,7 +74,7 @@ const FAQ = [
   },
   {
     q: "Which tones are hardest to hear?",
-    a: "Tone 2 and Tone 3 are the most common mix-up: both go low and then up. Tone 2 rises early and steadily; Tone 3 stays low for longer. Tone 1 and Tone 4 can also blur at speed, because a short Tone 4 starts high like Tone 1.",
+    a: "Tone 2 and Tone 3 are the most common mix-up. Tone 2 starts in the middle and rises early and steadily; Tone 3 starts low and stays low for longer. Tone 1 and Tone 4 can also blur at speed, because a short Tone 4 starts high like Tone 1.",
   },
   {
     q: "Is it free? Do I need an account?",
@@ -691,7 +691,7 @@ export function ToneTest() {
             <p>
               Each card plays one word, hidden, so the tone is the only clue. The four
               corners are the four tones, placed like their marks: the two that end
-              high on top (Tone 1 ˉ level, Tone 2 ˊ rising), the low dip and the fall at
+              high on top (Tone 1 level, Tone 2 ˊ rising), the low dip and the fall at
               the bottom (Tone 3 ˇ, Tone 4 ˋ). Swipe, tap a corner or press 1 to 4. Then
               you see the word, its pinyin, 注音 and the shape of its tone.
             </p>

@@ -67,11 +67,6 @@ export interface SayWord {
   /** The /tools/tone-visualizer target for "Practise this tone". */
   toneTarget: ToneTarget;
   toneTargetLabel: string;
-  /**
-   * The word "Practise this exact word" opens in the app's visualiser
-   * (`?word=`). Defaults to the first card.
-   */
-  practiseWordId?: string;
   /** Slugs of 2–3 sibling pages for "More words". */
   siblings: string[];
 }
@@ -91,7 +86,7 @@ export const SAY_WORDS: SayWord[] = [
     ],
     real: [
       "In the standard recording, the first 謝 falls from the top of her voice to the bottom. The second 謝 stays down there, short and almost flat. That matches the dictionary: tone 4, then a neutral tone.",
-      "The spoken recording is shorter, about half a second. The fall starts in the middle of her voice, not at the top, and the second syllable is just the end of the same fall. Say 謝謝 as one fall, not as two separate tone 4s.",
+      "The spoken recording is about the same length, about 0.7 seconds. The fall starts in the middle of her voice, not at the top, and the second syllable is just the end of the same fall. Say 謝謝 as one fall, not as two separate tone 4s.",
     ],
     teaser: "Two syllables, one fall: why the second 謝 is light.",
     mistakes: [
@@ -218,7 +213,7 @@ export const SAY_WORDS: SayWord[] = [
     pinyin: "zài jiàn",
     english: "goodbye; see you",
     answer:
-      "Goodbye in Chinese is 再見, written zàijiàn in pinyin and ㄗㄞˋ ㄐㄧㄢˋ in 注音. Both syllables are tone 4, a falling tone, but the second fall starts lower than the first, and the second fall starts a little lower than the first.",
+      "Goodbye in Chinese is 再見, written zàijiàn in pinyin and ㄗㄞˋ ㄐㄧㄢˋ in 注音. Both syllables are tone 4, a falling tone, but the second fall starts a little lower than the first.",
     cards: [
       { id: "zaijian44", hanzi: "再見", pinyin: "zài jiàn", english: "goodbye", tone: 4 },
     ],
@@ -305,7 +300,7 @@ export const SAY_WORDS: SayWord[] = [
       { hanzi: "麻煩你", pinyin: "má fán nǐ", english: "could you please…", note: "Softer than 請 when you ask a favour." },
     ],
     taiwan:
-      "請 is used the same way in Taiwan and the mainland. In Taiwan, 請 also means to treat someone: 我請你 (wǒ qǐng nǐ, said wó qǐng nǐ) means it's on me. For favours, 麻煩你 and 不好意思 are often more natural than 請.",
+      "請 is used the same way in Taiwan and the mainland. 請 also means to treat someone: 我請你 (wǒ qǐng nǐ, said wó qǐng nǐ) means it's on me. For favours, 麻煩你 and 不好意思 are often more natural than 請.",
     faq: [
       {
         q: "Where does 請 go in a sentence?",
@@ -333,7 +328,7 @@ export const SAY_WORDS: SayWord[] = [
     said: "duì bu qǐ",
     english: "sorry; excuse me",
     answer:
-      "Sorry in Chinese is 對不起, written duìbuqǐ in pinyin and ㄉㄨㄟˋ ㄅㄨˋ ㄑㄧˇ in 注音. 對 falls (tone 4), 不 is a quick, light syllable in everyday speech, and 起 dips low (tone 3), so the word ends low.",
+      "Sorry in Chinese is 對不起, written duìbuqǐ in pinyin and ㄉㄨㄟˋ ˙ㄅㄨ ㄑㄧˇ in 注音. 對 falls (tone 4), 不 is a quick, light syllable in everyday speech, and 起 dips low (tone 3), so the word ends low.",
     cards: [
       { id: "duibuqi403", hanzi: "對不起", pinyin: "duì bù qǐ", english: "sorry", tone: 4 },
     ],
@@ -360,7 +355,7 @@ export const SAY_WORDS: SayWord[] = [
       { hanzi: "沒關係", pinyin: "méi guān xi", english: "it's okay", note: "The usual reply to 對不起." },
     ],
     taiwan:
-      "Taiwan speakers use 不好意思 for most small apologies and save 對不起 for real ones. Taiwan dictionaries write 不 in 對不起 with a full tone 4, and careful Taiwan speech keeps more of it than northern mainland speech does.",
+      "Taiwan speakers use 不好意思 for most small apologies and save 對不起 for real ones. Taiwan's Ministry of Education dictionary writes 不 in 對不起 as a light, neutral syllable (˙ㄅㄨ); in careful speech some speakers still give it a full tone 4.",
     faq: [
       {
         q: "What is the difference between 對不起 and 不好意思?",
@@ -368,7 +363,7 @@ export const SAY_WORDS: SayWord[] = [
       },
       {
         q: "Is it duìbùqǐ or duìbuqǐ?",
-        a: "Both appear. The 不 is a fourth tone in careful speech and in Taiwan dictionaries, and light in fast speech. Either way, keep it short.",
+        a: "Both appear. Dictionaries, including Taiwan's, write 不 light: duìbuqǐ, ㄉㄨㄟˋ ˙ㄅㄨ ㄑㄧˇ. In careful speech it can be a full fourth tone. Either way, keep it short.",
       },
       {
         q: "How do I answer 對不起?",
@@ -468,7 +463,7 @@ export const SAY_WORDS: SayWord[] = [
       { hanzi: "沒關係，慢慢來", pinyin: "méi guān xi, màn màn lái", english: "it's okay, take your time", note: "A kind answer to someone who is late or slow." },
     ],
     taiwan:
-      "Taiwan dictionaries give 係 in 關係 a full tone 4 (guānxì), and some Taiwan speakers keep it; in normal speech it is short either way. 沒事 and 不會 are very common casual replies in Taiwan.",
+      "Taiwan's dictionary gives 係 a full tone 4 in 關係 on its own (guānxì), but a light, neutral tone in 沒關係 (ㄇㄟˊ ㄍㄨㄢ ˙ㄒㄧ); in normal speech it is short either way. 沒事 and 不會 are very common casual replies in Taiwan.",
     faq: [
       {
         q: "What is the difference between 沒關係 and 沒問題?",
@@ -476,7 +471,7 @@ export const SAY_WORDS: SayWord[] = [
       },
       {
         q: "Is 係 neutral or tone 4?",
-        a: "Mainland dictionaries mark it neutral (guānxi); Taiwan's marks it tone 4 (guānxì). In the phrase 沒關係 it is short and unstressed in both places.",
+        a: "In 沒關係 it is neutral (méi guān xi) in both mainland and Taiwan dictionaries. Taiwan's dictionary gives tone 4 only to 關係 on its own (guānxì). In the phrase it is short and unstressed.",
       },
       {
         q: "How do I make it sound friendly?",

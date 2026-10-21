@@ -7,14 +7,13 @@
 import { useRef, type ReactElement } from "react";
 import { PipCta } from "../Pip.tsx";
 import { TONE_LINE_COLOR } from "../../ui/toneColors.ts";
-import { appHref } from "../../ui/appLink.ts";
 import { captureGameEvent } from "../../analytics/posthog.ts";
 import type {
   AnalyticsEvent,
   SaySlug,
   WordPageAction,
 } from "../../analytics/session.ts";
-import { absoluteUrl, type SiteRoute } from "../routes.ts";
+import { absoluteUrl, routeFor, type SiteRoute } from "../routes.ts";
 import { OG_IMAGE } from "../siteFiles.ts";
 import { SAY_CLIPS, SAY_CLIPS_SPOKEN } from "../sayClips.ts";
 import type { ExampleClip } from "../exampleClips.ts";
@@ -192,7 +191,6 @@ function SayWordPage({ word }: { word: SayWord }) {
     );
     report.current(a);
   };
-  const practiseId = word.practiseWordId ?? word.cards[0].id;
   const siblings = word.siblings
     .map(sayWordFor)
     .filter((w): w is SayWord => !!w);
@@ -333,20 +331,9 @@ function SayWordPage({ word }: { word: SayWord }) {
             >
               Practise {word.toneTargetLabel}, free
             </a>
-            {practiseId && (
-              <a
-                className="site-play say-practise-word"
-                href={appHref("visualiser", path, practiseId)}
-                onClick={() => track("practise_word")}
-              >
-                Practise this exact word
-              </a>
-            )}
           </div>
           <p className="say-practise-note">
-            The tone visualizer is free and needs no account. Practising real
-            words with their recordings is in the FlappyTone app, free with an
-            account.
+            The tone visualizer is free and needs no account.
           </p>
         </section>
 
@@ -529,7 +516,9 @@ export function sayIndexJsonLd(route: SiteRoute): object[] {
       inLanguage: "en",
       hasPart: SAY_WORDS.map((w) => ({
         "@type": "Article",
-        headline: `How to say ${w.phrase.toLowerCase()} in Chinese`,
+        headline:
+          routeFor(sayPath(w.slug))?.title ??
+          `How to say ${w.phrase.toLowerCase()} in Chinese`,
         url: absoluteUrl(sayPath(w.slug)),
       })),
     },

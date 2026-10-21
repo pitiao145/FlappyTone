@@ -109,7 +109,7 @@ const PREVIEWS = {
     webm: "/cta/visualiser-loop.webm",
     mp4: "/cta/visualiser-loop.mp4",
     poster: "/cta/visualiser-poster.jpg",
-    label: "The tone visualiser: repeated attempts at a tone stacking on the target line.",
+    label: "The tone visualizer: repeated attempts at a tone stacking on the target line.",
   },
 } as const;
 
