@@ -80,7 +80,9 @@ function ToneMarks({ text }: { text: string }) {
           style={{ color: TONE_LINE_COLOR[syl.tone] }}
         >
           <ToneMarkIcon tone={syl.tone} className="say-tonemark-icon" />
-          <span>{syl.tone === 0 ? "neutral" : `tone ${syl.tone}`}</span>
+          <span className="visually-hidden">
+            {syl.tone === 0 ? "neutral" : `tone ${syl.tone}`}
+          </span>
         </span>
       ))}
     </span>
