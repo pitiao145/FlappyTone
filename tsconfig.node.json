@@ -22,6 +22,9 @@
   },
   "include": [
     "src/dev/render-demo.ts",
+    "src/dev/seo-check-pinyin.ts",
+    "src/dev/seoPinyin.ts",
+    "src/site/zhuyin.ts",
     "src/dev/check-mic-chunks.ts",
     "src/dev/demoVideo/scenario.ts",
     "vite.config.ts",
