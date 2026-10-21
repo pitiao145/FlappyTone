@@ -1,4 +1,6 @@
-# PRD — FlappyTone
+# PRD — the flying game
+
+**Scope of this file:** the spec of FlappyTone's flying game (`/app`, the voice-controlled bird). It is one expression of the product, not the whole product. The product vision is at the top of `CLAUDE.md`; other games and tools (TONEder at `/tools/tone-test`, the site tools) and the system around them (accounts, backend, clip pipeline, analytics) are in `docs/ARCHITECTURE.md`.
 
 **Status:** Living spec, tracks the shipped codebase. Historical v1 spec (with
 its full amendment trail) is archived at `docs/_archive/PRD-v0.1-annotated.md`
@@ -8,6 +10,9 @@ lives in `docs/DECISIONS.md`.
 
 ## 1. One-liner
 
+**Product vision:** FlappyTone makes Mandarin tones less boring, abstract and hard, and turns hearing, recognising and pronouncing them into play. The flying game below is one expression of that.
+
+**The flying game:**
 A browser game where your voice is the controller: you steer a bird through corridors shaped like Mandarin tone marks by producing the matching tone. Your pitch contour *is* the flight path.
 
 ## 2. Why this design
@@ -18,65 +23,18 @@ The four Mandarin tone marks (ˉ ˊ ˇ ˋ) are literally pitch-contour diagrams.
 2. **Slot-based gates, not endless free-flight.** Each gate is one syllable, sized to that word's own recorded length.
 3. **v1 verifies pitch contour, and now also a standalone tone-shape classifier — never a syllable.** No ASR, no ML model download, fully client-side. Framed honestly as a tone contour trainer.
 
-## 3. Non-goals
+## 3. Not built yet in the flying game (current state, not limits)
 
 - Speech recognition / syllable verification (ASR)
 - Tone sandhi as an explicit, taught concept; connected speech past two syllables; sentences
 - Native/mobile app build
-- Tone perception (listening) drills inside the game. The public SEO page `/tools/tone-test` (a 10-word listening quiz, no mic) is the one exception (20 Oct 2026, see DECISIONS.md).
+- A listening mode. TONEder (`/tools/tone-test`) is a separate listening game; bringing it into `/app` is an open option.
 
-**Two-syllable words ("tone pairs") shipped and are player-reachable** (no
-longer a non-goal, no longer Lab-only exploration): a `pairs` run mode from
-Modes, and a `wordMix` setting letting the classic run fly single syllables,
-pairs, or a shuffle of both — see §8 and CLAUDE.md's "Tone pairs" section.
-The corridor for a pair is measured shape-agnostic from the speaker's own
-contour, not a per-tone template (sandhi means the realised shape of a tone
-depends on what follows it), so nothing here teaches the *rule* of sandhi —
-it just doesn't fight the speaker for producing it naturally.
-
-**Accounts, a backend and monetisation are roadmapped, no longer non-goals**
-(that deliberate decision is logged in `docs/DECISIONS.md`): accounts + auth +
-a database backend are being added via Supabase (auth + Postgres) with
-Cloudflare R2 for object storage, starting with the leaderboard — see
-`docs/flappytone-ARCH-supabase.md` and `docs/flappytone-SPEC-supabase-phase1.md`.
-Payment is via Lemon Squeezy as merchant of record (EarlyBird) — `api/webhook-ls.ts`
-reacts to its webhook and never touches a card itself, so building our own
-payment/billing backend stays out of scope.
-
-**Phase 1 has shipped**: anonymous sign-in and a weekly leaderboard (§7.1).
-**Email accounts have shipped and are player-reachable**: the
-anonymous→permanent upgrade, per-tone stats on the server, and merge-by-max
-sync (§7.2). A free account is no longer the Pro tier — it's the guest→free
-gate (persistence, a real board row); Pro is depth and content on top.
-**Tier gating is live**: the run cap, the visualiser's word list, and the
-leaderboard's visibility all read `TIER_LIMITS` now, and the Lemon Squeezy
-webhook is the sole writer of `has_access` (§7.2). Voice-clip storage
-(the backend arch's own Phase 3, object storage — distinct from the
-tiers/payment spec's own phase numbering) is still ahead.
-
-Personal gameplay state is local-first, not local-only. The Progress tab's
-run history (`src/game/runHistory.ts`) and the streak (`src/game/streak.ts`)
-stay device-local and unsynced — none of it tamper-proof. The daily run
-limiter (`src/game/dailyLimit.ts`) is local-only for a guest but
-server-authoritative for an account (`api/run.ts`, §7.2). Lifetime tone
-accuracy (per tone and per pair combo, §7) syncs by merge-by-max for an account; an anonymous player's stats never
-reach the server at all. The leaderboard score, the run count, the
-payment entitlement and (Pro only) the tone-shape sums and run log are the values a
-signed-in player's browser sends to a server it doesn't fully trust itself on.
+Each of these can be proposed and built. Two-syllable words ("tone pairs") shipped as the `pairs` mode and the `wordMix` setting (§8). Accounts, tiers, the leaderboard, the server-owned stats and the payment flow are in `docs/ARCHITECTURE.md` ("Accounts, tiers and the leaderboard").
 
 ## 4. Platform & stack
 
-| Item | Current |
-|---|---|
-| Type | Static web app, three separate entries (see §CLAUDE.md "Three entries") |
-| Framework | React 19 + Vite, TypeScript |
-| Rendering | Canvas 2D + `requestAnimationFrame`, outside React state |
-| Audio | Web Audio API via `AudioWorkletNode` only |
-| Pitch detection | Custom band-limited McLeod Pitch Method implementation (`src/pitch/mpm.ts`) — no longer the `pitchy` package; `pitchy` remains a listed dependency but is unused in source |
-| Styling | Plain CSS with a design-token system (`src/ui/tokens.css`, `docs/BRAND.md`) |
-| Deploy | Vercel (static + serverless functions under `api/`) plus a Cloudflare Worker (`workers/clips/`, `clips.flappytone.com`) for clip audio — two deploy targets, two toolchains. The recording booth talks to the Worker's `/raw` and `/booth/words` routes; the pre-migration Vercel `api/upload.ts`/`api/auth.ts` routes and the Blob store were retired in Task 13 (Sep 2026). |
-| Backend | Supabase (Postgres + Auth) in Tokyo (ap-northeast-1): accounts, leaderboard, entitlements, and the word catalog — now three tables, `words` (the word, and its `min_tier` game access) + `speakers` (the voice roster) + `word_clips` (one row per recording, keyed `(word_id, speaker_id)`, holding every measurement). Cloudflare R2 (two private buckets, `flappytone-raw`/`flappytone-clips`) for clip audio, read only through the Worker above. Schema in `supabase/migrations/`. |
-| Target | Portrait mobile-first layout, playable on desktop |
+Stack, deploy targets and backend: `docs/ARCHITECTURE.md` ("Stack"). Pitch detection is a custom band-limited McLeod Pitch Method (`src/pitch/mpm.ts`); `pitchy` is a listed dependency but unused in source.
 
 **Layout:** 9:16 portrait canvas, max-width 420px, centred, dark neutral backdrop filling the rest of the viewport.
 
@@ -156,7 +114,7 @@ Every contour completes before the gate ends and then holds its final chao — a
 
 **Collision** requires `tuning().collisionSustainMs` (200ms default) continuously outside the corridor; an unvoiced frame clears the timer rather than bridging two excursions.
 
-**Gate duration is per-word/per-tone** (`tuning().gateDurationS`, currently `{1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6}` seconds), built to equal each clip's own recorded length — except **T1 and T3 have since been tuned shorter than their clips** (a known, unresolved gap between demo length and gate length for those two tones — see CLAUDE.md's Known Limitations and DECISIONS.md). Gate width in px = `tuning().baseScrollSpeed * gateDurationS[tone]`.
+**Gate duration is per-word/per-tone** (`tuning().gateDurationS`, currently `{1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6}` seconds), built to equal each clip's own recorded length — except **T1 and T3 have since been tuned shorter than their clips** (a known, unresolved gap between demo length and gate length for those two tones — see ARCHITECTURE.md's Known Limitations and DECISIONS.md). Gate width in px = `tuning().baseScrollSpeed * gateDurationS[tone]`.
 
 **`scrollSpeed` is fixed** at `tuning().baseScrollSpeed` (200 px/s) — it does not increase with difficulty. Difficulty ramps by tightening corridor tolerance (×0.95 per 5 gates cleared, floor 0.07H) and shrinking the rest interval between gates (×0.95, floor `tuning().restMsFloor`). There is no player-selectable pace setting.
 
@@ -305,7 +263,7 @@ Gate 2 (free→pro): depth, content and customization, not run quantity.
 **Launch gates on the Supabase project** — custom SMTP (the built-in sender
 allows ~2 emails/hour and is documented as unfit for production), an
 allowlisted redirect URL per origin, and leaked-password protection (password
-sign-in ships now). See CLAUDE.md's "Before accounts go live". These are
+sign-in ships now). See ARCHITECTURE.md's "Supabase auth settings". These are
 settings, not code, and they now affect real signups.
 
 ## 8. Screens
@@ -322,7 +280,7 @@ Actual screen set (`src/app/GameApp.tsx`'s `Screen` type): `play` (title/home), 
 - **Tutorial run** — fixed short sequence, one tone type at a time, double tolerance, no hearts, no scoring, text cue per gate.
 - **Drill** — repeated single-tone practice, picked from `modes`.
 - **Game** — the scored run: hearts, combo, difficulty ramp.
-- **Tone pairs** — the `pairs` run mode: shuffle across every two-syllable combo the tier's own words can build a gate from, or drill one combo. The corridor is measured from the speaker's own two-syllable contour, not built from per-tone templates (§6 and CLAUDE.md's "Tone pairs" section have the detail). The tone-mismatch classifier and its accuracy boost (§7) are both off for these gates; per-tone stats don't count them either — their tone accuracy goes to per-combo stats instead. Both explicit, not silent single-tone shortcuts.
+- **Tone pairs** — the `pairs` run mode: shuffle across every two-syllable combo the tier's own words can build a gate from, or drill one combo. The corridor is measured from the speaker's own two-syllable contour, not built from per-tone templates (§6 and ARCHITECTURE.md's "Tone pairs" section have the detail). The tone-mismatch classifier and its accuracy boost (§7) are both off for these gates; per-tone stats don't count them either — their tone accuracy goes to per-combo stats instead. Both explicit, not silent single-tone shortcuts.
 - **Game over** — total score, best combo, a tone-accuracy breakdown of what was played this run (single tones as tiles, pair combos as a list weakest first, capped at 4 with "show all"), one-line takeaway (§7). The pause menu shows the same breakdown mid-run, in every mode with stats.
 - **Progress, tone evolution (Pro)** — "See how your tones evolve over time": per tone and per pair combo with ≥5 heard attempts, the player's own average shape drawn over Jane's, with a fainter earlier average (1 or 2 months ago, or a chosen date) to compare against; the count behind each line is shown. Stored as per-day sums in `player_tone_shapes`, written only by `api/shapes.ts`, captured only for Pro (all game modes, not the visualiser; wall hits count, unheard gates don't). The player's line is in their own calibrated chao space, Jane's in hers — shape compares directly, height only as far as calibration lines up. Guest/free see a Pro teaser.
 - **Progress, Pro accuracy trend** — the "Accuracy progress" tab draws tone accuracy **per day**, per tone and per pair combo the player has data for. Stored one row per run, every mode, in `run_log`, written only by `api/runlog.ts` while Pro (§7.2). Free and guest keep the device-local last 5 and the labelled example-data teaser. A new Pro player with no server rows yet sees their local last 5 and a note that full history starts now.
@@ -338,7 +296,7 @@ Actual screen set (`src/app/GameApp.tsx`'s `Screen` type): `play` (title/home), 
 
 ## 9. Audio reference
 
-**Source:** a roster of recorded speakers, not one. 120 words (30 per tone) per voice, recorded at `/record` and cut with `npm run process-clips`; Jane (native Taiwanese speaker) is the default speaker and, today, the whole roster. Each voice carries its own measurements — polyline, onset, clip length — so the corridor a player flies is measured from the clip they just heard. Clips are served per speaker at `/clip/:speaker/:id`. Not a third-party corpus — no MSU Tone Perfect, no audio-cmn; those were early options, never shipped, and no code references them today. See CLAUDE.md's "The clip catalog and its Worker" section for the recording→corridor pipeline; the DB/R2 migration is complete, and the pre-migration `public/ref/*.wav` + manifest path was retired in Task 13 (Sep 2026).
+**Source:** a roster of recorded speakers, not one. 120 words (30 per tone) per voice, recorded at `/record` and cut with `npm run process-clips`; Jane (native Taiwanese speaker) is the default speaker and, today, the whole roster. Each voice carries its own measurements — polyline, onset, clip length — so the corridor a player flies is measured from the clip they just heard. Clips are served per speaker at `/clip/:speaker/:id`. Not a third-party corpus — no MSU Tone Perfect, no audio-cmn; those were early options, never shipped, and no code references them today. See ARCHITECTURE.md's "The clip catalog and its Worker" section for the recording→corridor pipeline; the DB/R2 migration is complete, and the pre-migration `public/ref/*.wav` + manifest path was retired in Task 13 (Sep 2026).
 
 **Two styles per word.** Jane recorded each word twice: *textbook* (slow, exaggerated, the default) and *natural* (everyday speed). A recording is a row in `word_clips` keyed `(word, speaker, style)`; the Speech style setting (§8) picks which one a run or the visualiser plays. Clips are served at `/clip/:speaker/:id?style=` (textbook when absent). The bundled fallback catalog is textbook only.
 
@@ -355,7 +313,7 @@ Reference audio plays before the gate arrives (call-and-response): hear it, then
 | Tab backgrounded / `visibilitychange` | Pauses immediately, suspends the AudioContext |
 | Voice outside calibrated range | Clamps to Chao 1 or 5 |
 
-## 11. Known limitations — state these in the product, not just here
+## 11. Known limitations of the flying game — state these in the product, not just here
 
 1. **Humming beats it, partially.** No syllable verification, but the tone-mismatch classifier (§7) now catches some of the worst cross-tone cases — not a full fix, and it has its own documented gaps (DECISIONS.md).
 2. **Two syllables at most, no connected speech.** Tone pairs (§8) fly real two-syllable words with a shape-agnostic corridor, so a player's natural sandhi is not fought — but nothing teaches sandhi as a rule, and nothing past two syllables is supported.
@@ -368,4 +326,4 @@ Reference audio plays before the gate arrives (call-and-response): hear it, then
 - Does the trail read better as a solid line, dots-per-frame, or a fading ribbon? (Unresolved — not re-verified since the original v1 build; check current `render/` before assuming either way.)
 - Which register (Taiwan vs Beijing) should new content default to if the inventory is ever extended past Jane's voice with a speaker from a different region? Still open — today's second-voice work only adds gender variation, not region.
 - Does anyone play it twice? Read this from PostHog, not a local report script.
-- Tone pairs shipped (four words, `tonepairs-v1`). Should the next content batch grow that same list, or start a second one? And is `multiGateChance` (0.5, unmeasured) the right default mix once there's enough pair inventory to actually feel a difficulty curve? See CLAUDE.md's "Tone pairs" section.
+- Tone pairs shipped (four words, `tonepairs-v1`). Should the next content batch grow that same list, or start a second one? And is `multiGateChance` (0.5, unmeasured) the right default mix once there's enough pair inventory to actually feel a difficulty curve? See ARCHITECTURE.md's "Tone pairs" section.

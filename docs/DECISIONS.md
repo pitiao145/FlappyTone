@@ -1,7 +1,8 @@
 # Design decisions
 
 A log of *why*, for decisions whose reasoning would otherwise be lost. CLAUDE.md
-states the rules that follow from these; this file is where you look when a
+(hard rules) and ARCHITECTURE.md (how the system works) state the rules that
+follow from these; this file is where you look when a
 rule seems arbitrary and you want the incident or measurement behind it.
 Newest first within each section. Don't add an entry for something that's
 just "what the code does" — only for a decision that overturned an earlier
@@ -1250,6 +1251,17 @@ FlappyTone-specific (project id 426310, "Default project"). Its
 FlappyTone specifically — check the current value with `project-get` before
 assuming either way, and raise any change with Pierre first since it's
 project-wide.
+
+## Docs split: vision, hard rules, architecture (21 Oct 2026)
+
+CLAUDE.md had grown to ~8,600 words and stated product scope as permanent law ("Out of scope", "Non-goals", "the product teaches tones by saying them"). On 20–21 Oct that made Claude argue against TONEder as an app tab, from the old "listening drills out of scope" line. Pierre's direction: FlappyTone makes tones less boring, abstract and hard through creative play; the flying game and TONEder are two expressions of it; learners now, teachers being explored; the product changes fast. So:
+
+- CLAUDE.md is now short: the vision, how to read the rules, 15 hard engineering rules, game rules per game, commands, testing, working style, and a "not built yet" list that is explicitly not a limit. New creative ideas get one honest opinion, then help.
+- The detail moved word for word to `docs/ARCHITECTURE.md` (stack, accounts and stats, clip pipeline, site pages, analytics, known limitations). Nothing was deleted.
+- `docs/PRD.md` is now the flying game's spec only.
+- The tone classifier's floor rule is a measured current setting, not a law; "never score unclear signal wrong" and "score vs tone accuracy" stay as rules.
+
+Older entries keep their wording as history: where one says "out of scope" or "CLAUDE.md's X section", read "was not the focus then" and "ARCHITECTURE.md's X section".
 
 ## Tone listening test: one perception drill, public page only (20 Oct 2026)
 

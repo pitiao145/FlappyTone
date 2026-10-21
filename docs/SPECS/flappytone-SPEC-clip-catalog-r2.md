@@ -8,7 +8,7 @@ and the pipeline scripts below all shipped — see
 `.superpowers/sdd/2026-09-15-audio-migration/progress.md` for the full task
 ledger. **Several decisions in this document were overridden during the
 build**; read `docs/DECISIONS.md`'s "Clip catalog: DB + R2 migration" entry
-and CLAUDE.md's "The clip catalog and its Worker" section for what actually
+and ARCHITECTURE.md's "The clip catalog and its Worker" section for what actually
 shipped instead — in particular Decision 1 (ES256, not HS256), Decision 2
 (guests get a ticket too; "no JWT ⇒ no clips" was dropped), Decision 6 (the
 cache/private split, unchanged in substance but restated there), Decision 7
