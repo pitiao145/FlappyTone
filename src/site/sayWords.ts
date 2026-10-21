@@ -147,20 +147,17 @@ export const SAY_WORDS: SayWord[] = [
     answer:
       "Hello in Chinese is 你好, written nǐ hǎo in pinyin and ㄋㄧˇ ㄏㄠˇ in 注音. Both syllables are written as third tones, but when two third tones meet, the first one rises like a second tone, so you actually say ní hǎo: a rise on 你, then a low dip on 好.",
     cards: [
-      { id: "ni3", hanzi: "你", pinyin: "nǐ", english: "you", tone: 3 },
-      { id: "hao3", hanzi: "好", pinyin: "hǎo", english: "good", tone: 3 },
+      { id: "nihao33", hanzi: "你好", pinyin: "nǐ hǎo", english: "hello", tone: 3 },
     ],
-    cardNote:
-      "These are 你 and 好 recorded on their own. A recording of 你好 as one word is coming soon.",
     real: [
-      "Said alone, 你 and 好 are both third tones. In the standard recordings each one drops to the bottom of her voice and comes back up near the top.",
+      "Written, 你 and 好 are both third tones.",
       "In 你好, two third tones meet, so the first one changes to a rise: ní hǎo. This happens to every 3+3 pair in Mandarin.",
-      "In the spoken recording, 好 drops low and only comes back to the middle. At the end of 你好, keep 好 low with a short lift, not a big rise.",
+      "In the standard recording of 你好, the line starts in the lower middle of the voice, climbs to near the top about halfway through, then falls to the bottom and stays there. The climb is the rising 你, and 好 ends low with no lift at the end.",
     ],
     teaser: "Written nǐ hǎo, said ní hǎo: the most common tone change.",
     mistakes: [
       { wrong: "Saying two full dips: nǐ hǎo with both syllables going down and up.", fix: "Make 你 rise (ní), then dip on 好." },
-      { wrong: "Ending 好 with a big rise, so hello sounds like a question.", fix: "Keep 好 low, with only a small lift at the end." },
+      { wrong: "Ending 好 with a big rise, so hello sounds like a question.", fix: "Keep 好 low and let it end there." },
       { wrong: "Saying hao like the English how with a hard h.", fix: "The h is breathier, from further back in the throat." },
     ],
     syllables: [
@@ -172,7 +169,7 @@ export const SAY_WORDS: SayWord[] = [
       {
         hanzi: "好",
         pinyin: "hǎo",
-        text: "Third tone: drop low and stay low, with a small lift at the end. h is breathier than English h, ao rhymes with how.",
+        text: "Third tone: drop low and stay low. h is breathier than English h, ao rhymes with how.",
       },
     ],
     uses: [
@@ -198,7 +195,7 @@ export const SAY_WORDS: SayWord[] = [
       },
       {
         q: "Should 好 rise at the end?",
-        a: "Only a little. Said alone and slowly it rises back up, but at the end of 你好 in normal speech it stays low and ends in the middle of your voice. A big rise at the end sounds like a question.",
+        a: "No. In the standard recording of 你好, 好 falls to the bottom and stays there. A rise at the end makes it sound like a question.",
       },
     ],
     toneTarget: "3-3",

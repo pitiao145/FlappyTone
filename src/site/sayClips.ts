@@ -110,27 +110,19 @@ export const SAY_CLIPS: Record<string, ExampleClip> = {
     durationS: 1.0287,
     clipS: 1.41,
   },
-  ni3: {
+  nihao33: {
     polyline: [
-      [0, 2.988],
-      [0.6389, 1.659],
-      [0.8268, 3.256],
-      [1, 4.694],
+      [0, 2.613],
+      [0.2823, 2.496],
+      [0.3321, 2.789],
+      [0.4336, 4.3],
+      [0.5498, 2.49],
+      [0.7141, 1.034],
+      [1, 1.034],
     ],
     onsetS: 0.232,
-    durationS: 1.1354,
-    clipS: 1.4953,
-  },
-  hao3: {
-    polyline: [
-      [0, 3.445],
-      [0.6274, 1.496],
-      [0.8222, 2.834],
-      [1, 4.541],
-    ],
-    onsetS: 0.232,
-    durationS: 0.986,
-    clipS: 1.346,
+    durationS: 1.2847,
+    clipS: 1.6447,
   },
 };
 
@@ -158,17 +150,6 @@ export const SAY_CLIPS_SPOKEN: Record<string, ExampleClip> = {
     durationS: 0.7087,
     clipS: 1.0687,
   },
-  hao3: {
-    polyline: [
-      [0, 3.636],
-      [0.5315, 1.461],
-      [0.7796, 1.956],
-      [1, 2.743],
-    ],
-    onsetS: 0.232,
-    durationS: 0.602,
-    clipS: 0.962,
-  },
   meiguanxi210: {
     polyline: [
       [0, 2.58],
@@ -182,17 +163,6 @@ export const SAY_CLIPS_SPOKEN: Record<string, ExampleClip> = {
     onsetS: 0.232,
     durationS: 0.922,
     clipS: 1.282,
-  },
-  ni3: {
-    polyline: [
-      [0, 3.562],
-      [0.6845, 1.662],
-      [0.8556, 2.421],
-      [1, 3.017],
-    ],
-    onsetS: 0.232,
-    durationS: 0.6234,
-    clipS: 0.9833,
   },
   qing3: {
     polyline: [
