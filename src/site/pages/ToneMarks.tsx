@@ -216,7 +216,7 @@ export const TONE_MARKS_FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Why is the third tone mark ˇ and not a dip and a rise?",
-    a: "The mark is a simple picture of the textbook tone 3, which dips and comes back up. In real speech tone 3 often only dips, especially before another syllable, and two tone 3s in a row change: nǐ hǎo is said ní hǎo.",
+    a: "The mark is a simple picture of the textbook third tone, which dips and comes back up. In real speech a third tone often only dips, especially before another syllable, and two third tones in a row change: nǐ hǎo is said ní hǎo.",
   },
   {
     q: "Do I write tone marks on the neutral tone?",

@@ -5,6 +5,7 @@
 
 import type { AnalyticsEvent } from "../../analytics/session.ts";
 import type { Tone } from "../../game/gates.ts";
+import { toneName } from "../toneNames.ts";
 
 export interface AttemptView {
   /** Whole percent, or null for "couldn't hear that". */
@@ -49,10 +50,10 @@ export function attemptView(
     const r = result.read;
     read =
       r.tone === "none"
-        ? `Didn't sound like one clear tone. Target: Tone ${target}.`
+        ? `Didn't sound like one clear tone. Target: ${toneName(target)}.`
         : r.tone === target
-          ? `Sounded like Tone ${r.tone}, the target.`
-          : `Sounded like Tone ${r.tone}. Target: Tone ${target}.`;
+          ? `Sounded like a ${toneName(r.tone)}, the target.`
+          : `Sounded like a ${toneName(r.tone)}. Target: ${toneName(target)}.`;
   }
   return { percent, headline, read, tier };
 }

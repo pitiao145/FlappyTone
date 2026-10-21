@@ -3,6 +3,7 @@ import { captureGameEvent } from "../../analytics/posthog.ts";
 import { TONE_LINE_COLOR } from "../../ui/toneColors.ts";
 import { appHref } from "../../ui/appLink.ts";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
+import { toneName } from "../toneNames.ts";
 import { Pip, PipCta } from "../Pip.tsx";
 import {
   DEFAULT_REF,
@@ -81,7 +82,7 @@ function shapePath(ref: ToneRef, mode: RefMode): string {
 const FAQ = [
   {
     q: "What is the difference between Real speech and Textbook?",
-    a: "Textbook is the classic tone chart: Tone 1 high and level (55), Tone 2 rising (35), Tone 3 dipping and rising (214), Tone 4 falling (51). Real speech is the average shape of many words recorded by our native Taiwan Mandarin speaker at everyday speed. They often differ: real Tone 3 rarely rises as high as the chart says, and two third tones in a row are not said as written. Pick the one you want to practise; you are scored against that line.",
+    a: "Textbook is the classic tone chart: first tone high and level (55), second tone rising (35), third tone dipping and rising (214), fourth tone falling (51). Real speech is the average shape of many words recorded by our native Taiwan Mandarin speaker at everyday speed. They often differ: real third tone rarely rises as high as the chart says, and two third tones in a row are not said as written. Pick the one you want to practise; you are scored against that line.",
   },
   {
     q: "Does it work on my phone?",
@@ -487,7 +488,7 @@ function RefChip({ r, selected, pick }: { r: ToneRef; selected: boolean; pick: (
       {r.tones.map((t, i) => (
         <span key={i} style={{ color: TONE_LINE_COLOR[t] }}>
           {i ? " + " : ""}
-          {r.tones.length > 1 ? t : `Tone ${t}`}
+          {r.tones.length > 1 ? t : toneName(t, true)}
         </span>
       ))}
     </button>

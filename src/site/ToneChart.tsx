@@ -1,5 +1,6 @@
 import { AVERAGED_TONE_SHAPE } from "../game/toneAverages.ts";
 import type { Tone } from "../game/gates.ts";
+import { toneName } from "./toneNames.ts";
 import { TONE_LINE_COLOR } from "../ui/toneColors.ts";
 
 const W = 320;
@@ -27,7 +28,7 @@ export function ToneChart() {
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label="Pitch over time for the four Mandarin tones, on a 1 to 5 scale: tone 1 stays high and level, tone 2 rises, tone 3 dips low, tone 4 falls from high to low."
+        aria-label="Pitch over time for the four Mandarin tones, on a 1 to 5 scale: first tone stays high and level, second tone rises, third tone dips low, fourth tone falls from high to low."
       >
         {[1, 2, 3, 4, 5].map((c) => (
           <g key={c}>
@@ -79,7 +80,7 @@ export function ToneChart() {
             className="legend"
             style={{ color: TONE_LINE_COLOR[t] }}
           >
-            ● Tone {t}
+            ● {toneName(t, true)}
           </span>
         ))}
         <span className="note">

@@ -20,6 +20,7 @@ import type { ExampleClip } from "../exampleClips.ts";
 import { corridorChaoAt } from "../../game/gates.ts";
 import { ToneMarkIcon } from "../../ui/toneIcons.tsx";
 import { SAY_WORDS, sayWordFor, type SayWord } from "../sayWords.ts";
+import { toneName } from "../toneNames.ts";
 import { PlayButton, SeeButton } from "../WordButtons.tsx";
 import { markSyllable, parsePinyin, toZhuyin } from "../zhuyin.ts";
 
@@ -81,7 +82,7 @@ function ToneMarks({ text }: { text: string }) {
         >
           <ToneMarkIcon tone={syl.tone} className="say-tonemark-icon" />
           <span className="visually-hidden">
-            {syl.tone === 0 ? "neutral" : `tone ${syl.tone}`}
+            {syl.tone === 0 ? "neutral" : toneName(syl.tone)}
           </span>
         </span>
       ))}
@@ -482,8 +483,8 @@ export function SayIndex() {
           <h2>Why the recordings sound different from the pinyin</h2>
           <p>
             Pinyin writes each syllable's own tone. In real speech, tones
-            change next to each other: two tone 3s in a row become a rise and a
-            dip, 不 rises before a tone 4, and many second syllables go light.
+            change next to each other: two third tones in a row become a rise and a
+            dip, 不 rises before a fourth tone, and many second syllables go light.
             The spoken recordings are also shorter and their pitch moves less.
             Hearing both versions helps you understand people at normal speed,
             not just in a classroom.

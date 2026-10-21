@@ -52,12 +52,12 @@ const SECTIONS: ToneSection[] = [
   {
     id: "tone-1",
     tone: 1,
-    title: "Tone 1: high and level (ˉ)",
+    title: "First tone: high and level (ˉ)",
     shape:
       "Start high in your voice and hold it flat, like singing one long note. Chao numbers write it 55: it starts at 5 and stays at 5. It is not louder than the other tones, only higher and steadier.",
     mistake:
       "Starting at a normal speaking pitch, so it sounds flat but low, or letting it sag at the end as if finishing an English sentence. Keep it up to the last moment.",
-    real: "In our native speaker's recordings, tone 1 sits at about 4.6, between 4 and 5, not at the very top. It stays there at everyday speed too. Aim for high and steady, not for your highest note.",
+    real: "In our native speaker's recordings, first tone sits at about 4.6, between 4 and 5, not at the very top. It stays there at everyday speed too. Aim for high and steady, not for your highest note.",
     examples: [
       ["ma1b", "媽", "mā", "mother"],
       ["shu1", "書", "shū", "book"],
@@ -67,12 +67,12 @@ const SECTIONS: ToneSection[] = [
   {
     id: "tone-2",
     tone: 2,
-    title: "Tone 2: rising (ˊ)",
+    title: "Second tone: rising (ˊ)",
     shape:
       "Start in the middle of your range and rise to the top, like a surprised “what?” in English. Chao 35. Native speakers often hold the start for a moment and then rise smoothly through the rest of the syllable.",
     mistake:
-      "Dipping too deep before the rise, which makes it sound like tone 3, or rising too little, which makes it sound like tone 1. The turn should be early and shallow.",
-    real: "Real tone 2 is not a straight line from 3 to 5. Our speaker starts near 2.8, dips a little to about 2.3 in the first third, then climbs to near 5. At everyday speed it often stops around 4.5.",
+      "Dipping too deep before the rise, which makes it sound like a third tone, or rising too little, which makes it sound like a first tone. The turn should be early and shallow.",
+    real: "A real second tone is not a straight line from 3 to 5. Our speaker starts near 2.8, dips a little to about 2.3 in the first third, then climbs to near 5. At everyday speed it often stops around 4.5.",
     examples: [
       ["ren2", "人", "rén", "person"],
       ["qian2", "錢", "qián", "money"],
@@ -82,11 +82,11 @@ const SECTIONS: ToneSection[] = [
   {
     id: "tone-3",
     tone: 3,
-    title: "Tone 3: low, dipping (ˇ)",
+    title: "Third tone: low, dipping (ˇ)",
     shape:
       "Drop to the bottom of your range and stay low. Said alone or at the end of a phrase it comes back up, so the full shape is a dip: chao 214. Inside a phrase it usually stays low and never rises (the “half third tone”).",
     mistake:
-      "Treating it as a rising tone with a small dip. The low part is what makes it tone 3; the rise is optional. Many learners also do the full dip-and-rise on every third tone, which sounds slow and exaggerated in normal speech.",
+      "Treating it as a rising tone with a small dip. The low part is what makes it a third tone; the rise is optional. Many learners also do the full dip-and-rise on every third tone, which sounds slow and exaggerated in normal speech.",
     real: "The textbook 214 ends at 4. In our speaker's careful recordings the dip reaches about 1.6 halfway through and the rise goes almost to 5. At everyday speed the dip is shallower (about 1.9) and the rise stops near 4, and inside a phrase there is often no rise at all.",
     examples: [
       ["ma3b", "馬", "mǎ", "horse"],
@@ -97,12 +97,12 @@ const SECTIONS: ToneSection[] = [
   {
     id: "tone-4",
     tone: 4,
-    title: "Tone 4: falling (ˋ)",
+    title: "Fourth tone: falling (ˋ)",
     shape:
       "Start high and fall fast to the bottom, like a firm “no!” or “stop!”. Chao 51. It is usually the shortest of the four tones.",
     mistake:
-      "Not falling far enough, so it sounds like a soft tone 1, or starting too low, so there is no room to fall. Start at the top and commit to the drop.",
-    real: "The textbook 51 starts at the top. Our speaker's tone 4 peaks a little later, at about 4.5, then falls to about 1.4. At everyday speed it falls less, to about 1.9, so the speed of the drop matters more than how far it goes.",
+      "Not falling far enough, so it sounds like a soft first tone, or starting too low, so there is no room to fall. Start at the top and commit to the drop.",
+    real: "The textbook 51 starts at the top. Our speaker's fourth tone peaks a little later, at about 4.5, then falls to about 1.4. At everyday speed it falls less, to about 1.9, so the speed of the drop matters more than how far it goes.",
     examples: [
       ["ma4b", "罵", "mà", "to scold"],
       ["da4", "大", "dà", "big"],
@@ -114,7 +114,7 @@ const SECTIONS: ToneSection[] = [
     tone: 0,
     title: "The neutral tone (˙)",
     shape:
-      "Some syllables, mostly grammar words and the second half of some words, are short and light with no shape of their own. Pinyin writes them with no mark; 注音 puts a dot (˙) in front. Their pitch depends on the tone before them: higher after tone 3, lower after tone 1, 2 or 4.",
+      "Some syllables, mostly grammar words and the second half of some words, are short and light with no shape of their own. Pinyin writes them with no mark; 注音 puts a dot (˙) in front. Their pitch depends on the tone before them: higher after a third tone, lower after a first, second or fourth tone.",
     mistake:
       "Giving a neutral syllable a full tone. 什麼 is “shén me”, not “shén mè”. Keep it short and let it follow the syllable before it.",
     examples: [
@@ -142,7 +142,7 @@ export const FAQ: Faq[] = [
   },
   {
     q: "Which tones are hardest to tell apart?",
-    a: "Tone 2 and tone 3. Both go down and then up, so the difference is how low the dip goes and when the rise starts: tone 2 turns early and rises over most of the syllable, tone 3 drops low first. Tones 1 and 4 are usually the easiest pair.",
+    a: "Second and third tones. Both go down and then up, so the difference is how low the dip goes and when the rise starts: second tone turns early and rises over most of the syllable, third tone drops low first. First and fourth tones are usually the easiest pair.",
   },
   {
     q: "How do I practise hearing tones?",
@@ -249,13 +249,13 @@ export function ChineseTones() {
         </p>
         <ToneChart />
         <p>
-          Textbooks give each tone a fixed number (tone 1 = 55, tone 2 = 35,
-          tone 3 = 214, tone 4 = 51). Real speech is close to that, but not the
+          Textbooks give each tone a fixed number (first tone = 55, second tone = 35,
+          third tone = 214, fourth tone = 51). Real speech is close to that, but not the
           same, and FlappyTone's tunnels follow real speech. Each tone below
           says what the textbook teaches and what the recordings show. Two
           things stand out on the chart. First, the tones are relative to your
           own voice, so a deep voice and a high voice draw the same shapes at
-          different pitches. Second, tones 2 and 3 both dip and rise in a
+          different pitches. Second, the second and third tones both dip and rise in a
           careful citation form; what separates them is how low the dip goes and
           how early the rise starts.
         </p>
@@ -289,18 +289,18 @@ export function ChineseTones() {
 
           <h3>1. Third tone + third tone → second tone + third tone</h3>
           <p>
-            When two third tones meet, the first one rises like a tone 2. 你好
+            When two third tones meet, the first one rises like a second tone. 你好
             is written nǐ hǎo and said ní hǎo. In our recording of 可以, the
             first syllable climbs to about 4.3 before the second one dips to the
             floor. Studies of everyday Taiwan Mandarin find the changed tone is
-            very close to a real tone 2, though not always identical, so saying
-            it as a tone 2 is the right target.
+            very close to a real second tone, though not always identical, so saying
+            it as a second tone is the right target.
           </p>
           <ExampleList examples={SANDHI_33} tone={2} />
 
           <h3>2. Third tone before any other tone stays low (半三聲)</h3>
           <p>
-            Before a tone 1, 2, 4 or a neutral syllable, a third tone drops low
+            Before a first, second or fourth tone, or a neutral syllable, a third tone drops low
             and stays there. It never makes the full dip-and-rise you learn for
             a single syllable. Chao numbers write this “half third tone” as 21
             instead of 214. In 喜歡, the first syllable sinks to about 1.5 and
@@ -311,15 +311,15 @@ export function ChineseTones() {
           <h3>3. 一 (yī, one) changes with the next tone</h3>
           <p>
             Alone, at the end of a word, when counting and in ordinals (第一),
-            一 keeps tone 1. Before a tone 4 it becomes tone 2: 一下 is said yí
-            xià, and the recording rises before it falls. Before tones 1, 2 and
-            3 it becomes tone 4: 一起 is said yì qǐ, a fall from the top.
+            一 keeps the first tone. Before a fourth tone it becomes a second tone: 一下 is said yí
+            xià, and the recording rises before it falls. Before first, second and
+            third tones it becomes a fourth tone: 一起 is said yì qǐ, a fall from the top.
           </p>
           <ExampleList examples={SANDHI_YI} tone={4} />
 
-          <h3>4. 不 (bù, not) becomes tone 2 before tone 4</h3>
+          <h3>4. 不 (bù, not) becomes a second tone before a fourth tone</h3>
           <p>
-            不 is tone 4, except before another tone 4, where it becomes tone 2:
+            不 is a fourth tone, except before another fourth tone, where it becomes a second tone:
             不錯 is said bú cuò, 不是 bú shì, 不要 bú yào. Before any other tone
             it stays bù: 不好 bù hǎo, 不來 bù lái. In our recording of 不錯, 不
             rises from about 2 to the top before 錯 falls.

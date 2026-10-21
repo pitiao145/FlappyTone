@@ -14,7 +14,7 @@ describe("attemptView", () => {
   it("names the read tone against the target", () => {
     const v = attemptView({ accuracy: 0.5, read: { tone: 2, confidence: 0.8 } }, 3, 1);
     expect(v.percent).toBe(50);
-    expect(v.read).toBe("Sounded like Tone 2. Target: Tone 3.");
+    expect(v.read).toBe("Sounded like a second tone. Target: third tone.");
     expect(attemptView({ accuracy: 0.9, read: { tone: 3, confidence: 1 } }, 3, 1).tier).toBe("good");
   });
 

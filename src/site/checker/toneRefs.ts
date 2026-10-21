@@ -73,7 +73,7 @@ const natPair = AVERAGED_PAIR_SHAPE.natural;
 export const TONE_REFS: readonly ToneRef[] = [
   {
     id: "1",
-    label: "Tone 1",
+    label: "First tone",
     tones: [1],
     example: "mā 媽",
     durationS: 0.719,
@@ -83,7 +83,7 @@ export const TONE_REFS: readonly ToneRef[] = [
   },
   {
     id: "2",
-    label: "Tone 2",
+    label: "Second tone",
     tones: [2],
     example: "má 麻",
     durationS: 0.751,
@@ -93,7 +93,7 @@ export const TONE_REFS: readonly ToneRef[] = [
   },
   {
     id: "3",
-    label: "Tone 3",
+    label: "Third tone",
     tones: [3],
     example: "mǎ 馬",
     durationS: 0.709,
@@ -103,7 +103,7 @@ export const TONE_REFS: readonly ToneRef[] = [
   },
   {
     id: "4",
-    label: "Tone 4",
+    label: "Fourth tone",
     tones: [4],
     example: "mà 罵",
     durationS: 0.495,
@@ -120,7 +120,7 @@ export const TONE_REFS: readonly ToneRef[] = [
     // Spoken as 2 + 3: the third-tone sandhi rule.
     real: fromAverage(natPair["2-3"]),
     textbook: letters([3, 3]),
-    diff: "Two third tones in a row: the first one rises like Tone 2 (ní hǎo).",
+    diff: "Two third tones in a row: the first one rises like a second tone (ní hǎo).",
   },
   {
     id: "3-4",

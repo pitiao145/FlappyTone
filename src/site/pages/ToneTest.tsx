@@ -5,6 +5,7 @@ import { ContourSpark } from "../../ui/ContourSpark.tsx";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
 import { Pip, PipCta } from "../Pip.tsx";
 import { toZhuyin } from "../zhuyin.ts";
+import { toneName } from "../toneNames.ts";
 import { PROFILES } from "../toneTest/profiles.ts";
 import {
   buildRound,
@@ -74,7 +75,7 @@ const FAQ = [
   },
   {
     q: "Which tones are hardest to hear?",
-    a: "Tone 2 and Tone 3 are the most common mix-up. Tone 2 starts in the middle and rises early and steadily; Tone 3 starts low and stays low for longer. Tone 1 and Tone 4 can also blur at speed, because a short Tone 4 starts high like Tone 1.",
+    a: "Second and third tones are the most common mix-up. A second tone starts in the middle and rises early and steadily; third tone starts low and stays low for longer. First and fourth tones can also blur at speed, because a short fourth tone starts high like a first tone.",
   },
   {
     q: "Is it free? Do I need an account?",
@@ -444,12 +445,12 @@ function ToneGame() {
                 style={{ color: TONE_LINE_COLOR[t] }}
                 disabled={phase !== "card"}
                 onClick={() => answer(t)}
-                aria-label={`Tone ${t}, ${NAME[t]} (key ${t})`}
+                aria-label={`${toneName(t, true)}, ${NAME[t]} (key ${t})`}
               >
                 <span className="tt-corner-shape" aria-hidden="true">
                   <ContourSpark tone={t} width={200} height={90} />
                 </span>
-                <span className="tt-corner-num">Tone {t}</span>
+                <span className="tt-corner-num">{toneName(t, true)}</span>
                 <span className="tt-corner-name">{NAME[t]}</span>
               </button>
             );
@@ -547,14 +548,14 @@ function ToneGame() {
             <ul className="tt-per-tone">
               {TONES.map((t) => (
                 <li key={t} style={{ color: TONE_LINE_COLOR[t] }}>
-                  <b>Tone {t}</b> {result.perTone[t].correct}/{result.perTone[t].cards}
+                  <b>{toneName(t, true)}</b> {result.perTone[t].correct}/{result.perTone[t].cards}
                 </li>
               ))}
             </ul>
             {result.mixUp && (
               <p className="tt-mixup">
-                You mix up <b style={{ color: TONE_LINE_COLOR[result.mixUp[0]] }}>Tone {result.mixUp[0]}</b>{" "}
-                and <b style={{ color: TONE_LINE_COLOR[result.mixUp[1]] }}>Tone {result.mixUp[1]}</b>.
+                You mix up the <b style={{ color: TONE_LINE_COLOR[result.mixUp[0]] }}>{toneName(result.mixUp[0])}</b>{" "}
+                and the <b style={{ color: TONE_LINE_COLOR[result.mixUp[1]] }}>{toneName(result.mixUp[1])}</b>.
               </p>
             )}
             <div className="tt-done-actions">
@@ -569,7 +570,7 @@ function ToneGame() {
               className="tc-result-cta"
               href={`/tools/tone-visualizer?tone=${result.weakest ?? 3}`}
             >
-              Now say {result.weakest ? `Tone ${result.weakest}` : "them"} out loud in the tone visualizer →
+              Now say {result.weakest ? toneName(result.weakest) : "them"} out loud in the tone visualizer →
             </a>
           </div>
         )}
@@ -609,7 +610,7 @@ function Reveal({
           </div>
           <p className="tt-match-title">It's a match!</p>
           <p className="tt-match-sub">
-            You heard <b style={{ color }}>Tone {word.tone}</b>. Your ear and {word.hanzi} like each other.
+            You heard the <b style={{ color }}>{toneName(word.tone)}</b>. Your ear and {word.hanzi} like each other.
           </p>
         </div>
       ) : (
@@ -617,7 +618,7 @@ function Reveal({
           <span className="tt-miss-x" aria-hidden="true">✕</span>
           <p className="tt-miss-title">No match this time</p>
           <p className="tt-match-sub">
-            That was <b style={{ color }}>Tone {word.tone}</b>. You swiped Tone {answer.picked}.
+            That was the <b style={{ color }}>{toneName(word.tone)}</b>. You swiped the {toneName(answer.picked)}.
           </p>
         </div>
       )}
@@ -645,7 +646,7 @@ function Reveal({
               <span aria-hidden="true">📖</span> Means “{word.english}”
             </li>
             <li style={{ color }}>
-              <ContourSpark tone={word.tone} width={40} height={18} /> Tone {word.tone}, {NAME[word.tone]}
+              <ContourSpark tone={word.tone} width={40} height={18} /> {toneName(word.tone, true)}, {NAME[word.tone]}
             </li>
           </ul>
           {profile && (
@@ -691,8 +692,8 @@ export function ToneTest() {
             <p>
               Each card plays one word, hidden, so the tone is the only clue. The four
               corners are the four tones, placed like their marks: the two that end
-              high on top (Tone 1 level, Tone 2 ˊ rising), the low dip and the fall at
-              the bottom (Tone 3 ˇ, Tone 4 ˋ). Swipe, tap a corner or press 1 to 4. Then
+              high on top (first tone level, second tone ˊ rising), the low dip and the fall at
+              the bottom (third tone ˇ, fourth tone ˋ). Swipe, tap a corner or press 1 to 4. Then
               you see the word, its pinyin, 注音 and the shape of its tone.
             </p>
             <p>
