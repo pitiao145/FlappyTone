@@ -371,6 +371,7 @@ function ToneGame() {
             aria-checked={style === s}
             aria-label={s === "standard" ? "Standard: slow, clear recordings" : "Spoken: everyday speed"}
             title={s === "standard" ? "Standard (slow)" : "Spoken (everyday speed)"}
+            disabled={phase === "card" || phase === "flying" || phase === "answered"}
             onClick={() => {
               styleRef.current = s;
               setStyle(s);
