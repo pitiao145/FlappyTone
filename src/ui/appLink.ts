@@ -39,11 +39,9 @@ export function setAppLinkSource(path: string): void {
 export function appHref(
   intent?: AppIntent,
   src: string | undefined = linkSource,
-  word?: string,
 ): string {
   const params = new URLSearchParams();
   if (intent) params.set("intent", intent);
-  if (word) params.set("word", word);
   if (src) params.set("src", src);
   // `/` is legal in a query value; left unescaped so the URL reads
   // `/app?src=/chinese-tones`.

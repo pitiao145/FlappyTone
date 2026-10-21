@@ -94,7 +94,7 @@ export const SAY_SLUGS = [
   "yuan",
 ] as const;
 export type SaySlug = (typeof SAY_SLUGS)[number];
-export type WordPageAction = "listen" | "see_it" | "practise_tone" | "practise_word";
+export type WordPageAction = "listen" | "see_it" | "practise_tone";
 
 export type AnalyticsEvent =
   /**

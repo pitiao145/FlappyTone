@@ -20,7 +20,7 @@ import {
   stopMic,
 } from "../audio/session.ts";
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
-import { tierReady, useTier } from "../data/tier.ts";
+import { useTier } from "../data/tier.ts";
 import { ContourRecorder } from "../game/contours.ts";
 import type { Tone } from "../game/gates.ts";
 import { effectiveSpeechStyle, type CalibrationSettings } from "../game/settings.ts";
@@ -129,14 +129,6 @@ interface Props {
   canvasHeight: number;
   /** Called when a guest taps a locked tone row/pill or a locked word chip. */
   onLocked?: (feature: string) => void;
-  /**
-   * A word to open on (`/app?intent=visualiser&word=<id>`, from a /say/* word
-   * page). Selected if this tier may practise it; otherwise its tone or pair
-   * opens with the word shown locked, and `onLocked` offers the upgrade from its button.
-   */
-  focusWordId?: string | null;
-  /** The locked-word card's "Create free account": straight to signup (guest). */
-  onCreateAccount?: () => void;
 }
 
 /**
@@ -148,7 +140,7 @@ interface Props {
  * corridor at the same time, and when that fails there is no way to tell which
  * half went wrong. Here there is only one half.
  */
-export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked, focusWordId, onCreateAccount }: Props) {
+export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Props) {
   const tier = useTier();
   const limits = tierLimits()[tier];
   // The recording style the visualiser plays, draws and scores in (spec
@@ -756,79 +748,6 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked, focu
     onLocked?.(feature);
   };
 
-  /**
-   * The linked word (`focusWordId`), shown as a "locked" card when this tier
-   * cannot practise it. Resolved once per tier: the tier store starts at
-   * "guest" and resolves a moment later, so a locked answer is re-checked
-   * when the tier changes.
-   */
-  const [lockedFocus, setLockedFocus] = useState<Word | null>(null);
-  const focusTierRef = useRef<string | null>(null);
-  // Wait for the real tier before deciding, so a signed-in player is never
-  // shown the guest upsell for the moment before it resolves.
-  const [tierKnown, setTierKnown] = useState(false);
-  useEffect(() => {
-    if (!focusWordId) return;
-    let live = true;
-    void tierReady()
-      .catch(() => {})
-      .then(() => {
-        if (live) setTierKnown(true);
-      });
-    return () => {
-      live = false;
-    };
-  }, [focusWordId]);
-  useEffect(() => {
-    if (!focusWordId || !tierKnown || focusTierRef.current === tier) return;
-    if (focusTierRef.current !== null && lockedFocus === null) return; // already opened on it
-    const base = words.find((w) => w.id === focusWordId);
-    if (!base) return; // inventory still loading
-    const multi = base.syllables === 2;
-    if (base.syllables !== 1 && !multi) {
-      focusTierRef.current = tier;
-      return;
-    }
-    // A tier with a level choice: make sure the word's TOCFL level is in the
-    // selection if the tier may use it, then decide on the next pass.
-    const allowed = limits.beginner.levels;
-    const level = base.listIds
-      .map((id) => /^tocfl([123])$/.exec(id))
-      .find((m) => m !== null);
-    const lvl = level ? (Number(level[1]) as TocflLevel) : null;
-    if (allowed && lvl && allowed.includes(lvl) && !selectedLevels.includes(lvl)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot arrival from a link
-      setSelectedLevels([...selectedLevels, lvl]);
-      return;
-    }
-    focusTierRef.current = tier;
-    const pool = multi
-      ? pairsUnlocked
-        ? wordsOfCombo(pairWords, base.tones, limits.pairWordsPerCombo)
-        : []
-      : wordsOfTone(listWords, base.tone, limits.wordsPerTone);
-    const hit = pool.find((w) => w.id === base.id);
-    setPopoverTab(multi ? "pairs" : "tone");
-    setPickerFolded(true);
-    resetAttempts();
-    if (multi) {
-      setCombo(base.tones);
-      setTone(null);
-    } else {
-      setTone(base.tone);
-      setCombo(null);
-    }
-    if (hit) {
-      setSelectedWord(hit);
-      setLockedFocus(null);
-    } else {
-      setSelectedWord(null);
-      // The banner is the prompt; the upgrade modal opens only from its button.
-      setLockedFocus(base);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusWordId, tierKnown, tier, words, listWords, pairWords, selectedLevels]);
-
   /** Bumped on every word tap, so a slow clip load cannot play over a newer tap. */
   const tapSeqRef = useRef(0);
 
@@ -1326,27 +1245,6 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked, focu
           Both markups always render; App.css's `min-width: 720px` query is
           what picks one. */}
       <div className="visualiser-body">
-        {lockedFocus && (
-          <div className="vis-locked-word" role="status">
-            <span className="vis-locked-word-hanzi" lang="zh-Hant-TW">
-              {lockedFocus.hanzi}
-            </span>
-            <span className="vis-locked-word-text">
-              <strong>{lockedFocus.pinyin}</strong>{" "}
-              {tier === "guest"
-                ? "is locked. Create a free account to practise it with its recording."
-                : "is in the full word list."}
-            </span>
-            <button type="button" className="vis-locked-word-cta" onClick={() =>
-                tier === "guest" && onCreateAccount ? onCreateAccount() : showLocked("visualiser-word-link")
-              }>
-              {tier === "guest" ? "Create free account" : "Unlock it"}
-            </button>
-            <button type="button" className="vis-locked-word-close" aria-label="Dismiss" onClick={() => setLockedFocus(null)}>
-              ×
-            </button>
-          </div>
-        )}
         <div className="vis-top-bar">
           {muteButton}
           <div className="vis-readouts">

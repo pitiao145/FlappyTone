@@ -148,4 +148,4 @@ Merged/dropped: /say index #1–#2 merged into sorry (same 對不起 error); tem
 - Check script: now reads CC-CEDICT "also pr. [...]" variants, so 拜拜 bāi bāi passes (0 mismatches). The earlier "matched the wrong entry" diagnosis was wrong: all entries were kept, the variant only lives in the definition.
 - Not changed: #12 headline pinyin "duì bù qǐ" — it must equal the catalog row `duibuqi403`, which labels the careful recording. Changing it is a catalog data change (ask first).
 - Hello: the whole-word 你好 clip (textbook take recorded) gets added later; lines 159/163/206 stay until then.
-- Left in the app: `?word=` deep link + `LockedWordView` no longer have a site entry point; remove or reuse later.
+- The app-side `?word=` deep link + `LockedWordView` were removed afterwards (no site entry point).
