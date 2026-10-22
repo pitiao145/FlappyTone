@@ -26,7 +26,7 @@ game does something, the game does it today.
 
 Three runtime dependencies total: `react`, `react-dom`, `pitchy`. (`@vercel/blob`
 was removed in Task 13, Sep 2026, along with the rest of this doc's now-dated
-"no accounts, no database" framing — see CLAUDE.md for the current picture.)
+"no accounts, no database" framing — see CLAUDE.md (vision) and docs/ARCHITECTURE.md for the current picture.)
 
 ---
 

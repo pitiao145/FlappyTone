@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { initAnalytics, track, trackCalibration, trackInAppBrowser, trackSpeechStyle } from "../analytics/client";
+import { initAnalytics, track, trackCalibration, trackFirstSeoTouch, trackInAppBrowser, trackSpeechStyle } from "../analytics/client";
+import { seoSource } from "../site/pageAnalytics.ts";
 import { detectInAppBrowser } from "../lib/inAppBrowser";
 import { InAppBrowserPrompt } from "../ui/InAppBrowserPrompt";
 import { useTier } from "../data/tier.ts";
@@ -1008,7 +1009,17 @@ export default function GameApp() {
     } catch {
       /* no window (tests) */
     }
-    track(isShareRef ? { type: "landed", ref: "share" } : { type: "landed" });
+    // `?src=` — the route-table page whose CTA sent the player here (see
+    // `appLink.ts`). Validated against the table, recorded once as a
+    // first-touch person property and on `landed`, then stripped below.
+    // Like `?intent=`, it never starts anything.
+    const seo = seoSource(typeof window === "undefined" ? "" : window.location.search);
+    if (seo) trackFirstSeoTouch(seo.path, seo.angle);
+    track({
+      type: "landed",
+      ...(isShareRef ? { ref: "share" as const } : {}),
+      ...(seo ? { seoPage: seo.path, seoAngle: seo.angle } : {}),
+    });
     // In-app browsers (Instagram/TikTok/Facebook): once per session, nothing
     // at all for a normal browser.
     try {
@@ -1023,7 +1034,7 @@ export default function GameApp() {
     if (challengeScoreState != null) {
       track({ type: "challenge_landed", target: challengeScoreState });
     }
-    // Strip `c`/`n`/`ref`/`openExternalBrowser` (already captured above — the
+    // Strip `c`/`n`/`ref`/`src`/`openExternalBrowser` (already captured above — the
     // last is only ever read by LINE's own WebView, see share.ts's
     // challengeUrl) so a refresh mid-session doesn't re-trigger the "beat X"
     // banner or double-count `landed`'s ref.
@@ -1033,8 +1044,12 @@ export default function GameApp() {
         params.has("c") ||
         params.has("n") ||
         params.has("ref") ||
+        params.has("src") ||
+        params.has("word") ||
         params.has("openExternalBrowser")
       ) {
+        params.delete("src");
+        params.delete("word");
         params.delete("c");
         params.delete("n");
         params.delete("ref");

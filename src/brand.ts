@@ -298,6 +298,7 @@ export const brand = {
   footer: {
     blurb: "A tiny voice-controlled game for practicing Mandarin tones.",
     builtByPrefix: "Built while 🏄 by",
+    learnHeading: "Learn & tools",
     connectHeading: "Connect",
     connect: [
       { href: "https://pierrebuilds.dev", label: "pierrebuilds.dev", external: true, icon: "web" },
@@ -336,19 +337,16 @@ export const brand = {
       id: "real-speech",
       title: "Based on real speech, not the textbook",
       navLabel: "Real speech",
-      inNav: true,
     },
     {
       id: "tone-pairs",
       title: "Real two-syllable words, not just single tones",
       navLabel: "Tone pairs",
-      inNav: true,
     },
     {
       id: "leaderboard",
       title: "A weekly leaderboard, reset every Monday",
       navLabel: "Leaderboard",
-      inNav: true,
     },
     { id: "coming-soon", title: "Get notified" },
     { id: "pricing", title: "Free to start, one-time to go further", navLabel: "Pricing", inNav: true },

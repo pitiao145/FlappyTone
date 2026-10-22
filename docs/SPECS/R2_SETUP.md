@@ -5,7 +5,7 @@ single **public** R2 bucket for `docs/SPECS/flappytone-SPEC-r2-clip-storage.md`
 (a spec that was never implemented — no code references it). The clip storage
 that actually shipped is `docs/SPECS/flappytone-SPEC-clip-catalog-r2.md`'s
 model instead: **two private buckets**, read only through a Cloudflare Worker
-that mints short-lived play tickets — see CLAUDE.md's "The clip catalog and
+that mints short-lived play tickets — see ARCHITECTURE.md's "The clip catalog and
 its Worker" and `docs/DECISIONS.md`'s "Clip catalog: DB + R2 migration"
 entry for why (guests get clips too; protection is defence-in-depth, not a
 public/private wall alone). Steps 1–4 below are **done** (Task 5/6/8 of the
@@ -62,7 +62,7 @@ Task 7 and again after Task 11) and never confirmed done. This is why the
 migration's own precondition for retiring the old `public/ref/*.wav` path (a
 full run played off R2 in production) hasn't been met yet, and why the
 booth shows "Recording isn't configured" in a deployed build until it's set.
-See CLAUDE.md's "clip catalog" section and DECISIONS.md's pending-Task-13
+See ARCHITECTURE.md's "clip catalog" section and DECISIONS.md's pending-Task-13
 checklist.
 
 ## 5. Rate limit — NOT DONE
@@ -80,7 +80,7 @@ Security → WAF → Rate limiting rules → Create:
   inherited gap, not one the voice-roster work introduced; it predates the
   passcode→speaker change and is unaffected by it.
 
-This is the last layer of the defence-in-depth list CLAUDE.md describes
+This is the last layer of the defence-in-depth list ARCHITECTURE.md describes
 (private buckets, no listing, one clip per request, short-lived IP-bound
 tickets, rate limit). The first four are live; this one is a dashboard step
 only Pierre can do. Re-run the manual probe in `docs/TESTING.md` §8 once it
@@ -89,7 +89,7 @@ exists.
 ## 6. After the old path is retired (Task 13, not yet done)
 
 Once `public/ref/*.wav`, the manifest, and the Vercel upload routes are
-actually deleted (see CLAUDE.md's pending-Task-13 note): Vercel → Storage →
+actually deleted (see ARCHITECTURE.md's pending-Task-13 note): Vercel → Storage →
 delete the Blob store; Vercel → Settings → Environment Variables → remove
 `BLOB_READ_WRITE_TOKEN` and the booth's Vercel-side `RECORD_PASSCODE` (the
 Worker has its own copy as a `wrangler secret`, independent of Vercel's).

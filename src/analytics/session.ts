@@ -70,6 +70,32 @@ export type MicFailureReason =
   | "no-audioworklet"
   | "unknown";
 
+/**
+ * Properties a route-table page adds to its own `$pageview` (global tier).
+ * Closed and reviewed like `AnalyticsEvent`: the page's own metadata from
+ * `src/site/routes.ts`, never anything typed.
+ */
+export interface SeoPageViewProps {
+  page_type: "landing" | "hub" | "tool" | "word" | "teacher" | "legal";
+  lang: "en" | "zh-tw";
+  angle: "learner" | "teacher" | "general";
+  page_path: string;
+}
+
+/** The /say/* word pages' slugs (`src/site/sayWords.ts`), restated as a closed set. */
+export const SAY_SLUGS = [
+  "thank-you",
+  "hello",
+  "goodbye",
+  "please",
+  "sorry",
+  "youre-welcome",
+  "no-problem",
+  "yuan",
+] as const;
+export type SaySlug = (typeof SAY_SLUGS)[number];
+export type WordPageAction = "listen" | "see_it" | "practise_tone";
+
 export type AnalyticsEvent =
   /**
    * `ref` is the closed set of `?ref=` values this app itself ever generates
@@ -78,7 +104,17 @@ export type AnalyticsEvent =
    * PostHog's own `$current_url`/`$referrer` are stripped from every
    * gameplay event, `landed` included, by `before_send`'s allowlist.
    */
-  | { type: "landed"; ref?: "share" }
+  | {
+      type: "landed";
+      ref?: "share";
+      /**
+       * The route-table page (`src/site/routes.ts`) whose CTA brought the
+       * player here, from `?src=`. Validated against the table, so always one
+       * of its paths. Absent on a direct visit.
+       */
+      seoPage?: string;
+      seoAngle?: "learner" | "teacher" | "general";
+    }
   | { type: "mic"; ok: true }
   | { type: "mic"; ok: false; reason: MicFailureReason }
   | { type: "calib_step"; step: CalibStep }
@@ -252,6 +288,46 @@ export type AnalyticsEvent =
       platform: "ios" | "android" | "other";
       action: "detected" | "shown" | "dismissed" | "open_external_clicked" | "copy_link_clicked";
     }
+  /**
+   * A route-table tool page was used (`src/site/pages/ToneMarks.tsx`): at most
+   * once per page load. Never carries the typed text — only which tool and
+   * which way it converted.
+   */
+  | { type: "tool_used"; tool: "tone-marks"; direction: "to-marks" | "to-numbers" }
+  /**
+   * The public tone visualizer (`src/site/checker/`): each action at most once per
+   * page load. No accuracy, no pitch, no word, nothing typed.
+   */
+  | {
+      type: "tool_used";
+      tool: "tone-visualizer";
+      action: "started" | "mic_denied" | "calibrated" | "first_attempt";
+    }
+  /**
+   * A /say/<slug> word page (`src/site/pages/SayWord.tsx`): each action at
+   * most once per page load. The slug is the page's own, from a closed set.
+   */
+  | { type: "word_page_action"; slug: SaySlug; action: WordPageAction }
+  /** The tone visualizer's visit, once on `pagehide`: counts only. */
+  | { type: "tool_summary"; tool: "tone-visualizer"; attempts: number; targets: number }
+  /**
+   * The tone listening test (`src/site/pages/ToneTest.tsx`): `started` and
+   * `round_done` once per round, the summary once on `pagehide`. Counts and a
+   * closed style only, never a word.
+   */
+  | { type: "tool_used"; tool: "tone-test"; action: "started" | "round_done" }
+  | {
+      type: "tool_summary";
+      tool: "tone-test";
+      rounds: number;
+      cards: number;
+      correct: number;
+      t1Correct: number;
+      t2Correct: number;
+      t3Correct: number;
+      t4Correct: number;
+      style: "standard" | "spoken" | "mixed";
+    }
   /** FeedbackWidget.tsx's submit, once it resolves ok. Never carries the free-text message — screen/rating/tier only. */
   | { type: "feedback_submitted"; screen: string; rating: number | null; tier: string };
 
@@ -352,6 +428,9 @@ export function eventTier(type: AnalyticsEvent["type"]): AnalyticsTier {
     case "feedback_submitted":
     case "update_banner":
     case "inapp_prompt":
+    case "tool_used":
+    case "tool_summary":
+    case "word_page_action":
       return "global";
   }
 }

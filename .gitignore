@@ -47,6 +47,7 @@ docs/
 .worktrees/
 .claude/*
 !.claude/skills/
+!.claude/agents/
 
 # Wrangler's local dev/build state for the clips Worker.
 workers/clips/.wrangler/

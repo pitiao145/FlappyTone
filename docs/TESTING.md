@@ -267,7 +267,7 @@ pass against `https://clips.flappytone.com`:
 - [ ] `POST /token` with a signed-in free account's JWT ⇒ `tier: "free"`; with
       a Pro account's ⇒ `tier: "pro"`.
 - [ ] `GET /clip/:id` with a guest ticket on a `min_tier='free'` word ⇒ `200
-      audio/wav`. (Every word is `min_tier='free'` today — see CLAUDE.md's
+      audio/wav`. (Every word is `min_tier='free'` today — see ARCHITECTURE.md's
       "clip catalog" section — so there is currently no live word to probe
       the 403 branch with; the Worker's own unit tests cover that branch
       against a mocked `pro` row instead.)

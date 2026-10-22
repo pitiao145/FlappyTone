@@ -16,6 +16,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Landing } from "../ui/Landing.tsx";
 import { LegalPage } from "../ui/LegalPage.tsx";
 import { termsOfServiceMd, privacyPolicyMd } from "../ui/legalContent.ts";
+import { SITE_PAGES, SitePage } from "../site/pages.tsx";
+import { NotFoundPage } from "../site/NotFound.tsx";
+import { routeFor } from "../site/routes.ts";
+import { breadcrumbJsonLd, breadcrumbsFor } from "../site/links.ts";
 
 const noop = () => {};
 
@@ -29,11 +33,11 @@ const noop = () => {};
 export function renderLanding(): string {
   return renderToStaticMarkup(
     <div className="app">
-      <div className="app-main">
+      <main className="app-main">
         <div className="frame">
           <Landing onPlay={noop} onVisualiser={noop} />
         </div>
-      </div>
+      </main>
     </div>,
   );
 }
@@ -45,11 +49,11 @@ export function renderLanding(): string {
 export function renderTerms(): string {
   return renderToStaticMarkup(
     <div className="app">
-      <div className="app-main">
+      <main className="app-main">
         <div className="frame">
           <LegalPage markdown={termsOfServiceMd} />
         </div>
-      </div>
+      </main>
     </div>,
   );
 }
@@ -57,11 +61,35 @@ export function renderTerms(): string {
 export function renderPrivacy(): string {
   return renderToStaticMarkup(
     <div className="app">
-      <div className="app-main">
+      <main className="app-main">
         <div className="frame">
           <LegalPage markdown={privacyPolicyMd} />
         </div>
-      </div>
+      </main>
     </div>,
   );
+}
+
+/**
+ * Every `shell: "site"` route in `src/site/routes.ts`. `SitePage` holds the
+ * wrappers, and `src/site/main.tsx` renders the same component on the client,
+ * so the identity rule above holds by construction.
+ */
+export function renderSitePage(path: string): string {
+  return renderToStaticMarkup(<SitePage path={path} />);
+}
+
+/** The route's schema.org objects (`SitePageDef.jsonLd`), or none. */
+export function siteJsonLd(path: string): object[] {
+  const route = routeFor(path);
+  const def = SITE_PAGES[path];
+  const own = route && def?.jsonLd ? def.jsonLd(route) : [];
+  // The breadcrumb trail is generated here, once, from the same data as the
+  // visible `<Breadcrumbs>`, so a page never declares its own.
+  return [...own, ...breadcrumbJsonLd(breadcrumbsFor(path))];
+}
+
+/** The body of `dist/404.html`. */
+export function renderNotFound(): string {
+  return renderToStaticMarkup(<NotFoundPage />);
 }

@@ -37,7 +37,7 @@ devDependency for the upload script only (never bundled client-side, so it
 doesn't touch client payload size). `aws4fetch` is a much lighter,
 zero-dependency alternative if Pierre would rather not pull in the full AWS
 SDK for one script. Either way: this project has an explicit "ask before
-adding a dependency" rule in CLAUDE.md's working-style section — ask before
+adding a dependency" rule in ARCHITECTURE.md's working-style section — ask before
 installing, don't just add it.
 
 ## 2. Separate cutting from publishing
@@ -46,7 +46,7 @@ Today `make-clips.ts` cuts and writes in one pass. Auto-uploading straight to
 a public production bucket on every local run would skip the human-review step
 the rest of this pipeline depends on — `clipReview.ts` is explicitly designed
 to flag, never block, on the assumption a person reads the report before
-trusting a batch (see CLAUDE.md's rule 3 on `clipReview.ts`). Keep that rhythm:
+trusting a batch (see ARCHITECTURE.md's rule 3 on `clipReview.ts`). Keep that rhythm:
 
 - `make-clips.ts` is unchanged — keeps writing locally to `outDir =
   ${root}public/ref` exactly as it does now (`writeFileSync` calls currently

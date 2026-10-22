@@ -5,7 +5,7 @@
 (`flappytone-SPEC-pro-run-history.md`) depend on this one.
 **Branch:** `feat/tone-accuracy` (already holds the `make-tone-averages` fix).
 **Suggested model:** Opus, high effort — this is signal-shape judgment work.
-Read CLAUDE.md's Testing section first: you cannot hear, verify with fixtures.
+Read ARCHITECTURE.md's Testing section first: you cannot hear, verify with fixtures.
 
 ## 1. Why
 

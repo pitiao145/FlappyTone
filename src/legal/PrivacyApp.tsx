@@ -6,11 +6,11 @@ import "../App.css";
 export default function PrivacyApp() {
   return (
     <div className="app">
-      <div className="app-main">
+      <main className="app-main">
         <div className="frame">
           <LegalPage markdown={privacyPolicyMd} />
         </div>
-      </div>
+      </main>
     </div>
   );
 }

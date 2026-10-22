@@ -68,6 +68,7 @@ import {
   eventTier,
   roundCalibration,
   type AnalyticsEvent,
+  type SeoPageViewProps,
   type SessionCalibration,
 } from "./session.ts";
 
@@ -160,6 +161,9 @@ export const APP_EVENTS = new Set<string>([
   "feedback_submitted",
   "update_banner",
   "inapp_prompt",
+  "tool_used",
+  "tool_summary",
+  "word_page_action",
 ]);
 
 /** The only `$`-prefixed properties allowed through on a gameplay event. */
@@ -194,7 +198,24 @@ export function sanitizeGameProperties(
   return out;
 }
 
-const beforeSend: BeforeSendFn = (cr: CaptureResult | null) => {
+/**
+ * Set by a route-table page's entry (`initPostHog`'s second argument): merged
+ * into that page load's `$pageview` only — not registered as a super
+ * property, which would persist and stamp every later event, /app included.
+ */
+let pageViewProps: SeoPageViewProps | undefined;
+
+/** Merges a route-table page's props into its `$pageview`; other events untouched. Pure, for tests. */
+export function withPageViewProps(
+  cr: CaptureResult,
+  props: SeoPageViewProps | undefined,
+): CaptureResult {
+  if (cr.event !== "$pageview" || !props) return cr;
+  return { ...cr, properties: { ...cr.properties, ...props } };
+}
+
+const beforeSend: BeforeSendFn = (input: CaptureResult | null) => {
+  const cr = input && withPageViewProps(input, pageViewProps);
   if (!cr || !APP_EVENTS.has(cr.event)) return cr;
   return { ...cr, properties: sanitizeGameProperties(cr.properties) };
 };
@@ -214,10 +235,11 @@ function runOrQueue(fn: () => void): void {
  *
  * Never throws — an analytics failure must not break a run (CLAUDE.md).
  */
-export function initPostHog(consent: boolean): void {
+export function initPostHog(consent: boolean, pageProps?: SeoPageViewProps): void {
   try {
     if (started || !enabled() || typeof window === "undefined") return;
     started = true;
+    pageViewProps = pageProps;
     gameplayConsent = consent;
     void import("posthog-js")
       .then(({ default: posthog }) => {
@@ -296,7 +318,7 @@ export function captureGameEvent(event: AnalyticsEvent): void {
   if (eventTier(event.type) === "gameplay" && !gameplayConsent) return;
   const { type, ...rest } = event;
   capturePostHogEvent(type, rest as Record<string, string | number | boolean>, {
-    instant: type === "run_end",
+    instant: type === "run_end" || type === "tool_summary",
   });
 }
 
@@ -348,6 +370,21 @@ export function setSpeechStyleProperty(style: SpeechStyle): void {
     try {
       ph?.register({ speech_style: style });
       ph?.setPersonProperties({ speech_style: style });
+    } catch {
+      // ignore
+    }
+  });
+}
+
+/**
+ * First-touch SEO attribution: the route-table page whose CTA first brought
+ * this person into /app. `$set_once`, so a later visit from another page never
+ * overwrites it. Global tier; values come from the route table only.
+ */
+export function setFirstSeoTouch(page: string, angle: string): void {
+  runOrQueue(() => {
+    try {
+      ph?.setPersonProperties(undefined, { first_seo_page: page, first_seo_angle: angle });
     } catch {
       // ignore
     }

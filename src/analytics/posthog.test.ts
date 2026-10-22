@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sanitizeGameProperties } from "./posthog.ts";
+import { sanitizeGameProperties, withPageViewProps } from "./posthog.ts";
 
 describe("sanitizeGameProperties", () => {
   it("passes through our own event fields untouched", () => {
@@ -53,5 +53,22 @@ describe("sanitizeGameProperties", () => {
         $current_url: "https://flappytone.example/game",
       }),
     ).toEqual({ tone: 4, outcome: "perfect", $geoip_country_code: "TW" });
+  });
+});
+
+describe("withPageViewProps", () => {
+  const props = { page_type: "hub", lang: "en", angle: "learner", page_path: "/chinese-tones" } as const;
+  const cr = (event: string) => ({ uuid: "u", event, properties: { $current_url: "x" } });
+
+  it("adds the page's props to its $pageview", () => {
+    expect(withPageViewProps(cr("$pageview"), props).properties).toEqual({
+      $current_url: "x",
+      ...props,
+    });
+  });
+
+  it("leaves every other event, and pages without props, alone", () => {
+    expect(withPageViewProps(cr("landed"), props).properties).toEqual({ $current_url: "x" });
+    expect(withPageViewProps(cr("$pageview"), undefined).properties).toEqual({ $current_url: "x" });
   });
 });

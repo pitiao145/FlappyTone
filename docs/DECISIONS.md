@@ -1,7 +1,8 @@
 # Design decisions
 
 A log of *why*, for decisions whose reasoning would otherwise be lost. CLAUDE.md
-states the rules that follow from these; this file is where you look when a
+(hard rules) and ARCHITECTURE.md (how the system works) state the rules that
+follow from these; this file is where you look when a
 rule seems arbitrary and you want the incident or measurement behind it.
 Newest first within each section. Don't add an entry for something that's
 just "what the code does" — only for a decision that overturned an earlier
@@ -1250,6 +1251,94 @@ FlappyTone-specific (project id 426310, "Default project"). Its
 FlappyTone specifically — check the current value with `project-get` before
 assuming either way, and raise any change with Pierre first since it's
 project-wide.
+
+## Docs split: vision, hard rules, architecture (21 Oct 2026)
+
+CLAUDE.md had grown to ~8,600 words and stated product scope as permanent law ("Out of scope", "Non-goals", "the product teaches tones by saying them"). On 20–21 Oct that made Claude argue against TONEder as an app tab, from the old "listening drills out of scope" line. Pierre's direction: FlappyTone makes tones less boring, abstract and hard through creative play; the flying game and TONEder are two expressions of it; learners now, teachers being explored; the product changes fast. So:
+
+- CLAUDE.md is now short: the vision, how to read the rules, 15 hard engineering rules, game rules per game, commands, testing, working style, and a "not built yet" list that is explicitly not a limit. New creative ideas get one honest opinion, then help.
+- The detail moved word for word to `docs/ARCHITECTURE.md` (stack, accounts and stats, clip pipeline, site pages, analytics, known limitations). Nothing was deleted.
+- `docs/PRD.md` is now the flying game's spec only.
+- The tone classifier's floor rule is a measured current setting, not a law; "never score unclear signal wrong" and "score vs tone accuracy" stay as rules.
+
+Older entries keep their wording as history: where one says "out of scope" or "CLAUDE.md's X section", read "was not the focus then" and "ARCHITECTURE.md's X section".
+
+## Tone listening test: one perception drill, public page only (20 Oct 2026)
+
+Listening drills were out of scope: the product teaches tones by saying
+them. Pierre lifted that for one public SEO tool, `/tools/tone-test`
+("chinese tones test", "can't hear chinese tones"), because a no-mic quiz is
+an easy first step and a shareable link. The game gets no listening mode.
+
+- **Swipe, not buttons (Pierre).** A card with the hidden word, four tone
+  corners placed like the marks (the two that end high on top). Release past
+  30% of the way to a corner, or flick; a drag too straight up/down/sideways
+  picks nothing. Taps on a corner and keys 1–4 also answer.
+- **Next is a tap, never automatic.** Each card's clip then starts inside a
+  tap, so iOS never blocks it; `wordAudio.ts` keeps one shared `<audio>`,
+  unlocked by a silent play inside the Start tap, for the fetch gap.
+- **Words are copied, not the catalog.** 40 single-syllable words, all
+  guest-playable and recorded in both styles, so no DB or list change was
+  needed. A clip that fails is replaced by a spare of the same tone.
+- **Standard / Spoken** = textbook / natural recordings. Spoken is harder;
+  the score is one number either way.
+
+## Public tone visualizer: a separate page, reference shapes, a quick calibration (19 Oct 2026)
+
+`/tools/tone-visualizer` (SEO S3) is the in-app visualiser's engine on a public,
+no-signup page. Decisions (Pierre's, plus what the build forced):
+
+- **Separate page, same engine, no fork.** Sending a search visitor into /app
+  costs a navigation, a calibration funnel and a guest visualiser cap of 0
+  words. Forking `Visualiser.tsx` would make two engines drift. The engine
+  pieces were already standalone modules, so `src/site/checker/engine.ts`
+  composes them; nothing was extracted and the Visualiser is unchanged.
+- **Reference shapes, not words (Pierre).** A first version had 24 words
+  with audio, more than a free account's visualiser gives (5 per tone), so
+  signing up would have given less. Now the page practises tones against two
+  lines the visitor picks: our speaker's natural-speed average, or the
+  textbook Chao letters stretched to the same length. That shows the product's
+  core idea (textbook vs real speech) and leaves words and audio to the app.
+  Two sandhi pairs (3+3, 3+4) are teasers. `TIER_LIMITS` is untouched.
+- **Scored against the line you pick.** Against the textbook line the T2/T3
+  cue is off (`t23Cue = false`): it measures likeness to our speaker, and with
+  it a perfect textbook 214 scored 0.84.
+- **A ~10 s calibration (one mā, one mǎ), not the app's flow.** The board's
+  halves come from the same anchors and function as the real calibration
+  (`computeRangeHalvesFromExtremes`: T1 level up, T3 floor down); the centre,
+  which the app measures from a talk step, is the geometric midpoint of the two
+  medians. It is stored in its own key (`flappytone.quickcal.v1`) so a rough
+  board never replaces a real one in /app. The game's calibration is used
+  when the device has one.
+- **The mic chunk is lazy, and the rule says so by name.** "Three entries"
+  rule 1 allowed no `getUserMedia` in any site chunk. The checker needs it, so
+  the exception is one module loaded by dynamic `import()`, and
+  `vite.config.ts` gives the mic code a stable chunk (`mic-*.js`) so
+  `npm run check:mic-chunks` can prove no page but /app and /record loads it up
+  front. The import starts on pointerdown; if it is not ready by the click, the
+  page asks for one more tap rather than opening the mic after an `await`
+  (iOS loses the gesture).
+
+## SEO pages: a route table, not one Vite entry per page (19 Oct 2026)
+
+The SEO plan adds many indexable pages (a hub, tools, word pages, a
+Traditional Chinese set under `/zh-tw/`). The existing pattern — one HTML file
++ one `rollupOptions.input` + one `vercel.json` rewrite + one
+`PRERENDER_ENTRIES` row + a hand-edited sitemap per page — means five edits
+per page and five places to drift (the sitemap and hreflang worst of all). So
+every indexable page is one record in `src/site/routes.ts`, and prerender,
+sitemap, llms.txt, head tags, dev URLs, page analytics and `?src=` all read it.
+Content pages share one HTML shell and one client entry, copied to
+`dist/<path>/index.html` per route; the folders need no Vercel rewrite. No
+router or SSG dependency: the copy loop is ~30 lines in `prerender.ts`.
+
+`/` and the legal pages stay on their own entries (`shell: "own"`): their
+output was required to stay byte-identical, and moving them onto the shared
+shell would change their head, chunking and URLs for no gain. Their head tags
+are still hand-written in their HTML; `routes.test.ts` fails if they drift from
+the table. The legal pages still have no PostHog (they had none before).
+`?src=` is accepted only for a path in the table, so `first_seo_page` is a
+closed set, never a raw URL.
 
 ## Landing/game split (Aug 2026)
 

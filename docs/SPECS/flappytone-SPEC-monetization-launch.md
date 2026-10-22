@@ -123,7 +123,7 @@ things that are polish.
   `https://flappytone.com/api/webhook-ls` and its own signing secret. A
   test-mode secret will not verify live payloads, and the failure looks like
   the webhook silently doing nothing.
-- **Supabase dashboard settings** (settings, not code — see CLAUDE.md's
+- **Supabase dashboard settings** (settings, not code — see ARCHITECTURE.md's
   "Before accounts go live"):
   - **Custom SMTP.** Mandatory. The built-in sender allows roughly two emails
     an hour project-wide and is documented as unfit for production. Password

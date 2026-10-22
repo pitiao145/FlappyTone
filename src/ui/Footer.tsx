@@ -1,4 +1,5 @@
 import { brand } from "../brand.ts";
+import { LEARN_LINKS } from "../site/links.ts";
 import { CoffeeIcon, MailIcon, WebIcon, XIcon } from "./icons.tsx";
 
 const CONNECT_ICONS = {
@@ -32,6 +33,19 @@ export function Footer() {
             </a>
           </p>
         </div>
+
+        <nav className="footer-connect footer-learn" aria-label={brand.footer.learnHeading}>
+          <h3>{brand.footer.learnHeading}</h3>
+          <ul>
+            {LEARN_LINKS.map((link) => (
+              <li key={link.href}>
+                <a href={link.href} className="footer-link footer-learn-link">
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
 
         <div className="footer-connect">
           <h3>{brand.footer.connectHeading}</h3>
