@@ -264,6 +264,29 @@ async function loadCatalog(forStyle: "textbook" | "natural"): Promise<Row[]> {
 
 const catalog = await loadCatalog(style);
 
+/**
+ * `{session}/{id}` keys that more than one style recorded. The booth keeps one
+ * session id across a resume, so a natural pass can land in the session folder
+ * of an earlier textbook pass with the same word ids. The local cache path
+ * below has no style in it, so for these keys it would hand one style's take
+ * to the other (2026-10-23: six natural takes would have published the cached
+ * textbook audio). Those keys are cached under their raw_key instead.
+ */
+const sharedTakeKeys = await (async () => {
+  const { data, error } = await supabase
+    .from("word_clips")
+    .select("word_id,recorded_session")
+    .eq("speaker_id", speakerId)
+    .not("recorded_session", "is", null);
+  if (error) throw new Error(`word_clips session select failed: ${error.message}`);
+  const counts = new Map<string, number>();
+  for (const r of data ?? []) {
+    const k = `${r.recorded_session}/${r.word_id}`;
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  return new Set([...counts].filter(([, n]) => n > 1).map(([k]) => k));
+})();
+
 /** Everything with audio in the raw bucket, whatever its status. */
 function hasTake(row: Row): boolean {
   return Boolean(row.raw_key && row.recorded_session);
@@ -321,6 +344,9 @@ const cohortOnly = toCut.length - selected.length;
  * is minted per booth sitting, so the two layouts cannot shadow each other.
  */
 function localPath(row: Row): string {
+  if (sharedTakeKeys.has(`${row.recorded_session}/${row.id}`) && row.raw_key) {
+    return `${recordingsDir}/${row.raw_key.replace(/^raw\//, "")}`;
+  }
   const legacy = `${recordingsDir}/${row.recorded_session}/${row.id}.wav`;
   if (existsSync(legacy)) return legacy;
   return `${recordingsDir}/${speakerId}/${row.recorded_session}/${row.id}.wav`;
@@ -453,7 +479,7 @@ async function cutRows(toCut: Row[]): Promise<{ cuts: Cut[]; failed: string[]; r
     // fixtures/recordings/ is the local evidence cache, gitignored and
     // re-pullable: the raw take is what you go back to when a clip comes out
     // wrong, so it stays on disk rather than being streamed and forgotten.
-    mkdirSync(`${recordingsDir}/${speakerId}/${row.recorded_session}`, { recursive: true });
+    mkdirSync(localPath(row).replace(/\/[^/]+$/, ""), { recursive: true });
     console.log(`pulling ${row.raw_key}`);
     r2Get("flappytone-raw", row.raw_key!, localPath(row));
   }
