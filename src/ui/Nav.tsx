@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { brand } from "../brand.ts";
+import { LEARN_LINKS } from "../site/links.ts";
 
 interface Props {
   /**
@@ -52,6 +53,27 @@ export function Nav({ onPlay, linkBase = "", playHref }: Props) {
   const navRef = useRef<HTMLElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const navMenuId = useId();
+  const learnRef = useRef<HTMLDetailsElement>(null);
+
+  // The desktop "Learn & tools" dropdown is a plain <details>, so it works
+  // without JS; this only closes it on an outside click or Escape.
+  useEffect(() => {
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      const el = learnRef.current;
+      if (!el?.open) return;
+      if (e instanceof KeyboardEvent) {
+        if (e.key === "Escape") el.open = false;
+      } else if (!el.contains(e.target as Node)) {
+        el.open = false;
+      }
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, []);
 
   useEffect(() => {
     if (!navMenuOpen) return;
@@ -107,6 +129,16 @@ export function Nav({ onPlay, linkBase = "", playHref }: Props) {
         </div>
 
         <div className="nav-actions">
+          <details className="nav-learn" ref={learnRef}>
+            <summary>Learn &amp; tools</summary>
+            <ul className="nav-learn-menu">
+              {LEARN_LINKS.map((l) => (
+                <li key={l.href}>
+                  <a href={l.href}>{l.label}</a>
+                </li>
+              ))}
+            </ul>
+          </details>
           {playHref && (
             <div className="nav-cta">
               <div className="nav-cta-shady">
@@ -153,6 +185,14 @@ export function Nav({ onPlay, linkBase = "", playHref }: Props) {
               <div key={s.id} className="nav-shady">
                 <a className="nav-shady-btn" href={`${linkBase}#${s.id}`} onClick={closeNavMenu}>
                   {s.navLabel ?? s.title}
+                </a>
+              </div>
+            ))}
+            <p className="nav-mobile-heading">Learn &amp; tools</p>
+            {LEARN_LINKS.map((l) => (
+              <div key={l.href} className="nav-shady">
+                <a className="nav-shady-btn" href={l.href} onClick={closeNavMenu}>
+                  {l.label}
                 </a>
               </div>
             ))}
