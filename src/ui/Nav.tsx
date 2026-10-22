@@ -126,9 +126,6 @@ export function Nav({ onPlay, linkBase = "", playHref }: Props) {
               {s.navLabel ?? s.title}
             </a>
           ))}
-        </div>
-
-        <div className="nav-actions">
           <details className="nav-learn" ref={learnRef}>
             <summary>Learn &amp; tools</summary>
             <ul className="nav-learn-menu">
@@ -139,6 +136,9 @@ export function Nav({ onPlay, linkBase = "", playHref }: Props) {
               ))}
             </ul>
           </details>
+        </div>
+
+        <div className="nav-actions">
           {playHref && (
             <div className="nav-cta">
               <div className="nav-cta-shady">
@@ -182,20 +182,22 @@ export function Nav({ onPlay, linkBase = "", playHref }: Props) {
         createPortal(
           <div className="nav-mobile-menu" id={navMenuId} ref={mobileMenuRef}>
             {items.map((s) => (
-              <div key={s.id} className="nav-shady">
-                <a className="nav-shady-btn" href={`${linkBase}#${s.id}`} onClick={closeNavMenu}>
-                  {s.navLabel ?? s.title}
-                </a>
-              </div>
+              <a key={s.id} className="nav-drawer-link" href={`${linkBase}#${s.id}`} onClick={closeNavMenu}>
+                {s.navLabel ?? s.title}
+              </a>
             ))}
-            <p className="nav-mobile-heading">Learn &amp; tools</p>
-            {LEARN_LINKS.map((l) => (
-              <div key={l.href} className="nav-shady">
-                <a className="nav-shady-btn" href={l.href} onClick={closeNavMenu}>
-                  {l.label}
-                </a>
-              </div>
-            ))}
+            <details className="nav-drawer-group">
+              <summary className="nav-drawer-link">Learn &amp; tools</summary>
+              <ul>
+                {LEARN_LINKS.map((l) => (
+                  <li key={l.href}>
+                    <a href={l.href} onClick={closeNavMenu}>
+                      {l.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </details>
           </div>,
           document.body,
         )}

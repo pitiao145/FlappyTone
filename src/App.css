@@ -4227,9 +4227,8 @@
   transform: translateX(-50%);
   display: none;
   gap: var(--space-4);
-  overflow-x: auto;
-  scrollbar-width: none;
-  max-width: min(52vw, 600px);
+  align-items: center;
+  max-width: min(60vw, 680px);
   padding-inline: var(--space-2);
 }
 
@@ -4256,7 +4255,6 @@
 /* Desktop "Learn & tools" dropdown; below 901px the drawer lists the same links. */
 .nav-learn {
   position: relative;
-  display: none;
 }
 
 .nav-learn summary {
@@ -4265,7 +4263,6 @@
   color: var(--ink-muted);
   font-size: var(--text-sm);
   white-space: nowrap;
-  padding: 6px 4px;
 }
 
 .nav-learn summary::-webkit-details-marker {
@@ -4289,8 +4286,9 @@
 
 .nav-learn-menu {
   position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 50;
   min-width: 190px;
   margin: 0;
@@ -4316,13 +4314,74 @@
   background: color-mix(in srgb, var(--ink) 8%, transparent);
 }
 
-.nav-mobile-heading {
-  margin: var(--space-3) 0 0;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+/* Mobile drawer: a quiet list, not a stack of buttons. Learn & tools folds. */
+.nav-drawer-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 16px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  color: var(--ink);
+  font-family: var(--font-display, inherit);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.nav-drawer-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.nav-drawer-group summary {
+  list-style: none;
+}
+
+.nav-drawer-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.nav-drawer-group summary::after {
+  content: "";
+  width: 9px;
+  height: 9px;
+  margin-right: 4px;
+  border-right: 2px solid var(--ink-muted);
+  border-bottom: 2px solid var(--ink-muted);
+  transform: rotate(45deg);
+  transition: transform 0.18s ease;
+}
+
+.nav-drawer-group[open] summary::after {
+  transform: rotate(-135deg);
+}
+
+.nav-drawer-group ul {
+  margin: 0;
+  padding: 4px 0 8px 16px;
+  list-style: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+.nav-drawer-group li a {
+  display: block;
+  padding: 11px 0;
   color: var(--ink-muted);
+  font-size: var(--text-base);
+  text-decoration: none;
+}
+
+.nav-drawer-group li a:hover,
+.nav-drawer-group li a:focus-visible {
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-drawer-group summary::after {
+    transition: none;
+  }
 }
 
 .nav-actions {
@@ -4536,10 +4595,10 @@
   z-index: 100;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  padding: 88px var(--space-6) var(--space-6);
+  align-items: stretch;
+  justify-content: flex-start;
+  overflow-y: auto;
+  padding: 96px var(--space-6) var(--space-6);
   background: var(--surface-panel);
 }
 
