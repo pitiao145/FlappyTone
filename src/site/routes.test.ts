@@ -49,7 +49,7 @@ describe("generated files", () => {
   it("sitemap lists indexable routes only, with their hand-set lastmod", () => {
     const xml = sitemapXml();
     expect(xml).toContain(
-      "<loc>https://flappytone.com/</loc>\n    <lastmod>2026-08-07</lastmod>",
+      "<loc>https://flappytone.com/</loc>\n    <lastmod>2026-10-22</lastmod>",
     );
     expect(xml).toContain(
       "https://flappytone.com/privacy-policy</loc>\n    <lastmod>2026-09-08",
@@ -58,7 +58,7 @@ describe("generated files", () => {
       "https://flappytone.com/terms-of-service</loc>\n    <lastmod>2026-09-08",
     );
     expect(xml).toContain(
-      "https://flappytone.com/chinese-tones</loc>\n    <lastmod>2026-10-19",
+      "https://flappytone.com/chinese-tones</loc>\n    <lastmod>2026-10-22",
     );
     expect(xml).toContain("https://flappytone.com/tools/tone-marks</loc>");
     expect(llmsTxt()).toContain("https://flappytone.com/chinese-tones");

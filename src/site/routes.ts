@@ -62,7 +62,7 @@ const BASE_ROUTES: readonly SiteRoute[] = [
     title: "Practice Mandarin Tones With Your Voice — FlappyTone",
     description:
       "Steer a bird with your voice through corridors shaped like Mandarin tone marks. A browser-based tone contour trainer.",
-    lastmod: "2026-08-07",
+    lastmod: "2026-10-22",
     pageType: "landing",
     angle: "general",
     shell: "own",
@@ -99,7 +99,7 @@ const BASE_ROUTES: readonly SiteRoute[] = [
     title: "Chinese Tones: The 4 Mandarin Tones Explained",
     description:
       "The four Mandarin Chinese tones and the neutral tone, drawn from a native speaker's voice, with examples, sandhi rules and FAQs. Practise them out loud free.",
-    lastmod: "2026-10-19",
+    lastmod: "2026-10-22",
     pageType: "hub",
     angle: "learner",
     shell: "site",
@@ -111,7 +111,7 @@ const BASE_ROUTES: readonly SiteRoute[] = [
     title: "Pinyin Tone Marks Converter (ni3 → nǐ) — FlappyTone",
     description:
       "Free pinyin tone marks converter: type ni3 hao3, get nǐ hǎo, 注音 (Zhuyin) and each tone's shape, or turn marks back into numbers. Then practise them out loud.",
-    lastmod: "2026-10-19",
+    lastmod: "2026-10-22",
     pageType: "tool",
     angle: "learner",
     shell: "site",
@@ -123,7 +123,7 @@ const BASE_ROUTES: readonly SiteRoute[] = [
     title: "Mandarin Tone Visualizer & Pronunciation Checker (Free)",
     description:
       "Free Chinese tone checker: say a Mandarin tone and see your pitch drawn over a native speaker's tone shape or the textbook one, with a score. No sign-up.",
-    lastmod: "2026-10-19",
+    lastmod: "2026-10-22",
     pageType: "tool",
     angle: "learner",
     shell: "site",
@@ -135,7 +135,7 @@ const BASE_ROUTES: readonly SiteRoute[] = [
     title: "Chinese Tones Test: Can You Hear the 4 Tones?",
     description:
       "Free Mandarin tones listening test: hear 10 words from a native speaker, swipe each to its tone, see which tones you mix up. No sign-up, no mic. Try it now.",
-    lastmod: "2026-10-20",
+    lastmod: "2026-10-22",
     pageType: "tool",
     angle: "learner",
     shell: "site",
@@ -147,7 +147,7 @@ const BASE_ROUTES: readonly SiteRoute[] = [
     title: "How to Say Common Words in Chinese (with Audio) — FlappyTone",
     description:
       "How to say hello, thank you, sorry, goodbye and more in Chinese, each with a native speaker's recording, pinyin, 注音 and how the tones really sound.",
-    lastmod: "2026-10-19",
+    lastmod: "2026-10-22",
     pageType: "hub",
     angle: "learner",
     shell: "site",
@@ -176,7 +176,7 @@ export const SAY_ROUTES: readonly SiteRoute[] = SAY_META.map(
     lang: "en",
     title,
     description,
-    lastmod: "2026-10-19",
+    lastmod: "2026-10-22",
     pageType: "word",
     angle: "learner",
     shell: "site",
