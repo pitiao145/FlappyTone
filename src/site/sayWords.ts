@@ -153,6 +153,7 @@ export const SAY_WORDS: SayWord[] = [
       "Written, 你 and 好 are both third tones.",
       "In 你好, two third tones meet, so the first one changes to a rise: ní hǎo. This happens to every 3+3 pair in Mandarin.",
       "In the standard recording of 你好, the line starts in the lower middle of the voice, climbs to near the top about halfway through, then falls to the bottom and stays there. The climb is the rising 你, and 好 ends low with no lift at the end.",
+      "The spoken recording is about half as long, around 0.6 seconds. 你 starts in the middle of her voice and rises to just below the top, then 好 falls to the low middle and the sound fades out. The rise on 你 is still there at normal speed; 好 does not dip as deep as in the standard take.",
     ],
     teaser: "Written nǐ hǎo, said ní hǎo: the most common tone change.",
     mistakes: [
@@ -331,7 +332,8 @@ export const SAY_WORDS: SayWord[] = [
     ],
     real: [
       "In the standard recording, all three syllables are full. 對 falls from the top to the middle, 不 comes back up and falls again, and 起 drops to the bottom of her voice, then lifts to the middle.",
-      "In normal speech the middle 不 is short and light, so many dictionaries write duìbuqǐ. Say 對 and 起 clearly and keep 不 quick.",
+      "In normal speech the middle 不 is short and light, so dictionaries write duìbuqǐ. Say 對 and 起 clearly and keep 不 quick.",
+      "The spoken recording takes about half a second. 對 starts just above the middle of her voice and slides down, 不 is only a small bump, and 起 settles low and stays there. The whole word is one gentle fall, and 不 never makes a fall of its own.",
       "The word ends low, on 起. If you end it high, it sounds like a question.",
     ],
     teaser: "對不起 ends low. When to say 不好意思 instead.",

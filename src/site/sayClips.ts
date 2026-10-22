@@ -134,6 +134,33 @@ export const SAY_CLIPS: Record<string, ExampleClip> = {
  * not checked against it. 對不起 has no spoken take yet.
  */
 export const SAY_CLIPS_SPOKEN: Record<string, ExampleClip> = {
+  nihao33: {
+    polyline: [
+      [0, 3.223],
+      [0.2396, 3.226],
+      [0.5476, 3.963],
+      [0.7224, 1.993],
+    ],
+    onsetS: 0.232,
+    durationS: 0.6234,
+    clipS: 0.9833,
+  },
+  duibuqi403: {
+    polyline: [
+      [0, 3.784],
+      [0.1586, 3.77],
+      [0.2819, 3.454],
+      [0.3215, 3.131],
+      [0.3965, 3.125],
+      [0.4405, 3.48],
+      [0.7577, 2.766],
+      [0.8723, 2.307],
+      [1, 2.307],
+    ],
+    onsetS: 0.232,
+    durationS: 0.538,
+    clipS: 0.898,
+  },
   bukeqi444: {
     polyline: [
       [0, 3.438],
