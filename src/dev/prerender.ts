@@ -55,6 +55,7 @@ type PrerenderModule = {
   renderTerms: () => string;
   renderPrivacy: () => string;
   renderSitePage: (path: string) => string;
+  renderNotFound: () => string;
   siteJsonLd: (path: string) => object[];
 };
 
@@ -126,6 +127,27 @@ export function fillShell(
   return out;
 }
 
+/**
+ * `404.html`: Vercel serves it, with HTTP 404, for any path that matches no
+ * file. No canonical, `noindex`, and the client bundle is dropped: it is a
+ * static page of links and must not mount a router over an unknown path.
+ */
+export function notFoundHtml(html: string, markup: string): string {
+  if (!html.includes(HEAD_MARK) || !html.includes(LANG_MARK) || !html.includes(ROOT_DIV)) {
+    throw new Error(`prerender: ${SITE_SHELL} is missing a marker`);
+  }
+  const head = [
+    "<title>Page not found — FlappyTone</title>",
+    `<meta name="description" content="This page does not exist. Try the guide to the four Mandarin tones." />`,
+    `<meta name="robots" content="noindex" />`,
+  ].join("\n    ");
+  return html
+    .replace(LANG_MARK, "en")
+    .replace(HEAD_MARK, () => head)
+    .replace(ROOT_DIV, () => `<div id="root">${markup}</div>`)
+    .replace(/<script type="module"[^>]*><\/script>\s*/g, "");
+}
+
 /** `dist/<path>/index.html` for a site route (root is never a site route). */
 function siteOutFile(outDir: string, route: SiteRoute): string {
   return join(outDir, route.path.replace(/^\//, ""), "index.html");
@@ -190,6 +212,7 @@ export function prerenderLanding(): Plugin {
           fillShell(shell, route, renderRoute(m, route), m.siteJsonLd(route.path)),
         );
       }
+      await writeFile(join(outDir, "404.html"), notFoundHtml(shell, m.renderNotFound()));
       // The bare shell has no route of its own; serving it would be an
       // empty duplicate page.
       await unlink(shellPath);

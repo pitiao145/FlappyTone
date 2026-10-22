@@ -6,11 +6,11 @@ import "../App.css";
 export default function TermsApp() {
   return (
     <div className="app">
-      <div className="app-main">
+      <main className="app-main">
         <div className="frame">
           <LegalPage markdown={termsOfServiceMd} />
         </div>
-      </div>
+      </main>
     </div>
   );
 }

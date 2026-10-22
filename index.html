@@ -12,10 +12,10 @@
     <!-- PNG fallback for anything that will not take an SVG favicon. -->
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
     <!-- viewport-fit=cover: safe-area insets in App.css depend on it.
-         user-scalable=no: double-tap zoom mid-run mis-scales the canvas. -->
+         The game shell (app.html) keeps user-scalable=no; marketing pages must stay zoomable. -->
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
 
     <!-- Home-screen install runs without browser chrome (spec B6). -->
@@ -54,7 +54,27 @@
     <!-- No twitter:title/description/image: falls back to og: tags, avoids drift. -->
     <meta name="twitter:card" content="summary_large_image" />
 
-    <!-- SoftwareApplication only — Google deprecated FAQ rich results. -->
+    <!-- SoftwareApplication, WebSite and Organization only — honest facts, no ratings.
+         Google deprecated FAQ rich results. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "FlappyTone",
+        "url": "https://flappytone.com/",
+        "inLanguage": "en"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "FlappyTone",
+        "url": "https://flappytone.com/",
+        "logo": "https://flappytone.com/icons/apple-touch-icon.png",
+        "sameAs": ["https://x.com/pierreBuildsDev"]
+      }
+    </script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",

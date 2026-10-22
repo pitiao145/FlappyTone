@@ -410,14 +410,6 @@ export function sayWordJsonLd(word: SayWord, route: SiteRoute): object[] {
     },
     {
       "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: "Common words", item: absoluteUrl(INDEX) },
-        { "@type": "ListItem", position: 2, name: word.phrase, item: url },
-      ],
-    },
-    {
-      "@context": "https://schema.org",
       "@type": "FAQPage",
       mainEntity: word.faq.map((f) => ({
         "@type": "Question",

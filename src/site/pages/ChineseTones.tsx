@@ -373,6 +373,28 @@ export function ChineseTones() {
           </p>
         </section>
 
+        <section id="tools">
+          <h2>Free tools for practising the tones</h2>
+          <ul>
+            <li>
+              <a href="/tools/tone-test">Chinese tones test</a>: hear ten words
+              and swipe each to its tone. No microphone needed.
+            </li>
+            <li>
+              <a href="/tools/tone-visualizer">Mandarin tone visualizer</a>: say
+              a tone and see your pitch drawn over a native speaker's.
+            </li>
+            <li>
+              <a href="/tools/tone-marks">Pinyin tone marks converter</a>: turn
+              ni3 hao3 into nǐ hǎo and 注音.
+            </li>
+            <li>
+              <a href="/say">Common words with audio</a>: hello, thank you,
+              sorry and more, each with a native speaker's recording.
+            </li>
+          </ul>
+        </section>
+
         <section id="faq">
           <h2>Can't hear the tones? Common questions</h2>
           <p>

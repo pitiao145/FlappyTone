@@ -142,7 +142,7 @@ export function Landing({ onPlay, onVisualiser }: Props) {
       <section id="play" className="landing-section hero-cards">
         <article className="hero-card hero-card-media">
           <p className="section-eyebrow">{brand.heroCards.play.eyebrow}</p>
-          <h3>{brand.heroCards.play.title}</h3>
+          <h2>{brand.heroCards.play.title}</h2>
           <p>{brand.heroCards.play.body}</p>
           <img
             className="hero-card-thumb"
@@ -164,7 +164,7 @@ export function Landing({ onPlay, onVisualiser }: Props) {
         </article>
         <article className="hero-card hero-card-accent hero-card-media">
           <p className="section-eyebrow">{brand.heroCards.visualise.eyebrow}</p>
-          <h3>{brand.heroCards.visualise.title}</h3>
+          <h2>{brand.heroCards.visualise.title}</h2>
           <p>{brand.heroCards.visualise.body}</p>
           <img
             className="hero-card-thumb"

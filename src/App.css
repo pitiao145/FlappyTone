@@ -4644,6 +4644,7 @@ div.hero-cards {
   padding: var(--space-6);
 }
 
+.hero-card h2,
 .hero-card h3 {
   font-size: var(--text-xl);
   margin: 0;
@@ -5195,6 +5196,11 @@ div.hero-cards {
   align-items: center;
 }
 
+.real-speech-text a {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
 .real-speech-text {
   display: flex;
   flex-direction: column;
@@ -5555,7 +5561,7 @@ div.hero-cards {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: color-mix(in srgb, var(--ink) 50%, transparent);
+  color: color-mix(in srgb, var(--ink) 72%, transparent);
   margin: 0 0 var(--space-3);
 }
 
@@ -5576,6 +5582,10 @@ div.hero-cards {
   text-decoration: none;
   font-size: var(--text-sm);
   transition: color 0.15s ease;
+}
+
+.footer-learn-link {
+  min-height: 32px;
 }
 
 .footer-link-icon {
@@ -5620,7 +5630,7 @@ div.hero-cards {
   border-top: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
   padding-top: var(--space-4);
   font-size: var(--text-xs);
-  color: color-mix(in srgb, var(--ink) 55%, transparent);
+  color: color-mix(in srgb, var(--ink) 72%, transparent);
 }
 
 .footer-attribution {
@@ -5630,6 +5640,7 @@ div.hero-cards {
 }
 
 .footer-copyright {
+  color: var(--ink-muted);
   margin: 0;
 }
 
@@ -11499,6 +11510,44 @@ button.switch-track.switch-on {
 .say-page .say-back:hover,
 .say-page .say-back:focus-visible {
   color: var(--ink);
+}
+
+.site-breadcrumbs {
+  max-width: 72rem;
+  margin: var(--space-3) auto 0;
+  padding-inline: var(--space-4);
+  font-size: 0.85rem;
+}
+
+.site-breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.site-breadcrumbs li + li::before {
+  content: "›";
+  margin-right: 8px;
+  color: var(--ink-muted);
+}
+
+.site-breadcrumbs a {
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+
+.site-breadcrumbs a:hover,
+.site-breadcrumbs a:focus-visible {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.site-breadcrumbs [aria-current="page"] {
+  color: var(--ink);
+  font-weight: 600;
 }
 
 /* Route-table pages: room between the last block (CTA / Read next) and the footer. */

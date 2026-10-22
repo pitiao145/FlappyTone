@@ -42,11 +42,11 @@ export default function LandingApp() {
 
   return (
     <div className="app">
-      <div className="app-main">
+      <main className="app-main">
         <div className="frame">
           <Landing onPlay={() => goToApp()} onVisualiser={() => goToApp("visualiser")} />
         </div>
-      </div>
+      </main>
     </div>
   );
 }

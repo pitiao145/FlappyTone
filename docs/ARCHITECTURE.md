@@ -92,6 +92,8 @@ must be true in the code.
 `first_seo_page`/`first_seo_angle` with `$set_once`, puts `seoPage`/`seoAngle`
 on `landed`, and strips it. Like `?intent=`, it never starts anything.
 
+**Discoverability.** `src/site/links.ts` holds the footer "Learn & tools" group (`LEARN_LINKS`, in `Footer.tsx`, so every page links the hub, tools and `/say`) and each route's breadcrumb trail; `Breadcrumbs.tsx` renders it and `prerenderEntry.tsx`' `siteJsonLd` appends the matching `BreadcrumbList` (pages never declare their own). `NotFound.tsx` becomes `dist/404.html` (Vercel serves it with HTTP 404; noindex, no client bundle). `src/site/crawl.test.ts` fails on a missing sitemap entry, a missing or duplicate title/description, a non-self canonical, a second h1, an image without alt, a link to an unknown route, or an orphan more than 2 clicks from `/`. Marketing pages render inside `<main class="app-main">`.
+
 Four rules hold the split together:
 
 1. **The marketing page must not import `src/audio/` or `src/pitch/`.** The same rule holds for every route-table page and `src/site/`, with **one named exception: the tone visualizer's engine, `src/site/checker/engine.ts`**, which `/tools/tone-visualizer` loads only with a dynamic `import()` on the Start tap (never statically, never with the page). Check after touching `Landing.tsx`, `src/site/` or anything they import:

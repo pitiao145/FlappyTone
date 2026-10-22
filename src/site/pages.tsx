@@ -17,6 +17,7 @@ import type { SiteRoute } from "./routes.ts";
 import { Nav } from "../ui/Nav.tsx";
 import { Footer } from "../ui/Footer.tsx";
 import { appHref } from "../ui/appLink.ts";
+import { Breadcrumbs } from "./Breadcrumbs.tsx";
 import { ChineseTones, chineseTonesJsonLd } from "./pages/ChineseTones.tsx";
 import { ToneMarks, toneMarksJsonLd } from "./pages/ToneMarks.tsx";
 import { ToneVisualizer, toneVisualizerJsonLd } from "./pages/ToneVisualizer.tsx";
@@ -43,15 +44,16 @@ export function SitePage({ path }: { path: string }) {
   const Page = SITE_PAGES[path]?.Page;
   return (
     <div className="app">
-      <div className="app-main">
+      <main className="app-main">
         <div className="frame">
           {/* The landing page's own bar and footer, so a visitor from search
               can reach the rest of the site. Links point back into `/`. */}
           <Nav linkBase="/" playHref={appHref(undefined, path)} />
+          <Breadcrumbs path={path} />
           {Page ? <Page /> : null}
           <Footer />
         </div>
-      </div>
+      </main>
     </div>
   );
 }
