@@ -148,3 +148,41 @@ export function wordCountLabel(n: number | null): string {
   if (n === null) return "";
   return n === 1 ? "(1 word)" : `(${n} words)`;
 }
+
+/** An empty tone or pair in the visualiser's practice list. */
+export type PracticeTarget = { tone: Tone } | { combo: Tone[] };
+
+/**
+ * For a tone or pair with no words in the selected TOCFL lists: the lowest
+ * level NOT already in play that would give it at least one word, and whether
+ * this tier may turn that level on (if not, the caller shows the upsell).
+ * null when no level helps, or for a tier with no level choice (guest).
+ *
+ * Built from `wordsForList` / `wordsOfTone` / `wordsOfCombo` like every other
+ * count here, so the suggestion cannot point at a level that stays empty.
+ */
+export function levelToAdd(
+  words: readonly Word[],
+  tier: Tier,
+  selectedLevels: readonly TocflLevel[],
+  style: SpeechStyle,
+  target: PracticeTarget,
+): { level: TocflLevel; unlocked: boolean } | null {
+  const allowed = tierLimits()[tier].beginner.levels;
+  if (allowed === null) return null;
+  // No selection means every level the tier allows.
+  const inPlay = selectedLevels.length > 0 ? selectedLevels : allowed;
+  for (const level of [1, 2, 3] as const) {
+    if (inPlay.includes(level)) continue;
+    const levels = [...inPlay, level];
+    const found =
+      "tone" in target
+        ? wordsOfTone(wordsInStyle(wordsForList([...words], levels, "beginner"), style), target.tone).length
+        : wordsOfCombo(
+            wordsInStyle(multiWords(wordsForList([...words], levels, "intermediate")), style),
+            target.combo,
+          ).length;
+    if (found > 0) return { level, unlocked: allowed.includes(level) };
+  }
+  return null;
+}

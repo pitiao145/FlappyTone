@@ -47,6 +47,8 @@ import { micErrorCopy } from "./micErrors.ts";
 import { SPEECH_STYLE_LABEL } from "./Settings.tsx";
 import {
   visualiserComboCount,
+  levelToAdd,
+  type PracticeTarget,
   visualiserListWords,
   visualiserPairWords,
   visualiserToneCount,
@@ -209,6 +211,11 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
    * selection (every row toggled off) falls back to every level the tier
    * allows, the old `null` state.
    */
+  /**
+   * A tapped tone or pair with no words in the selected lists: shows a hint
+   * and a one-tap "Add TOCFL N" instead of an empty word rail.
+   */
+  const [emptyTarget, setEmptyTarget] = useState<PracticeTarget | null>(null);
   const [selectedLevels, setSelectedLevels] = useState<TocflLevel[]>(
     () => defaultLevels(tierLimits()[tier].beginner.levels),
   );
@@ -697,6 +704,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     }
     if (t !== null) sessionTonesRef.current.add(t);
     setPickerFolded(t !== null);
+    setEmptyTarget(null);
     setTone(t);
     setCombo(null);
     setSelectedWord(null);
@@ -721,6 +729,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       return;
     }
     sessionCombosRef.current.add(toneComboKey(c));
+    setEmptyTarget(null);
     setPickerFolded(true);
     setCombo(c);
     setTone(null);
@@ -972,6 +981,16 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   );
 
   /** One sentence under the tabs, saying what the open tab is for. */
+  /** Levels actually in play: none selected means every level the tier allows. */
+  const levelsInPlay: TocflLevel[] =
+    selectedLevels.length > 0 ? selectedLevels : [...(limits.beginner.levels ?? [])];
+  const allLevelsOn =
+    limits.beginner.levels !== null &&
+    limits.beginner.levels.every((n) => levelsInPlay.includes(n));
+  /** "TOCFL 1 · 2" — the lists in play, beside the Practice heading. */
+  const listsChipLabel =
+    levelsInPlay.length === 0 ? null : `TOCFL ${[...levelsInPlay].sort((a, b) => a - b).join(" · ")}`;
+
   const PRACTICE_DESC: Record<typeof popoverTab, string> = {
     free: "Practice freely, by single tone, or by tone pair.",
     tone: "Pick a tone, then tap a word to hear it and say it back.",
@@ -980,7 +999,10 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
 
   const practiceHead = (
     <div className="vis-practice-head">
-      <span className="vis-setting-label">Practice</span>
+      <div className="vis-practice-title">
+        <span className="vis-setting-label">Practice</span>
+        {listsChipLabel && <span className="vis-lists-chip">{listsChipLabel}</span>}
+      </div>
       <p className="vis-setting-desc">
         {pickerFolded && popoverTab !== "free"
           ? `Tap ${popoverTab === "pairs" ? "Tone pairs" : "By tone"} to pick another.`
@@ -1062,7 +1084,21 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
             TOCFL levels 🔒
           </button>
         ) : (
-          ([1, 2, 3] as const).map((n) => {
+          <>
+          {/* Shortcut: every level this tier allows. */}
+          <button
+            type="button"
+            className={`vis-setting-chip${allLevelsOn ? " active" : ""}`}
+            onClick={() => {
+              sessionLevelsChangedRef.current = true;
+              setSelectedLevels([...limits.beginner.levels!].sort((a, b) => a - b));
+            }}
+            aria-pressed={allLevelsOn}
+          >
+            {allLevelsOn && <span className="vis-chip-check" aria-hidden="true">✓</span>}
+            All levels
+          </button>
+          {([1, 2, 3] as const).map((n) => {
             const unlocked = limits.beginner.levels!.includes(n);
             const on = selectedLevels.includes(n);
             return (
@@ -1084,18 +1120,72 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
                 aria-pressed={unlocked ? on : undefined}
                 aria-label={unlocked ? LEVEL_LABEL[n] : `${LEVEL_LABEL[n]}, locked, Pro`}
               >
+                {on && <span className="vis-chip-check" aria-hidden="true">✓</span>}
                 {LEVEL_LABEL[n]}
                 {!unlocked && " 🔒"}
               </button>
             );
-          })
+          })}
+          </>
         )}
       </div>
     </div>
   );
 
-  const countBadge = (n: number | null) =>
-    n === null ? null : <span className="count-badge">{n}</span>;
+  /** Word count; 0 shows greyed (the item stays tappable — see `emptyHint`). */
+  const countBadge = (n: number | null) => (
+    <span className={n === null ? "count-badge is-zero" : "count-badge"}>{n ?? 0}</span>
+  );
+
+  const toneEmpty = (t: Tone) =>
+    limits.visualiserPerTone && visualiserToneCount(listWords, tier, t) === null;
+  const comboEmpty = (c: Tone[]) => pairsUnlocked && visualiserComboCount(pairWords, tier, c) === null;
+  const pickTone = (t: Tone) => (toneEmpty(t) ? setEmptyTarget({ tone: t }) : chooseTone(t));
+  const pickCombo = (c: Tone[]) => (comboEmpty(c) ? setEmptyTarget({ combo: c }) : chooseCombo(c));
+
+  /** "4–1", "3–neutral" — the pair as its tiles show it. */
+  const comboLabel = (c: Tone[]) => c.map((t) => ((t as number) === 0 ? "neutral" : t)).join("–");
+
+  /**
+   * Under an empty tone or pair: why it is empty, and one tap to add the
+   * lowest list that has words for it. A level outside the tier leads to the
+   * usual upsell; the tier rules themselves do not change.
+   */
+  const emptyHintFor = (kind: "tone" | "combo") => {
+    const target = emptyTarget;
+    if (target === null || ("tone" in target) !== (kind === "tone")) return null;
+    const label = "tone" in target ? `Tone ${target.tone}` : comboLabel(target.combo);
+    const add = levelToAdd(words, tier, selectedLevels, speechStyle, target);
+    return (
+      <div className="vis-empty-hint" role="status">
+        <p>
+          No {label} words in {listsChipLabel ?? "your lists"}.
+          {add === null && " None in the other lists either, yet."}
+        </p>
+        {add !== null && (
+          <div className="vis-setting-chips">
+          <button
+            type="button"
+            className={`vis-setting-chip${add.unlocked ? "" : " is-locked"}`}
+            onClick={() => {
+              if (!add.unlocked) {
+                showLocked("visualiser-word-list");
+                return;
+              }
+              sessionLevelsChangedRef.current = true;
+              setSelectedLevels([...levelsInPlay, add.level].sort((a, b) => a - b));
+              if ("tone" in target) chooseTone(target.tone);
+              else chooseCombo(target.combo);
+            }}
+          >
+            Add {LEVEL_LABEL[add.level]}
+            {!add.unlocked && " 🔒"}
+          </button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   /** Mobile popover — stacked rows with labels. */
   const tonePickerToneList = (
@@ -1110,7 +1200,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
                 ? "tone-popover-row is-locked"
                 : "tone-popover-row"
           }
-          onClick={() => chooseTone(t)}
+          onClick={() => pickTone(t)}
         >
           <span className="tone-popover-row-icon">
             <ToneMarkIcon tone={t} className="tone-mark-icon" />
@@ -1120,6 +1210,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
           {!limits.visualiserPerTone && <span className="pro-badge">🔒 Pro</span>}
         </button>
       ))}
+      {emptyHintFor("tone")}
     </div>
   );
 
@@ -1136,7 +1227,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
                 ? "choice-option tone-pill is-locked"
                 : "choice-option tone-pill"
           }
-          onClick={() => chooseTone(t)}
+          onClick={() => pickTone(t)}
           aria-label={`Tone ${t}, ${TONE_SHORT_LABEL[t]}${!limits.visualiserPerTone ? ", locked, Pro" : ""}`}
         >
           <ToneMarkIcon tone={t} className="tone-mark-icon" />
@@ -1144,6 +1235,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
           {!limits.visualiserPerTone && <span className="tone-pill-lock">🔒</span>}
         </button>
       ))}
+      {emptyHintFor("tone")}
     </div>
   );
 
@@ -1205,15 +1297,16 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       {TONES.flatMap((first) =>
         ([1, 2, 3, 4, 0] as const).map((second) => {
           const key = `${first}-${second}`;
-          const c = comboByKey.get(key);
-          if (!c) return <span key={key} className="vis-pair-empty" aria-hidden="true" />;
+          // Every one of the 20 combos is a tile, with or without words in
+          // the selected lists (an empty one shows 0 and explains why).
+          const c = comboByKey.get(key) ?? ([first, second] as Tone[]);
           const active = combo !== null && toneComboKey(combo) === key;
           return (
             <button
               key={key}
               type="button"
               className={`choice-option vis-pair-tile${active ? " active" : ""}${pairsUnlocked ? "" : " is-locked"}`}
-              onClick={() => chooseCombo(c)}
+              onClick={() => pickCombo(c)}
               aria-label={`Tone ${first} then ${second === 0 ? "neutral" : `tone ${second}`}${pairsUnlocked ? "" : ", locked"}`}
             >
               {c.map((t, n) => (
@@ -1225,6 +1318,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
           );
         }),
       )}
+      {emptyHintFor("combo")}
     </div>
   );
 

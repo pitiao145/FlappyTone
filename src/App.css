@@ -12321,3 +12321,43 @@ button.switch-track.switch-on {
   outline-offset: 2px;
 }
 
+
+/* Practice list (brief 21, phase 2). */
+.count-badge.is-zero {
+  background: var(--line-strong);
+  color: var(--ink-muted);
+}
+
+.vis-practice-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* The lists in play, beside "Practice": a read-out, not a control. */
+.vis-lists-chip {
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-deep);
+  color: var(--ink-dim);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Multi-select level chips carry a check when on. */
+.vis-chip-check {
+  margin-right: 6px;
+}
+
+.vis-empty-hint {
+  flex-basis: 100%;
+  grid-column: 1 / -1;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.vis-empty-hint p {
+  margin: 0 0 8px;
+}
