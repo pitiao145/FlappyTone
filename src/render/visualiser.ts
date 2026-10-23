@@ -15,6 +15,7 @@
 import { corridorChaoAt,
   shapeForTone, shapeForWord, type Tone } from "../game/gates.ts";
 import type { Contour, TrailPoint } from "../game/contours.ts";
+import { BRIDGE_MS } from "../game/visualiserCore.ts";
 import { birdXFrac } from "../game/run.ts";
 import type { Word } from "../game/words.ts";
 import { BACKDROP, chaoToY, drawChaoGrid, drawPip } from "./scene.ts";
@@ -56,13 +57,6 @@ const TARGET_STEPS = 48;
  */
 const BREAK_MS = 70;
 
-/**
- * A silence up to this long inside speech (a consonant like the q of qiān, a
- * creaky T3 dip) is bridged with a faint dashed line on the scrolling trace —
- * it shows the voice carried on without inventing a pitch for the gap. Longer
- * silences leave a real hole.
- */
-export const BRIDGE_MS = 700;
 
 /** Where the bird sits on the scrolling trace, as a fraction of the width. */
 const SCROLL_HEAD_FRAC = 0.72;

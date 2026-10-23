@@ -29,6 +29,7 @@ export function attemptView(
   result: {
     accuracy: number | null;
     read: { tone: Tone | "none"; confidence: number } | null;
+    syllables?: (Tone | "none" | null)[] | null;
   },
   target: Tone,
   syllables: number,
@@ -54,6 +55,15 @@ export function attemptView(
         : r.tone === target
           ? `Sounded like a ${toneName(r.tone)}, the target.`
           : `Sounded like a ${toneName(r.tone)}. Target: ${toneName(target)}.`;
+  }
+  if (syllables > 1 && result.syllables) {
+    // Describes what was heard, without judging it against the target: the
+    // per-syllable read is new, and a wrong "wrong" is worse than none.
+    const s = result.syllables;
+    read =
+      s.length !== syllables || s.some((t) => t === null || t === "none")
+        ? "Couldn't detect both tones."
+        : `Sounded like ${s.map((t) => `a ${toneName(t as Tone)}`).join(", then ")}.`;
   }
   return { percent, headline, read, tier };
 }

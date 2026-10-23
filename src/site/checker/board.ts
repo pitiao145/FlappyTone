@@ -9,6 +9,7 @@
 import type { Contour } from "../../game/contours.ts";
 import type { Tone } from "../../game/gates.ts";
 import { classifyToneV2 } from "../../game/toneClassifierV2.ts";
+import { readContourSyllables } from "../../game/freeAttempts.ts";
 import { toneAccuracyDetail } from "../../game/toneAccuracy.ts";
 import { corridorChaoAt, shapeForWord } from "../../game/gates.ts";
 import type { Word } from "../../game/words.ts";
@@ -52,6 +53,12 @@ export interface AttemptResult {
   accuracy: number | null;
   /** v2's read, single syllables only. */
   read: { tone: Tone | "none"; confidence: number } | null;
+  /**
+   * Pairs only: one read per syllable, split at the gap between them (the
+   * app's Tone pairs mode does the same). null entries were too short to
+   * judge; null overall for a single syllable.
+   */
+  syllables: (Tone | "none" | null)[] | null;
 }
 
 /** What a finished utterance scored against the chosen line. */
@@ -67,7 +74,11 @@ export function scoreAttempt(contour: Contour, word: Word, mode: RefMode): Attem
     )?.accuracy ?? null;
   // The classifier misreads a two-syllable contour (same rule as the app).
   const r = word.syllables === 1 && accuracy !== null ? classifyToneV2(contour) : null;
-  return { accuracy, read: r ? { tone: r.tone, confidence: r.confidence } : null };
+  const syllables =
+    word.syllables > 1 && accuracy !== null
+      ? (readContourSyllables(contour)?.map((s) => s?.tone ?? null) ?? [])
+      : null;
+  return { accuracy, read: r ? { tone: r.tone, confidence: r.confidence } : null, syllables };
 }
 
 /** The idle board: the target and the bird at rest, nothing heard yet. */

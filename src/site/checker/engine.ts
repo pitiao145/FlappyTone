@@ -15,7 +15,7 @@
 
 import { ensureMic, getMicSession, setFrameSink, stopMic } from "../../audio/session.ts";
 import { MicError } from "../../audio/mic.ts";
-import { ContourRecorder } from "../../game/contours.ts";
+import { VisualiserCore } from "../../game/visualiserCore.ts";
 import { loadSettings } from "../../game/settings.ts";
 import { sessionNoiseMeter, startingNoiseFloor } from "../../game/sessionNoise.ts";
 import { tuning } from "../../game/tuning.ts";
@@ -35,8 +35,6 @@ import {
 
 export { micErrorCopy };
 export type { AttemptResult };
-/** Kept attempts on screen, as in the visualiser. */
-const MAX_KEPT = 3;
 /** A calibration take ends after this much voiced sound… */
 const CAL_TAKE_MS = 450;
 /** …followed by this much silence. */
@@ -138,12 +136,9 @@ export function startChecker(
 
   // ---- checker state
   let tracker: PitchTracker | null = null;
-  const recorder = new ContourRecorder({ maxKept: MAX_KEPT });
-  let scoredAt = -1;
+  /** The per-frame core shared with the app's Visualiser. */
+  const core = new VisualiserCore(SPAN_MS);
   let hadLive = false;
-  let displayChao = 3;
-  let voiced = false;
-  let lastT = performance.now();
   let rafId = 0;
 
   const beginCal = (step: CalStep, retry: boolean) => {
@@ -159,7 +154,7 @@ export function startChecker(
   const ready = (fromApp: boolean) => {
     calStep = null;
     tracker = null; // rebuilt on the next frame with the new board
-    recorder.clear();
+    core.clear();
     events.onReady(fromApp);
   };
 
@@ -229,29 +224,17 @@ export function startChecker(
       });
     }
     const p = tracker.push(frame);
-    recorder.push(p.smoothedChao, p.voiced, now);
-    voiced = p.voiced;
-    if (p.voiced) lastVoicedAt = now;
+    core.push(p.smoothedChao, p.voiced, now);
   };
   setFrameSink(onFrame);
 
   const tick = (now: number) => {
     if (destroyed) return;
-    const dt = Math.min(100, now - lastT);
-    lastT = now;
-    const pair = word.syllables > 1;
-    const gapMs = pair ? tuning().multiMergeGapMs : tuning().mergeGapMs;
-    recorder.setMergeGapMs(gapMs);
-    const live = recorder.live();
-    const finished = recorder.finished();
+    const frame = core.step(now, { syllables: word.syllables, free: false });
+    const { live, finished } = frame;
     const head = live?.points.at(-1);
-    const holding = pair && head !== undefined && now - lastVoicedAt <= gapMs;
-    const target = head && (voiced || holding) ? head.chao : 3;
-    displayChao += (target - displayChao) * (1 - Math.exp(-dt / tuning().easeTauMs));
-
-    const latest = finished.at(-1);
-    if (latest && latest.startedAtMs !== scoredAt) {
-      scoredAt = latest.startedAtMs;
+    const latest = frame.attempt;
+    if (latest) {
       hadLive = false;
       events.onAttempt(scoreAttempt(latest, word, mode));
     } else if (live) {
@@ -260,7 +243,7 @@ export function startChecker(
       // A voiced run closed without becoming an attempt: shorter than
       // `minUtteranceMs`. Neutral, never a wrong score (hard rule 8).
       hadLive = false;
-      events.onAttempt({ accuracy: null, read: null });
+      events.onAttempt({ accuracy: null, read: null, syllables: null });
     }
 
     if (ctx) {
@@ -273,8 +256,8 @@ export function startChecker(
         live: calStep ? null : live,
         finished: calStep ? [] : finished,
         spanMs: SPAN_MS,
-        chao: displayChao,
-        voiced: !calStep && (voiced || holding || now - lastVoicedAt <= tuning().graceMs),
+        chao: frame.chao,
+        voiced: !calStep && frame.dotVoiced,
       });
     }
     rafId = requestAnimationFrame(tick);
@@ -295,13 +278,11 @@ export function startChecker(
     setTarget(ref, m) {
       mode = m;
       word = targetWord(ref, m);
-      recorder.clear();
-      scoredAt = -1;
+      core.clear();
       hadLive = false;
     },
     clear() {
-      recorder.clear();
-      scoredAt = -1;
+      core.clear();
       hadLive = false;
     },
     recalibrate() {

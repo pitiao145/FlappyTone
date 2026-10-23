@@ -117,7 +117,16 @@ against: **Real speech** = our speaker's natural-speed average
 spoken "2-3"), or **Textbook** = the Chao letters (55/35/214/51) over the same
 duration (`toneRefs.ts`). `board.ts` (no mic) holds the shared renderer/scorer
 and draws the idle board; `engine.ts` is the mic chunk and never imports
-`Visualiser.tsx`. Textbook scoring passes `t23Cue = false` to
+`Visualiser.tsx`. **Both `engine.ts` and the app's `Visualiser.tsx` run the
+same per-frame core, `src/game/visualiserCore.ts`** (`VisualiserCore`): when
+an attempt ends (silence over `SINGLE_TONE_GAP_MS` 400ms for one tone,
+`BRIDGE_MS` 700ms for a pair or Free mode — visualiser-only, the game keeps
+`mergeGapMs`/`multiMergeGapMs`), the dashed bridge over shorter silences, the
+bird's hold and easing, and Free mode's scrolling line. Change line
+behaviour there, never in one page. A pair is read one syllable at a time
+(`readContourSyllables`, split at silences over `mergeGapMs`); if it does not
+find every syllable it says so ("couldn't detect both tones") rather than
+show one tone, and the read is never judged against the target yet. Textbook scoring passes `t23Cue = false` to
 `toneAccuracyDetail` (the cue measures likeness to real speech). Calibration:
 the game's own (`loadSettings()`) if the device has one, else a ~10 s quick
 one (one mā, one mǎ, `quickCal.ts`) under **`flappytone.quickcal.v1`** — never

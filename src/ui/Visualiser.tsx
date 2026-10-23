@@ -21,7 +21,7 @@ import {
 } from "../audio/session.ts";
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { useTier } from "../data/tier.ts";
-import { ContourRecorder, PitchTrail } from "../game/contours.ts";
+import { VisualiserCore } from "../game/visualiserCore.ts";
 import type { Tone } from "../game/gates.ts";
 import { effectiveSpeechStyle, type CalibrationSettings } from "../game/settings.ts";
 import { type ToneClassification } from "../game/toneClassifier.ts";
@@ -40,8 +40,8 @@ import {
 import { sessionNoiseMeter, startingNoiseFloor } from "../game/sessionNoise.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
-import { BRIDGE_MS, drawVisualiser } from "../render/visualiser.ts";
-import { readAttempt, type FreeAttempt } from "../game/freeAttempts.ts";
+import { drawVisualiser } from "../render/visualiser.ts";
+import { readAttempt, readContourSyllables, type FreeAttempt } from "../game/freeAttempts.ts";
 import { AttemptThumbs } from "./AttemptThumbs.tsx";
 import { micErrorCopy } from "./micErrors.ts";
 import { SPEECH_STYLE_LABEL } from "./Settings.tsx";
@@ -70,11 +70,6 @@ import {
 export const SPAN_MS = 1600;
 /** Free-mode attempts kept as thumbnails. */
 const MAX_FREE_ATTEMPTS = 3;
-/**
- * By-tone mode: how long a silence may last before the attempt ends. Wider
- * than the game's `mergeGapMs` (150ms), which reset the line mid-word.
- */
-const SINGLE_TONE_GAP_MS = 400;
 
 /** How long the "wrong tone" toast stays up — matches .mismatch-toast's own fade (App.css). */
 const WRONG_TOAST_MS = 1200;
@@ -251,9 +246,8 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   toneRef.current = tone;
   const wordRef = useRef<Word | null>(null);
   wordRef.current = selectedWord;
-  const recorderRef = useRef<ContourRecorder | null>(null);
-  /** Free tab's scrolling line — every voiced frame, never split into attempts. */
-  const trailRef = useRef<PitchTrail | null>(null);
+  /** The per-frame core shared with the public tone checker. */
+  const coreRef = useRef<VisualiserCore | null>(null);
   /** Free tab's last few attempts, shown as thumbnails on desktop. */
   const [freeAttempts, setFreeAttempts] = useState<FreeAttempt[]>([]);
   /** Which thumbnail drives the Tone card; a new attempt selects itself. */
@@ -266,8 +260,6 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   const cueTimersRef = useRef<Set<number>>(new Set());
   /** Combined accuracy for the current word — reset on word change or Clear. */
   const wordStatsRef = useRef<WordStats>({ attempts: 0, sumAccuracy: 0 });
-  /** `startedAtMs` of the last finished attempt already folded into `wordStatsRef`. */
-  const lastScoredAtRef = useRef<number | null>(null);
   /**
    * The standalone recognizer's read of the last finished attempt —
    * deliberately independent of `word`/`tone`: it runs off the same
@@ -275,8 +267,6 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
    * the "target" was. See `classifyTone` in `src/game/toneClassifier.ts`.
    */
   const [recognized, setRecognized] = useState<ToneClassification | null>(null);
-  /** `startedAtMs` of the last finished attempt already classified. */
-  const lastRecognizedAtRef = useRef<number | null>(null);
   /**
    * Session-summary accounting for the gameplay-tier `visualiser_session`
    * event, flushed on unmount (see the mount/unmount effect below). Refs, not
@@ -382,20 +372,17 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   /**
    * Clears both the trail and the running accuracy. Used whenever the word
    * actually changes: leaving the old word's trail in `recorder` would leave
-   * its already-finished attempts sitting in `finished()`, which the tick
+   * its already-finished attempts in the core, which the tick
    * loop would then score against the *new* word's shape the moment
-   * `lastScoredAtRef` resets to null.
+   * core forgets which attempt it last reported.
    */
   const resetAttempts = () => {
-    recorderRef.current?.clear();
-    trailRef.current?.clear();
+    coreRef.current?.clear();
     setFreeAttempts([]);
     setSelectedAttemptId(null);
     setPairSyllables(null);
     wordStatsRef.current = { attempts: 0, sumAccuracy: 0 };
-    lastScoredAtRef.current = null;
     setAccuracyDisplay(null);
-    lastRecognizedAtRef.current = null;
     setRecognized(null);
   };
 
@@ -524,20 +511,13 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     const ctx = canvas ? scaleForDpr(canvas, canvasW, canvasH) : null;
     if (!canvas || !ctx) return;
 
-    const recorder = new ContourRecorder();
-    recorderRef.current = recorder;
-    const trail = new PitchTrail(SPAN_MS, BRIDGE_MS);
-    trailRef.current = trail;
+    const core = new VisualiserCore(SPAN_MS);
+    coreRef.current = core;
     // The player's tone lines this session (spec B, Pro only), sent in one
     // batch when the session ends or the tab is hidden — whichever is first.
     let tracker: PitchTracker | null = null;
     let rafId = 0;
     let running = true;
-    /** Eased render position, exactly as the game eases its dot. */
-    let displayChao = 3;
-    let voiced = false;
-    let lastVoicedAt = -Infinity;
-    let lastT = performance.now();
 
     // The mic is already open — the caller opened it inside a click gesture.
     // Stored in a ref (not just handed to setFrameSink) so `toggleMute` can
@@ -566,59 +546,28 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       const measured = measureNoise(frame, sampleRate);
       if (measured !== null) tracker.setNoiseFloor(measured);
       const p = tracker.push(frame);
-      const now = performance.now();
-      recorder.push(p.smoothedChao, p.voiced, now);
-      trail.push(p.smoothedChao, p.voiced, now);
-      voiced = p.voiced;
-      if (p.voiced) lastVoicedAt = now;
+      core.push(p.smoothedChao, p.voiced, performance.now());
     };
     frameSinkRef.current = onFrame;
     setFrameSink(onFrame);
 
     const tick = (now: number) => {
-      const dt = Math.min(100, now - lastT);
-      lastT = now;
-      const live = recorder.live();
-      const finished = recorder.finished();
-      const head = live?.points.at(-1);
-      // A tone pair holds through the pause between its two syllables, as a
-      // pair gate does in play (`multiMergeGapMs`): the recorder keeps one
-      // utterance open across the gap, and the dot holds its last height
-      // instead of falling back to the rest line.
-      // Visualiser-only gaps, wider than the game's: a pair uses the same
-      // bridge as Free mode, so a slow second syllable stays in the attempt.
-      const pair = (wordRef.current?.syllables ?? 1) > 1;
-      const gapMs = pair ? BRIDGE_MS : SINGLE_TONE_GAP_MS;
-      recorder.setMergeGapMs(gapMs);
-      // Free tab: one line that scrolls only while you speak, and the bird holds its height across a
-      // bridged gap so it never disagrees with the line behind it.
+      const word = wordRef.current;
       const free = freeRef.current;
+      const frame = core.step(now, { syllables: word?.syllables ?? 1, free });
+      const { live, finished } = frame;
       // Event-driven, not per-frame: only runs when an attempt just ended.
-      for (const pts of trail.takeFinished()) {
-        const attempt = free ? readAttempt(nextAttemptIdRef.current++, pts) : null;
+      for (const pts of frame.freeAttempts) {
+        const attempt = readAttempt(nextAttemptIdRef.current++, pts);
         if (attempt === null) continue;
         setFreeAttempts((prev) => [...prev, attempt].slice(-MAX_FREE_ATTEMPTS));
         setSelectedAttemptId(attempt.id);
       }
-      const trailHead = trail.points().at(-1);
-      const holding = free
-        ? trailHead !== undefined && now - lastVoicedAt <= BRIDGE_MS
-        : head !== undefined && now - lastVoicedAt <= gapMs;
-      // Between utterances the dot returns to the rest line, as it does in
-      // play — but nothing drifts *while* you are speaking.
-      const headChao = free ? trailHead?.chao : head?.chao;
-      const target = headChao !== undefined && (voiced || holding) ? headChao : 3;
-      displayChao +=
-        (target - displayChao) * (1 - Math.exp(-dt / tuning().easeTauMs));
 
-      // Score any attempt that finished since the last frame. `finished()` is
-      // capped and shifts, so identity (startedAtMs) rather than length is
-      // what says "this one is new" — length stops changing once the cap is
-      // hit, right when a running average matters most.
-      const word = wordRef.current;
-      const latest = finished.at(-1);
-      if (word && latest && latest.startedAtMs !== lastScoredAtRef.current) {
-        lastScoredAtRef.current = latest.startedAtMs;
+      // Score the attempt that finished since the last frame (`frame.attempt`
+      // is set once per attempt). Free mode reads its own attempts instead.
+      const latest = free ? null : frame.attempt;
+      if (word && latest) {
         // Tone accuracy — the same timing-free measure the game logs per gate,
         // but judged against THIS word's own recorded contour (the line on
         // screen), not the tone's average. `latest` is already one utterance
@@ -642,15 +591,8 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       // Tone pairs: read each syllable of the attempt on its own, the same
       // way Free mode does (`readAttempt`) — the classifier only ever sees
       // one syllable, never the two-syllable contour it misreads.
-      if (
-        latest &&
-        latest.startedAtMs !== lastRecognizedAtRef.current &&
-        (word?.syllables ?? 1) > 1 &&
-        !free
-      ) {
-        lastRecognizedAtRef.current = latest.startedAtMs;
-        const read = readAttempt(0, latest.points.map((p) => ({ atMs: p.tMs, chao: p.chao })));
-        setPairSyllables(read?.syllables ?? null);
+      if (latest && (word?.syllables ?? 1) > 1) {
+        setPairSyllables(readContourSyllables(latest));
       }
 
       // Standalone recognition — runs off the same `finished()` array as the
@@ -659,14 +601,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       // a target". See `classifyTone`.
       // Single-syllable only: the classifier misreads a two-syllable contour
       // (same rule as the pairs run mode), so a pair word gets no read.
-      if (
-        latest &&
-        latest.startedAtMs !== lastRecognizedAtRef.current &&
-        (word?.syllables ?? 1) === 1 &&
-        // Free mode reads its own attempts, per syllable (`freeAttempts`).
-        !free
-      ) {
-        lastRecognizedAtRef.current = latest.startedAtMs;
+      if (latest && (word?.syllables ?? 1) === 1) {
         const result = classifyToneV2(latest);
         sessionAttemptsRef.current += 1;
         // Dev only: keep every attempt for offline classifier tests. In the
@@ -699,16 +634,15 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         live,
         finished,
         spanMs: SPAN_MS,
-        chao: displayChao,
-        voiced: voiced || holding || now - lastVoicedAt <= tuning().graceMs,
-        scroll: free ? { points: trail.points(), nowMs: trail.clockMs(), originMs: trail.originMs() } : null,
+        chao: frame.chao,
+        voiced: frame.dotVoiced,
+        scroll: frame.scroll,
       });
       if (running) rafId = requestAnimationFrame(tick);
     };
 
     const start = () => {
       running = true;
-      lastT = performance.now();
       rafId = requestAnimationFrame(tick);
       // No touch input drives this screen either — same rationale as Game.tsx.
       void acquireWakeLock();

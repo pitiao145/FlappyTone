@@ -69,3 +69,11 @@ export function readAttempt(id: number, points: readonly TrailPoint[]): FreeAtte
   const syllables = pieces.length === 0 ? [null] : pieces.map((p) => classifyToneV2(toContour(p)));
   return { id, points, syllables };
 }
+
+/**
+ * One finished contour (time-zeroed, from `ContourRecorder`) read per
+ * syllable — tone pairs use this. null for a cough.
+ */
+export function readContourSyllables(contour: Contour): FreeAttempt["syllables"] | null {
+  return readAttempt(0, contour.points.map((p) => ({ atMs: p.tMs, chao: p.chao })))?.syllables ?? null;
+}

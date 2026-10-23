@@ -18,6 +18,18 @@ describe("attemptView", () => {
     expect(attemptView({ accuracy: 0.9, read: { tone: 3, confidence: 1 } }, 3, 1).tier).toBe("good");
   });
 
+  it("describes a pair per syllable, or says it couldn't split it", () => {
+    expect(attemptView({ accuracy: 0.7, read: null, syllables: [4, 1] }, 4, 2).read).toBe(
+      "Sounded like a fourth tone, then a first tone.",
+    );
+    expect(attemptView({ accuracy: 0.7, read: null, syllables: [4] }, 4, 2).read).toBe(
+      "Couldn't detect both tones.",
+    );
+    expect(attemptView({ accuracy: 0.7, read: null, syllables: [4, null] }, 4, 2).read).toBe(
+      "Couldn't detect both tones.",
+    );
+  });
+
   it("gives no tone read for a two-syllable word", () => {
     expect(attemptView({ accuracy: 0.7, read: null }, 3, 2).read).toBeNull();
   });
