@@ -15,7 +15,7 @@ const FILES = [
   ...readdirSync("src/site/pages").filter((f) => f.endsWith(".tsx")).map((f) => `src/site/pages/${f}`),
   "src/site/sayWords.ts",
   "src/site/routes.ts",
-  "src/site/toneTest/toneTest.ts",
+  "src/toneder/toneTest.ts",
 ];
 
 const dict = parseCedict(

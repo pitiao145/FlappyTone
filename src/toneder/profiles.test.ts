@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasSimplified } from "../../dev/simplified.ts";
+import { hasSimplified } from "../dev/simplified.ts";
 import { PROFILES } from "./profiles.ts";
 import { TEST_WORDS } from "./toneTest.ts";
 

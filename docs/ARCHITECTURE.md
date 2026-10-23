@@ -135,7 +135,7 @@ preselect. Analytics: `tool_used {tool:"tone-visualizer", action}` (each once
 per load) and `tool_summary {attempts, targets}` on `pagehide`, global tier,
 counts only.
 
-**The public tone listening test (`/tools/tone-test`, `src/site/toneTest/`,
+**The public tone listening test (`/tools/tone-test`, `src/toneder/`,
 `pages/ToneTest.tsx`).** TONEder, the swipe-the-tone listening game. Today it
 lives only on this public page (Pierre, 20 Oct 2026); it may become an app tab. No mic, no `src/audio/`: a card
 plays a hidden word through `wordAudio.ts`, the visitor swipes it to a corner

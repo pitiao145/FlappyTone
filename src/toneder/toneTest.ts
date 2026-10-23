@@ -9,7 +9,7 @@
  * does not ship the catalog.
  */
 
-import type { AnalyticsEvent } from "../../analytics/session.ts";
+import type { AnalyticsEvent } from "../analytics/session.ts";
 
 export type Tone = 1 | 2 | 3 | 4;
 export const TONES: readonly Tone[] = [1, 2, 3, 4];

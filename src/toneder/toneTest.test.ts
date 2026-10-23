@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import fallback from "../../data/wordsFallback.json";
-import { hasSimplified } from "../../dev/simplified.ts";
-import type { AnalyticsEvent } from "../../analytics/session.ts";
-import { parsePinyin } from "../zhuyin.ts";
+import fallback from "../data/wordsFallback.json";
+import { hasSimplified } from "../dev/simplified.ts";
+import type { AnalyticsEvent } from "../analytics/session.ts";
+import { parsePinyin } from "../site/zhuyin.ts";
 import {
   buildRound,
   cornerFor,
