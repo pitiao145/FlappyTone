@@ -12388,11 +12388,10 @@ button.switch-track.switch-on {
 
 /* Reveal and score card can be taller than the stage: let it scroll, never clip. */
 .tt-stage.tt-stage-scroll {
-  align-items: safe center;
-  overflow-x: hidden;
-  overflow-y: auto;
+  height: auto;
+  overflow: visible;
   padding-top: var(--space-4);
-  padding-bottom: var(--space-4);
+  padding-bottom: var(--space-5);
 }
 
 /* The score card: a match screen. Pink for a match, blue for a Super Match. */
@@ -12495,7 +12494,7 @@ button.switch-track.switch-on {
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   width: 100%;
 }
@@ -12510,7 +12509,13 @@ button.switch-track.switch-on {
   font-size: 0.82rem;
   font-weight: 700;
 }
-.tt-tone-chips li span { flex: 1; text-align: left; white-space: nowrap; }
+.tt-tone-chips li { min-width: 0; }
+.tt-tone-chips li svg { flex: none; }
+.tt-tone-chips li span { flex: 1; min-width: 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 480px) {
+  .tt-tone-chips li { padding: 6px 8px; font-size: 0.78rem; gap: 4px; }
+  .tt-tone-chips li svg { display: none; }
+}
 .tt-tone-chips li b { color: var(--ink); }
 .tt-score-body .tt-done-actions { flex-wrap: wrap; justify-content: center; }
 .tt-score-body .tc-result-cta { font-size: 0.92rem; }
