@@ -1316,6 +1316,7 @@ export default function GameApp() {
               setScreen("checkoutSignup");
             }}
             onUpgrade={(from) => openEarlyBird("toneder", from === "cap" ? "toneder-cap" : "toneder-spoken")}
+            onPlay={() => onNavigate("play")}
           />
         )}
 

@@ -274,7 +274,11 @@ export function Toneder({
       return;
     }
     if (swipesLeft <= 0) {
-      setPhase("cap");
+      // Out of swipes mid-round: still end on the score card for what was
+      // played; its "Play again" then shows the cap.
+      reporter.roundDone();
+      onRoundDone?.(scoreRound(r.answers), styleRef.current);
+      setPhase("done");
       return;
     }
     const nr = { ...r, index: r.index + 1 };
@@ -475,7 +479,10 @@ export function Toneder({
         </span>
         {styleToggle}
       </div>
-      <div className="tt-stage" ref={stageRef}>
+      <div
+        className={phase === "answered" || phase === "done" ? "tt-stage tt-stage-scroll" : "tt-stage"}
+        ref={stageRef}
+      >
         {showCorners &&
           TONES.map((t) => {
             const c = CORNER[t];
@@ -587,43 +594,13 @@ export function Toneder({
         )}
 
         {phase === "done" && result && (
-          <div className="tt-card tt-done">
-            <p className="tt-score">
-              {result.correct}
-              <span>/{result.total}</span>
-            </p>
-            <p className="tt-card-title">
-              {result.correct === result.total
-                ? "Perfect ear!"
-                : result.correct >= 8
-                  ? "Great ear."
-                  : result.correct >= 5
-                    ? "Getting there."
-                    : "Your ear is warming up."}
-            </p>
-            <ul className="tt-per-tone">
-              {TONES.map((t) => (
-                <li key={t} style={{ color: TONE_LINE_COLOR[t] }}>
-                  <b>{toneName(t, true)}</b> {result.perTone[t].correct}/{result.perTone[t].cards}
-                </li>
-              ))}
-            </ul>
-            {result.mixUp && (
-              <p className="tt-mixup">
-                You mix up the <b style={{ color: TONE_LINE_COLOR[result.mixUp[0]] }}>{toneName(result.mixUp[0])}</b>{" "}
-                and the <b style={{ color: TONE_LINE_COLOR[result.mixUp[1]] }}>{toneName(result.mixUp[1])}</b>.
-              </p>
-            )}
-            <div className="tt-done-actions">
-              <button type="button" className="sticker-button" onClick={start}>
-                Play again
-              </button>
-              <button type="button" className="tc-button" onClick={() => void share()}>
-                {shared ? "Shared!" : "Share my score"}
-              </button>
-            </div>
-            {round && doneCta?.(result, round.answers)}
-          </div>
+          <ScoreCard
+            result={result}
+            shared={shared}
+            onAgain={start}
+            onShare={() => void share()}
+            cta={round && doneCta?.(result, round.answers)}
+          />
         )}
       </div>
       <p className="tt-keys">
@@ -715,6 +692,91 @@ function Reveal({
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** The end of a round, as a match screen: a Super Match for a perfect round. */
+function ScoreCard({
+  result,
+  shared,
+  onAgain,
+  onShare,
+  cta,
+}: {
+  result: RoundResult;
+  shared: boolean;
+  onAgain: () => void;
+  onShare: () => void;
+  cta: ReactNode;
+}) {
+  const perfect = result.total > 0 && result.correct === result.total;
+  const [eyebrow, title] = perfect
+    ? ["It's a", "SUPER MATCH"]
+    : result.correct >= 8
+      ? ["It's a", "match!"]
+      : result.correct >= 5
+        ? ["Almost", "a match"]
+        : ["Your ear is", "warming up"];
+  return (
+    <div className={perfect ? "tt-score-card tt-super" : "tt-score-card"} role="status">
+      <div className="tt-score-hero">
+        <div className="tt-burst" aria-hidden="true">
+          {Array.from({ length: 12 }, (_, i) => (
+            <span key={i} style={{ "--i": i, background: perfect ? "#fff" : TONE_LINE_COLOR[TONES[i % 4]] } as CSSProperties} />
+          ))}
+        </div>
+        {perfect && (
+          <span className="tt-super-star" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z" />
+            </svg>
+          </span>
+        )}
+        <p className="tt-score-eyebrow">{eyebrow}</p>
+        <p className="tt-score-title">{title}</p>
+        <div className="tt-score-pair" aria-hidden="true">
+          <span className="tt-score-avatar">
+            <Pip size={56} tilt={-10} />
+          </span>
+          <span className="tt-score-heart">{perfect ? "★" : "♥"}</span>
+          <span className="tt-score-avatar tt-score-num">
+            {result.correct}
+            <small>/{result.total}</small>
+          </span>
+        </div>
+        <p className="tt-score-sub">
+          {result.correct} of {result.total} words matched your ear
+        </p>
+      </div>
+      <div className="tt-score-body">
+        <ul className="tt-tone-chips">
+          {TONES.map((t) => (
+            <li key={t} style={{ "--c": TONE_LINE_COLOR[t] } as CSSProperties}>
+              <ContourSpark tone={t} width={34} height={16} />
+              <span>{toneName(t, true)}</span>
+              <b>
+                {result.perTone[t].correct}/{result.perTone[t].cards}
+              </b>
+            </li>
+          ))}
+        </ul>
+        {result.mixUp && (
+          <p className="tt-mixup">
+            You mix up the <b style={{ color: TONE_LINE_COLOR[result.mixUp[0]] }}>{toneName(result.mixUp[0])}</b>{" "}
+            and the <b style={{ color: TONE_LINE_COLOR[result.mixUp[1]] }}>{toneName(result.mixUp[1])}</b>.
+          </p>
+        )}
+        <div className="tt-done-actions">
+          <button type="button" className="tt-next" onClick={onAgain} autoFocus>
+            Play again
+          </button>
+          <button type="button" className="tc-button" onClick={onShare}>
+            {shared ? "Shared!" : "Share my score"}
+          </button>
+        </div>
+        {cta}
       </div>
     </div>
   );

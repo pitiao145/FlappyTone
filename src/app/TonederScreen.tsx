@@ -15,6 +15,8 @@ interface Props {
   onCreateAccount: () => void;
   /** Free at the cap, or a tap on the locked Spoken style: the Pro modal. */
   onUpgrade: (from: "cap" | "spoken") => void;
+  /** The score card's next step: the flying game. */
+  onPlay: () => void;
 }
 
 /**
@@ -22,7 +24,7 @@ interface Props {
  * daily swipe cap per tier and Spoken for Pro. Standalone on purpose: no
  * stats, XP, streaks or DB writes, only analytics counts.
  */
-export function TonederScreen({ onCreateAccount, onUpgrade }: Props) {
+export function TonederScreen({ onCreateAccount, onUpgrade, onPlay }: Props) {
   const tier = useTier();
   const [used, setUsed] = useState(() => swipesUsed());
   const left = swipesLeft(tier, used);
@@ -122,6 +124,11 @@ export function TonederScreen({ onCreateAccount, onUpgrade }: Props) {
           track({ type: "toneder_round_done", tier, correct: result.correct });
         }}
         capScreen={capScreen}
+        doneCta={() => (
+          <button type="button" className="tc-result-cta tt-cta-button" onClick={onPlay}>
+            Now say them: fly the bird with your voice →
+          </button>
+        )}
         spokenLocked={tier !== "pro"}
         onSpokenLocked={() => upgrade("spoken")}
       />
