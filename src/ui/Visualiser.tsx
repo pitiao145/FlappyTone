@@ -41,6 +41,8 @@ import { sessionNoiseMeter, startingNoiseFloor } from "../game/sessionNoise.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { BRIDGE_MS, drawVisualiser } from "../render/visualiser.ts";
+import { readAttempt, type FreeAttempt } from "../game/freeAttempts.ts";
+import { AttemptThumbs } from "./AttemptThumbs.tsx";
 import { micErrorCopy } from "./micErrors.ts";
 import { SPEECH_STYLE_LABEL } from "./Settings.tsx";
 import {
@@ -66,6 +68,8 @@ import {
  * a tone-pair fixture on identical axes for comparison.
  */
 export const SPAN_MS = 1600;
+/** Free-mode attempts kept as thumbnails. */
+const MAX_FREE_ATTEMPTS = 3;
 
 /** How long the "wrong tone" toast stays up — matches .mismatch-toast's own fade (App.css). */
 const WRONG_TOAST_MS = 1200;
@@ -245,6 +249,11 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   const recorderRef = useRef<ContourRecorder | null>(null);
   /** Free tab's scrolling line — every voiced frame, never split into attempts. */
   const trailRef = useRef<PitchTrail | null>(null);
+  /** Free tab's last few attempts, shown as thumbnails on desktop. */
+  const [freeAttempts, setFreeAttempts] = useState<FreeAttempt[]>([]);
+  /** Which thumbnail drives the Tone card; a new attempt selects itself. */
+  const [selectedAttemptId, setSelectedAttemptId] = useState<number | null>(null);
+  const nextAttemptIdRef = useRef(1);
   const resumeRef = useRef<() => void>(() => {});
   /** Pending timers for the iOS loud-cue dance, cleared on unmount. */
   const cueTimersRef = useRef<Set<number>>(new Set());
@@ -373,6 +382,8 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   const resetAttempts = () => {
     recorderRef.current?.clear();
     trailRef.current?.clear();
+    setFreeAttempts([]);
+    setSelectedAttemptId(null);
     wordStatsRef.current = { attempts: 0, sumAccuracy: 0 };
     lastScoredAtRef.current = null;
     setAccuracyDisplay(null);
@@ -572,6 +583,13 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       // Free tab: one line that scrolls only while you speak, and the bird holds its height across a
       // bridged gap so it never disagrees with the line behind it.
       const free = freeRef.current;
+      // Event-driven, not per-frame: only runs when an attempt just ended.
+      for (const pts of trail.takeFinished()) {
+        const attempt = free ? readAttempt(nextAttemptIdRef.current++, pts) : null;
+        if (attempt === null) continue;
+        setFreeAttempts((prev) => [...prev, attempt].slice(-MAX_FREE_ATTEMPTS));
+        setSelectedAttemptId(attempt.id);
+      }
       const trailHead = trail.points().at(-1);
       const holding = free
         ? trailHead !== undefined && now - lastVoicedAt <= BRIDGE_MS
@@ -620,7 +638,9 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       if (
         latest &&
         latest.startedAtMs !== lastRecognizedAtRef.current &&
-        (word?.syllables ?? 1) === 1
+        (word?.syllables ?? 1) === 1 &&
+        // Free mode reads its own attempts, per syllable (`freeAttempts`).
+        !free
       ) {
         lastRecognizedAtRef.current = latest.startedAtMs;
         const result = classifyToneV2(latest);
@@ -880,7 +900,35 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
    * deliberately independent of the practice target — see `classifyTone` —
    * but its colour is not: see `recognizedTier`.
    */
-  const recognizedReadout = (
+  const selectedAttempt = freeAttempts.find((a) => a.id === selectedAttemptId) ?? null;
+  /**
+   * Free mode's Tone card: one read per syllable of the selected attempt,
+   * e.g. "T4 · T1". "?" is a syllable too short to judge — never a wrong tone.
+   */
+  const freeToneReadout = (
+    <div className="vis-accuracy">
+      <span className="vis-accuracy-label">Tone</span>
+      {selectedAttempt ? (
+        <>
+          <strong className="vis-accuracy-value">
+            {selectedAttempt.syllables
+              .map((r) => (r === null ? "?" : r.tone === "none" ? "none" : `T${r.tone}`))
+              .join(" · ")}
+          </strong>
+          {/* Confidence per syllable, in the same order as the tones. */}
+          <span className="vis-accuracy-tries">
+            {selectedAttempt.syllables
+              .map((r) => (r === null ? "–" : `${Math.round(r.confidence * 100)}%`))
+              .join(" · ")}
+          </span>
+        </>
+      ) : (
+        <span className="vis-accuracy-value vis-accuracy-empty">–</span>
+      )}
+    </div>
+  );
+
+  const recognizedReadout = popoverTab === "free" ? freeToneReadout : (
     <div
       key={shakeSeq}
       className={recognized ? `vis-accuracy tier-${recognizedTier(tone, recognized)}` : "vis-accuracy"}
@@ -1329,6 +1377,14 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
             {accuracyReadout}
             {recognizedReadout}
           </div>
+
+          {popoverTab === "free" && freeAttempts.length > 0 && (
+            <AttemptThumbs
+              attempts={freeAttempts}
+              selectedId={selectedAttemptId}
+              onSelect={setSelectedAttemptId}
+            />
+          )}
 
           <div className="vis-tone-picker">{desktopTonePickerPanel}</div>
 

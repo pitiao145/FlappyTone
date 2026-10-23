@@ -139,6 +139,9 @@ export class PitchTrail {
   private origin: number | null = null;
   private lastFrameAt: number | null = null;
   private lastVoicedAt = -Infinity;
+  /** Every voiced frame of the attempt in progress — not trimmed to the window. */
+  private attempt: TrailPoint[] = [];
+  private done: TrailPoint[][] = [];
 
   constructor(maxAgeMs: number, bridgeMs: number) {
     this.maxAgeMs = maxAgeMs;
@@ -152,10 +155,16 @@ export class PitchTrail {
     if (voiced) {
       this.clock += inBridge || this.pts.length === 0 ? dt : this.bridgeMs + RESUME_GAP_EXTRA_MS;
       this.origin ??= this.clock;
-      this.pts.push({ atMs: this.clock, chao });
+      const p = { atMs: this.clock, chao };
+      this.pts.push(p);
+      this.attempt.push(p);
       this.lastVoicedAt = nowMs;
     } else if (inBridge) {
       this.clock += dt;
+    } else if (this.attempt.length > 0) {
+      // Silence outlasted the bridge: the attempt is over.
+      this.done.push(this.attempt);
+      this.attempt = [];
     }
     let drop = 0;
     while (drop < this.pts.length && this.clock - this.pts[drop].atMs > this.maxAgeMs) drop++;
@@ -176,8 +185,20 @@ export class PitchTrail {
     return this.origin;
   }
 
+  /**
+   * Attempts that ended since the last call, oldest first. An attempt is one
+   * stretch of speech with no silence longer than `bridgeMs`.
+   */
+  takeFinished(): TrailPoint[][] {
+    const out = this.done;
+    this.done = [];
+    return out;
+  }
+
   clear(): void {
     this.pts = [];
+    this.attempt = [];
+    this.done = [];
     this.origin = null;
     this.lastVoicedAt = -Infinity;
   }
