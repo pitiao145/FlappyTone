@@ -107,3 +107,78 @@ export class ContourRecorder {
     this.lastVoicedAtMs = -Infinity;
   }
 }
+
+export interface TrailPoint {
+  /** The trail's own clock (see `PitchTrail`), not the host clock. */
+  atMs: number;
+  chao: number;
+}
+
+/**
+ * How far past `bridgeMs` the trail's clock jumps when speech resumes after a
+ * long silence, so the renderer always leaves a clear hole between phrases.
+ */
+const RESUME_GAP_EXTRA_MS = 200;
+
+/**
+ * A rolling record of every voiced frame — the data behind the Free tab's
+ * scrolling line. Unlike `ContourRecorder` it never splits speech into
+ * attempts, so a word of any length draws as one line where each syllable
+ * lands when it was said.
+ *
+ * It keeps its own clock, which runs only while you speak (and through a
+ * bridged gap of up to `bridgeMs`). In silence the clock stops, so the line
+ * stops scrolling and stays on screen to be read. When speech resumes the
+ * clock jumps just past `bridgeMs`, leaving a hole between the two phrases.
+ */
+export class PitchTrail {
+  private pts: TrailPoint[] = [];
+  private readonly maxAgeMs: number;
+  private readonly bridgeMs: number;
+  private clock = 0;
+  private origin: number | null = null;
+  private lastFrameAt: number | null = null;
+  private lastVoicedAt = -Infinity;
+
+  constructor(maxAgeMs: number, bridgeMs: number) {
+    this.maxAgeMs = maxAgeMs;
+    this.bridgeMs = bridgeMs;
+  }
+
+  push(chao: number, voiced: boolean, nowMs: number): void {
+    const dt = this.lastFrameAt === null ? 0 : nowMs - this.lastFrameAt;
+    this.lastFrameAt = nowMs;
+    const inBridge = nowMs - this.lastVoicedAt <= this.bridgeMs;
+    if (voiced) {
+      this.clock += inBridge || this.pts.length === 0 ? dt : this.bridgeMs + RESUME_GAP_EXTRA_MS;
+      this.origin ??= this.clock;
+      this.pts.push({ atMs: this.clock, chao });
+      this.lastVoicedAt = nowMs;
+    } else if (inBridge) {
+      this.clock += dt;
+    }
+    let drop = 0;
+    while (drop < this.pts.length && this.clock - this.pts[drop].atMs > this.maxAgeMs) drop++;
+    if (drop > 0) this.pts.splice(0, drop);
+  }
+
+  points(): readonly TrailPoint[] {
+    return this.pts;
+  }
+
+  /** The trail's clock now — frozen while silent. */
+  clockMs(): number {
+    return this.clock;
+  }
+
+  /** Clock time of the first voiced frame since the last clear, or null. */
+  originMs(): number | null {
+    return this.origin;
+  }
+
+  clear(): void {
+    this.pts = [];
+    this.origin = null;
+    this.lastVoicedAt = -Infinity;
+  }
+}

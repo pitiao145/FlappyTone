@@ -14,7 +14,7 @@
 
 import { corridorChaoAt,
   shapeForTone, shapeForWord, type Tone } from "../game/gates.ts";
-import type { Contour } from "../game/contours.ts";
+import type { Contour, TrailPoint } from "../game/contours.ts";
 import { birdXFrac } from "../game/run.ts";
 import type { Word } from "../game/words.ts";
 import { BACKDROP, chaoToY, drawChaoGrid, drawPip } from "./scene.ts";
@@ -38,6 +38,13 @@ export interface VisualiserScene {
   /** Where the dot sits right now, in chao. */
   chao: number;
   voiced: boolean;
+  /**
+   * Free tab only: one line instead of stacked attempts. The bird starts at
+   * the game's `birdXFrac`, moves right as you speak, then holds at
+   * `SCROLL_HEAD_FRAC` while the line scrolls left behind it. Times are on
+   * `PitchTrail`'s clock, which stops in silence — so does the scroll.
+   */
+  scroll?: { points: readonly TrailPoint[]; nowMs: number; originMs: number | null } | null;
 }
 
 /** Samples used to trace the target contour. */
@@ -48,6 +55,17 @@ const TARGET_STEPS = 48;
  * frames enter a contour, so a gap is missing data, not quiet data.
  */
 const BREAK_MS = 70;
+
+/**
+ * A silence up to this long inside speech (a consonant like the q of qiān, a
+ * creaky T3 dip) is bridged with a faint dashed line on the scrolling trace —
+ * it shows the voice carried on without inventing a pitch for the gap. Longer
+ * silences leave a real hole.
+ */
+export const BRIDGE_MS = 700;
+
+/** Where the bird sits on the scrolling trace, as a fraction of the width. */
+const SCROLL_HEAD_FRAC = 0.72;
 
 /** Right margin, so the trace doesn't run flush to the edge. */
 const END_PAD_FRAC = 0.04;
@@ -75,6 +93,18 @@ export function drawVisualiser(
   ctx.fillStyle = BACKDROP;
   ctx.fillRect(0, 0, width, height);
   drawChaoGrid(ctx, width, height);
+
+  if (scene.scroll) {
+    const { points, nowMs, originMs } = scene.scroll;
+    const pxPerMs = (width * SCROLL_HEAD_FRAC) / scene.spanMs;
+    const startX = width * birdXFrac();
+    const headX = originMs === null
+      ? startX
+      : Math.min(width * SCROLL_HEAD_FRAC, startX + (nowMs - originMs) * pxPerMs);
+    drawScrolling(ctx, height, points, nowMs, pxPerMs, headX);
+    drawPip(ctx, height, scene.chao, headX, 0, "flying", scene.voiced, performance.now(), Infinity, true, width);
+    return;
+  }
 
   if (scene.tone !== null) drawTarget(ctx, width, height, scene);
 
@@ -169,5 +199,63 @@ function drawContour(
     }
   }
   ctx.stroke();
+  ctx.restore();
+}
+
+export type ScrollSegment = { kind: "voice" | "bridge"; points: { x: number; y: number }[] };
+
+/**
+ * Splits the trail into what to stroke: solid runs of voice, dashed bridges
+ * over short silences, nothing over long ones. Pure, so it is testable
+ * without a canvas. x moves left `pxPerMs` per ms of age on the trail clock.
+ */
+export function scrollSegments(
+  points: readonly TrailPoint[],
+  nowMs: number,
+  pxPerMs: number,
+  headX: number,
+  height: number,
+): ScrollSegment[] {
+  const segs: ScrollSegment[] = [];
+  let run: { x: number; y: number }[] = [];
+  for (let i = 0; i < points.length; i++) {
+    const p = { x: headX - (nowMs - points[i].atMs) * pxPerMs, y: chaoToY(points[i].chao, height) };
+    const gap = i > 0 ? points[i].atMs - points[i - 1].atMs : 0;
+    if (i > 0 && gap > BREAK_MS) {
+      if (run.length > 1) segs.push({ kind: "voice", points: run });
+      if (gap <= BRIDGE_MS) segs.push({ kind: "bridge", points: [run[run.length - 1], p] });
+      run = [];
+    }
+    run.push(p);
+  }
+  if (run.length > 1) segs.push({ kind: "voice", points: run });
+  return segs;
+}
+
+function drawScrolling(
+  ctx: CanvasRenderingContext2D,
+  height: number,
+  points: readonly TrailPoint[],
+  nowMs: number,
+  pxPerMs: number,
+  headX: number,
+): void {
+  ctx.save();
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  for (const seg of scrollSegments(points, nowMs, pxPerMs, headX, height)) {
+    if (seg.kind === "bridge") {
+      ctx.setLineDash([3, 6]);
+      ctx.strokeStyle = rgba("accent", 0.35);
+      ctx.lineWidth = 2;
+    } else {
+      ctx.setLineDash([]);
+      ctx.strokeStyle = rgba("accent", 0.95);
+      ctx.lineWidth = 3.5;
+    }
+    ctx.beginPath();
+    seg.points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+    ctx.stroke();
+  }
   ctx.restore();
 }

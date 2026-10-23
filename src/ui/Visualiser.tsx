@@ -21,7 +21,7 @@ import {
 } from "../audio/session.ts";
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { useTier } from "../data/tier.ts";
-import { ContourRecorder } from "../game/contours.ts";
+import { ContourRecorder, PitchTrail } from "../game/contours.ts";
 import type { Tone } from "../game/gates.ts";
 import { effectiveSpeechStyle, type CalibrationSettings } from "../game/settings.ts";
 import { type ToneClassification } from "../game/toneClassifier.ts";
@@ -40,7 +40,7 @@ import {
 import { sessionNoiseMeter, startingNoiseFloor } from "../game/sessionNoise.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
-import { drawVisualiser } from "../render/visualiser.ts";
+import { BRIDGE_MS, drawVisualiser } from "../render/visualiser.ts";
 import { micErrorCopy } from "./micErrors.ts";
 import { SPEECH_STYLE_LABEL } from "./Settings.tsx";
 import {
@@ -182,6 +182,8 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   /** Mobile only — the collapsed tone-mark icon opens this to pick a tone. */
   const [tonePopoverOpen, setTonePopoverOpen] = useState(false);
   const [popoverTab, setPopoverTab] = useState<VisualiserTab>("free");
+  const freeRef = useRef(true);
+  freeRef.current = popoverTab === "free";
   /**
    * Desktop only: once a tone or pair is picked, its tab's grid folds away so
    * the word list below gets the room. Tapping the tab again unfolds it. (The
@@ -241,6 +243,8 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   const wordRef = useRef<Word | null>(null);
   wordRef.current = selectedWord;
   const recorderRef = useRef<ContourRecorder | null>(null);
+  /** Free tab's scrolling line — every voiced frame, never split into attempts. */
+  const trailRef = useRef<PitchTrail | null>(null);
   const resumeRef = useRef<() => void>(() => {});
   /** Pending timers for the iOS loud-cue dance, cleared on unmount. */
   const cueTimersRef = useRef<Set<number>>(new Set());
@@ -368,6 +372,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
    */
   const resetAttempts = () => {
     recorderRef.current?.clear();
+    trailRef.current?.clear();
     wordStatsRef.current = { attempts: 0, sumAccuracy: 0 };
     lastScoredAtRef.current = null;
     setAccuracyDisplay(null);
@@ -502,6 +507,8 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
 
     const recorder = new ContourRecorder();
     recorderRef.current = recorder;
+    const trail = new PitchTrail(SPAN_MS, BRIDGE_MS);
+    trailRef.current = trail;
     // The player's tone lines this session (spec B, Pro only), sent in one
     // batch when the session ends or the tab is hidden — whichever is first.
     let tracker: PitchTracker | null = null;
@@ -542,6 +549,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       const p = tracker.push(frame);
       const now = performance.now();
       recorder.push(p.smoothedChao, p.voiced, now);
+      trail.push(p.smoothedChao, p.voiced, now);
       voiced = p.voiced;
       if (p.voiced) lastVoicedAt = now;
     };
@@ -561,10 +569,17 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       const pair = (wordRef.current?.syllables ?? 1) > 1;
       const gapMs = pair ? tuning().multiMergeGapMs : tuning().mergeGapMs;
       recorder.setMergeGapMs(gapMs);
-      const holding = pair && head !== undefined && now - lastVoicedAt <= gapMs;
+      // Free tab: one line that scrolls only while you speak, and the bird holds its height across a
+      // bridged gap so it never disagrees with the line behind it.
+      const free = freeRef.current;
+      const trailHead = trail.points().at(-1);
+      const holding = free
+        ? trailHead !== undefined && now - lastVoicedAt <= BRIDGE_MS
+        : pair && head !== undefined && now - lastVoicedAt <= gapMs;
       // Between utterances the dot returns to the rest line, as it does in
       // play — but nothing drifts *while* you are speaking.
-      const target = head && (voiced || holding) ? head.chao : 3;
+      const headChao = free ? trailHead?.chao : head?.chao;
+      const target = headChao !== undefined && (voiced || holding) ? headChao : 3;
       displayChao +=
         (target - displayChao) * (1 - Math.exp(-dt / tuning().easeTauMs));
 
@@ -642,6 +657,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         spanMs: SPAN_MS,
         chao: displayChao,
         voiced: voiced || holding || now - lastVoicedAt <= tuning().graceMs,
+        scroll: free ? { points: trail.points(), nowMs: trail.clockMs(), originMs: trail.originMs() } : null,
       });
       if (running) rafId = requestAnimationFrame(tick);
     };
