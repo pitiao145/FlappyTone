@@ -6,7 +6,7 @@ FlappyTone makes Mandarin tones less boring, abstract and hard. It uses creativi
 
 Each game or tool is one creative expression of that vision, not the whole product:
 - **The flying game** (`/app`, Flappy Bird based): the player's voice is the controller. Live pitch moves a bird through corridors shaped like the tones.
-- **TONEder** (`/tools/tone-test`, Tinder based): swipe a heard word to its tone.
+- **TONEder** (`/tools/tone-test` and the app's TONEder tab, Tinder based): swipe a heard word to its tone. One shared component, `src/toneder/`.
 - Public tools on the site: tone visualizer, tone-marks converter, `/say` word pages.
 
 These ideas come from Pierre's own creativity and give people a "wow" the first time. **No rule in this file blocks a new creative idea.** When Pierre proposes one, give one short, honest opinion (fit, cost, risk), then help build it if he still wants it. Never argue "out of scope" or "that is not the flying game".
@@ -101,7 +101,7 @@ Ground truth is `fixtures/captures/jane_*.wav` (native Taiwanese speaker, direct
 
 ## Not built yet (current state, not limits)
 
-Speech recognition · taught sandhi rules · speech past two syllables · native apps · listening drills inside `/app` (TONEder is a public page today) · teacher tools · our own billing (Lemon Squeezy is merchant of record). Any of these can be proposed and built.
+Speech recognition · taught sandhi rules · speech past two syllables · native apps · teacher tools · our own billing (Lemon Squeezy is merchant of record). Any of these can be proposed and built.
 
 ## Briefs workflow (Cowork → Claude Code)
 

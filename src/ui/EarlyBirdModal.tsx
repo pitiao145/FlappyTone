@@ -8,7 +8,7 @@ import { tierLimits } from "../game/tiers.ts";
 import { PRO_FEATURES, PRO_PRICE } from "./plan.ts";
 import { useNewsletterSubscribe } from "./useNewsletterSubscribe.ts";
 
-export type EarlyBirdSurface = "progress" | "profile" | "daily-limit" | "visualiser" | "leaderboard";
+export type EarlyBirdSurface = "progress" | "profile" | "daily-limit" | "visualiser" | "leaderboard" | "toneder";
 
 interface Props {
   surface: EarlyBirdSurface;
@@ -62,6 +62,13 @@ const COPY: Record<
     eyebrow: "★ Claim your place",
     title: "Your score is good enough to be on the board",
     body: "A free account puts you on the weekly leaderboard and saves your progress across devices. EarlyBird adds your own name, every word, and unlimited runs.",
+  },
+  toneder: {
+    eyebrow: "★ EarlyBird access",
+    title: "Swipe without a limit",
+    body: "EarlyBird gives TONEder with no daily limit and the Spoken recordings at everyday speed, plus unlimited runs and everything else as it lands. Full refund anytime.",
+    guestBody:
+      "Create a free account for more swipes a day. EarlyBird goes further: no daily limit, the Spoken recordings, and everything else as it lands.",
   },
   visualiser: {
     eyebrow: "★ EarlyBird access",

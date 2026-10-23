@@ -136,8 +136,17 @@ per load) and `tool_summary {attempts, targets}` on `pagehide`, global tier,
 counts only.
 
 **The public tone listening test (`/tools/tone-test`, `src/toneder/`,
-`pages/ToneTest.tsx`).** TONEder, the swipe-the-tone listening game. Today it
-lives only on this public page (Pierre, 20 Oct 2026); it may become an app tab. No mic, no `src/audio/`: a card
+`pages/ToneTest.tsx`, app tab `src/app/TonederScreen.tsx`).** TONEder, the
+swipe-the-tone listening game. One component, `src/toneder/Toneder.tsx`, used
+by the public page and the app's TONEder tab (brief 20); the host passes the
+word pool, a swipe budget, analytics hooks and the end-screen CTA. The app tab
+is standalone (no stats, XP or DB writes): pool `poolForTier()` (the 76
+guest-playable single-syllable words for every tier until a membership change
+opens the 211 to free/Pro), a daily swipe cap `tonederSwipesPerDay` in
+`tiers.ts` (guest 30, free 50, Pro none; counted per local day in
+`flappytone.toneder.swipes.v1`, device-local, not tamper-proof), Spoken for Pro
+only. App events: `toneder_swipe {tier, style, count}` (batched per round),
+`toneder_round_done`, `toneder_cap_hit`, `toneder_upgrade_click`. No mic, no `src/audio/`: a card
 plays a hidden word through `wordAudio.ts`, the visitor swipes it to a corner
 (T1 top-left, T2 top-right, T3 bottom-left, T4 bottom-right). 40 words
 (`TEST_WORDS`, 10 per tone, guest-playable, both styles; `toneTest.test.ts`

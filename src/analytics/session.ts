@@ -328,6 +328,15 @@ export type AnalyticsEvent =
       t4Correct: number;
       style: "standard" | "spoken" | "mixed";
     }
+  /**
+   * The app's TONEder tab (`src/app/TonederScreen.tsx`). Counts only, never a
+   * word. `toneder_swipe` is batched: one event per round (or on leaving the
+   * tab) carrying how many swipes it covers.
+   */
+  | { type: "toneder_swipe"; tier: string; style: "standard" | "spoken"; count: number }
+  | { type: "toneder_round_done"; tier: string; correct: number }
+  | { type: "toneder_cap_hit"; tier: string }
+  | { type: "toneder_upgrade_click"; tier: string; from: "cap" | "spoken" }
   /** FeedbackWidget.tsx's submit, once it resolves ok. Never carries the free-text message — screen/rating/tier only. */
   | { type: "feedback_submitted"; screen: string; rating: number | null; tier: string };
 
@@ -359,7 +368,8 @@ export type TrackedScreen =
   | "progress"
   | "profile"
   | "checkoutSignup"
-  | "resetPassword";
+  | "resetPassword"
+  | "toneder";
 
 /** The Settings controls that emit a `setting_changed` event. */
 /** The visualiser's practice tabs, mirrored from Visualiser.tsx. */
@@ -431,6 +441,10 @@ export function eventTier(type: AnalyticsEvent["type"]): AnalyticsTier {
     case "tool_used":
     case "tool_summary":
     case "word_page_action":
+    case "toneder_swipe":
+    case "toneder_round_done":
+    case "toneder_cap_hit":
+    case "toneder_upgrade_click":
       return "global";
   }
 }

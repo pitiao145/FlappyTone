@@ -1432,3 +1432,14 @@ removed entirely in the same pass — once scrollSpeed stopped varying, pace's
 only remaining effect was stretching the rest interval, not enough to
 justify a menu control. `baseRestMs`/`restMsFloor` in `tuning.ts` were
 doubled at removal to absorb the old "relaxed" default's ×2.0 multiplier.
+
+## TONEder becomes an app tab too (23 Oct 2026, brief 20)
+
+The page's swipe UI moved into one component (`src/toneder/`) used by both
+`/tools/tone-test` and a TONEder tab in `/app`. The app tab is standalone (no
+stats, XP or DB writes) and gives an upgrade reason: a daily swipe cap (guest
+30, free 50, Pro unlimited, `tiers.ts`) and Spoken recordings for Pro only.
+The cap is device-local; a guest who clears storage resets it, which is
+accepted. Free/Pro were meant to get all 211 published words; that needs a
+membership change on the Worker side and waits for Pierre's go-ahead, so every
+tier gets the 76 guest-playable words for now.

@@ -12361,3 +12361,16 @@ button.switch-track.switch-on {
 .vis-empty-hint p {
   margin: 0 0 8px;
 }
+
+/* The app's TONEder tab (src/app/TonederScreen.tsx): the shared .tt-tool in
+   the app's main column. */
+.toneder-screen {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 16px;
+  box-sizing: border-box;
+}
+.tt-style button.tt-style-locked {
+  opacity: 0.45;
+}

@@ -1,6 +1,6 @@
 import { SITE_HREF } from "../ui/appLink.ts";
 
-export type NavTab = "play" | "visualiser" | "progress" | "profile" | "settings";
+export type NavTab = "play" | "toneder" | "visualiser" | "progress" | "profile" | "settings";
 
 interface Props {
   active: NavTab;
@@ -25,6 +25,26 @@ function IconVisualiser() {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Two stacked cards, the front one tilted: a swipe deck. */
+function IconToneder() {
+  return (
+    <svg className="game-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="4" y="5" width="11" height="15" rx="2" fill="none" stroke="currentColor" strokeWidth="2" />
+      <rect
+        x="9"
+        y="3"
+        width="11"
+        height="15"
+        rx="2"
+        transform="rotate(12 14.5 10.5)"
+        fill="currentColor"
+        stroke="currentColor"
+        strokeWidth="2"
       />
     </svg>
   );
@@ -93,6 +113,7 @@ const ITEMS: {
   soon?: boolean;
 }[] = [
   { tab: "play", label: "Play", icon: IconPlay },
+  { tab: "toneder", label: "TONEder", icon: IconToneder },
   { tab: "visualiser", label: "Visualiser", icon: IconVisualiser },
   { tab: "progress", label: "Progress", icon: IconProgress },
   { tab: "profile", label: "Profile", icon: IconProfile },

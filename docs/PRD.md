@@ -28,7 +28,7 @@ The four Mandarin tone marks (ˉ ˊ ˇ ˋ) are literally pitch-contour diagrams.
 - Speech recognition / syllable verification (ASR)
 - Tone sandhi as an explicit, taught concept; connected speech past two syllables; sentences
 - Native/mobile app build
-- A listening mode. TONEder (`/tools/tone-test`) is a separate listening game; bringing it into `/app` is an open option.
+- A listening mode inside the flying game. TONEder is a separate listening game: a public page (`/tools/tone-test`) and its own `/app` tab (brief 20), with no link to scoring or stats.
 
 Each of these can be proposed and built. Two-syllable words ("tone pairs") shipped as the `pairs` mode and the `wordMix` setting (§8). Accounts, tiers, the leaderboard, the server-owned stats and the payment flow are in `docs/ARCHITECTURE.md` ("Accounts, tiers and the leaderboard").
 

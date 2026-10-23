@@ -73,6 +73,7 @@ import { Visualiser } from "../ui/Visualiser";
 import { micErrorCopy } from "../ui/micErrors";
 import { parseChallengeName } from "../share/shareName.ts";
 import { GameNav, type NavTab } from "./GameNav.tsx";
+import { TonederScreen } from "./TonederScreen.tsx";
 import "../App.css";
 
 export type Screen =
@@ -97,6 +98,7 @@ export type Screen =
   | "profile"
   | "checkoutSignup"
   | "resetPassword"
+  | "toneder"
   | "lab"
   | "devlogin";
 
@@ -122,6 +124,7 @@ const FEEDBACK_SCREENS: ReadonlySet<Screen> = new Set<Screen>([
   "progress",
   "profile",
   "checkoutSignup",
+  "toneder",
 ]);
 
 /** Which nav item should read as active for a given screen. */
@@ -129,6 +132,8 @@ function navTabFor(screen: Screen): NavTab {
   switch (screen) {
     case "visualiser":
       return "visualiser";
+    case "toneder":
+      return "toneder";
     case "progress":
       return "progress";
     case "profile":
@@ -1292,6 +1297,16 @@ export default function GameApp() {
             onHowTo={() => setScreen("howto")}
             onSignedOut={() => setScreen("play")}
             focus={settingsFocus}
+          />
+        )}
+
+        {screen === "toneder" && (
+          <TonederScreen
+            onCreateAccount={() => {
+              setSignupReason("join");
+              setScreen("checkoutSignup");
+            }}
+            onUpgrade={(from) => openEarlyBird("toneder", from === "cap" ? "toneder-cap" : "toneder-spoken")}
           />
         )}
 

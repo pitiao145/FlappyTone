@@ -46,6 +46,8 @@ export interface TierLimits {
   intermediate: ProficiencyAccess;
   /** Tone-pairs mode's per-combo word cap. `Infinity` = unlimited. */
   pairWordsPerCombo: number;
+  /** The app's TONEder tab: swipes (answers) per local day. `Infinity` = unlimited. */
+  tonederSwipesPerDay: number;
 }
 
 export const DEFAULT_TIER_LIMITS: Readonly<Record<Tier, TierLimits>> = Object.freeze({
@@ -61,6 +63,7 @@ export const DEFAULT_TIER_LIMITS: Readonly<Record<Tier, TierLimits>> = Object.fr
     // free) — 0, not Infinity, so this reads as "no access" rather than
     // implying an unrestricted mode nothing gates.
     pairWordsPerCombo: 0,
+    tonederSwipesPerDay: 30,
   },
   free: {
     runsPerDay: 10,
@@ -71,6 +74,7 @@ export const DEFAULT_TIER_LIMITS: Readonly<Record<Tier, TierLimits>> = Object.fr
     beginner: { levels: [1, 2], allowMix: true },
     intermediate: { levels: [1], allowMix: false },
     pairWordsPerCombo: 10,
+    tonederSwipesPerDay: 50,
   },
   pro: {
     runsPerDay: Infinity,
@@ -81,6 +85,7 @@ export const DEFAULT_TIER_LIMITS: Readonly<Record<Tier, TierLimits>> = Object.fr
     beginner: { levels: [1, 2, 3], allowMix: true },
     intermediate: { levels: [1, 2, 3], allowMix: true },
     pairWordsPerCombo: Infinity,
+    tonederSwipesPerDay: Infinity,
   },
 }) as Readonly<Record<Tier, TierLimits>>;
 
