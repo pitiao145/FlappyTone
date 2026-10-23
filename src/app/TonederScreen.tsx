@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { track } from "../analytics/client.ts";
+import { getPlayTicket } from "../audio/clipToken.ts";
+import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
+import { catalogFromCache, catalogFromFallback, fetchCatalog } from "../data/words.ts";
 import { useTier } from "../data/tier.ts";
 import { tierLimits, type Tier } from "../game/tiers.ts";
 import { Toneder } from "../toneder/Toneder.tsx";
 import { countSwipe, swipesLeft, swipesUsed } from "../toneder/dailySwipes.ts";
-import { poolForTier } from "../toneder/pool.ts";
+import { tierPool, usablePool } from "../toneder/pool.ts";
 import type { TestStyle } from "../toneder/toneTest.ts";
 
 interface Props {
@@ -29,6 +32,32 @@ export function TonederScreen({ onCreateAccount, onUpgrade }: Props) {
     tierRef.current = tier;
   }, [tier]);
   const capSent = useRef(false);
+  const [catalog, setCatalog] = useState(
+    () => catalogFromCache(DEFAULT_SPEAKER_ID) ?? catalogFromFallback(),
+  );
+
+  // The live catalog (it knows which words have a Spoken take), and the
+  // game's own clip ticket, so the Worker serves what this tier may play.
+  useEffect(() => {
+    let live = true;
+    void fetchCatalog({ speaker: DEFAULT_SPEAKER_ID }).then((w) => {
+      if (live) setCatalog(w);
+    });
+    void import("../site/wordAudio.ts").then((m) => m.setTicketProvider(getPlayTicket));
+    return () => {
+      live = false;
+      void import("../site/wordAudio.ts").then((m) => m.setTicketProvider(null));
+    };
+  }, []);
+
+  const pools = useMemo(() => {
+    const standard = tierPool(catalog, tier, "standard", DEFAULT_SPEAKER_ID);
+    const spoken = tierPool(catalog, tier, "spoken", DEFAULT_SPEAKER_ID);
+    // The bundled fallback carries no Spoken data: use the guest words, all
+    // of which have both takes.
+    const guest = tierPool(catalog, "guest", "standard", DEFAULT_SPEAKER_ID);
+    return { standard, spoken: usablePool(spoken) ? spoken : guest };
+  }, [catalog, tier]);
 
   /** `toneder_swipe` is batched: one event per style per flush. */
   const flush = () => {
@@ -80,7 +109,8 @@ export function TonederScreen({ onCreateAccount, onUpgrade }: Props) {
   return (
     <div className="screen toneder-screen">
       <Toneder
-        words={poolForTier(tier)}
+        words={pools.standard}
+        spokenWords={pools.spoken}
         sharePath="/tools/tone-test"
         swipesLeft={left}
         onSwipe={(_, style) => {

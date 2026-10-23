@@ -51,3 +51,11 @@ This is a client-only change, with no schema change. I did not build it because 
 - Tier ticket for TONEder clips, then the bigger pool for free/Pro (see above).
 - A game entry filtered by tone pair (for example `?intent=pairs&combo=2-3`), so the CTA can drop the player straight into their weak pair.
 - In-app profiles: only the page's 40 words have dating-profile props and bios. The other 36 show the reveal without "About me".
+
+## Follow-up (23 Oct, Pierre said yes): the bigger pool
+- `wordAudio.ts` has `setTicketProvider()`. The app's TONEder sets it to the game's `getPlayTicket` (the ticket carries the account's tier) and clears it on leaving. Site pages are unchanged (guest ticket).
+- `src/toneder/pool.ts` → `tierPool(words, tier, style)`: single-syllable, default speaker, `min_tier`, and the Worker's level gate (levels read from `tiers.ts`, not copied). Spoken keeps words with a natural take. The tab reads the live catalog (`fetchCatalog`); with only the bundled fallback (no Spoken data), Spoken uses the 76 guest words.
+- Counts: **guest 76, free 187, Pro 211.** Read-only query on the live DB: all 211 have a published Spoken take, so Spoken loses no words. (Free is 187, not 190: my earlier count included 3 neutral-tone words, which TONEder has no corner for.)
+- No schema, RLS or Worker change.
+- Checks: typecheck ✓, `npm test` 1497 ✓, build ✓, rule-7 grep empty, mic-chunks ✓.
+- Needs Pierre's eyes: sign in as free and Pro, play TONEder, and confirm the new words play (a TOCFL-3 word should play only for Pro). The "211 words" CTA copy is now true for Pro only.

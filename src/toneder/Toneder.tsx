@@ -87,6 +87,8 @@ interface Round {
 export interface TonederProps {
   /** The pool rounds are drawn from (default: the public page's 40). */
   words?: readonly TestWord[];
+  /** The pool for Spoken rounds, when not every word has a natural take (default: `words`). */
+  spokenWords?: readonly TestWord[];
   /** The public page's analytics; the app reports through `onSwipe`/`onRoundDone`. */
   reporter?: ToneTestReporter;
   /** The page "Share my score" links to. */
@@ -117,6 +119,7 @@ const NO_REPORTER: ToneTestReporter = {
 /** The listening game: a card in the middle, a tone in each corner. */
 export function Toneder({
   words = TEST_WORDS,
+  spokenWords,
   reporter = NO_REPORTER,
   sharePath,
   swipesLeft = Infinity,
@@ -209,7 +212,11 @@ export function Toneder({
     }
     reporter.style(styleRef.current);
     reporter.started();
-    const { cards, spares } = buildRound(Math.random, words, loadLastRound());
+    const { cards, spares } = buildRound(
+      Math.random,
+      styleRef.current === "spoken" ? (spokenWords ?? words) : words,
+      loadLastRound(),
+    );
     saveLastRound(cards.map((w) => w.id));
     const r: Round = { cards, spares, index: 0, answers: [] };
     roundRef.current = r;

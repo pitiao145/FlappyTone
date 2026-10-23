@@ -140,9 +140,12 @@ counts only.
 swipe-the-tone listening game. One component, `src/toneder/Toneder.tsx`, used
 by the public page and the app's TONEder tab (brief 20); the host passes the
 word pool, a swipe budget, analytics hooks and the end-screen CTA. The app tab
-is standalone (no stats, XP or DB writes): pool `poolForTier()` (the 76
-guest-playable single-syllable words for every tier until a membership change
-opens the 211 to free/Pro), a daily swipe cap `tonederSwipesPerDay` in
+is standalone (no stats, XP or DB writes): pools `tierPool()` (`src/toneder/pool.ts`): every
+published single-syllable word the tier's clip ticket may play, mirroring the
+Worker's `min_tier` + TOCFL level gate (guest 76, free 187, Pro 211 on 23 Oct;
+all with a Spoken take). Clips use the game's own ticket
+(`wordAudio.setTicketProvider(getPlayTicket)`), so the Worker sees the real
+tier; site pages stay on a guest ticket, a daily swipe cap `tonederSwipesPerDay` in
 `tiers.ts` (guest 30, free 50, Pro none; counted per local day in
 `flappytone.toneder.swipes.v1`, device-local, not tamper-proof), Spoken for Pro
 only. App events: `toneder_swipe {tier, style, count}` (batched per round),

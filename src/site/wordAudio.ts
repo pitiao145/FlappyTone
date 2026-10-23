@@ -23,7 +23,19 @@ const urls = new Map<string, Promise<string | null>>();
 let playing: HTMLAudioElement | null = null;
 let finish: (() => void) | null = null;
 
+/**
+ * The app's TONEder sets this to the game's own ticket (`src/audio/clipToken.ts`),
+ * so a signed-in player gets the words their tier may play. Site pages never
+ * set it and stay on a guest ticket.
+ */
+let provider: (() => Promise<string | null>) | null = null;
+
+export function setTicketProvider(p: (() => Promise<string | null>) | null): void {
+  provider = p;
+}
+
 function getTicket(): Promise<string | null> {
+  if (provider) return provider().catch(() => null);
   ticket ??= fetch(`${BASE}/token`, { method: "POST" })
     .then((r) => (r.ok ? r.json() : null))
     .then((b: { token?: unknown } | null) =>

@@ -1443,3 +1443,9 @@ The cap is device-local; a guest who clears storage resets it, which is
 accepted. Free/Pro were meant to get all 211 published words; that needs a
 membership change on the Worker side and waits for Pierre's go-ahead, so every
 tier gets the 76 guest-playable words for now.
+
+Follow-up the same day: no membership change was needed. The Worker already
+serves free (TOCFL 1–2) and Pro (all levels) more words; the block was
+TONEder's guest-only clip ticket. The app tab now uses the game's ticket and a
+per-tier pool (guest 76, free 187, Pro 211; all have a Spoken take, checked
+live).

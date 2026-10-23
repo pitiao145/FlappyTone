@@ -1,58 +1,64 @@
 /**
- * The app's TONEder word pool, read from the bundled catalog fallback (the
- * app ships it already): every published single-syllable word a guest
- * ticket can play, in both styles. 76 words today.
+ * The app's TONEder word pools, per tier and style: every published
+ * single-syllable word of the default speaker that this tier's clip ticket
+ * may play. Mirrors the clips Worker's rules (`workers/clips/src/routes/clip.ts`):
+ * `min_tier`, then the TOCFL level gate (sampler and untagged words always
+ * play; otherwise one of the word's levels must be in the tier's union of
+ * Beginner and Intermediate levels from `tiers.ts`). Spoken keeps only words
+ * with a published natural take.
  *
- * Free and Pro are meant to get all 211 published words, but the Worker only
- * serves the rest to tickets whose tier the word's lists allow (a membership
- * change, brief 20 "ask first"). Until that lands every tier gets the 76.
+ * Words come from the live catalog (`fetchCatalog`); the bundled fallback has
+ * no natural-take data, so with only the fallback in hand Spoken uses the
+ * guest pool (all 76 are known to have both styles; `toneTest.test.ts` checks
+ * the 40-word subset against the Worker).
  */
-import fallback from "../data/wordsFallback.json";
 import type { Tier } from "../game/tiers.ts";
+import { tierLimits } from "../game/tiers.ts";
+import { wordsForTier, type Word } from "../game/words.ts";
 import type { TestWord, Tone } from "./toneTest.ts";
 
-interface Row {
-  id: string;
-  hanzi: string;
-  pinyin: string;
-  tone: number;
-  english?: string;
-  syllables: number;
-  status: string;
-  lists?: string[] | null;
+/** Mirrors the Worker's `SAMPLER_LIST_IDS`. */
+const SAMPLERS = new Set(["sampler-beginner", "sampler-intermediate", "sampler-seo"]);
+
+function tocflLevel(id: string): number | null {
+  const m = /^tocfl([123])$/.exec(id);
+  return m ? Number(m[1]) : null;
 }
 
-/** Mirrors workers/clips/src/routes/clip.ts' sampler lists and level gate. */
-const GUEST_SAMPLERS = new Set(["sampler-beginner", "sampler-intermediate", "sampler-seo"]);
-
-export function guestPlayable(lists: readonly string[]): boolean {
-  return lists.some((l) => GUEST_SAMPLERS.has(l)) || !lists.some((l) => /^tocfl\d$/.test(l));
+/** The Worker's level gate, with the tier's level union read from `tiers.ts`. */
+export function levelAllowed(listIds: readonly string[], tier: Tier): boolean {
+  const levels = listIds.map(tocflLevel).filter((l): l is number => l !== null);
+  if (levels.length === 0 || listIds.some((id) => SAMPLERS.has(id))) return true;
+  const t = tierLimits()[tier];
+  const union = new Set<number>([...(t.beginner.levels ?? []), ...(t.intermediate.levels ?? [])]);
+  return levels.some((l) => union.has(l));
 }
 
-export function guestPool(rows: readonly Row[]): TestWord[] {
-  return rows
+function toTestWord(w: Word): TestWord {
+  return { id: w.id, hanzi: w.hanzi, pinyin: w.pinyin, tone: w.tone as Tone, english: w.english };
+}
+
+/** Every single-syllable word this tier's ticket can play, in this style. */
+export function tierPool(
+  words: readonly Word[],
+  tier: Tier,
+  style: "standard" | "spoken",
+  speaker = "jane",
+): TestWord[] {
+  return wordsForTier([...words], tier)
     .filter(
-      (r) =>
-        r.status === "published" &&
-        r.syllables === 1 &&
-        r.tone >= 1 &&
-        r.tone <= 4 &&
-        guestPlayable(r.lists ?? []),
+      (w) =>
+        w.speakerId === speaker &&
+        w.syllables === 1 &&
+        w.tone >= 1 &&
+        w.tone <= 4 &&
+        levelAllowed(w.listIds ?? [], tier) &&
+        (style === "standard" || !!w.natural),
     )
-    .map((r) => ({
-      id: r.id,
-      hanzi: r.hanzi,
-      pinyin: r.pinyin,
-      tone: r.tone as Tone,
-      english: r.english ?? "",
-    }));
+    .map(toTestWord);
 }
 
-let cached: TestWord[] | null = null;
-
-/** The words a tier's rounds draw from. Every tier: the guest pool, until the membership change. */
-export function poolForTier(tier: Tier): readonly TestWord[] {
-  void tier;
-  cached ??= guestPool((fallback as { rows: Row[] }).rows);
-  return cached;
+/** A pool needs a few words of every tone for a balanced round. */
+export function usablePool(pool: readonly TestWord[]): boolean {
+  return ([1, 2, 3, 4] as const).every((t) => pool.filter((w) => w.tone === t).length >= 3);
 }
