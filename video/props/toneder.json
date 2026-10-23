@@ -1,0 +1,17 @@
+{
+  "format": "9:16",
+  "clip": "clips/toneder.mp4",
+  "clipSeconds": 18.5,
+  "hook": { "text": "Tinder for tones", "sub": "Swipe each word to its tone", "seconds": 1.8 },
+  "captions": [
+    { "text": "Finally, some productive swiping", "from": 0.3, "to": 7.6, "position": 0.86 },
+    { "text": "Test your tones", "from": 7.9, "to": 15.4, "position": 0.86, "tone": "accent" },
+    { "text": "Can you get a perfect score?", "from": 15.6, "to": 18.4, "position": 0.86, "tone": "highlight" }
+  ],
+  "endCard": {
+    "title": "FlappyTone",
+    "subtitle": "Hear it. Say it. Play it.",
+    "cta": "flappytone.com",
+    "seconds": 2.5
+  }
+}

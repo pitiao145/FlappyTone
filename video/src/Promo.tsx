@@ -49,7 +49,8 @@ export interface Caption {
   /** Seconds into the clip (the timing file's marks are in these units). */
   from: number;
   to: number;
-  position?: "top" | "middle" | "bottom";
+  /** A named slot, or the pill's top edge as a fraction of the frame height. */
+  position?: "top" | "middle" | "bottom" | number;
   /** "ink" (dark pill, default), "accent" (green) or "highlight" (gold, for a payoff line). */
   tone?: "ink" | "accent" | "highlight";
 }
@@ -166,7 +167,7 @@ export function CaptionPill({ c, len }: { c: Caption; len: number }) {
   const { fps, height } = useVideoConfig();
   const inS = spring({ frame: f, fps, config: { damping: 13, mass: 0.7 } });
   const out = interpolate(f, [len - 6, len], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const top = c.position === "bottom" ? 0.72 : c.position === "middle" ? 0.45 : 0.2;
+  const top = typeof c.position === "number" ? c.position : c.position === "bottom" ? 0.72 : c.position === "middle" ? 0.45 : 0.2;
   const col = CAPTION_BG[c.tone ?? "ink"];
   return (
     <AbsoluteFill style={{ alignItems: "center", pointerEvents: "none" }}>
