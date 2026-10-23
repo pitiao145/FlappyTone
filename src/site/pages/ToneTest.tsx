@@ -64,10 +64,10 @@ function ToneGameOnPage() {
                 Your weak spot:{" "}
                 <b style={{ color: TONE_LINE_COLOR[pair[0]] }}>{toneName(pair[0], true)}</b> vs{" "}
                 <b style={{ color: TONE_LINE_COLOR[pair[1]] }}>{toneName(pair[1], true)}</b> → train it
-                in the game ({GAME_WORDS} words)
+                in the game
               </>
             ) : (
-              <>Perfect ear. Now say them: train in the game ({GAME_WORDS} words) →</>
+              <>Perfect ear. Now say them: train in the game →</>
             )}
           </a>
         );
@@ -75,9 +75,6 @@ function ToneGameOnPage() {
     />
   );
 }
-
-/** Published words in the game, for the CTA copy. */
-const GAME_WORDS = 211;
 
 function ctaClick(weak_pair: string, placement: "round_done" | "persistent"): void {
   try {
