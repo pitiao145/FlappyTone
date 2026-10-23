@@ -55,10 +55,10 @@ function draw(scene: Partial<VisualiserScene>): Op[] {
 const count = (ops: Op[], op: string) => ops.filter((o) => o.op === op).length;
 
 /** A contour sampled every 20ms, rising from chao 2 to 4. */
-function contour(fromMs: number, toMs: number, gapAt?: number): Contour {
+function contour(fromMs: number, toMs: number, gapAt?: number, gapMs = 300): Contour {
   const points = [];
   for (let t = fromMs; t < toMs; t += 20) {
-    if (gapAt !== undefined && t > gapAt && t < gapAt + 300) continue;
+    if (gapAt !== undefined && t > gapAt && t < gapAt + gapMs) continue;
     points.push({ tMs: t, chao: 2 + (t / toMs) * 2 });
   }
   return { points, startedAtMs: 0, endedAtMs: null };
@@ -84,12 +84,22 @@ describe("drawVisualiser", () => {
     expect(count(two, "stroke")).toBe(count(one, "stroke") + 1);
   });
 
-  it("breaks the line across a gap rather than inventing pitch through it", () => {
-    const unbroken = draw({ live: contour(0, 900) });
-    const gapped = draw({ live: contour(0, 900, 300) });
+  it("breaks the line across a long gap rather than inventing pitch through it", () => {
+    const unbroken = draw({ live: contour(0, 1600) });
+    const gapped = draw({ live: contour(0, 1600, 300, 800) });
     // A break is one extra moveTo — the pen lifts instead of drawing a path
     // the player never produced.
     expect(count(gapped, "moveTo")).toBe(count(unbroken, "moveTo") + 1);
+    expect(count(gapped, "setLineDash")).toBe(count(unbroken, "setLineDash"));
+  });
+
+  it("bridges a short gap with a dashed line, apart from the solid one", () => {
+    const unbroken = draw({ live: contour(0, 900) });
+    const bridged = draw({ live: contour(0, 900, 300) });
+    // The solid line still lifts (+1 moveTo); the bridge is its own dashed
+    // stroke (+1 moveTo, +1 setLineDash).
+    expect(count(bridged, "moveTo")).toBe(count(unbroken, "moveTo") + 2);
+    expect(count(bridged, "setLineDash")).toBe(count(unbroken, "setLineDash") + 1);
   });
 
   it("maps time to x — a later point sits further right", () => {

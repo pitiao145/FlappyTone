@@ -70,6 +70,11 @@ import {
 export const SPAN_MS = 1600;
 /** Free-mode attempts kept as thumbnails. */
 const MAX_FREE_ATTEMPTS = 3;
+/**
+ * By-tone mode: how long a silence may last before the attempt ends. Wider
+ * than the game's `mergeGapMs` (150ms), which reset the line mid-word.
+ */
+const SINGLE_TONE_GAP_MS = 400;
 
 /** How long the "wrong tone" toast stays up — matches .mismatch-toast's own fade (App.css). */
 const WRONG_TOAST_MS = 1200;
@@ -254,6 +259,8 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   /** Which thumbnail drives the Tone card; a new attempt selects itself. */
   const [selectedAttemptId, setSelectedAttemptId] = useState<number | null>(null);
   const nextAttemptIdRef = useRef(1);
+  /** Tone-pairs mode: the latest attempt read one syllable at a time. */
+  const [pairSyllables, setPairSyllables] = useState<FreeAttempt["syllables"] | null>(null);
   const resumeRef = useRef<() => void>(() => {});
   /** Pending timers for the iOS loud-cue dance, cleared on unmount. */
   const cueTimersRef = useRef<Set<number>>(new Set());
@@ -384,6 +391,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     trailRef.current?.clear();
     setFreeAttempts([]);
     setSelectedAttemptId(null);
+    setPairSyllables(null);
     wordStatsRef.current = { attempts: 0, sumAccuracy: 0 };
     lastScoredAtRef.current = null;
     setAccuracyDisplay(null);
@@ -577,8 +585,10 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       // pair gate does in play (`multiMergeGapMs`): the recorder keeps one
       // utterance open across the gap, and the dot holds its last height
       // instead of falling back to the rest line.
+      // Visualiser-only gaps, wider than the game's: a pair uses the same
+      // bridge as Free mode, so a slow second syllable stays in the attempt.
       const pair = (wordRef.current?.syllables ?? 1) > 1;
-      const gapMs = pair ? tuning().multiMergeGapMs : tuning().mergeGapMs;
+      const gapMs = pair ? BRIDGE_MS : SINGLE_TONE_GAP_MS;
       recorder.setMergeGapMs(gapMs);
       // Free tab: one line that scrolls only while you speak, and the bird holds its height across a
       // bridged gap so it never disagrees with the line behind it.
@@ -593,7 +603,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       const trailHead = trail.points().at(-1);
       const holding = free
         ? trailHead !== undefined && now - lastVoicedAt <= BRIDGE_MS
-        : pair && head !== undefined && now - lastVoicedAt <= gapMs;
+        : head !== undefined && now - lastVoicedAt <= gapMs;
       // Between utterances the dot returns to the rest line, as it does in
       // play — but nothing drifts *while* you are speaking.
       const headChao = free ? trailHead?.chao : head?.chao;
@@ -627,6 +637,20 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
           // completed utterance, when `finished()` grows a new entry.
           setAccuracyDisplay({ value: next.sumAccuracy / next.attempts, attempts: next.attempts });
         }
+      }
+
+      // Tone pairs: read each syllable of the attempt on its own, the same
+      // way Free mode does (`readAttempt`) — the classifier only ever sees
+      // one syllable, never the two-syllable contour it misreads.
+      if (
+        latest &&
+        latest.startedAtMs !== lastRecognizedAtRef.current &&
+        (word?.syllables ?? 1) > 1 &&
+        !free
+      ) {
+        lastRecognizedAtRef.current = latest.startedAtMs;
+        const read = readAttempt(0, latest.points.map((p) => ({ atMs: p.tMs, chao: p.chao })));
+        setPairSyllables(read?.syllables ?? null);
       }
 
       // Standalone recognition — runs off the same `finished()` array as the
@@ -901,23 +925,39 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
    * but its colour is not: see `recognizedTier`.
    */
   const selectedAttempt = freeAttempts.find((a) => a.id === selectedAttemptId) ?? null;
+  const pairMode = popoverTab !== "free" && (selectedWord?.syllables ?? 1) > 1;
+  const syllableReads = popoverTab === "free" ? selectedAttempt?.syllables ?? null : pairMode ? pairSyllables : null;
   /**
-   * Free mode's Tone card: one read per syllable of the selected attempt,
-   * e.g. "T4 · T1". "?" is a syllable too short to judge — never a wrong tone.
+   * Tone pairs: a read with a different number of syllables than the word
+   * (one tone when the voice never stopped between them) is not shown — a
+   * single tone means nothing when practising a pair.
    */
-  const freeToneReadout = (
+  const pairMisread =
+    pairMode && pairSyllables !== null && pairSyllables.length !== (selectedWord?.syllables ?? 2);
+  /**
+   * Free and Tone-pairs mode's Tone card: one read per syllable, e.g.
+   * "T4 · T1". "?" is a syllable too short to judge — never a wrong tone.
+   * Not coloured against the target: a per-syllable read is new and has not
+   * been checked against real pair recordings yet (hard rule 8).
+   */
+  const syllableToneReadout = (
     <div className="vis-accuracy">
       <span className="vis-accuracy-label">Tone</span>
-      {selectedAttempt ? (
+      {pairMisread ? (
+        <>
+          <span className="vis-accuracy-value vis-accuracy-empty">–</span>
+          <span className="vis-accuracy-tries">couldn't detect both tones</span>
+        </>
+      ) : syllableReads ? (
         <>
           <strong className="vis-accuracy-value">
-            {selectedAttempt.syllables
+            {syllableReads
               .map((r) => (r === null ? "?" : r.tone === "none" ? "none" : `T${r.tone}`))
               .join(" · ")}
           </strong>
           {/* Confidence per syllable, in the same order as the tones. */}
           <span className="vis-accuracy-tries">
-            {selectedAttempt.syllables
+            {syllableReads
               .map((r) => (r === null ? "–" : `${Math.round(r.confidence * 100)}%`))
               .join(" · ")}
           </span>
@@ -928,7 +968,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     </div>
   );
 
-  const recognizedReadout = popoverTab === "free" ? freeToneReadout : (
+  const recognizedReadout = popoverTab === "free" || pairMode ? syllableToneReadout : (
     <div
       key={shakeSeq}
       className={recognized ? `vis-accuracy tier-${recognizedTier(tone, recognized)}` : "vis-accuracy"}

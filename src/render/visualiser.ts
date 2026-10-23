@@ -186,19 +186,36 @@ function drawContour(
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
   ctx.beginPath();
-  let penDown = false;
+  // Short silences inside the attempt get a faint dashed bridge, as in Free
+  // mode; collected here and stroked after the solid line.
+  const bridges: [number, number, number, number][] = [];
+  let px = 0;
+  let py = 0;
   for (let i = 0; i < pts.length; i++) {
     const x = xFor(pts[i].tMs, spanMs, width);
     const y = chaoToY(pts[i].chao, height);
-    const broken = i > 0 && pts[i].tMs - pts[i - 1].tMs > BREAK_MS;
-    if (!penDown || broken) {
+    const gap = i > 0 ? pts[i].tMs - pts[i - 1].tMs : 0;
+    if (i === 0 || gap > BREAK_MS) {
+      if (i > 0 && gap <= BRIDGE_MS) bridges.push([px, py, x, y]);
       ctx.moveTo(x, y);
-      penDown = true;
     } else {
       ctx.lineTo(x, y);
     }
+    px = x;
+    py = y;
   }
   ctx.stroke();
+  if (bridges.length > 0) {
+    ctx.setLineDash([3, 6]);
+    ctx.strokeStyle = rgba("accent", alpha * 0.4);
+    ctx.lineWidth = Math.max(1, lineWidth * 0.55);
+    ctx.beginPath();
+    for (const [x0, y0, x1, y1] of bridges) {
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+    }
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
