@@ -103,7 +103,7 @@ export interface TonederProps {
   spokenLocked?: boolean;
   onSpokenLocked?: () => void;
   /** What the end screen offers next, under the score (the CTA slot). */
-  doneCta?: (result: RoundResult) => ReactNode;
+  doneCta?: (result: RoundResult, answers: readonly Answer[]) => ReactNode;
 }
 
 const NO_REPORTER: ToneTestReporter = {
@@ -615,7 +615,7 @@ export function Toneder({
                 {shared ? "Shared!" : "Share my score"}
               </button>
             </div>
-            {doneCta?.(result)}
+            {round && doneCta?.(result, round.answers)}
           </div>
         )}
       </div>

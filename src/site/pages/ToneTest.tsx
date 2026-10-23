@@ -2,7 +2,9 @@ import { useEffect, useRef } from "react";
 import { captureGameEvent } from "../../analytics/posthog.ts";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
 import { PipCta } from "../Pip.tsx";
+import { TONE_LINE_COLOR } from "../../ui/toneColors.ts";
 import { toneName } from "../toneNames.ts";
+import { gameHref, pairKey, weakPair } from "../../toneder/cta.ts";
 import { Toneder } from "../../toneder/Toneder.tsx";
 import { makeToneTestReporter, type ToneTestReporter } from "../../toneder/toneTest.ts";
 
@@ -49,13 +51,40 @@ function ToneGameOnPage() {
     <Toneder
       sharePath={PATH}
       reporter={reporter}
-      doneCta={(result) => (
-        <a className="tc-result-cta" href={`/tools/tone-visualizer?tone=${result.weakest ?? 3}`}>
-          Now say {result.weakest ? toneName(result.weakest) : "them"} out loud in the tone visualizer →
-        </a>
-      )}
+      doneCta={(_, answers) => {
+        const pair = weakPair(answers);
+        return (
+          <a
+            className="tc-result-cta"
+            href={gameHref(PATH, pair)}
+            onClick={() => ctaClick(pairKey(pair), "round_done")}
+          >
+            {pair ? (
+              <>
+                Your weak spot:{" "}
+                <b style={{ color: TONE_LINE_COLOR[pair[0]] }}>{toneName(pair[0], true)}</b> vs{" "}
+                <b style={{ color: TONE_LINE_COLOR[pair[1]] }}>{toneName(pair[1], true)}</b> → train it
+                in the game ({GAME_WORDS} words)
+              </>
+            ) : (
+              <>Perfect ear. Now say them: train in the game ({GAME_WORDS} words) →</>
+            )}
+          </a>
+        );
+      }}
     />
   );
+}
+
+/** Published words in the game, for the CTA copy. */
+const GAME_WORDS = 211;
+
+function ctaClick(weak_pair: string, placement: "round_done" | "persistent"): void {
+  try {
+    captureGameEvent({ type: "tool_cta_click", tool: "tone-test", weak_pair, placement });
+  } catch {
+    // Analytics never breaks the page.
+  }
 }
 
 export function ToneTest() {
@@ -74,6 +103,12 @@ export function ToneTest() {
         </header>
 
         <ToneGameOnPage />
+        <p className="tt-play-game">
+          Hearing is half of it.{" "}
+          <a href={gameHref(PATH, null)} onClick={() => ctaClick("none", "persistent")}>
+            Play the game: say the tones with your voice →
+          </a>
+        </p>
 
         <div className="tm-notes">
           <section>

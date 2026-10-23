@@ -74,6 +74,7 @@ import { micErrorCopy } from "../ui/micErrors";
 import { parseChallengeName } from "../share/shareName.ts";
 import { GameNav, type NavTab } from "./GameNav.tsx";
 import { TonederScreen } from "./TonederScreen.tsx";
+import { parsePairKey } from "../toneder/cta.ts";
 import "../App.css";
 
 export type Screen =
@@ -1020,6 +1021,12 @@ export default function GameApp() {
     // Like `?intent=`, it never starts anything.
     const seo = seoSource(typeof window === "undefined" ? "" : window.location.search);
     if (seo) trackFirstSeoTouch(seo.path, seo.angle);
+    // The tone test's funnel CTA: which pair it said the player confuses.
+    // The game can't start filtered to it yet, so this is attribution only.
+    if (seo?.path === "/tools/tone-test") {
+      const weak = parsePairKey(new URLSearchParams(window.location.search).get("weak"));
+      track({ type: "app_open", source: "tone-test", weak_pair: weak ?? "none" });
+    }
     track({
       type: "landed",
       ...(isShareRef ? { ref: "share" as const } : {}),
@@ -1051,10 +1058,12 @@ export default function GameApp() {
         params.has("ref") ||
         params.has("src") ||
         params.has("word") ||
+        params.has("weak") ||
         params.has("openExternalBrowser")
       ) {
         params.delete("src");
         params.delete("word");
+        params.delete("weak");
         params.delete("c");
         params.delete("n");
         params.delete("ref");

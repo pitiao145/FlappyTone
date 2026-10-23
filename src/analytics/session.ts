@@ -328,6 +328,15 @@ export type AnalyticsEvent =
       t4Correct: number;
       style: "standard" | "spoken" | "mixed";
     }
+  /** A funnel CTA on a public tool page; `weak_pair` is "2-3" or "none". */
+  | {
+      type: "tool_cta_click";
+      tool: "tone-test";
+      weak_pair: string;
+      placement: "round_done" | "persistent";
+    }
+  /** /app opened from the tone test's CTA (`?src=/tools/tone-test`), once per load. */
+  | { type: "app_open"; source: "tone-test"; weak_pair: string }
   /**
    * The app's TONEder tab (`src/app/TonederScreen.tsx`). Counts only, never a
    * word. `toneder_swipe` is batched: one event per round (or on leaving the
@@ -441,6 +450,8 @@ export function eventTier(type: AnalyticsEvent["type"]): AnalyticsTier {
     case "tool_used":
     case "tool_summary":
     case "word_page_action":
+    case "tool_cta_click":
+    case "app_open":
     case "toneder_swipe":
     case "toneder_round_done":
     case "toneder_cap_hit":

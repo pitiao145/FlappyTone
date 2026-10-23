@@ -146,7 +146,12 @@ opens the 211 to free/Pro), a daily swipe cap `tonederSwipesPerDay` in
 `tiers.ts` (guest 30, free 50, Pro none; counted per local day in
 `flappytone.toneder.swipes.v1`, device-local, not tamper-proof), Spoken for Pro
 only. App events: `toneder_swipe {tier, style, count}` (batched per round),
-`toneder_round_done`, `toneder_cap_hit`, `toneder_upgrade_click`. No mic, no `src/audio/`: a card
+`toneder_round_done`, `toneder_cap_hit`, `toneder_upgrade_click`. The page's
+end screen is a funnel CTA (`src/toneder/cta.ts`): the most-confused pair →
+`/app?src=/tools/tone-test&weak=2-3`, plus a light "Play the game" link under
+the tool; `tool_cta_click {tool, weak_pair, placement}`. The game cannot start
+filtered to a pair, so `/app` opens plainly and only records `app_open
+{source:"tone-test", weak_pair}`, then strips `weak`. No mic, no `src/audio/`: a card
 plays a hidden word through `wordAudio.ts`, the visitor swipes it to a corner
 (T1 top-left, T2 top-right, T3 bottom-left, T4 bottom-right). 40 words
 (`TEST_WORDS`, 10 per tone, guest-playable, both styles; `toneTest.test.ts`

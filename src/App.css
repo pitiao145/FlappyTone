@@ -12374,3 +12374,8 @@ button.switch-track.switch-on {
 .tt-style button.tt-style-locked {
   opacity: 0.45;
 }
+/* The tone test's light, always-there game link under the tool. */
+.tt-play-game {
+  text-align: center;
+  margin: 12px 0 0;
+}

@@ -164,6 +164,8 @@ export const APP_EVENTS = new Set<string>([
   "tool_used",
   "tool_summary",
   "word_page_action",
+  "tool_cta_click",
+  "app_open",
   "toneder_swipe",
   "toneder_round_done",
   "toneder_cap_hit",
