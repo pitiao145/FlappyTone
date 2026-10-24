@@ -147,8 +147,8 @@ all with a Spoken take). Clips use the game's own ticket
 (`wordAudio.setTicketProvider(getPlayTicket)`), so the Worker sees the real
 tier; site pages stay on a guest ticket, a daily swipe cap `tonederSwipesPerDay` in
 `tiers.ts` (guest 30, free 50, Pro none; counted per local day in
-`flappytone.toneder.swipes.v1`, device-local, not tamper-proof), Spoken for Pro
-only. App events: `toneder_swipe {tier, style, count}` (batched per round),
+`flappytone.toneder.swipes.v1`, device-local, not tamper-proof), Spoken for free and Pro
+(locked for guests). App events: `toneder_swipe {tier, style, count}` (batched per round),
 `toneder_round_done`, `toneder_cap_hit`, `toneder_upgrade_click`. The page's
 end screen is a funnel CTA (`src/toneder/cta.ts`): the most-confused pair →
 `/app?src=/tools/tone-test&weak=2-3`, plus a light "Play the game" link under

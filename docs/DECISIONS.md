@@ -1449,3 +1449,6 @@ serves free (TOCFL 1–2) and Pro (all levels) more words; the block was
 TONEder's guest-only clip ticket. The app tab now uses the game's ticket and a
 per-tier pool (guest 76, free 187, Pro 211; all have a Spoken take, checked
 live).
+
+Update 24 Oct 2026 (Pierre): Spoken is open to free accounts too in the app's
+TONEder; only guests see it locked. The Pro reason is the daily swipe limit.

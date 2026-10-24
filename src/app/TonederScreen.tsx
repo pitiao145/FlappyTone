@@ -21,7 +21,7 @@ interface Props {
 
 /**
  * The app's TONEder tab: the same swipe game as `/tools/tone-test`, with a
- * daily swipe cap per tier and Spoken for Pro. Standalone on purpose: no
+ * daily swipe cap per tier and Spoken for an account (free or Pro). Standalone on purpose: no
  * stats, XP, streaks or DB writes, only analytics counts.
  */
 export function TonederScreen({ onCreateAccount, onUpgrade, onPlay }: Props) {
@@ -100,7 +100,7 @@ export function TonederScreen({ onCreateAccount, onUpgrade, onPlay }: Props) {
       <p className="tt-note">
         {tier === "guest"
           ? `New cards tomorrow. A free account gives you ${tierLimits().free.tonederSwipesPerDay} a day.`
-          : "New cards tomorrow. Pro has no daily limit, and adds the Spoken recordings."}
+          : "New cards tomorrow. Pro has no daily limit."}
       </p>
       <button type="button" className="sticker-button tt-start" onClick={() => upgrade("cap")}>
         {tier === "guest" ? "Create a free account" : "Go Pro"}
@@ -129,7 +129,7 @@ export function TonederScreen({ onCreateAccount, onUpgrade, onPlay }: Props) {
             Now say them: fly the bird with your voice →
           </button>
         )}
-        spokenLocked={tier !== "pro"}
+        spokenLocked={tier === "guest"}
         onSpokenLocked={() => upgrade("spoken")}
       />
     </div>

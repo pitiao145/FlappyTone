@@ -66,9 +66,9 @@ const COPY: Record<
   toneder: {
     eyebrow: "★ EarlyBird access",
     title: "Swipe without a limit",
-    body: "EarlyBird gives TONEder with no daily limit and the Spoken recordings at everyday speed, plus unlimited runs and everything else as it lands. Full refund anytime.",
+    body: "EarlyBird gives TONEder with no daily limit, plus unlimited runs and everything else as it lands. Full refund anytime.",
     guestBody:
-      "Create a free account for more swipes a day. EarlyBird goes further: no daily limit, the Spoken recordings, and everything else as it lands.",
+      "Create a free account for more swipes a day and the Spoken recordings at everyday speed. EarlyBird goes further: no daily limit, and everything else as it lands.",
   },
   visualiser: {
     eyebrow: "★ EarlyBird access",
