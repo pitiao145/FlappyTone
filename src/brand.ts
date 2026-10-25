@@ -310,6 +310,7 @@ export const brand = {
         icon: "coffee",
       },
       { href: "mailto:pierre@pierrebuilds.dev", label: "pierre@pierrebuilds.dev", external: false, icon: "mail" },
+      { href: "https://peerpush.com/p/flappytone", label: "PeerPush", external: true, icon: "web" },
     ],
   },
 
