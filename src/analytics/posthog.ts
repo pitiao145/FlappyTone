@@ -324,7 +324,8 @@ export function captureGameEvent(event: AnalyticsEvent): void {
   if (eventTier(event.type) === "gameplay" && !gameplayConsent) return;
   const { type, ...rest } = event;
   capturePostHogEvent(type, rest as Record<string, string | number | boolean>, {
-    instant: type === "run_end" || type === "tool_summary",
+    // tool_cta_click leaves the page for /app; a batched send would be lost.
+    instant: type === "run_end" || type === "tool_summary" || type === "tool_cta_click",
   });
 }
 

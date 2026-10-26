@@ -335,6 +335,24 @@ export type AnalyticsEvent =
       weak_pair: string;
       placement: "round_done" | "persistent";
     }
+  /**
+   * The landing page's Try it now mini run (`src/ui/lp-trials/TryItNow.tsx`).
+   * `opened` on the first tap, `started` with the voice preset ("saved" =
+   * the device's own calibration), `ready` once the cues loaded, then
+   * `finished`, `exited` (with the step it left from) or `mic_denied`/`error`.
+   * Closed values only: no pitch, no audio, no word.
+   */
+  | {
+      type: "tool_used";
+      tool: "try-now";
+      action: "opened" | "started" | "ready" | "finished" | "exited" | "mic_denied" | "error";
+      voice?: "lower" | "higher" | "saved";
+      stage?: "choose" | "preparing" | "playing";
+    }
+  /** One finished Try it now run: counts only. `unheard` gates are neutral. */
+  | { type: "tool_summary"; tool: "try-now"; cleared: number; total: number; unheard: number }
+  /** Try it now's way into /app, from its end screen. */
+  | { type: "tool_cta_click"; tool: "try-now"; placement: "finished" }
   /** /app opened from the tone test's CTA (`?src=/tools/tone-test`), once per load. */
   | { type: "app_open"; source: "tone-test"; weak_pair: string }
   /**
