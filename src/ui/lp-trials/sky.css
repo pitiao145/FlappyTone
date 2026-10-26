@@ -223,8 +223,54 @@ html:has(.lp-sky) body {
 .sky-learn ul a { display: block; padding: 8px 12px; border-radius: 8px; color: var(--color-ink); text-decoration: none; }
 .sky-learn ul a:hover { background: var(--color-sky-5); }
 
+/* Phones: the links fold into a menu panel; the brand, Play and the menu button stay. */
+.sky-burger { display: none; }
+.sky-menu { display: none; }
+
 @media (max-width: 820px) {
-  .sky-nav-links > li:not(:last-child) { display: none; }
+  .sky-nav { gap: 8px; padding-inline: 12px; }
+  .sky-nav-links { display: none; }
+  .sky-brand { font-size: 1.2rem; margin-right: auto; }
+  .sky-brand .pip { width: 30px; height: 30px; }
+  .sky-nav .sky-btn-small { min-height: 44px; padding-inline: 12px; font-size: 1rem; }
+  .sky-burger {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border: 2px solid var(--color-ink);
+    border-radius: var(--radius);
+    background: var(--color-cloud);
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+  .sky-burger svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; }
+  .sky-burger:active { translate: 0 2px; }
+  .sky-burger:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+  .sky-menu {
+    display: grid;
+    gap: 8px;
+    margin: 8px var(--gutter) 0;
+    padding: 16px;
+    border: var(--outline) solid var(--color-ink);
+    border-radius: var(--radius);
+    background: var(--color-sky-5);
+    box-shadow: 4px 4px 0 var(--color-ink);
+  }
+  .sky-menu ul { list-style: none; display: grid; }
+  .sky-menu h3 { margin-top: 8px; font-size: 1.05rem; }
+  .sky-menu a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 8px;
+    border-radius: 8px;
+    color: var(--color-ink);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .sky-menu a:hover { background: var(--color-cloud); }
 }
 
 /* ---- hero */
@@ -318,7 +364,9 @@ html:has(.lp-sky) body {
 .sky-panel-media :is(video, canvas) { display: block; max-width: 100%; height: auto; border-radius: 8px; }
 .sky-shot { display: block; width: 100%; height: auto; padding: 0; }
 
-.sky-tone-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+/* Two columns only when each card has room for its 200px chart; one otherwise. */
+.sky-tone-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 248px), 1fr)); gap: 16px; }
+.sky-tone-grid canvas { max-width: 100%; }
 
 .sky-tags { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; }
 .sky-tags li {

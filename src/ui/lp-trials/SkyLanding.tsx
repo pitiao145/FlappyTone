@@ -184,6 +184,16 @@ export function SkyLanding() {
 
   const modes = brand.options.modes;
   const compact = useScrolled();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = () => setMenuOpen(false);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, [menuOpen]);
 
   return (
     <div className="lp-sky">
@@ -210,7 +220,34 @@ export function SkyLanding() {
         <button className="sky-btn sky-btn-small" onClick={() => go("play", "nav")}>
           {brand.heroCards.play.cta}
         </button>
+        {/* Phones: the links fold into a menu; Play stays in the bar. */}
+        <button
+          className="sky-burger"
+          aria-expanded={menuOpen}
+          aria-controls="sky-menu"
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          onClick={() => setMenuOpen((o) => !o)}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d={menuOpen ? "M6 6l12 12M18 6L6 18" : "M4 7h16M4 12h16M4 17h16"} />
+          </svg>
+        </button>
       </nav>
+      {menuOpen && (
+        <div id="sky-menu" className="sky-menu">
+          <ul>
+            <li><a href="#how-it-works" onClick={closeMenu}>How it works</a></li>
+            <li><a href="#visualiser" onClick={closeMenu}>Visualiser</a></li>
+            <li><a href="#pricing" onClick={closeMenu}>Pricing</a></li>
+          </ul>
+          <h3>Learn and tools</h3>
+          <ul>
+            {LEARN_LINKS.map((l) => (
+              <li key={l.href}><a href={l.href}>{l.label}</a></li>
+            ))}
+          </ul>
+        </div>
+      )}
       </div>
       <ScrollBird />
 
