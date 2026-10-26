@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { brand } from "../../brand.ts";
-import { capturePostHogEvent } from "../../analytics/posthog.ts";
+import { captureGameEvent, capturePostHogEvent } from "../../analytics/posthog.ts";
+import type { AnalyticsEvent } from "../../analytics/session.ts";
+
+type TryNowAction = Extract<AnalyticsEvent, { type: "tool_used"; tool: "try-now" }>;
+
+/** Try it now's funnel, in the site tools' events (global tier, closed values). */
+function trackTry(action: TryNowAction["action"], extra: Omit<TryNowAction, "type" | "tool" | "action"> = {}) {
+  captureGameEvent({ type: "tool_used", tool: "try-now", action, ...extra });
+}
 import { wordsFromCatalog } from "../../game/words.ts";
 import type { RunSnapshot } from "../../game/run.ts";
 import { GameHud } from "../GameHud.tsx";
@@ -57,6 +65,8 @@ export function TryItNow() {
   const [step, setStep] = useState<Step>({ kind: "demo" });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stopRef = useRef<(() => void) | null>(null);
+  /** Bumped on exit, so a run still loading when the visitor left never starts. */
+  const attemptRef = useRef(0);
   /** The game's HUD, polled like Game.tsx does (never per frame). */
   const [hud, setHud] = useState<RunSnapshot | null>(null);
 
@@ -65,15 +75,23 @@ export function TryItNow() {
     return all.filter((w) => EASY_IDS.includes(w.id));
   }, []);
 
-  useEffect(() => () => stopRef.current?.(), []);
+  useEffect(
+    () => () => {
+      attemptRef.current++;
+      stopRef.current?.();
+    },
+    [],
+  );
 
   const open = async () => {
     capturePostHogEvent("landing_cta_clicked", { cta: "try_now", location: "hero_demo" });
+    trackTry("opened");
     setStep({ kind: "loading" });
     try {
       const mini = await loadMini();
       setStep({ kind: "choose", mini, calibrated: mini.hasSavedCalibration() });
     } catch {
+      trackTry("error");
       setStep({ kind: "error", message: "Couldn't load the game. Check your connection and try again." });
     }
   };
@@ -82,6 +100,9 @@ export function TryItNow() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     setStep({ kind: "preparing" });
+    trackTry("started", { voice: mini.hasSavedCalibration() ? "saved" : voice });
+    const attempt = ++attemptRef.current;
+    const current = () => attempt === attemptRef.current;
     let poll = 0;
     mini
       .startMiniGame({
@@ -91,16 +112,25 @@ export function TryItNow() {
         words,
         voice,
         gates: GATES,
-        onReady: () => setStep({ kind: "playing" }),
+        onReady: () => {
+          if (!current()) return;
+          trackTry("ready");
+          setStep({ kind: "playing" });
+        },
         onEnd: (r) => {
           window.clearInterval(poll);
           setHud(null);
           stopRef.current = null;
-          capturePostHogEvent("landing_try_now_done", { cleared: r.cleared, total: r.total });
+          trackTry("finished");
+          captureGameEvent({ type: "tool_summary", tool: "try-now", cleared: r.cleared, total: r.total, unheard: r.unheard });
           setStep({ kind: "done", ...r });
         },
       })
       .then((game) => {
+        if (!current()) {
+          game.stop();
+          return;
+        }
         stopRef.current = () => {
           window.clearInterval(poll);
           game.stop();
@@ -109,8 +139,21 @@ export function TryItNow() {
       })
       .catch((err: unknown) => {
         window.clearInterval(poll);
-        setStep({ kind: "error", message: mini.micErrorCopy(mini.micErrorKind(err)) });
+        if (!current()) return;
+        const kind = mini.micErrorKind(err);
+        trackTry(kind === "permission-denied" ? "mic_denied" : "error");
+        setStep({ kind: "error", message: mini.micErrorCopy(kind) });
       });
+  };
+
+  /** Leave the run at any point: mic off, back to the recorded demo. */
+  const exit = () => {
+    attemptRef.current++;
+    stopRef.current?.();
+    stopRef.current = null;
+    setHud(null);
+    trackTry("exited", { stage: step.kind === "playing" ? "playing" : "preparing" });
+    setStep({ kind: "demo" });
   };
 
   const live = step.kind === "playing";
@@ -184,7 +227,10 @@ export function TryItNow() {
             <p>
               {step.cleared} of {step.total} tunnels cleared. {verdict(step.cleared, step.total).nudge}
             </p>
-            <button className="sky-btn" onClick={() => go("play", "try_now_done")}>
+            <button className="sky-btn" onClick={() => {
+                captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "finished" });
+                go("play", "try_now_done");
+              }}>
               Keep practising, free
             </button>
             <button className="sky-btn sky-btn-ghost" onClick={open}>
@@ -202,7 +248,13 @@ export function TryItNow() {
         )}
       </div>
       <figcaption>
-        {live ? null : brand.demoCaption}
+        {live || step.kind === "preparing" ? (
+          <button className="sky-btn sky-btn-ghost sky-btn-small" onClick={exit}>
+            Exit demo
+          </button>
+        ) : (
+          brand.demoCaption
+        )}
       </figcaption>
     </figure>
   );
