@@ -48,6 +48,38 @@ describe("worker fetch", () => {
     expect((await call("/clip/ba1?v=1")).status).toBe(401);
   });
 
+  it("429s the passcode routes once the per-IP limit is spent, before checking the code", async () => {
+    const keys: string[] = [];
+    const env = fakeEnv({
+      PASSCODE_LIMITER: {
+        limit: async ({ key }: { key: string }) => (keys.push(key), { success: false }),
+      },
+    });
+    for (const [path, method] of [["/auth", "GET"], ["/raw?id=ba1&session=s&style=textbook", "POST"], ["/booth/words", "GET"]]) {
+      const res = await worker.fetch(
+        new Request(`https://clips.flappytone.com${path}`, {
+          method,
+          headers: { origin: ORIGIN, "CF-Connecting-IP": TEST_IP, [PASSCODE_HEADER]: "hunter2" },
+        }),
+        env,
+        fakeCtx(),
+      );
+      expect(res.status).toBe(429);
+      expect(res.headers.get("access-control-allow-origin")).toBe(ORIGIN);
+    }
+    expect(keys).toEqual([TEST_IP, TEST_IP, TEST_IP]);
+  });
+
+  it("does not rate-limit POST /token", async () => {
+    const env = fakeEnv({ PASSCODE_LIMITER: { limit: async () => ({ success: false }) } });
+    const res = await worker.fetch(
+      new Request("https://clips.flappytone.com/token", { method: "POST", headers: { "CF-Connecting-IP": TEST_IP } }),
+      env,
+      fakeCtx(),
+    );
+    expect(res.status).toBe(200);
+  });
+
   it("gates /auth on the passcode, on GET and POST", async () => {
     expect((await call("/auth")).status).toBe(401);
     expect((await call("/auth", { method: "POST" })).status).toBe(401);

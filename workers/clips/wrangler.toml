@@ -17,3 +17,16 @@ ALLOWED_ORIGINS = "https://flappytone.com,https://www.flappytone.com,https://*.v
 # Secrets (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, CLIP_TOKEN_SECRET,
 # RECORD_PASSCODE) are set with `wrangler secret put` — never here, and never
 # in any committed file.
+
+# Per-IP budget on the passcode routes (/auth, /raw, /booth/words), checked in
+# src/index.ts before the code is compared. 30 a minute is well above a booth
+# session's upload rate. Counters are per Cloudflare location, so this is a
+# brake on guessing, not an exact count. namespace_id only has to be unique in
+# this account.
+[[ratelimits]]
+name = "PASSCODE_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60

@@ -77,6 +77,7 @@ export function fakeEnv(over: Partial<Env> = {}): Env {
   return {
     RAW: fakeBucket() as unknown as R2Bucket,
     CLIPS: fakeBucket() as unknown as R2Bucket,
+    PASSCODE_LIMITER: { limit: async () => ({ success: true }) },
     SUPABASE_URL: "https://example.supabase.co",
     SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
     CLIP_TOKEN_SECRET: TEST_SECRET,

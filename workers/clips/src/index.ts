@@ -13,7 +13,7 @@ import { handleAuth } from "./routes/auth.ts";
 import { handleBoothWords } from "./routes/boothWords.ts";
 import { handleClip } from "./routes/clip.ts";
 import { handleRaw } from "./routes/raw.ts";
-import { handleToken } from "./routes/token.ts";
+import { callerIp, handleToken } from "./routes/token.ts";
 
 export interface Env {
   RAW: R2Bucket;
@@ -25,6 +25,20 @@ export interface Env {
   RECORD_PASSCODES: string;
   /** Comma-separated; entries may be "https://*.vercel.app". */
   ALLOWED_ORIGINS: string;
+  /** Per-IP cap on the passcode routes (`wrangler.toml` `[[ratelimits]]`). */
+  PASSCODE_LIMITER: RateLimit;
+}
+
+/**
+ * The passcode routes are the only ones a guess can be made against, so they
+ * share one per-IP budget. It is set well above a booth session's real upload
+ * rate and far below what guessing a long random passcode would need.
+ */
+const PASSCODE_ROUTES = new Set(["GET /auth", "POST /auth", "POST /raw", "GET /booth/words"]);
+
+async function overPasscodeLimit(req: Request, env: Env): Promise<boolean> {
+  const { success } = await env.PASSCODE_LIMITER.limit({ key: callerIp(req) });
+  return !success;
 }
 
 function withCors(res: Response, origin: string | null, allowed: string): Response {
@@ -52,6 +66,10 @@ export default {
     // release — old bundles in open tabs still ask for it.
     if (req.method === "GET" && url.pathname.startsWith("/clip/")) {
       return cors(await handleClip(req, env, ctx));
+    }
+
+    if (PASSCODE_ROUTES.has(key) && (await overPasscodeLimit(req, env))) {
+      return cors(Response.json({ error: "Too many attempts. Wait a minute." }, { status: 429 }));
     }
 
     switch (key) {
