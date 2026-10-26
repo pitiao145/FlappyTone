@@ -4,7 +4,7 @@
 /* Hallmark · answered F4 · the hero's second action is a transparent outline, not a fill; the notify button sits in its own form */
 /* Hallmark · waive 11 · buttons, chips and the notify button only · one pressed-edge language taken from the game art */
 /* Hallmark · critique · the risk is a toy; held off by the real data panels, real recordings and plain adult copy */
-/* Tokens sit on :root here because this file loads only on the dev trial route (/?lp=sky), never in /app. */
+/* Tokens sit on :root here because this file loads only on `/` (src/main.tsx → SkyLanding), never in /app or the other site pages. */
 
 :root {
   --color-sky-1: var(--pf-sky-1);

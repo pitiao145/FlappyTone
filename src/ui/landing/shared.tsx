@@ -8,15 +8,14 @@ import { goToApp, type AppIntent } from "../appLink.ts";
 import { useNewsletterSubscribe } from "../useNewsletterSubscribe.ts";
 
 /**
- * What the two Hallmark landing trials (`?lp=hum`, `?lp=sky`, dev only) share
- * with the real landing page: the same words, the same CTA events and the same
- * newsletter wiring. Only the look differs, so a trial that wins can replace
- * `Landing.tsx` without re-plumbing anything.
+ * The landing page's plumbing: the bundled words for its tone cards, the CTA
+ * events (`landing_cta_clicked`, the names the dashboards already read), the
+ * torn-edge helper and the newsletter form.
  */
 
 export const TONES: Tone[] = [1, 2, 3, 4];
 
-/** Same as Landing.tsx: a batched click would not survive the navigation. */
+/** Every CTA leaves for /app: a batched click would not survive the navigation. */
 const INSTANT = { instant: true } as const;
 
 export function useWordsByTone(): Map<Tone, Word[]> {

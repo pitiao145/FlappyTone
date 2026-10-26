@@ -9,7 +9,7 @@
  *   - `src/data/words.ts` — the last resort when the live query fails and no
  *     `localStorage` cache exists, so a first-time visitor on a dead network
  *     still gets a playable inventory instead of the tuning defaults.
- *   - `src/ui/Landing.tsx` — the marketing page, which may not import
+ *   - the landing page (`src/ui/landing/`) — which may not import
  *     anything from `src/data/`, `src/audio/` or `src/pitch/`. A JSON import
  *     pulls in no module, so the tone cards read their contours from here.
  *   - the Lab and `make-tone-averages` — dev tooling that wants a fixed,

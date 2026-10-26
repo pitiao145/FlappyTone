@@ -1,37 +1,24 @@
-import { lazy, Suspense, useEffect } from "react";
+import { useEffect } from "react";
 import { initAnalytics } from "./analytics/client";
 import { initPostHog } from "./analytics/posthog.ts";
 import { loadShareData } from "./game/settings";
-import { Landing } from "./ui/Landing";
-import { goToApp, setAppLinkSource } from "./ui/appLink.ts";
+import { SkyLanding } from "./ui/landing/SkyLanding.tsx";
+import { setAppLinkSource } from "./ui/appLink.ts";
 import { routeFor } from "./site/routes.ts";
 import { pageViewProps } from "./site/pageAnalytics.ts";
 import "./App.css";
 
 /**
- * Hallmark design trials, dev only: `/?lp=hum` or `/?lp=sky` swaps the whole
- * page. The `import.meta.env.DEV` guard keeps both out of `dist/`.
- */
-const TRIALS = import.meta.env.DEV
-  ? {
-      hum: lazy(() => import("./ui/lp-trials/HumLanding.tsx").then((m) => ({ default: m.HumLanding }))),
-      sky: lazy(() => import("./ui/lp-trials/SkyLanding.tsx").then((m) => ({ default: m.SkyLanding }))),
-    }
-  : null;
-
-/**
  * The marketing site — the whole of what `/` serves.
  *
- * It has one screen and no game in it. Everything a player does that needs a
- * microphone lives on the other entry (`/app`, `src/app/GameApp.tsx`), which is
- * what lets this page stay free of `src/audio/` and `src/game/`'s runtime and
- * be prerendered into `index.html` for crawlers.
+ * The game lives on the other entry (`/app`, `src/app/GameApp.tsx`). The one
+ * piece of mic code here is Try it now's mini run, which loads only on a tap
+ * (ARCHITECTURE.md, "Three entries", rule 1), so the page itself stays free
+ * of `src/audio/` and is prerendered into `index.html` for crawlers
+ * (`src/dev/prerenderEntry.tsx` renders the same `<SkyLanding />`, with no
+ * wrapper, so the crawler markup matches what React paints).
  *
- * Terms and Privacy used to be a screen swapped in here; they are now their
- * own prerendered entries (`terms-of-service.html`, `privacy-policy.html`,
- * see `src/legal/`) so each is a real, indexable URL rather than JS-only
- * content behind a click — the same reasoning that split `/app` off this
- * entry in the first place.
+ * Terms and Privacy are their own prerendered entries (`src/legal/`).
  */
 export default function LandingApp() {
   /**
@@ -51,23 +38,5 @@ export default function LandingApp() {
     initPostHog(loadShareData(), route ? pageViewProps(route) : undefined);
   }, []);
 
-  const trialKey = TRIALS && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("lp") : null;
-  const Trial = TRIALS && (trialKey === "hum" || trialKey === "sky") ? TRIALS[trialKey] : null;
-  if (Trial) {
-    return (
-      <Suspense fallback={null}>
-        <Trial />
-      </Suspense>
-    );
-  }
-
-  return (
-    <div className="app">
-      <main className="app-main">
-        <div className="frame">
-          <Landing onPlay={() => goToApp()} onVisualiser={() => goToApp("visualiser")} />
-        </div>
-      </main>
-    </div>
-  );
+  return <SkyLanding />;
 }

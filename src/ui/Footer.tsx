@@ -13,7 +13,7 @@ const CONNECT_ICONS = {
  * Page footer: brand blurb + built-by line, a Connect column of external
  * links, then an attribution + copyright row. All copy comes from
  * `brand.footer` / `brand.attribution`; this file is layout only, same rule
- * as `Landing.tsx`.
+ * as the landing page.
  *
  * Same navy/gold footer as the EasyCard app it was adapted from, minus what
  * doesn't apply here: EasyCard-specific copy, the Legal column, the

@@ -87,7 +87,7 @@ const COPY: Record<
  * live Lemon Squeezy checkout for a signed-in free account; a guest's Pay
  * routes through the create-account-first screen and on to checkout. The
  * email capture below stays as a "not ready to pay" fallback, sharing the Kit
- * integration `ComingSoon`/Landing already use (`useNewsletterSubscribe`,
+ * integration the landing page already uses (`useNewsletterSubscribe`,
  * `api/newsletter.ts`), tagged with the dedicated "earlybird" source.
  */
 export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: Props) {

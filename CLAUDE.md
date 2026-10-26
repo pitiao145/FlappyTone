@@ -25,7 +25,7 @@ These docs are not loaded at start. Open the one that matches your work. `src/re
 |---|---|
 | `src/data/`, `api/`, `supabase/`, tiers, stats, leaderboard | `docs/ARCHITECTURE.md` → "Accounts, tiers and the leaderboard" |
 | `src/record/`, `workers/clips/`, `src/dev/clip*`, `process-clips`, catalog | `docs/ARCHITECTURE.md` → "The clip catalog and its Worker" |
-| `src/site/`, `Landing.tsx`, routes, SEO pages, TONEder, tone visualizer | `docs/ARCHITECTURE.md` → "Three entries, not one app" |
+| `src/site/`, `src/ui/landing/`, routes, SEO pages, TONEder, tone visualizer | `docs/ARCHITECTURE.md` → "Three entries, not one app" |
 | `src/analytics/`, a new event | `docs/ARCHITECTURE.md` → "Play analytics" |
 | The flying game: `src/game/`, `src/render/`, scoring, calibration, gates | `docs/PRD.md`, and `docs/ARCHITECTURE.md` → "Tone pairs", "Score and tone accuracy", "Canvas themes" |
 | `src/pitch/`, the classifier, tone accuracy | `docs/TESTING.md` |

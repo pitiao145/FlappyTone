@@ -4,7 +4,7 @@ import { capturePostHogEvent } from "../analytics/posthog.ts";
 type Status = "idle" | "loading" | "success";
 
 /**
- * Shared submit logic for the Kit signup forms (ComingSoon, Landing's
+ * Shared submit logic for the Kit signup forms (the landing page's
  * #mobile, the app's EarlyBird modal). `source` tags which form fired, for
  * the funnel — never the email itself, which stays out of PostHog per
  * posthog.ts's own rule.

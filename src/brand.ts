@@ -34,25 +34,8 @@ export interface LandingSection {
 export const brand = {
   name: "FlappyTone",
   shortName: "FlappyTone",
-  /**
-   * The page's `h1`, and the thing someone would actually search for.
-   *
-   * Deliberately not the brand name: "FlappyTone" is a coined word with no
-   * search demand, and a brand-name `h1` is part of what got the sibling
-   * project deindexed. The wordmark in `Nav` carries the name instead.
-   */
-  /** Small caps label above the h1. */
-  heroEyebrow: "A tone-training game, not a fluency app",
-  headline: "A visual way to train your Mandarin tones",
-  tagline: "Your voice is the controller.",
-  /** One sentence, under the h1. Say what it does, not what it feels like. */
-  pitch:
-    "Tones are the hardest thing to get a feel for from a textbook. FlappyTone turns them into something you see and fly through, so you build muscle memory without it feeling like studying.",
   /** PRD §8 requires this to be visible before the mic is ever requested. */
   requirement: "Needs a microphone and a quiet room.",
-
-  privacyNote:
-    "Your voice is processed on your device, never uploaded or stored. No AI, just maths.",
 
   /** Caption under the demo loop. */
   demoCaption: "Flappytone in action.",
@@ -83,11 +66,8 @@ export const brand = {
 
   /** Subhead + lead-in above the four tone cards. */
   toneDataTitle: "Trained on the voice of a native Mandarin speaker from Taiwan",
-  toneDataEyebrow: "Based on real speech, not the textbook",
-  toneDataIntro:
-    "Every corridor is measured from Jane, a native Taiwanese speaker, across 450+ recorded words. Traditional characters, Taiwan pronunciation. The word list follows TOCFL order, so these are words that are actually worth learning first as a beginner, not random vocab. And if a shape doesn't match a textbook you've used, that's not a bug, it's a real accent. More accents, and eventually other tonal languages, are on the roadmap.",
 
-  /** Paragraph under `toneDataIntro`, about Jane, with "Jane's Mandarin" linked. Placeholder copy, to be edited. */
+  /** The line about Jane, with "Jane's Mandarin" linked. Placeholder copy, to be edited. */
   jane: {
     before: "Jane is also the founder of ",
     linkText: "Jane's Mandarin",
@@ -138,15 +118,6 @@ export const brand = {
     cta: "Try Tone Pairs",
     quote: "“Tone pairs are what I need most, 3-3 still gets me.”",
     quoteAttribution: "— an early tester",
-  },
-
-  /** What's new banner above the hero; the link scrolls to `options`. */
-  updateBanner: {
-    id: "lp-speech-style",
-    label: "Update",
-    title: "Standard or spoken speech.",
-    body: "Choose how fast the recordings are spoken, plus new modes and settings.",
-    cta: "See what's new",
   },
 
   /** Modes and settings, now that there are enough of them to be worth listing. */
@@ -270,19 +241,6 @@ export const brand = {
     },
   },
 
-  comingSoon: {
-    eyebrow: "Coming next",
-    title: "More voices and more words, always shipping",
-    body: "It's 450+ words across TOCFL 1-3 and two-syllable tone pairs today. Next up: more accents, deeper tone-pair drills, and whatever gets asked for most. Get notified when new words ship.",
-    items: [
-      { label: "Next", title: "More tone-pair drills" },
-      { label: "Then", title: "A second voice" },
-      { label: "Later", title: "More accents & languages" },
-    ],
-    placeholder: "you@example.com",
-    cta: "Notify me",
-    disclaimer: "One list. Only for FlappyTone updates, no spam, unsubscribe anytime.",
-  },
 
   /** Footer credit for the reference clips. Jane recorded them; say so. */
   attribution:
@@ -314,44 +272,56 @@ export const brand = {
     ],
   },
 
-  /** In DOM order as they appear in `Landing.tsx` — Nav renders `inNav`
-   *  entries in this array's order, so a section moved in the page has to
-   *  move here too or the nav links stop matching the scroll order. */
+  /** In DOM order as they appear on the landing page (`src/ui/landing/SkyLanding.tsx`).
+   *  The site pages' Nav renders the `inNav` entries as `/#id` links in this
+   *  order, so a section moved or renamed on the page has to change here too. */
   sections: [
     { id: "top", title: "FlappyTone" },
-    { id: "demo", title: "See it" },
-    { id: "play", title: "Play", navLabel: "Play", inNav: true },
-    {
-      id: "how-it-works",
-      title: "How it works",
-      navLabel: "How it works",
-      inNav: true,
-    },
-    { id: "why-tones-hard", title: "You don't study tones. You feel them." },
-    {
-      id: "visualiser",
-      title: "Tone visualiser",
-      navLabel: "Visualiser",
-      inNav: true,
-    },
-    {
-      id: "real-speech",
-      title: "Based on real speech, not the textbook",
-      navLabel: "Real speech",
-    },
-    {
-      id: "tone-pairs",
-      title: "Real two-syllable words, not just single tones",
-      navLabel: "Tone pairs",
-    },
-    {
-      id: "leaderboard",
-      title: "A weekly leaderboard, reset every Monday",
-      navLabel: "Leaderboard",
-    },
-    { id: "coming-soon", title: "Get notified" },
+    { id: "demo", title: "Try it now" },
+    { id: "how-it-works", title: "How it works", navLabel: "How it works", inNav: true },
+    { id: "real-speech", title: "Based on real speech, not the textbook", navLabel: "Real speech" },
+    { id: "visualiser", title: "Tone visualiser", navLabel: "Visualiser", inNav: true },
+    { id: "tone-pairs", title: "Tone pairs", navLabel: "Tone pairs" },
+    { id: "options", title: "Game modes and settings" },
+    { id: "leaderboard", title: "Leaderboard", navLabel: "Leaderboard" },
     { id: "pricing", title: "Free to start, one-time to go further", navLabel: "Pricing", inNav: true },
     { id: "faq", title: "Questions" },
-    { id: "mobile", title: "Mobile app", navLabel: "Mobile", inNav: true },
+    { id: "mobile", title: "Mobile app", navLabel: "Mobile" },
+    { id: "founder", title: "Made by a Mandarin learner" },
   ] as LandingSection[],
+  /**
+   * The landing page's own lines (`src/ui/landing/SkyLanding.tsx`). Titles,
+   * lists and quotes it shares with the rest of the site stay in their own
+   * fields above; these are the shorter bodies the Sky design uses.
+   */
+  landing: {
+    /**
+     * The page's `h1`. Catchy on purpose, not the search phrase: the `<title>`
+     * (index.html, routes.ts) carries the keywords. Never the brand name: a
+     * brand-name `h1` is part of what got the sibling project deindexed.
+     */
+    headline: "Finally nail the Mandarin tones",
+    lede: "Your voice flies a bird through tunnels shaped like each tone. You build muscle memory without it feeling like study.",
+    privacy: "Needs a microphone and a quiet room. Your voice stays on your device: no upload, no AI.",
+    why: [
+      "mā, má, mǎ, mà trace four different pitch shapes. That is all a tone mark is.",
+      "See the shape as you speak and your voice learns to make it. Your ear soon follows.",
+    ],
+    tunnels:
+      "Each tunnel is the tone of the word you hear, cut from a real recording of a native speaker. Pick a word to see its gate.",
+    realSpeech:
+      "450+ recorded words in Traditional characters and Taiwan pronunciation, in TOCFL order, so the first words are the useful ones. A shape that differs from your textbook is a real accent, not a bug.",
+    averages: "The bold line is the average. The faint lines are every real take.",
+    notTextbook:
+      "Most tone practice is a chart and rules to memorize, and it doesn't stick. Watching your own voice trace the shape gives you the picture a textbook never does.",
+    visualiser: "Say mǎ ten times and watch every try stack on the target shape. No score, no pressure.",
+    pairsTitle: "Level up to tone pairs when you're ready",
+    pairs: "Once single tones feel easy, Tone Pairs flies two syllables at a time: 好玩, 以前 and 240+ more. Each corridor comes from the exact recording, sandhi and all.",
+    leaderboard: "Sign up free and every run counts. This week, this month or all-time.",
+    mobile: "Native apps aren't out yet. They'll add offline play, reminders and a streak. Get told when they ship:",
+    founder: [
+      "I'm Pierre, and I'm learning Mandarin too.",
+      "I realised I learn far better with visuals than with audio alone, so I built a way to see the tones, not just hear them. Every word is recorded by a native speaker from Taiwan. Questions or ideas? Write to me.",
+    ],
+  },
 } as const;

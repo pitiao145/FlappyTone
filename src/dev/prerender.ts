@@ -21,7 +21,7 @@
  * **This renders the real component, not a copy of its copy.** The first
  * attempt emitted a hand-written block of `brand.ts` strings with its own
  * inline styles; even styled to match, the swap to React's version was a
- * visible flash of a different document. Now `renderToStaticMarkup(<Landing/>)`
+ * visible flash of a different document. Now `renderToStaticMarkup(<SkyLanding/>)`
  * runs at build time and the result goes *inside* `#root`, so the first paint
  * is the landing page — same markup, same class names, and `App.css` is a
  * render-blocking `<link>`, so it is already styled. React then replaces it

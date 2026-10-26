@@ -18,41 +18,17 @@ import { TryItNow } from "./TryItNow.tsx";
 import "./sky.css";
 
 /**
- * Hallmark trial 2: custom. The idea: the page is the corridor. You scroll
- * through the game's own sky, and every band of ground is a wall whose edge is
- * a tone contour, the same shapes the bird flies. Dev only, at `/?lp=sky`.
+ * The landing page at `/` (built with the Hallmark skill, custom direction).
+ * The idea: the page is the corridor. You scroll through the game's own sky,
+ * and every band of ground is a wall whose edge is a tone contour, the same
+ * shapes the bird flies. Prerendered into index.html for crawlers
+ * (src/dev/prerenderEntry.tsx), so it must render without `window`.
  *
- * Copy: brand.ts for titles and lists, as on the live page. Long bodies are
- * cut here to Hallmark's budget (one idea a sentence, about 80 words a
- * screen) in `COPY`, keeping each one's core idea. If this trial ships, move
- * `COPY` into brand.ts.
+ * Copy lives in brand.ts: `brand.landing` holds this page's own lines, cut to
+ * Hallmark's budget (one idea a sentence, about 80 words a screen).
  */
 
-const COPY = {
-  headline: "Finally nail the Mandarin tones",
-  lede: "Your voice flies a bird through tunnels shaped like each tone. You build muscle memory without it feeling like study.",
-  privacy: "Needs a microphone and a quiet room. Your voice stays on your device: no upload, no AI.",
-  why: [
-    "mā, má, mǎ, mà trace four different pitch shapes. That is all a tone mark is.",
-    "See the shape as you speak and your voice learns to make it. Your ear soon follows.",
-  ],
-  tunnels:
-    "Each tunnel is the tone of the word you hear, cut from a real recording of a native speaker. Pick a word to see its gate.",
-  realSpeech:
-    "450+ recorded words in Traditional characters and Taiwan pronunciation, in TOCFL order, so the first words are the useful ones. A shape that differs from your textbook is a real accent, not a bug.",
-  averages: "The bold line is the average. The faint lines are every real take.",
-  notTextbook:
-    "Most tone practice is a chart and rules to memorize, and it doesn't stick. Watching your own voice trace the shape gives you the picture a textbook never does.",
-  visualiser: "Say mǎ ten times and watch every try stack on the target shape. No score, no pressure.",
-  pairsTitle: "Level up to tone pairs when you're ready",
-  pairs: "Once single tones feel easy, Tone Pairs flies two syllables at a time: 好玩, 以前 and 240+ more. Each corridor comes from the exact recording, sandhi and all.",
-  leaderboard: "Sign up free and every run counts. This week, this month or all-time.",
-  mobile: "Native apps aren't out yet. They'll add offline play, reminders and a streak. Get told when they ship:",
-  founder: [
-    "I'm Pierre, and I'm learning Mandarin too.",
-    "I realised I learn far better with visuals than with audio alone, so I built a way to see the tones, not just hear them. Every word is recorded by a native speaker from Taiwan. Questions or ideas? Write to me.",
-  ],
-} as const;
+const COPY = brand.landing;
 
 /**
  * Real quotes from players, as brand.ts has them. Never add one nobody said.
@@ -174,13 +150,6 @@ export function SkyLanding() {
   }, []);
   const picked = examples.find((e) => e.id === exampleId) ?? examples[0];
 
-  useEffect(() => {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Lilita+One&display=swap";
-    document.head.appendChild(link);
-    return () => link.remove();
-  }, []);
 
   const modes = brand.options.modes;
   const compact = useScrolled();
@@ -252,6 +221,8 @@ export function SkyLanding() {
       )}
       </div>
       <ScrollBird />
+
+      <main className="sky-main">
 
       <header id="top" className="sky-hero">
         <div className="sky-hero-text">
@@ -614,6 +585,8 @@ export function SkyLanding() {
         </div>
         <Wall tone={4} edge="bottom" />
       </section>
+
+      </main>
 
       <div className="sky-footer">
         <Footer />

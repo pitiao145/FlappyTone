@@ -336,7 +336,7 @@ export type AnalyticsEvent =
       placement: "round_done" | "persistent";
     }
   /**
-   * The landing page's Try it now mini run (`src/ui/lp-trials/TryItNow.tsx`).
+   * The landing page's Try it now mini run (`src/ui/landing/TryItNow.tsx`).
    * `opened` on the first tap, `started` with the voice preset ("saved" =
    * the device's own calibration), `ready` once the cues loaded, then
    * `finished`, `exited` (with the step it left from) or `mic_denied`/`error`.

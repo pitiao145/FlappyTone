@@ -13,7 +13,7 @@
  */
 
 import { renderToStaticMarkup } from "react-dom/server";
-import { Landing } from "../ui/Landing.tsx";
+import { SkyLanding } from "../ui/landing/SkyLanding.tsx";
 import { LegalPage } from "../ui/LegalPage.tsx";
 import { termsOfServiceMd, privacyPolicyMd } from "../ui/legalContent.ts";
 import { SITE_PAGES, SitePage } from "../site/pages.tsx";
@@ -21,25 +21,13 @@ import { NotFoundPage } from "../site/NotFound.tsx";
 import { routeFor } from "../site/routes.ts";
 import { breadcrumbJsonLd, breadcrumbsFor } from "../site/links.ts";
 
-const noop = () => {};
-
 /**
- * The wrappers are copied from `LandingApp`'s own tree, not guessed:
- * `.landing`'s layout hangs off `.frame:has(.landing)`, so rendering `Landing`
- * bare would lay out at the game's 420px width. `.app-main` between the two
- * used to be missing here — a real mismatch between the prerendered markup and
- * what React painted over it. Keep this identical to `LandingApp`'s wrappers.
+ * Must match `LandingApp`'s tree exactly, or the prerendered markup and what
+ * React paints over it differ (a visible flash). `LandingApp` renders
+ * `<SkyLanding />` with no wrapper, so this does too.
  */
 export function renderLanding(): string {
-  return renderToStaticMarkup(
-    <div className="app">
-      <main className="app-main">
-        <div className="frame">
-          <Landing onPlay={noop} onVisualiser={noop} />
-        </div>
-      </main>
-    </div>,
-  );
+  return renderToStaticMarkup(<SkyLanding />);
 }
 
 /**
