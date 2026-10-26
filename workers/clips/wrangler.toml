@@ -20,9 +20,10 @@ ALLOWED_ORIGINS = "https://flappytone.com,https://www.flappytone.com,https://*.v
 
 # Per-IP budget on the passcode routes (/auth, /raw, /booth/words), checked in
 # src/index.ts before the code is compared. 30 a minute is well above a booth
-# session's upload rate. Counters are per Cloudflare location, so this is a
-# brake on guessing, not an exact count. namespace_id only has to be unique in
-# this account.
+# session's upload rate. This limit is approximate: counts are per machine and
+# sync in the background, so in a live test (Oct 2026) 170 guesses from one IP
+# never got a 429. Do not rely on it against guessing; a strict limit needs a
+# Durable Object or a WAF rule. namespace_id only has to be unique in this account.
 [[ratelimits]]
 name = "PASSCODE_LIMITER"
 namespace_id = "1001"
