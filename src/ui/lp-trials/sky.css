@@ -116,10 +116,24 @@ html:has(.lp-sky) body {
 .sky-center { justify-self: center; }
 
 /* ---- nav */
+/* Sticky; past the hero it narrows into a floating, outlined bar. */
+.sky-nav-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding-top: 0;
+  /* Full width over the hero: the sky's top band, so text scrolls under it cleanly. */
+  background: var(--color-sky-1);
+  transition: padding 240ms var(--ease-snap), background-color 240ms;
+}
+.sky-nav-bar.is-compact { padding-top: 10px; background: transparent; }
 .sky-nav {
   max-width: var(--container);
   margin-inline: auto;
   padding: 16px var(--gutter);
+  border: var(--outline) solid transparent;
+  border-radius: var(--radius);
+  transition: max-width 240ms var(--ease-snap), padding 240ms var(--ease-snap), background-color 240ms, border-color 240ms, box-shadow 240ms;
   display: flex;
   align-items: center;
   gap: 20px;
@@ -132,6 +146,44 @@ html:has(.lp-sky) body {
   font: 400 1.6rem/1 var(--font-display);
   color: var(--color-ink);
   text-decoration: none;
+}
+
+.sky-nav-bar.is-compact .sky-nav {
+  max-width: min(60rem, calc(100% - 2 * var(--gutter)));
+  padding-block: 6px;
+  padding-inline: 16px;
+  background: var(--color-cloud);
+  border-color: var(--color-ink);
+  box-shadow: 4px 4px 0 var(--color-ink);
+}
+.sky-brand .pip { transition: width 240ms var(--ease-snap), height 240ms var(--ease-snap); }
+.sky-nav-bar.is-compact .sky-brand { font-size: 1.3rem; }
+.sky-nav-bar.is-compact .sky-brand .pip { width: 30px; height: 30px; }
+
+/* Scroll indicator: the bird flies the four tones as the page scrolls. */
+.sky-flight {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 15;
+  padding: 8px 10px;
+  border: var(--outline) solid var(--color-ink);
+  border-radius: var(--radius);
+  background: var(--color-cloud);
+  box-shadow: 4px 4px 0 var(--color-ink);
+  pointer-events: none;
+}
+.sky-flight svg { display: block; overflow: visible; }
+.sky-flight path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.sky-flight-ghost { stroke: color-mix(in oklab, var(--color-ink) 18%, transparent); stroke-width: 2; stroke-dasharray: 2 4; }
+.sky-flight-line { stroke-width: 3.5; }
+.sky-flight-bird { position: absolute; left: 10px; top: 8px; width: 0; height: 0; will-change: transform; }
+.sky-flight-bird .pip { position: absolute; left: -11px; top: -11px; filter: drop-shadow(1px 1px 0 var(--color-ink)); }
+@media (max-width: 560px) {
+  .sky-flight { left: 10px; bottom: 10px; transform: scale(0.8); transform-origin: bottom left; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sky-nav-bar, .sky-nav, .sky-brand .pip { transition: none; }
 }
 
 .sky-nav-links { display: flex; gap: 4px; margin-left: auto; list-style: none; }

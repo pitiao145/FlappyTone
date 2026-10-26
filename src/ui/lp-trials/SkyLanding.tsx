@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { brand } from "../../brand.ts";
 import type { Tone } from "../../game/gates.ts";
 import { tierLimits } from "../../game/tiers.ts";
@@ -106,6 +106,105 @@ function Wall({ tone, edge }: { tone: Tone; edge: "top" | "bottom" }) {
   );
 }
 
+/**
+ * The scroll indicator: the four tones in a row, mā má mǎ mà. Scrolling flies
+ * the bird along them and draws each tone in its own colour behind it, so
+ * reading the page is one run. Decorative; the scrollbar still does the job.
+ */
+const TRACK = { w: 168, h: 44, seg: 36, gap: 8, pad: 4 };
+
+function trackPoints(tone: Tone, i: number): [number, number][] {
+  const x0 = TRACK.pad + i * (TRACK.seg + TRACK.gap);
+  return Array.from({ length: 17 }, (_, k) => {
+    const t = k / 16;
+    return [x0 + t * TRACK.seg, TRACK.pad + (1 - CONTOUR[tone](t)) * (TRACK.h - 2 * TRACK.pad)];
+  });
+}
+
+function ScrollFlight() {
+  const bird = useRef<HTMLDivElement>(null);
+  const paths = useRef<(SVGPathElement | null)[]>([]);
+  const segs = useMemo(() => TONES.map((t, i) => trackPoints(t, i)), []);
+
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const max = document.documentElement.scrollHeight - innerHeight;
+      const p = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
+      // Progress through the four tones, the gaps between them included.
+      const k = p * TONES.length;
+      paths.current.forEach((el, i) => {
+        if (!el) return;
+        // pathLength={1}: the dash offset is the share still undrawn.
+        el.style.strokeDashoffset = String(1 - Math.min(1, Math.max(0, k - i)));
+      });
+      const i = Math.min(TONES.length - 1, Math.floor(k));
+      const pts = segs[i];
+      const f = Math.min(1, k - i) * (pts.length - 1);
+      const j = Math.min(pts.length - 2, Math.floor(f));
+      const [ax, ay] = pts[j];
+      const [bx, by] = pts[j + 1];
+      const u = f - j;
+      const angle = (Math.atan2(by - ay, bx - ax) * 180) / Math.PI;
+      if (bird.current) {
+        bird.current.style.transform = `translate(${ax + (bx - ax) * u}px, ${ay + (by - ay) * u}px) rotate(${angle * 0.7}deg)`;
+      }
+    };
+    const onScroll = () => {
+      raf ||= requestAnimationFrame(update);
+    };
+    update();
+    addEventListener("scroll", onScroll, { passive: true });
+    addEventListener("resize", onScroll);
+    return () => {
+      cancelAnimationFrame(raf);
+      removeEventListener("scroll", onScroll);
+      removeEventListener("resize", onScroll);
+    };
+  }, [segs]);
+
+  return (
+    <div className="sky-flight" aria-hidden="true">
+      <svg width={TRACK.w} height={TRACK.h} viewBox={`0 0 ${TRACK.w} ${TRACK.h}`}>
+        {segs.map((pts, i) => {
+          const d = `M${pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" L")}`;
+          return (
+            <g key={i}>
+              <path d={d} className="sky-flight-ghost" />
+              <path
+                d={d}
+                ref={(el) => {
+                  paths.current[i] = el;
+                }}
+                pathLength={1}
+                className="sky-flight-line"
+                style={{ stroke: TONE_LINE_COLOR[TONES[i]], strokeDasharray: 1, strokeDashoffset: 1 }}
+              />
+            </g>
+          );
+        })}
+      </svg>
+      <div ref={bird} className="sky-flight-bird">
+        <Pip size={22} />
+      </div>
+    </div>
+  );
+}
+
+/** Sticky nav that narrows into a floating bar once the hero has scrolled away. */
+function useScrolledPast(id: string): boolean {
+  const [past, setPast] = useState(false);
+  useEffect(() => {
+    const el = document.getElementById(id);
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setPast(!e.isIntersecting && e.boundingClientRect.top < 0));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [id]);
+  return past;
+}
+
 function toneLabel(tones: number[]): string {
   return tones.length > 1 ? `Tones ${tones.join(" + ")}` : `Tone ${tones[0]}`;
 }
@@ -132,9 +231,11 @@ export function SkyLanding() {
   }, []);
 
   const modes = brand.options.modes;
+  const compact = useScrolledPast("top");
 
   return (
     <div className="lp-sky">
+      <div className={compact ? "sky-nav-bar is-compact" : "sky-nav-bar"}>
       <nav className="sky-nav" aria-label="Main">
         <a className="sky-brand" href="#top">
           <Pip size={38} tilt={-8} /> FlappyTone
@@ -158,6 +259,8 @@ export function SkyLanding() {
           {brand.heroCards.play.cta}
         </button>
       </nav>
+      </div>
+      <ScrollFlight />
 
       <header id="top" className="sky-hero">
         <div className="sky-hero-text">
