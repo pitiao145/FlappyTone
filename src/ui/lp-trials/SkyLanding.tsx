@@ -107,49 +107,42 @@ function Wall({ tone, edge }: { tone: Tone; edge: "top" | "bottom" }) {
 }
 
 /**
- * The scroll indicator: the four tones in a row, mā má mǎ mà. Scrolling flies
- * the bird along them and draws each tone in its own colour behind it, so
- * reading the page is one run. Decorative; the scrollbar still does the job.
+ * The scroll indicator: a small badge in the bottom-left corner. A ring
+ * around the bird fills with the four tone colours as the page goes by, one
+ * quarter per tone, and the bird tilts the way you scroll (nose up going
+ * down the page, as if climbing). A tap flies back to the top. All of it is
+ * written straight to the DOM from one rAF, never React state (hard rule 1).
  */
-const TRACK = { w: 168, h: 44, seg: 36, gap: 8, pad: 4 };
+const RING_R = 21;
+const RING_C = 2 * Math.PI * RING_R;
 
-function trackPoints(tone: Tone, i: number): [number, number][] {
-  const x0 = TRACK.pad + i * (TRACK.seg + TRACK.gap);
-  return Array.from({ length: 17 }, (_, k) => {
-    const t = k / 16;
-    return [x0 + t * TRACK.seg, TRACK.pad + (1 - CONTOUR[tone](t)) * (TRACK.h - 2 * TRACK.pad)];
-  });
-}
-
-function ScrollFlight() {
-  const bird = useRef<HTMLDivElement>(null);
-  const paths = useRef<(SVGPathElement | null)[]>([]);
-  const segs = useMemo(() => TONES.map((t, i) => trackPoints(t, i)), []);
+function ScrollBird() {
+  const bird = useRef<HTMLSpanElement>(null);
+  const arcs = useRef<(SVGCircleElement | null)[]>([]);
 
   useEffect(() => {
     let raf = 0;
+    let lastY = scrollY;
+    let tilt = 0;
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const update = () => {
       raf = 0;
       const max = document.documentElement.scrollHeight - innerHeight;
       const p = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
-      // Progress through the four tones, the gaps between them included.
-      const k = p * TONES.length;
-      paths.current.forEach((el, i) => {
+      // Each tone owns a quarter of the ring and fills in turn.
+      arcs.current.forEach((el, i) => {
         if (!el) return;
-        // pathLength={1}: the dash offset is the share still undrawn.
-        el.style.strokeDashoffset = String(1 - Math.min(1, Math.max(0, k - i)));
+        const share = Math.min(1, Math.max(0, p * TONES.length - i));
+        el.style.strokeDasharray = `${(share * RING_C) / TONES.length} ${RING_C}`;
       });
-      const i = Math.min(TONES.length - 1, Math.floor(k));
-      const pts = segs[i];
-      const f = Math.min(1, k - i) * (pts.length - 1);
-      const j = Math.min(pts.length - 2, Math.floor(f));
-      const [ax, ay] = pts[j];
-      const [bx, by] = pts[j + 1];
-      const u = f - j;
-      const angle = (Math.atan2(by - ay, bx - ax) * 180) / Math.PI;
-      if (bird.current) {
-        bird.current.style.transform = `translate(${ax + (bx - ax) * u}px, ${ay + (by - ay) * u}px) rotate(${angle * 0.7}deg)`;
+      if (!reduce) {
+        const dy = scrollY - lastY;
+        tilt = Math.max(-24, Math.min(24, tilt * 0.6 - dy * 0.8));
+        if (bird.current) bird.current.style.transform = `rotate(${tilt.toFixed(1)}deg)`;
+        // Ease back to level once the scrolling stops.
+        if (Math.abs(tilt) > 0.5) raf = requestAnimationFrame(update);
       }
+      lastY = scrollY;
     };
     const onScroll = () => {
       raf ||= requestAnimationFrame(update);
@@ -162,47 +155,48 @@ function ScrollFlight() {
       removeEventListener("scroll", onScroll);
       removeEventListener("resize", onScroll);
     };
-  }, [segs]);
+  }, []);
 
   return (
-    <div className="sky-flight" aria-hidden="true">
-      <svg width={TRACK.w} height={TRACK.h} viewBox={`0 0 ${TRACK.w} ${TRACK.h}`}>
-        {segs.map((pts, i) => {
-          const d = `M${pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" L")}`;
-          return (
-            <g key={i}>
-              <path d={d} className="sky-flight-ghost" />
-              <path
-                d={d}
-                ref={(el) => {
-                  paths.current[i] = el;
-                }}
-                pathLength={1}
-                className="sky-flight-line"
-                style={{ stroke: TONE_LINE_COLOR[TONES[i]], strokeDasharray: 1, strokeDashoffset: 1 }}
-              />
-            </g>
-          );
-        })}
+    <a className="sky-scrollbird" href="#top" aria-label="Back to top">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <circle cx="24" cy="24" r={RING_R} className="sky-scrollbird-track" />
+        {TONES.map((t, i) => (
+          <circle
+            key={t}
+            ref={(el) => {
+              arcs.current[i] = el;
+            }}
+            cx="24"
+            cy="24"
+            r={RING_R}
+            className="sky-scrollbird-arc"
+            style={{
+              stroke: TONE_LINE_COLOR[t],
+              strokeDasharray: `0 ${RING_C}`,
+              // Start each tone's quarter where the last one ends, from 12 o'clock.
+              transform: `rotate(${-90 + i * 90}deg)`,
+            }}
+          />
+        ))}
       </svg>
-      <div ref={bird} className="sky-flight-bird">
-        <Pip size={22} />
-      </div>
-    </div>
+      <span ref={bird} className="sky-scrollbird-bird" aria-hidden="true">
+        <Pip size={24} />
+      </span>
+    </a>
   );
 }
 
-/** Sticky nav that narrows into a floating bar once the hero has scrolled away. */
-function useScrolledPast(id: string): boolean {
-  const [past, setPast] = useState(false);
+/** True as soon as the page has scrolled at all: the nav collapses at once. */
+function useScrolled(): boolean {
+  const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
-    const el = document.getElementById(id);
-    if (!el || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver(([e]) => setPast(!e.isIntersecting && e.boundingClientRect.top < 0));
-    io.observe(el);
-    return () => io.disconnect();
-  }, [id]);
-  return past;
+    const onScroll = () => setScrolled(scrollY > 4);
+    onScroll();
+    addEventListener("scroll", onScroll, { passive: true });
+    return () => removeEventListener("scroll", onScroll);
+  }, []);
+  return scrolled;
 }
 
 function toneLabel(tones: number[]): string {
@@ -231,7 +225,7 @@ export function SkyLanding() {
   }, []);
 
   const modes = brand.options.modes;
-  const compact = useScrolledPast("top");
+  const compact = useScrolled();
 
   return (
     <div className="lp-sky">
@@ -260,7 +254,7 @@ export function SkyLanding() {
         </button>
       </nav>
       </div>
-      <ScrollFlight />
+      <ScrollBird />
 
       <header id="top" className="sky-hero">
         <div className="sky-hero-text">
@@ -414,7 +408,6 @@ export function SkyLanding() {
             <VisualiserDemoLoop width={480} />
           </div>
           <div className="sky-head">
-            <p className="sky-eyebrow">The visualiser</p>
             <h2>{brand.notTextbook.title}</h2>
             <p>{COPY.notTextbook}</p>
             <p>{COPY.visualiser}</p>
