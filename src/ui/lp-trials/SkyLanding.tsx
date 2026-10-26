@@ -107,19 +107,21 @@ function Wall({ tone, edge }: { tone: Tone; edge: "top" | "bottom" }) {
 }
 
 /**
- * The scroll indicator, small: the four tones in a row, mā má mǎ mà, each
- * 20px wide on a slim pill in the bottom-left corner. Scrolling flies the bird
+ * The scroll indicator, small and upright: the four tones stacked top to
+ * bottom, mā má mǎ mà, on a slim vertical pill in the bottom-left corner.
+ * Time runs down the page like the scroll does; pitch runs left (low) to
+ * right (high). Scrolling flies the bird
  * along them and inks each tone in its colour behind it, so reading the page
  * is one run. A tap goes back to the top. Written straight to the DOM from
  * one rAF, never React state (hard rule 1).
  */
-const TRACK = { w: 98, h: 20, seg: 20, gap: 6, pad: 3 };
+const TRACK = { w: 20, h: 98, seg: 20, gap: 6, pad: 3 };
 
 function trackPoints(tone: Tone, i: number): [number, number][] {
-  const x0 = TRACK.pad + i * (TRACK.seg + TRACK.gap);
+  const y0 = TRACK.pad + i * (TRACK.seg + TRACK.gap);
   return Array.from({ length: 13 }, (_, k) => {
     const t = k / 12;
-    return [x0 + t * TRACK.seg, TRACK.pad + (1 - CONTOUR[tone](t)) * (TRACK.h - 2 * TRACK.pad)];
+    return [TRACK.pad + CONTOUR[tone](t) * (TRACK.w - 2 * TRACK.pad), y0 + t * TRACK.seg];
   });
 }
 
@@ -147,7 +149,8 @@ function ScrollFlight() {
       const [ax, ay] = pts[j];
       const [bx, by] = pts[j + 1];
       const u = f - j;
-      const angle = (Math.atan2(by - ay, bx - ax) * 180) / Math.PI;
+      // Lean with the pitch: right (rising) tips the nose up, left tips it down.
+      const angle = (-Math.atan2(bx - ax, by - ay) * 180) / Math.PI;
       if (bird.current) {
         bird.current.style.transform = `translate(${(ax + (bx - ax) * u).toFixed(1)}px, ${(ay + (by - ay) * u).toFixed(1)}px) rotate(${(angle * 0.7).toFixed(1)}deg)`;
       }

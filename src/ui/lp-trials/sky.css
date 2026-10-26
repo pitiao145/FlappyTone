@@ -161,14 +161,14 @@ html:has(.lp-sky) body {
 .sky-nav-bar.is-compact .sky-brand { font-size: 1.3rem; }
 .sky-nav-bar.is-compact .sky-brand .pip { width: 30px; height: 30px; }
 
-/* Scroll indicator: the bird flies the four tones, on a slim pill. */
+/* Scroll indicator: the bird flies the four tones down a slim upright pill. */
 .sky-flight {
   position: fixed;
   left: 16px;
   bottom: 16px;
   z-index: 15;
   display: block;
-  padding: 4px 8px;
+  padding: 8px 4px;
   border: 2px solid var(--color-ink);
   border-radius: 999px;
   background: color-mix(in oklab, var(--color-sky-5) 88%, transparent);
@@ -179,7 +179,7 @@ html:has(.lp-sky) body {
 .sky-flight path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .sky-flight-ghost { stroke: color-mix(in oklab, var(--color-ink) 22%, transparent); stroke-width: 1.5; stroke-dasharray: 1.5 3; }
 .sky-flight-line { stroke-width: 2.5; }
-.sky-flight-bird { position: absolute; left: 8px; top: 4px; width: 0; height: 0; will-change: transform; }
+.sky-flight-bird { position: absolute; left: 4px; top: 8px; width: 0; height: 0; will-change: transform; }
 .sky-flight-bird .pip { position: absolute; left: -8px; top: -8px; }
 .sky-flight:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) {
