@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { initAnalytics } from "./analytics/client";
 import { initPostHog } from "./analytics/posthog.ts";
 import { loadShareData } from "./game/settings";
@@ -7,6 +7,17 @@ import { goToApp, setAppLinkSource } from "./ui/appLink.ts";
 import { routeFor } from "./site/routes.ts";
 import { pageViewProps } from "./site/pageAnalytics.ts";
 import "./App.css";
+
+/**
+ * Hallmark design trials, dev only: `/?lp=hum` or `/?lp=sky` swaps the whole
+ * page. The `import.meta.env.DEV` guard keeps both out of `dist/`.
+ */
+const TRIALS = import.meta.env.DEV
+  ? {
+      hum: lazy(() => import("./ui/lp-trials/HumLanding.tsx").then((m) => ({ default: m.HumLanding }))),
+      sky: lazy(() => import("./ui/lp-trials/SkyLanding.tsx").then((m) => ({ default: m.SkyLanding }))),
+    }
+  : null;
 
 /**
  * The marketing site — the whole of what `/` serves.
@@ -39,6 +50,16 @@ export default function LandingApp() {
     if (route) setAppLinkSource(route.path);
     initPostHog(loadShareData(), route ? pageViewProps(route) : undefined);
   }, []);
+
+  const trialKey = TRIALS && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("lp") : null;
+  const Trial = TRIALS && (trialKey === "hum" || trialKey === "sky") ? TRIALS[trialKey] : null;
+  if (Trial) {
+    return (
+      <Suspense fallback={null}>
+        <Trial />
+      </Suspense>
+    );
+  }
 
   return (
     <div className="app">
