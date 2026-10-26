@@ -225,6 +225,7 @@ html:has(.lp-sky) body {
 
 /* Phones: the links fold into a menu panel; the brand, Play and the menu button stay. */
 .sky-burger { display: none; }
+.sky-label-short { display: none; }
 .sky-menu { display: none; }
 
 @media (max-width: 820px) {
@@ -232,7 +233,13 @@ html:has(.lp-sky) body {
   .sky-nav-links { display: none; }
   .sky-brand { font-size: 1.2rem; margin-right: auto; }
   .sky-brand .pip { width: 30px; height: 30px; }
-  .sky-nav .sky-btn-small { min-height: 44px; padding-inline: 12px; font-size: 1rem; }
+  .sky-nav .sky-btn-small { min-height: 44px; padding-inline: 16px; font-size: 1rem; }
+  .sky-label-long { display: none; }
+  .sky-label-short { display: inline; }
+  .sky-brand { min-width: 0; }
+  /* The floating bar keeps the same inner room as the full one, so the
+     menu button never meets its right edge. */
+  .sky-nav-bar.is-compact .sky-nav { padding-inline: 12px; max-width: calc(100% - 2 * var(--gutter)); }
   .sky-burger {
     display: inline-grid;
     place-items: center;

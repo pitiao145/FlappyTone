@@ -218,7 +218,9 @@ export function SkyLanding() {
           </li>
         </ul>
         <button className="sky-btn sky-btn-small" onClick={() => go("play", "nav")}>
-          {brand.heroCards.play.cta}
+          {/* Phones show the short label; the bar has no room for the long one. */}
+          <span className="sky-label-long">{brand.heroCards.play.cta}</span>
+          <span className="sky-label-short">Play</span>
         </button>
         {/* Phones: the links fold into a menu; Play stays in the bar. */}
         <button
