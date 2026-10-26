@@ -4871,6 +4871,23 @@ div.hero-cards {
   background: color-mix(in srgb, var(--accent) 88%, white);
 }
 
+/* The three states the landing page was missing (Hallmark audit, gates 26a
+   and 26b): one focus ring for every control, a press, and a disabled look.
+   Scoped to .landing so the game shell keeps its own. */
+.landing :is(a, button, summary, input):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.landing button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.landing :is(button, input):disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* `.primary` already gives it the same fill as Play/Tutorial — this only
    overrides the flex-column stretch that otherwise fills the card width. */
 .visualiser-cta {

@@ -398,7 +398,7 @@ export function Landing({ onPlay, onVisualiser }: Props) {
             </button>
           </article>
           <article className="hero-card hero-card-accent">
-            <h3>{brand.pricing.pro.label} — {PRO_PRICE} one-time</h3>
+            <h3>{brand.pricing.pro.label}: {PRO_PRICE} one-time</h3>
             <ul className="pricing-feature-list">
               <li>Unlimited runs</li>
               <li>Every word, every tone, every TOCFL level</li>
@@ -420,7 +420,6 @@ export function Landing({ onPlay, onVisualiser }: Props) {
       </section>
 
       <section id="faq" className="landing-section">
-        <p className="section-eyebrow">FAQ</p>
         <h2>Questions</h2>
         <div className="landing-faq">
           {brand.faq.map((item) => (
@@ -489,6 +488,9 @@ export function Landing({ onPlay, onVisualiser }: Props) {
           <div className="mobile-video">
             <video
               src="/PWA-instructions.mp4"
+              poster="/PWA-instructions-poster.jpg"
+              width={502}
+              height={1080}
               autoPlay
               muted
               loop
