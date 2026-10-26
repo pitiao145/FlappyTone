@@ -107,21 +107,20 @@ function Wall({ tone, edge }: { tone: Tone; edge: "top" | "bottom" }) {
 }
 
 /**
- * The scroll indicator, small and upright: the four tones stacked top to
- * bottom, mā má mǎ mà, on a slim vertical pill in the bottom-left corner.
- * Time runs down the page like the scroll does; pitch runs left (low) to
- * right (high). Scrolling flies the bird
+ * The scroll indicator, small and upright: the four tone marks stacked top
+ * to bottom, mā má mǎ mà, each drawn the usual way (time left to right,
+ * pitch up), like lines of text on a slim pill in the bottom-left corner. Scrolling flies the bird
  * along them and inks each tone in its colour behind it, so reading the page
  * is one run. A tap goes back to the top. Written straight to the DOM from
  * one rAF, never React state (hard rule 1).
  */
-const TRACK = { w: 20, h: 98, seg: 20, gap: 6, pad: 3 };
+const TRACK = { w: 28, h: 84, row: 15, gap: 6, pad: 3 };
 
 function trackPoints(tone: Tone, i: number): [number, number][] {
-  const y0 = TRACK.pad + i * (TRACK.seg + TRACK.gap);
+  const y0 = TRACK.pad + i * (TRACK.row + TRACK.gap);
   return Array.from({ length: 13 }, (_, k) => {
     const t = k / 12;
-    return [TRACK.pad + CONTOUR[tone](t) * (TRACK.w - 2 * TRACK.pad), y0 + t * TRACK.seg];
+    return [TRACK.pad + t * (TRACK.w - 2 * TRACK.pad), y0 + (1 - CONTOUR[tone](t)) * TRACK.row];
   });
 }
 
@@ -149,8 +148,7 @@ function ScrollFlight() {
       const [ax, ay] = pts[j];
       const [bx, by] = pts[j + 1];
       const u = f - j;
-      // Lean with the pitch: right (rising) tips the nose up, left tips it down.
-      const angle = (-Math.atan2(bx - ax, by - ay) * 180) / Math.PI;
+      const angle = (Math.atan2(by - ay, bx - ax) * 180) / Math.PI;
       if (bird.current) {
         bird.current.style.transform = `translate(${(ax + (bx - ax) * u).toFixed(1)}px, ${(ay + (by - ay) * u).toFixed(1)}px) rotate(${(angle * 0.7).toFixed(1)}deg)`;
       }
@@ -196,6 +194,112 @@ function ScrollFlight() {
   );
 }
 
+/**
+ * Scroll indicator, option 2 (`?ind=run`): reading the page is a run. Every
+ * section is one gate, cut to a tone (they cycle 1, 2, 3, 4), and the bird
+ * flies through the current section's gate as you scroll it. Leave a section
+ * and the gate counts as cleared: the score ticks up with a pop, like the
+ * game's. The pill shows the gate's tone mark too. DOM writes from one rAF.
+ */
+const RUN = { w: 112, h: 36, gap: 13 };
+const TONE_MARK: Record<Tone, string> = { 1: "ˉ", 2: "ˊ", 3: "ˇ", 4: "ˋ" };
+
+function gateD(tone: Tone): { top: string; bottom: string; mid: (t: number) => number } {
+  const span = RUN.h - 8 - RUN.gap;
+  const mid = (t: number) => 4 + RUN.gap / 2 + (1 - CONTOUR[tone](t)) * span;
+  const n = 24;
+  const top: string[] = [];
+  const bot: string[] = [];
+  for (let k = 0; k <= n; k++) {
+    const t = k / n;
+    const x = (t * RUN.w).toFixed(1);
+    top.push(`${x},${(mid(t) - RUN.gap / 2).toFixed(1)}`);
+    bot.push(`${x},${(mid(t) + RUN.gap / 2).toFixed(1)}`);
+  }
+  return {
+    top: `M0,0 L${top.join(" L")} L${RUN.w},0 Z`,
+    bottom: `M0,${RUN.h} L${bot.join(" L")} L${RUN.w},${RUN.h} Z`,
+    mid,
+  };
+}
+
+function ScrollRun() {
+  const top = useRef<SVGPathElement>(null);
+  const bottom = useRef<SVGPathElement>(null);
+  const bird = useRef<SVGGElement>(null);
+  const score = useRef<HTMLSpanElement>(null);
+  const mark = useRef<HTMLSpanElement>(null);
+  const root = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    const gates = TONES.map((t) => gateD(t));
+    const sections = Array.from(document.querySelectorAll<HTMLElement>(".lp-sky > header, .lp-sky > section"));
+    let raf = 0;
+    let shown = -1;
+    let best = 0;
+    const update = () => {
+      raf = 0;
+      const probe = innerHeight * 0.5;
+      // The section under the middle of the screen is the gate being flown.
+      let i = sections.findIndex((el) => el.getBoundingClientRect().bottom > probe);
+      if (i < 0) i = sections.length - 1;
+      const r = sections[i].getBoundingClientRect();
+      const t = Math.min(1, Math.max(0, (probe - r.top) / Math.max(1, r.height)));
+      const tone = TONES[i % TONES.length];
+      const g = gates[i % TONES.length];
+      if (i !== shown) {
+        shown = i;
+        top.current?.setAttribute("d", g.top);
+        bottom.current?.setAttribute("d", g.bottom);
+        if (mark.current) {
+          mark.current.textContent = TONE_MARK[tone];
+          mark.current.style.color = TONE_LINE_COLOR[tone];
+        }
+      }
+      if (i > best) {
+        best = i;
+        if (score.current) score.current.textContent = String(best);
+        root.current?.classList.remove("is-pop");
+        void root.current?.offsetWidth; // restart the pop
+        root.current?.classList.add("is-pop");
+      }
+      const x = 6 + t * (RUN.w - 12);
+      const y = g.mid(t);
+      const slope = g.mid(Math.min(1, t + 0.04)) - y;
+      bird.current?.setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(slope * 6).toFixed(1)})`);
+    };
+    const onScroll = () => {
+      raf ||= requestAnimationFrame(update);
+    };
+    update();
+    addEventListener("scroll", onScroll, { passive: true });
+    addEventListener("resize", onScroll);
+    return () => {
+      cancelAnimationFrame(raf);
+      removeEventListener("scroll", onScroll);
+      removeEventListener("resize", onScroll);
+    };
+  }, []);
+
+  return (
+    <a ref={root} className="sky-run" href="#top" aria-label="Back to top">
+      <span className="sky-run-score" aria-hidden="true">
+        <span ref={score}>0</span>
+        <span ref={mark} className="sky-run-mark" />
+      </span>
+      <svg width={RUN.w} height={RUN.h} viewBox={`0 0 ${RUN.w} ${RUN.h}`} aria-hidden="true">
+        <path ref={top} className="sky-run-wall" />
+        <path ref={bottom} className="sky-run-wall" />
+        <g ref={bird}>
+          <circle r="5.5" className="sky-bird-body" />
+          <circle cx="1.8" cy="-1.8" r="1.5" className="sky-bird-eye" />
+          <path d="M4.5 -1.5 L9 0 L4.5 1.5 z" className="sky-bird-beak" />
+        </g>
+      </svg>
+    </a>
+  );
+}
+
 /** True as soon as the page has scrolled at all: the nav collapses at once. */
 function useScrolled(): boolean {
   const [scrolled, setScrolled] = useState(false);
@@ -235,6 +339,11 @@ export function SkyLanding() {
 
   const modes = brand.options.modes;
   const compact = useScrolled();
+  /** Trial switch between the two scroll indicators: `?ind=run` for option 2. */
+  const indicator = useMemo(
+    () => (typeof window !== "undefined" && new URLSearchParams(location.search).get("ind") === "run" ? "run" : "flight"),
+    [],
+  );
 
   return (
     <div className="lp-sky">
@@ -263,7 +372,7 @@ export function SkyLanding() {
         </button>
       </nav>
       </div>
-      <ScrollFlight />
+      {indicator === "run" ? <ScrollRun /> : <ScrollFlight />}
 
       <header id="top" className="sky-hero">
         <div className="sky-hero-text">

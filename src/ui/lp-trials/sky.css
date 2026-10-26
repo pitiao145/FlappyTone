@@ -182,6 +182,47 @@ html:has(.lp-sky) body {
 .sky-flight-bird { position: absolute; left: 4px; top: 8px; width: 0; height: 0; will-change: transform; }
 .sky-flight-bird .pip { position: absolute; left: -8px; top: -8px; }
 .sky-flight:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+/* Scroll indicator, option 2: each section is a gate the bird flies. */
+.sky-run {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 4px 12px;
+  border: 2px solid var(--color-ink);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-sky-5) 88%, transparent);
+  box-shadow: 2px 2px 0 var(--color-ink);
+  color: var(--color-ink);
+  text-decoration: none;
+}
+.sky-run svg { display: block; border-radius: 8px; background: var(--color-sky-3); }
+.sky-run .sky-bird-body { fill: var(--color-bird); stroke: var(--color-ink); stroke-width: 0.75; }
+.sky-run .sky-bird-eye { fill: var(--color-bird-eye); }
+.sky-run .sky-bird-beak { fill: var(--color-beak); }
+.sky-run-wall { fill: var(--color-rim-lo); stroke: var(--color-rim-hi); stroke-width: 1.5; }
+.sky-run-score {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  min-width: 2ch;
+  font: 400 1.25rem/1 var(--font-display);
+}
+.sky-run-mark { font: 700 1.25rem/1 var(--font-body); }
+.sky-run.is-pop .sky-run-score { animation: sky-run-pop 360ms var(--ease-snap); }
+@keyframes sky-run-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+.sky-run:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .sky-run.is-pop .sky-run-score { animation: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sky-nav-bar, .sky-nav { transition: none; }
 }
