@@ -1,7 +1,10 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { brand } from "../../brand.ts";
 import type { Tone } from "../../game/gates.ts";
 import { tierLimits } from "../../game/tiers.ts";
+import { wordsFromCatalog } from "../../game/words.ts";
+import { DEFAULT_SPEAKER_ID } from "../../data/catalogRows.ts";
+import fallback from "../../data/wordsFallback.json";
 import { LEARN_LINKS } from "../../site/links.ts";
 import { Pip } from "../../site/Pip.tsx";
 import { capturePostHogEvent } from "../../analytics/posthog.ts";
@@ -17,7 +20,25 @@ import "./sky.css";
  * Hallmark trial 2: custom. The idea: the page is the corridor. You scroll
  * through the game's own sky, and every band of ground is a wall whose edge is
  * a tone contour, the same shapes the bird flies. Dev only, at `/?lp=sky`.
+ *
+ * Copy comes from brand.ts, as on the live page, except the hero line, the
+ * tunnel explainer and the visualiser title, which Pierre set for this trial.
  */
+
+/** The real gate, drawn by the game's renderer. Off the first paint. */
+const GateDemo = lazy(() => import("./GateDemo.tsx"));
+
+/** Example words for the gate picker: one per tone, then a few pairs. */
+const EXAMPLES: { group: "Single tones" | "Tone pairs"; id: string }[] = [
+  { group: "Single tones", id: "ma1b" },
+  { group: "Single tones", id: "ma2" },
+  { group: "Single tones", id: "ma3b" },
+  { group: "Single tones", id: "ma4b" },
+  { group: "Tone pairs", id: "zhongwen12" },
+  { group: "Tone pairs", id: "laoshi31" },
+  { group: "Tone pairs", id: "haowan32" },
+  { group: "Tone pairs", id: "nihao33" },
+];
 
 /** Pitch height 0 (low) to 1 (high) along a syllable, per tone. */
 const CONTOUR: Record<Tone, (t: number) => number> = {
@@ -27,75 +48,41 @@ const CONTOUR: Record<Tone, (t: number) => number> = {
   4: (t) => 0.92 - 0.8 * t,
 };
 
-function contourPoints(tone: Tone, w: number, top: number, span: number, n = 48): string {
-  const pts: string[] = [];
-  for (let i = 0; i <= n; i++) {
-    const t = i / n;
-    pts.push(`${((t * w)).toFixed(1)},${(top + (1 - CONTOUR[tone](t)) * span).toFixed(1)}`);
-  }
-  return pts.join(" L");
-}
-
 /** A band of ground whose top (or bottom) edge is a tone's contour. */
 function Wall({ tone, edge }: { tone: Tone; edge: "top" | "bottom" }) {
   const W = 1200;
   const H = 150;
-  const line = contourPoints(tone, W, 14, 110);
+  const pts: string[] = [];
+  for (let i = 0; i <= 48; i++) {
+    const t = i / 48;
+    pts.push(`${(t * W).toFixed(1)},${(14 + (1 - CONTOUR[tone](t)) * 110).toFixed(1)}`);
+  }
+  const line = pts.join(" L");
   const d = edge === "top" ? `M${line} L${W},${H} L0,${H} Z` : `M${line} L${W},0 L0,0 Z`;
   return (
-    <svg
-      className={`sky-wall sky-wall-${edge}`}
-      viewBox={`0 0 ${W} ${H}`}
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
+    <svg className={`sky-wall sky-wall-${edge}`} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
       <path d={d} className="sky-wall-fill" />
       <path d={`M${line}`} className="sky-wall-rim" />
     </svg>
   );
 }
 
-/** One tone as a pair of corridor walls with the gap the bird flies through. */
-function Corridor({ tone }: { tone: Tone }) {
-  const W = 240;
-  const H = 180;
-  const gap = 46;
-  const mid = (t: number) => 24 + (1 - CONTOUR[tone](t)) * (H - 48 - gap);
-  const n = 32;
-  const topEdge: string[] = [];
-  const botEdge: string[] = [];
-  for (let i = 0; i <= n; i++) {
-    const t = i / n;
-    const x = (t * W).toFixed(1);
-    topEdge.push(`${x},${mid(t).toFixed(1)}`);
-    botEdge.push(`${x},${(mid(t) + gap).toFixed(1)}`);
-  }
-  const bird = mid(0.62) + gap / 2;
-  return (
-    <svg className="sky-corridor" viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
-      <path d={`M0,0 L${topEdge.join(" L")} L${W},0 Z`} className="sky-wall-fill" />
-      <path d={`M0,${H} L${botEdge.join(" L")} L${W},${H} Z`} className="sky-wall-fill" />
-      <path d={`M${topEdge.join(" L")}`} className="sky-wall-rim" />
-      <path d={`M${botEdge.join(" L")}`} className="sky-wall-rim" />
-      <path
-        d={`M${topEdge.map((p) => {
-          const [x, y] = p.split(",").map(Number);
-          return `${x},${(y + gap / 2).toFixed(1)}`;
-        }).join(" L")}`}
-        className="sky-corridor-trace"
-        style={{ stroke: TONE_LINE_COLOR[tone] }}
-      />
-      <g transform={`translate(${0.62 * W - 16}, ${bird - 16})`}>
-        <circle cx="14" cy="16" r="11" className="sky-bird-body" />
-        <circle cx="17" cy="11" r="3" className="sky-bird-eye" />
-        <path d="M24 13 L32 16 L24 19 z" className="sky-bird-beak" />
-      </g>
-    </svg>
-  );
+function toneLabel(tones: number[]): string {
+  return tones.length > 1 ? `Tones ${tones.join(" + ")}` : `Tone ${tones[0]}`;
 }
 
 export function SkyLanding() {
   const wordsByTone = useWordsByTone();
+  const [mode, setMode] = useState(0);
+  const [exampleId, setExampleId] = useState(EXAMPLES[2].id);
+
+  const examples = useMemo(() => {
+    const all = wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID })));
+    return EXAMPLES.map((e) => ({ ...e, word: all.find((w) => w.id === e.id) })).filter(
+      (e): e is typeof e & { word: NonNullable<typeof e.word> } => !!e.word,
+    );
+  }, []);
+  const picked = examples.find((e) => e.id === exampleId) ?? examples[0];
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -105,6 +92,9 @@ export function SkyLanding() {
     return () => link.remove();
   }, []);
 
+  const modes = brand.options.modes;
+  const whyParagraphs = brand.whyThisWorks.body.split("\n");
+
   return (
     <div className="lp-sky">
       <nav className="sky-nav" aria-label="Main">
@@ -112,7 +102,7 @@ export function SkyLanding() {
           <Pip size={38} tilt={-8} /> FlappyTone
         </a>
         <ul className="sky-nav-links">
-          <li><a href="#how-it-works">The four tones</a></li>
+          <li><a href="#how-it-works">How it works</a></li>
           <li><a href="#visualiser">Visualiser</a></li>
           <li><a href="#pricing">Pricing</a></li>
           <li>
@@ -127,62 +117,117 @@ export function SkyLanding() {
           </li>
         </ul>
         <button className="sky-btn sky-btn-small" onClick={() => go("play", "nav")}>
-          Play free
+          {brand.heroCards.play.cta}
         </button>
       </nav>
 
       <header id="top" className="sky-hero">
         <div className="sky-hero-text">
-          <h1>
-            Your voice is the <span className="sky-nowrap">controller.</span>
-          </h1>
-          <p className="sky-lede">Say a Mandarin tone and the bird flies its shape.</p>
+          <h1>Fly a bird with your voice and finally nail Mandarin tones</h1>
+          <p className="sky-lede">{brand.pitch}</p>
           <div className="sky-actions">
             <button className="sky-btn" onClick={() => go("play", "hero_actions")}>
-              Play free
+              {brand.heroCards.play.cta}
             </button>
             <button className="sky-btn sky-btn-ghost" onClick={() => go("visualiser", "hero_actions", "visualiser")}>
-              Try the visualiser
+              {brand.heroCards.visualise.cta}
             </button>
           </div>
-          <p className="sky-small">{brand.requirement} Your voice never leaves your device.</p>
+          <p className="sky-small">
+            {brand.requirement} {brand.privacyNote}
+          </p>
         </div>
         <figure id="demo" className="sky-screen">
           <DemoLoop width={340} />
-          <figcaption>A real run, one wall clipped near the end.</figcaption>
+          <figcaption>{brand.demoCaption}</figcaption>
         </figure>
       </header>
 
       <section id="how-it-works" className="sky-ground">
         <Wall tone={3} edge="top" />
         <div className="sky-inner">
-          <h2>Four tones, four corridors.</h2>
-          <p className="sky-ground-lede">
-            Each tone mark is a pitch shape. The game turns each shape into a corridor you fly with your voice.
-          </p>
-          <ol className="sky-corridors">
-            {TONES.map((t) => (
-              <li key={t}>
-                <Corridor tone={t} />
-                <p className="sky-corridor-label">
-                  <span lang="zh-Hant">{brand.tones[t].hanzi}</span>{" "}
-                  <b style={{ color: TONE_LINE_COLOR[t] }}>{brand.tones[t].pinyin}</b>
-                </p>
-                <p className="sky-corridor-cue">{brand.tones[t].cue}</p>
-              </li>
-            ))}
-          </ol>
+          <div className="sky-split sky-split-how">
+            <div className="sky-head">
+              <h2>{brand.whyThisWorks.title}</h2>
+              {whyParagraphs.map((p) => (
+                <p key={p.slice(0, 24)}>{p}</p>
+              ))}
+              <p className="sky-callout">
+                Each tunnel is the tone of the word you hear. Its shape is cut from a real recording of a
+                native speaker, not drawn from a textbook chart. Pick a word to see its gate.
+              </p>
+            </div>
+            <div className="sky-gate">
+              <div className="sky-gate-picker">
+                {(["Single tones", "Tone pairs"] as const).map((group) => (
+                  <div key={group} className="sky-gate-group" role="radiogroup" aria-label={group}>
+                    <h3>{group}</h3>
+                    <div className="sky-gate-chips">
+                      {examples
+                        .filter((e) => e.group === group)
+                        .map((e) => (
+                          <button
+                            key={e.id}
+                            role="radio"
+                            aria-checked={e.id === picked?.id}
+                            className="sky-chip"
+                            onClick={() => setExampleId(e.id)}
+                          >
+                            <span lang="zh-Hant">{e.word.hanzi}</span>{" "}
+                            <span className="sky-chip-pinyin">{e.word.pinyin}</span>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {picked && (
+                <figure className="sky-gate-screen">
+                  <Suspense fallback={<div className="sky-gate-canvas" />}>
+                    <GateDemo
+                      word={picked.word}
+                      label={`The game's gate for ${picked.word.pinyin}, a corridor shaped like ${toneLabel(picked.word.tones).toLowerCase()}.`}
+                    />
+                  </Suspense>
+                  <figcaption>
+                    <span lang="zh-Hant">{picked.word.hanzi}</span>{" "}
+                    <b>{picked.word.pinyin}</b>
+                    {picked.word.english ? `, “${picked.word.english}”` : ""},{" "}
+                    {picked.word.tones.map((t, i) => (
+                      <span key={i} className="sky-gate-tone" style={{ color: TONE_LINE_COLOR[t] }}>
+                        {i > 0 ? " + " : ""}
+                        tone {t}
+                      </span>
+                    ))}
+                  </figcaption>
+                </figure>
+              )}
+            </div>
+          </div>
         </div>
         <Wall tone={2} edge="bottom" />
       </section>
 
+      <div className="sky-ticker" aria-label="What FlappyTone is not">
+        <ul className="sky-ticker-track">
+          {brand.limits.map((l) => (
+            <li key={l}>{l}</li>
+          ))}
+          {brand.limits.map((l) => (
+            <li key={`dup-${l}`} aria-hidden="true" className="sky-ticker-dup">
+              {l}
+            </li>
+          ))}
+        </ul>
+      </div>
+
       <section id="real-speech" className="sky-section">
         <div className="sky-split">
           <div className="sky-head">
-            <h2>Shaped from 450+ real recordings.</h2>
+            <h2>{brand.toneDataTitle}</h2>
+            <p>{brand.toneDataIntro}</p>
             <p>
-              One native Taiwanese speaker, Traditional characters, TOCFL word order. Each bold line is her
-              average; the faint ones are what she actually said. Recorded by the founder of{" "}
+              {brand.jane.before}
               <a
                 href={brand.jane.href}
                 target="_blank"
@@ -191,21 +236,35 @@ export function SkyLanding() {
               >
                 {brand.jane.linkText}
               </a>
-              .
+              {brand.jane.after}
             </p>
-            <ul className="sky-tags">
-              {brand.limits.map((l) => (
-                <li key={l}>{l}</li>
+          </div>
+          <div>
+            <div className="sky-tone-grid">
+              {TONES.map((t) => (
+                <div key={t} className="sky-panel">
+                  <ToneAverageCard tone={t} words={wordsByTone.get(t) ?? []} />
+                </div>
               ))}
-            </ul>
+            </div>
+            <p className="sky-small sky-note">
+              Every clip in the inventory, resampled and averaged: the bold line is the mean, the faint lines
+              behind it are what she actually said.
+            </p>
           </div>
-          <div className="sky-tone-grid">
-            {TONES.map((t) => (
-              <div key={t} className="sky-panel">
-                <ToneAverageCard tone={t} words={wordsByTone.get(t) ?? []} />
-              </div>
-            ))}
+        </div>
+      </section>
+
+      <section id="why-tones-hard" className="sky-section">
+        <div className="sky-split">
+          <div className="sky-head">
+            <h2>{brand.notTextbook.title}</h2>
+            <p>{brand.notTextbook.body}</p>
           </div>
+          <blockquote className="sky-bigquote">
+            {brand.notTextbook.quote}
+            <cite>{brand.notTextbook.quoteAttribution.replace(/^—\s*/, "")}</cite>
+          </blockquote>
         </div>
       </section>
 
@@ -215,10 +274,10 @@ export function SkyLanding() {
             <VisualiserDemoLoop width={480} />
           </div>
           <div className="sky-head">
-            <h2>No gates. Just your voice and the shape.</h2>
-            <p>Say mǎ ten times and every try stacks on the target. Nothing is scored.</p>
+            <h2>Understand your own voice</h2>
+            <p>{brand.visualiser.body}</p>
             <button className="sky-btn" onClick={() => go("visualiser", "visualiser_section", "visualiser")}>
-              Open the visualiser
+              {brand.visualiser.cta}
             </button>
           </div>
         </div>
@@ -227,62 +286,59 @@ export function SkyLanding() {
       <section id="tone-pairs" className="sky-sand">
         <div className="sky-inner sky-split">
           <div className="sky-head">
-            <h2>
-              <span lang="zh-Hant">好玩</span>, <span lang="zh-Hant">以前</span> and 240 more.
-            </h2>
-            <p>
-              Tone Pairs flies real two-syllable words. Each corridor comes from the exact recording, sandhi
-              included.
-            </p>
+            <h2>{brand.tonePairs.title}</h2>
+            <p>{brand.tonePairs.body}</p>
             <button className="sky-btn" onClick={() => go("tone_pairs", "tone_pairs", "pairs")}>
-              Try Tone Pairs
+              {brand.tonePairs.cta}
             </button>
           </div>
-          <div className="sky-quotes">
-            <blockquote>
-              {brand.notTextbook.quote}
-              <cite>r/taiwan</cite>
-            </blockquote>
-            <blockquote>
-              {brand.tonePairs.quote}
-              <cite>An early tester</cite>
-            </blockquote>
-          </div>
+          <blockquote className="sky-bigquote">
+            {brand.tonePairs.quote}
+            <cite>{brand.tonePairs.quoteAttribution.replace(/^—\s*/, "")}</cite>
+          </blockquote>
         </div>
       </section>
 
       <section id="options" className="sky-section">
         <div className="sky-head">
-          <h2>Four ways to fly.</h2>
+          <h2>{brand.options.title}</h2>
+          <p>{brand.options.body}</p>
         </div>
-        <ul className="sky-pipes">
-          {brand.options.modes.map((m) => (
-            <li key={m.title} className="sky-pipe">
-              <h3>{m.title}</h3>
-              <p>{m.body}</p>
-            </li>
-          ))}
-        </ul>
-        <dl className="sky-settings">
-          {brand.options.settings.map((s) => (
-            <div key={s.title}>
-              <dt>{s.title}</dt>
-              <dd>{s.choices.replaceAll(" · ", ", ")}</dd>
-            </div>
-          ))}
-        </dl>
-        <button className="sky-btn sky-center" onClick={() => go("play", "options")}>
-          Try it
-        </button>
+        <div className="sky-chooser">
+          <h3>{brand.options.modesTitle}</h3>
+          <div className="sky-chooser-chips" role="radiogroup" aria-label={brand.options.modesTitle}>
+            {modes.map((m, i) => (
+              <button key={m.title} role="radio" aria-checked={mode === i} className="sky-chip" onClick={() => setMode(i)}>
+                {m.title}
+              </button>
+            ))}
+          </div>
+          <p className="sky-chooser-result" aria-live="polite">
+            <mark>{modes[mode].title}</mark>: {modes[mode].body}
+          </p>
+          <h3>{brand.options.settingsTitle}</h3>
+          <dl className="sky-settings">
+            {brand.options.settings.map((s) => (
+              <div key={s.title}>
+                <dt>{s.title}</dt>
+                <dd className="sky-settings-choices">{s.choices.replaceAll(" · ", ", ")}</dd>
+                <dd>{s.body}</dd>
+              </div>
+            ))}
+          </dl>
+          <button className="sky-btn" onClick={() => go("play", "options")}>
+            {brand.options.cta}
+          </button>
+        </div>
       </section>
 
       <section id="leaderboard" className="sky-section">
         <div className="sky-split">
           <div className="sky-head">
-            <h2>Defend your spot on the board.</h2>
-            <p>Week, month or all-time. Sign up free and every run counts.</p>
+            <h2>{brand.leaderboard.title}</h2>
+            <p>{brand.leaderboard.body}</p>
             <button className="sky-btn sky-btn-ghost" onClick={() => go("leaderboard", "leaderboard", "leaderboard")}>
-              See the board
+              {brand.leaderboard.cta}
             </button>
           </div>
           <img
@@ -299,38 +355,41 @@ export function SkyLanding() {
       <section id="pricing" className="sky-ground sky-ground-pricing">
         <Wall tone={1} edge="top" />
         <div className="sky-inner">
-          <h2>Free to fly. {PRO_PRICE} once for everything.</h2>
+          <h2>{brand.pricing.title}</h2>
           <div className="sky-prices">
             <article className="sky-price">
-              <h3>Free</h3>
+              <h3>{brand.pricing.free.label}</h3>
               <ul>
                 <li>{tierLimits().free.runsPerDay} runs a day</li>
-                <li>Progress synced to your account</li>
-                <li>A leaderboard entry, under a generated name</li>
+                <li>Progress saved and synced to your account</li>
+                <li>A real leaderboard entry, under a generated name</li>
                 <li>{tierLimits().free.wordsPerTone} words per tone in the visualiser</li>
                 <li>Limited tone pair practice</li>
               </ul>
               <button className="sky-btn sky-btn-ghost" onClick={() => go("play", "pricing_free")}>
-                Start free
+                {brand.pricing.free.cta}
               </button>
             </article>
             <article className="sky-price sky-price-pro">
-              <h3>Pro, {PRO_PRICE} one-time</h3>
+              <span className="sky-launch">Launch price</span>
+              <h3>
+                {brand.pricing.pro.label}: {PRO_PRICE} one-time
+              </h3>
               <ul>
                 <li>Unlimited runs</li>
                 <li>Every word, every tone, every TOCFL level</li>
                 <li>Full tone pairs access</li>
-                <li>A leaderboard name you choose</li>
+                <li>Leaderboard entry under a name you choose</li>
                 <li>Offline play (coming soon)</li>
               </ul>
               <button className="sky-btn" onClick={() => go("pricing", "pricing_pro", "pricing")}>
-                Go Pro
+                {brand.pricing.pro.cta}
               </button>
             </article>
           </div>
           <blockquote className="sky-ground-quote">
             {brand.pricing.quote}
-            <cite>EarlyBird player, over email</cite>
+            <cite>{brand.pricing.quoteAttribution.replace(/^—\s*/, "")}</cite>
           </blockquote>
         </div>
         <Wall tone={4} edge="bottom" />
@@ -362,11 +421,15 @@ export function SkyLanding() {
             playsInline
           />
           <div className="sky-head">
-            <h2>No app yet. Use your home screen.</h2>
+            <h2>{brand.mobile.title}</h2>
+            <p>{brand.mobile.body}</p>
+            <NotifyForm className="sky-notify" cta={brand.mobile.notify.cta} placeholder={brand.mobile.notify.placeholder} />
+            <p className="sky-small">{brand.mobile.notify.disclaimer}</p>
+            <h3>{brand.mobile.homeScreen.title}</h3>
             <div className="sky-steps">
               {[brand.mobile.homeScreen.ios, brand.mobile.homeScreen.android].map((p) => (
                 <div key={p.label}>
-                  <h3>{p.label}</h3>
+                  <h4>{p.label}</h4>
                   <ol>
                     {p.steps.map((s) => (
                       <li key={s.text}>{s.text}</li>
@@ -375,9 +438,7 @@ export function SkyLanding() {
                 </div>
               ))}
             </div>
-            <p>Native apps, a second voice and more tone-pair drills are next.</p>
-            <NotifyForm className="sky-notify" cta="Notify me" placeholder="you@example.com" />
-            <p className="sky-small">{brand.mobile.notify.disclaimer}</p>
+            <p className="sky-small">{brand.mobile.homeScreen.body}</p>
           </div>
         </div>
       </section>
