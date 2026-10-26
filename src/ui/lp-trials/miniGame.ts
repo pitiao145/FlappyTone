@@ -6,7 +6,13 @@
  * dynamic `import()` on the first tap, and the second tap calls `start`, so
  * `ensureMic` runs inside a gesture (hard rule 4). Nothing here is React
  * state: one rAF loop and one frame sink, like `Game.tsx`, without the HUD,
- * accounts, cues or stats. Dev-only trial for now.
+ * accounts or stats.
+ *
+ * Cues work as in the game ("listen", then fly), but play through the site's
+ * guest-ticket `wordAudio.ts`, not `src/audio/reference.ts`, whose ticket
+ * pulls in the account code. Every easy word is in `sampler-beginner`, so a
+ * guest ticket plays it. No iOS loud-speaker dance: cues take the earpiece
+ * route there, like Chrome on iOS does in the game.
  */
 import { ensureMic, setFrameSink, stopMic } from "../../audio/session.ts";
 import { MicError } from "../../audio/mic.ts";
@@ -19,6 +25,7 @@ import { PitchTracker } from "../../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../../render/canvas.ts";
 import { drawWorld, lockWorldTheme } from "../../render/world.ts";
 import { micErrorCopy } from "../micErrors.ts";
+import { clipUrl, playWord, stopWord, unlockAudio } from "../../site/wordAudio.ts";
 
 export { micErrorCopy };
 
@@ -67,7 +74,10 @@ export function micErrorKind(err: unknown): string {
 
 /** Opens the mic (call from a tap) and flies `gates` gates. Returns stop. */
 export async function startMiniGame(opts: MiniGameOptions): Promise<() => void> {
+  // Inside the tap, before any await: lets later cue clips play on iOS.
+  unlockAudio();
   await ensureMic();
+  for (const w of opts.words) void clipUrl(w.id);
   const settings = loadSettings() ?? PRESETS[opts.voice];
   lockWorldTheme("pixel-flappy");
 
@@ -75,14 +85,19 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<() => void> 
     mode: "game",
     width: opts.width,
     corridor: "wide",
-    cueStyle: "off",
+    cueStyle: "pause",
+    cueDurationMsFor: (word) => (word?.clipS ?? 0.8) * 1000,
     words: opts.words,
     speechStyle: "textbook",
   });
 
   let tracker: PitchTracker | null = null;
   const measureNoise = sessionNoiseMeter(settings.voiceRms);
+  /** The cue plays through the speaker; the mic must not fly it. */
+  let cueAudibleUntil = 0;
+  let lastCueX = -Infinity;
   setFrameSink((frame, sampleRate) => {
+    if (performance.now() < cueAudibleUntil) return;
     tracker ??= new PitchTracker({
       sampleRate,
       f0Center: settings.f0Center,
@@ -106,6 +121,7 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<() => void> 
     stopped = true;
     cancelAnimationFrame(raf);
     setFrameSink(null);
+    stopWord();
     stopMic();
     lockWorldTheme(null);
   };
@@ -118,6 +134,13 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<() => void> 
     const snap = run.snapshot();
     const ctx = scaleForDpr(opts.canvas, opts.width, opts.height);
     if (ctx) drawWorld(ctx, opts.width, opts.height, snap, now);
+
+    if (snap.cue && snap.cue.xStart > lastCueX) {
+      lastCueX = snap.cue.xStart;
+      const cueWord = snap.cue.word;
+      cueAudibleUntil = now + snap.cue.durationMs + 150;
+      if (cueWord) void playWord(cueWord.id);
+    }
 
     const word = snap.activeGate?.word ?? snap.upcoming?.word ?? null;
     const id = word?.id ?? null;

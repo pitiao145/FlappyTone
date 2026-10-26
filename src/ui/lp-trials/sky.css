@@ -490,7 +490,28 @@ html:has(.lp-sky) body {
 .sky-chip[aria-checked="true"] { background: var(--color-beak); }
 .sky-chip-pinyin { font-weight: 400; }
 
-.sky-gate-screen { margin: 0; }
+.sky-gate-screen { margin: 0; position: relative; }
+
+/* A hand-drawn note pointing at the phone gate. */
+.sky-arrow-note {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 4px;
+  margin: 0 8px 4px 0;
+  font: 600 1.15rem/1.2 var(--font-body);
+  color: var(--color-rim-hi);
+}
+.sky-arrow {
+  width: 52px;
+  height: 46px;
+  margin-top: 8px;
+  fill: none;
+  stroke: var(--color-rim-hi);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .sky-gate-canvas {
   display: block;
   width: min(100%, 320px);

@@ -54,7 +54,7 @@ React 19 + TypeScript + Vite. Canvas 2D. Web Audio (`AudioWorklet`). Plain CSS t
 10. **Nothing in `src/data/`, `src/share/` or `src/analytics/` throws into a caller.** A failure returns an empty board, `false` or the fallback catalog, never a broken screen. Analytics never breaks a run.
 11. **Values the client must not decide are written only by a server function** in `api/`; those tables have no client write policy. Ask before any schema or payment change; migration steps are in ARCHITECTURE.md.
 12. **Player voice audio is never uploaded.** Only derived numbers are stored, and the privacy policy says so. Any new voice-derived data needs a privacy-policy update.
-13. **Site pages never load the mic code up front** (one lazy exception, see ARCHITECTURE.md "Three entries"). A click gesture does not survive the navigation from `/` to `/app`.
+13. **Site pages never load the mic code up front** (two lazy, tap-loaded exceptions: the tone visualizer engine and the landing's Try it now, see ARCHITECTURE.md "Three entries"). A click gesture does not survive the navigation from `/` to `/app`.
 14. **`min_tier` (game access) and `TIER_LIMITS.wordsPerTone` (visualiser depth) are different gates.** Never conflate them (a real incident). `src/game/tiers.ts` is the single source of per-tier limits.
 
 ## Game rules

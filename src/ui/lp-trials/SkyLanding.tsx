@@ -48,8 +48,8 @@ const COPY = {
   leaderboard: "Sign up free and every run counts. This week, this month or all-time.",
   mobile: "Native apps aren't out yet. They'll add offline play, reminders and a streak. Get told when they ship:",
   founder: [
-    "I'm Pierre, and I build FlappyTone on my own.",
-    "I wanted tone practice that feels like play, so the voice became the controller. Every word is recorded by a native speaker from Taiwan. Questions or ideas? Write to me.",
+    "I'm Pierre, and I'm learning Mandarin too.",
+    "I realised I learn far better with visuals than with audio alone, so I built a way to see the tones, not just hear them. Every word is recorded by a native speaker from Taiwan. Questions or ideas? Write to me.",
   ],
 } as const;
 
@@ -218,6 +218,13 @@ export function SkyLanding() {
               </div>
               {picked && (
                 <figure className="sky-gate-screen">
+                  <p className="sky-arrow-note" aria-hidden="true">
+                    See the gates
+                    <svg viewBox="0 0 64 56" className="sky-arrow">
+                      <path d="M4 10 C 22 2, 38 6, 40 18 C 42 28, 30 30, 30 22 C 30 14, 46 14, 52 28 L 54 44" />
+                      <path d="M46 38 L 54 46 L 60 36" />
+                    </svg>
+                  </p>
                   <Suspense fallback={<div className="sky-gate-canvas" />}>
                     <GateDemo
                       word={picked.word}
@@ -408,7 +415,7 @@ export function SkyLanding() {
               </button>
             </article>
             <article className="sky-price sky-price-pro">
-              <span className="sky-launch">Launch price</span>
+              <span className="sky-launch">Launch price until 31 Dec</span>
               <h3>
                 {brand.pricing.pro.label}: {PRO_PRICE} one-time
               </h3>
@@ -481,7 +488,7 @@ export function SkyLanding() {
         <div className="sky-founder">
           <Pip size={72} tilt={-6} />
           <div className="sky-head">
-            <h2>Made by one person, not a company</h2>
+            <h2>Made by a Mandarin learner</h2>
             {COPY.founder.map((p) => (
               <p key={p}>{p}</p>
             ))}

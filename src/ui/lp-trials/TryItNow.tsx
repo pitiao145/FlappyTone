@@ -25,6 +25,18 @@ const GATES = 6;
 const W = 420;
 const H = 640;
 
+/** An encouraging line and a nudge into the game, by how the run went. */
+function verdict(cleared: number, total: number): { title: string; nudge: string } {
+  const share = total ? cleared / total : 0;
+  if (share >= 0.8) {
+    return { title: "Great ear!", nudge: "You're ready for more. The game has 450+ words and real tone pairs." };
+  }
+  if (share >= 0.4) {
+    return { title: "Nice start!", nudge: "A few runs a day and these shapes start to stick. Keep going in the game." };
+  }
+  return { title: "Everyone starts here", nudge: "Tones click with practice. The game builds them up one word at a time." };
+}
+
 type Step =
   | { kind: "demo" }
   | { kind: "loading" }
@@ -118,8 +130,8 @@ export function TryItNow() {
           <div className="sky-try-panel">
             <p>
               {step.calibrated
-                ? "Ready when you are. Say each word as the bird reaches its tunnel."
-                : "Pick your voice so the bird fits your range. Then say each word."}
+                ? "Listen to each word, then say it to fly through its tunnel."
+                : "Pick your voice so the bird fits your range. Then listen to each word and say it back."}
             </p>
             {step.calibrated ? (
               <button className="sky-btn" onClick={() => start(step.mini, "lower")}>
@@ -140,17 +152,15 @@ export function TryItNow() {
         )}
         {step.kind === "done" && (
           <div className="sky-try-panel">
-            <p className="sky-try-score">
-              {step.cleared} of {step.total} tunnels cleared
+            <p className="sky-try-score">{verdict(step.cleared, step.total).title}</p>
+            <p>
+              {step.cleared} of {step.total} tunnels cleared. {verdict(step.cleared, step.total).nudge}
             </p>
-            {step.unheard > 0 && (
-              <p className="sky-small">We couldn&rsquo;t hear {step.unheard} of them. That never counts against you.</p>
-            )}
             <button className="sky-btn" onClick={() => go("play", "try_now_done")}>
-              Play the full game
+              Keep practising, free
             </button>
             <button className="sky-btn sky-btn-ghost" onClick={open}>
-              Try again
+              One more round
             </button>
           </div>
         )}

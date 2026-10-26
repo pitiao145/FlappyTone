@@ -96,7 +96,7 @@ on `landed`, and strips it. Like `?intent=`, it never starts anything.
 
 Four rules hold the split together:
 
-1. **The marketing page must not import `src/audio/` or `src/pitch/`.** The same rule holds for every route-table page and `src/site/`, with **one named exception: the tone visualizer's engine, `src/site/checker/engine.ts`**, which `/tools/tone-visualizer` loads only with a dynamic `import()` on the Start tap (never statically, never with the page). Check after touching `Landing.tsx`, `src/site/` or anything they import:
+1. **The marketing page must not import `src/audio/` or `src/pitch/` up front.** The same rule holds for every route-table page and `src/site/`, with **two named exceptions, both loaded only with a dynamic `import()` on a tap (never statically, never with the page):** the tone visualizer's engine, `src/site/checker/engine.ts` (`/tools/tone-visualizer`, on the Start tap), and the landing page's "Try it now" mini run, `src/ui/lp-trials/miniGame.ts` (decided 26 Oct 2026: the landing page must let a visitor try the game). The mini run loads on the first tap and opens the mic on the second, so `ensureMic` stays inside a gesture; its cues play through the guest-ticket `src/site/wordAudio.ts`, not `src/audio/reference.ts` (which pulls in the account code). It is a dev-only trial (`/?lp=sky`) until the Sky landing ships. Check after touching `Landing.tsx`, `src/site/` or anything they import:
    ```bash
    npm run build
    npm run check:mic-chunks   # getUserMedia only in mic-*.js (vite.config.ts names it); no page but /app and /record loads it up front
