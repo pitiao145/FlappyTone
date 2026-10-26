@@ -665,13 +665,50 @@ html:has(.lp-sky) body {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
-.sky-proof blockquote {
-  padding: 20px;
+.sky-proof-title {
+  grid-column: 1 / -1;
+  font: 400 clamp(1.4rem, 2.4vw, 1.9rem)/1.2 var(--font-display);
+  text-align: center;
+}
+.sky-testimonial {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0;
+  padding: 26px 22px 20px;
   border: 2px solid var(--color-ink);
   border-radius: var(--radius);
   background: var(--color-cloud);
-  font-weight: 600;
-  line-height: 1.4;
+  box-shadow: var(--shadow-hard);
+}
+.sky-testimonial::before {
+  content: "\201C";
+  position: absolute;
+  top: -22px;
+  left: 18px;
+  font: 400 4rem/1 var(--font-display);
+  color: var(--color-rim-hi);
+}
+.sky-testimonial blockquote { margin: 0; font-weight: 600; line-height: 1.4; }
+.sky-testimonial figcaption { display: flex; align-items: center; gap: 12px; }
+.sky-testimonial img {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  padding: 4px;
+  border: 2px solid var(--color-ink);
+  border-radius: 50%;
+  background: var(--color-sky-1);
+  object-fit: contain;
+}
+.sky-testimonial cite { margin-top: 0; }
+.sky-eyebrow {
+  font: 700 0.85rem/1 var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-2);
 }
 @media (max-width: 820px) {
   .sky-proof { grid-template-columns: minmax(0, 1fr); }
@@ -714,8 +751,16 @@ html:has(.lp-sky) body {
   background: var(--color-cloud);
   box-shadow: var(--shadow-hard);
 }
+.sky-founder-video {
+  display: block;
+  width: 170px;
+  height: auto;
+  border: 2px solid var(--color-ink);
+  border-radius: 14px;
+}
 @media (max-width: 560px) {
   .sky-founder { grid-template-columns: minmax(0, 1fr); }
+  .sky-founder-video { width: min(200px, 60vw); margin-inline: auto; }
 }
 
 /* ---- final call to action, on its own wall */

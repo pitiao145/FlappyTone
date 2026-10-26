@@ -44,7 +44,8 @@ const COPY = {
   notTextbook:
     "Most tone practice is a chart and rules to memorize, and it doesn't stick. Watching your own voice trace the shape gives you the picture a textbook never does.",
   visualiser: "Say mǎ ten times and watch every try stack on the target shape. No score, no pressure.",
-  pairs: "Tone Pairs flies 好玩, 以前 and 240+ more real words. Each corridor comes from the exact recording, sandhi and all.",
+  pairsTitle: "Level up to tone pairs when you're ready",
+  pairs: "Once single tones feel easy, Tone Pairs flies two syllables at a time: 好玩, 以前 and 240+ more. Each corridor comes from the exact recording, sandhi and all.",
   leaderboard: "Sign up free and every run counts. This week, this month or all-time.",
   mobile: "Native apps aren't out yet. They'll add offline play, reminders and a streak. Get told when they ship:",
   founder: [
@@ -53,11 +54,14 @@ const COPY = {
   ],
 } as const;
 
-/** Real quotes from players, as brand.ts has them. Never add one nobody said. */
+/**
+ * Real quotes from players, as brand.ts has them. Never add one nobody said.
+ * The avatars are roster birds (docs/bird-design/roster), not the players.
+ */
 const QUOTES = [
-  { text: brand.notTextbook.quote, who: brand.notTextbook.quoteAttribution },
-  { text: brand.tonePairs.quote, who: brand.tonePairs.quoteAttribution },
-  { text: brand.pricing.quote, who: brand.pricing.quoteAttribution },
+  { text: brand.notTextbook.quote, who: brand.notTextbook.quoteAttribution, bird: "lu_rou_fan" },
+  { text: brand.tonePairs.quote, who: brand.tonePairs.quoteAttribution, bird: "boba" },
+  { text: brand.pricing.quote, who: brand.pricing.quoteAttribution, bird: "ji_pai" },
 ].map((q) => ({ ...q, who: q.who.replace(/^—\s*/, "") }));
 
 /** The real gate, drawn by the game's renderer. Off the first paint. */
@@ -173,11 +177,15 @@ export function SkyLanding() {
       </header>
 
       <section className="sky-proof" aria-label="What players say">
+        <h2 className="sky-proof-title">What players say</h2>
         {QUOTES.map((q) => (
-          <blockquote key={q.who}>
-            {q.text}
-            <cite>{q.who}</cite>
-          </blockquote>
+          <figure key={q.who} className="sky-testimonial">
+            <blockquote>{q.text}</blockquote>
+            <figcaption>
+              <img src={`/lp/birds/${q.bird}.webp`} width={48} height={48} alt="" loading="lazy" />
+              <cite>{q.who}</cite>
+            </figcaption>
+          </figure>
         ))}
       </section>
 
@@ -296,22 +304,16 @@ export function SkyLanding() {
         </div>
       </section>
 
-      <section id="why-tones-hard" className="sky-section">
-        <div className="sky-split">
-          <div className="sky-head">
-            <h2>{brand.notTextbook.title}</h2>
-            <p>{COPY.notTextbook}</p>
-          </div>
-        </div>
-      </section>
-
+      {/* "Feel them" is the visualiser's promise, so it heads that section. */}
       <section id="visualiser" className="sky-section">
         <div className="sky-split sky-split-rev">
           <div className="sky-panel sky-panel-media">
             <VisualiserDemoLoop width={480} />
           </div>
           <div className="sky-head">
-            <h2>Understand your own voice</h2>
+            <p className="sky-eyebrow">The visualiser</p>
+            <h2>{brand.notTextbook.title}</h2>
+            <p>{COPY.notTextbook}</p>
             <p>{COPY.visualiser}</p>
             <button className="sky-btn" onClick={() => go("visualiser", "visualiser_section", "visualiser")}>
               {brand.visualiser.cta}
@@ -323,7 +325,7 @@ export function SkyLanding() {
       <section id="tone-pairs" className="sky-sand">
         <div className="sky-inner sky-split">
           <div className="sky-head">
-            <h2>{brand.tonePairs.title}</h2>
+            <h2>{COPY.pairsTitle}</h2>
             <p>{COPY.pairs}</p>
             <button className="sky-btn" onClick={() => go("tone_pairs", "tone_pairs", "pairs")}>
               {brand.tonePairs.cta}
@@ -486,7 +488,18 @@ export function SkyLanding() {
 
       <section id="founder" className="sky-section">
         <div className="sky-founder">
-          <Pip size={72} tilt={-6} />
+          <video
+            className="sky-founder-video"
+            src="/lp/founder-play.mp4"
+            poster="/lp/founder-play-poster.jpg"
+            width={340}
+            height={730}
+            autoPlay
+            muted
+            loop
+            playsInline
+            aria-label="Pierre playing FlappyTone, his voice flying the bird through a tone corridor"
+          />
           <div className="sky-head">
             <h2>Made by a Mandarin learner</h2>
             {COPY.founder.map((p) => (
