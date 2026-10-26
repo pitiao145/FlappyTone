@@ -501,7 +501,7 @@ export function SkyLanding() {
         <Wall tone={2} edge="top" />
         <div className="sky-inner sky-final-inner">
           <Pip size={88} tilt={-14} />
-          <h2>Your first tunnel is one word away</h2>
+          <h2>One run a day keeps the lǎoshī away</h2>
           <button className="sky-btn" onClick={() => go("play", "final_cta")}>
             {brand.heroCards.play.cta}
           </button>

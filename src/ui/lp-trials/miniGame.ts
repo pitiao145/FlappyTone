@@ -64,20 +64,34 @@ export interface MiniGameOptions {
   voice: VoicePreset;
   gates: number;
   /** Edge-triggered when the gate being flown changes (null between gates). */
-  onWord: (word: Word | null) => void;
   onEnd: (result: MiniResult) => void;
+  /** Every cue clip has loaded (or timed out); the run starts now. */
+  onReady: () => void;
 }
+
+export interface MiniGame {
+  stop: () => void;
+  /** The live run state, for the host's HUD poll. Never per frame in React. */
+  snapshot: () => RunSnapshot;
+}
+
+/** Longest we hold the start for clips; a slow one falls back to silence. */
+const PRELOAD_MAX_MS = 8000;
 
 export function micErrorKind(err: unknown): string {
   return err instanceof MicError ? err.kind : "unknown";
 }
 
-/** Opens the mic (call from a tap) and flies `gates` gates. Returns stop. */
-export async function startMiniGame(opts: MiniGameOptions): Promise<() => void> {
+/** Opens the mic (call from a tap), loads every cue, then flies `gates` gates. */
+export async function startMiniGame(opts: MiniGameOptions): Promise<MiniGame> {
   // Inside the tap, before any await: lets later cue clips play on iOS.
   unlockAudio();
   await ensureMic();
-  for (const w of opts.words) void clipUrl(w.id);
+  // Every cue loads before the first gate, so no gate flies in silence.
+  await Promise.race([
+    Promise.all(opts.words.map((w) => clipUrl(w.id))),
+    new Promise((done) => setTimeout(done, PRELOAD_MAX_MS)),
+  ]);
   const settings = loadSettings() ?? PRESETS[opts.voice];
   lockWorldTheme("pixel-flappy");
 
@@ -113,7 +127,6 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<() => void> 
 
   let raf = 0;
   let last = performance.now();
-  let lastWordId: string | null | undefined;
   let stopped = false;
 
   const stop = () => {
@@ -142,13 +155,6 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<() => void> 
       if (cueWord) void playWord(cueWord.id);
     }
 
-    const word = snap.activeGate?.word ?? snap.upcoming?.word ?? null;
-    const id = word?.id ?? null;
-    if (id !== lastWordId) {
-      lastWordId = id;
-      opts.onWord(word);
-    }
-
     if (snap.over || snap.gateLog.length >= opts.gates) {
       const result = {
         cleared: count(snap, "perfect", "good", "ok"),
@@ -161,6 +167,8 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<() => void> 
     }
     raf = requestAnimationFrame(tick);
   };
+  opts.onReady();
+  last = performance.now();
   raf = requestAnimationFrame(tick);
-  return stop;
+  return { stop, snapshot: () => run.snapshot() };
 }

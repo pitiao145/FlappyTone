@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { brand } from "../../brand.ts";
 import { capturePostHogEvent } from "../../analytics/posthog.ts";
-import { wordsFromCatalog, type Word } from "../../game/words.ts";
+import { wordsFromCatalog } from "../../game/words.ts";
+import type { RunSnapshot } from "../../game/run.ts";
+import { GameHud } from "../GameHud.tsx";
 import { DEFAULT_SPEAKER_ID } from "../../data/catalogRows.ts";
 import fallback from "../../data/wordsFallback.json";
 import { DemoLoop } from "../DemoLoop.tsx";
@@ -41,6 +43,7 @@ type Step =
   | { kind: "demo" }
   | { kind: "loading" }
   | { kind: "choose"; mini: MiniModule; calibrated: boolean }
+  | { kind: "preparing" }
   | { kind: "playing" }
   | { kind: "done"; cleared: number; total: number; unheard: number }
   | { kind: "error"; message: string };
@@ -53,8 +56,9 @@ type Step =
 export function TryItNow() {
   const [step, setStep] = useState<Step>({ kind: "demo" });
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const wordRef = useRef<HTMLSpanElement>(null);
   const stopRef = useRef<(() => void) | null>(null);
+  /** The game's HUD, polled like Game.tsx does (never per frame). */
+  const [hud, setHud] = useState<RunSnapshot | null>(null);
 
   const words = useMemo(() => {
     const all = wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID })));
@@ -77,7 +81,8 @@ export function TryItNow() {
   const start = (mini: MiniModule, voice: "lower" | "higher") => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    setStep({ kind: "playing" });
+    setStep({ kind: "preparing" });
+    let poll = 0;
     mini
       .startMiniGame({
         canvas,
@@ -86,21 +91,24 @@ export function TryItNow() {
         words,
         voice,
         gates: GATES,
-        onWord: (word: Word | null) => {
-          const el = wordRef.current;
-          if (!el) return;
-          el.textContent = word ? `${word.hanzi} ${word.pinyin}: ${brand.tones[word.tone].cue}` : "Get ready…";
-        },
+        onReady: () => setStep({ kind: "playing" }),
         onEnd: (r) => {
+          window.clearInterval(poll);
+          setHud(null);
           stopRef.current = null;
           capturePostHogEvent("landing_try_now_done", { cleared: r.cleared, total: r.total });
           setStep({ kind: "done", ...r });
         },
       })
-      .then((stop) => {
-        stopRef.current = stop;
+      .then((game) => {
+        stopRef.current = () => {
+          window.clearInterval(poll);
+          game.stop();
+        };
+        poll = window.setInterval(() => setHud(game.snapshot()), 100);
       })
       .catch((err: unknown) => {
+        window.clearInterval(poll);
         setStep({ kind: "error", message: mini.micErrorCopy(mini.micErrorKind(err)) });
       });
   };
@@ -111,13 +119,27 @@ export function TryItNow() {
     <figure id="demo" className="sky-screen sky-try">
       <div className="sky-try-stage">
         {/* The canvas exists from the first tap so `start` can draw at once. */}
-        <canvas
-          ref={canvasRef}
-          className="sky-try-canvas"
-          hidden={!live}
-          role="img"
-          aria-label="The game: say the tone to fly the bird through its corridor."
-        />
+        <div className="stage game-stage sky-try-game" hidden={!live}>
+          <canvas
+            ref={canvasRef}
+            className="sky-try-canvas"
+            role="img"
+            aria-label="The game: listen to the word, then say it to fly the bird through its corridor."
+          />
+          {live && (
+            <GameHud
+              hud={hud}
+              flash={null}
+              mode="game"
+              scored
+              showTranslation={false}
+              showPinyin
+              showToneMarks
+              showPause={false}
+              onPause={() => {}}
+            />
+          )}
+        </div>
         {!live && <DemoLoop width={340} />}
 
         {step.kind === "demo" && (
@@ -126,6 +148,12 @@ export function TryItNow() {
           </button>
         )}
         {step.kind === "loading" && <p className="sky-try-panel" role="status">Loading the game…</p>}
+        {step.kind === "preparing" && (
+          <p className="sky-try-panel" role="status">
+            Loading the words…
+            <span className="sky-small">Turn your sound on: you hear each word before you say it.</span>
+          </p>
+        )}
         {step.kind === "choose" && (
           <div className="sky-try-panel">
             <p>
@@ -174,7 +202,7 @@ export function TryItNow() {
         )}
       </div>
       <figcaption>
-        {step.kind === "playing" ? <span ref={wordRef}>Get ready…</span> : brand.demoCaption}
+        {live ? null : brand.demoCaption}
       </figcaption>
     </figure>
   );

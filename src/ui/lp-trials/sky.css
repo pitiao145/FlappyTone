@@ -616,15 +616,20 @@ html:has(.lp-sky) body {
 /* ---- try it now: the demo, a button over it, then a real mini run */
 .sky-try-stage { position: relative; display: grid; place-items: center; }
 .sky-try-stage > * { grid-area: 1 / 1; }
-.sky-try-canvas {
-  display: block;
+/* The game's own stage and HUD (App.css .stage/.game-stage/.hud), sized here. */
+.lp-sky .sky-try-game {
+  position: relative;
+  margin: 0;
   aspect-ratio: 420 / 640;
   width: min(100%, 340px);
+  max-width: none;
+  overflow: hidden;
   border: var(--outline) solid var(--color-ink);
   border-radius: 20px;
   box-shadow: var(--shadow-hard);
 }
-.sky-try-canvas[hidden] { display: none; }
+.lp-sky .sky-try-game[hidden] { display: none; }
+.sky-try-canvas { display: block; width: 100%; height: 100%; }
 .sky-try-button { align-self: end; margin-bottom: 32px; z-index: 1; }
 
 .sky-try-panel {
@@ -642,10 +647,11 @@ html:has(.lp-sky) body {
   font-weight: 600;
 }
 .sky-try-voices { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.sky-try-panel .sky-small { display: block; margin-top: 8px; font-weight: 400; }
 .sky-try-score { font: 400 1.6rem/1.1 var(--font-display); }
 
 @media (min-width: 821px) {
-  .sky-try-canvas { width: auto; height: min(calc(100svh - 168px), 760px); }
+  .lp-sky .sky-try-game { width: auto; height: min(calc(100svh - 168px), 760px); }
 }
 
 /* ---- proof: three real quotes right under the hero */
