@@ -192,7 +192,7 @@ html:has(.lp-sky) body {
 .sky-actions { display: flex; flex-wrap: wrap; gap: 16px; }
 
 .sky-screen { margin: 0; justify-self: center; }
-.sky-screen :is(video, canvas) {
+.sky-screen video {
   display: block;
   max-width: 100%;
   height: auto;
@@ -446,7 +446,7 @@ html:has(.lp-sky) body {
 /* ---- hero video: on wide screens the whole clip fits the viewport height */
 @media (min-width: 821px) {
   .sky-hero { min-height: calc(100svh - 84px); padding-block: 8px 24px; }
-  .sky-screen :is(video, canvas) {
+  .sky-screen video {
     width: auto;
     height: min(calc(100svh - 168px), 760px);
     max-height: none;
@@ -621,8 +621,10 @@ html:has(.lp-sky) body {
   position: relative;
   margin: 0;
   aspect-ratio: 420 / 640;
-  width: min(100%, 340px);
-  max-width: none;
+  /* A fixed width, not a percentage: the stage sits in a shrink-to-fit
+     figure, where 100% resolves to nothing and the game vanished on phones. */
+  width: 340px;
+  max-width: 100%;
   overflow: hidden;
   border: var(--outline) solid var(--color-ink);
   border-radius: 20px;
