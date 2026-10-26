@@ -488,6 +488,13 @@ export function SkyLanding() {
 
       <section id="founder" className="sky-section">
         <div className="sky-founder">
+          <div className="sky-head">
+            <h2>Made by a Mandarin learner</h2>
+            {COPY.founder.map((p) => (
+              <p key={p}>{p}</p>
+            ))}
+            <a href="mailto:pierre@pierrebuilds.dev">pierre@pierrebuilds.dev</a>
+          </div>
           <video
             className="sky-founder-video"
             src="/lp/founder-play.mp4"
@@ -500,13 +507,6 @@ export function SkyLanding() {
             playsInline
             aria-label="Pierre playing FlappyTone, his voice flying the bird through a tone corridor"
           />
-          <div className="sky-head">
-            <h2>Made by a Mandarin learner</h2>
-            {COPY.founder.map((p) => (
-              <p key={p}>{p}</p>
-            ))}
-            <a href="mailto:pierre@pierrebuilds.dev">pierre@pierrebuilds.dev</a>
-          </div>
         </div>
       </section>
 

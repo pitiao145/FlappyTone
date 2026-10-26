@@ -741,10 +741,12 @@ html:has(.lp-sky) body {
 /* ---- founder */
 .sky-founder {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
-  max-width: 44rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 32px;
+  align-items: center;
+  width: 100%;
+  max-width: 52rem;
+  margin-inline: auto;
   padding: 28px;
   border: var(--outline) solid var(--color-ink);
   border-radius: var(--radius);
