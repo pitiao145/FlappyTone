@@ -8,12 +8,13 @@ import fallback from "../../data/wordsFallback.json";
 import { LEARN_LINKS } from "../../site/links.ts";
 import { Pip } from "../../site/Pip.tsx";
 import { capturePostHogEvent } from "../../analytics/posthog.ts";
-import { DemoLoop, VisualiserDemoLoop } from "../DemoLoop.tsx";
+import { VisualiserDemoLoop } from "../DemoLoop.tsx";
 import { Footer } from "../Footer.tsx";
 import { PRO_PRICE } from "../plan.ts";
 import { TONE_LINE_COLOR } from "../toneColors.ts";
 import { ToneAverageCard } from "../ToneAverageCard.tsx";
 import { NotifyForm, TONES, go, useWordsByTone } from "./shared.tsx";
+import { TryItNow } from "./TryItNow.tsx";
 import "./sky.css";
 
 /**
@@ -21,9 +22,43 @@ import "./sky.css";
  * through the game's own sky, and every band of ground is a wall whose edge is
  * a tone contour, the same shapes the bird flies. Dev only, at `/?lp=sky`.
  *
- * Copy comes from brand.ts, as on the live page, except the hero line, the
- * tunnel explainer and the visualiser title, which Pierre set for this trial.
+ * Copy: brand.ts for titles and lists, as on the live page. Long bodies are
+ * cut here to Hallmark's budget (one idea a sentence, about 80 words a
+ * screen) in `COPY`, keeping each one's core idea. If this trial ships, move
+ * `COPY` into brand.ts.
  */
+
+const COPY = {
+  headline: "Finally nail the Mandarin tones",
+  lede: "Your voice flies a bird through tunnels shaped like each tone. You build muscle memory without it feeling like study.",
+  privacy: "Needs a microphone and a quiet room. Your voice stays on your device: no upload, no AI.",
+  why: [
+    "mā, má, mǎ, mà trace four different pitch shapes. That is all a tone mark is.",
+    "See the shape as you speak and your voice learns to make it. Your ear soon follows.",
+  ],
+  tunnels:
+    "Each tunnel is the tone of the word you hear, cut from a real recording of a native speaker. Pick a word to see its gate.",
+  realSpeech:
+    "450+ recorded words in Traditional characters and Taiwan pronunciation, in TOCFL order, so the first words are the useful ones. A shape that differs from your textbook is a real accent, not a bug.",
+  averages: "The bold line is the average. The faint lines are every real take.",
+  notTextbook:
+    "Most tone practice is a chart and rules to memorize, and it doesn't stick. Watching your own voice trace the shape gives you the picture a textbook never does.",
+  visualiser: "Say mǎ ten times and watch every try stack on the target shape. No score, no pressure.",
+  pairs: "Tone Pairs flies 好玩, 以前 and 240+ more real words. Each corridor comes from the exact recording, sandhi and all.",
+  leaderboard: "Sign up free and every run counts. This week, this month or all-time.",
+  mobile: "Native apps aren't out yet. They'll add offline play, reminders and a streak. Get told when they ship:",
+  founder: [
+    "I'm Pierre, and I build FlappyTone on my own.",
+    "I wanted tone practice that feels like play, so the voice became the controller. Every word is recorded by a native speaker from Taiwan. Questions or ideas? Write to me.",
+  ],
+} as const;
+
+/** Real quotes from players, as brand.ts has them. Never add one nobody said. */
+const QUOTES = [
+  { text: brand.notTextbook.quote, who: brand.notTextbook.quoteAttribution },
+  { text: brand.tonePairs.quote, who: brand.tonePairs.quoteAttribution },
+  { text: brand.pricing.quote, who: brand.pricing.quoteAttribution },
+].map((q) => ({ ...q, who: q.who.replace(/^—\s*/, "") }));
 
 /** The real gate, drawn by the game's renderer. Off the first paint. */
 const GateDemo = lazy(() => import("./GateDemo.tsx"));
@@ -93,7 +128,6 @@ export function SkyLanding() {
   }, []);
 
   const modes = brand.options.modes;
-  const whyParagraphs = brand.whyThisWorks.body.split("\n");
 
   return (
     <div className="lp-sky">
@@ -123,8 +157,8 @@ export function SkyLanding() {
 
       <header id="top" className="sky-hero">
         <div className="sky-hero-text">
-          <h1>Fly a bird with your voice and finally nail Mandarin tones</h1>
-          <p className="sky-lede">{brand.pitch}</p>
+          <h1>{COPY.headline}</h1>
+          <p className="sky-lede">{COPY.lede}</p>
           <div className="sky-actions">
             <button className="sky-btn" onClick={() => go("play", "hero_actions")}>
               {brand.heroCards.play.cta}
@@ -133,15 +167,19 @@ export function SkyLanding() {
               {brand.heroCards.visualise.cta}
             </button>
           </div>
-          <p className="sky-small">
-            {brand.requirement} {brand.privacyNote}
-          </p>
+          <p className="sky-small">{COPY.privacy}</p>
         </div>
-        <figure id="demo" className="sky-screen">
-          <DemoLoop width={340} />
-          <figcaption>{brand.demoCaption}</figcaption>
-        </figure>
+        <TryItNow />
       </header>
+
+      <section className="sky-proof" aria-label="What players say">
+        {QUOTES.map((q) => (
+          <blockquote key={q.who}>
+            {q.text}
+            <cite>{q.who}</cite>
+          </blockquote>
+        ))}
+      </section>
 
       <section id="how-it-works" className="sky-ground">
         <Wall tone={3} edge="top" />
@@ -149,13 +187,10 @@ export function SkyLanding() {
           <div className="sky-split sky-split-how">
             <div className="sky-head">
               <h2>{brand.whyThisWorks.title}</h2>
-              {whyParagraphs.map((p) => (
-                <p key={p.slice(0, 24)}>{p}</p>
+              {COPY.why.map((p) => (
+                <p key={p}>{p}</p>
               ))}
-              <p className="sky-callout">
-                Each tunnel is the tone of the word you hear. Its shape is cut from a real recording of a
-                native speaker, not drawn from a textbook chart. Pick a word to see its gate.
-              </p>
+              <p className="sky-callout">{COPY.tunnels}</p>
             </div>
             <div className="sky-gate">
               <div className="sky-gate-picker">
@@ -225,7 +260,7 @@ export function SkyLanding() {
         <div className="sky-split">
           <div className="sky-head">
             <h2>{brand.toneDataTitle}</h2>
-            <p>{brand.toneDataIntro}</p>
+            <p>{COPY.realSpeech}</p>
             <p>
               {brand.jane.before}
               <a
@@ -248,8 +283,7 @@ export function SkyLanding() {
               ))}
             </div>
             <p className="sky-small sky-note">
-              Every clip in the inventory, resampled and averaged: the bold line is the mean, the faint lines
-              behind it are what she actually said.
+              {COPY.averages}
             </p>
           </div>
         </div>
@@ -259,12 +293,8 @@ export function SkyLanding() {
         <div className="sky-split">
           <div className="sky-head">
             <h2>{brand.notTextbook.title}</h2>
-            <p>{brand.notTextbook.body}</p>
+            <p>{COPY.notTextbook}</p>
           </div>
-          <blockquote className="sky-bigquote">
-            {brand.notTextbook.quote}
-            <cite>{brand.notTextbook.quoteAttribution.replace(/^—\s*/, "")}</cite>
-          </blockquote>
         </div>
       </section>
 
@@ -275,7 +305,7 @@ export function SkyLanding() {
           </div>
           <div className="sky-head">
             <h2>Understand your own voice</h2>
-            <p>{brand.visualiser.body}</p>
+            <p>{COPY.visualiser}</p>
             <button className="sky-btn" onClick={() => go("visualiser", "visualiser_section", "visualiser")}>
               {brand.visualiser.cta}
             </button>
@@ -287,15 +317,21 @@ export function SkyLanding() {
         <div className="sky-inner sky-split">
           <div className="sky-head">
             <h2>{brand.tonePairs.title}</h2>
-            <p>{brand.tonePairs.body}</p>
+            <p>{COPY.pairs}</p>
             <button className="sky-btn" onClick={() => go("tone_pairs", "tone_pairs", "pairs")}>
               {brand.tonePairs.cta}
             </button>
           </div>
-          <blockquote className="sky-bigquote">
-            {brand.tonePairs.quote}
-            <cite>{brand.tonePairs.quoteAttribution.replace(/^—\s*/, "")}</cite>
-          </blockquote>
+          <ol className="sky-pair-tiles" aria-label="Example tone pairs">
+            {examples
+              .filter((e) => e.group === "Tone pairs")
+              .map((e) => (
+                <li key={e.id}>
+                  <span lang="zh-Hant">{e.word.hanzi}</span>
+                  <span>{e.word.pinyin}</span>
+                </li>
+              ))}
+          </ol>
         </div>
       </section>
 
@@ -336,7 +372,7 @@ export function SkyLanding() {
         <div className="sky-split">
           <div className="sky-head">
             <h2>{brand.leaderboard.title}</h2>
-            <p>{brand.leaderboard.body}</p>
+            <p>{COPY.leaderboard}</p>
             <button className="sky-btn sky-btn-ghost" onClick={() => go("leaderboard", "leaderboard", "leaderboard")}>
               {brand.leaderboard.cta}
             </button>
@@ -356,6 +392,7 @@ export function SkyLanding() {
         <Wall tone={1} edge="top" />
         <div className="sky-inner">
           <h2>{brand.pricing.title}</h2>
+          <p className="sky-pay-once">Pay once. No subscription.</p>
           <div className="sky-prices">
             <article className="sky-price">
               <h3>{brand.pricing.free.label}</h3>
@@ -375,6 +412,7 @@ export function SkyLanding() {
               <h3>
                 {brand.pricing.pro.label}: {PRO_PRICE} one-time
               </h3>
+              <p className="sky-price-value">450+ words, 240+ tone pairs, every TOCFL level.</p>
               <ul>
                 <li>Unlimited runs</li>
                 <li>Every word, every tone, every TOCFL level</li>
@@ -387,10 +425,6 @@ export function SkyLanding() {
               </button>
             </article>
           </div>
-          <blockquote className="sky-ground-quote">
-            {brand.pricing.quote}
-            <cite>{brand.pricing.quoteAttribution.replace(/^—\s*/, "")}</cite>
-          </blockquote>
         </div>
         <Wall tone={4} edge="bottom" />
       </section>
@@ -422,7 +456,7 @@ export function SkyLanding() {
           />
           <div className="sky-head">
             <h2>{brand.mobile.title}</h2>
-            <p>{brand.mobile.body}</p>
+            <p>{COPY.mobile}</p>
             <NotifyForm className="sky-notify" cta={brand.mobile.notify.cta} placeholder={brand.mobile.notify.placeholder} />
             <p className="sky-small">{brand.mobile.notify.disclaimer}</p>
             <h3>{brand.mobile.homeScreen.title}</h3>
@@ -441,6 +475,31 @@ export function SkyLanding() {
             <p className="sky-small">{brand.mobile.homeScreen.body}</p>
           </div>
         </div>
+      </section>
+
+      <section id="founder" className="sky-section">
+        <div className="sky-founder">
+          <Pip size={72} tilt={-6} />
+          <div className="sky-head">
+            <h2>Made by one person, not a company</h2>
+            {COPY.founder.map((p) => (
+              <p key={p}>{p}</p>
+            ))}
+            <a href="mailto:pierre@pierrebuilds.dev">pierre@pierrebuilds.dev</a>
+          </div>
+        </div>
+      </section>
+
+      <section className="sky-final">
+        <Wall tone={2} edge="top" />
+        <div className="sky-inner sky-final-inner">
+          <Pip size={88} tilt={-14} />
+          <h2>Your first tunnel is one word away</h2>
+          <button className="sky-btn" onClick={() => go("play", "final_cta")}>
+            {brand.heroCards.play.cta}
+          </button>
+        </div>
+        <Wall tone={4} edge="bottom" />
       </section>
 
       <div className="sky-footer">

@@ -2,7 +2,6 @@
  * hero: Settled, the headline on the stepped sky beside the real recorded run in a thick-outlined screen · nav: edge-aligned, the bird wordmark, four links and one action · footer: the site's shared footer · imagery: product, recorded runs and the leaderboard shot · signature: pick a word and its real gate flies in the game's pixel theme, inside a wall cut to a tone contour · paper: the game canvas's stepped sky · accent: the bird's beak · faces: Lilita One, Figtree
  * axes: light/display-heavy/chromatic-amber · posture: committed · v2.0.0 */
 /* Hallmark · answered F4 · the hero's second action is a transparent outline, not a fill; the notify button sits in its own form */
-/* Hallmark · waive 58 · h1 set by the owner · the 11-word line is his own, by request */
 /* Hallmark · waive 11 · buttons, chips and the notify button only · one pressed-edge language taken from the game art */
 /* Hallmark · critique · the risk is a toy; held off by the real data panels, real recordings and plain adult copy */
 /* Tokens sit on :root here because this file loads only on the dev trial route (/?lp=sky), never in /app. */
@@ -90,6 +89,8 @@ html:has(.lp-sky) body {
 .sky-btn {
   display: inline-flex;
   align-items: center;
+  /* Lilita One sits high in its line box; this optical nudge centres it. */
+  padding-top: 4px;
   justify-content: center;
   min-height: 54px;
   padding: 0 24px;
@@ -403,6 +404,10 @@ html:has(.lp-sky) body {
   background: var(--color-cloud);
 }
 .sky-notify button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 4px;
   min-height: 52px;
   padding: 0 24px;
   border: var(--outline) solid var(--color-ink);
@@ -460,14 +465,14 @@ html:has(.lp-sky) body {
   font-weight: 600;
 }
 
-.sky-gate { display: grid; gap: 20px; }
-.sky-gate-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.sky-gate { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 320px); gap: 24px; align-items: start; }
+.sky-gate-picker { display: grid; gap: 20px; align-content: start; }
 .sky-gate-group h3 { font-size: 1.1rem; margin-bottom: 8px; color: var(--color-on-wall); }
 .sky-gate-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .sky-chip {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 4px;
   min-height: 44px;
   padding: 0 16px;
@@ -488,18 +493,23 @@ html:has(.lp-sky) body {
 .sky-gate-screen { margin: 0; }
 .sky-gate-canvas {
   display: block;
-  width: 100%;
-  aspect-ratio: 16 / 9;
+  width: min(100%, 320px);
+  margin-inline: auto;
+  aspect-ratio: 420 / 747;
   border: var(--outline) solid var(--color-ink);
   border-radius: var(--radius);
   background: var(--color-sky-3);
   box-shadow: var(--shadow-hard);
 }
-.sky-gate-screen figcaption { margin-top: 12px; color: var(--color-on-wall); font-weight: 600; }
+.sky-gate-screen figcaption { margin-top: 12px; color: var(--color-on-wall); font-weight: 600; text-align: center; }
 .sky-gate-tone { filter: brightness(1.6); }
 
-@media (max-width: 820px) {
+@media (max-width: 1100px) {
   .sky-split-how { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 560px) {
+  .sky-gate { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ---- the four "not" pills: one row on desktop, a slow drift on phones */
@@ -553,7 +563,7 @@ html:has(.lp-sky) body {
 .sky-chooser { display: grid; gap: 20px; justify-items: start; }
 .sky-chooser h3 { font-size: 1.3rem; }
 .sky-chooser-chips { display: flex; flex-wrap: wrap; gap: 12px; }
-.sky-chooser-chips .sky-chip { min-height: 52px; padding: 0 24px; font: 400 1.2rem/1 var(--font-display); }
+.sky-chooser-chips .sky-chip { min-height: 52px; padding: 4px 24px 0; font: 400 1.2rem/1 var(--font-display); }
 .sky-chooser-result { font-size: 1.35rem; font-weight: 600; line-height: 1.4; max-width: 32em; }
 .lp-sky mark {
   background: color-mix(in oklab, var(--color-beak) 55%, transparent);
@@ -581,3 +591,109 @@ html:has(.lp-sky) body {
 }
 
 .sky-steps h4 { font-size: 1rem; margin-bottom: 4px; }
+
+/* ---- try it now: the demo, a button over it, then a real mini run */
+.sky-try-stage { position: relative; display: grid; place-items: center; }
+.sky-try-stage > * { grid-area: 1 / 1; }
+.sky-try-canvas {
+  display: block;
+  aspect-ratio: 420 / 640;
+  width: min(100%, 340px);
+  border: var(--outline) solid var(--color-ink);
+  border-radius: 20px;
+  box-shadow: var(--shadow-hard);
+}
+.sky-try-canvas[hidden] { display: none; }
+.sky-try-button { align-self: end; margin-bottom: 32px; z-index: 1; }
+
+.sky-try-panel {
+  z-index: 1;
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  width: min(88%, 300px);
+  padding: 20px;
+  border: var(--outline) solid var(--color-ink);
+  border-radius: var(--radius);
+  background: var(--color-cloud);
+  box-shadow: var(--shadow-hard);
+  text-align: center;
+  font-weight: 600;
+}
+.sky-try-voices { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.sky-try-score { font: 400 1.6rem/1.1 var(--font-display); }
+
+@media (min-width: 821px) {
+  .sky-try-canvas { width: auto; height: min(calc(100svh - 168px), 760px); }
+}
+
+/* ---- proof: three real quotes right under the hero */
+.sky-proof {
+  max-width: var(--container);
+  margin: 8px auto 0;
+  padding-inline: var(--gutter);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.sky-proof blockquote {
+  padding: 20px;
+  border: 2px solid var(--color-ink);
+  border-radius: var(--radius);
+  background: var(--color-cloud);
+  font-weight: 600;
+  line-height: 1.4;
+}
+@media (max-width: 820px) {
+  .sky-proof { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---- tone pairs: the real example words as tiles */
+.sky-pair-tiles {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.sky-pair-tiles li {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 20px 12px;
+  border: var(--outline) solid var(--color-ink);
+  border-radius: var(--radius);
+  background: var(--color-cloud);
+  box-shadow: 5px 5px 0 var(--color-ink);
+}
+.sky-pair-tiles li span:first-child { font: 400 clamp(2rem, 4vw, 3rem)/1.1 var(--font-display); }
+.sky-pair-tiles li span:last-child { font-weight: 600; color: var(--color-ink-2); }
+
+/* ---- pricing additions */
+.sky-pay-once { font: 400 clamp(1.4rem, 2.4vw, 1.9rem)/1.2 var(--font-display); color: var(--color-rim-hi); }
+.sky-price-value { font-weight: 700; color: var(--color-ink); }
+
+/* ---- founder */
+.sky-founder {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  max-width: 44rem;
+  padding: 28px;
+  border: var(--outline) solid var(--color-ink);
+  border-radius: var(--radius);
+  background: var(--color-cloud);
+  box-shadow: var(--shadow-hard);
+}
+@media (max-width: 560px) {
+  .sky-founder { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---- final call to action, on its own wall */
+.sky-final { margin-top: clamp(64px, 9vw, 120px); color: var(--color-on-wall); }
+.sky-final > .sky-inner {
+  background: var(--color-wall);
+  padding: 24px var(--gutter) 40px;
+}
+.sky-final-inner { display: grid; justify-items: center; gap: 20px; text-align: center; }
+.sky-final h2 { color: var(--color-on-wall); }
