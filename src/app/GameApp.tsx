@@ -1213,7 +1213,6 @@ export default function GameApp() {
               canvasHeight={GAME_CANVAS_H}
               challengeScore={challengeScoreState}
               challengeName={challengeNameState}
-              onDevLogin={() => setScreen("devlogin")}
             />
           )}
 
@@ -1306,6 +1305,8 @@ export default function GameApp() {
             onHowTo={() => setScreen("howto")}
             onSignedOut={() => setScreen("play")}
             focus={settingsFocus}
+            onDevLab={import.meta.env.DEV ? () => startPlay("lab") : undefined}
+            onDevLogin={import.meta.env.DEV ? () => setScreen("devlogin") : undefined}
           />
         )}
 

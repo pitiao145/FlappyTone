@@ -28,9 +28,6 @@ interface Props {
   onModes: () => void;
   /** Opens Settings scrolled to the Themes section (the current update banner's link). */
   onOpenThemes: () => void;
-  /** Dev builds only: opens the magic-link login. Needs no mic, so it does not
-   * go through `onStart`'s gesture path. */
-  onDevLogin: () => void;
   /** Matches the size Game/Calibration will actually open at — see GameApp's computeCanvasSize. */
   canvasWidth: number;
   canvasHeight: number;
@@ -54,7 +51,6 @@ export function PlayHome({
   onStart,
   onModes,
   onOpenThemes,
-  onDevLogin,
   canvasWidth,
   canvasHeight,
   challengeScore,
@@ -112,19 +108,6 @@ export function PlayHome({
             <button onClick={() => onStart("tutorial")}>Tutorial</button>
           </div>
           {error && <p className="error">{error}</p>}
-
-          {/* Dev builds only. The Lab is a separate instance of the game for
-              tuning, and it is not part of the product. */}
-          {import.meta.env.DEV && (
-            <>
-              <button className="dev-toggle" onClick={() => onStart("lab")}>
-                lab
-              </button>
-              <button className="dev-toggle" onClick={onDevLogin}>
-                login
-              </button>
-            </>
-          )}
         </div>
       </div>
     </div>

@@ -185,6 +185,10 @@ interface Props {
   onSignedOut?: () => void;
   /** Scrolls the named section into view on arrival (e.g. from a Play-home update banner). */
   focus?: "speechStyle" | "theme" | null;
+  /** Dev builds only: starts the Lab (goes through the Play tab's gesture path). */
+  onDevLab?: () => void;
+  /** Dev builds only: opens the magic-link login. */
+  onDevLogin?: () => void;
 }
 
 /**
@@ -208,6 +212,8 @@ export function Settings({
   onHowTo,
   onSignedOut,
   focus,
+  onDevLab,
+  onDevLogin,
 }: Props) {
   const [confirmForget, setConfirmForget] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -350,6 +356,20 @@ export function Settings({
   return (
     <div className="screen settings-screen">
       <h2>Settings</h2>
+
+      {/* Dev builds only. The Lab is a separate instance of the game for
+          tuning, and it is not part of the product. */}
+      {import.meta.env.DEV && onDevLab && onDevLogin && (
+        <section className="setting setting-card">
+          <div className="setting-card-head">
+            <h3>Development</h3>
+          </div>
+          <div className="setting-actions setting-actions-row">
+            <button onClick={onDevLab}>Lab</button>
+            <button onClick={onDevLogin}>Login</button>
+          </div>
+        </section>
+      )}
 
       <section className="setting setting-card">
         <div className="setting-card-head">
