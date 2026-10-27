@@ -313,11 +313,11 @@ export function ToneMarks() {
               Taiwan. They describe the same sounds and the same four tones, so
               this page shows both. If you plan to live or study in Taiwan,
               learning to read 注音 is worth a few hours: it is on many signs,
-              in children's books and on phone keyboards.
+              in children’s books and on phone keyboards.
             </p>
           </section>
           <section>
-            <h2>Questions</h2>
+            <h2>Common questions</h2>
             {TONE_MARKS_FAQ.map((f) => (
               <details key={f.q} className="site-faq" open>
                 <summary>

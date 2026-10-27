@@ -14,7 +14,7 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { SkyLanding } from "../ui/landing/SkyLanding.tsx";
-import { LegalPage } from "../ui/LegalPage.tsx";
+import { LegalPage, LegalShell } from "../ui/LegalPage.tsx";
 import { termsOfServiceMd, privacyPolicyMd } from "../ui/legalContent.ts";
 import { SITE_PAGES, SitePage } from "../site/pages.tsx";
 import { NotFoundPage } from "../site/NotFound.tsx";
@@ -32,29 +32,21 @@ export function renderLanding(): string {
 
 /**
  * Same wrapper identity rule as `renderLanding`, kept in sync with
- * `TermsApp.tsx`/`PrivacyApp.tsx`'s own `.app > .app-main > .frame` tree.
+ * `TermsApp.tsx`/`PrivacyApp.tsx`'s own `LegalShell` tree.
  */
 export function renderTerms(): string {
   return renderToStaticMarkup(
-    <div className="app">
-      <main className="app-main">
-        <div className="frame">
-          <LegalPage markdown={termsOfServiceMd} />
-        </div>
-      </main>
-    </div>,
+    <LegalShell path="/terms-of-service">
+      <LegalPage markdown={termsOfServiceMd} />
+    </LegalShell>,
   );
 }
 
 export function renderPrivacy(): string {
   return renderToStaticMarkup(
-    <div className="app">
-      <main className="app-main">
-        <div className="frame">
-          <LegalPage markdown={privacyPolicyMd} />
-        </div>
-      </main>
-    </div>,
+    <LegalShell path="/privacy-policy">
+      <LegalPage markdown={privacyPolicyMd} />
+    </LegalShell>,
   );
 }
 

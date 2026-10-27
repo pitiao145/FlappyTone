@@ -39,21 +39,19 @@ export const SITE_PAGES: Record<string, SitePageDef> = {
   ...sayPageDefs(),
 };
 
-/** The page for `path`, inside the `.app > .app-main > .frame` wrappers. */
+/** The page for `path`, inside the Sky site shell (`src/site/site.css`). */
 export function SitePage({ path }: { path: string }) {
   const Page = SITE_PAGES[path]?.Page;
   return (
-    <div className="app">
-      <main className="app-main">
-        <div className="frame">
-          {/* The landing page's own bar and footer, so a visitor from search
-              can reach the rest of the site. Links point back into `/`. */}
-          <Nav linkBase="/" playHref={appHref(undefined, path)} />
-          <Breadcrumbs path={path} />
-          {Page ? <Page /> : null}
-          <Footer />
-        </div>
+    <div className="sky sky-site">
+      {/* The landing page's own bar and footer, so a visitor from search
+          can reach the rest of the site. Links point back into `/`. */}
+      <Nav linkBase="/" playHref={appHref(undefined, path)} />
+      <main className="sky-site-main">
+        <Breadcrumbs path={path} />
+        {Page ? <Page /> : null}
       </main>
+      <Footer />
     </div>
   );
 }

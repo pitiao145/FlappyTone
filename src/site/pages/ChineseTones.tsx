@@ -251,7 +251,7 @@ export function ChineseTones() {
         <p>
           Textbooks give each tone a fixed number (first tone = 55, second tone = 35,
           third tone = 214, fourth tone = 51). Real speech is close to that, but not the
-          same, and FlappyTone's tunnels follow real speech. Each tone below
+          same, and FlappyTone’s tunnels follow real speech. Each tone below
           says what the textbook teaches and what the recordings show. Two
           things stand out on the chart. First, the tones are relative to your
           own voice, so a deep voice and a high voice draw the same shapes at
@@ -280,7 +280,7 @@ export function ChineseTones() {
         <section id="tone-sandhi">
           <h2>Tone sandhi: how tones change next to each other</h2>
           <p>
-            Dictionaries and pinyin always write a word's own tone. In speech,
+            Dictionaries and pinyin always write a word’s own tone. In speech,
             some tones change when another tone follows them. This is called
             tone sandhi (變調). Four rules cover almost everything a learner
             meets, and every example below is a real recording: tap “See it” to
@@ -327,8 +327,8 @@ export function ChineseTones() {
           <ExampleList examples={SANDHI_BU} tone={4} />
 
           <p>
-            FlappyTone's tunnels are measured from these recordings, so a tone
-            pair's tunnel already has the change built in. Fly 可以 as ké yǐ and
+            FlappyTone’s tunnels are measured from these recordings, so a tone
+            pair’s tunnel already has the change built in. Fly 可以 as ké yǐ and
             you stay inside it. The game shows the spoken tones above each word,
             next to the written pinyin.
           </p>
@@ -337,7 +337,7 @@ export function ChineseTones() {
         <section id="taiwan-vs-mainland">
           <h2>Taiwan vs mainland Mandarin tones</h2>
           <p>
-            Taiwan's 國語 and mainland China's 普通話 use the same four tones
+            Taiwan’s 國語 and mainland China’s 普通話 use the same four tones
             and the same sandhi rules. The differences are in which words get
             which tone, and in how some tones are usually said:
           </p>
@@ -368,8 +368,8 @@ export function ChineseTones() {
           <ExampleList examples={TAIWAN_FULL} tone={3} />
           <p>
             Both are standard, and speakers of each understand the other without
-            trouble. FlappyTone's recordings are Taiwan Mandarin, so the tunnels
-            follow Taiwan's tones and Taiwan's rhythm.
+            trouble. FlappyTone’s recordings are Taiwan Mandarin, so the tunnels
+            follow Taiwan’s tones and Taiwan’s rhythm.
           </p>
         </section>
 
@@ -382,7 +382,7 @@ export function ChineseTones() {
             </li>
             <li>
               <a href="/tools/tone-visualizer">Mandarin tone visualizer</a>: say
-              a tone and see your pitch drawn over a native speaker's.
+              a tone and see your pitch drawn over a native speaker’s.
             </li>
             <li>
               <a href="/tools/tone-marks">Pinyin tone marks converter</a>: turn
@@ -390,13 +390,13 @@ export function ChineseTones() {
             </li>
             <li>
               <a href="/say">Common words with audio</a>: hello, thank you,
-              sorry and more, each with a native speaker's recording.
+              sorry and more, each with a native speaker’s recording.
             </li>
           </ul>
         </section>
 
         <section id="faq">
-          <h2>Can't hear the tones? Common questions</h2>
+          <h2>Can’t hear the tones? Common questions</h2>
           <p>
             Test your ear first: the free{" "}
             <a href="/tools/tone-test">Chinese tones test</a> plays ten words and

@@ -67,7 +67,7 @@ function ToneGameOnPage() {
                 in the game
               </>
             ) : (
-              <>Perfect ear. Now say them: train in the game →</>
+              <>Perfect ear. Now say them: train in the game</>
             )}
           </a>
         );
@@ -103,7 +103,7 @@ export function ToneTest() {
         <p className="tt-play-game">
           Hearing is half of it.{" "}
           <a href={gameHref(PATH, null)} onClick={() => ctaClick("none", "persistent")}>
-            Play the game: say the tones with your voice →
+            Play the game: say the tones with your voice
           </a>
         </p>
 
@@ -143,7 +143,7 @@ export function ToneTest() {
             </p>
           </section>
           <section>
-            <h2>Questions</h2>
+            <h2>Common questions</h2>
             {FAQ.map((f) => (
               <details key={f.q} className="site-faq" open>
                 <summary>

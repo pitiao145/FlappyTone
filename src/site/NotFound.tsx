@@ -9,37 +9,35 @@ import { LEARN_LINKS } from "./links.ts";
  */
 export function NotFoundPage() {
   return (
-    <div className="app">
-      <main className="app-main">
-        <div className="frame">
-          <Nav linkBase="/" playHref={appHref()} />
-          <div className="screen legal-screen site-page">
-            <article className="legal-body">
-              <h1>Page not found</h1>
-              <p className="site-answer">
-                <strong>
-                  That page does not exist. Start with the guide to the four
-                  Mandarin tones, or pick a tool below.
-                </strong>
-              </p>
-              <p>
-                <a href="/chinese-tones">The four Mandarin tones, explained</a>
-              </p>
-              <ul>
-                {LEARN_LINKS.filter((l) => l.href !== "/chinese-tones").map((l) => (
-                  <li key={l.href}>
-                    <a href={l.href}>{l.label}</a>
-                  </li>
-                ))}
-                <li>
-                  <a href="/">FlappyTone home</a>
+    <div className="sky sky-site">
+      <Nav linkBase="/" playHref={appHref()} />
+      <main className="sky-site-main">
+        <div className="screen legal-screen site-page">
+          <article className="legal-body">
+            <h1>Page not found</h1>
+            <p className="site-answer">
+              <strong>
+                That page does not exist. Start with the guide to the four
+                Mandarin tones, or pick a tool below.
+              </strong>
+            </p>
+            <p>
+              <a href="/chinese-tones">The four Mandarin tones, explained</a>
+            </p>
+            <ul>
+              {LEARN_LINKS.filter((l) => l.href !== "/chinese-tones").map((l) => (
+                <li key={l.href}>
+                  <a href={l.href}>{l.label}</a>
                 </li>
-              </ul>
-            </article>
-          </div>
-          <Footer />
+              ))}
+              <li>
+                <a href="/">FlappyTone home</a>
+              </li>
+            </ul>
+          </article>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

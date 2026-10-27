@@ -1,16 +1,13 @@
-import { LegalPage } from "../ui/LegalPage.tsx";
+import { LegalPage, LegalShell } from "../ui/LegalPage.tsx";
 import { termsOfServiceMd } from "../ui/legalContent.ts";
 import "../App.css";
+import "../site/site.css";
 
 /** The whole of what `/terms-of-service` serves — one static document. */
 export default function TermsApp() {
   return (
-    <div className="app">
-      <main className="app-main">
-        <div className="frame">
-          <LegalPage markdown={termsOfServiceMd} />
-        </div>
-      </main>
-    </div>
+    <LegalShell path="/terms-of-service">
+      <LegalPage markdown={termsOfServiceMd} />
+    </LegalShell>
   );
 }

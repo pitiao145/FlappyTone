@@ -1,14 +1,28 @@
+import type { ReactNode } from "react";
+import { Footer } from "./Footer.tsx";
+import { Nav } from "./Nav.tsx";
+import { appHref } from "./appLink.ts";
 import { renderMarkdown } from "./markdown.tsx";
+
+/**
+ * The Sky site shell for a legal entry: the marketing nav and footer around
+ * the document (`src/site/site.css`). Play carries `?src=<path>`.
+ */
+export function LegalShell({ path, children }: { path: string; children: ReactNode }) {
+  return (
+    <div className="sky sky-site">
+      <Nav linkBase="/" playHref={appHref(undefined, path)} />
+      <main className="sky-site-main">{children}</main>
+      <Footer />
+    </div>
+  );
+}
 
 /**
  * Renders one parsed legal document (Terms of Service, Privacy Policy).
  *
- * Reuses the game's typographic classes (`Terms.tsx`'s look) rather than
- * inventing a new style: `.howto-section`-style left-aligned body text,
- * `.terms-bullets` for lists, `App.css`'s `.screen h1/h2/h3` for headings.
- * `.legal-screen` (see `App.css`) widens the frame's measure past the
- * 640px menu-shell cap and sets left alignment for the whole body — a
- * long-form document reads as prose, not a centered menu.
+ * Styled by `src/site/site.css` (`.legal-screen`, `.legal-body`): one
+ * outlined cloud panel at a prose measure, left-aligned.
  *
  * The back link is a real anchor: this page is its own entry, reached and
  * left by a real navigation, not a screen swap inside a SPA.

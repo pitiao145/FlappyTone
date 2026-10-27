@@ -202,7 +202,7 @@ function SayWordPage({ word }: { word: SayWord }) {
     <div className="screen legal-screen site-page say-page">
       <article className="legal-body">
         <a className="say-back" href={INDEX}>
-          <span aria-hidden="true">←</span> All words
+          All words
         </a>
         <h1>{word.h1}</h1>
         <p className="site-answer">
@@ -341,7 +341,7 @@ function SayWordPage({ word }: { word: SayWord }) {
         </section>
 
         <section id="faq">
-          <h2>Questions</h2>
+          <h2>Common questions</h2>
           {word.faq.map((f) => (
             <details key={f.q} className="site-faq" open>
               <summary>
@@ -427,7 +427,7 @@ export function SayIndex() {
         <h1>How to say common words in Chinese</h1>
         <p className="site-answer">
           <strong>
-            The first words most learners need, each with a native speaker's
+            The first words most learners need, each with a native speaker’s
             recording, pinyin and 注音 (Zhuyin). Each page also compares the
             slow standard pronunciation with how the word sounds at normal
             speed.
@@ -474,7 +474,7 @@ export function SayIndex() {
         <section>
           <h2>Why the recordings sound different from the pinyin</h2>
           <p>
-            Pinyin writes each syllable's own tone. In real speech, tones
+            Pinyin writes each syllable’s own tone. In real speech, tones
             change next to each other: two third tones in a row become a rise and a
             dip, 不 rises before a fourth tone, and many second syllables go light.
             The spoken recordings are also shorter and their pitch moves less.

@@ -317,8 +317,7 @@ function Visualizer() {
         </div>
 
         <a className="tc-app-link" href={appHref("visualiser", PATH)}>
-          Practise in the full visualizer{" "}
-          <span aria-hidden="true">→</span>
+          Practise in the full visualizer
         </a>
       </div>
 
@@ -364,7 +363,7 @@ function Visualizer() {
                 Step {calStep === "high" ? 1 : 2} of 2 · Fitting the board to your voice
               </div>
               {calRetry && (
-                <p className="tc-cal-retry">Couldn't hear that clearly. Let's try again.</p>
+                <p className="tc-cal-retry">Couldn’t hear that clearly. Let’s try again.</p>
               )}
               <p className="tc-cal-say">
                 Say{" "}
@@ -407,12 +406,12 @@ function Visualizer() {
               )}
               {result.tier === "good" && (
                 <a className="tc-result-cta" href={appHref(undefined, PATH)}>
-                  Now fly it: your voice steers the bird in FlappyTone →
+                  Now fly it: your voice steers the bird in FlappyTone
                 </a>
               )}
               {(result.tier === "ok" || result.tier === "bad") && (
                 <a className="tc-result-cta" href={appHref("visualiser", PATH)}>
-                  Practise in the full visualizer →
+                  Practise in the full visualizer
                 </a>
               )}
             </div>
@@ -538,7 +537,7 @@ export function ToneVisualizer() {
             </p>
           </section>
           <section>
-            <h2>Questions</h2>
+            <h2>Common questions</h2>
             {FAQ.map((f) => (
               <details key={f.q} className="site-faq" open>
                 <summary>

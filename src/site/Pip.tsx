@@ -82,7 +82,7 @@ export function PipCta({
         <a className="read-next" href={secondary.href}>
           <span className="read-next-label">Read next</span>
           <span className="read-next-title">
-            {secondary.label} <span aria-hidden="true">→</span>
+            {secondary.label}
           </span>
         </a>
       )}

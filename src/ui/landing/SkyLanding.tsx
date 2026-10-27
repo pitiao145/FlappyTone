@@ -5,11 +5,11 @@ import { tierLimits } from "../../game/tiers.ts";
 import { wordsFromCatalog } from "../../game/words.ts";
 import { DEFAULT_SPEAKER_ID } from "../../data/catalogRows.ts";
 import fallback from "../../data/wordsFallback.json";
-import { LEARN_LINKS } from "../../site/links.ts";
 import { Pip } from "../../site/Pip.tsx";
 import { capturePostHogEvent } from "../../analytics/posthog.ts";
 import { VisualiserDemoLoop } from "../DemoLoop.tsx";
 import { Footer } from "../Footer.tsx";
+import { Nav } from "../Nav.tsx";
 import { PRO_PRICE } from "../plan.ts";
 import { TONE_LINE_COLOR } from "../toneColors.ts";
 import { ToneAverageCard } from "../ToneAverageCard.tsx";
@@ -121,18 +121,6 @@ function ScrollBird() {
   );
 }
 
-/** True as soon as the page has scrolled at all: the nav collapses at once. */
-function useScrolled(): boolean {
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setScrolled(scrollY > 4);
-    onScroll();
-    addEventListener("scroll", onScroll, { passive: true });
-    return () => removeEventListener("scroll", onScroll);
-  }, []);
-  return scrolled;
-}
-
 function toneLabel(tones: number[]): string {
   return tones.length > 1 ? `Tones ${tones.join(" + ")}` : `Tone ${tones[0]}`;
 }
@@ -152,74 +140,10 @@ export function SkyLanding() {
 
 
   const modes = brand.options.modes;
-  const compact = useScrolled();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const closeMenu = () => setMenuOpen(false);
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
-    };
-    addEventListener("keydown", onKey);
-    return () => removeEventListener("keydown", onKey);
-  }, [menuOpen]);
 
   return (
-    <div className="lp-sky">
-      <div className={compact ? "sky-nav-bar is-compact" : "sky-nav-bar"}>
-      <nav className="sky-nav" aria-label="Main">
-        <a className="sky-brand" href="#top">
-          <Pip size={38} tilt={-8} /> FlappyTone
-        </a>
-        <ul className="sky-nav-links">
-          <li><a href="#how-it-works">How it works</a></li>
-          <li><a href="#visualiser">Visualiser</a></li>
-          <li><a href="#pricing">Pricing</a></li>
-          <li>
-            <details className="sky-learn">
-              <summary>Learn and tools</summary>
-              <ul>
-                {LEARN_LINKS.map((l) => (
-                  <li key={l.href}><a href={l.href}>{l.label}</a></li>
-                ))}
-              </ul>
-            </details>
-          </li>
-        </ul>
-        <button className="sky-btn sky-btn-small" onClick={() => go("play", "nav")}>
-          {/* Phones show the short label; the bar has no room for the long one. */}
-          <span className="sky-label-long">{brand.heroCards.play.cta}</span>
-          <span className="sky-label-short">Play</span>
-        </button>
-        {/* Phones: the links fold into a menu; Play stays in the bar. */}
-        <button
-          className="sky-burger"
-          aria-expanded={menuOpen}
-          aria-controls="sky-menu"
-          aria-label={menuOpen ? "Close menu" : "Open menu"}
-          onClick={() => setMenuOpen((o) => !o)}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d={menuOpen ? "M6 6l12 12M18 6L6 18" : "M4 7h16M4 12h16M4 17h16"} />
-          </svg>
-        </button>
-      </nav>
-      {menuOpen && (
-        <div id="sky-menu" className="sky-menu">
-          <ul>
-            <li><a href="#how-it-works" onClick={closeMenu}>How it works</a></li>
-            <li><a href="#visualiser" onClick={closeMenu}>Visualiser</a></li>
-            <li><a href="#pricing" onClick={closeMenu}>Pricing</a></li>
-          </ul>
-          <h3>Learn and tools</h3>
-          <ul>
-            {LEARN_LINKS.map((l) => (
-              <li key={l.href}><a href={l.href}>{l.label}</a></li>
-            ))}
-          </ul>
-        </div>
-      )}
-      </div>
+    <div className="sky lp-sky">
+      <Nav onPlay={() => go("play", "nav")} />
       <ScrollBird />
 
       <main className="sky-main">
@@ -588,9 +512,7 @@ export function SkyLanding() {
 
       </main>
 
-      <div className="sky-footer">
-        <Footer />
-      </div>
+      <Footer />
     </div>
   );
 }

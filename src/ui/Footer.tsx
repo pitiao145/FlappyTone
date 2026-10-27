@@ -10,36 +10,32 @@ const CONNECT_ICONS = {
 } as const;
 
 /**
- * Page footer: brand blurb + built-by line, a Connect column of external
- * links, then an attribution + copyright row. All copy comes from
- * `brand.footer` / `brand.attribution`; this file is layout only, same rule
- * as the landing page.
- *
- * Same navy/gold footer as the EasyCard app it was adapted from, minus what
- * doesn't apply here: EasyCard-specific copy, the Legal column, the
- * newsletter signup box, the "independent tool" disclaimer, and the
- * card-number handling notice.
+ * The marketing site's footer (Sky, `src/site/site.css`): one outlined cloud
+ * panel with the brand blurb, the Learn links and the Connect links, in one
+ * row from tablet up; then a row with the copyright, the legal links and the
+ * attribution. All copy comes from `brand.footer` / `brand.attribution`; this
+ * file is layout only.
  */
 export function Footer() {
   return (
-    <footer className="landing-footer">
-      <div className="footer-grid">
-        <div className="footer-brand">
-          <p className="footer-blurb">{brand.footer.blurb}</p>
-          <p className="footer-builtby">
+    <footer className="sky-footer">
+      <div className="sky-footer-grid">
+        <div className="sky-footer-brand">
+          <p>{brand.footer.blurb}</p>
+          <p>
             {brand.footer.builtByPrefix}{" "}
-            <a href="https://pierrebuilds.dev" target="_blank" rel="noopener noreferrer" className="footer-builtby-link">
+            <a href="https://pierrebuilds.dev" target="_blank" rel="noopener noreferrer">
               pierrebuilds.dev
             </a>
           </p>
         </div>
 
-        <nav className="footer-connect footer-learn" aria-label={brand.footer.learnHeading}>
+        <nav aria-label={brand.footer.learnHeading}>
           <h3>{brand.footer.learnHeading}</h3>
           <ul>
             {LEARN_LINKS.map((link) => (
               <li key={link.href}>
-                <a href={link.href} className="footer-link footer-learn-link">
+                <a href={link.href} className="sky-footer-link">
                   {link.label}
                 </a>
               </li>
@@ -47,7 +43,7 @@ export function Footer() {
           </ul>
         </nav>
 
-        <div className="footer-connect">
+        <div>
           <h3>{brand.footer.connectHeading}</h3>
           <ul>
             {brand.footer.connect.map((link) => {
@@ -57,9 +53,9 @@ export function Footer() {
                   <a
                     href={link.href}
                     {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                    className="footer-link"
+                    className="sky-footer-link"
                   >
-                    <span className="footer-link-icon">
+                    <span className="sky-footer-icon" aria-hidden="true">
                       <Icon />
                     </span>
                     <span>{link.label}</span>
@@ -71,18 +67,13 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="footer-bottom">
-        <p className="footer-copyright">© {new Date().getFullYear()} pierrebuilds.dev</p>
-        <p className="footer-legal">
-          <a className="footer-legal-link" href="/terms-of-service">
-            Terms of Service
-          </a>
-          {" · "}
-          <a className="footer-legal-link" href="/privacy-policy">
-            Privacy Policy
-          </a>
+      <div className="sky-footer-bottom">
+        <p>© {new Date().getFullYear()} pierrebuilds.dev</p>
+        <p className="sky-footer-legal">
+          <a href="/terms-of-service">Terms of Service</a>
+          <a href="/privacy-policy">Privacy Policy</a>
         </p>
-        <p className="footer-attribution">{brand.attribution}</p>
+        <p>{brand.attribution}</p>
       </div>
     </footer>
   );

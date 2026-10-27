@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "../index.css";
 import "../App.css";
+import "./site.css";
 import { initPostHog } from "../analytics/posthog.ts";
 import { loadShareData } from "../game/settings";
 import { routeFor } from "./routes.ts";
