@@ -371,6 +371,14 @@
 }
 .lp-sky .sky-try-game[hidden] { display: none; }
 .sky-try-canvas { display: block; width: 100%; height: 100%; }
+/* The demo loop (and its prerendered placeholder) fits the screen like the
+   live game does: width is capped so the clip's height stays within
+   100svh - 168px (nav + caption). 796/1734 is the hero clip's aspect
+   (DemoLoop.tsx HERO_CLIP_*); update both if the clip changes shape. */
+.sky-try .demo-canvas {
+  width: min(100%, 380px, calc((100svh - 168px) * 796 / 1734));
+  height: auto;
+}
 .sky-try-button { align-self: end; margin-bottom: 32px; z-index: 1; }
 
 .sky-try-panel {
