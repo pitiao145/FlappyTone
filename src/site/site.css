@@ -621,9 +621,11 @@ html:has(.sky) body {
   padding: clamp(16px, 3vw, 40px) var(--gutter) 0;
 }
 
-/* The old frame's measures: prose at 720px, tool pages at 1120px. */
-.sky-site-main:has(.legal-screen) { max-width: 720px; }
-.sky-site-main:has(.site-wide) { max-width: 1120px; }
+/* One content width for every site page: articles, tools, /say, legal. */
+.sky-site-main { max-width: 1120px; }
+.sky-site .legal-body,
+.sky-site .site-wide .tm-head,
+.sky-site .legal-body :is(p, ul, ol) { max-width: none; }
 
 /* ================================================================
    The site pages' own rules (moved from App.css).
