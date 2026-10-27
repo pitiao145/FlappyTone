@@ -44,6 +44,8 @@
   --measure: 44rem;
   --gutter: clamp(16px, 4vw, 40px);
   --ease-snap: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Cards on the sky: warm sand over cloud, so they read as paper. */
+  --color-card: color-mix(in oklab, var(--color-sand) 38%, var(--color-cloud));
   /* The game's paper tokens, resolved here, before .sky-site maps them to
      the sky: the footer keeps the landing's paper band on every page. */
   --paper-surface: var(--surface);
@@ -2242,10 +2244,11 @@ html:has(.sky) body {
 .sky-site .legal-body a.sticker-button:focus-visible { outline-color: var(--color-focus); }
 .sky-site .legal-body .pip-cta a.sticker-button:focus-visible { outline-color: var(--color-on-wall); }
 
-/* ---- example and word cards: cloud cards with an ink edge on the sky */
+/* ---- example and word cards: sand cards with an ink edge on the sky */
 .sky-site .site-examples li,
-.sky-site .say-page ul.say-index a {
-  background: var(--color-cloud);
+.sky-site .say-page ul.say-index a,
+.sky-site .tc-ref-card {
+  background: var(--color-card);
   border: 2px solid var(--color-ink);
   box-shadow: 4px 4px 0 var(--color-ink);
 }
@@ -2275,3 +2278,31 @@ html:has(.sky) body {
 }
 .sky-site .screen .tc-toggle button + button { border-left: 2px solid var(--color-ink); }
 .sky-site .screen .tc-toggle .tc-toggle-on { background: var(--color-beak); color: var(--color-ink); }
+
+/* ---- tool pages: the notes above the FAQ in two columns on wide screens */
+.sky-site .tm-notes section :is(p, ul, ol) { max-width: none; }
+@media (min-width: 900px) {
+  .sky-site .tm-notes section:not(:has(.site-faq)) { display: block; column-count: 2; column-gap: 48px; }
+  .sky-site .tm-notes section:not(:has(.site-faq)) > * { margin-bottom: 16px; }
+  .sky-site .tm-notes section:not(:has(.site-faq)) h2 { column-span: all; }
+  .sky-site .tm-notes section:not(:has(.site-faq)) h3 { break-after: avoid; }
+  .sky-site .tm-notes section:not(:has(.site-faq)) p { break-inside: avoid; }
+}
+
+/* ---- tool pages: the FAQ as cards, two to a row on wide screens */
+.sky-site .tm-notes section:has(.site-faq) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.sky-site .tm-notes section:has(.site-faq) > h2 { grid-column: 1 / -1; }
+.sky-site .tm-notes .site-faq {
+  padding: 0;
+  border: 2px solid var(--color-ink);
+  border-radius: var(--radius);
+  background: var(--color-card);
+}
+.sky-site .tm-notes .site-faq summary { padding: 16px 20px; border-radius: var(--radius); }
+.sky-site .tm-notes .site-faq summary::after { font-family: var(--font-display); color: var(--color-ink); }
+.sky-site .tm-notes .site-faq p { margin: 0; padding: 0 20px 16px; color: var(--color-ink-2); }
