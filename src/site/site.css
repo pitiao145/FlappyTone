@@ -250,6 +250,9 @@ html:has(.sky) body {
   transition: background-color 200ms var(--ease-snap);
 }
 .sky-nav-bar.is-compact { padding-top: 12px; background: transparent; }
+/* Anchor jumps (#how-it-works…) stop below the floating bar, not under it:
+   the compact bar is ~62px tall (12px gap + 50px bar), plus breathing room. */
+html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
 .sky-nav {
   max-width: var(--container);
   margin-inline: auto;
