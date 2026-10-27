@@ -287,7 +287,7 @@ function Visualizer() {
 
         <div className="tc-picker-label">Practise against</div>
         <div className="tc-toggle" role="radiogroup" aria-label="Reference line">
-          {(["real", "textbook"] as const).map((m) => (
+          {(["textbook", "real"] as const).map((m) => (
             <button
               key={m}
               type="button"
@@ -296,7 +296,7 @@ function Visualizer() {
               className={mode === m ? "tc-toggle-on" : undefined}
               onClick={() => choose(ref, m)}
             >
-              {m === "real" ? "Real speech" : "Textbook"}
+              {m === "real" ? "Spoken" : "Standard"}
             </button>
           ))}
         </div>

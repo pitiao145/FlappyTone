@@ -2241,3 +2241,37 @@ html:has(.sky) body {
 .sky-site .screen .tc-primary { color: var(--color-on-wall); }
 .sky-site .legal-body a.sticker-button:focus-visible { outline-color: var(--color-focus); }
 .sky-site .legal-body .pip-cta a.sticker-button:focus-visible { outline-color: var(--color-on-wall); }
+
+/* ---- example and word cards: cloud cards with an ink edge on the sky */
+.sky-site .site-examples li,
+.sky-site .say-page ul.say-index a {
+  background: var(--color-cloud);
+  border: 2px solid var(--color-ink);
+  box-shadow: 4px 4px 0 var(--color-ink);
+}
+.sky-site .say-page ul.say-index a { transition: translate 120ms var(--ease-snap), box-shadow 120ms var(--ease-snap); }
+.sky-site .say-page ul.say-index a:hover { translate: 0 -2px; box-shadow: 4px 6px 0 var(--color-ink); }
+
+/* ---- tool pages: the notes under the tool stack, each full width */
+.sky-site .tm-notes { grid-template-columns: minmax(0, 1fr); }
+.sky-site .site-wide .tm-notes section { max-width: none; }
+
+/* ---- the tone marks tool: sky and sand panes, not white */
+.sky-site .tm-tool { background: color-mix(in oklab, var(--color-sand) 28%, var(--color-cloud)); }
+.sky-site .tm-input { background: var(--color-sky-3); }
+.sky-site .tm-input textarea { background: var(--color-cloud); }
+
+/* ---- the visualizer's Standard / Spoken switch: one segmented chip */
+.sky-site .tc-toggle { border-radius: 999px; background: var(--color-cloud); }
+.sky-site .screen .tc-toggle button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  font: 600 1rem/1 var(--font-body);
+  background: transparent;
+  color: var(--color-ink);
+}
+.sky-site .screen .tc-toggle button + button { border-left: 2px solid var(--color-ink); }
+.sky-site .screen .tc-toggle .tc-toggle-on { background: var(--color-beak); color: var(--color-ink); }
