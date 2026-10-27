@@ -2,6 +2,7 @@
  * mode: redesign · depth: full · scope: site · copy: verbatim · nav: the landing's sticky bar that floats on scroll, Play always in the bar · footer: one row from tablet up · faces: Lilita One, Figtree · v2.0.0 */
 /* Hallmark · critique · SEO pages are informative, not playful: they keep their own article layout and take only the Sky colours, faces, nav and footer */
 /* Hallmark · waive 11 · buttons, chips and the notify button only · one pressed-edge language taken from the game art */
+/* Hallmark · waive 10b · .sky-nav animates max-width and padding as it floats · Pierre asked for a smooth collapse; reduced motion snaps */
 /* Hallmark · answered F4 · every site page keeps one beak-coloured primary per screen; secondary actions are outlined, never filled */
 
 /*
@@ -2298,3 +2299,22 @@ html:has(.sky) body {
 }
 .sky-site .say-page ul.say-index li { display: flex; }
 .sky-site .say-page ul.say-index a { flex: 1; }
+
+/* ---- the nav floats in smoothly: the bar narrows, its padding and the
+   brand shrink over 280ms. Asked for by Pierre over gate 10b's snap. */
+.sky-nav-bar {
+  transition: background-color 280ms var(--ease-snap), padding-top 280ms var(--ease-snap);
+}
+.sky-nav {
+  transition:
+    max-width 280ms var(--ease-snap),
+    padding 280ms var(--ease-snap),
+    background-color 280ms var(--ease-snap),
+    border-color 280ms var(--ease-snap),
+    box-shadow 280ms var(--ease-snap);
+}
+.sky .sky-brand { transition: font-size 280ms var(--ease-snap); }
+.sky-brand .pip { transition: width 280ms var(--ease-snap), height 280ms var(--ease-snap); }
+@media (prefers-reduced-motion: reduce) {
+  .sky-nav-bar, .sky-nav, .sky .sky-brand, .sky-brand .pip { transition: none; }
+}
