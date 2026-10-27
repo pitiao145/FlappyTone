@@ -51,7 +51,9 @@ export function SitePage({ path }: { path: string }) {
         <Breadcrumbs path={path} />
         {Page ? <Page /> : null}
       </main>
-      <Footer />
+      <div className="sky-footer">
+        <Footer />
+      </div>
     </div>
   );
 }

@@ -13,7 +13,9 @@ export function LegalShell({ path, children }: { path: string; children: ReactNo
     <div className="sky sky-site">
       <Nav linkBase="/" playHref={appHref(undefined, path)} />
       <main className="sky-site-main">{children}</main>
-      <Footer />
+      <div className="sky-footer">
+        <Footer />
+      </div>
     </div>
   );
 }

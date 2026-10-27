@@ -37,7 +37,9 @@ export function NotFoundPage() {
           </article>
         </div>
       </main>
-      <Footer />
+      <div className="sky-footer">
+        <Footer />
+      </div>
     </div>
   );
 }

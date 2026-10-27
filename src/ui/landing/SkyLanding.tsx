@@ -512,7 +512,9 @@ export function SkyLanding() {
 
       </main>
 
-      <Footer />
+      <div className="sky-footer">
+        <Footer />
+      </div>
     </div>
   );
 }
