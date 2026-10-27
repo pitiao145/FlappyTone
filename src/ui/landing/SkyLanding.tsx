@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { brand } from "../../brand.ts";
 import type { Tone } from "../../game/gates.ts";
 import { tierLimits } from "../../game/tiers.ts";
@@ -10,6 +10,7 @@ import { capturePostHogEvent } from "../../analytics/posthog.ts";
 import { VisualiserDemoLoop } from "../DemoLoop.tsx";
 import { Footer } from "../Footer.tsx";
 import { Nav } from "../Nav.tsx";
+import { ScrollBird } from "../ScrollBird.tsx";
 import { PRO_PRICE } from "../plan.ts";
 import { TONE_LINE_COLOR } from "../toneColors.ts";
 import { ToneAverageCard } from "../ToneAverageCard.tsx";
@@ -79,45 +80,6 @@ function Wall({ tone, edge }: { tone: Tone; edge: "top" | "bottom" }) {
       <path d={d} className="sky-wall-fill" />
       <path d={`M${line}`} className="sky-wall-rim" />
     </svg>
-  );
-}
-
-/**
- * The scroll indicator: the bird in a small round button, bottom-left. It
- * turns as you scroll, one full loop from the top of the page to the bottom,
- * and a tap flies back to the top. Written straight to the DOM from one rAF,
- * never React state (hard rule 1).
- */
-function ScrollBird() {
-  const bird = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    let raf = 0;
-    const update = () => {
-      raf = 0;
-      const max = document.documentElement.scrollHeight - innerHeight;
-      const p = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
-      if (bird.current) bird.current.style.transform = `rotate(${(p * 360).toFixed(1)}deg)`;
-    };
-    const onScroll = () => {
-      raf ||= requestAnimationFrame(update);
-    };
-    update();
-    addEventListener("scroll", onScroll, { passive: true });
-    addEventListener("resize", onScroll);
-    return () => {
-      cancelAnimationFrame(raf);
-      removeEventListener("scroll", onScroll);
-      removeEventListener("resize", onScroll);
-    };
-  }, []);
-
-  return (
-    <a className="sky-scrollbird" href="#top" aria-label="Back to top">
-      <span ref={bird} className="sky-scrollbird-bird" aria-hidden="true">
-        <Pip size={28} />
-      </span>
-    </a>
   );
 }
 

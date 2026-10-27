@@ -1,3 +1,4 @@
+import { ScrollBird } from "../ui/ScrollBird.tsx";
 import { Nav } from "../ui/Nav.tsx";
 import { Footer } from "../ui/Footer.tsx";
 import { appHref } from "../ui/appLink.ts";
@@ -9,8 +10,9 @@ import { LEARN_LINKS } from "./links.ts";
  */
 export function NotFoundPage() {
   return (
-    <div className="sky sky-site">
+    <div id="top" className="sky sky-site">
       <Nav linkBase="/" playHref={appHref()} />
+      <ScrollBird />
       <main className="sky-site-main">
         <div className="screen legal-screen site-page">
           <article className="legal-body">

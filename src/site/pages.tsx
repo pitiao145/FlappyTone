@@ -12,6 +12,7 @@
  * Must not import `src/audio/` or `src/pitch/` (CLAUDE.md, "Three entries").
  */
 
+import { ScrollBird } from "../ui/ScrollBird.tsx";
 import type { ReactElement } from "react";
 import type { SiteRoute } from "./routes.ts";
 import { Nav } from "../ui/Nav.tsx";
@@ -43,10 +44,11 @@ export const SITE_PAGES: Record<string, SitePageDef> = {
 export function SitePage({ path }: { path: string }) {
   const Page = SITE_PAGES[path]?.Page;
   return (
-    <div className="sky sky-site">
+    <div id="top" className="sky sky-site">
       {/* The landing page's own bar and footer, so a visitor from search
           can reach the rest of the site. Links point back into `/`. */}
       <Nav linkBase="/" playHref={appHref(undefined, path)} />
+      <ScrollBird />
       <main className="sky-site-main">
         <Breadcrumbs path={path} />
         {Page ? <Page /> : null}

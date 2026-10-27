@@ -1,3 +1,4 @@
+import { ScrollBird } from "./ScrollBird.tsx";
 import type { ReactNode } from "react";
 import { Footer } from "./Footer.tsx";
 import { Nav } from "./Nav.tsx";
@@ -10,8 +11,9 @@ import { renderMarkdown } from "./markdown.tsx";
  */
 export function LegalShell({ path, children }: { path: string; children: ReactNode }) {
   return (
-    <div className="sky sky-site">
+    <div id="top" className="sky sky-site">
       <Nav linkBase="/" playHref={appHref(undefined, path)} />
+      <ScrollBird />
       <main className="sky-site-main">{children}</main>
       <div className="sky-footer">
         <Footer />
