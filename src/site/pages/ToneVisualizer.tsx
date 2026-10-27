@@ -526,6 +526,8 @@ export function ToneVisualizer() {
               of the four tones your shape sounded most like. It checks the tone
               only, not the consonants or vowels.
             </p>
+          </section>
+          <section>
             <h2>Textbook vs real speech</h2>
             <p>
               Tone charts teach 55, 35, 214 and 51. Real speech is softer and

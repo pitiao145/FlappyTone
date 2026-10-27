@@ -121,6 +121,8 @@ export function ToneTest() {
               Standard plays slow, clear recordings. Spoken plays the same words at
               everyday speed, which is harder and closer to real conversation.
             </p>
+          </section>
+          <section>
             <h2>Why tones are hard to hear for English speakers</h2>
             <p>
               In English, pitch tells you whether a sentence is a question or how
@@ -129,6 +131,8 @@ export function ToneTest() {
               (媽, mother) and mǎ (馬, horse) differ only in tone. Hearing that is a
               new habit, and like any habit it comes with practice, not talent.
             </p>
+          </section>
+          <section>
             <h2>Are you tone deaf?</h2>
             <p>
               Probably not. True tone deafness (congenital amusia) is rare, and even

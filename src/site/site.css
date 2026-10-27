@@ -2256,9 +2256,16 @@ html:has(.sky) body {
 .sky-site .say-page ul.say-index a { transition: translate 120ms var(--ease-snap), box-shadow 120ms var(--ease-snap); }
 .sky-site .say-page ul.say-index a:hover { translate: 0 -2px; box-shadow: 4px 6px 0 var(--color-ink); }
 
-/* ---- tool pages: the notes under the tool stack, each full width */
-.sky-site .tm-notes { grid-template-columns: minmax(0, 1fr); }
-.sky-site .site-wide .tm-notes section { max-width: none; }
+/* ---- tool pages: the notes under the tool, one section per cell of a
+   two-column grid; an odd last section and the FAQ span the full width. */
+.sky-site .tm-notes { grid-template-columns: minmax(0, 1fr); gap: 48px; margin-top: 48px; }
+.sky-site .site-wide .tm-notes section { max-width: none; gap: 16px; }
+.sky-site .tm-notes section :is(p, ul, ol) { max-width: none; line-height: 1.7; }
+@media (min-width: 900px) {
+  .sky-site .tm-notes { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 64px; }
+  .sky-site .tm-notes section:has(.site-faq),
+  .sky-site .tm-notes section:nth-child(odd):nth-last-child(2) { grid-column: 1 / -1; }
+}
 
 /* ---- the tone marks tool: sky and sand panes, not white */
 .sky-site .tm-tool { background: color-mix(in oklab, var(--color-sand) 28%, var(--color-cloud)); }
@@ -2279,13 +2286,3 @@ html:has(.sky) body {
 }
 .sky-site .screen .tc-toggle button + button { border-left: 2px solid var(--color-ink); }
 .sky-site .screen .tc-toggle .tc-toggle-on { background: var(--color-beak); color: var(--color-ink); }
-
-/* ---- tool pages: the notes above the FAQ in two columns on wide screens */
-.sky-site .tm-notes section :is(p, ul, ol) { max-width: none; }
-@media (min-width: 900px) {
-  .sky-site .tm-notes section:not(:has(.site-faq)) { display: block; column-count: 2; column-gap: 48px; }
-  .sky-site .tm-notes section:not(:has(.site-faq)) > * { margin-bottom: 16px; }
-  .sky-site .tm-notes section:not(:has(.site-faq)) h2 { column-span: all; }
-  .sky-site .tm-notes section:not(:has(.site-faq)) h3 { break-after: avoid; }
-  .sky-site .tm-notes section:not(:has(.site-faq)) p { break-inside: avoid; }
-}
