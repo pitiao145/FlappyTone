@@ -605,15 +605,12 @@ html:has(.sky) body {
   --line: color-mix(in oklab, var(--color-ink) 18%, transparent);
   --line-soft: color-mix(in oklab, var(--color-ink) 9%, transparent);
   --line-strong: color-mix(in oklab, var(--color-ink) 30%, transparent);
-  background: linear-gradient(
-    to bottom,
-    var(--color-sky-1) 0 140px,
-    var(--color-sky-2) 140px 280px,
-    var(--color-sky-3) 280px 420px,
-    var(--color-sky-4) 420px 560px,
-    var(--color-sky-5) 560px
-  );
+  /* One solid sky; only the landing hero has the stepped bands. */
+  background: var(--color-sky-5);
 }
+
+/* The bar sits on the same solid sky before it floats. */
+.sky-site .sky-nav-bar:not(.is-compact) { background: var(--color-sky-5); }
 
 .sky-site-main {
   max-width: var(--container);
