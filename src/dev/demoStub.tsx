@@ -11,7 +11,7 @@
  */
 export function DemoLoop({
   width = 380,
-  height = Math.round((width * 1404) / 708),
+  height = Math.round((width * 1734) / 796),
 }: {
   width?: number;
   height?: number;
@@ -29,7 +29,7 @@ export function DemoLoop({
 /** Stand-in for `VisualiserDemoLoop` — 1696:1694, the visualiser clip's native size. */
 export function VisualiserDemoLoop({
   width = 440,
-  height = Math.round((width * 1694) / 1696),
+  height = Math.round((width * 1936) / 1968),
 }: {
   width?: number;
   height?: number;
