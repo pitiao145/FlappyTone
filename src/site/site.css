@@ -2247,6 +2247,7 @@ html:has(.sky) body {
 /* ---- example and word cards: sand cards with an ink edge on the sky */
 .sky-site .site-examples li,
 .sky-site .say-page ul.say-index a,
+.sky-site .say-page .say-card,
 .sky-site .tc-ref-card {
   background: var(--color-card);
   border: 2px solid var(--color-ink);
@@ -2288,21 +2289,3 @@ html:has(.sky) body {
   .sky-site .tm-notes section:not(:has(.site-faq)) h3 { break-after: avoid; }
   .sky-site .tm-notes section:not(:has(.site-faq)) p { break-inside: avoid; }
 }
-
-/* ---- tool pages: the FAQ as cards, two to a row on wide screens */
-.sky-site .tm-notes section:has(.site-faq) {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
-  gap: 16px;
-  align-items: start;
-}
-.sky-site .tm-notes section:has(.site-faq) > h2 { grid-column: 1 / -1; }
-.sky-site .tm-notes .site-faq {
-  padding: 0;
-  border: 2px solid var(--color-ink);
-  border-radius: var(--radius);
-  background: var(--color-card);
-}
-.sky-site .tm-notes .site-faq summary { padding: 16px 20px; border-radius: var(--radius); }
-.sky-site .tm-notes .site-faq summary::after { font-family: var(--font-display); color: var(--color-ink); }
-.sky-site .tm-notes .site-faq p { margin: 0; padding: 0 20px 16px; color: var(--color-ink-2); }
