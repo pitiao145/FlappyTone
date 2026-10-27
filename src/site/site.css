@@ -2288,3 +2288,16 @@ html:has(.sky) body {
 }
 .sky-site .screen .tc-toggle button + button { border-left: 2px solid var(--color-ink); }
 .sky-site .screen .tc-toggle .tc-toggle-on { background: var(--color-beak); color: var(--color-ink); }
+
+/* ---- the tone chart, centred with its legend and note */
+.sky-site .site-tone-chart { align-items: center; text-align: center; }
+.sky-site .site-tone-chart svg { margin-inline: auto; }
+.sky-site .site-tone-chart figcaption { justify-content: center; }
+
+/* ---- /say: the word cards four to a row in a narrower box, one height */
+.sky-site .say-page ul.say-index { max-width: 760px; margin-inline: auto; width: 100%; }
+@media (min-width: 760px) {
+  .sky-site .say-page ul.say-index { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.sky-site .say-page ul.say-index li { display: flex; }
+.sky-site .say-page ul.say-index a { flex: 1; }
