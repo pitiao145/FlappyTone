@@ -133,6 +133,12 @@ export interface RunConfig {
    */
   singleWord?: Word;
   /**
+   * A fixed word order for a "game" run: gate i flies `wordSequence[i]`, and
+   * no gate spawns past the end, so no word repeats. The landing page's Try
+   * it now uses it. Unset (the game) draws tones and words as usual.
+   */
+  wordSequence?: Word[];
+  /**
    * The fixed tone sequence for `mode === "tutorial"`. Defaults to the full
    * teaching order (`TUTORIAL_TONES`); the calibration flight overrides it with
    * `CALIBRATION_TONES` (just the T1 and T3 gates that anchor the grid — up and
@@ -594,6 +600,8 @@ export class Run {
   private words: Word[];
   /** The one word a "single" mode run flies. Unused otherwise. */
   private readonly singleWord: Word | null;
+  /** `cfg.wordSequence`, or null to draw as usual. */
+  private readonly wordSequence: Word[] | null;
   /** The tutorial's fixed tone order and length. Full teach set, or the short
    * calibration set — see `CALIBRATION_TONES`. */
   private readonly tutorialTones: Tone[];
@@ -690,6 +698,7 @@ export class Run {
     this.releaseMicForCue = cfg.releaseMicForCue ?? false;
     this.words = wordsInStyle(cfg.words ?? [], this.speechStyle);
     this.singleWord = cfg.singleWord ? wordInStyle(cfg.singleWord, this.speechStyle) : null;
+    this.wordSequence = cfg.wordSequence ? wordsInStyle(cfg.wordSequence, this.speechStyle) : null;
     this.isCalibrationFlight = isCalibrationTones(cfg.tutorialTones);
     this.tutorialTones = cfg.tutorialTones ?? TUTORIAL_TONES;
     this.drillTone = cfg.drillTone ?? null;
@@ -1463,10 +1472,12 @@ export class Run {
       const word =
         this.mode === "single"
           ? this.singleWord
-          : this.isCalibrationFlight
-            ? (this.calibrationWordFor(this.spawnedTones.length) ??
-              pickWord(this.words, tone, this.spawnedWords, this.rand))
-            : pickWord(this.words, tone, this.spawnedWords, this.rand);
+          : this.wordSequence
+            ? (this.wordSequence[this.spawnedTones.length] ?? null)
+            : this.isCalibrationFlight
+              ? (this.calibrationWordFor(this.spawnedTones.length) ??
+                pickWord(this.words, tone, this.spawnedWords, this.rand))
+              : pickWord(this.words, tone, this.spawnedWords, this.rand);
       this.gates.push(makeGate(word ?? tone, this.nextSpawnX(), this.difficulty));
       this.spawnedTones.push(tone);
       if (word) this.spawnedWords.push(word);
@@ -1516,6 +1527,9 @@ export class Run {
     }
     if (this.mode === "drill") {
       return this.drillTone;
+    }
+    if (this.wordSequence) {
+      return this.wordSequence[this.spawnedTones.length]?.tone ?? null;
     }
     return nextTone(this.spawnedTones, this.rand);
   }

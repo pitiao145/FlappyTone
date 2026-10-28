@@ -93,3 +93,15 @@ describe("Run speechStyle", () => {
     expect(new Run({ mode: "game", width: 400, words }).speechStyle).toBe("textbook");
   });
 });
+
+describe("Run wordSequence", () => {
+  it("flies the given words once each, in order, then spawns no more", () => {
+    const seq = [word("c", 2, false), word("a", 1, false), word("e", 4, false)];
+    const run = new Run({ mode: "game", width: 400, words: seq, wordSequence: seq });
+    for (let i = 0; i < 2000; i++) run.tickFrame(16, i * 16);
+    const ids = run.snapshot().gates.map((g) => g.word?.id);
+    expect(ids.slice(0, 3)).toEqual(["c", "a", "e"].slice(0, ids.length));
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.length).toBeLessThanOrEqual(3);
+  });
+});

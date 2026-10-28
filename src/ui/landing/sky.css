@@ -414,6 +414,37 @@
 .sky-try-over * { min-width: 0; max-width: 100%; box-sizing: border-box; }
 .sky-try-over .screen.gameover-screen { margin-top: 0; text-align: left; }
 .go-demo-actions { display: grid; gap: 8px; justify-items: center; }
+/* The signup pitch: a game-over card in the board CTA's gold frame. */
+.sky-try-over .go-demo-pitch {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
+  border-color: var(--beak);
+  box-shadow: var(--shadow-sticker-pro);
+}
+.sky-try-over .go-demo-pitch p { margin: 0; }
+/* The game's ghost button is see-through; over the game's sky it vanished. */
+.sky-try-over .screen button.go-btn-ghost {
+  border: 2px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+}
+/* Try it now, with a hand-drawn arrow pointing at it (same as "See the gates"). */
+.sky-try-cta {
+  z-index: 1;
+  align-self: end;
+  display: grid;
+  justify-items: center;
+  margin-bottom: 32px;
+}
+.sky-try-cta .sky-try-button { margin-bottom: 0; }
+.sky-try-arrow {
+  margin: 0 0 2px 48px;
+  color: var(--color-ink);
+  text-shadow: 0 0 6px #fff, 0 0 2px #fff;
+}
+.sky-try-arrow .sky-arrow { stroke: var(--color-ink); }
 
 @media (min-width: 561px) {
   .lp-sky .sky-try-game { width: auto; height: min(calc(100svh - 168px), 760px); }

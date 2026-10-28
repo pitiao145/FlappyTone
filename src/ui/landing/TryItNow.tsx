@@ -33,22 +33,39 @@ function loadMini(): Promise<MiniModule> {
 
 const GATES = 10;
 
+function shuffle<T>(items: T[]): T[] {
+  const a = [...items];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 /**
- * A fresh random draw of `GATES` words from the pool, one per round, spread
- * evenly over the four tones (the run picks a tone first, then a word of it).
+ * Words already flown on this page load. In memory only (the demo writes
+ * nothing), so "One more round" brings new words until the pool runs out.
+ */
+const played = new Set<string>();
+
+/**
+ * A fresh draw of `GATES` words for one round: spread evenly over the four
+ * tones, none flown earlier on this page load (when the pool allows), in a
+ * random order. The run flies exactly these, so none repeats in a round.
  */
 function draw(pool: Word[]): Word[] {
-  const shuffled = [...pool];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  let fresh = pool.filter((w) => !played.has(w.id));
+  if (fresh.length < GATES) {
+    played.clear();
+    fresh = pool;
   }
-  const byTone = [1, 2, 3, 4].map((t) => shuffled.filter((w) => w.tone === t));
+  const byTone = [1, 2, 3, 4].map((t) => shuffle(fresh.filter((w) => w.tone === t)));
   const out: Word[] = [];
   for (let i = 0; out.length < GATES && byTone.some((g) => i < g.length); i++) {
-    for (const g of byTone) if (i < g.length && out.length < GATES) out.push(g[i]);
+    for (const g of shuffle(byTone)) if (i < g.length && out.length < GATES) out.push(g[i]);
   }
-  return out;
+  for (const w of out) played.add(w.id);
+  return shuffle(out);
 }
 const W = 420;
 const H = 640;
@@ -213,9 +230,18 @@ export function TryItNow() {
         {!live && <DemoLoop width={340} />}
 
         {step.kind === "demo" && (
-          <button className="sky-btn sky-try-button" onClick={open}>
-            Try it now
-          </button>
+          <div className="sky-try-cta">
+            <p className="sky-arrow-note sky-try-arrow" aria-hidden="true">
+              {brand.tryArrow}
+              <svg viewBox="0 0 64 56" className="sky-arrow">
+                <path d="M4 10 C 22 2, 38 6, 40 18 C 42 28, 30 30, 30 22 C 30 14, 46 14, 52 28 L 54 44" />
+                <path d="M46 38 L 54 46 L 60 36" />
+              </svg>
+            </p>
+            <button className="sky-btn sky-try-button" onClick={open}>
+              Try it now
+            </button>
+          </div>
         )}
         {step.kind === "loading" && <p className="sky-try-panel" role="status">Loading the game…</p>}
         {step.kind === "preparing" && (

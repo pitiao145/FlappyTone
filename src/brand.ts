@@ -42,9 +42,14 @@ export const brand = {
 
   /** The Try it now end screen (the real game-over, demo variant). */
   demoGameOver: {
-    signup: "Sign up free to track your progress",
+    pitchTitle: "Like it? There's more",
+    pitchBody: "Track your progress, choose your level, speech style and more.",
+    signup: "Sign up free",
     retry: "One more round",
   },
+
+  /** The hand-drawn arrow pointing at the hero demo's Try it now button. */
+  tryArrow: "Try it out now!",
 
   /** The two teaser cards directly under the hero: Play vs. Visualise. */
   heroCards: {

@@ -34,10 +34,15 @@ export function DemoGameOver({
 
       {weakest && <CoachCard weakest={weakest} breakdown={breakdown} />}
 
-      <div className="go-demo-actions">
+      <section className="go-card go-demo-pitch">
+        <h3 className="go-coach-title">{brand.demoGameOver.pitchTitle}</h3>
+        <p className="go-coach-body">{brand.demoGameOver.pitchBody}</p>
         <button type="button" className="go-btn-primary" onClick={onSignup}>
           {brand.demoGameOver.signup}
         </button>
+      </section>
+
+      <div className="go-demo-actions">
         <button type="button" className="go-btn-ghost" onClick={onRetry}>
           {brand.demoGameOver.retry}
         </button>

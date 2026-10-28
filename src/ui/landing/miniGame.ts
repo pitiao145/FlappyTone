@@ -108,6 +108,8 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<MiniGame> {
     cueStyle: "pause",
     cueDurationMsFor: (word) => (word?.clipS ?? 0.8) * 1000,
     words: opts.words,
+    // Exactly these words, in this order: no repeats within a round.
+    wordSequence: opts.words,
     speechStyle: "textbook",
   });
 
