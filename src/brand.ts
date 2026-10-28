@@ -281,6 +281,7 @@ export const brand = {
     { id: "how-it-works", title: "How it works", navLabel: "How it works", inNav: true },
     { id: "real-speech", title: "Based on real speech, not the textbook", navLabel: "Real speech" },
     { id: "visualiser", title: "Tone visualiser", navLabel: "Visualiser", inNav: true },
+    { id: "progress", title: "See your tones take shape", navLabel: "Progress", inNav: true },
     { id: "tone-pairs", title: "Tone pairs", navLabel: "Tone pairs" },
     { id: "options", title: "Game modes and settings" },
     { id: "leaderboard", title: "Leaderboard", navLabel: "Leaderboard" },
@@ -315,6 +316,31 @@ export const brand = {
     notTextbook:
       "Most tone practice is a chart and rules to memorize, and it doesn't stick. Watching your own voice trace the shape gives you the picture a textbook never does.",
     visualiser: "Say mǎ ten times and watch every try stack on the target shape. No score, no pressure.",
+    /** The Progress section (`src/ui/landing/ProgressSection.tsx`). No name for the native speaker. */
+    progress: {
+      title: "See your tones take shape",
+      source: "Real data from the founder's account",
+      shape: {
+        badge: "Pro",
+        title: "Your average 3rd tone, next to a native speaker's, and next to you a month ago.",
+        legend: { native: "Native speaker's average", now: "Yours now", earlier: "Yours earlier" },
+        alt: "Tone 3 pitch shape. A native speaker's average dips low and rises. The player's line from a month ago is flatter and sits off the shape. The player's line now follows the native curve closely.",
+      },
+      accuracy: {
+        badges: ["Free: last 5 runs", "Pro: every run"],
+        title: "Nailing single tones? Pairs are where it breaks.",
+        toggle: ["Last 5 runs", "All time"],
+        toggleTags: ["Free", "Pro"],
+        pairsHeading: "Tone pairs",
+        weak: "Your weak spot",
+        alt: "Accuracy per tone, all time: tone 1 81 percent, tone 2 58, tone 3 63, tone 4 65. Tone pairs: 4 then 1 is 15 percent, 3 then 3 is 48, 2 then 1 is 75.",
+      },
+      trend: {
+        badge: "Pro",
+        title: "Watch your accuracy climb.",
+        alt: "Tone 1 accuracy by day in October: 65 percent on the 1st, 82 on the 9th, 71 on the 11th, 78 on the 13th, 86 on the 15th, 84 on the 20th and 96 on the 26th.",
+      },
+    },
     pairsTitle: "Level up to tone pairs when you're ready",
     pairs: "Once single tones feel easy, Tone Pairs flies two syllables at a time: 好玩, 以前 and 240+ more. Each corridor comes from the exact recording, sandhi and all.",
     leaderboard: "Sign up free and every run counts. This week, this month or all-time.",

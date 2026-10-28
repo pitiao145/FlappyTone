@@ -15,6 +15,7 @@ import { PRO_PRICE } from "../plan.ts";
 import { TONE_LINE_COLOR } from "../toneColors.ts";
 import { ToneAverageCard } from "../ToneAverageCard.tsx";
 import { NotifyForm, TONES, go, useWordsByTone } from "./shared.tsx";
+import { ProgressSection } from "./ProgressSection.tsx";
 import { TryItNow } from "./TryItNow.tsx";
 import "./sky.css";
 
@@ -271,6 +272,8 @@ export function SkyLanding() {
           </div>
         </div>
       </section>
+
+      <ProgressSection />
 
       <section id="tone-pairs" className="sky-sand">
         <div className="sky-inner sky-split">
