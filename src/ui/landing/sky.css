@@ -397,7 +397,18 @@
 }
 .sky-try-voices { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .sky-try-panel .sky-small { display: block; margin-top: 8px; font-weight: 400; }
-.sky-try-score { font: 400 1.6rem/1.1 var(--font-display); }
+/* The end screen: the game's own game-over parts (App.css .go-*), laid over
+   the demo and scrolled inside it. Top pad leaves room for the bird. */
+.sky-try-over {
+  z-index: 1;
+  align-self: stretch;
+  width: min(100%, 360px);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 40px 16px 8px;
+}
+.sky-try-over .screen.gameover-screen { margin-top: 0; text-align: left; }
+.go-demo-actions { display: grid; gap: 8px; justify-items: center; }
 
 @media (min-width: 561px) {
   .lp-sky .sky-try-game { width: auto; height: min(calc(100svh - 168px), 760px); }

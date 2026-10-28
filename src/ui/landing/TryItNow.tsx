@@ -16,6 +16,8 @@ import { DEFAULT_SPEAKER_ID } from "../../data/catalogRows.ts";
 import fallback from "../../data/wordsFallback.json";
 import { DemoLoop } from "../DemoLoop.tsx";
 import { go } from "./shared.tsx";
+import { DemoGameOver } from "./DemoGameOver.tsx";
+import { toneBreakdown, type RunStats } from "../../game/scoring.ts";
 
 type MiniModule = typeof import("./miniGame.ts");
 
@@ -35,25 +37,13 @@ const GATES = 6;
 const W = 420;
 const H = 640;
 
-/** An encouraging line and a nudge into the game, by how the run went. */
-function verdict(cleared: number, total: number): { title: string; nudge: string } {
-  const share = total ? cleared / total : 0;
-  if (share >= 0.8) {
-    return { title: "Great ear!", nudge: "You're ready for more. The game has 450+ words and real tone pairs." };
-  }
-  if (share >= 0.4) {
-    return { title: "Nice start!", nudge: "A few runs a day and these shapes start to stick. Keep going in the game." };
-  }
-  return { title: "Everyone starts here", nudge: "Tones click with practice. The game builds them up one word at a time." };
-}
-
 type Step =
   | { kind: "demo" }
   | { kind: "loading" }
   | { kind: "choose"; mini: MiniModule; calibrated: boolean }
   | { kind: "preparing" }
   | { kind: "playing" }
-  | { kind: "done"; cleared: number; total: number; unheard: number }
+  | { kind: "done"; stats: RunStats }
   | { kind: "error"; message: string };
 
 /**
@@ -122,8 +112,28 @@ export function TryItNow() {
           setHud(null);
           stopRef.current = null;
           trackTry("finished");
-          captureGameEvent({ type: "tool_summary", tool: "try-now", cleared: r.cleared, total: r.total, unheard: r.unheard });
-          setStep({ kind: "done", ...r });
+          const acc = Object.fromEntries(toneBreakdown(r.stats).map((b) => [b.tone, b.pct === null ? null : Math.round(b.pct)]));
+          const t = r.perTone;
+          captureGameEvent({
+            type: "tool_summary",
+            tool: "try-now",
+            cleared: r.cleared,
+            total: r.total,
+            unheard: r.unheard,
+            t1Gates: t[1].gates,
+            t1Cleared: t[1].cleared,
+            t1Acc: acc[1] ?? null,
+            t2Gates: t[2].gates,
+            t2Cleared: t[2].cleared,
+            t2Acc: acc[2] ?? null,
+            t3Gates: t[3].gates,
+            t3Cleared: t[3].cleared,
+            t3Acc: acc[3] ?? null,
+            t4Gates: t[4].gates,
+            t4Cleared: t[4].cleared,
+            t4Acc: acc[4] ?? null,
+          });
+          setStep({ kind: "done", stats: r.stats });
         },
       })
       .then((game) => {
@@ -222,20 +232,18 @@ export function TryItNow() {
           </div>
         )}
         {step.kind === "done" && (
-          <div className="sky-try-panel">
-            <p className="sky-try-score">{verdict(step.cleared, step.total).title}</p>
-            <p>
-              {step.cleared} of {step.total} tunnels cleared. {verdict(step.cleared, step.total).nudge}
-            </p>
-            <button className="sky-btn" onClick={() => {
-                captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "finished" });
+          <div className="sky-try-over">
+            <DemoGameOver
+              stats={step.stats}
+              onSignup={() => {
+                captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_signup" });
                 go("play", "try_now_done");
-              }}>
-              Keep practising, free
-            </button>
-            <button className="sky-btn sky-btn-ghost" onClick={open}>
-              One more round
-            </button>
+              }}
+              onRetry={() => {
+                captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_retry" });
+                void open();
+              }}
+            />
           </div>
         )}
         {step.kind === "error" && (

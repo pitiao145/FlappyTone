@@ -349,10 +349,32 @@ export type AnalyticsEvent =
       voice?: "lower" | "higher" | "saved";
       stage?: "choose" | "preparing" | "playing";
     }
-  /** One finished Try it now run: counts only. `unheard` gates are neutral. */
-  | { type: "tool_summary"; tool: "try-now"; cleared: number; total: number; unheard: number }
-  /** Try it now's way into /app, from its end screen. */
-  | { type: "tool_cta_click"; tool: "try-now"; placement: "finished" }
+  /**
+   * One finished Try it now run: counts only. `unheard` gates are neutral.
+   * Per tone: `tNGates` flown, `tNCleared` flown through, `tNAcc` this run's
+   * tone accuracy in % (null when that tone had no heard gate).
+   */
+  | {
+      type: "tool_summary";
+      tool: "try-now";
+      cleared: number;
+      total: number;
+      unheard: number;
+      t1Gates: number;
+      t1Cleared: number;
+      t1Acc: number | null;
+      t2Gates: number;
+      t2Cleared: number;
+      t2Acc: number | null;
+      t3Gates: number;
+      t3Cleared: number;
+      t3Acc: number | null;
+      t4Gates: number;
+      t4Cleared: number;
+      t4Acc: number | null;
+    }
+  /** Try it now's way into /app or a new round, from its end screen. */
+  | { type: "tool_cta_click"; tool: "try-now"; placement: "demo_gameover_signup" | "demo_gameover_retry" }
   /** /app opened from the tone test's CTA (`?src=/tools/tone-test`), once per load. */
   | { type: "app_open"; source: "tone-test"; weak_pair: string }
   /**

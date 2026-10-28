@@ -2,12 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { levelFor, runXp, totalXp } from "../game/xp.ts";
 import { useSessionVersion } from "../data/sessionVersion.ts";
 import { THEMES } from "../game/themes.ts";
-import {
-  MIN_SCORED_GATES_FOR_TAKEAWAY,
-  takeaway,
-  toneBreakdown,
-  type RunStats,
-} from "../game/scoring.ts";
+import { toneBreakdown, type RunStats } from "../game/scoring.ts";
 import { loadRunHistory } from "../game/runHistory.ts";
 import { loadDailyRuns } from "../game/dailyLimit.ts";
 import { hasShownFeedbackToday, markFeedbackShown } from "../game/runFeedback.ts";
@@ -31,7 +26,7 @@ import { useTier } from "../data/tier.ts";
 import type { AnalyticsEvent } from "../analytics/session.ts";
 import { saveSettings, type CalibrationSettings } from "../game/settings.ts";
 import type { RangeHalves } from "../pitch/calibration.ts";
-import { ToneMarkIcon, TONE_SHORT_LABEL } from "./toneIcons.tsx";
+import { CoachCard, GameOverHeader, weakestTone } from "./GameOverParts.tsx";
 import { ShareIcon } from "./icons.tsx";
 import { renderShareCard } from "../share/renderCard.ts";
 import { downloadShareCard, shareRunResult } from "../share/share.ts";
@@ -147,20 +142,8 @@ export function GameOver({
     };
   }, [mode, stats, history, tier]);
 
-  /**
-   * The weak tone the coach card is about — the same entry `takeaway()`
-   * names, picked by the same eligibility rule, so the card's headline and
-   * its body can never disagree. `null` means no tone had enough scored
-   * gates to judge, and the card doesn't render at all.
-   */
-  const weakest = useMemo(() => {
-    const eligible = breakdown.filter(
-      (b): b is typeof b & { pct: number } =>
-        b.pct !== null && b.gates >= MIN_SCORED_GATES_FOR_TAKEAWAY,
-    );
-    if (eligible.length === 0) return null;
-    return eligible.reduce((min, b) => (b.pct < min.pct ? b : min));
-  }, [breakdown]);
+  /** The coach card's weak tone (`weakestTone`); null hides the card. */
+  const weakest = useMemo(() => weakestTone(breakdown), [breakdown]);
 
   /**
    * Read once on mount, same rationale as `history` above: GameApp's
@@ -453,41 +436,38 @@ export function GameOver({
         />
       )}
       {/* ---- 1. header / score card, with the Pip breaking out of its corner */}
-      <header className="go-header">
-        <img className="go-bird" src="/Bird-up-no-halo.png" alt="" aria-hidden="true" />
-        <div className="go-header-score">
-          <p className="go-eyebrow">{isNewBest ? "New personal best" : "Run over"}</p>
-          <p className="go-score-line">
-            <span className="go-score">{stats.score.toLocaleString()}</span>
-            <span className="go-score-unit">score</span>
-          </p>
-          <p className="go-best">
-            Best {history.bestScore.toLocaleString()} · ×{stats.bestMultiplier}
-          </p>
-          {xpGain && (
-            <p className="go-xp-chip">
-              <span>+{xpGain.gained.toLocaleString()} XP</span>
-              {xpGain.levelUp && <span className="go-xp-chip-up">Level {xpGain.after.level}!</span>}
-            </p>
-          )}
-          {challengeScore != null && (
-            <p className="go-challenge">
-              {stats.score >= challengeScore
-                ? `You beat it! 🎉 (target ${challengeScore.toLocaleString()})`
-                : `So close — ${challengeScore.toLocaleString()}${challengeName ? ` (${challengeName})` : ""} to beat.`}
-            </p>
-          )}
-        </div>
-        {/* Share always lives here (right of the score). Play again joins it
-            on desktop; on mobile Play again stays in the sticky footer. */}
-        <div className="go-header-actions">
-          <div className="go-share-cluster">
-            {shareCopied && <p className="note go-share-copied">Copied to clipboard!</p>}
-            {shareButton}
+      <GameOverHeader
+        eyebrow={isNewBest ? "New personal best" : "Run over"}
+        score={stats.score}
+        actions={
+          /* Share always lives here (right of the score). Play again joins it
+             on desktop; on mobile Play again stays in the sticky footer. */
+          <div className="go-header-actions">
+            <div className="go-share-cluster">
+              {shareCopied && <p className="note go-share-copied">Copied to clipboard!</p>}
+              {shareButton}
+            </div>
+            {playAgainButton}
           </div>
-          {playAgainButton}
-        </div>
-      </header>
+        }
+      >
+        <p className="go-best">
+          Best {history.bestScore.toLocaleString()} · ×{stats.bestMultiplier}
+        </p>
+        {xpGain && (
+          <p className="go-xp-chip">
+            <span>+{xpGain.gained.toLocaleString()} XP</span>
+            {xpGain.levelUp && <span className="go-xp-chip-up">Level {xpGain.after.level}!</span>}
+          </p>
+        )}
+        {challengeScore != null && (
+          <p className="go-challenge">
+            {stats.score >= challengeScore
+              ? `You beat it! 🎉 (target ${challengeScore.toLocaleString()})`
+              : `So close — ${challengeScore.toLocaleString()}${challengeName ? ` (${challengeName})` : ""} to beat.`}
+          </p>
+        )}
+      </GameOverHeader>
 
       {xpGain && (
         <section className={`go-xp${xpGain.levelUp ? " is-level-up" : ""}`} aria-live="polite">
@@ -516,22 +496,12 @@ export function GameOver({
         {/* ---- 3. coach card */}
         <div className="go-col">
           {weakest && (
-            <section className="go-card go-coach">
-              <div className="go-coach-head">
-                <span className="go-coach-mark">
-                  <ToneMarkIcon tone={weakest.tone} className="go-coach-icon" />
-                </span>
-                <span className="go-coach-eyebrow">Coach</span>
-              </div>
-              <h3 className="go-coach-title">
-                Weak spot: Tone {weakest.tone} ({TONE_SHORT_LABEL[weakest.tone]})
-              </h3>
-              <p className="go-coach-body">{takeaway(breakdown)}</p>
+            <CoachCard weakest={weakest} breakdown={breakdown}>
               <button type="button" className="go-btn-primary" onClick={onVisualiser}>
                 Practise in visualiser →
               </button>
               {!recalOffering && fineTuneLink}
-            </section>
+            </CoachCard>
           )}
         </div>
 

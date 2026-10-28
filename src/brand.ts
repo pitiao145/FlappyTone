@@ -40,6 +40,12 @@ export const brand = {
   /** Caption under the demo loop. */
   demoCaption: "Flappytone in action.",
 
+  /** The Try it now end screen (the real game-over, demo variant). */
+  demoGameOver: {
+    signup: "Sign up free to track your tones over time",
+    retry: "One more round",
+  },
+
   /** The two teaser cards directly under the hero: Play vs. Visualise. */
   heroCards: {
     play: {

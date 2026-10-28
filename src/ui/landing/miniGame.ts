@@ -17,6 +17,8 @@
 import { ensureMic, setFrameSink, stopMic } from "../../audio/session.ts";
 import { MicError } from "../../audio/mic.ts";
 import { Run, type RunSnapshot } from "../../game/run.ts";
+import type { RunStats } from "../../game/scoring.ts";
+import type { Tone } from "../../game/gates.ts";
 import { loadSettings, type CalibrationSettings } from "../../game/settings.ts";
 import { sessionNoiseMeter, startingNoiseFloor } from "../../game/sessionNoise.ts";
 import { tuning } from "../../game/tuning.ts";
@@ -53,6 +55,10 @@ export interface MiniResult {
   total: number;
   /** Gates we could not hear: neutral, never counted against the player (hard rule 8). */
   unheard: number;
+  /** The run's real stats, as `Run` built them: what the end screen shows. */
+  stats: RunStats;
+  /** Single-syllable gates per tone: flown, and flown through. For tracking. */
+  perTone: Record<Tone, { gates: number; cleared: number }>;
 }
 
 export interface MiniGameOptions {
@@ -139,7 +145,18 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<MiniGame> {
     lockWorldTheme(null);
   };
 
+  const CLEARED = ["perfect", "good", "ok"];
   const count = (snap: RunSnapshot, ...o: string[]) => snap.gateLog.filter((g) => o.includes(g.outcome)).length;
+  const perTone = (snap: RunSnapshot): MiniResult["perTone"] => {
+    const out = { 1: { gates: 0, cleared: 0 }, 2: { gates: 0, cleared: 0 }, 3: { gates: 0, cleared: 0 }, 4: { gates: 0, cleared: 0 } };
+    for (const g of snap.gateLog) {
+      if (g.tones.length !== 1 || !(g.tone in out)) continue;
+      const t = out[g.tone as Tone];
+      t.gates++;
+      if (CLEARED.includes(g.outcome)) t.cleared++;
+    }
+    return out;
+  };
 
   const tick = (now: number) => {
     run.tickFrame(now - last, now);
@@ -156,10 +173,12 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<MiniGame> {
     }
 
     if (snap.over || snap.gateLog.length >= opts.gates) {
-      const result = {
-        cleared: count(snap, "perfect", "good", "ok"),
+      const result: MiniResult = {
+        cleared: count(snap, ...CLEARED),
         total: snap.gateLog.length,
         unheard: count(snap, "unheard"),
+        stats: snap.stats,
+        perTone: perTone(snap),
       };
       stop();
       opts.onEnd(result);
