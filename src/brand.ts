@@ -281,7 +281,7 @@ export const brand = {
     { id: "how-it-works", title: "How it works", navLabel: "How it works", inNav: true },
     { id: "real-speech", title: "Based on real speech, not the textbook", navLabel: "Real speech" },
     { id: "visualiser", title: "Tone visualiser", navLabel: "Visualiser", inNav: true },
-    { id: "progress", title: "See your tones take shape", navLabel: "Progress", inNav: true },
+    { id: "progress", title: "See your tones take shape", navLabel: "Track progress", inNav: true },
     { id: "tone-pairs", title: "Tone pairs", navLabel: "Tone pairs" },
     { id: "options", title: "Game modes and settings" },
     { id: "leaderboard", title: "Leaderboard", navLabel: "Leaderboard" },
