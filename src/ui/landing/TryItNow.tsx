@@ -207,6 +207,16 @@ export function TryItNow() {
 
   return (
     <figure id="demo" className="sky-screen sky-try">
+      {/* Outside the frame: beside it on wide screens, above it on phones. */}
+      {step.kind === "demo" && (
+        <p className="sky-arrow-note sky-try-arrow" aria-hidden="true">
+          {brand.tryArrow}
+          <svg viewBox="0 0 64 56" className="sky-arrow">
+            <path d="M4 10 C 22 2, 38 6, 40 18 C 42 28, 30 30, 30 22 C 30 14, 46 14, 52 28 L 54 44" />
+            <path d="M46 38 L 54 46 L 60 36" />
+          </svg>
+        </p>
+      )}
       <div className="sky-try-stage">
         {/* The canvas exists from the first tap so `start` can draw at once. */}
         <div className="stage game-stage sky-try-game" hidden={!live}>
@@ -244,13 +254,6 @@ export function TryItNow() {
 
         {step.kind === "demo" && (
           <div className="sky-try-cta">
-            <p className="sky-arrow-note sky-try-arrow" aria-hidden="true">
-              {brand.tryArrow}
-              <svg viewBox="0 0 64 56" className="sky-arrow">
-                <path d="M4 10 C 22 2, 38 6, 40 18 C 42 28, 30 30, 30 22 C 30 14, 46 14, 52 28 L 54 44" />
-                <path d="M46 38 L 54 46 L 60 36" />
-              </svg>
-            </p>
             <button className="sky-btn sky-try-button" onClick={open}>
               Try it now
             </button>

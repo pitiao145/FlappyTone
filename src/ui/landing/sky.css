@@ -464,10 +464,23 @@
   margin-bottom: 32px;
 }
 .sky-try-cta .sky-try-button { margin-bottom: 0; }
+/* Wide screens: in the gap left of the frame, near its top, pointing at it. */
+.sky-try { position: relative; }
 .sky-try-arrow {
-  margin: 0 0 2px 48px;
+  position: absolute;
+  top: 8%;
+  right: calc(100% + 8px);
+  margin: 0;
+  white-space: nowrap;
   color: var(--color-ink);
-  text-shadow: 0 0 6px #fff, 0 0 2px #fff;
+}
+/* Phones: the hero stacks, so the note sits above the frame, on its left. */
+@media (max-width: 560px) {
+  .sky-try-arrow {
+    position: static;
+    justify-content: flex-start;
+    margin: 0 0 4px 8px;
+  }
 }
 .sky-try-arrow .sky-arrow { stroke: var(--color-ink); }
 
