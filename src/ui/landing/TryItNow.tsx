@@ -49,16 +49,25 @@ function shuffle<T>(items: T[]): T[] {
  */
 const played = new Set<string>();
 
+/** "single": one-syllable words. "pairs": the "Too easy?" round of two-syllable words. */
+type Level = "single" | "pairs";
+
 /**
- * A fresh draw of `GATES` words for one round: spread evenly over the four
- * tones, none flown earlier on this page load (when the pool allows), in a
- * random order. The run flies exactly these, so none repeats in a round.
+ * A fresh draw of `GATES` words for one round: none flown earlier on this
+ * page load (when the pool allows), in a random order. Single syllables are
+ * spread evenly over the four tones. The run flies exactly these, so none
+ * repeats in a round.
  */
-function draw(pool: Word[]): Word[] {
+function draw(pool: Word[], level: Level): Word[] {
   let fresh = pool.filter((w) => !played.has(w.id));
   if (fresh.length < GATES) {
-    played.clear();
+    for (const w of pool) played.delete(w.id);
     fresh = pool;
+  }
+  if (level === "pairs") {
+    const out = shuffle(fresh).slice(0, GATES);
+    for (const w of out) played.add(w.id);
+    return out;
   }
   const byTone = [1, 2, 3, 4].map((t) => shuffle(fresh.filter((w) => w.tone === t)));
   const out: Word[] = [];
@@ -77,7 +86,7 @@ type Step =
   | { kind: "choose"; mini: MiniModule; calibrated: boolean }
   | { kind: "preparing" }
   | { kind: "playing" }
-  | { kind: "done"; stats: RunStats }
+  | { kind: "done"; stats: RunStats; level: Level }
   | { kind: "error"; message: string };
 
 /**
@@ -94,11 +103,20 @@ export function TryItNow() {
   /** The game's HUD, polled like Game.tsx does (never per frame). */
   const [hud, setHud] = useState<RunSnapshot | null>(null);
   const [confettiDone, setConfettiDone] = useState(false);
+  /** The last round's module and voice, so "Too easy?" starts straight away. */
+  const lastRef = useRef<{ mini: MiniModule; voice: "lower" | "higher" } | null>(null);
 
   /** The app's guest pool: the beginner sampler, single syllables, free clips. */
-  const pool = useMemo(() => {
-    const all = wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID })));
-    return wordsForList(wordsForTier(all, "guest"), null, "beginner");
+  const pools = useMemo(() => {
+    const guest = wordsForTier(
+      wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID }))),
+      "guest",
+    );
+    return {
+      single: wordsForList(guest, null, "beginner"),
+      // The guest intermediate sampler's two-syllable words: real tone pairs.
+      pairs: wordsForList(guest, null, "intermediate").filter((w) => w.syllables === 2),
+    };
   }, []);
 
   useEffect(
@@ -122,9 +140,10 @@ export function TryItNow() {
     }
   };
 
-  const start = (mini: MiniModule, voice: "lower" | "higher") => {
+  const start = (mini: MiniModule, voice: "lower" | "higher", level: Level = "single") => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    lastRef.current = { mini, voice };
     setStep({ kind: "preparing" });
     trackTry("started", { voice: mini.hasSavedCalibration() ? "saved" : voice });
     const attempt = ++attemptRef.current;
@@ -135,7 +154,7 @@ export function TryItNow() {
         canvas,
         width: W,
         height: H,
-        words: draw(pool),
+        words: draw(pools[level], level),
         voice,
         gates: GATES,
         onReady: () => {
@@ -153,6 +172,7 @@ export function TryItNow() {
           captureGameEvent({
             type: "tool_summary",
             tool: "try-now",
+            level,
             cleared: r.cleared,
             total: r.total,
             unheard: r.unheard,
@@ -170,7 +190,7 @@ export function TryItNow() {
             t4Acc: acc[4] ?? null,
           });
           setConfettiDone(false);
-          setStep({ kind: "done", stats: r.stats });
+          setStep({ kind: "done", stats: r.stats, level });
         },
       })
       .then((game) => {
@@ -303,6 +323,17 @@ export function TryItNow() {
                 captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_retry" });
                 void open();
               }}
+              onHarder={
+                step.level === "single" && lastRef.current
+                  ? () => {
+                      const last = lastRef.current;
+                      if (!last) return;
+                      captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_pairs" });
+                      // Inside this tap, so the mic can reopen on iOS (hard rule 4).
+                      start(last.mini, last.voice, "pairs");
+                    }
+                  : undefined
+              }
             />
           </div>
         )}

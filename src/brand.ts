@@ -42,10 +42,15 @@ export const brand = {
 
   /** The Try it now end screen (the real game-over, demo variant). */
   demoGameOver: {
-    pitchTitle: "Like it? There's more",
-    pitchBody: "Track your progress, choose your level, speech style and more.",
+    pitchTitle: "Save your tone scores",
+    /** With this run's weakest tone; `pitchBodyAny` when no tone had enough gates. */
+    pitchBody: (tone: number, pct: number) =>
+      `Your Tone ${tone} is at ${pct}%. Sign up free to track it and watch it climb.`,
+    pitchBodyAny: "Sign up free to track your tones run after run and watch them climb.",
+    pitchMore: "Plus: choose your level, words and speech style.",
     signup: "Sign up free",
     retry: "One more round",
+    harder: "Too easy? Try real tone pairs",
   },
 
   /** The hand-drawn arrow pointing at the hero demo's Try it now button. */

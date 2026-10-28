@@ -357,6 +357,8 @@ export type AnalyticsEvent =
   | {
       type: "tool_summary";
       tool: "try-now";
+      /** "pairs" is the "Too easy?" round of two-syllable words. */
+      level: "single" | "pairs";
       cleared: number;
       total: number;
       unheard: number;
@@ -374,7 +376,7 @@ export type AnalyticsEvent =
       t4Acc: number | null;
     }
   /** Try it now's way into /app or a new round, from its end screen. */
-  | { type: "tool_cta_click"; tool: "try-now"; placement: "demo_gameover_signup" | "demo_gameover_retry" }
+  | { type: "tool_cta_click"; tool: "try-now"; placement: "demo_gameover_signup" | "demo_gameover_retry" | "demo_gameover_pairs" }
   /** /app opened from the tone test's CTA (`?src=/tools/tone-test`), once per load. */
   | { type: "app_open"; source: "tone-test"; weak_pair: string }
   /**

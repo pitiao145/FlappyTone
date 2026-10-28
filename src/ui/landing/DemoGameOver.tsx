@@ -14,10 +14,13 @@ export function DemoGameOver({
   stats,
   onSignup,
   onRetry,
+  onHarder,
 }: {
   stats: RunStats;
   onSignup: () => void;
   onRetry: () => void;
+  /** The "Too easy?" pairs round. Unset hides it (after a pairs round). */
+  onHarder?: () => void;
 }) {
   const breakdown = toneBreakdown(stats);
   const weakest = useMemo(() => weakestTone(breakdown), [breakdown]);
@@ -25,6 +28,21 @@ export function DemoGameOver({
   return (
     <div className="screen gameover-screen go-demo">
       <GameOverHeader eyebrow="Run over" score={stats.score} />
+
+      {/* The one thing to do next: right under the score, in its own colour. */}
+      <section className="go-card go-demo-pitch">
+        <img className="go-demo-pitch-bird" src="/Bird-up-no-halo.png" alt="" aria-hidden="true" />
+        <h3 className="go-demo-pitch-title">{brand.demoGameOver.pitchTitle}</h3>
+        <p className="go-demo-pitch-body">
+          {weakest
+            ? brand.demoGameOver.pitchBody(weakest.tone, Math.round(weakest.pct))
+            : brand.demoGameOver.pitchBodyAny}
+        </p>
+        <button type="button" className="go-btn-primary go-demo-pitch-btn" onClick={onSignup}>
+          {brand.demoGameOver.signup}
+        </button>
+        <p className="go-demo-pitch-more">{brand.demoGameOver.pitchMore}</p>
+      </section>
 
       {hasToneAccuracy(stats) && (
         <section className="go-card go-tones">
@@ -34,16 +52,13 @@ export function DemoGameOver({
 
       {weakest && <CoachCard weakest={weakest} breakdown={breakdown} />}
 
-      <section className="go-card go-demo-pitch">
-        <h3 className="go-coach-title">{brand.demoGameOver.pitchTitle}</h3>
-        <p className="go-coach-body">{brand.demoGameOver.pitchBody}</p>
-        <button type="button" className="go-btn-primary" onClick={onSignup}>
-          {brand.demoGameOver.signup}
-        </button>
-      </section>
-
       <div className="go-demo-actions">
-        <button type="button" className="go-btn-ghost" onClick={onRetry}>
+        {onHarder && (
+          <button type="button" className="go-btn-ghost" onClick={onHarder}>
+            {brand.demoGameOver.harder}
+          </button>
+        )}
+        <button type="button" className="go-subtle-link" onClick={onRetry}>
           {brand.demoGameOver.retry}
         </button>
       </div>

@@ -449,16 +449,41 @@
 .sky-try-over * { min-width: 0; max-width: 100%; box-sizing: border-box; }
 .sky-try-over .screen.gameover-screen { margin-top: 0; text-align: left; }
 .go-demo-actions { display: grid; gap: 8px; justify-items: center; }
-/* The signup pitch: a game-over card in the board CTA's gold frame. */
+/* The signup pitch: the one gold card, right under the score, so it reads
+   as the next step rather than one card among four. */
 .sky-try-over .go-demo-pitch {
+  position: relative;
   display: grid;
   gap: 8px;
   justify-items: center;
+  padding: 20px 16px 16px;
   text-align: center;
-  border-color: var(--beak);
-  box-shadow: var(--shadow-sticker-pro);
+  border: 2px solid var(--ink);
+  background: var(--beak);
+  box-shadow: var(--shadow-sticker);
+  color: var(--ink);
 }
-.sky-try-over .go-demo-pitch p { margin: 0; }
+.sky-try-over .go-demo-pitch p { margin: 0; color: var(--ink); }
+.go-demo-pitch-bird {
+  position: absolute;
+  top: -22px;
+  right: -8px;
+  width: 52px;
+  rotate: 8deg;
+  pointer-events: none;
+}
+.sky-try-over .go-demo-pitch-title {
+  margin: 0;
+  font: 400 1.35rem/1.1 var(--font-display);
+  color: var(--ink);
+}
+.go-demo-pitch-body { font-weight: 600; }
+.sky-try-over .screen .go-demo-pitch-btn {
+  width: 100%;
+  min-height: 52px;
+  font-size: 1.1rem;
+}
+.sky-try-over .go-demo-pitch .go-demo-pitch-more { font-size: 0.85rem; }
 /* The game's ghost button is see-through; over the game's sky it vanished. */
 .sky-try-over .screen button.go-btn-ghost {
   border: 2px solid var(--ink);

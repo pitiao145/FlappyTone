@@ -1444,6 +1444,16 @@ export class Run {
       this.gates.filter((g) => this.gateEnd(g) >= this.worldX).length <
       QUEUE_AHEAD
     ) {
+      // A fixed word order (single or multi-syllable) replaces every draw.
+      if (this.wordSequence) {
+        const w = this.wordSequence[this.spawnedWords.length];
+        if (!w) return;
+        this.gates.push(makeGate(w, this.nextSpawnX(), this.difficulty));
+        this.spawnedTones.push(w.tone);
+        this.spawnedWords.push(w);
+        continue;
+      }
+
       if (this.mode === "pairs") {
         if (!this.fillPairsGate()) return;
         continue;
@@ -1472,12 +1482,10 @@ export class Run {
       const word =
         this.mode === "single"
           ? this.singleWord
-          : this.wordSequence
-            ? (this.wordSequence[this.spawnedTones.length] ?? null)
-            : this.isCalibrationFlight
-              ? (this.calibrationWordFor(this.spawnedTones.length) ??
-                pickWord(this.words, tone, this.spawnedWords, this.rand))
-              : pickWord(this.words, tone, this.spawnedWords, this.rand);
+          : this.isCalibrationFlight
+            ? (this.calibrationWordFor(this.spawnedTones.length) ??
+              pickWord(this.words, tone, this.spawnedWords, this.rand))
+            : pickWord(this.words, tone, this.spawnedWords, this.rand);
       this.gates.push(makeGate(word ?? tone, this.nextSpawnX(), this.difficulty));
       this.spawnedTones.push(tone);
       if (word) this.spawnedWords.push(word);
@@ -1527,9 +1535,6 @@ export class Run {
     }
     if (this.mode === "drill") {
       return this.drillTone;
-    }
-    if (this.wordSequence) {
-      return this.wordSequence[this.spawnedTones.length]?.tone ?? null;
     }
     return nextTone(this.spawnedTones, this.rand);
   }

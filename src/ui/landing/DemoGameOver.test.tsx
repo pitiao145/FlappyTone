@@ -11,11 +11,12 @@ describe("DemoGameOver", () => {
     let stats = newRunStats();
     stats = applyGate(stats, [1], "good", 0.9);
     stats = applyGate(stats, [4], "collision", 0.4);
+    stats = applyGate(stats, [4], "ok", 0.4);
     const out = html(stats);
     expect(out).toContain("go-score");
     expect(out).toContain("Tone 1: 90% tone accuracy");
     expect(out).toContain("Tone 4: 40% tone accuracy");
-    expect(out).toContain("Track your progress, choose your level, speech style and more.");
+    expect(out).toContain("Your Tone 4 is at 40%");
     expect(out).toContain("Sign up free");
     expect(out).toContain("One more round");
   });

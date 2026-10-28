@@ -105,3 +105,10 @@ describe("Run wordSequence", () => {
     expect(ids.length).toBeLessThanOrEqual(3);
   });
 });
+
+  it("flies a two-syllable word from the sequence as one gate", () => {
+    const pair = { ...word("p", 2, false), tones: [2, 1] as (1 | 2 | 3 | 4)[], syllables: 2 };
+    const run = new Run({ mode: "game", width: 400, words: [pair], wordSequence: [pair] });
+    const gates = run.snapshot().gates;
+    expect(gates.map((g) => g.word?.id)).toEqual(["p"]);
+  });
