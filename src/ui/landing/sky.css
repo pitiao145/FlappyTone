@@ -449,41 +449,46 @@
 .sky-try-over * { min-width: 0; max-width: 100%; box-sizing: border-box; }
 .sky-try-over .screen.gameover-screen { margin-top: 0; text-align: left; }
 .go-demo-actions { display: grid; gap: 8px; justify-items: center; }
-/* The signup pitch: the one gold card, right under the score, so it reads
-   as the next step rather than one card among four. */
+/* The signup pitch: the one jade card, right under the score, so it reads
+   as the next step. Cream text on jade for contrast; the button is the
+   site's gold "Play the game" button, so it reads as the main action. */
 .sky-try-over .go-demo-pitch {
   position: relative;
   display: grid;
-  gap: 8px;
+  gap: 10px;
   justify-items: center;
-  padding: 20px 16px 16px;
+  padding: 24px 18px 18px;
   text-align: center;
   border: 2px solid var(--ink);
-  background: var(--beak);
+  background: var(--accent);
   box-shadow: var(--shadow-sticker);
-  color: var(--ink);
 }
-.sky-try-over .go-demo-pitch p { margin: 0; color: var(--ink); }
+.sky-try-over .go-demo-pitch p { margin: 0; color: var(--accent-ink); }
+/* The bird perched on the card's top edge, big enough to read as the mascot. */
 .go-demo-pitch-bird {
   position: absolute;
-  top: -22px;
-  right: -8px;
-  width: 52px;
-  rotate: 8deg;
+  top: -40px;
+  right: 14px;
+  width: 72px;
   pointer-events: none;
 }
 .sky-try-over .go-demo-pitch-title {
   margin: 0;
-  font: 400 1.35rem/1.1 var(--font-display);
-  color: var(--ink);
+  padding-right: 48px;
+  font: 400 1.35rem/1.15 var(--font-display);
+  color: var(--accent-ink);
 }
 .go-demo-pitch-body { font-weight: 600; }
-.sky-try-over .screen .go-demo-pitch-btn {
+.sky-try-over .screen button.go-demo-pitch-btn {
   width: 100%;
   min-height: 52px;
   font-size: 1.1rem;
+  background: var(--beak);
+  color: var(--ink);
 }
-.sky-try-over .go-demo-pitch .go-demo-pitch-more { font-size: 0.85rem; }
+.sky-try-over .go-demo-pitch .go-demo-pitch-more { font-size: 0.85rem; opacity: 0.9; }
+/* More air between cards than the in-app screen, which has a full page. */
+.sky-try-over .screen.gameover-screen { gap: 22px; }
 /* The game's ghost button is see-through; over the game's sky it vanished. */
 .sky-try-over .screen button.go-btn-ghost {
   border: 2px solid var(--ink);
