@@ -423,6 +423,16 @@
   color: var(--color-ink);
   pointer-events: none;
 }
+/* Phones: bottom centre, just above the audio cue pill. */
+@media (max-width: 560px) {
+  .sky-try-progress {
+    top: auto;
+    right: auto;
+    bottom: 52px;
+    left: 50%;
+    translate: -50% 0;
+  }
+}
 .sky-try-progress-bar {
   width: 48px;
   height: 8px;
