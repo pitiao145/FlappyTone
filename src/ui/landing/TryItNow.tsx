@@ -17,6 +17,7 @@ import fallback from "../../data/wordsFallback.json";
 import { DemoLoop } from "../DemoLoop.tsx";
 import { go } from "./shared.tsx";
 import { DemoGameOver } from "./DemoGameOver.tsx";
+import { Confetti } from "../Confetti.tsx";
 import { toneBreakdown, type RunStats } from "../../game/scoring.ts";
 
 type MiniModule = typeof import("./miniGame.ts");
@@ -31,7 +32,7 @@ function loadMini(): Promise<MiniModule> {
   return modulePromise;
 }
 
-const GATES = 10;
+const GATES = 5;
 
 function shuffle<T>(items: T[]): T[] {
   const a = [...items];
@@ -82,7 +83,7 @@ type Step =
 /**
  * The hero's demo, with a "Try it now" button over it. Tap once: the mic
  * chunk loads and the visitor picks a voice. Tap again: the mic opens (inside
- * that tap) and ten gates from the guest pool fly right here, no account, no calibration.
+ * that tap) and five gates from the guest pool fly right here, no account, no calibration.
  */
 export function TryItNow() {
   const [step, setStep] = useState<Step>({ kind: "demo" });
@@ -92,6 +93,7 @@ export function TryItNow() {
   const attemptRef = useRef(0);
   /** The game's HUD, polled like Game.tsx does (never per frame). */
   const [hud, setHud] = useState<RunSnapshot | null>(null);
+  const [confettiDone, setConfettiDone] = useState(false);
 
   /** The app's guest pool: the beginner sampler, single syllables, free clips. */
   const pool = useMemo(() => {
@@ -167,6 +169,7 @@ export function TryItNow() {
             t4Cleared: t[4].cleared,
             t4Acc: acc[4] ?? null,
           });
+          setConfettiDone(false);
           setStep({ kind: "done", stats: r.stats });
         },
       })
@@ -226,8 +229,18 @@ export function TryItNow() {
               onPause={() => {}}
             />
           )}
+          {live && (
+            <div className="sky-try-progress" role="status" aria-label={`Word ${Math.min(GATES, (hud?.gateLog.length ?? 0) + 1)} of ${GATES}`}>
+              <span className="sky-try-progress-bar" aria-hidden="true">
+                <span style={{ width: `${((hud?.gateLog.length ?? 0) / GATES) * 100}%` }} />
+              </span>
+              <span className="sky-try-progress-count">
+                {hud?.gateLog.length ?? 0} / {GATES}
+              </span>
+            </div>
+          )}
         </div>
-        {!live && <DemoLoop width={340} />}
+        {!live && step.kind !== "done" && <DemoLoop width={340} />}
 
         {step.kind === "demo" && (
           <div className="sky-try-cta">
@@ -276,6 +289,7 @@ export function TryItNow() {
         )}
         {step.kind === "done" && (
           <div className="sky-try-over">
+            {!confettiDone && <Confetti onDone={() => setConfettiDone(true)} />}
             <DemoGameOver
               stats={step.stats}
               onSignup={() => {

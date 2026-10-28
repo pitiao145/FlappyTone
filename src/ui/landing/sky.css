@@ -397,19 +397,44 @@
 }
 .sky-try-voices { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .sky-try-panel .sky-small { display: block; margin-top: 8px; font-weight: 400; }
-/* The end screen: the game's own game-over parts (App.css .go-*), laid over
-   the demo and scrolled inside it. Top pad leaves room for the bird. */
+/* The end screen: the game's own game-over parts (App.css .go-*). It takes
+   the demo's place (the demo is narrower than a card on small phones) and
+   grows to its own height. Top pad leaves room for the bird. */
 .sky-try-over {
   z-index: 1;
-  align-self: stretch;
-  /* The game frame's width (.sky-try-game), never wider. */
-  width: 340px;
-  max-width: 100%;
+  width: min(100%, 360px);
   box-sizing: border-box;
-  max-height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding: 40px 12px 8px;
+  padding: 36px 4px 8px;
+}
+/* Run progress, under the game's HUD: "2 / 5" and a bar. */
+.sky-try-progress {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border: 2px solid var(--color-ink);
+  border-radius: 999px;
+  background: #fff;
+  font: 700 0.85rem/1 var(--font-body);
+  color: var(--color-ink);
+  pointer-events: none;
+}
+.sky-try-progress-bar {
+  width: 72px;
+  height: 8px;
+  border-radius: 999px;
+  background: #e6e0d2;
+  overflow: hidden;
+}
+.sky-try-progress-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--color-ink);
+  transition: width 0.3s ease;
 }
 .sky-try-over * { min-width: 0; max-width: 100%; box-sizing: border-box; }
 .sky-try-over .screen.gameover-screen { margin-top: 0; text-align: left; }
