@@ -31,7 +31,6 @@ export function DemoGameOver({
 
       {/* The one thing to do next: right under the score, in its own colour. */}
       <section className="go-card go-demo-pitch">
-        <img className="go-demo-pitch-bird" src="/Bird-up-no-halo.png" alt="" aria-hidden="true" />
         <h3 className="go-demo-pitch-title">{brand.demoGameOver.pitchTitle}</h3>
         <p className="go-demo-pitch-body">
           {weakest
