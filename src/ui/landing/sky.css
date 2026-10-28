@@ -406,12 +406,12 @@
   box-sizing: border-box;
   padding: 36px 4px 8px;
 }
-/* Run progress, under the game's HUD: "2 / 5" and a bar. */
+/* Run progress, right under the hearts and pause button: "2 / 5" and a bar.
+   Right-aligned, so it stays clear of the centred word card below the HUD. */
 .sky-try-progress {
   position: absolute;
-  top: 56px;
-  left: 50%;
-  translate: -50% 0;
+  top: 50px;
+  right: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -424,7 +424,7 @@
   pointer-events: none;
 }
 .sky-try-progress-bar {
-  width: 72px;
+  width: 48px;
   height: 8px;
   border-radius: 999px;
   background: #e6e0d2;
