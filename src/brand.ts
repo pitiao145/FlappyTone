@@ -320,20 +320,19 @@ export const brand = {
     progress: {
       title: "See your tones take shape",
       lede: "FlappyTone keeps your results, so you can see what is improving and what is not.",
-      source: "Real screens from the founder's account",
       shape: {
-        badge: "Pro",
         title: "Your tone next to a native speaker's",
+        body: "Your average pitch shape for a tone, drawn over a native speaker's and over your own from an earlier date.",
         alt: "Screen recording of the tone evolution view. A native speaker's average pitch shape is drawn with the player's average now and from an earlier date, and the player's line moves closer to the native curve.",
       },
       accuracy: {
-        badges: ["Free: last 5 runs", "Pro: every run"],
         title: "Accuracy per tone",
+        body: "How often you hit each tone and tone pair, over your last 5 runs, your last 50 or all time.",
         alt: "Accuracy per tone for the last 5 runs: tone 1 86 percent, tone 2 68, tone 3 56, tone 4 76. Buttons switch between the last 5 runs, last 50 runs and all time.",
       },
       trend: {
-        badge: "Pro",
         title: "Accuracy progress",
+        body: "Your accuracy for one tone, day by day, so you can watch it climb.",
         alt: "Line chart of tone 1 accuracy by day in October, climbing from 65 percent on the 1st to 96 percent on the 26th.",
       },
     },
