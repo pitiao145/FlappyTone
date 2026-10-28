@@ -281,7 +281,7 @@ export const brand = {
     { id: "how-it-works", title: "How it works", navLabel: "How it works", inNav: true },
     { id: "real-speech", title: "Based on real speech, not the textbook", navLabel: "Real speech" },
     { id: "visualiser", title: "Tone visualiser", navLabel: "Visualiser", inNav: true },
-    { id: "progress", title: "See your tones take shape", navLabel: "Track progress", inNav: true },
+    { id: "progress", title: "Watch your tones get closer", navLabel: "Track progress", inNav: true },
     { id: "tone-pairs", title: "Tone pairs", navLabel: "Tone pairs" },
     { id: "options", title: "Game modes and settings" },
     { id: "leaderboard", title: "Leaderboard", navLabel: "Leaderboard" },
@@ -318,21 +318,21 @@ export const brand = {
     visualiser: "Say mǎ ten times and watch every try stack on the target shape. No score, no pressure.",
     /** The Progress section (`src/ui/landing/ProgressSection.tsx`). No name for the native speaker. */
     progress: {
-      title: "See your tones take shape",
-      lede: "FlappyTone keeps your results, so you can see what is improving and what is not.",
+      title: "Watch your tones get closer",
+      lede: "Every run is saved, so you see which tones improve and which still need work.",
       shape: {
-        title: "Your tone next to a native speaker's",
-        body: "Your average pitch shape for a tone, drawn over a native speaker's and over your own from an earlier date.",
+        title: "Your curve over a native speaker's",
+        body: "Your average shape for each tone and tone pair, next to how it looked a month ago.",
         alt: "Screen recording of the tone evolution view. A native speaker's average pitch shape is drawn with the player's average now and from an earlier date, and the player's line moves closer to the native curve.",
       },
       accuracy: {
-        title: "Accuracy per tone",
-        body: "How often you hit each tone and tone pair, over your last 5 runs, your last 50 or all time.",
+        title: "Find your weakest tone",
+        body: "Your hit rate for every tone and pair, over your last 5 runs, last 50 or all time.",
         alt: "Accuracy per tone for the last 5 runs: tone 1 86 percent, tone 2 68, tone 3 56, tone 4 76. Buttons switch between the last 5 runs, last 50 runs and all time.",
       },
       trend: {
-        title: "Accuracy progress",
-        body: "Your accuracy for one tone, day by day, so you can watch it climb.",
+        title: "See the line climb",
+        body: "Accuracy for one tone or pair, day by day. Proof the practice works.",
         alt: "Line chart of tone 1 accuracy by day in October, climbing from 65 percent on the 1st to 96 percent on the 26th.",
       },
     },
