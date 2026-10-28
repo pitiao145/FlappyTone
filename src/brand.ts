@@ -322,7 +322,7 @@ export const brand = {
       lede: "Every run is saved, so you see which tones improve and which still need work.",
       shape: {
         title: "Your curve over a native speaker's",
-        body: "Your average shape for each tone and tone pair, next to how it looked a month ago.",
+        body: "Your average shape for each tone and tone pair, next to how it looked weeks or months ago.",
         alt: "Screen recording of the tone evolution view. A native speaker's average pitch shape is drawn with the player's average now and from an earlier date, and the player's line moves closer to the native curve.",
       },
       accuracy: {
