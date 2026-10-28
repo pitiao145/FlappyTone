@@ -516,26 +516,27 @@
 .sky-final h2 { color: var(--color-on-wall); }
 
 /* ---- progress: real screens from the app (ProgressSection.tsx).
-   One row on desktop; the media height is what fits under the heading in the
-   viewport, each image keeps its own width. */
-.pg { --pg-media-h: clamp(220px, calc(100svh - 470px), 480px); }
+   One row on desktop, every screen the same size (4:5, cropped to fit), the
+   width chosen so the row fits under the heading in the viewport. */
+.pg { --pg-w: clamp(240px, calc((100svh - 440px) * 0.8), 360px); }
 .pg-layout { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 32px; }
-.pg-feature { display: grid; gap: 12px; align-content: start; justify-items: start; min-width: min(15rem, 100%); max-width: 22rem; }
+.pg-feature { display: grid; gap: 12px; align-content: start; width: var(--pg-w); min-width: 0; }
 .pg-feature p { font-size: 1rem; }
-.pg-feature h3 { max-width: 20em; }
+.pg-text { display: grid; gap: 8px; }
 .pg-media {
   display: block;
-  height: var(--pg-media-h);
-  width: auto;
-  max-width: 100%;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  object-position: top;
   border: var(--outline) solid var(--color-ink);
   border-radius: 20px;
   box-shadow: var(--shadow-hard);
   background: var(--color-card);
 }
-.pg-text { display: grid; gap: 8px; }
+.pg-media-mid { object-position: center; }
+.pg-media-end { object-position: bottom; }
 @media (max-width: 820px) {
+  .pg { --pg-w: min(100%, 340px); }
   .pg-layout { flex-direction: column; align-items: center; }
-  .pg-feature { justify-items: center; text-align: center; }
-  .pg-media { height: auto; width: min(100%, 340px); }
 }
