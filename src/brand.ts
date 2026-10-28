@@ -281,7 +281,7 @@ export const brand = {
     { id: "how-it-works", title: "How it works", navLabel: "How it works", inNav: true },
     { id: "real-speech", title: "Based on real speech, not the textbook", navLabel: "Real speech" },
     { id: "visualiser", title: "Tone visualiser", navLabel: "Visualiser", inNav: true },
-    { id: "progress", title: "Watch your tones get closer", navLabel: "Track progress", inNav: true },
+    { id: "progress", title: "Watch your tones improve", navLabel: "Track progress", inNav: true },
     { id: "tone-pairs", title: "Tone pairs", navLabel: "Tone pairs" },
     { id: "options", title: "Game modes and settings" },
     { id: "leaderboard", title: "Leaderboard", navLabel: "Leaderboard" },
@@ -318,24 +318,22 @@ export const brand = {
     visualiser: "Say mǎ ten times and watch every try stack on the target shape. No score, no pressure.",
     /** The Progress section (`src/ui/landing/ProgressSection.tsx`). No name for the native speaker. */
     progress: {
-      title: "Watch your tones get closer",
+      title: "Watch your tones improve",
       lede: "Every run is saved, so you see which tones improve and which still need work.",
       shape: {
         title: "Your curve over a native speaker's",
         body: "Your average shape for each tone and tone pair, next to how it looked weeks or months ago.",
-        tier: "With Pro.",
         alt: "Screen recording of the tone evolution view. A native speaker's average pitch shape is drawn with the player's average now and from an earlier date, and the player's line moves closer to the native curve.",
       },
       accuracy: {
         title: "Find your weakest tone",
         body: "Your hit rate for every tone and pair, over your last 5 runs, last 50 or all time.",
-        tier: "Free for your last 5 runs. Last 50 and all time with Pro.",
+        tier: "Your last 5 runs are free.",
         alt: "Accuracy per tone for the last 5 runs: tone 1 86 percent, tone 2 68, tone 3 56, tone 4 76. Buttons switch between the last 5 runs, last 50 runs and all time.",
       },
       trend: {
         title: "See the line climb",
         body: "Accuracy for one tone or pair, day by day. Proof the practice works.",
-        tier: "With Pro.",
         alt: "Line chart of tone 1 accuracy by day in October, climbing from 65 percent on the 1st to 96 percent on the 26th.",
       },
     },

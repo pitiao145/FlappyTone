@@ -534,8 +534,15 @@
 .pg-text { display: grid; gap: 6px; align-content: start; }
 .pg-feature p { font-size: 1rem; max-width: 34ch; }
 .pg-feature .pg-tier { font-size: 0.875rem; color: var(--color-ink); opacity: 0.75; }
-.pg-tier a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-.pg-tier a:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; border-radius: 4px; }
+.pg-title { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.pg-badge {
+  font-family: inherit; font-size: 1rem; line-height: 1; text-decoration: none;
+  padding: 6px 12px; border-radius: 999px;
+  color: var(--color-ink); background: var(--color-beak);
+  border: var(--outline) solid var(--color-ink);
+}
+.pg-badge:hover { background: var(--color-sand); }
+.pg-badge:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; border-radius: 4px; }
 .pg-media {
   display: block;
   width: 100%;

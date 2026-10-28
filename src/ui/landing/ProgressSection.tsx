@@ -9,7 +9,7 @@ import { brand } from "../../brand.ts";
 
 const COPY = brand.landing.progress;
 
-function Feature({ title, body, tier, children }: { title: string; body: string; tier: string; children: React.ReactNode }) {
+function Feature({ title, body, tier, children }: { title: string; body: string; tier?: string; children: React.ReactNode }) {
   return (
     <article className="pg-feature">
       <div className="pg-text">
@@ -17,9 +17,7 @@ function Feature({ title, body, tier, children }: { title: string; body: string;
         <p>{body}</p>
       </div>
       {children}
-      <p className="pg-tier">
-        {tier} <a href="#pricing">See pricing</a>
-      </p>
+      {tier && <p className="pg-tier">{tier}</p>}
     </article>
   );
 }
@@ -29,11 +27,14 @@ export function ProgressSection() {
   return (
     <section id="progress" className="sky-section pg">
       <div className="sky-head">
-        <h2>{COPY.title}</h2>
+        <h2 className="pg-title">
+          {COPY.title}
+          <a className="pg-badge" href="#pricing" aria-label="Pro feature, see pricing">Pro</a>
+        </h2>
         <p>{COPY.lede}</p>
       </div>
       <div className="pg-layout">
-        <Feature title={shape.title} body={shape.body} tier={shape.tier}>
+        <Feature title={shape.title} body={shape.body}>
           <video
             className="pg-media"
             src="/lp/tone-evolution-demo.mp4"
@@ -50,7 +51,7 @@ export function ProgressSection() {
         <Feature title={accuracy.title} body={accuracy.body} tier={accuracy.tier}>
           <img className="pg-media" src="/lp/progress-accuracy.webp" width={782} height={816} alt={accuracy.alt} loading="lazy" />
         </Feature>
-        <Feature title={trend.title} body={trend.body} tier={trend.tier}>
+        <Feature title={trend.title} body={trend.body}>
           <img className="pg-media" src="/lp/progress-trend.webp" width={782} height={1164} alt={trend.alt} loading="lazy" />
         </Feature>
       </div>
