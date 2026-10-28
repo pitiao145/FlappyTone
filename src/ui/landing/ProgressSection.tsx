@@ -9,7 +9,7 @@ import { brand } from "../../brand.ts";
 
 const COPY = brand.landing.progress;
 
-function Feature({ title, body, children }: { title: string; body: string; children: React.ReactNode }) {
+function Feature({ title, body, tier, children }: { title: string; body: string; tier: string; children: React.ReactNode }) {
   return (
     <article className="pg-feature">
       <div className="pg-text">
@@ -17,6 +17,9 @@ function Feature({ title, body, children }: { title: string; body: string; child
         <p>{body}</p>
       </div>
       {children}
+      <p className="pg-tier">
+        {tier} <a href="#pricing">See pricing</a>
+      </p>
     </article>
   );
 }
@@ -30,7 +33,7 @@ export function ProgressSection() {
         <p>{COPY.lede}</p>
       </div>
       <div className="pg-layout">
-        <Feature title={shape.title} body={shape.body}>
+        <Feature title={shape.title} body={shape.body} tier={shape.tier}>
           <video
             className="pg-media"
             src="/lp/tone-evolution-demo.mp4"
@@ -44,10 +47,10 @@ export function ProgressSection() {
             aria-label={shape.alt}
           />
         </Feature>
-        <Feature title={accuracy.title} body={accuracy.body}>
+        <Feature title={accuracy.title} body={accuracy.body} tier={accuracy.tier}>
           <img className="pg-media" src="/lp/progress-accuracy.webp" width={782} height={816} alt={accuracy.alt} loading="lazy" />
         </Feature>
-        <Feature title={trend.title} body={trend.body}>
+        <Feature title={trend.title} body={trend.body} tier={trend.tier}>
           <img className="pg-media" src="/lp/progress-trend.webp" width={782} height={1164} alt={trend.alt} loading="lazy" />
         </Feature>
       </div>

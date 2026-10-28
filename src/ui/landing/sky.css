@@ -526,13 +526,16 @@
 .pg-layout {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: auto auto;
+  grid-template-rows: auto auto auto;
   column-gap: clamp(20px, 3vw, 40px);
   row-gap: 14px;
 }
-.pg-feature { display: grid; grid-row: span 2; grid-template-rows: subgrid; min-width: 0; }
+.pg-feature { display: grid; grid-row: span 3; grid-template-rows: subgrid; min-width: 0; }
 .pg-text { display: grid; gap: 6px; align-content: start; }
 .pg-feature p { font-size: 1rem; max-width: 34ch; }
+.pg-feature .pg-tier { font-size: 0.875rem; color: var(--color-ink); opacity: 0.75; }
+.pg-tier a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.pg-tier a:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; border-radius: 4px; }
 .pg-media {
   display: block;
   width: 100%;

@@ -323,16 +323,19 @@ export const brand = {
       shape: {
         title: "Your curve over a native speaker's",
         body: "Your average shape for each tone and tone pair, next to how it looked weeks or months ago.",
+        tier: "With Pro.",
         alt: "Screen recording of the tone evolution view. A native speaker's average pitch shape is drawn with the player's average now and from an earlier date, and the player's line moves closer to the native curve.",
       },
       accuracy: {
         title: "Find your weakest tone",
         body: "Your hit rate for every tone and pair, over your last 5 runs, last 50 or all time.",
+        tier: "Free for your last 5 runs. Last 50 and all time with Pro.",
         alt: "Accuracy per tone for the last 5 runs: tone 1 86 percent, tone 2 68, tone 3 56, tone 4 76. Buttons switch between the last 5 runs, last 50 runs and all time.",
       },
       trend: {
         title: "See the line climb",
         body: "Accuracy for one tone or pair, day by day. Proof the practice works.",
+        tier: "With Pro.",
         alt: "Line chart of tone 1 accuracy by day in October, climbing from 65 percent on the 1st to 96 percent on the 26th.",
       },
     },
