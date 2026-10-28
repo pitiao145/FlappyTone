@@ -3,7 +3,7 @@ import { brand } from "../../brand.ts";
 /**
  * Landing → "Track progress". Real screens from the founder's account (27 Oct
  * 2026): the tone-shape comparison as a short screen recording, accuracy per
- * tone and the accuracy trend as screenshots, in one row, all the same size. Static media,
+ * tone and the accuracy trend as screenshots, in one row, each frame the same height, never cropped. Static media,
  * nothing live.
  */
 
@@ -45,10 +45,10 @@ export function ProgressSection() {
           />
         </Feature>
         <Feature title={accuracy.title} body={accuracy.body}>
-          <img className="pg-media pg-media-mid" src="/lp/progress-accuracy.webp" width={782} height={816} alt={accuracy.alt} loading="lazy" />
+          <img className="pg-media" src="/lp/progress-accuracy.webp" width={782} height={816} alt={accuracy.alt} loading="lazy" />
         </Feature>
         <Feature title={trend.title} body={trend.body}>
-          <img className="pg-media pg-media-end" src="/lp/progress-trend.webp" width={782} height={1164} alt={trend.alt} loading="lazy" />
+          <img className="pg-media" src="/lp/progress-trend.webp" width={782} height={1164} alt={trend.alt} loading="lazy" />
         </Feature>
       </div>
     </section>
