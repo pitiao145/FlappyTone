@@ -402,11 +402,16 @@
 .sky-try-over {
   z-index: 1;
   align-self: stretch;
-  width: min(100%, 360px);
+  /* The game frame's width (.sky-try-game), never wider. */
+  width: 340px;
+  max-width: 100%;
+  box-sizing: border-box;
   max-height: 100%;
+  overflow-x: hidden;
   overflow-y: auto;
-  padding: 40px 16px 8px;
+  padding: 40px 12px 8px;
 }
+.sky-try-over * { min-width: 0; max-width: 100%; box-sizing: border-box; }
 .sky-try-over .screen.gameover-screen { margin-top: 0; text-align: left; }
 .go-demo-actions { display: grid; gap: 8px; justify-items: center; }
 

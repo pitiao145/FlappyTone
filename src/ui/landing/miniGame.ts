@@ -10,8 +10,8 @@
  *
  * Cues work as in the game ("listen", then fly), but play through the site's
  * guest-ticket `wordAudio.ts`, not `src/audio/reference.ts`, whose ticket
- * pulls in the account code. Every easy word is in `sampler-beginner`, so a
- * guest ticket plays it. No iOS loud-speaker dance: cues take the earpiece
+ * pulls in the account code. Every word comes from `sampler-beginner` (the
+ * app's guest pool), so a guest ticket plays it. No iOS loud-speaker dance: cues take the earpiece
  * route there, like Chrome on iOS does in the game.
  */
 import { ensureMic, setFrameSink, stopMic } from "../../audio/session.ts";

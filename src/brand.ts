@@ -42,7 +42,7 @@ export const brand = {
 
   /** The Try it now end screen (the real game-over, demo variant). */
   demoGameOver: {
-    signup: "Sign up free to track your tones over time",
+    signup: "Sign up free to track your progress",
     retry: "One more round",
   },
 

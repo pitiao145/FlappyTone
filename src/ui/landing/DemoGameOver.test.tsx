@@ -15,7 +15,7 @@ describe("DemoGameOver", () => {
     expect(out).toContain("go-score");
     expect(out).toContain("Tone 1: 90% tone accuracy");
     expect(out).toContain("Tone 4: 40% tone accuracy");
-    expect(out).toContain("Sign up free to track your tones over time");
+    expect(out).toContain("Sign up free to track your progress");
     expect(out).toContain("One more round");
   });
 

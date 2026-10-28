@@ -9,7 +9,7 @@ type TryNowAction = Extract<AnalyticsEvent, { type: "tool_used"; tool: "try-now"
 function trackTry(action: TryNowAction["action"], extra: Omit<TryNowAction, "type" | "tool" | "action"> = {}) {
   captureGameEvent({ type: "tool_used", tool: "try-now", action, ...extra });
 }
-import { wordsFromCatalog } from "../../game/words.ts";
+import { wordsForList, wordsForTier, wordsFromCatalog, type Word } from "../../game/words.ts";
 import type { RunSnapshot } from "../../game/run.ts";
 import { GameHud } from "../GameHud.tsx";
 import { DEFAULT_SPEAKER_ID } from "../../data/catalogRows.ts";
@@ -31,9 +31,25 @@ function loadMini(): Promise<MiniModule> {
   return modulePromise;
 }
 
-/** Easy single syllables, all textbook-clear and guest-playable. */
-const EASY_IDS = ["ma1b", "ma2", "ma3b", "ma4b", "mao1", "wo3"];
-const GATES = 6;
+const GATES = 10;
+
+/**
+ * A fresh random draw of `GATES` words from the pool, one per round, spread
+ * evenly over the four tones (the run picks a tone first, then a word of it).
+ */
+function draw(pool: Word[]): Word[] {
+  const shuffled = [...pool];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  const byTone = [1, 2, 3, 4].map((t) => shuffled.filter((w) => w.tone === t));
+  const out: Word[] = [];
+  for (let i = 0; out.length < GATES && byTone.some((g) => i < g.length); i++) {
+    for (const g of byTone) if (i < g.length && out.length < GATES) out.push(g[i]);
+  }
+  return out;
+}
 const W = 420;
 const H = 640;
 
@@ -49,7 +65,7 @@ type Step =
 /**
  * The hero's demo, with a "Try it now" button over it. Tap once: the mic
  * chunk loads and the visitor picks a voice. Tap again: the mic opens (inside
- * that tap) and six easy gates fly right here, no account, no calibration.
+ * that tap) and ten gates from the guest pool fly right here, no account, no calibration.
  */
 export function TryItNow() {
   const [step, setStep] = useState<Step>({ kind: "demo" });
@@ -60,9 +76,10 @@ export function TryItNow() {
   /** The game's HUD, polled like Game.tsx does (never per frame). */
   const [hud, setHud] = useState<RunSnapshot | null>(null);
 
-  const words = useMemo(() => {
+  /** The app's guest pool: the beginner sampler, single syllables, free clips. */
+  const pool = useMemo(() => {
     const all = wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID })));
-    return all.filter((w) => EASY_IDS.includes(w.id));
+    return wordsForList(wordsForTier(all, "guest"), null, "beginner");
   }, []);
 
   useEffect(
@@ -99,7 +116,7 @@ export function TryItNow() {
         canvas,
         width: W,
         height: H,
-        words,
+        words: draw(pool),
         voice,
         gates: GATES,
         onReady: () => {
