@@ -241,6 +241,24 @@ export function sanitizeGameProperties(
 }
 
 /**
+ * Drops full URLs from the person properties the SDK adds to an app event
+ * (`$set_once` carries `$initial_current_url`, `$initial_referrer`,
+ * `$current_url`, `$referrer`). A challenge link's `?n=<name>` can be in
+ * them. Host, path, referring domain and UTM keys stay. Pure, for tests.
+ */
+export function stripPersonUrls(
+  props: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  if (!props) return props;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(props)) {
+    if (k.endsWith("current_url") || k.endsWith("referrer")) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+/**
  * Set by a route-table page's entry (`initPostHog`'s second argument): merged
  * into that page load's `$pageview` only — not registered as a super
  * property, which would persist and stamp every later event, /app included.
@@ -259,7 +277,10 @@ export function withPageViewProps(
 const beforeSend: BeforeSendFn = (input: CaptureResult | null) => {
   const cr = input && withPageViewProps(input, pageViewProps);
   if (!cr || !APP_EVENTS.has(cr.event)) return cr;
-  return { ...cr, properties: sanitizeGameProperties(cr.properties) };
+  const out: CaptureResult = { ...cr, properties: sanitizeGameProperties(cr.properties) };
+  if (cr.$set) out.$set = stripPersonUrls(cr.$set);
+  if (cr.$set_once) out.$set_once = stripPersonUrls(cr.$set_once);
+  return out;
 };
 
 /** Runs now if the SDK is ready, otherwise queues for replay after it loads. */

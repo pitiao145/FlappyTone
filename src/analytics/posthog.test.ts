@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PH_ALLOW, sanitizeGameProperties, withPageViewProps } from "./posthog.ts";
+import { PH_ALLOW, sanitizeGameProperties, stripPersonUrls, withPageViewProps } from "./posthog.ts";
 
 describe("sanitizeGameProperties", () => {
   it("passes through our own event fields untouched", () => {
@@ -81,5 +81,31 @@ describe("withPageViewProps", () => {
   it("leaves every other event, and pages without props, alone", () => {
     expect(withPageViewProps(cr("landed"), props).properties).toEqual({ $current_url: "x" });
     expect(withPageViewProps(cr("$pageview"), undefined).properties).toEqual({ $current_url: "x" });
+  });
+});
+
+describe("stripPersonUrls", () => {
+  it("drops full URLs and referrers, keeps host, path, referring domain and UTM", () => {
+    expect(
+      stripPersonUrls({
+        $initial_current_url: "https://flappytone.com/app?n=Pierre",
+        $initial_referrer: "https://x.com/?q=1",
+        $current_url: "https://flappytone.com/app?n=Pierre",
+        $referrer: "https://x.com/",
+        $initial_host: "flappytone.com",
+        $initial_pathname: "/app",
+        $initial_referring_domain: "x.com",
+        $initial_utm_source: "tiktok",
+      }),
+    ).toEqual({
+      $initial_host: "flappytone.com",
+      $initial_pathname: "/app",
+      $initial_referring_domain: "x.com",
+      $initial_utm_source: "tiktok",
+    });
+  });
+
+  it("passes undefined through", () => {
+    expect(stripPersonUrls(undefined)).toBeUndefined();
   });
 });
