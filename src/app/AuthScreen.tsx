@@ -20,7 +20,13 @@ import {
   type AuthCard,
   type AuthSource,
 } from "./authGate.ts";
+import { Nav } from "../ui/Nav.tsx";
+import "../site/site.css";
 import "./AuthScreen.css";
+
+/** The site's faces (Lilita One, Figtree): /app's HTML only loads the game's. */
+const SKY_FONTS =
+  "https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Lilita+One&display=swap";
 
 interface Props {
   source: AuthSource;
@@ -52,6 +58,14 @@ export function AuthScreen({ source, challengeScore, challengeName }: Props) {
   const ids = useId();
 
   useEffect(() => {
+    if (document.querySelector(`link[href="${SKY_FONTS}"]`)) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = SKY_FONTS;
+    document.head.appendChild(link);
+  }, []);
+
+  useEffect(() => {
     if (view === "reset") return;
     track({ type: "auth_screen_viewed", screen: view, source });
   }, [view, source]);
@@ -75,14 +89,16 @@ export function AuthScreen({ source, challengeScore, challengeName }: Props) {
       mode === "signup"
         ? await signUpWithPassword(email, password, consent)
         : await signInWithPassword(email, password);
-    setBusy(false);
     if (!result.ok) {
+      setBusy(false);
       setError(friendlyAuthError(result.reason));
       return;
     }
     track({ type: "signup_completed", mode, method: "password" });
     if (mode === "login") track({ type: "login_completed", method: "password" });
-    // AuthGate's auth listener swaps the game in from here.
+    // Start the game from a clean page: AuthGate sees the account on load.
+    // The short wait lets the two events above leave first.
+    setTimeout(() => window.location.reload(), 300);
   }
 
   async function sendMagicLink() {
@@ -206,7 +222,7 @@ export function AuthScreen({ source, challengeScore, challengeName }: Props) {
   if (sent) {
     body = (
       <div className="auth-sent" role="status">
-        <img className="auth-sent-bird" src="/Bird-up-no-halo.png" alt="" width={72} height={72} />
+        <img className="auth-sent-bird" src="/Bird-up-no-halo.png" alt="" width={80} height={80} />
         <h2>Check your inbox</h2>
         <p>
           {sent.kind === "magic" ? "We sent a sign-in link to " : "We sent a reset link to "}
@@ -223,7 +239,7 @@ export function AuthScreen({ source, challengeScore, challengeName }: Props) {
       <form className="auth-form" onSubmit={submitReset}>
         {emailField}
         {errorBox}
-        <button type="submit" className="auth-primary" disabled={busy}>
+        <button type="submit" className="sky-btn auth-primary" disabled={busy}>
           {busy ? "Sending…" : "Send reset link"}
         </button>
         <button type="button" className="auth-link" onClick={() => go("login")}>
@@ -236,7 +252,7 @@ export function AuthScreen({ source, challengeScore, challengeName }: Props) {
       <>
         {/* Google / Apple go here in a later brief; nothing renders yet. */}
         <div className="auth-providers" aria-hidden="true" />
-        <button type="button" className="auth-primary" onClick={() => setEmailOpen(true)}>
+        <button type="button" className="sky-btn auth-primary" onClick={() => setEmailOpen(true)}>
           <MailIcon />
           Sign up with email
         </button>
@@ -254,7 +270,7 @@ export function AuthScreen({ source, challengeScore, challengeName }: Props) {
           </label>
         )}
         {errorBox}
-        <button type="submit" className="auth-primary" disabled={busy}>
+        <button type="submit" className="sky-btn auth-primary" disabled={busy}>
           {busy ? "One moment…" : view === "login" ? "Log in" : "Create account and play"}
         </button>
         <button type="button" className="auth-link" onClick={() => void sendMagicLink()} disabled={busy}>
@@ -265,43 +281,62 @@ export function AuthScreen({ source, challengeScore, challengeName }: Props) {
   }
 
   return (
-    <main className="auth-screen">
-      <div className="auth-wrap">
-        <a className="auth-brand" href="/">
-          <img src="/Bird-hor-no-halo.png" alt="" width={40} height={40} />
-          <span>FlappyTone</span>
-        </a>
-        <img className="auth-bird" src="/Bird-hor-halo.png" alt="" width={112} height={112} />
-        <h1 className="auth-title">{head.title}</h1>
-        <p className="auth-sub">{head.sub}</p>
+    <div id="top" className="sky sky-site auth">
+      <Nav linkBase="/" />
+      <main className="auth-main">
+        <div className="auth-stage" aria-hidden="true">
+          <svg className="auth-cloud auth-cloud-a" viewBox="0 0 120 50">
+            <path d="M20 45 a18 18 0 0 1 8-30 a24 24 0 0 1 44-4 a20 20 0 0 1 34 18 a14 14 0 0 1 -6 16 z" />
+          </svg>
+          <svg className="auth-cloud auth-cloud-b" viewBox="0 0 120 50">
+            <path d="M20 45 a18 18 0 0 1 8-30 a24 24 0 0 1 44-4 a20 20 0 0 1 34 18 a14 14 0 0 1 -6 16 z" />
+          </svg>
+          <svg className="auth-contour" viewBox="0 0 400 160" preserveAspectRatio="none">
+            <path className="auth-contour-trace" d="M10 130 C 120 128, 200 110, 260 70 S 360 22, 390 18" />
+          </svg>
+          <div className="auth-flyer">
+            <img className="auth-bird" src="/Bird-hor-no-halo.png" alt="" width={120} height={120} />
+          </div>
+          <svg className="auth-ground" viewBox="0 0 400 60" preserveAspectRatio="none">
+            <path d="M0 26 C 90 30, 170 34, 240 22 S 340 6, 400 10 L 400 60 L 0 60 z" />
+          </svg>
+        </div>
 
-        <section className="auth-card" aria-label={view === "login" ? "Log in" : view === "reset" ? "Reset password" : "Sign up"}>
-          {body}
-          {view === "signup" && !sent && (
-            <p className="auth-legal">
-              By signing up, you agree to our <a href="/terms-of-service">Terms</a> &amp;{" "}
-              <a href="/privacy-policy">Privacy Policy</a>.
+        <div className="auth-panel">
+          <h1 className="auth-title">{head.title}</h1>
+          <p className="auth-sub">{head.sub}</p>
+
+          <section
+            className="auth-card"
+            aria-label={view === "login" ? "Log in" : view === "reset" ? "Reset password" : "Sign up"}
+          >
+            {body}
+            {view === "signup" && !sent && (
+              <p className="auth-legal">
+                By signing up, you agree to our <a href="/terms-of-service">Terms</a> &amp;{" "}
+                <a href="/privacy-policy">Privacy Policy</a>.
+              </p>
+            )}
+          </section>
+
+          {view === "signup" ? (
+            <p className="auth-switch">
+              Already have an account?{" "}
+              <button type="button" className="auth-link" onClick={() => go("login")}>
+                Log in
+              </button>
+            </p>
+          ) : (
+            <p className="auth-switch">
+              Don't have an account?{" "}
+              <button type="button" className="auth-link" onClick={() => go("signup")}>
+                Sign up
+              </button>
             </p>
           )}
-        </section>
-
-        {view === "signup" ? (
-          <p className="auth-switch">
-            Already have an account?{" "}
-            <button type="button" className="auth-link" onClick={() => go("login")}>
-              Log in
-            </button>
-          </p>
-        ) : (
-          <p className="auth-switch">
-            Don't have an account?{" "}
-            <button type="button" className="auth-link" onClick={() => go("signup")}>
-              Sign up
-            </button>
-          </p>
-        )}
-      </div>
-    </main>
+        </div>
+      </main>
+    </div>
   );
 }
 

@@ -1,73 +1,185 @@
-/* Hallmark · v2.0.0 · in-system screen (FlappyTone tokens.css, BRAND.md), not a dealt theme · signature: the bird over one calm card */
-/* critique: one card, one primary action per view; refs (Habits Garden) adapted to paper, jade and gold */
-/* waiver: no "or" divider yet, the provider slot above it is empty until Google/Apple land (brief 24) */
+/* Hallmark · theme: custom (Sky, src/site/site.css) · mode: redesign · depth: full · scope: app screen · signature: the bird gliding up a tone-2 contour over the game's sky · nav: the landing's bar, no Play (this is the door to play) · faces: Lilita One, Figtree · genre: playful · v2.0.0 */
+/* Hallmark · critique · was a lone card on flat paper; now the site's sky, its nav and its pressed-edge controls, the card set beside a live scene so signing up feels like the start of the game; no "or" divider until the Google/Apple slot holds something */
 
-.auth-screen {
-  min-height: 100svh;
-  background: var(--surface);
-  color: var(--ink);
-  font-family: var(--font);
-  display: flex;
-  justify-content: center;
-  padding: var(--space-6) var(--space-4) var(--space-8);
-  overflow-x: clip;
+.auth {
+  --auth-input-bg: var(--color-cloud);
+  --auth-error-bg: color-mix(in oklab, var(--danger) 10%, var(--color-cloud));
+  --auth-error-ink: var(--danger-strong);
+  background: linear-gradient(
+    to bottom,
+    var(--color-sky-1) 0 18%,
+    var(--color-sky-2) 18% 36%,
+    var(--color-sky-3) 36% 54%,
+    var(--color-sky-4) 54% 72%,
+    var(--color-sky-5) 72% 100%
+  );
 }
 
-.auth-wrap {
-  width: 100%;
-  max-width: 440px;
-  display: flex;
-  flex-direction: column;
+.auth-main {
+  max-width: var(--container);
+  margin-inline: auto;
+  padding: clamp(16px, 4vw, 48px) var(--gutter) var(--space-8);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
-  text-align: center;
+  gap: clamp(24px, 5vw, 72px);
 }
 
-.auth-brand {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--ink);
-  text-decoration: none;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: var(--text-lg);
-  border-radius: var(--radius-sm);
+/* ---- the scene: sky, two clouds, a rising tone contour, the bird, the ground */
+.auth-stage {
+  position: relative;
+  aspect-ratio: 5 / 4;
+  border: var(--outline) solid var(--color-ink);
+  border-radius: calc(var(--radius) * 1.6);
+  box-shadow: var(--shadow-hard);
+  overflow: clip;
+  background: linear-gradient(
+    to bottom,
+    var(--color-sky-2) 0 30%,
+    var(--color-sky-3) 30% 55%,
+    var(--color-sky-4) 55% 78%,
+    var(--color-sky-5) 78% 100%
+  );
+}
+
+.auth-cloud {
+  position: absolute;
+  width: 26%;
+  fill: var(--color-cloud);
+  stroke: var(--color-ink);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  animation: auth-drift 18s linear infinite;
+}
+
+.auth-cloud-a {
+  top: 12%;
+  left: 8%;
+}
+
+.auth-cloud-b {
+  top: 30%;
+  right: 6%;
+  width: 18%;
+  animation-duration: 24s;
+  animation-direction: reverse;
+}
+
+.auth-contour {
+  position: absolute;
+  inset: 22% 6% 22% 6%;
+  width: 88%;
+  height: 56%;
+}
+
+.auth-contour-trace {
+  fill: none;
+  stroke: var(--color-beak);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 2 16;
+}
+
+.auth-flyer {
+  position: absolute;
+  left: 6%;
+  bottom: 26%;
+  width: 26%;
+  animation: auth-climb 6s var(--ease-snap) infinite;
 }
 
 .auth-bird {
-  margin-top: var(--space-6);
-  width: 96px;
+  display: block;
+  width: 100%;
   height: auto;
+  animation: auth-flap 0.9s ease-in-out infinite alternate;
+}
+
+.auth-ground {
+  position: absolute;
+  inset: auto 0 0 0;
+  width: 100%;
+  height: 22%;
+  fill: var(--color-rim);
+  stroke: var(--color-ink);
+  stroke-width: 3;
+}
+
+@keyframes auth-climb {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  45% {
+    transform: translate(120%, -20%) rotate(-8deg);
+  }
+  85% {
+    transform: translate(250%, -150%) rotate(-18deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(270%, -165%) rotate(-18deg);
+    opacity: 0;
+  }
+}
+
+@keyframes auth-flap {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-6%);
+  }
+}
+
+@keyframes auth-drift {
+  from {
+    transform: translateX(-12%);
+  }
+  50% {
+    transform: translateX(12%);
+  }
+  to {
+    transform: translateX(-12%);
+  }
+}
+
+/* ---- the panel: head, card, switch */
+.auth-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .auth-title {
-  font-family: var(--font-display);
-  font-size: var(--text-3xl);
-  line-height: 1.1;
-  margin: var(--space-3) 0 var(--space-2);
+  margin: 0;
+  font-size: clamp(2.4rem, 5vw, 3.6rem);
+  line-height: 1;
+  color: var(--color-ink);
+  text-wrap: balance;
   overflow-wrap: break-word;
   min-width: 0;
 }
 
 .auth-sub {
-  color: var(--ink-muted);
-  font-size: var(--text-lg);
-  margin: 0 0 var(--space-6);
+  margin: var(--space-3) 0 var(--space-6);
+  font-size: 1.15rem;
+  color: var(--color-ink-2);
   max-width: 34ch;
 }
 
 .auth-card {
-  width: 100%;
-  background: var(--surface-panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sticker);
-  padding: var(--space-6);
+  background: var(--color-card);
+  border: var(--outline) solid var(--color-ink);
+  border-radius: calc(var(--radius) * 1.4);
+  box-shadow: var(--shadow-hard);
+  padding: clamp(20px, 3vw, 32px);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  text-align: left;
 }
 
 .auth-providers:empty {
@@ -86,10 +198,9 @@
   gap: var(--space-2);
 }
 
-.auth-field label,
-.auth-label-row label {
-  font-weight: 600;
-  font-size: var(--text-sm);
+.auth-field label {
+  font-weight: 700;
+  font-size: 1rem;
 }
 
 .auth-label-row {
@@ -101,15 +212,23 @@
 
 .auth-field input {
   width: 100%;
-  font: inherit;
-  font-size: var(--text-base);
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
-  min-height: 48px;
   box-sizing: border-box;
+  min-height: 52px;
+  padding: var(--space-3) var(--space-4);
+  font: 400 1.05rem/1.3 var(--font-body);
+  color: var(--color-ink);
+  background: var(--auth-input-bg);
+  border: var(--outline) solid var(--color-ink);
+  border-radius: var(--radius);
+  box-shadow: inset 0 3px 0 color-mix(in oklab, var(--color-ink) 10%, transparent);
+}
+
+.auth-field input::placeholder {
+  color: var(--color-ink-2);
+}
+
+.auth-field input:hover {
+  background: color-mix(in oklab, var(--color-sky-5) 40%, var(--color-cloud));
 }
 
 .auth-password {
@@ -117,7 +236,7 @@
 }
 
 .auth-password input {
-  padding-right: 52px;
+  padding-right: 56px;
 }
 
 .auth-eye {
@@ -131,77 +250,79 @@
   place-items: center;
   background: none;
   border: 0;
-  border-radius: var(--radius-sm);
-  color: var(--ink-muted);
+  border-radius: var(--radius);
+  color: var(--color-ink);
   cursor: pointer;
+}
+
+.auth-eye:hover {
+  background: color-mix(in oklab, var(--color-ink) 8%, transparent);
+}
+
+.auth-eye:active {
+  background: color-mix(in oklab, var(--color-ink) 14%, transparent);
 }
 
 .auth-hint {
   margin: 0;
-  font-size: var(--text-xs);
-  color: var(--ink-muted);
+  font-size: 0.9rem;
+  color: var(--color-ink-2);
 }
 
 .auth-consent {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-3);
   align-items: flex-start;
-  font-size: var(--text-sm);
-  color: var(--ink-muted);
+  font-size: 0.95rem;
+  color: var(--color-ink-2);
+  cursor: pointer;
 }
 
 .auth-consent input {
   margin-top: var(--space-1);
-  accent-color: var(--accent);
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-wall);
 }
 
 .auth-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
   width: 100%;
-  min-height: 52px;
-  font: inherit;
-  font-weight: 700;
-  font-size: var(--text-base);
-  color: var(--accent-ink);
-  background: var(--accent);
-  border: 0;
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.1s ease;
-}
-
-.auth-primary:hover:not(:disabled) {
-  background: var(--accent-bright);
-}
-
-.auth-primary:active:not(:disabled) {
-  background: var(--accent-bright);
-  transform: translateY(1px);
+  gap: var(--space-3);
 }
 
 .auth-primary:disabled {
-  background: var(--surface-deep);
-  color: var(--ink-muted);
+  background: var(--color-sand);
+  color: var(--color-ink-2);
+  box-shadow: 0 2px 0 var(--color-ink);
   cursor: not-allowed;
-}
-
-.auth-link:active {
-  color: var(--accent-bright);
+  opacity: 1;
 }
 
 .auth-link {
   font: inherit;
-  color: var(--accent);
+  font-weight: 600;
+  color: var(--color-link);
   background: none;
   border: 0;
   padding: 0;
   text-decoration: underline;
+  text-decoration-thickness: 2px;
   text-underline-offset: 3px;
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: 4px;
+}
+
+.auth-link:hover {
+  color: var(--color-ink);
+}
+
+.auth-link:active {
+  color: var(--color-wall-deep);
+}
+
+.auth-link:disabled {
+  color: var(--color-ink-2);
+  cursor: not-allowed;
 }
 
 .auth-form > .auth-link {
@@ -209,23 +330,24 @@
 }
 
 .auth-link-small {
-  font-size: var(--text-sm);
+  font-size: 0.95rem;
 }
 
 .auth-error {
   margin: 0;
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: rgba(var(--danger-rgb), 0.08);
-  color: var(--danger-strong);
-  font-size: var(--text-sm);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--auth-error-ink);
+  border-radius: var(--radius);
+  background: var(--auth-error-bg);
+  color: var(--auth-error-ink);
+  font-size: 0.95rem;
 }
 
 .auth-legal {
   margin: 0;
   text-align: center;
-  font-size: var(--text-xs);
-  color: var(--ink-muted);
+  font-size: 0.9rem;
+  color: var(--color-ink-2);
 }
 
 .auth-legal a {
@@ -233,8 +355,8 @@
 }
 
 .auth-switch {
-  margin-top: var(--space-6);
-  color: var(--ink);
+  margin: var(--space-5) 0 0;
+  font-size: 1.05rem;
 }
 
 .auth-sent {
@@ -245,51 +367,58 @@
   gap: var(--space-2);
 }
 
-.auth-title,
 .auth-sent h2 {
-  text-wrap: balance;
-}
-
-.auth-sent h2 {
-  font-family: var(--font-display);
-  font-size: var(--text-xl);
   margin: 0;
+  font-size: 1.8rem;
+  text-wrap: balance;
 }
 
 .auth-sent p {
   margin: 0;
-  color: var(--ink-muted);
+  color: var(--color-ink-2);
 }
 
 .auth-sent-bird {
-  width: 64px;
+  width: 80px;
   height: auto;
+  animation: auth-flap 0.9s ease-in-out infinite alternate;
 }
 
-.auth-gate-loading {
-  min-height: 100svh;
-  background: var(--surface);
-}
-
-.auth-screen a:focus-visible,
-.auth-screen button:focus-visible,
-.auth-screen input:focus-visible {
-  outline: 3px solid var(--beak);
-  outline-offset: 2px;
+.auth :is(a, button, input):focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
   transition: none;
 }
 
-@media (max-width: 480px) {
-  .auth-title {
-    font-size: var(--text-2xl);
+/* ---- phones and narrow tablets: the scene becomes a short band above the card */
+@media (max-width: 860px) {
+  .auth-main {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+    padding-top: var(--space-3);
   }
-  .auth-card {
-    padding: var(--space-5);
+  .auth-stage {
+    aspect-ratio: 16 / 7;
+    order: -1;
+  }
+  .auth-panel {
+    max-width: 520px;
+    width: 100%;
+    margin-inline: auto;
+  }
+  .auth-sub {
+    margin-bottom: var(--space-5);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .auth-primary {
-    transition: none;
+  .auth-cloud,
+  .auth-bird,
+  .auth-sent-bird {
+    animation: none;
+  }
+  .auth-flyer {
+    animation: none;
+    transform: translate(120%, -20%) rotate(-8deg);
   }
 }

@@ -7,14 +7,23 @@
  * before: a password signup never leaves the page, and a magic link's parked
  * params are put back here first (`restoreReturn`).
  */
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { track } from "../analytics/client";
 import { getAccount } from "../data/account.ts";
 import { getSupabase } from "../data/supabase.ts";
 import { parseChallengeName } from "../share/shareName.ts";
-import { AuthScreen } from "./AuthScreen.tsx";
 import { authSource, canPlay, consumeMagicLink, restoreReturn } from "./authGate.ts";
 import GameApp, { parseChallengeScore } from "./GameApp.tsx";
+
+/**
+ * Lazy, so the site's Sky stylesheet (nav, faces, its own :root tokens) is
+ * only ever loaded for a signed-out visitor. Its `--font-display` would
+ * otherwise restyle the game, which is why the gate reloads the page once
+ * the auth screen hands over instead of mounting GameApp beside it.
+ */
+const AuthScreen = lazy(() => import("./AuthScreen.tsx").then((m) => ({ default: m.AuthScreen })));
+
+const LOADING = { minHeight: "100svh", background: "var(--surface)" } as const;
 
 type GateState = "checking" | "auth" | "play";
 
@@ -29,6 +38,7 @@ function storage(): Storage | undefined {
 export default function AuthGate() {
   const [state, setState] = useState<GateState>("checking");
   const playingRef = useRef(false);
+  const shownAuthRef = useRef(false);
   // A reset-password link signs the player in with a recovery session; the
   // event fires before GameApp subscribes, so it is caught here and handed on.
   const [recovery, setRecovery] = useState(false);
@@ -54,6 +64,11 @@ export default function AuthGate() {
           }
         }
         playingRef.current = play;
+        // The auth screen was up this page: it reloads itself once its own
+        // signup/login call has finished (sync, consent), so the game starts
+        // from a clean page with the URL params intact and none of its CSS.
+        if (play && shownAuthRef.current) return;
+        if (!play) shownAuthRef.current = true;
         setState(play ? "play" : "auth");
       });
     check();
@@ -68,13 +83,15 @@ export default function AuthGate() {
     };
   }, []);
 
-  if (state === "checking") return <div className="auth-gate-loading" aria-busy="true" />;
+  if (state === "checking") return <div style={LOADING} aria-busy="true" />;
   if (state === "play") return <GameApp recovery={recovery} />;
   return (
-    <AuthScreen
-      source={source}
-      challengeScore={parseChallengeScore(window.location.search)}
-      challengeName={parseChallengeName(window.location.search)}
-    />
+    <Suspense fallback={<div style={LOADING} aria-busy="true" />}>
+      <AuthScreen
+        source={source}
+        challengeScore={parseChallengeScore(window.location.search)}
+        challengeName={parseChallengeName(window.location.search)}
+      />
+    </Suspense>
   );
 }
