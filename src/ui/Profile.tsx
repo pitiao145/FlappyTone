@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { track } from "../analytics/client.ts";
 import { getAccount, type Account } from "../data/account.ts";
+import { redirectToCheckoutForCurrentAccount } from "../data/checkout.ts";
 import { displayName } from "../data/leaderboard.ts";
 import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
@@ -109,7 +110,12 @@ export function Profile({ onEarlyBird, onSignedOut }: Props) {
           className="profile-earlybird-sticker"
           onClick={() => {
             track({ type: "profile_earlybird_cta_click" });
-            onEarlyBird("plan_card");
+            // Straight to checkout; the modal only opens when checkout can't
+            // (no store configured, or no permanent account to attach it to).
+            void redirectToCheckoutForCurrentAccount().then((went) => {
+              if (went) track({ type: "earlybird_checkout_opened", surface: "profile", feature: "plan_card" });
+              else onEarlyBird("plan_card");
+            });
           }}
         >
           <span className="profile-earlybird-copy">
