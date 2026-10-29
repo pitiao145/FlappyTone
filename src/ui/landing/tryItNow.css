@@ -144,7 +144,7 @@
 .sky-try-cta .sky-try-button { margin-bottom: 0; }
 /* Wide screens: in the gap left of the frame, near its top, pointing at it. */
 .sky-try { position: relative; }
-.sky-try-arrow {
+.sky-try .sky-try-arrow {
   position: absolute;
   top: 8%;
   right: calc(100% + 8px);
@@ -154,7 +154,7 @@
 }
 /* Phones: the hero stacks, so the note sits above the frame, on its left. */
 @media (max-width: 560px) {
-  .sky-try-arrow {
+  .sky-try .sky-try-arrow {
     position: static;
     justify-content: flex-start;
     margin: 0 0 4px 8px;
