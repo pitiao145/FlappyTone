@@ -30,7 +30,7 @@
 
 .sky-hero-text { display: grid; gap: 24px; }
 .sky-lede { font-size: 1.35rem; font-weight: 600; }
-.sky-actions { display: flex; flex-wrap: wrap; gap: 16px; }
+.sky-actions { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; }
 
 .sky-screen { margin: 0; justify-self: center; }
 .sky-screen video {
@@ -353,8 +353,12 @@
 .sky-steps h4 { font-size: 1rem; margin-bottom: 4px; }
 
 /* "or try the demo" under the hero's Play button: a text link that opens the demo. */
+.sky-play-group { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+@media (max-width: 560px) {
+  .sky-play-group { flex-direction: row; gap: 14px; }
+}
 .sky-demo-link {
-  margin: 10px 0 0;
+  margin: 0;
   padding: 4px 0;
   border: 0;
   background: none;

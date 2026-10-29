@@ -149,24 +149,27 @@ export function SkyLanding() {
           <h1>{COPY.headline}</h1>
           <p className="sky-lede">{COPY.lede}</p>
           <div className="sky-actions">
-            <button className="sky-btn" onClick={() => go("play", "hero_actions")}>
-              {brand.heroCards.play.cta}
-            </button>
+            {/* Play and its demo link stay together: under it on wide screens, beside it on phones. */}
+            <div className="sky-play-group">
+              <button className="sky-btn" onClick={() => go("play", "hero_actions")}>
+                {brand.heroCards.play.cta}
+              </button>
+              <button
+                type="button"
+                className="sky-demo-link"
+                onClick={() => {
+                  capturePostHogEvent("landing_cta_clicked", { cta: "try_demo_link", location: "hero_actions" });
+                  demo.current?.start();
+                }}
+              >
+                {brand.heroCards.play.demoLink}
+              </button>
+            </div>
             {/* The free tool first: "Try" must not land on signup. */}
             <button className="sky-btn sky-btn-ghost" onClick={() => goToPage("visualiser_tool", "hero_actions", "/tools/tone-visualizer")}>
               {brand.heroCards.visualise.cta}
             </button>
           </div>
-          <button
-            type="button"
-            className="sky-demo-link"
-            onClick={() => {
-              capturePostHogEvent("landing_cta_clicked", { cta: "try_demo_link", location: "hero_actions" });
-              demo.current?.start();
-            }}
-          >
-            {brand.heroCards.play.demoLink}
-          </button>
           <p className="sky-small">{COPY.privacy}</p>
         </div>
         <TryItNow controlRef={demo} />
