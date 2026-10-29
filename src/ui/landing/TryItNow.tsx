@@ -139,7 +139,7 @@ export function TryItNow({
     return {
       pools: {
         single: wordsForList(guest, null, "beginner"),
-        // The guest intermediate sampler's two-syllable words: real tone pairs.
+        // The guest intermediate sampler's two-syllable words: tone pairs.
         pairs: wordsForList(guest, null, "intermediate").filter((w) => w.syllables === 2),
       },
       seed: playableSeed(all, seedId),

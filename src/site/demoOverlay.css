@@ -122,3 +122,11 @@
   .sky-try-overlay .go-tones { grid-area: tones; align-self: start; }
   .sky-try-overlay .go-coach { grid-area: coach; align-self: start; }
 }
+
+/* "Exit demo" centred under the game, as in the landing hero (sky.css .sky-screen figcaption). */
+.sky-try-overlay figcaption {
+  margin-top: 16px;
+  font-size: 0.92rem;
+  color: var(--color-ink-2);
+  text-align: center;
+}

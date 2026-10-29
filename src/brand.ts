@@ -50,7 +50,7 @@ export const brand = {
     pitchMore: "Plus: choose your level, words and speech style.",
     signup: "Sign up free",
     retry: "One more round",
-    harder: "Too easy? Try real tone pairs",
+    harder: "Too easy? Try tone pairs",
   },
 
   /** The hand-drawn arrow pointing at the hero demo's Try it now button. */
