@@ -9417,6 +9417,38 @@ button.switch-track.switch-on {
   padding: 16px;
   box-sizing: border-box;
 }
+/* Not the 9:16 game frame: its svh width cap shrank the tab on a real
+   iPhone (browser bars make svh short), and its padding doubled ours. */
+.frame:has(.toneder-screen) {
+  max-width: 100%;
+  padding: 0;
+}
+/* Mobile: the stage fills the height left between the bar and the nav,
+   instead of a fixed 520px+ that ran under the nav. A screen too short for
+   the stage's floor scrolls rather than clips. */
+@media (max-width: 719px) {
+  .app-game .frame:has(.toneder-screen) {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .toneder-screen {
+    flex: 1 0 auto;
+    margin-top: 0;
+  }
+  .toneder-screen .tt-tool {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+  }
+  .toneder-screen .tt-stage {
+    flex: 1 0 auto;
+    height: auto;
+    min-height: 420px;
+  }
+}
 .tt-style button.tt-style-locked {
   opacity: 0.45;
 }
