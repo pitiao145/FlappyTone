@@ -105,6 +105,10 @@ export interface DemoWhere {
   surface?: "landing" | "overlay";
   page?: string | null;
   seeded?: string | null;
+  /** Classic ("game") or the game's Tone Drill / Tone Pairs. */
+  mode?: "game" | "drill" | "pairs";
+  /** Drill: the tone ("3"); Pairs: the combo ("3-2") or "shuffle"; null for Classic. */
+  target?: string | null;
 }
 
 /** The routed CTAs on route-table pages (brief 25's table). */

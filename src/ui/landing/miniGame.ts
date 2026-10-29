@@ -61,11 +61,24 @@ export interface MiniResult {
   perTone: Record<Tone, { gates: number; cleared: number }>;
 }
 
+/**
+ * Which of the game's run modes to fly. "game" flies `words` in exactly that
+ * order (Try it now's rounds); "drill" and "pairs" are the game's own Tone
+ * Drill and Tone Pairs runs, drawing from `words` as the pool.
+ */
+export type MiniMode =
+  | { mode: "game" }
+  | { mode: "drill"; drillTone: Tone }
+  | { mode: "pairs"; pairCombo: Tone[] | null };
+
 export interface MiniGameOptions {
   canvas: HTMLCanvasElement;
   width: number;
   height: number;
+  /** The round's words ("game"), or the pool a drill/pairs run draws from. */
   words: Word[];
+  /** Default: `{ mode: "game" }`. */
+  run?: MiniMode;
   /** Ignored when this device already has a calibration. */
   voice: VoicePreset;
   gates: number;
@@ -101,16 +114,21 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<MiniGame> {
   const settings = loadSettings() ?? PRESETS[opts.voice];
   lockWorldTheme("pixel-flappy");
 
+  const kind = opts.run ?? { mode: "game" };
   const run = new Run({
-    mode: "game",
+    mode: kind.mode,
     width: opts.width,
     corridor: "wide",
     cueStyle: "pause",
     cueDurationMsFor: (word) => (word?.clipS ?? 0.8) * 1000,
     words: opts.words,
-    // Exactly these words, in this order: no repeats within a round.
-    wordSequence: opts.words,
     speechStyle: "textbook",
+    ...(kind.mode === "game"
+      ? // Exactly these words, in this order: no repeats within a round.
+        { wordSequence: opts.words }
+      : kind.mode === "drill"
+        ? { drillTone: kind.drillTone }
+        : { pairCombo: kind.pairCombo }),
   });
 
   let tracker: PitchTracker | null = null;

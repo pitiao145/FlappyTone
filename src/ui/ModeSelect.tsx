@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { track } from "../analytics/client.ts";
 import type { Tone } from "../game/gates.ts";
-import { availableTones, availableToneCombos, resolvedPool, toneComboKey, wordsForTier } from "../game/words.ts";
+import { availableTones, availableToneCombos, resolvedPool, wordsForTier } from "../game/words.ts";
 import { effectiveSpeechStyle, loadLastLevel, loadProficiency } from "../game/settings.ts";
 import {
   classicCount,
@@ -9,13 +9,12 @@ import {
   drillToneCount,
   pairsComboCount,
   pairsCount,
-  wordCountLabel,
 } from "../game/poolCounts.ts";
 import { useInventoryWords } from "./useInventoryWords.ts";
 import type { PlayIntent } from "./PlayHome.tsx";
 import { useTier } from "../data/tier.ts";
 import { tierLimits } from "../game/tiers.ts";
-import { ShuffleIcon, ToneMarkIcon, type ToneOrNeutral } from "./toneIcons.tsx";
+import { CountBadge, DrillTonePicker, PairComboPicker } from "./ModePickers.tsx";
 
 function LockIcon({ className }: { className?: string }) {
   return (
@@ -94,8 +93,7 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
   const combos = tier !== "guest" && tierWords ? availableToneCombos(tierWords) : [];
 
   // Counts come from poolCounts (the pools a Run really draws); null renders nothing.
-  const badge = (n: number | null) =>
-    n === null ? null : <span className="count-badge" aria-label={wordCountLabel(n)}>{n}</span>;
+  const badge = (n: number | null) => <CountBadge n={n} />;
   const classicBadge = badge(classicCount(words, tier, proficiency, loadLastLevel(proficiency), style));
   const drillBadge = badge(drillCount(words, tier, style));
   const pairsBadge = combos.length > 0 ? badge(pairsCount(words, tier, style)) : null;
@@ -182,67 +180,26 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
           )}
 
           {step === "tone" && (
-            <>
-              <p className="note">Which tone do you want to drill?</p>
-              <div className="choice">
-                {ALL_TONES.map((tone) => {
-                  const disabled = !tones.includes(tone);
-                  return (
-                    <button
-                      key={tone}
-                      className="choice-option"
-                      disabled={disabled}
-                      onClick={go("drill", { drillTone: tone })}
-                    >
-                      <ToneMarkIcon tone={tone} className="tone-mark-icon" />
-                      {tone}
-                      {badge(drillToneCount(words, tier, tone, style))}
-                    </button>
-                  );
-                })}
-              </div>
-              <button type="button" className="link" onClick={() => setStep("mode")}>
-                ← Back
-              </button>
-            </>
+            <DrillTonePicker
+              tones={tones}
+              count={(tone) => drillToneCount(words, tier, tone, style)}
+              onPick={(tone) => go("drill", { drillTone: tone })()}
+              onBack={() => setStep("mode")}
+            />
           )}
 
           {step === "pairs" && (
-            <>
-              <p className="note">Shuffle across every pair, or drill one combo.</p>
-              {tier === "free" && (
-                <p className="note">
-                  {tierLimits().free.pairWordsPerCombo} words available per tone pair. Go Pro for full access!
-                </p>
-              )}
-              <div className="tone-pair-selection">
-                <div className="pair-combo-grid">
-                  {combos.map((combo) => (
-                    <button
-                      key={toneComboKey(combo)}
-                      className="pair-combo-tile"
-                      onClick={go("pairs", { pairCombo: combo })}
-                    >
-                      {combo.map((tone, i) => (
-                        <ToneMarkIcon key={i} tone={tone as ToneOrNeutral} className="pair-combo-tone-icon" />
-                      ))}
-                      {badge(pairsComboCount(words, tier, combo, style))}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  className="pair-combo-shuffle"
-                  onClick={go("pairs", { pairCombo: null })}
-                >
-                  <ShuffleIcon className="pair-combo-shuffle-icon" />
-                  Shuffle
-                </button>
-              </div>
-              <button type="button" className="link" onClick={() => setStep("mode")}>
-                ← Back
-              </button>
-            </>
+            <PairComboPicker
+              combos={combos}
+              count={(combo) => pairsComboCount(words, tier, combo, style)}
+              onPick={(combo) => go("pairs", { pairCombo: combo })()}
+              onBack={() => setStep("mode")}
+              note={
+                tier === "free"
+                  ? `${tierLimits().free.pairWordsPerCombo} words available per tone pair. Go Pro for full access!`
+                  : undefined
+              }
+            />
           )}
 
           {step === "learn" && (

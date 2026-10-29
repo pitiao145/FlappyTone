@@ -9,7 +9,17 @@ type TryNowAction = Extract<AnalyticsEvent, { type: "tool_used"; tool: "try-now"
 function trackTry(action: TryNowAction["action"], extra: Omit<TryNowAction, "type" | "tool" | "action"> = {}) {
   captureGameEvent({ type: "tool_used", tool: "try-now", action, ...extra });
 }
-import { wordsForList, wordsForTier, wordsFromCatalog, type Word } from "../../game/words.ts";
+import {
+  availableToneCombos,
+  availableTones,
+  toneComboKey,
+  wordsForList,
+  wordsForTier,
+  wordsFromCatalog,
+  type Word,
+} from "../../game/words.ts";
+import type { Tone } from "../../game/gates.ts";
+import { DrillTonePicker, PairComboPicker } from "../ModePickers.tsx";
 import type { RunSnapshot } from "../../game/run.ts";
 import { GameHud } from "../GameHud.tsx";
 import { DEFAULT_SPEAKER_ID } from "../../data/catalogRows.ts";
@@ -24,6 +34,7 @@ import { playableSeed, seededRound } from "./demoSeed.ts";
 import "./tryItNow.css";
 
 type MiniModule = typeof import("./miniGame.ts");
+type MiniGameRun = import("./miniGame.ts").MiniMode;
 
 /** The mic chunk, loaded on the first tap so the second tap can open the mic. */
 let modulePromise: Promise<MiniModule> | null = null;
@@ -92,6 +103,7 @@ const H = 640;
 type Step =
   | { kind: "demo" }
   | { kind: "loading" }
+  | { kind: "pick"; mini: MiniModule; calibrated: boolean }
   | { kind: "choose"; mini: MiniModule; calibrated: boolean }
   | { kind: "preparing" }
   | { kind: "playing" }
@@ -108,8 +120,10 @@ type Step =
  * fly the page's word first (`seedId`, see `demoSeed.ts`), and its signup
  * carries `?src=<page>`. Leaving the run closes the overlay (`onClose`).
  *
- * `firstLevel="pairs"` starts on the two-syllable round (the landing's "Try
- * Tone Pairs"). `controlRef` lets the host drive the hero demo: `start` (the
+ * `mode="drill"` / `"pairs"` (the landing's mode chooser and "Try Tone
+ * Pairs") runs the game's own Tone Drill or Tone Pairs: first the game's
+ * tone or combo picker (`ModePickers.tsx`), then the voice choice, then that
+ * run mode on the guest pool. `controlRef` lets the host drive the hero demo: `start` (the
  * "or try the demo" link) scrolls it into view and shows the voice choice,
  * as the button over it does; `stop` ends a run before another demo opens,
  * so two runs never share the mic.
@@ -118,7 +132,7 @@ export function TryItNow({
   surface = "landing",
   page,
   seedId = null,
-  firstLevel = "single",
+  mode = "game",
   controlRef,
   onClose,
 }: {
@@ -127,8 +141,8 @@ export function TryItNow({
   page?: string;
   /** A word id to fly first; ignored unless `playableSeed` accepts it. */
   seedId?: string | null;
-  /** The round the voice choice starts. */
-  firstLevel?: Level;
+  /** Classic ("game"), or the game's Tone Drill / Tone Pairs. */
+  mode?: "game" | "drill" | "pairs";
   /** Filled with controls for the host page (landing only). */
   controlRef?: { current: DemoControl | null };
   onClose?: () => void;
@@ -147,6 +161,8 @@ export function TryItNow({
   /** The game's HUD, polled like Game.tsx does (never per frame). */
   const [hud, setHud] = useState<RunSnapshot | null>(null);
   const [confettiDone, setConfettiDone] = useState(false);
+  /** The live run's mode, for the game's HUD. */
+  const [runMode, setRunMode] = useState<"game" | "drill" | "pairs">("game");
   /** The last round's module and voice, so "Too easy?" starts straight away. */
   const lastRef = useRef<{ mini: MiniModule; voice: "lower" | "higher" } | null>(null);
 
@@ -165,8 +181,11 @@ export function TryItNow({
   }, [seedId]);
   /** The seed flies in the first round only; "One more round" uses the pool. */
   const seedUsedRef = useRef(false);
+  /** Drill/Pairs: the tone or combo picked on the game's picker (null combo = Shuffle). */
+  const [pick, setPick] = useState<{ drillTone: Tone } | { pairCombo: Tone[] | null } | null>(null);
+  const pickKey = !pick ? null : "drillTone" in pick ? String(pick.drillTone) : pick.pairCombo ? toneComboKey(pick.pairCombo) : "shuffle";
   /** Added to the overlay's summary and CTA events. */
-  const where = { surface, page: page ?? null, seeded: seed?.id ?? null };
+  const where = { surface, page: page ?? null, seeded: seed?.id ?? null, mode, target: pickKey };
 
   useEffect(
     () => () => {
@@ -191,7 +210,9 @@ export function TryItNow({
   const load = async () => {
     try {
       const mini = await loadMini();
-      setStep({ kind: "choose", mini, calibrated: mini.hasSavedCalibration() });
+      // Drill and Pairs start on the game's own picker; a retry keeps the pick.
+      const kind = mode !== "game" && !pick ? "pick" : "choose";
+      setStep({ kind, mini, calibrated: mini.hasSavedCalibration() });
     } catch {
       trackTry("error");
       setStep({ kind: "error", message: "Couldn't load the game. Check your connection and try again." });
@@ -214,9 +235,28 @@ export function TryItNow({
     return seededRound(seed, draw(pools.single.filter((w) => w.id !== seed.id), "single"), GATES);
   };
 
-  const start = (mini: MiniModule, voice: "lower" | "higher", level: Level = "single") => {
+  /** The pool and run mode for a Drill/Pairs round, from the pick. */
+  const modeRun = (): { words: Word[]; run: MiniGameRun; level: Level } | null => {
+    if (mode === "game" || !pick) return null;
+    if ("drillTone" in pick) {
+      const t = pick.drillTone;
+      return { words: pools.single.filter((w) => w.tone === t), run: { mode: "drill", drillTone: t }, level: "single" };
+    }
+    const combo = pick.pairCombo;
+    const key = combo && toneComboKey(combo);
+    return {
+      words: key ? pools.pairs.filter((w) => toneComboKey(w.tones) === key) : pools.pairs,
+      run: { mode: "pairs", pairCombo: combo },
+      level: "pairs",
+    };
+  };
+
+  const start = (mini: MiniModule, voice: "lower" | "higher", classicLevel: Level = "single") => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const picked = modeRun();
+    const level = picked?.level ?? classicLevel;
+    setRunMode(picked?.run.mode ?? "game");
     lastRef.current = { mini, voice };
     setStep({ kind: "preparing" });
     trackTry("started", { voice: mini.hasSavedCalibration() ? "saved" : voice });
@@ -228,7 +268,8 @@ export function TryItNow({
         canvas,
         width: W,
         height: H,
-        words: roundWords(level),
+        words: picked ? picked.words : roundWords(level),
+        run: picked?.run,
         voice,
         gates: GATES,
         onReady: () => {
@@ -353,7 +394,7 @@ export function TryItNow({
             <GameHud
               hud={hud}
               flash={null}
-              mode="game"
+              mode={runMode}
               scored
               showTranslation={false}
               showPinyin
@@ -373,7 +414,7 @@ export function TryItNow({
             </div>
           )}
         </div>
-        {!live && step.kind !== "done" && <DemoLoop width={340} />}
+        {!live && step.kind !== "done" && step.kind !== "pick" && <DemoLoop width={340} />}
 
         {step.kind === "demo" && (
           <div className="sky-try-cta">
@@ -389,6 +430,35 @@ export function TryItNow({
             <span className="sky-small">Turn your sound on: you hear each word before you say it.</span>
           </p>
         )}
+        {step.kind === "pick" && (
+          // The game's Modes screen (ModeSelect), in the game's own frame.
+          <div className="stage game-stage playhome-stage sky-try-game sky-try-pick">
+            <div className="playhome-canvas">
+              <div className="screen playhome-overlay">
+                <h1>Modes</h1>
+                {mode === "drill" ? (
+                  <DrillTonePicker
+                    tones={availableTones(pools.single)}
+                    count={(t) => pools.single.filter((w) => w.tone === t).length}
+                    onPick={(t) => {
+                      setPick({ drillTone: t });
+                      setStep({ kind: "choose", mini: step.mini, calibrated: step.calibrated });
+                    }}
+                  />
+                ) : (
+                  <PairComboPicker
+                    combos={availableToneCombos(pools.pairs)}
+                    count={(c) => pools.pairs.filter((w) => toneComboKey(w.tones) === toneComboKey(c)).length}
+                    onPick={(c) => {
+                      setPick({ pairCombo: c });
+                      setStep({ kind: "choose", mini: step.mini, calibrated: step.calibrated });
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         {step.kind === "choose" && (
           <div className="sky-try-panel">
             <p>
@@ -397,15 +467,15 @@ export function TryItNow({
                 : "Pick your voice so the bird fits your range. Then listen to each word and say it back."}
             </p>
             {step.calibrated ? (
-              <button className="sky-btn" onClick={() => start(step.mini, "lower", firstLevel)}>
+              <button className="sky-btn" onClick={() => start(step.mini, "lower")}>
                 Start
               </button>
             ) : (
               <div className="sky-try-voices">
-                <button className="sky-btn" onClick={() => start(step.mini, "lower", firstLevel)}>
+                <button className="sky-btn" onClick={() => start(step.mini, "lower")}>
                   Lower voice
                 </button>
-                <button className="sky-btn" onClick={() => start(step.mini, "higher", firstLevel)}>
+                <button className="sky-btn" onClick={() => start(step.mini, "higher")}>
                   Higher voice
                 </button>
               </div>
@@ -428,7 +498,7 @@ export function TryItNow({
                 void open();
               }}
               onHarder={
-                step.level === "single" && lastRef.current
+                mode === "game" && step.level === "single" && lastRef.current
                   ? () => {
                       const last = lastRef.current;
                       if (!last) return;

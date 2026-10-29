@@ -17,6 +17,15 @@ import { ToneAverageCard } from "../ToneAverageCard.tsx";
 import { NotifyForm, TONES, go, goToPage, useWordsByTone } from "./shared.tsx";
 import { ProgressSection } from "./ProgressSection.tsx";
 import { TryItNow, type DemoControl } from "./TryItNow.tsx";
+
+type DemoMode = "game" | "drill" | "pairs";
+
+/** The mode chooser's demo per card title (brand.options.modes); Learn has none. */
+const CHOOSER_DEMO: Record<string, DemoMode | undefined> = {
+  Classic: "game",
+  "Tone Drill": "drill",
+  "Tone Pairs": "pairs",
+};
 import "./sky.css";
 
 /**
@@ -106,20 +115,32 @@ export function SkyLanding() {
 
   /** The hero's "or try the demo" link opens the demo beside it (TryItNow fills this). */
   const demo = useRef<DemoControl | null>(null);
-  /** "Try Tone Pairs": the demo in a dialog, on the pairs round. Loaded on the tap. */
-  const [pairsOverlay, setPairsOverlay] = useState<typeof import("../../site/DemoOverlay.tsx") | null>(null);
-  const openPairs = () => {
-    capturePostHogEvent("landing_cta_clicked", { cta: "tone_pairs", location: "tone_pairs" });
+  /**
+   * The demo in a dialog, in one of the game's modes ("Try Tone Pairs", and
+   * the mode chooser's "Try it"). Loaded on the tap; the hero run stops first
+   * so two runs never share the mic.
+   */
+  const [overlay, setOverlay] = useState<{
+    mod: typeof import("../../site/DemoOverlay.tsx");
+    mode: DemoMode;
+  } | null>(null);
+  const openDemo = (mode: DemoMode, cta: string, location: string) => {
+    capturePostHogEvent("landing_cta_clicked", { cta, location });
     demo.current?.stop();
     import("../../site/DemoOverlay.tsx")
-      .then(setPairsOverlay)
-      .catch(() => go("tone_pairs", "tone_pairs", "pairs"));
+      .then((mod) => setOverlay({ mod, mode }))
+      .catch(() => go(cta, location, mode === "pairs" ? "pairs" : undefined));
   };
 
   return (
     <div className="sky lp-sky">
       <Nav onPlay={() => go("play", "nav")} />
       <ScrollBird />
+      {overlay &&
+        createPortal(
+          <overlay.mod.DemoOverlay seedId={null} mode={overlay.mode} onClose={() => setOverlay(null)} />,
+          document.body,
+        )}
 
       <main className="sky-main">
 
@@ -303,14 +324,9 @@ export function SkyLanding() {
           <div className="sky-head">
             <h2>{COPY.pairsTitle}</h2>
             <p>{COPY.pairs}</p>
-            <button className="sky-btn" aria-haspopup="dialog" onClick={openPairs}>
+            <button className="sky-btn" aria-haspopup="dialog" onClick={() => openDemo("pairs", "tone_pairs", "tone_pairs")}>
               {brand.tonePairs.cta}
             </button>
-            {pairsOverlay &&
-              createPortal(
-                <pairsOverlay.DemoOverlay seedId={null} level="pairs" onClose={() => setPairsOverlay(null)} />,
-                document.body,
-              )}
           </div>
           <ol className="sky-pair-tiles" aria-label="Example tone pairs">
             {examples
@@ -352,9 +368,20 @@ export function SkyLanding() {
               </div>
             ))}
           </dl>
-          <button className="sky-btn" onClick={() => go("play", "options")}>
-            {brand.options.cta}
-          </button>
+          {/* Classic, Drill and Pairs open the demo in that mode; Learn has no demo yet. */}
+          {CHOOSER_DEMO[modes[mode].title] ? (
+            <button
+              className="sky-btn"
+              aria-haspopup="dialog"
+              onClick={() => openDemo(CHOOSER_DEMO[modes[mode].title]!, `try_${CHOOSER_DEMO[modes[mode].title]}`, "options")}
+            >
+              {brand.options.cta}
+            </button>
+          ) : (
+            <button className="sky-btn" onClick={() => go("play", "options")}>
+              {brand.options.cta}
+            </button>
+          )}
         </div>
       </section>
 
