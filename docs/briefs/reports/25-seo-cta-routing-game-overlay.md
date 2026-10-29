@@ -82,3 +82,27 @@ Not run. The Lighthouse CLI is not installed (installing it would add a dependen
   - ≥640px: two columns (score, signup and actions | tones and coach). 513px tall, so it fits in any desktop window taller than about 615px.
   - Phones: less padding around the end screen, and the score card sits beside the close button. On short screens (≤760px high) the coach card is hidden, because the gold card already names the weakest tone. 375×667, 390×844 (coach shown), 600×720 and 640×700: no scroll and no overlap.
 - The page's own CTA keeps its sticker style. The overlay looks like the landing page's demo.
+
+## Update: landing page follow-ups (Pierre's requests, same session)
+- Hero: an "or try the demo" text link opens the hero demo (voice choice) and scrolls it into view when it is off screen. It sits under Play on wide screens and beside it on phones. The "Try it now" button is centred on the demo video.
+- Hero "Try the visualiser" now goes to the free `/tools/tone-visualizer`, not signup. The visualiser section button reads "Sign up and try the full visualiser" (still /app).
+- "Pick how you practise": "Try it" opens the demo overlay in the selected mode (Classic, Tone Drill, Tone Pairs). Learn keeps the signup CTA. "Try Tone Pairs" opens Tone Pairs. Drill and Pairs start on the game's own tone and combo picker (`src/ui/ModePickers.tsx`, moved out of `ModeSelect.tsx` with no markup change), then fly the game's real `drill`/`pairs` Run mode on the guest pools. The hero run stops before an overlay opens, so two runs never share the mic.
+- The "Too easy?" button reads "Too easy? Try tone pairs" (on the landing page too).
+- Fixes along the way: the overlay game frame collapsed to 6px on phones (a percentage width in a shrink-to-fit figure); "Exit demo" was not centred; the hero's "Try it out now!" note had lost its ink colour after the CSS move.
+- Tracking: the demo events also send `mode` and `target` ("3", "3-2", "shuffle", or null). `landing_cta_clicked` has new values: `try_demo_link`, `try_game`/`try_drill`/`try_pairs` (chooser), `tone_pairs`. The hero visualiser button's value changed from `visualiser` to `visualiser_tool`.
+
+## Final check (end of session)
+- typecheck pass; tests 119 files / 1570 pass; lint: 4 errors, all in `video/` (known); build pass; hard rule 7 grep empty.
+- SEO initial load (all route-table pages share it): 172,119 → 173,624 B gzip (+1.5 kB). No `startMiniGame`, `getUserMedia`, `AudioWorklet`, word catalog or picker code in it. The overlay, demo, pickers and mini game load on the tap (about 8 kB gzip plus the game modules).
+- LP initial load: 205,420 → 210,634 B gzip (+5.2 kB, mostly chunk reshuffling, the demo control code and the shared pickers).
+- Brief items: 1 (overlay, lazy, voice choice, `?src=`), 2 (seed and its test), 3 (all 15 rows, routing test), 4 (feature line), tracking and the row 9 subtitle are all done.
+- The brief's "LP demo must not change" was overridden on purpose by your later requests (centred button, demo link, pairs copy). The /app game is unchanged, apart from the shared pickers (same markup) and the auth screen's weak-pair subtitle (allowed by the brief).
+
+## Still needs Pierre
+- Real mic runs (I cannot use a mic): a seeded SEO overlay (/say/thank-you starts with 謝謝), one Drill run and one Pairs combo run from the landing chooser, the "Too easy?" round, and closing mid-run on a real iPhone (the mic must stop).
+- Lighthouse on /say/hello and /chinese-tones (not run, see above).
+- /app Modes → Tone Drill and Tone Pairs pickers: a quick look to confirm they are unchanged after the move to `ModePickers.tsx`.
+- The tone-test result link → auth screen shows "Your weak spot is 2nd vs 3rd…".
+- The "Try it out now!" arrow still points at the frame from near the top; check that it still reads well now the button is centred.
+- Your decision: the CLAUDE.md hard rule 13 wording (the Try it now demo now also loads on a tap on site pages).
+- PostHog: update insights that filter `cta = visualiser` (hero) or the old try-now `placement = finished`.
