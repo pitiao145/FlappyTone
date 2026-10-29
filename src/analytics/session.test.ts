@@ -232,7 +232,7 @@ describe("run_end", () => {
       $current_url: "https://flappytone.com/app",
     });
     expect(sent.voice).toBe("mark");
-    expect(sent).not.toHaveProperty("$host");
+    expect(sent.$host).toBe("flappytone.com");
     expect(sent).not.toHaveProperty("$current_url");
     expect(sent.$geoip_country_code).toBe("TW");
   });
@@ -358,10 +358,12 @@ describe("APP_EVENTS", () => {
     const sent = sanitizeGameProperties({
       screen: "profile",
       $host: "flappytone.com",
+      $current_url: "https://flappytone.com/app",
       $geoip_country_code: "TW",
     });
     expect(sent.screen).toBe("profile");
-    expect(sent).not.toHaveProperty("$host");
+    expect(sent.$host).toBe("flappytone.com");
+    expect(sent).not.toHaveProperty("$current_url");
     expect(sent.$geoip_country_code).toBe("TW");
   });
 });

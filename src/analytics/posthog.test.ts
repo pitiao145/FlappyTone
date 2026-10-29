@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sanitizeGameProperties, withPageViewProps } from "./posthog.ts";
+import { PH_ALLOW, sanitizeGameProperties, withPageViewProps } from "./posthog.ts";
 
 describe("sanitizeGameProperties", () => {
   it("passes through our own event fields untouched", () => {
@@ -32,14 +32,24 @@ describe("sanitizeGameProperties", () => {
     ).toEqual({});
   });
 
-  it("drops every other PostHog default property — $current_url, $browser, etc.", () => {
+  it("keeps the allowlisted page, device and session properties", () => {
+    const allowed = Object.fromEntries([...PH_ALLOW].map((k) => [k, "v"]));
+    expect(sanitizeGameProperties(allowed)).toEqual(allowed);
+    expect(PH_ALLOW).toContain("$host");
+    expect(PH_ALLOW).toContain("$raw_user_agent");
+    expect(PH_ALLOW).toContain("$session_id");
+  });
+
+  it("drops $current_url, $referrer, element props and unknown $ properties", () => {
     expect(
       sanitizeGameProperties({
-        $current_url: "https://flappytone.example/game",
-        $browser: "Safari",
-        $os: "iOS",
-        $screen_height: 844,
+        $current_url: "https://flappytone.example/app?n=Pierre",
+        $referrer: "https://example.com/?q=x",
+        $session_entry_url: "https://flappytone.example/app?n=Pierre",
+        $initial_current_url: "https://flappytone.example/",
+        $el_text: "typed",
         $device_id: "abc-123",
+        $foo: 1,
       }),
     ).toEqual({});
   });
@@ -51,8 +61,9 @@ describe("sanitizeGameProperties", () => {
         outcome: "perfect",
         $geoip_country_code: "TW",
         $current_url: "https://flappytone.example/game",
+        $host: "flappytone.com",
       }),
-    ).toEqual({ tone: 4, outcome: "perfect", $geoip_country_code: "TW" });
+    ).toEqual({ tone: 4, outcome: "perfect", $geoip_country_code: "TW", $host: "flappytone.com" });
   });
 });
 

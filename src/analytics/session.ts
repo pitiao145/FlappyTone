@@ -25,7 +25,9 @@
  * - No audio. Not a sample, not a clip, not a duration of anything recorded.
  * - No per-frame pitch or contour data. Gate summaries only, so the trace of
  *   someone's voice cannot be reconstructed from the payload.
- * - No raw user-agent — that is a fingerprint. Only `deviceBucket`'s closed set.
+ * - No raw user-agent in our own fields — only `deviceBucket`'s closed set.
+ *   PostHog's own `$raw_user_agent` is kept by `posthog.ts`'s `PH_ALLOW`, for
+ *   bot filtering (DECISIONS.md, 29 Oct 2026).
  * - No IP, geolocation, timezone, screen size, language, or cookies.
  * - No name, handle, email, or anything the player typed. The game has no
  *   text input; keep it that way.

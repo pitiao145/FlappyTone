@@ -1452,3 +1452,23 @@ live).
 
 Update 24 Oct 2026 (Pierre): Spoken is open to free accounts too in the app's
 TONEder; only guests see it locked. The Pro reason is the daily swipe limit.
+
+## App events keep PostHog's page, device and session properties (29 Oct 2026, brief 26)
+
+`sanitizeGameProperties` used to drop every `$`-prefixed property on app
+events except country geo. That removed `$raw_user_agent`, `$host` and
+`$session_id`, so PostHog classed every game event as "Automation" (bot), no
+event could be split by site, and session funnels did not work. Confirmed by
+capturing `run_start` and `tool_summary` through the real SDK on 29 Oct.
+
+Now a short allowlist (`PH_ALLOW` in `src/analytics/posthog.ts`) passes:
+`$host`, `$pathname`, `$referring_domain`, the user agent, browser/OS and
+versions, device type, screen and viewport sizes, `$lib`/`$lib_version`,
+`$session_id`, `$window_id`, `$insert_id`, `$time`, `$process_person_profile`
+and the country geo pair. `$current_url` (a challenge link holds `?n=<name>`),
+`$referrer`, `$session_entry_*` and every other `$` key are still dropped.
+
+Why: bot filtering, per-host analysis and a clean before/after measurement of
+the login-gate release. Cost: the "closed vocabulary" rule is looser; game
+events now carry the user agent and screen sizes. Nothing typed and no full
+URL is added. The privacy policy says so (same commit).

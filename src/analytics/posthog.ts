@@ -14,7 +14,8 @@
  * can contain — and it is the ONLY property-level gate. Be exact about what
  * `before_send` below actually does, because it is easy to read as more: it
  * matches the event NAME against `APP_EVENTS`, then drops `$`-prefixed keys
- * except the two country-level geo fields, and passes every other property
+ * except a short allowlist (`PH_ALLOW`: page host/path, device/user-agent,
+ * SDK/session ids, country-level geo), and passes every other property
  * straight through. It filters PostHog's defaults, not ours.
  *
  * The consequence, stated plainly: a field added to `AnalyticsEvent` ships
@@ -117,7 +118,7 @@ function enabled(): boolean {
  * regardless of consent tier, plus `calib_numbers` (the calibration readout,
  * not part of the union since it isn't a moment-in-time event). This is a
  * property-sanitization allowlist, not a consent gate: it strips PostHog's
- * own `$`-prefixed defaults from anything named here, whether that event is
+ * own `$`-prefixed defaults (except `PH_ALLOW`) from anything named here, whether that event is
  * gameplay- or global-tier. Anything NOT named here (marketing CTA clicks on
  * the landing site, `$pageview`, newsletter events) keeps PostHog's normal
  * properties, since those were never built from `session.ts`'s closed union
@@ -174,13 +175,46 @@ export const APP_EVENTS = new Set<string>([
   "toneder_upgrade_click",
 ]);
 
-/** The only `$`-prefixed properties allowed through on a gameplay event. */
-const GEO_ALLOW = new Set(["$geoip_country_name", "$geoip_country_code"]);
+/**
+ * The only `$`-prefixed properties allowed through on an app event. Each one
+ * is set by the SDK and carries no text the player typed:
+ * - page: `$host`, `$pathname`, `$referring_domain`. Never `$current_url`
+ *   (its query string can hold a challenge `?n=<name>`) or `$referrer`.
+ * - device: the user agent, browser/OS, device type and screen/viewport
+ *   sizes. PostHog's bot filter reads the user agent; without it every app
+ *   event was classed as "Automation" (DECISIONS.md, 2026-10-29).
+ * - SDK/session: what ingestion and session funnels need.
+ * - geo: country only, never city/region/lat-long.
+ */
+export const PH_ALLOW = new Set([
+  "$host",
+  "$pathname",
+  "$referring_domain",
+  "$raw_user_agent",
+  "$browser",
+  "$browser_version",
+  "$os",
+  "$os_version",
+  "$device_type",
+  "$screen_width",
+  "$screen_height",
+  "$viewport_width",
+  "$viewport_height",
+  "$lib",
+  "$lib_version",
+  "$session_id",
+  "$window_id",
+  "$insert_id",
+  "$time",
+  "$process_person_profile",
+  "$geoip_country_name",
+  "$geoip_country_code",
+]);
 
 /**
- * Reduces a gameplay event's properties to what CLAUDE.md's closed-vocabulary
- * rule permits: PostHog's own `$`-prefixed defaults are dropped except the
- * two country-level geo fields; everything else (our own event fields) passes
+ * Reduces an app event's properties to what CLAUDE.md's closed-vocabulary
+ * rule permits: PostHog's own `$`-prefixed defaults are dropped except
+ * `PH_ALLOW`; everything else (our own event fields) passes
  * through, since the `AnalyticsEvent`/`SessionCalibration` type unions are
  * already the guard on those. Pure and exported so it is testable without
  * mocking the SDK.
@@ -198,7 +232,7 @@ export function sanitizeGameProperties(
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(properties)) {
     if (k.startsWith("$")) {
-      if (GEO_ALLOW.has(k)) out[k] = v;
+      if (PH_ALLOW.has(k)) out[k] = v;
       continue;
     }
     out[k] = v;

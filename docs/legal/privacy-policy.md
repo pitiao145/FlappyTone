@@ -1,6 +1,6 @@
 # FlappyTone — Privacy Policy
 
-**Last updated: 14 October 2026**
+**Last updated: 29 October 2026**
 
 This policy explains what personal data FlappyTone ("we", "us") collects, why, and your rights over it. FlappyTone is operated by Pierre Bruyninckx, an independent developer, at [flappytone.com](https://flappytone.com). For any privacy question or request, contact [pierre@pierrebuilds.dev](mailto:pierre@pierrebuilds.dev).
 
@@ -12,8 +12,9 @@ FlappyTone listens to your voice through your device's microphone to drive the g
 
 ## What we collect
 
-**If you play as a guest (no account):**
-- Game state and progress stored **locally in your browser** (localStorage) — runs, streaks, daily-run counter, settings. This stays on your device and is not sent to us.
+**If you try FlappyTone without an account:**
+- You can try the demo on our pages without an account. Nothing from the demo is stored on our servers or sent to us, apart from the analytics described below. Playing the full game needs an account.
+- If you played as a guest on this device in the past, that progress stays **locally in your browser** (localStorage) and is not sent to us. When you sign up, it is added to your account once.
 
 **If you create an account:**
 - **Email address** (to sign in, sync your data, and contact you about your account).
@@ -28,7 +29,7 @@ FlappyTone listens to your voice through your device's microphone to drive the g
 - Your purchase is handled by **Lemon Squeezy** as merchant of record. They collect the payment and billing details needed for the transaction and tax. **We do not receive or store your card number.** We receive confirmation that your account has access, and basic order information (such as your email and order reference).
 
 **When you use the site (analytics):**
-- **Usage analytics** via **PostHog**, in two categories. General usage data, such as which screens you visit, which game mode you pick, and settings or account actions, is collected to understand how the app is used and to fix problems; this does not require a separate opt-in. Gameplay data, such as which gates you hit or miss, your calibration numbers, and Tone Visualiser practice, is only collected if you leave "Anonymous game data" turned on in Settings. Turning it off stops that data immediately; it does not delete the anonymous identifier already used for general usage data.
+- **Usage analytics** via **PostHog**, in two categories. General usage data, such as which screens you visit, which game mode you pick, and settings or account actions, is collected to understand how the app is used and to fix problems; this does not require a separate opt-in. Gameplay data, such as which gates you hit or miss, your calibration numbers, and Tone Visualiser practice, is only collected if you leave "Anonymous game data" turned on in Settings. Turning it off stops that data immediately; it does not delete the anonymous identifier already used for general usage data. PostHog events also include technical information about your device and visit: your browser and operating system (user agent), device type, screen size, the site page (host and path), a visit/session identifier, and your approximate country from your IP address. We don't send the full page address or anything you type.
 
 ## Legal bases for processing
 
