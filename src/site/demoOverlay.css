@@ -1,7 +1,13 @@
 /* The Try it now overlay on site pages (DemoOverlay.tsx). Loaded with it, on
-   the CTA tap. The demo's own look is tryItNow.css; this only frames it.
-   Phones: full screen. Wider: a large centred modal. */
+   the CTA tap, and mounted on <body> so no page rule reaches it. The demo's
+   own look is tryItNow.css (the same as the landing hero); this only frames
+   it. Phones: full screen. Wider: a large centred modal. */
 .demo-overlay {
+  /* What `.sky` gives the landing hero's demo. */
+  --font: var(--font-body);
+  font: 400 18px/1.55 var(--font-body);
+  color: var(--color-ink);
+  color-scheme: light;
   box-sizing: border-box;
   width: 100vw;
   max-width: none;
@@ -13,7 +19,6 @@
   overflow: auto;
   overscroll-behavior: contain;
   background: var(--color-sky-2);
-  color: var(--color-ink);
 }
 .demo-overlay::backdrop { background: rgb(20 16 10 / 0.6); }
 .demo-overlay-inner {
@@ -24,23 +29,32 @@
   place-items: center;
   padding: 64px 16px 24px;
 }
-.demo-overlay-close {
+
+/* Round, in the site's pressed-edge button language (site.css .sky-btn). */
+.demo-overlay .demo-overlay-close {
   position: absolute;
   top: 12px;
   right: 12px;
   z-index: 2;
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  box-sizing: border-box;
+  width: 48px;
+  height: 48px;
+  margin: 0;
+  padding: 0;
   border: var(--outline) solid var(--color-ink);
   border-radius: 999px;
   background: var(--color-cloud);
-  box-shadow: 0 3px 0 var(--color-ink);
+  box-shadow: 0 4px 0 var(--color-ink);
+  color: var(--color-ink);
   cursor: pointer;
+  transition: translate 120ms var(--ease-snap), box-shadow 120ms var(--ease-snap);
 }
-.demo-overlay-close svg { stroke: var(--color-ink); stroke-width: 2.5; stroke-linecap: round; fill: none; }
-.demo-overlay-close:focus-visible { outline: 3px solid var(--color-ink); outline-offset: 3px; }
+.demo-overlay .demo-overlay-close:hover { translate: 0 -2px; box-shadow: 0 6px 0 var(--color-ink); }
+.demo-overlay .demo-overlay-close:active { translate: 0 3px; box-shadow: 0 1px 0 var(--color-ink); }
+.demo-overlay .demo-overlay-close:focus-visible { outline: 3px solid var(--color-focus, var(--color-ink)); outline-offset: 3px; }
+.demo-overlay-close svg { stroke: currentColor; stroke-width: 3; stroke-linecap: round; fill: none; }
 
 /* The live game frame: the landing sizes it under .lp-sky; same rules here. */
 .demo-overlay .sky-try-game {
@@ -56,14 +70,55 @@
 .demo-overlay .sky-try-game[hidden] { display: none; }
 .sky-try-overlay figcaption:empty { display: none; }
 
+/* The end screen fits without scrolling: tighter gaps on phones... */
+.sky-try-overlay .sky-try-over { padding-top: 28px; }
+.sky-try-overlay .sky-try-over .screen.gameover-screen { gap: 14px; padding-bottom: 0; }
+@media (max-width: 560px) {
+  /* No HUD under the close button now, so the score card can start beside it. */
+  .demo-overlay-inner:has(.sky-try-over) { padding: 16px 12px 12px; }
+  .sky-try-overlay .go-header { margin-right: 52px; }
+}
+@media (min-width: 561px) and (max-width: 639px) {
+  /* One centred column, clear of the close button in the corner. */
+  .demo-overlay-inner:has(.sky-try-over) { padding: 24px 16px 12px; }
+}
+/* Short phones: the coach repeats the gold card's weakest tone; drop it. */
+@media (max-width: 639px) and (max-height: 760px) {
+  .sky-try-overlay .go-coach { display: none; }
+}
+
 @media (min-width: 561px) {
   .demo-overlay {
-    width: min(92vw, 640px);
-    height: min(94dvh, 940px);
+    width: min(94vw, 900px);
+    height: min(94dvh, 900px);
     margin: auto;
     border: var(--outline) solid var(--color-ink);
     border-radius: 24px;
     box-shadow: var(--shadow-hard);
   }
   .demo-overlay .sky-try-game { width: auto; height: min(calc(94dvh - 150px), 720px); }
+  .demo-overlay-inner { padding-top: 40px; }
+}
+
+/* ...and two columns where there is room: score, signup and actions on the
+   left, this run's tones and the coach on the right. Same cards as the
+   landing's end screen, only placed side by side. */
+@media (min-width: 640px) {
+  .sky-try-overlay .sky-try-over { width: min(100%, 780px); }
+  .sky-try-overlay .sky-try-over .screen.gameover-screen {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "head tones"
+      "pitch tones"
+      "pitch coach"
+      "actions coach";
+    align-content: start;
+    gap: 16px 22px;
+  }
+  .sky-try-overlay .go-header { grid-area: head; }
+  .sky-try-overlay .go-demo-pitch { grid-area: pitch; align-self: start; }
+  .sky-try-overlay .go-demo-actions { grid-area: actions; align-self: start; }
+  .sky-try-overlay .go-tones { grid-area: tones; align-self: start; }
+  .sky-try-overlay .go-coach { grid-area: coach; align-self: start; }
 }

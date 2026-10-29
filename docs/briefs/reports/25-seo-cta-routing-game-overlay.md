@@ -72,3 +72,13 @@ Not run. The Lighthouse CLI is not installed (installing it would add a dependen
 
 ## Follow-ups
 - PostHog: add `surface` as a breakdown on the Try it now insights, and add an `seo_cta_click` funnel (overlay open → `tool_summary` → signup).
+
+## Update: styling fixes after Pierre's first look
+- Cause of most issues: the overlay and the viewer's "Try it" rendered inside the page's article, so `.screen button` (white, thin border), `.legal-body` and the jade `.pip-cta` text colour restyled them. The overlay now mounts on `<body>` (`createPortal`). The voice panel, buttons and end screen get only the demo's own CSS, as on the landing page (checked: voice buttons are gold `sky-btn`, the panel text is ink).
+- Word viewer "Try it": the selector is now `.word-viewer .word-viewer-try`, so it beats `.screen button`. It is gold again.
+- Close button: a round, white, ink-outlined button with the site's pressed edge (48px).
+- Visualizer toggle text: the new feature line crowded the left column, and the toggle (it has `overflow: hidden`) shrank to 12px. Fix: `.tc-toggle { flex-shrink: 0 }`.
+- End screen without scrolling (measured with the real `DemoGameOver` in the overlay):
+  - ≥640px: two columns (score, signup and actions | tones and coach). 513px tall, so it fits in any desktop window taller than about 615px.
+  - Phones: less padding around the end screen, and the score card sits beside the close button. On short screens (≤760px high) the coach card is hidden, because the gold card already names the weakest tone. 375×667, 390×844 (coach shown), 600×720 and 640×700: no scroll and no overlap.
+- The page's own CTA keeps its sticker style. The overlay looks like the landing page's demo.

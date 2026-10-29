@@ -8,6 +8,7 @@
  * and the game load on the tap (`import("./DemoOverlay.tsx")`).
  */
 import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { captureGameEvent } from "../analytics/posthog.ts";
 import type { SeoCta } from "../analytics/session.ts";
 
@@ -80,7 +81,11 @@ export function DemoTrigger({
           {children}
         </a>
       )}
-      {open && mod && <mod.DemoOverlay page={page} seedId={seedId} onClose={() => setOpen(false)} />}
+      {/* On <body>, not inside the article: the page's `.screen button`,
+          `.legal-body` and jade `.pip-cta` rules must not restyle the demo. */}
+      {open &&
+        mod &&
+        createPortal(<mod.DemoOverlay page={page} seedId={seedId} onClose={() => setOpen(false)} />, document.body)}
     </>
   );
 }

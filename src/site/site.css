@@ -990,7 +990,7 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
 }
 
 /* Into the app's visualiser: the one sticker-style action in the viewer. */
-.word-viewer-try {
+.word-viewer .word-viewer-try {
   font-family: inherit;
   cursor: pointer;
   display: inline-flex;
@@ -1007,17 +1007,17 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
   box-shadow: 3px 3px 0 var(--ink);
 }
 
-.word-viewer-try:hover {
+.word-viewer .word-viewer-try:hover {
   transform: translate(-1px, -1px);
   box-shadow: 4px 4px 0 var(--ink);
 }
 
-.word-viewer-try:active {
+.word-viewer .word-viewer-try:active {
   transform: translate(2px, 2px);
   box-shadow: 1px 1px 0 var(--ink);
 }
 
-.word-viewer-try:focus-visible {
+.word-viewer .word-viewer-try:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 3px;
 }
@@ -1719,6 +1719,8 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
 .tc-toggle {
   display: inline-flex;
   align-self: flex-start;
+  /* overflow: hidden lets a crowded picker squash it to nothing. */
+  flex-shrink: 0;
   border: 2px solid var(--ink);
   border-radius: var(--radius-pill);
   overflow: hidden;
