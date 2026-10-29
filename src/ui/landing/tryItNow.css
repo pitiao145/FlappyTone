@@ -134,12 +134,12 @@
   color: var(--ink);
 }
 /* Try it now, with a hand-drawn arrow pointing at it (same as "See the gates"). */
+/* Centred on the demo video, where the eye already is. */
 .sky-try-cta {
   z-index: 1;
-  align-self: end;
+  align-self: center;
   display: grid;
   justify-items: center;
-  margin-bottom: 32px;
 }
 .sky-try-cta .sky-try-button { margin-bottom: 0; }
 /* Wide screens: in the gap left of the frame, near its top, pointing at it. */
