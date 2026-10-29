@@ -16,10 +16,14 @@ import "./demoOverlay.css";
 export function DemoOverlay({
   page,
   seedId,
+  level = "single",
   onClose,
 }: {
-  page: string;
+  /** The route-table page it opened on; unset on the landing page. */
+  page?: string;
   seedId: string | null;
+  /** "pairs": start on the two-syllable round (the landing's Try Tone Pairs). */
+  level?: "single" | "pairs";
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -49,7 +53,7 @@ export function DemoOverlay({
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
         </button>
-        <TryItNow surface="overlay" page={page} seedId={seedId} onClose={close} />
+        <TryItNow surface="overlay" page={page} seedId={seedId} firstLevel={level} onClose={close} />
       </div>
     </dialog>
   );

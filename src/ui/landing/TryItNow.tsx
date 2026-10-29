@@ -52,6 +52,12 @@ function shuffle<T>(items: T[]): T[] {
  */
 const played = new Set<string>();
 
+/** What the landing page can do to its hero demo from other controls. */
+export interface DemoControl {
+  start: () => void;
+  stop: () => void;
+}
+
 /** "single": one-syllable words. "pairs": the "Too easy?" round of two-syllable words. */
 type Level = "single" | "pairs";
 
@@ -101,11 +107,19 @@ type Step =
  * (`src/site/DemoOverlay.tsx`): it opens straight on the voice choice, can
  * fly the page's word first (`seedId`, see `demoSeed.ts`), and its signup
  * carries `?src=<page>`. Leaving the run closes the overlay (`onClose`).
+ *
+ * `firstLevel="pairs"` starts on the two-syllable round (the landing's "Try
+ * Tone Pairs"). `controlRef` lets the host drive the hero demo: `start` (the
+ * "or try the demo" link) scrolls it into view and shows the voice choice,
+ * as the button over it does; `stop` ends a run before another demo opens,
+ * so two runs never share the mic.
  */
 export function TryItNow({
   surface = "landing",
   page,
   seedId = null,
+  firstLevel = "single",
+  controlRef,
   onClose,
 }: {
   surface?: "landing" | "overlay";
@@ -113,6 +127,10 @@ export function TryItNow({
   page?: string;
   /** A word id to fly first; ignored unless `playableSeed` accepts it. */
   seedId?: string | null;
+  /** The round the voice choice starts. */
+  firstLevel?: Level;
+  /** Filled with controls for the host page (landing only). */
+  controlRef?: { current: DemoControl | null };
   onClose?: () => void;
 } = {}) {
   const overlay = surface === "overlay";
@@ -180,6 +198,7 @@ export function TryItNow({
     }
   };
 
+  const figureRef = useRef<HTMLElement>(null);
   // The overlay opens on the CTA's tap: load the mic chunk and show the voice choice.
   useEffect(() => {
     if (!overlay) return;
@@ -284,10 +303,33 @@ export function TryItNow({
     setStep({ kind: "demo" });
   };
 
+  useEffect(() => {
+    if (!controlRef) return;
+    const start = () => {
+      const fig = figureRef.current;
+      if (fig) {
+        const r = fig.getBoundingClientRect();
+        // Phones stack the hero, so the demo is below the fold: bring it in.
+        if (r.top < 0 || r.bottom > window.innerHeight) {
+          const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+          fig.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "center" });
+        }
+      }
+      if (stepRef.current === "demo" || stepRef.current === "error") void open();
+    };
+    const stop = () => {
+      if (stepRef.current === "playing" || stepRef.current === "preparing") exit();
+    };
+    controlRef.current = { start, stop };
+    return () => {
+      controlRef.current = null;
+    };
+  });
+
   const live = step.kind === "playing";
 
   return (
-    <figure id={overlay ? undefined : "demo"} className={overlay ? "sky-screen sky-try sky-try-overlay" : "sky-screen sky-try"}>
+    <figure ref={figureRef} id={overlay ? undefined : "demo"} className={overlay ? "sky-screen sky-try sky-try-overlay" : "sky-screen sky-try"}>
       {/* Outside the frame: beside it on wide screens, above it on phones. */}
       {step.kind === "demo" && !overlay && (
         <p className="sky-arrow-note sky-try-arrow" aria-hidden="true">
@@ -355,15 +397,15 @@ export function TryItNow({
                 : "Pick your voice so the bird fits your range. Then listen to each word and say it back."}
             </p>
             {step.calibrated ? (
-              <button className="sky-btn" onClick={() => start(step.mini, "lower")}>
+              <button className="sky-btn" onClick={() => start(step.mini, "lower", firstLevel)}>
                 Start
               </button>
             ) : (
               <div className="sky-try-voices">
-                <button className="sky-btn" onClick={() => start(step.mini, "lower")}>
+                <button className="sky-btn" onClick={() => start(step.mini, "lower", firstLevel)}>
                   Lower voice
                 </button>
-                <button className="sky-btn" onClick={() => start(step.mini, "higher")}>
+                <button className="sky-btn" onClick={() => start(step.mini, "higher", firstLevel)}>
                   Higher voice
                 </button>
               </div>

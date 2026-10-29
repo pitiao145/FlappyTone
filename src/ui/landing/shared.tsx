@@ -33,6 +33,12 @@ export function go(cta: string, location: string, intent?: AppIntent) {
   goToApp(intent);
 }
 
+/** Fire the landing CTA event, then leave for a site page (e.g. the free visualizer tool). */
+export function goToPage(cta: string, location: string, href: string) {
+  capturePostHogEvent("landing_cta_clicked", { cta, location }, INSTANT);
+  window.location.assign(href);
+}
+
 /**
  * A torn paper edge as a `clip-path` polygon: seeded value noise along the top
  * and/or bottom edge, straight sides. Deterministic per seed, so the prerender

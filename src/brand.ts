@@ -63,6 +63,8 @@ export const brand = {
       title: "Fly through corridors with your voice",
       body: "Fly through gates shaped like tone contours. Ace the pitch, clear the gate. This builds muscle memory without you even thinking about it.",
       cta: "Play the game",
+      /** Under the hero's Play button: opens the demo beside it. */
+      demoLink: "or try the demo",
     },
     visualise: {
       eyebrow: "For understanding",
@@ -227,7 +229,7 @@ export const brand = {
     eyebrow: "The other half of the app",
     title: "Understand how to use your voice",
     body: "Say mǎ ten times in a row and watch every attempt stack on the target shape. No score, no pressure, no gate to clear. Helps you understand how to voice each tone properly.",
-    cta: "Open the visualiser",
+    cta: "Sign up and try the full visualiser",
     imageCaption: "mǎ, average pronunciation of a native Taiwanese speaker",
   },
 

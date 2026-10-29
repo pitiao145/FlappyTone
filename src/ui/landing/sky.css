@@ -352,6 +352,21 @@
 
 .sky-steps h4 { font-size: 1rem; margin-bottom: 4px; }
 
+/* "or try the demo" under the hero's Play button: a text link that opens the demo. */
+.sky-demo-link {
+  margin: 10px 0 0;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  font: 600 1rem/1.3 var(--font-body);
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.sky-demo-link:hover { text-decoration-thickness: 2px; }
+.sky-demo-link:focus-visible { outline: 3px solid var(--color-focus, var(--color-ink)); outline-offset: 3px; border-radius: 4px; }
+
 /* ---- proof: three real quotes right under the hero */
 .sky-proof {
   max-width: var(--container);

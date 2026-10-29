@@ -1,4 +1,5 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { brand } from "../../brand.ts";
 import type { Tone } from "../../game/gates.ts";
 import { wordsFromCatalog } from "../../game/words.ts";
@@ -13,9 +14,9 @@ import { ScrollBird } from "../ScrollBird.tsx";
 import { FREE_HIGHLIGHTS, PRO_HIGHLIGHTS, PRO_PRICE } from "../plan.ts";
 import { TONE_LINE_COLOR } from "../toneColors.ts";
 import { ToneAverageCard } from "../ToneAverageCard.tsx";
-import { NotifyForm, TONES, go, useWordsByTone } from "./shared.tsx";
+import { NotifyForm, TONES, go, goToPage, useWordsByTone } from "./shared.tsx";
 import { ProgressSection } from "./ProgressSection.tsx";
-import { TryItNow } from "./TryItNow.tsx";
+import { TryItNow, type DemoControl } from "./TryItNow.tsx";
 import "./sky.css";
 
 /**
@@ -103,6 +104,18 @@ export function SkyLanding() {
 
   const modes = brand.options.modes;
 
+  /** The hero's "or try the demo" link opens the demo beside it (TryItNow fills this). */
+  const demo = useRef<DemoControl | null>(null);
+  /** "Try Tone Pairs": the demo in a dialog, on the pairs round. Loaded on the tap. */
+  const [pairsOverlay, setPairsOverlay] = useState<typeof import("../../site/DemoOverlay.tsx") | null>(null);
+  const openPairs = () => {
+    capturePostHogEvent("landing_cta_clicked", { cta: "tone_pairs", location: "tone_pairs" });
+    demo.current?.stop();
+    import("../../site/DemoOverlay.tsx")
+      .then(setPairsOverlay)
+      .catch(() => go("tone_pairs", "tone_pairs", "pairs"));
+  };
+
   return (
     <div className="sky lp-sky">
       <Nav onPlay={() => go("play", "nav")} />
@@ -118,13 +131,24 @@ export function SkyLanding() {
             <button className="sky-btn" onClick={() => go("play", "hero_actions")}>
               {brand.heroCards.play.cta}
             </button>
-            <button className="sky-btn sky-btn-ghost" onClick={() => go("visualiser", "hero_actions", "visualiser")}>
+            {/* The free tool first: "Try" must not land on signup. */}
+            <button className="sky-btn sky-btn-ghost" onClick={() => goToPage("visualiser_tool", "hero_actions", "/tools/tone-visualizer")}>
               {brand.heroCards.visualise.cta}
             </button>
           </div>
+          <button
+            type="button"
+            className="sky-demo-link"
+            onClick={() => {
+              capturePostHogEvent("landing_cta_clicked", { cta: "try_demo_link", location: "hero_actions" });
+              demo.current?.start();
+            }}
+          >
+            {brand.heroCards.play.demoLink}
+          </button>
           <p className="sky-small">{COPY.privacy}</p>
         </div>
-        <TryItNow />
+        <TryItNow controlRef={demo} />
       </header>
 
       <section className="sky-proof" aria-label="What players say">
@@ -279,9 +303,14 @@ export function SkyLanding() {
           <div className="sky-head">
             <h2>{COPY.pairsTitle}</h2>
             <p>{COPY.pairs}</p>
-            <button className="sky-btn" onClick={() => go("tone_pairs", "tone_pairs", "pairs")}>
+            <button className="sky-btn" aria-haspopup="dialog" onClick={openPairs}>
               {brand.tonePairs.cta}
             </button>
+            {pairsOverlay &&
+              createPortal(
+                <pairsOverlay.DemoOverlay seedId={null} level="pairs" onClose={() => setPairsOverlay(null)} />,
+                document.body,
+              )}
           </div>
           <ol className="sky-pair-tiles" aria-label="Example tone pairs">
             {examples
