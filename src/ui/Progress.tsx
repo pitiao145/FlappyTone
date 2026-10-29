@@ -18,7 +18,9 @@ import { fetchTrendRows } from "../data/runlog.ts";
 import { fetchRecentRuns, refreshServerStats } from "../data/stats.ts";
 import { dailyTrend, trendKeys } from "../game/runTrend.ts";
 import { Leaderboard } from "./Leaderboard.tsx";
-import { FREE_FEATURES, GUEST_FEATURES, PRO_FEATURES, PRO_PRICE, TIER_LABEL } from "./plan.ts";
+import { brand } from "../brand.ts";
+import { redirectToCheckoutForCurrentAccount } from "../data/checkout.ts";
+import { FREE_HIGHLIGHTS, PRO_HIGHLIGHTS, PRO_PRICE } from "./plan.ts";
 import { PlayerToneEvolution, SamplePlayerToneEvolution } from "./PlayerToneEvolution.tsx";
 import { TONE_LINE_COLOR } from "./toneColors.ts";
 
@@ -575,51 +577,35 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
       {!isPro && (
       <section id="pricing" className="pricing-section">
         <div className="pricing-head">
-          <h2>Free today, more with Pro</h2>
-          <p className="note">
-            EarlyBird gets you every Pro feature as it ships, at a one-time price, before it
-            moves to ongoing credits.
-          </p>
+          <h2>{brand.pricing.title}</h2>
+          <p className="note">{brand.pricing.pro.payOnce}</p>
         </div>
 
         <div className="pricing-cards">
-          <div className={`sticker-card price-card${tier === "guest" ? " price-card-current" : ""}`}>
+          <div className="sticker-card price-card price-card-current">
             <div className="price-card-head">
-              <h3>Guest{tier === "guest" && <span className="badge badge-free">{TIER_LABEL.guest}</span>}</h3>
-              <p className="note">No signup needed</p>
+              <h3>
+                {brand.pricing.free.label}
+                <span className="badge badge-free">Your plan</span>
+              </h3>
             </div>
             <ul className="price-list">
-              {GUEST_FEATURES.map((f) => (
-                <li key={f.label} className={f.soon ? "price-list-soon" : undefined}>
-                  {f.label}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className={`sticker-card price-card${tier === "free" ? " price-card-current" : ""}`}>
-            <div className="price-card-head">
-              <h3>Free{tier === "free" && <span className="badge badge-free">{TIER_LABEL.free}</span>}</h3>
-              <p className="note">Sign up with an email, no payment</p>
-            </div>
-            <ul className="price-list">
-              {FREE_FEATURES.map((f) => (
-                <li key={f.label} className={f.soon ? "price-list-soon" : undefined}>
-                  {f.label}
-                </li>
+              {FREE_HIGHLIGHTS.map((label) => (
+                <li key={label}>{label}</li>
               ))}
             </ul>
           </div>
 
           <div className="sticker-card price-card price-card-pro">
+            <span className="upsell-launch">{brand.pricing.pro.launch}</span>
             <div className="price-card-head price-card-head-pro">
-              <h3>Pro - Support the app</h3>
-              <span className="price-tag">
-                {PRO_PRICE} <span className="price-tag-note">one-time, EarlyBird price</span>
-              </span>
+              <h3>
+                {brand.pricing.pro.label}: {PRO_PRICE} one-time
+              </h3>
             </div>
+            <p className="price-value">{brand.pricing.pro.value}</p>
             <ul className="price-list price-list-pro">
-              {PRO_FEATURES.map((label) => (
+              {PRO_HIGHLIGHTS.map((label) => (
                 <li key={label}>{label}</li>
               ))}
             </ul>
@@ -628,15 +614,16 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
               className="price-cta"
               onClick={() => {
                 track({ type: "progress_earlybird_pricing_click" });
-                onEarlyBird("pricing");
+                // Straight to checkout; the modal only opens when checkout
+                // can't (no store configured, or no account to attach it to).
+                void redirectToCheckoutForCurrentAccount().then((went) => {
+                  if (went) track({ type: "earlybird_checkout_opened", surface: "progress", feature: "pricing" });
+                  else onEarlyBird("pricing");
+                });
               }}
             >
-              Join EarlyBird
+              {brand.pricing.pro.cta}
             </button>
-            <p className="price-foot">
-              Beta price, before it moves to ongoing credits. EarlyBirds keep full access and get
-              every future feature as it ships, at no extra cost.
-            </p>
           </div>
         </div>
       </section>

@@ -7315,6 +7315,17 @@ button.switch-track.switch-on {
   font-weight: 700;
 }
 
+/* The Progress Pro card's value line, as on the landing page's Pro card. */
+.price-value {
+  margin: 0 0 var(--space-3);
+  font-weight: 600;
+}
+
+.price-card-pro .upsell-launch {
+  align-self: flex-start;
+  margin-bottom: var(--space-2);
+}
+
 .upsell-offer {
   padding: var(--space-5);
   border-radius: var(--radius-md);

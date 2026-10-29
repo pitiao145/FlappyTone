@@ -1,7 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import { brand } from "../../brand.ts";
 import type { Tone } from "../../game/gates.ts";
-import { tierLimits } from "../../game/tiers.ts";
 import { wordsFromCatalog } from "../../game/words.ts";
 import { DEFAULT_SPEAKER_ID } from "../../data/catalogRows.ts";
 import fallback from "../../data/wordsFallback.json";
@@ -11,7 +10,7 @@ import { VisualiserDemoLoop } from "../DemoLoop.tsx";
 import { Footer } from "../Footer.tsx";
 import { Nav } from "../Nav.tsx";
 import { ScrollBird } from "../ScrollBird.tsx";
-import { PRO_HIGHLIGHTS, PRO_PRICE } from "../plan.ts";
+import { FREE_HIGHLIGHTS, PRO_HIGHLIGHTS, PRO_PRICE } from "../plan.ts";
 import { TONE_LINE_COLOR } from "../toneColors.ts";
 import { ToneAverageCard } from "../ToneAverageCard.tsx";
 import { NotifyForm, TONES, go, useWordsByTone } from "./shared.tsx";
@@ -359,11 +358,9 @@ export function SkyLanding() {
             <article className="sky-price">
               <h3>{brand.pricing.free.label}</h3>
               <ul>
-                <li>{tierLimits().free.runsPerDay} runs a day</li>
-                <li>Progress saved and synced to your account</li>
-                <li>A real leaderboard entry, under a generated name</li>
-                <li>{tierLimits().free.wordsPerTone} words per tone in the visualiser</li>
-                <li>Limited tone pair practice</li>
+                {FREE_HIGHLIGHTS.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
               </ul>
               <button className="sky-btn sky-btn-ghost" onClick={() => go("play", "pricing_free")}>
                 {brand.pricing.free.cta}

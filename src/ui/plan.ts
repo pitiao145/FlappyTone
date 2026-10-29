@@ -68,10 +68,19 @@ export const PRO_FEATURES: string[] = [
 ];
 
 /**
- * The short Pro list the landing page's pricing card and the upsell modal
- * both show, so the two always say the same thing. `PRO_FEATURES` above is
+ * The short Free and Pro lists the landing page's pricing cards, the
+ * Progress pricing cards and the upsell modal all show, so they always say
+ * the same thing. `PRO_FEATURES` above is
  * the long list for Progress and Profile.
  */
+export const FREE_HIGHLIGHTS: string[] = [
+  runsLabel("free"),
+  "Progress saved and synced to your account",
+  "A real leaderboard entry, under a generated name",
+  `${tierLimits().free.wordsPerTone} words per tone in the visualiser`,
+  "Limited tone pair practice",
+];
+
 export const PRO_HIGHLIGHTS: string[] = [
   runsLabel("pro"),
   "Every word, every tone, every TOCFL level",
