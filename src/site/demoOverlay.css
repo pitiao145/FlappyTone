@@ -56,12 +56,14 @@
 .demo-overlay .demo-overlay-close:focus-visible { outline: 3px solid var(--color-focus, var(--color-ink)); outline-offset: 3px; }
 .demo-overlay-close svg { stroke: currentColor; stroke-width: 3; stroke-linecap: round; fill: none; }
 
-/* The live game frame: the landing sizes it under .lp-sky; same rules here. */
+/* The live game frame: the landing sizes it under .lp-sky; same rules here.
+   No percentage width: while playing, the frame is the shrink-to-fit
+   figure's only content, so 100% resolved to nothing (a 6px game on phones). */
 .demo-overlay .sky-try-game {
   position: relative;
   margin: 0;
   aspect-ratio: 420 / 640;
-  width: min(340px, 100%, calc((100dvh - 120px) * 420 / 640));
+  width: min(340px, calc(100vw - 32px), calc((100dvh - 120px) * 420 / 640));
   overflow: hidden;
   border: var(--outline) solid var(--color-ink);
   border-radius: 20px;
