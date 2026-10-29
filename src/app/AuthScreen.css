@@ -24,9 +24,9 @@
 /* ---- the bird, flapping over the head */
 .auth-bird {
   display: block;
-  width: 96px;
+  width: 72px;
   height: auto;
-  margin: 0 auto var(--space-3);
+  margin: 0 auto var(--space-2);
   animation: auth-flap 0.9s ease-in-out infinite alternate;
 }
 
@@ -40,6 +40,7 @@
 }
 
 /* ---- the panel: head, card, switch */
+/* One card holds the whole screen: bird, head, form and the switch line. */
 .auth-panel {
   display: flex;
   flex-direction: column;
@@ -47,15 +48,16 @@
   max-width: 480px;
   margin-inline: auto;
   text-align: center;
+  background: var(--color-card);
+  border: var(--outline) solid var(--color-ink);
+  border-radius: calc(var(--radius) * 1.4);
+  box-shadow: var(--shadow-hard);
+  padding: clamp(20px, 4vw, 40px);
 }
 
-.auth-card {
-  text-align: left;
-}
-
-.auth-title {
+.auth .auth-title {
   margin: 0;
-  font-size: clamp(2.4rem, 5vw, 3.6rem);
+  font-size: clamp(2rem, 4vw, 2.6rem);
   line-height: 1;
   color: var(--color-ink);
   text-wrap: balance;
@@ -64,19 +66,15 @@
 }
 
 .auth-sub {
-  margin: var(--space-3) 0 var(--space-6);
-  font-size: 1.15rem;
+  margin: var(--space-2) auto var(--space-5);
+  font-size: 1.05rem;
   color: var(--color-ink-2);
   max-width: 34ch;
   margin-inline: auto;
 }
 
 .auth-card {
-  background: var(--color-card);
-  border: var(--outline) solid var(--color-ink);
-  border-radius: calc(var(--radius) * 1.4);
-  box-shadow: var(--shadow-hard);
-  padding: clamp(20px, 3vw, 32px);
+  text-align: left;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
