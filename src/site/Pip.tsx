@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { appHref, type AppIntent } from "../ui/appLink.ts";
+import { DemoTrigger, trackSignupCta } from "./DemoCta.tsx";
 
 /**
  * Pip, the game's bird, as inline SVG: the same shapes and colours as
@@ -34,10 +35,20 @@ export function Pip({
 }
 
 /**
+ * The sticker button's label per target (brief 25): the overlay is the demo,
+ * played right here with no account; the link is the game, behind signup.
+ */
+export const PIP_CTA_LABEL = {
+  demo: "Try it now, free",
+  signup: "Play FlappyTone free",
+} as const;
+
+/**
  * The closing call to action on every route-table content page: a jade panel
- * where Pip flies a tone-shaped path, and one sticker button into the game.
- * The href is built with an explicit `src` so the prerendered link already
- * carries `?src=<path>`.
+ * where Pip flies a tone-shaped path, and one sticker button. `to="demo"`
+ * (the default) opens the Try it now demo over the page, optionally flying
+ * `seedId` first; `to="signup"` is a link into the game, built with an
+ * explicit `src` so the prerendered link already carries `?src=<path>`.
  */
 export function PipCta({
   path,
@@ -46,11 +57,17 @@ export function PipCta({
   secondary,
   intent,
   preview = "flight",
+  to = "demo",
+  seedId,
 }: {
+  /** "demo": the overlay, for visitors who have not played yet. "signup": /app. */
+  to?: "demo" | "signup";
+  /** `to="demo"` only: a word to fly first. */
+  seedId?: string;
   path: string;
   /** The loop on the right: the bird flying (default) or the visualiser. */
   preview?: "flight" | "visualiser";
-  /** Where the game should land (`?intent=`); the default is Play. */
+  /** `to="signup"` only: where the game should land (`?intent=`); the default is Play. */
   intent?: AppIntent;
   title: string;
   body: string;
@@ -71,9 +88,19 @@ export function PipCta({
           <h2>{title}</h2>
           <p>{body}</p>
           <div className="pip-cta-actions">
-            <a className="sticker-button" href={appHref(intent, path)}>
-              Play FlappyTone free
-            </a>
+            {to === "demo" ? (
+              <DemoTrigger className="sticker-button" page={path} cta="pip_cta" seedId={seedId}>
+                {PIP_CTA_LABEL.demo}
+              </DemoTrigger>
+            ) : (
+              <a
+                className="sticker-button"
+                href={appHref(intent, path)}
+                onClick={() => trackSignupCta(path, "pip_cta")}
+              >
+                {PIP_CTA_LABEL.signup}
+              </a>
+            )}
           </div>
         </div>
         <CtaFlight kind={preview} />

@@ -327,7 +327,7 @@ export function captureGameEvent(event: AnalyticsEvent): void {
   const { type, ...rest } = event;
   capturePostHogEvent(type, rest as Record<string, string | number | boolean>, {
     // tool_cta_click leaves the page for /app; a batched send would be lost.
-    instant: type === "run_end" || type === "tool_summary" || type === "tool_cta_click",
+    instant: type === "run_end" || type === "tool_summary" || type === "tool_cta_click" || type === "seo_cta_click",
   });
 }
 

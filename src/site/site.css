@@ -991,6 +991,8 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
 
 /* Into the app's visualiser: the one sticker-style action in the viewer. */
 .word-viewer-try {
+  font-family: inherit;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1454,8 +1456,10 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
   margin-top: var(--space-2);
 }
 
-.legal-body a.sticker-button {
+.legal-body :is(a, button).sticker-button {
   display: inline-block;
+  font-family: inherit;
+  cursor: pointer;
   font-weight: 700;
   font-size: 1.05rem;
   padding: 16px 24px;
@@ -1468,17 +1472,17 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
   transition: transform 80ms ease, box-shadow 80ms ease;
 }
 
-.legal-body a.sticker-button:hover {
+.legal-body :is(a, button).sticker-button:hover {
   transform: translate(-1px, -1px);
   box-shadow: 5px 5px 0 var(--ink);
 }
 
-.legal-body a.sticker-button:active {
+.legal-body :is(a, button).sticker-button:active {
   transform: translate(3px, 3px);
   box-shadow: 1px 1px 0 var(--ink);
 }
 
-.legal-body a.sticker-button:focus-visible {
+.legal-body :is(a, button).sticker-button:focus-visible {
   outline: 3px solid var(--accent-ink);
   outline-offset: 3px;
 }
@@ -1523,7 +1527,7 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .legal-body a.sticker-button {
+  .legal-body :is(a, button).sticker-button {
     transition: none;
   }
 }
@@ -1773,6 +1777,14 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
 .legal-body a.tc-result-cta {
   flex-basis: 100%;
   margin-top: var(--space-2);
+}
+
+/* What the in-app visualizer adds, under its signup links. */
+.tc-app-features {
+  flex-basis: 100%;
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: var(--color-ink-2);
 }
 
 .tc-cal {
@@ -2241,11 +2253,21 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
   text-align: center;
   margin: 12px 0 0;
 }
+/* Opens the demo overlay (a button once the page is live): reads as the link it replaces. */
+.legal-body .tt-play-game button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
 
 /* ---- Sky contrast fixes for the old site rules */
 .sky-site .screen .tc-primary { color: var(--color-on-wall); }
-.sky-site .legal-body a.sticker-button:focus-visible { outline-color: var(--color-focus); }
-.sky-site .legal-body .pip-cta a.sticker-button:focus-visible { outline-color: var(--color-on-wall); }
+.sky-site .legal-body :is(a, button).sticker-button:focus-visible { outline-color: var(--color-focus); }
+.sky-site .legal-body .pip-cta :is(a, button).sticker-button:focus-visible { outline-color: var(--color-on-wall); }
 
 /* ---- example and word cards: sand cards with an ink edge on the sky */
 .sky-site .site-examples li,

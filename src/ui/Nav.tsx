@@ -16,6 +16,8 @@ interface Props {
    */
   linkBase?: string;
   playHref?: string;
+  /** With `playHref`: called on the link's click (analytics), before it leaves. */
+  onPlayLinkClick?: () => void;
 }
 
 /** True as soon as the page has scrolled at all: the bar floats at once. */
@@ -41,7 +43,7 @@ function useScrolled(): boolean {
  * Every link is a real anchor, so middle-click and open-in-new-tab keep
  * working. Section items come from `brand.sections` (`inNav`).
  */
-export function Nav({ onPlay, linkBase = "", playHref }: Props) {
+export function Nav({ onPlay, linkBase = "", playHref, onPlayLinkClick }: Props) {
   const items = brand.sections.filter((s) => s.inNav);
   const compact = useScrolled();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -90,7 +92,7 @@ export function Nav({ onPlay, linkBase = "", playHref }: Props) {
           </li>
         </ul>
         {playHref && (
-          <a className="sky-btn sky-btn-small" href={playHref}>
+          <a className="sky-btn sky-btn-small" href={playHref} onClick={onPlayLinkClick}>
             {playLabel}
           </a>
         )}

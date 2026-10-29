@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { captureGameEvent } from "../../analytics/posthog.ts";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
 import { PipCta } from "../Pip.tsx";
+import { DemoTrigger, trackSignupCta } from "../DemoCta.tsx";
 import { TONE_LINE_COLOR } from "../../ui/toneColors.ts";
 import { toneName } from "../toneNames.ts";
 import { gameHref, pairKey, weakPair } from "../../toneder/cta.ts";
@@ -57,7 +58,10 @@ function ToneGameOnPage() {
           <a
             className="tc-result-cta"
             href={gameHref(PATH, pair)}
-            onClick={() => ctaClick(pairKey(pair), "round_done")}
+            onClick={() => {
+              ctaClick(pairKey(pair), "round_done");
+              trackSignupCta(PATH, "tone_test_result");
+            }}
           >
             {pair ? (
               <>
@@ -102,9 +106,9 @@ export function ToneTest() {
         <ToneGameOnPage />
         <p className="tt-play-game">
           Hearing is half of it.{" "}
-          <a href={gameHref(PATH, null)} onClick={() => ctaClick("none", "persistent")}>
+          <DemoTrigger page={PATH} cta="tone_test_play_link" onOpen={() => ctaClick("none", "persistent")}>
             Play the game: say the tones with your voice
-          </a>
+          </DemoTrigger>
         </p>
 
         <div className="tm-notes">

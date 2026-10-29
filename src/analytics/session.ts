@@ -96,6 +96,28 @@ export const SAY_SLUGS = [
 export type SaySlug = (typeof SAY_SLUGS)[number];
 export type WordPageAction = "listen" | "see_it" | "practise_tone";
 
+/**
+ * Where a Try it now run happened: the landing hero, or a site page's
+ * overlay (`page` = route path, `seeded` = the word flown first, or null).
+ * Optional so older events still type-check.
+ */
+export interface DemoWhere {
+  surface?: "landing" | "overlay";
+  page?: string | null;
+  seeded?: string | null;
+}
+
+/** The routed CTAs on route-table pages (brief 25's table). */
+export type SeoCta =
+  | "nav_play"
+  | "viewer_try"
+  | "pip_cta"
+  | "tone_test_result"
+  | "tone_test_play_link"
+  | "visualizer_above_stage"
+  | "visualizer_result_good"
+  | "visualizer_result_retry";
+
 export type AnalyticsEvent =
   /**
    * `ref` is the closed set of `?ref=` values this app itself ever generates
@@ -358,7 +380,7 @@ export type AnalyticsEvent =
    * Per tone: `tNGates` flown, `tNCleared` flown through, `tNAcc` this run's
    * tone accuracy in % (null when that tone had no heard gate).
    */
-  | {
+  | ({
       type: "tool_summary";
       tool: "try-now";
       /** "pairs" is the "Too easy?" round of two-syllable words. */
@@ -378,9 +400,15 @@ export type AnalyticsEvent =
       t4Gates: number;
       t4Cleared: number;
       t4Acc: number | null;
-    }
+    } & DemoWhere)
   /** Try it now's way into /app or a new round, from its end screen. */
-  | { type: "tool_cta_click"; tool: "try-now"; placement: "demo_gameover_signup" | "demo_gameover_retry" | "demo_gameover_pairs" }
+  | ({ type: "tool_cta_click"; tool: "try-now"; placement: "demo_gameover_signup" | "demo_gameover_retry" | "demo_gameover_pairs" } & DemoWhere)
+  /**
+   * A routed CTA on a route-table page (brief 25): `overlay` opens the Try it
+   * now demo on the page, `signup` leaves for /app. `page` is the route path,
+   * `cta` a closed name (`SeoCta`).
+   */
+  | { type: "seo_cta_click"; page: string; cta: SeoCta; target: "overlay" | "signup" }
   /** /app opened from the tone test's CTA (`?src=/tools/tone-test`), once per load. */
   | { type: "app_open"; source: "tone-test"; weak_pair: string }
   /**
@@ -499,6 +527,7 @@ export function eventTier(type: AnalyticsEvent["type"]): AnalyticsTier {
     case "tool_summary":
     case "word_page_action":
     case "tool_cta_click":
+    case "seo_cta_click":
     case "app_open":
     case "toneder_swipe":
     case "toneder_round_done":

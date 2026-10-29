@@ -19,6 +19,7 @@ import { Nav } from "../ui/Nav.tsx";
 import { Footer } from "../ui/Footer.tsx";
 import { appHref } from "../ui/appLink.ts";
 import { Breadcrumbs } from "./Breadcrumbs.tsx";
+import { trackSignupCta } from "./DemoCta.tsx";
 import { ChineseTones, chineseTonesJsonLd } from "./pages/ChineseTones.tsx";
 import { ToneMarks, toneMarksJsonLd } from "./pages/ToneMarks.tsx";
 import { ToneVisualizer, toneVisualizerJsonLd } from "./pages/ToneVisualizer.tsx";
@@ -47,7 +48,11 @@ export function SitePage({ path }: { path: string }) {
     <div id="top" className="sky sky-site">
       {/* The landing page's own bar and footer, so a visitor from search
           can reach the rest of the site. Links point back into `/`. */}
-      <Nav linkBase="/" playHref={appHref(undefined, path)} />
+      <Nav
+        linkBase="/"
+        playHref={appHref(undefined, path)}
+        onPlayLinkClick={() => trackSignupCta(path, "nav_play")}
+      />
       <ScrollBird />
       <main className="sky-site-main">
         <Breadcrumbs path={path} />

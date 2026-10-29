@@ -33,6 +33,8 @@ interface Props {
   source: AuthSource;
   challengeScore: number | null;
   challengeName: string | null;
+  /** The tone test's weak pair, as a subtitle (`weakPairLine`); null otherwise. */
+  weakLine?: string | null;
 }
 
 type View = AuthCard | "reset";
@@ -46,7 +48,7 @@ function storage(): Storage | undefined {
   }
 }
 
-export function AuthScreen({ source, challengeScore, challengeName }: Props) {
+export function AuthScreen({ source, challengeScore, challengeName, weakLine = null }: Props) {
   const [view, setView] = useState<View>("signup");
   const [emailOpen, setEmailOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -156,7 +158,9 @@ export function AuthScreen({ source, challengeScore, challengeName }: Props) {
         ? { title: "Reset your password", sub: "We'll email you a link to set a new one." }
         : challengeScore != null
           ? { title: "Save your progress", sub: challengeLine(challengeScore, challengeName) }
-          : { title: "Save your progress", sub: "Sign up free to play, and track how your tones improve." };
+          : weakLine
+            ? { title: "Save your progress", sub: weakLine }
+            : { title: "Save your progress", sub: "Sign up free to play, and track how your tones improve." };
 
   const errorBox = error && (
     <p className="auth-error" role="alert">

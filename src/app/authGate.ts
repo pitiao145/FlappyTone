@@ -140,3 +140,15 @@ export function friendlyAuthError(reason: string): { text: string; existing: boo
   }
   return { text: reason.charAt(0).toUpperCase() + reason.slice(1), existing: false };
 }
+
+/**
+ * The tone test's weak pair (`?weak=2-3`, set by its round-result link, brief
+ * 25) as the signup subtitle: "Your weak spot is 2nd vs 3rd. Sign up free to
+ * train it." Null for anything else.
+ */
+export function weakPairLine(search: string): string | null {
+  const ORD = ["", "1st", "2nd", "3rd", "4th"];
+  const m = new URLSearchParams(search).get("weak")?.match(/^([1-4])-([1-4])$/);
+  if (!m || m[1] >= m[2]) return null;
+  return `Your weak spot is ${ORD[+m[1]]} vs ${ORD[+m[2]]}. Sign up free to train it.`;
+}

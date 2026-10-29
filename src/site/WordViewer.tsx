@@ -4,7 +4,7 @@ import { TONE_LINE_COLOR } from "../ui/toneColors.ts";
 import { EXAMPLE_CLIPS, type ExampleClip } from "./exampleClips.ts";
 import { Pip } from "./Pip.tsx";
 import { clipUrl } from "./wordAudio.ts";
-import { appHref } from "../ui/appLink.ts";
+import { DemoTrigger } from "./DemoCta.tsx";
 
 const W = 360;
 const H = 200;
@@ -39,7 +39,7 @@ export function WordViewer({
   word: ViewerWord;
   /** The word's measured clip; defaults to the hub's `EXAMPLE_CLIPS`. */
   clip?: ExampleClip;
-  /** The page path, for the "Try it" link's `?src=`. */
+  /** The page path: the demo's `?src=` and tracking. */
   from?: string;
   onClose: () => void;
 }) {
@@ -165,13 +165,11 @@ export function WordViewer({
           : "The bird flies the pitch of the recording. In FlappyTone, your own voice flies it."}
       </p>
       <div className="word-viewer-actions">
-        <a
-          className="word-viewer-try"
-          href={appHref("visualiser", from)}
-        >
+        {/* The demo over the page, flying this word first (when the game can). */}
+        <DemoTrigger className="word-viewer-try" page={from} cta="viewer_try" seedId={word.id}>
           <Pip size={26} tilt={-12} />
           Try it
-        </a>
+        </DemoTrigger>
         <button
           type="button"
           className="site-play"

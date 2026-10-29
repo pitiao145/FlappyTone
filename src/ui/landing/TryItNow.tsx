@@ -19,6 +19,9 @@ import { go } from "./shared.tsx";
 import { DemoGameOver } from "./DemoGameOver.tsx";
 import { Confetti } from "../Confetti.tsx";
 import { toneBreakdown, type RunStats } from "../../game/scoring.ts";
+import { appHref } from "../appLink.ts";
+import { playableSeed, seededRound } from "./demoSeed.ts";
+import "./tryItNow.css";
 
 type MiniModule = typeof import("./miniGame.ts");
 
@@ -93,9 +96,32 @@ type Step =
  * The hero's demo, with a "Try it now" button over it. Tap once: the mic
  * chunk loads and the visitor picks a voice. Tap again: the mic opens (inside
  * that tap) and five gates from the guest pool fly right here, no account, no calibration.
+ *
+ * `surface="overlay"` is the same demo inside a site page's dialog
+ * (`src/site/DemoOverlay.tsx`): it opens straight on the voice choice, can
+ * fly the page's word first (`seedId`, see `demoSeed.ts`), and its signup
+ * carries `?src=<page>`. Leaving the run closes the overlay (`onClose`).
  */
-export function TryItNow() {
-  const [step, setStep] = useState<Step>({ kind: "demo" });
+export function TryItNow({
+  surface = "landing",
+  page,
+  seedId = null,
+  onClose,
+}: {
+  surface?: "landing" | "overlay";
+  /** The site page the overlay opened on (route path), for `?src=` and tracking. */
+  page?: string;
+  /** A word id to fly first; ignored unless `playableSeed` accepts it. */
+  seedId?: string | null;
+  onClose?: () => void;
+} = {}) {
+  const overlay = surface === "overlay";
+  const [step, setStep] = useState<Step>({ kind: overlay ? "loading" : "demo" });
+  /** For the unmount cleanup, which only sees the first render's `step`. */
+  const stepRef = useRef(step.kind);
+  useEffect(() => {
+    stepRef.current = step.kind;
+  });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stopRef = useRef<(() => void) | null>(null);
   /** Bumped on exit, so a run still loading when the visitor left never starts. */
@@ -107,30 +133,44 @@ export function TryItNow() {
   const lastRef = useRef<{ mini: MiniModule; voice: "lower" | "higher" } | null>(null);
 
   /** The app's guest pool: the beginner sampler, single syllables, free clips. */
-  const pools = useMemo(() => {
-    const guest = wordsForTier(
-      wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID }))),
-      "guest",
-    );
+  const { pools, seed } = useMemo(() => {
+    const all = wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID })));
+    const guest = wordsForTier(all, "guest");
     return {
-      single: wordsForList(guest, null, "beginner"),
-      // The guest intermediate sampler's two-syllable words: real tone pairs.
-      pairs: wordsForList(guest, null, "intermediate").filter((w) => w.syllables === 2),
+      pools: {
+        single: wordsForList(guest, null, "beginner"),
+        // The guest intermediate sampler's two-syllable words: real tone pairs.
+        pairs: wordsForList(guest, null, "intermediate").filter((w) => w.syllables === 2),
+      },
+      seed: playableSeed(all, seedId),
     };
-  }, []);
+  }, [seedId]);
+  /** The seed flies in the first round only; "One more round" uses the pool. */
+  const seedUsedRef = useRef(false);
+  /** Added to the overlay's summary and CTA events. */
+  const where = { surface, page: page ?? null, seeded: seed?.id ?? null };
 
   useEffect(
     () => () => {
       attemptRef.current++;
       stopRef.current?.();
+      // Closing the overlay mid-run leaves the run, like "Exit demo".
+      const left = stepRef.current;
+      if (overlay && (left === "playing" || left === "preparing")) trackTry("exited", { stage: left });
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
   const open = async () => {
-    capturePostHogEvent("landing_cta_clicked", { cta: "try_now", location: "hero_demo" });
+    if (!overlay) capturePostHogEvent("landing_cta_clicked", { cta: "try_now", location: "hero_demo" });
     trackTry("opened");
     setStep({ kind: "loading" });
+    await load();
+  };
+
+  /** Loads the mic chunk, then offers the voice choice. */
+  const load = async () => {
     try {
       const mini = await loadMini();
       setStep({ kind: "choose", mini, calibrated: mini.hasSavedCalibration() });
@@ -138,6 +178,21 @@ export function TryItNow() {
       trackTry("error");
       setStep({ kind: "error", message: "Couldn't load the game. Check your connection and try again." });
     }
+  };
+
+  // The overlay opens on the CTA's tap: load the mic chunk and show the voice choice.
+  useEffect(() => {
+    if (!overlay) return;
+    trackTry("opened");
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const roundWords = (level: Level): Word[] => {
+    if (level !== "single" || !seed || seedUsedRef.current) return draw(pools[level], level);
+    seedUsedRef.current = true;
+    played.add(seed.id);
+    return seededRound(seed, draw(pools.single.filter((w) => w.id !== seed.id), "single"), GATES);
   };
 
   const start = (mini: MiniModule, voice: "lower" | "higher", level: Level = "single") => {
@@ -154,7 +209,7 @@ export function TryItNow() {
         canvas,
         width: W,
         height: H,
-        words: draw(pools[level], level),
+        words: roundWords(level),
         voice,
         gates: GATES,
         onReady: () => {
@@ -188,6 +243,7 @@ export function TryItNow() {
             t4Gates: t[4].gates,
             t4Cleared: t[4].cleared,
             t4Acc: acc[4] ?? null,
+            ...where,
           });
           setConfettiDone(false);
           setStep({ kind: "done", stats: r.stats, level });
@@ -220,15 +276,20 @@ export function TryItNow() {
     stopRef.current = null;
     setHud(null);
     trackTry("exited", { stage: step.kind === "playing" ? "playing" : "preparing" });
+    if (overlay) {
+      stepRef.current = "demo"; // tracked just above; the unmount must not track it again
+      onClose?.();
+      return;
+    }
     setStep({ kind: "demo" });
   };
 
   const live = step.kind === "playing";
 
   return (
-    <figure id="demo" className="sky-screen sky-try">
+    <figure id={overlay ? undefined : "demo"} className={overlay ? "sky-screen sky-try sky-try-overlay" : "sky-screen sky-try"}>
       {/* Outside the frame: beside it on wide screens, above it on phones. */}
-      {step.kind === "demo" && (
+      {step.kind === "demo" && !overlay && (
         <p className="sky-arrow-note sky-try-arrow" aria-hidden="true">
           {brand.tryArrow}
           <svg viewBox="0 0 64 56" className="sky-arrow">
@@ -316,11 +377,12 @@ export function TryItNow() {
             <DemoGameOver
               stats={step.stats}
               onSignup={() => {
-                captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_signup" });
-                go("play", "try_now_done");
+                captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_signup", ...where });
+                if (overlay) window.location.assign(appHref(undefined, page));
+                else go("play", "try_now_done");
               }}
               onRetry={() => {
-                captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_retry" });
+                captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_retry", ...where });
                 void open();
               }}
               onHarder={
@@ -328,7 +390,7 @@ export function TryItNow() {
                   ? () => {
                       const last = lastRef.current;
                       if (!last) return;
-                      captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_pairs" });
+                      captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_pairs", ...where });
                       // Inside this tap, so the mic can reopen on iOS (hard rule 4).
                       start(last.mini, last.voice, "pairs");
                     }
@@ -351,7 +413,7 @@ export function TryItNow() {
           <button className="sky-btn sky-btn-ghost sky-btn-small" onClick={exit}>
             Exit demo
           </button>
-        ) : (
+        ) : overlay ? null : (
           brand.demoCaption
         )}
       </figcaption>

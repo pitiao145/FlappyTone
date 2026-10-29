@@ -12,7 +12,7 @@ import { track } from "../analytics/client";
 import { getAccount } from "../data/account.ts";
 import { getSupabase } from "../data/supabase.ts";
 import { parseChallengeName } from "../share/shareName.ts";
-import { authSource, canPlay, consumeMagicLink, restoreReturn } from "./authGate.ts";
+import { authSource, canPlay, consumeMagicLink, restoreReturn, weakPairLine } from "./authGate.ts";
 import GameApp, { parseChallengeScore } from "./GameApp.tsx";
 
 /**
@@ -91,6 +91,7 @@ export default function AuthGate() {
         source={source}
         challengeScore={parseChallengeScore(window.location.search)}
         challengeName={parseChallengeName(window.location.search)}
+        weakLine={weakPairLine(window.location.search)}
       />
     </Suspense>
   );

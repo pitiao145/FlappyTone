@@ -374,6 +374,7 @@ function SayWordPage({ word }: { word: SayWord }) {
 
         <PipCta
           path={path}
+          seedId={word.cards[0].id}
           title="Fly the word with your voice"
           body="In FlappyTone your voice flies a bird through a tunnel shaped like the tone, so you see right away if your pitch made the right shape. It checks the pitch shape, not the syllable, and your microphone audio stays on your device."
           secondary={{ href: HUB, label: "Chinese tones, explained" }}

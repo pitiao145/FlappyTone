@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { captureGameEvent } from "../../analytics/posthog.ts";
 import { TONE_LINE_COLOR } from "../../ui/toneColors.ts";
 import { appHref } from "../../ui/appLink.ts";
+import { trackSignupCta } from "../DemoCta.tsx";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
 import { toneName } from "../toneNames.ts";
 import { Pip, PipCta } from "../Pip.tsx";
@@ -24,6 +25,15 @@ import {
 import type { CalStep, Checker } from "../checker/engine.ts";
 
 const PATH = "/tools/tone-visualizer";
+
+/**
+ * What the in-app visualizer adds over this free tool, shown under its
+ * signup links (brief 25). Each item checked in src/ui/Visualiser.tsx and
+ * src/game/tiers.ts for a free account: words per tone (`wordsPerTone`: 5),
+ * the Tone pairs tab (`visualiserPairWords`), TOCFL lists (`beginner.levels`).
+ */
+const APP_FEATURES =
+  "The full visualizer adds real words for each tone, two-syllable tone pairs and TOCFL word lists, each with our native speaker's recording. Free with an account.";
 
 type EngineModule = typeof import("../checker/engine.ts");
 type BoardModule = typeof import("../checker/board.ts");
@@ -316,9 +326,14 @@ function Visualizer() {
           </p>
         </div>
 
-        <a className="tc-app-link" href={appHref("visualiser", PATH)}>
+        <a
+          className="tc-app-link"
+          href={appHref("visualiser", PATH)}
+          onClick={() => trackSignupCta(PATH, "visualizer_above_stage")}
+        >
           Practise in the full visualizer
         </a>
+        <p className="tc-app-features">{APP_FEATURES}</p>
       </div>
 
       <div className="tc-main">
@@ -405,14 +420,25 @@ function Visualizer() {
                 </span>
               )}
               {result.tier === "good" && (
-                <a className="tc-result-cta" href={appHref(undefined, PATH)}>
+                <a
+                  className="tc-result-cta"
+                  href={appHref(undefined, PATH)}
+                  onClick={() => trackSignupCta(PATH, "visualizer_result_good")}
+                >
                   Now fly it: your voice steers the bird in FlappyTone
                 </a>
               )}
               {(result.tier === "ok" || result.tier === "bad") && (
-                <a className="tc-result-cta" href={appHref("visualiser", PATH)}>
-                  Practise in the full visualizer
-                </a>
+                <>
+                  <a
+                    className="tc-result-cta"
+                    href={appHref("visualiser", PATH)}
+                    onClick={() => trackSignupCta(PATH, "visualizer_result_retry")}
+                  >
+                    Practise in the full visualizer
+                  </a>
+                  <span className="tc-app-features">{APP_FEATURES}</span>
+                </>
               )}
             </div>
           )}
@@ -553,6 +579,7 @@ export function ToneVisualizer() {
 
         <PipCta
           path={PATH}
+          to="signup"
           intent="visualiser"
           preview="visualiser"
           title="Practise, then play"
