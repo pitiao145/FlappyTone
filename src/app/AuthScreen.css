@@ -21,6 +21,43 @@
   padding: clamp(16px, 4vw, 48px) var(--gutter) var(--space-8);
 }
 
+/* ---- sign up / log in: two halves of one pressed-edge switch */
+.auth-tabs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  padding: var(--space-1);
+  margin-bottom: var(--space-5);
+  border: var(--outline) solid var(--color-ink);
+  border-radius: var(--radius);
+  background: var(--color-cloud);
+}
+
+.auth-tab {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: calc(var(--radius) - 4px);
+  background: none;
+  color: var(--color-ink-2);
+  font: 700 1rem/1.2 var(--font-body);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.auth-tab:hover {
+  color: var(--color-ink);
+  background: color-mix(in oklab, var(--color-sky-5) 60%, var(--color-cloud));
+}
+
+.auth-tab:active {
+  background: var(--color-sky-4);
+}
+
+.auth-tab[aria-pressed="true"] {
+  background: var(--color-wall);
+  color: var(--color-on-wall);
+}
+
 /* ---- the bird, flapping over the head */
 .auth-bird {
   display: block;
@@ -252,11 +289,6 @@
   color: inherit;
 }
 
-.auth-switch {
-  margin: var(--space-5) 0 0;
-  font-size: 1.05rem;
-}
-
 .auth-sent {
   display: flex;
   flex-direction: column;
@@ -289,6 +321,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .auth-tab {
+    transition: none;
+  }
   .auth-bird,
   .auth-sent-bird {
     animation: none;

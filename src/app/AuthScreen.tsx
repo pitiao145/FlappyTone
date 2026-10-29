@@ -285,6 +285,25 @@ export function AuthScreen({ source, challengeScore, challengeName }: Props) {
       <Nav linkBase="/" />
       <main className="auth-main">
         <div className="auth-panel">
+          {/* Two clear doors at the top: new players and returning players. */}
+          <div className="auth-tabs" role="group" aria-label="Sign up or log in">
+            <button
+              type="button"
+              className="auth-tab"
+              aria-pressed={view === "signup"}
+              onClick={() => view !== "signup" && go("signup")}
+            >
+              I'm new
+            </button>
+            <button
+              type="button"
+              className="auth-tab"
+              aria-pressed={view !== "signup"}
+              onClick={() => view !== "login" && go("login")}
+            >
+              I have an account
+            </button>
+          </div>
           <img className="auth-bird" src="/Bird-hor-no-halo.png" alt="" width={96} height={96} />
           <h1 className="auth-title">{head.title}</h1>
           <p className="auth-sub">{head.sub}</p>
@@ -302,21 +321,6 @@ export function AuthScreen({ source, challengeScore, challengeName }: Props) {
             )}
           </section>
 
-          {view === "signup" ? (
-            <p className="auth-switch">
-              Already have an account?{" "}
-              <button type="button" className="auth-link" onClick={() => go("login")}>
-                Log in
-              </button>
-            </p>
-          ) : (
-            <p className="auth-switch">
-              Don't have an account?{" "}
-              <button type="button" className="auth-link" onClick={() => go("signup")}>
-                Sign up
-              </button>
-            </p>
-          )}
         </div>
       </main>
     </div>
