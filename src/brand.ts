@@ -190,6 +190,9 @@ export const brand = {
     pro: {
       label: "Pro",
       cta: "Go Pro",
+      launch: "Launch price until 31 Dec",
+      value: "450+ words, 240+ tone pairs, every TOCFL level.",
+      payOnce: "Pay once. No subscription.",
     },
   },
 

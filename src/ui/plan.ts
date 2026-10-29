@@ -67,6 +67,19 @@ export const PRO_FEATURES: string[] = [
   "Every future feature, as it ships",
 ];
 
+/**
+ * The short Pro list the landing page's pricing card and the upsell modal
+ * both show, so the two always say the same thing. `PRO_FEATURES` above is
+ * the long list for Progress and Profile.
+ */
+export const PRO_HIGHLIGHTS: string[] = [
+  runsLabel("pro"),
+  "Every word, every tone, every TOCFL level",
+  "Full tone pairs access",
+  "Leaderboard entry under a name you choose",
+  "Offline play (coming soon)",
+];
+
 /** One-line Free summary for compact spots (the Profile plan card). */
 export const FREE_SUMMARY = `${runsLabel("free")} · ${tierLimits().free.wordsPerTone} words per tone · synced progress · a real leaderboard row`;
 

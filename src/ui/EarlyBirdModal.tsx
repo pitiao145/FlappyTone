@@ -5,8 +5,8 @@ import { buildCheckoutUrl, redirectToCheckoutForCurrentAccount } from "../data/c
 import { setPendingCheckout } from "../data/checkoutIntent.ts";
 import { useTier } from "../data/tier.ts";
 import { tierLimits } from "../game/tiers.ts";
-import { PRO_FEATURES, PRO_PRICE } from "./plan.ts";
-import { useNewsletterSubscribe } from "./useNewsletterSubscribe.ts";
+import { brand } from "../brand.ts";
+import { PRO_HIGHLIGHTS, PRO_PRICE } from "./plan.ts";
 
 export type EarlyBirdSurface = "progress" | "profile" | "daily-limit" | "visualiser" | "leaderboard" | "toneder";
 
@@ -34,48 +34,31 @@ interface Props {
  * the free account as the immediate next step; a free player's copy is
  * Pro-only, since they already took that step.
  */
-const COPY: Record<
-  EarlyBirdSurface,
-  { eyebrow: string; title: string; body: string; guestBody?: string }
-> = {
+const COPY: Record<EarlyBirdSurface, { title: string; body: string; guestBody?: string }> = {
   progress: {
-    eyebrow: "★ EarlyBird access",
-    title: "Lock in the lowest price, forever",
-    body: "FlappyTone is still early. Sign up now for unlimited play and access to all the future features. EarlyBirds get everything as it lands, and never pay again.",
-    guestBody:
-      "Create a free account to save your progress and get a real row on the leaderboard. Ready to go further? EarlyBird unlocks unlimited play and every future feature, for good.",
+    title: "See every run, not just the last five",
+    body: "Pro keeps your full history and trends, so you can watch each tone improve.",
   },
   profile: {
-    eyebrow: "★ EarlyBird access",
-    title: "Lock in the lowest price, forever",
-    body: "FlappyTone is still early. Sign up now for unlimited play and access to all the future features. EarlyBirds get everything as it lands, and never pay again.",
-    guestBody:
-      "Create a free account to save your progress and get a real row on the leaderboard. Ready to go further? EarlyBird unlocks unlimited play and every future feature, for good.",
+    title: "Go further with Pro",
+    body: "Every word, every tone pair, no daily limit. One payment, yours for good.",
   },
   "daily-limit": {
-    eyebrow: "★ Daily limit reached",
     title: "You've flown all your free runs today",
-    body: "Come back tomorrow, or go EarlyBird now for unlimited play today and every day after — plus everything else as it lands. Full refund anytime.",
-    guestBody: `Come back tomorrow, or create a free account for ${tierLimits().free.runsPerDay} runs a day instead of ${tierLimits().guest.runsPerDay}. Want no limit at all? EarlyBird gives unlimited play today and every day after.`,
+    body: "Come back tomorrow, or go Pro and keep flying right now.",
+    guestBody: `Come back tomorrow, or create a free account for ${tierLimits().free.runsPerDay} runs a day instead of ${tierLimits().guest.runsPerDay}.`,
   },
   leaderboard: {
-    eyebrow: "★ Claim your place",
-    title: "Your score is good enough to be on the board",
-    body: "A free account puts you on the weekly leaderboard and saves your progress across devices. EarlyBird adds your own name, every word, and unlimited runs.",
+    title: "Fly under your own name",
+    body: "Pro puts you on the leaderboard under a name you choose.",
   },
   toneder: {
-    eyebrow: "★ EarlyBird access",
     title: "Swipe without a limit",
-    body: "EarlyBird gives TONEder with no daily limit, plus unlimited runs and everything else as it lands. Full refund anytime.",
-    guestBody:
-      "Create a free account for more swipes a day and the Spoken recordings at everyday speed. EarlyBird goes further: no daily limit, and everything else as it lands.",
+    body: "Pro takes away TONEder's daily limit, along with everything below.",
   },
   visualiser: {
-    eyebrow: "★ EarlyBird access",
     title: "Practise every word, every tone",
-    body: "The visualiser's per-tone practice and the full word list come with EarlyBird — along with everything else as it lands. Full refund anytime.",
-    guestBody:
-      "Create a free account to unlock per-tone practice. EarlyBird goes further, with every word for every tone and everything else as it lands.",
+    body: "Pro opens the full word list in the visualiser, for every tone.",
   },
 };
 
@@ -85,15 +68,12 @@ const COPY: Record<
  * runs cap (`dailyLimitReached` in GameApp.tsx). A guest also sees a second
  * door here: creating a free account, a smaller step than paying. Pay is a
  * live Lemon Squeezy checkout for a signed-in free account; a guest's Pay
- * routes through the create-account-first screen and on to checkout. The
- * email capture below stays as a "not ready to pay" fallback, sharing the Kit
- * integration the landing page already uses (`useNewsletterSubscribe`,
- * `api/newsletter.ts`), tagged with the dedicated "earlybird" source.
+ * routes through the create-account-first screen and on to checkout. Its
+ * offer (launch tag, price, value line, highlights) is the landing page's Pro
+ * card word for word (`brand.pricing.pro`, `PRO_HIGHLIGHTS`).
  */
 export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: Props) {
   const inputId = useId();
-  const [email, setEmail] = useState("");
-  const { status, error, submit } = useNewsletterSubscribe("earlybird");
   const tier = useTier();
   const isGuest = tier === "guest";
   const copy = COPY[surface];
@@ -144,46 +124,6 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  /** The email-capture form, shared verbatim by the main card and the Pay prompt — same `useNewsletterSubscribe` state either way, just a distinct `id` so both can exist in the DOM at once without colliding. */
-  const notifyForm = (id: string) => (
-    <>
-      {status === "success" ? (
-        <p className="newsletter-success">You&rsquo;re on the list — we&rsquo;ll email you at the EarlyBird price.</p>
-      ) : (
-        <form
-          className="coming-soon-form modal-notify-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit(email);
-          }}
-        >
-          <label htmlFor={id} className="visually-hidden">
-            Email address
-          </label>
-          <input
-            id={id}
-            type="email"
-            name="email"
-            placeholder="you@email.com"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={status === "loading"}
-          />
-          <button type="submit" disabled={status === "loading"}>
-            {status === "loading" ? "Joining…" : "Notify me"}
-          </button>
-        </form>
-      )}
-      {error && (
-        <p className="newsletter-error" role="alert">
-          {error}
-        </p>
-      )}
-    </>
-  );
-
   return (
     // A fragment, not a single backdrop: the Pay prompt below is a second,
     // independent full-screen overlay, not a child of this one — nesting it
@@ -193,7 +133,7 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
     <>
       <div className="modal-backdrop" onClick={onClose}>
         <div
-          className="modal-card"
+          className="modal-card upsell-card"
           role="dialog"
           aria-modal="true"
           aria-labelledby={`${inputId}-title`}
@@ -203,37 +143,40 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
             ×
           </button>
 
-          <p className="modal-eyebrow">{copy.eyebrow}</p>
+          <span className="upsell-launch">{brand.pricing.pro.launch}</span>
           <h2 id={`${inputId}-title`}>{copy.title}</h2>
-          <p className="modal-price">
-            {PRO_PRICE} <span className="modal-price-note">once · lifetime</span>
-          </p>
           <p className="modal-body">{body}</p>
 
           {showAccountDoor && (
-            <button
-              type="button"
-              className="primary modal-create-account"
-              onClick={() => {
-                track({ type: "earlybird_create_account_click", surface, feature });
-                onCreateAccount?.();
-              }}
-            >
-              Create a free account
-            </button>
+            <>
+              <button
+                type="button"
+                className="primary modal-create-account"
+                onClick={() => {
+                  track({ type: "earlybird_create_account_click", surface, feature });
+                  onCreateAccount?.();
+                }}
+              >
+                Create a free account
+              </button>
+              <div className="modal-divider">
+                <span>or go further</span>
+              </div>
+            </>
           )}
 
-          {showAccountDoor && (
-            <div className="modal-divider">
-              <span>or go further</span>
-            </div>
-          )}
-
-          <ul className="modal-features">
-            {PRO_FEATURES.map((label) => (
-              <li key={label}>{label}</li>
-            ))}
-          </ul>
+          <div className="upsell-offer">
+            <p className="upsell-price">
+              <span className="upsell-amount">{PRO_PRICE}</span>
+              <span className="upsell-price-note">one-time, no subscription</span>
+            </p>
+            <p className="upsell-value">{brand.pricing.pro.value}</p>
+            <ul className="upsell-features">
+              {PRO_HIGHLIGHTS.map((label) => (
+                <li key={label}>{label}</li>
+              ))}
+            </ul>
+          </div>
 
           {checkoutUrl ? (
             <a
@@ -252,7 +195,7 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
                 window.location.assign(checkoutUrl);
               }}
             >
-              Pay {PRO_PRICE} — get EarlyBird access
+              {brand.pricing.pro.cta}, {PRO_PRICE} one-time
             </a>
           ) : (
             <button
@@ -271,18 +214,14 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
                 })();
               }}
             >
-              Pay {PRO_PRICE} — get EarlyBird access
+              {brand.pricing.pro.cta}, {PRO_PRICE} one-time
             </button>
           )}
 
-          <div className="modal-divider">
-            <span>or</span>
-          </div>
-
-          {notifyForm(inputId)}
-          <p className="modal-notify-note">
-            Not ready to pay? Join the list and get the EarlyBird price when it&rsquo;s ready.
-          </p>
+          <figure className="upsell-quote">
+            <blockquote>{brand.pricing.quote}</blockquote>
+            <figcaption>{brand.pricing.quoteAttribution}</figcaption>
+          </figure>
         </div>
       </div>
     </>

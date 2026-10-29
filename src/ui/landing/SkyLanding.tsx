@@ -11,7 +11,7 @@ import { VisualiserDemoLoop } from "../DemoLoop.tsx";
 import { Footer } from "../Footer.tsx";
 import { Nav } from "../Nav.tsx";
 import { ScrollBird } from "../ScrollBird.tsx";
-import { PRO_PRICE } from "../plan.ts";
+import { PRO_HIGHLIGHTS, PRO_PRICE } from "../plan.ts";
 import { TONE_LINE_COLOR } from "../toneColors.ts";
 import { ToneAverageCard } from "../ToneAverageCard.tsx";
 import { NotifyForm, TONES, go, useWordsByTone } from "./shared.tsx";
@@ -354,7 +354,7 @@ export function SkyLanding() {
         <Wall tone={1} edge="top" />
         <div className="sky-inner">
           <h2>{brand.pricing.title}</h2>
-          <p className="sky-pay-once">Pay once. No subscription.</p>
+          <p className="sky-pay-once">{brand.pricing.pro.payOnce}</p>
           <div className="sky-prices">
             <article className="sky-price">
               <h3>{brand.pricing.free.label}</h3>
@@ -370,17 +370,15 @@ export function SkyLanding() {
               </button>
             </article>
             <article className="sky-price sky-price-pro">
-              <span className="sky-launch">Launch price until 31 Dec</span>
+              <span className="sky-launch">{brand.pricing.pro.launch}</span>
               <h3>
                 {brand.pricing.pro.label}: {PRO_PRICE} one-time
               </h3>
-              <p className="sky-price-value">450+ words, 240+ tone pairs, every TOCFL level.</p>
+              <p className="sky-price-value">{brand.pricing.pro.value}</p>
               <ul>
-                <li>Unlimited runs</li>
-                <li>Every word, every tone, every TOCFL level</li>
-                <li>Full tone pairs access</li>
-                <li>Leaderboard entry under a name you choose</li>
-                <li>Offline play (coming soon)</li>
+                {PRO_HIGHLIGHTS.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
               </ul>
               <button className="sky-btn" onClick={() => go("pricing", "pricing_pro", "pricing")}>
                 {brand.pricing.pro.cta}

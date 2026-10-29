@@ -7254,19 +7254,6 @@ button.switch-track.switch-on {
   background: color-mix(in srgb, var(--accent) 88%, white);
 }
 
-.modal-notify-form button {
-  padding: 10px 18px;
-  border: none;
-  border-radius: var(--radius-pill);
-  background: var(--accent);
-  color: var(--accent-ink);
-  white-space: nowrap;
-}
-
-.modal-notify-form button:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 88%, white);
-}
-
 /* The guest-only "create a free account" door, above the Pro pay button. */
 .modal-create-account {
   width: 100%;
@@ -7294,21 +7281,120 @@ button.switch-track.switch-on {
   background: var(--line);
 }
 
-.modal-notify-form {
+/* ---- the Pro upsell (EarlyBirdModal): the landing page's Pro card, in the app's paper */
+.upsell-card {
+  max-width: 420px;
+  padding: var(--space-6);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sticker-pro);
+  text-align: left;
+}
+
+.upsell-card h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  line-height: 1.2;
+  margin: var(--space-3) var(--space-6) var(--space-2) 0;
+  text-wrap: balance;
+}
+
+.upsell-card .modal-body {
+  font-size: var(--text-base);
+  color: var(--ink-muted);
+  margin: 0 0 var(--space-5);
+}
+
+.upsell-launch {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--beak);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.upsell-offer {
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  border: 1px solid var(--line-strong);
+  margin-bottom: var(--space-5);
+}
+
+.upsell-price {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.upsell-amount {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  line-height: 1;
+}
+
+.upsell-price-note {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.upsell-value {
+  margin: var(--space-2) 0 var(--space-4);
+  font-weight: 600;
+}
+
+.upsell-features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.upsell-features li {
   display: flex;
   gap: var(--space-2);
 }
 
-.modal-notify-form input {
-  flex: 1;
-  min-width: 0;
+.upsell-features li::before {
+  content: "✓";
+  color: var(--accent);
+  font-weight: 800;
+  flex-shrink: 0;
 }
 
-.modal-notify-note {
-  text-align: center;
-  font-size: var(--text-xs);
-  color: var(--ink-dim);
-  margin-top: var(--space-3);
+.upsell-card .modal-pay {
+  font-weight: 700;
+  padding: 14px 20px;
+}
+
+.upsell-card .modal-pay:focus-visible,
+.upsell-card .modal-create-account:focus-visible {
+  outline: 3px solid var(--beak);
+  outline-offset: 2px;
+}
+
+.upsell-quote {
+  margin: var(--space-5) 0 0;
+  padding-left: var(--space-4);
+  border-left: 3px solid var(--beak);
+}
+
+.upsell-quote blockquote {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  line-height: 1.4;
+}
+
+.upsell-quote figcaption {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
 }
 
 /* ------------------------------------------------------------- loading state */
