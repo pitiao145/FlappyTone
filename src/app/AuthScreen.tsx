@@ -284,25 +284,8 @@ export function AuthScreen({ source, challengeScore, challengeName }: Props) {
     <div id="top" className="sky sky-site auth">
       <Nav linkBase="/" />
       <main className="auth-main">
-        <div className="auth-stage" aria-hidden="true">
-          <svg className="auth-cloud auth-cloud-a" viewBox="0 0 120 50">
-            <path d="M20 45 a18 18 0 0 1 8-30 a24 24 0 0 1 44-4 a20 20 0 0 1 34 18 a14 14 0 0 1 -6 16 z" />
-          </svg>
-          <svg className="auth-cloud auth-cloud-b" viewBox="0 0 120 50">
-            <path d="M20 45 a18 18 0 0 1 8-30 a24 24 0 0 1 44-4 a20 20 0 0 1 34 18 a14 14 0 0 1 -6 16 z" />
-          </svg>
-          <svg className="auth-contour" viewBox="0 0 400 160" preserveAspectRatio="none">
-            <path className="auth-contour-trace" d="M10 130 C 120 128, 200 110, 260 70 S 360 22, 390 18" />
-          </svg>
-          <div className="auth-flyer">
-            <img className="auth-bird" src="/Bird-hor-no-halo.png" alt="" width={120} height={120} />
-          </div>
-          <svg className="auth-ground" viewBox="0 0 400 60" preserveAspectRatio="none">
-            <path d="M0 26 C 90 30, 170 34, 240 22 S 340 6, 400 10 L 400 60 L 0 60 z" />
-          </svg>
-        </div>
-
         <div className="auth-panel">
+          <img className="auth-bird" src="/Bird-hor-no-halo.png" alt="" width={96} height={96} />
           <h1 className="auth-title">{head.title}</h1>
           <p className="auth-sub">{head.sub}</p>
 

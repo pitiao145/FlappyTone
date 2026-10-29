@@ -1,5 +1,5 @@
-/* Hallmark · theme: custom (Sky, src/site/site.css) · mode: redesign · depth: full · scope: app screen · signature: the bird gliding up a tone-2 contour over the game's sky · nav: the landing's bar, no Play (this is the door to play) · faces: Lilita One, Figtree · genre: playful · v2.0.0 */
-/* Hallmark · critique · was a lone card on flat paper; now the site's sky, its nav and its pressed-edge controls, the card set beside a live scene so signing up feels like the start of the game; no "or" divider until the Google/Apple slot holds something */
+/* Hallmark · theme: custom (Sky, src/site/site.css) · mode: redesign · depth: full · scope: app screen · signature: the bird flapping over one centred column · nav: the landing's bar, no Play (this is the door to play) · faces: Lilita One, Figtree · genre: playful · v2.0.0 */
+/* Hallmark · critique · was a lone card on flat paper; now the site's sky, its nav and its pressed-edge controls, one centred column, the bird flapping over the head; no "or" divider until the Google/Apple slot holds something */
 
 .auth {
   --auth-input-bg: var(--color-cloud);
@@ -19,111 +19,15 @@
   max-width: var(--container);
   margin-inline: auto;
   padding: clamp(16px, 4vw, 48px) var(--gutter) var(--space-8);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: center;
-  gap: clamp(24px, 5vw, 72px);
 }
 
-/* ---- the scene: sky, two clouds, a rising tone contour, the bird, the ground */
-.auth-stage {
-  position: relative;
-  aspect-ratio: 5 / 4;
-  border: var(--outline) solid var(--color-ink);
-  border-radius: calc(var(--radius) * 1.6);
-  box-shadow: var(--shadow-hard);
-  overflow: clip;
-  background: linear-gradient(
-    to bottom,
-    var(--color-sky-2) 0 30%,
-    var(--color-sky-3) 30% 55%,
-    var(--color-sky-4) 55% 78%,
-    var(--color-sky-5) 78% 100%
-  );
-}
-
-.auth-cloud {
-  position: absolute;
-  width: 26%;
-  fill: var(--color-cloud);
-  stroke: var(--color-ink);
-  stroke-width: 3;
-  stroke-linejoin: round;
-  animation: auth-drift 18s linear infinite;
-}
-
-.auth-cloud-a {
-  top: 12%;
-  left: 8%;
-}
-
-.auth-cloud-b {
-  top: 30%;
-  right: 6%;
-  width: 18%;
-  animation-duration: 24s;
-  animation-direction: reverse;
-}
-
-.auth-contour {
-  position: absolute;
-  inset: 22% 6% 22% 6%;
-  width: 88%;
-  height: 56%;
-}
-
-.auth-contour-trace {
-  fill: none;
-  stroke: var(--color-beak);
-  stroke-width: 6;
-  stroke-linecap: round;
-  stroke-dasharray: 2 16;
-}
-
-.auth-flyer {
-  position: absolute;
-  left: 6%;
-  bottom: 26%;
-  width: 26%;
-  animation: auth-climb 6s var(--ease-snap) infinite;
-}
-
+/* ---- the bird, flapping over the head */
 .auth-bird {
   display: block;
-  width: 100%;
+  width: 96px;
   height: auto;
+  margin: 0 auto var(--space-3);
   animation: auth-flap 0.9s ease-in-out infinite alternate;
-}
-
-.auth-ground {
-  position: absolute;
-  inset: auto 0 0 0;
-  width: 100%;
-  height: 22%;
-  fill: var(--color-rim);
-  stroke: var(--color-ink);
-  stroke-width: 3;
-}
-
-@keyframes auth-climb {
-  0% {
-    transform: translate(0, 0) rotate(0deg);
-    opacity: 0;
-  }
-  8% {
-    opacity: 1;
-  }
-  45% {
-    transform: translate(120%, -20%) rotate(-8deg);
-  }
-  85% {
-    transform: translate(250%, -150%) rotate(-18deg);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(270%, -165%) rotate(-18deg);
-    opacity: 0;
-  }
 }
 
 @keyframes auth-flap {
@@ -135,23 +39,18 @@
   }
 }
 
-@keyframes auth-drift {
-  from {
-    transform: translateX(-12%);
-  }
-  50% {
-    transform: translateX(12%);
-  }
-  to {
-    transform: translateX(-12%);
-  }
-}
-
 /* ---- the panel: head, card, switch */
 .auth-panel {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  max-width: 480px;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.auth-card {
+  text-align: left;
 }
 
 .auth-title {
@@ -169,6 +68,7 @@
   font-size: 1.15rem;
   color: var(--color-ink-2);
   max-width: 34ch;
+  margin-inline: auto;
 }
 
 .auth-card {
@@ -390,35 +290,9 @@
   transition: none;
 }
 
-/* ---- phones and narrow tablets: the scene becomes a short band above the card */
-@media (max-width: 860px) {
-  .auth-main {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-5);
-    padding-top: var(--space-3);
-  }
-  .auth-stage {
-    aspect-ratio: 16 / 7;
-    order: -1;
-  }
-  .auth-panel {
-    max-width: 520px;
-    width: 100%;
-    margin-inline: auto;
-  }
-  .auth-sub {
-    margin-bottom: var(--space-5);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .auth-cloud,
   .auth-bird,
   .auth-sent-bird {
     animation: none;
-  }
-  .auth-flyer {
-    animation: none;
-    transform: translate(120%, -20%) rotate(-8deg);
   }
 }
