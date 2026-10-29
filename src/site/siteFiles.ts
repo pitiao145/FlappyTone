@@ -126,13 +126,13 @@ export function llmsTxt(routes: readonly SiteRoute[] = ROUTES): string {
 
 > A browser game for practising the four Mandarin tones with your voice. Your live pitch steers a bird through corridors shaped like the tone you have to say.
 
-- Free to try in the browser, no signup needed: ${absoluteUrl("/app")}
+- Free to play in the browser with a free account: ${absoluteUrl("/app")}. The tone visualizer and tone test pages need no account.
 - Reference audio is recorded by a native Taiwan Mandarin speaker; all hanzi is Traditional Chinese.
 - Pitch is analysed on the device. The game does not upload or store your microphone audio.
 - The core idea: tones are hard because they are abstract. FlappyTone makes them visible. Each tone is drawn as a shape on screen and your own voice is drawn live against it, so you link what you hear and say to what you see.
 - Tone pair practice: two-syllable words (e.g. 好玩, 美國) with their own mode. Each corridor is measured from the native speaker's real recording, so it follows natural tone sandhi (e.g. a 3rd tone before another 3rd tone) as she actually says it.
 - It checks the tone's pitch shape, not the syllable (no speech recognition).
-- Tiers: guest (3 runs a day, no account), free account (10 runs a day, saved progress, leaderboard), Pro, sold as EarlyBird (one-time payment: unlimited runs, full history, customisation).
+- Tiers: free account (10 runs a day, saved progress, leaderboard), Pro, sold as EarlyBird (one-time payment: unlimited runs, every word and tone pair, a leaderboard name you choose).
 
 ## Pages
 

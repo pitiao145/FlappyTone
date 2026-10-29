@@ -20,6 +20,7 @@ import {
   type AuthCard,
   type AuthSource,
 } from "./authGate.ts";
+import { redirectToCheckoutForCurrentAccount } from "../data/checkout.ts";
 import { Nav } from "../ui/Nav.tsx";
 import "../site/site.css";
 import "./AuthScreen.css";
@@ -96,9 +97,19 @@ export function AuthScreen({ source, challengeScore, challengeName }: Props) {
     }
     track({ type: "signup_completed", mode, method: "password" });
     if (mode === "login") track({ type: "login_completed", method: "password" });
-    // Start the game from a clean page: AuthGate sees the account on load.
-    // The short wait lets the two events above leave first.
-    setTimeout(() => window.location.reload(), 300);
+    // The short wait lets the events above leave first. A visitor who came
+    // from the landing page's "Go Pro" goes on to checkout (brief 24); anyone
+    // else starts the game from a clean page, where AuthGate sees the account.
+    const wantsPro = new URLSearchParams(window.location.search).get("intent") === "pricing";
+    setTimeout(() => {
+      void (async () => {
+        if (wantsPro && (await redirectToCheckoutForCurrentAccount())) {
+          track({ type: "earlybird_checkout_opened", surface: "auth", feature: "lp_pricing" });
+          return;
+        }
+        window.location.reload();
+      })();
+    }, 300);
   }
 
   async function sendMagicLink() {

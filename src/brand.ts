@@ -219,7 +219,7 @@ export const brand = {
     },
     {
       q: "Do I need an account?",
-      a: "No, you can play as a guest. An account saves your progress across devices and gets you on the leaderboard.",
+      a: "Yes, a free one, made in a few seconds with your email. It saves your progress across devices and gets you on the leaderboard. The tone test and tone visualizer need no account.",
     },
   ],
 
