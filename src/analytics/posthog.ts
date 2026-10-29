@@ -149,6 +149,8 @@ export const APP_EVENTS = new Set<string>([
   "setting_changed",
   "signup_started",
   "signup_completed",
+  "auth_screen_viewed",
+  "login_completed",
   "daily_limit_reached",
   "earlybird_modal_shown",
   "earlybird_create_account_click",

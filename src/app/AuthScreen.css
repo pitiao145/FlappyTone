@@ -1,0 +1,295 @@
+/* Hallmark · v2.0.0 · in-system screen (FlappyTone tokens.css, BRAND.md), not a dealt theme · signature: the bird over one calm card */
+/* critique: one card, one primary action per view; refs (Habits Garden) adapted to paper, jade and gold */
+/* waiver: no "or" divider yet, the provider slot above it is empty until Google/Apple land (brief 24) */
+
+.auth-screen {
+  min-height: 100svh;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font);
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6) var(--space-4) var(--space-8);
+  overflow-x: clip;
+}
+
+.auth-wrap {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.auth-brand {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-lg);
+  border-radius: var(--radius-sm);
+}
+
+.auth-bird {
+  margin-top: var(--space-6);
+  width: 96px;
+  height: auto;
+}
+
+.auth-title {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  line-height: 1.1;
+  margin: var(--space-3) 0 var(--space-2);
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+.auth-sub {
+  color: var(--ink-muted);
+  font-size: var(--text-lg);
+  margin: 0 0 var(--space-6);
+  max-width: 34ch;
+}
+
+.auth-card {
+  width: 100%;
+  background: var(--surface-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sticker);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  text-align: left;
+}
+
+.auth-providers:empty {
+  display: none;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.auth-field label,
+.auth-label-row label {
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.auth-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.auth-field input {
+  width: 100%;
+  font: inherit;
+  font-size: var(--text-base);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  min-height: 48px;
+  box-sizing: border-box;
+}
+
+.auth-password {
+  position: relative;
+}
+
+.auth-password input {
+  padding-right: 52px;
+}
+
+.auth-eye {
+  position: absolute;
+  right: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.auth-hint {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+.auth-consent {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.auth-consent input {
+  margin-top: var(--space-1);
+  accent-color: var(--accent);
+}
+
+.auth-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 52px;
+  font: inherit;
+  font-weight: 700;
+  font-size: var(--text-base);
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: 0;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.auth-primary:hover:not(:disabled) {
+  background: var(--accent-bright);
+}
+
+.auth-primary:active:not(:disabled) {
+  background: var(--accent-bright);
+  transform: translateY(1px);
+}
+
+.auth-primary:disabled {
+  background: var(--surface-deep);
+  color: var(--ink-muted);
+  cursor: not-allowed;
+}
+
+.auth-link:active {
+  color: var(--accent-bright);
+}
+
+.auth-link {
+  font: inherit;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.auth-form > .auth-link {
+  align-self: center;
+}
+
+.auth-link-small {
+  font-size: var(--text-sm);
+}
+
+.auth-error {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(var(--danger-rgb), 0.08);
+  color: var(--danger-strong);
+  font-size: var(--text-sm);
+}
+
+.auth-legal {
+  margin: 0;
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+.auth-legal a {
+  color: inherit;
+}
+
+.auth-switch {
+  margin-top: var(--space-6);
+  color: var(--ink);
+}
+
+.auth-sent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-2);
+}
+
+.auth-title,
+.auth-sent h2 {
+  text-wrap: balance;
+}
+
+.auth-sent h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  margin: 0;
+}
+
+.auth-sent p {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+.auth-sent-bird {
+  width: 64px;
+  height: auto;
+}
+
+.auth-gate-loading {
+  min-height: 100svh;
+  background: var(--surface);
+}
+
+.auth-screen a:focus-visible,
+.auth-screen button:focus-visible,
+.auth-screen input:focus-visible {
+  outline: 3px solid var(--beak);
+  outline-offset: 2px;
+  transition: none;
+}
+
+@media (max-width: 480px) {
+  .auth-title {
+    font-size: var(--text-2xl);
+  }
+  .auth-card {
+    padding: var(--space-5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-primary {
+    transition: none;
+  }
+}

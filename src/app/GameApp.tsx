@@ -338,7 +338,7 @@ function useCanvasSize(mainRef: React.RefObject<HTMLElement | null>) {
  * (`/`, `src/LandingApp.tsx`), which is why this file no longer decides
  * between the two on load: reaching this URL at all *is* the decision.
  */
-export default function GameApp() {
+export default function GameApp({ recovery = false }: { recovery?: boolean }) {
   const tier = useTier();
   // Every later event carries the player's effective speech style, so charts
   // can split by it even for players who never open Settings.
@@ -367,6 +367,8 @@ export default function GameApp() {
   // doc comment) — they just pick a different initial screen.
   const [settingsFocus, setSettingsFocus] = useState<"speechStyle" | "theme" | null>(null);
   const [screen, setScreen] = useState<Screen>(() => {
+    // A reset-password link: AuthGate caught PASSWORD_RECOVERY before this mounted.
+    if (recovery) return "resetPassword";
     switch (initialIntent()) {
       case "visualiser":
         return "visualiser";

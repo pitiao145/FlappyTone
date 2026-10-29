@@ -230,9 +230,13 @@ export type AnalyticsEvent =
   /** A Settings control changed. `value` is always stringified (booleans as "on"/"off") so the union stays flat primitives. */
   | { type: "setting_changed"; key: SettingKey; value: string }
   /** AccountCard.tsx's submit handler, fired at the start of the attempt. */
-  | { type: "signup_started"; mode: "signup" | "login" }
+  | { type: "signup_started"; mode: "signup" | "login"; method?: "password" | "magic_link" }
   /** AccountCard.tsx's submit handler, fired once `result.ok`. */
-  | { type: "signup_completed"; mode: "signup" | "login" }
+  | { type: "signup_completed"; mode: "signup" | "login"; method?: "password" | "magic_link" }
+  /** AuthScreen.tsx (the /app login gate, brief 24): the signup or login card became visible. */
+  | { type: "auth_screen_viewed"; screen: "signup" | "login"; source: "challenge" | "direct" | "lp_cta" }
+  /** AuthScreen.tsx: a returning player signed in (password), or a magic link brought them back. */
+  | { type: "login_completed"; method: "password" | "magic_link" }
   /** The daily run cap blocked a start/retry — replaces the old ad-hoc `daily_limit_earlybird_shown`. */
   | { type: "daily_limit_reached"; trigger: "start" | "retry" }
   /** EarlyBirdModal.tsx's mount/surface-change effect. */
@@ -478,6 +482,8 @@ export function eventTier(type: AnalyticsEvent["type"]): AnalyticsTier {
     case "setting_changed":
     case "signup_started":
     case "signup_completed":
+    case "auth_screen_viewed":
+    case "login_completed":
     case "daily_limit_reached":
     case "earlybird_modal_shown":
     case "earlybird_create_account_click":
