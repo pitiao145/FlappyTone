@@ -274,9 +274,42 @@ export function withPageViewProps(
   return { ...cr, properties: { ...cr.properties, ...props } };
 }
 
+/** A URL with a challenge link's `?n=<name>` removed; anything unparsable passes unchanged. */
+export function withoutNameParam(url: unknown): unknown {
+  if (typeof url !== "string" || !url.includes("n=")) return url;
+  try {
+    const u = new URL(url);
+    if (!u.searchParams.has("n")) return url;
+    u.searchParams.delete("n");
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Removes `?n=<name>` from every full-URL field (`$current_url`, `$referrer`,
+ * their `$initial_` person forms). Runs on every event, `$pageview` included,
+ * since those keep their URLs. Pure, for tests.
+ */
+export function scrubNameFromUrls(
+  props: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  if (!props) return props;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(props)) {
+    out[k] = k.endsWith("current_url") || k.endsWith("referrer") ? withoutNameParam(v) : v;
+  }
+  return out;
+}
+
 const beforeSend: BeforeSendFn = (input: CaptureResult | null) => {
-  const cr = input && withPageViewProps(input, pageViewProps);
-  if (!cr || !APP_EVENTS.has(cr.event)) return cr;
+  const raw = input && withPageViewProps(input, pageViewProps);
+  if (!raw) return raw;
+  const cr: CaptureResult = { ...raw, properties: scrubNameFromUrls(raw.properties) ?? raw.properties };
+  if (raw.$set) cr.$set = scrubNameFromUrls(raw.$set);
+  if (raw.$set_once) cr.$set_once = scrubNameFromUrls(raw.$set_once);
+  if (!APP_EVENTS.has(cr.event)) return cr;
   const out: CaptureResult = { ...cr, properties: sanitizeGameProperties(cr.properties) };
   if (cr.$set) out.$set = stripPersonUrls(cr.$set);
   if (cr.$set_once) out.$set_once = stripPersonUrls(cr.$set_once);
@@ -381,8 +414,12 @@ export function captureGameEvent(event: AnalyticsEvent): void {
   if (eventTier(event.type) === "gameplay" && !gameplayConsent) return;
   const { type, ...rest } = event;
   capturePostHogEvent(type, rest as Record<string, string | number | boolean>, {
-    // tool_cta_click leaves the page for /app; a batched send would be lost.
-    instant: type === "run_end" || type === "tool_summary" || type === "tool_cta_click" || type === "seo_cta_click",
+    // These leave the page for /app; a batched send would be lost.
+    instant:
+      type === "run_end" ||
+      type === "tool_summary" ||
+      type === "tool_cta_click" ||
+      (type === "seo_cta_click" && event.target === "signup"),
   });
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PH_ALLOW, sanitizeGameProperties, stripPersonUrls, withPageViewProps } from "./posthog.ts";
+import { PH_ALLOW, sanitizeGameProperties, scrubNameFromUrls, stripPersonUrls, withPageViewProps } from "./posthog.ts";
 
 describe("sanitizeGameProperties", () => {
   it("passes through our own event fields untouched", () => {
@@ -107,5 +107,23 @@ describe("stripPersonUrls", () => {
 
   it("passes undefined through", () => {
     expect(stripPersonUrls(undefined)).toBeUndefined();
+  });
+});
+
+describe("scrubNameFromUrls", () => {
+  it("drops a challenge name from every full-URL field, keeps the rest", () => {
+    expect(
+      scrubNameFromUrls({
+        $current_url: "https://flappytone.com/app?c=42&n=Alice",
+        $initial_referrer: "https://x.com/?n=Bob",
+        $pathname: "/app",
+        name: "kept",
+      }),
+    ).toEqual({
+      $current_url: "https://flappytone.com/app?c=42",
+      $initial_referrer: "https://x.com/",
+      $pathname: "/app",
+      name: "kept",
+    });
   });
 });

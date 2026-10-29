@@ -88,6 +88,20 @@ export function restoreReturn(search: string, storage: Storage | undefined, now 
   return parked ? `?${parked}` : search;
 }
 
+/**
+ * True while AuthScreen's own password submit runs. That submit reloads the
+ * page itself once it finishes (sync, consent, checkout), so AuthGate must
+ * not. Any other sign-in seen on the auth screen (a magic link opened in
+ * another tab, a session restored by the SDK) makes AuthGate reload.
+ */
+let ownSubmit = false;
+export function setOwnSubmit(on: boolean): void {
+  ownSubmit = on;
+}
+export function ownSubmitPending(): boolean {
+  return ownSubmit;
+}
+
 /** A magic link is in flight: remembers which card sent it, for the completion event. */
 const MAGIC_KEY = "toneflap.magicPending.v1";
 

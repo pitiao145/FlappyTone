@@ -20,10 +20,11 @@ export interface ModalDocument {
  * Shows `dialog`. The returned function gives the page its scroll back and
  * focus back to the opener (safe to call twice). It does not close the
  * dialog: the host unmounts it on the dialog's `close` event, and React
- * StrictMode's double effect run must not fire one.
+ * StrictMode's double effect run must not fire one. Pass `openerEl` when
+ * focus may already be inside the dialog (that second effect run).
  */
-export function openModal(dialog: ModalDialog, doc: ModalDocument): () => void {
-  const opener = doc.activeElement as { focus?: () => void } | null;
+export function openModal(dialog: ModalDialog, doc: ModalDocument, openerEl: unknown = doc.activeElement): () => void {
+  const opener = openerEl as { focus?: () => void } | null;
   const root = doc.documentElement.style;
   const overflow = root.overflow;
   root.overflow = "hidden";

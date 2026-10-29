@@ -19,6 +19,7 @@ import {
   parkReturn,
   type AuthCard,
   type AuthSource,
+  setOwnSubmit,
 } from "./authGate.ts";
 import { redirectToCheckoutForCurrentAccount } from "../data/checkout.ts";
 import { Nav } from "../ui/Nav.tsx";
@@ -86,6 +87,7 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     if (busy) return;
     setBusy(true);
     setError(null);
+    setOwnSubmit(true);
     const mode = view === "login" ? "login" : "signup";
     track({ type: "signup_started", mode, method: "password" });
     const result =
@@ -93,6 +95,7 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
         ? await signUpWithPassword(email, password, consent)
         : await signInWithPassword(email, password);
     if (!result.ok) {
+      setOwnSubmit(false);
       setBusy(false);
       setError(friendlyAuthError(result.reason));
       return;

@@ -192,7 +192,9 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<MiniGame> {
       if (cueWord) void playWord(cueWord.id);
     }
 
-    if (snap.over || snap.gateLog.length >= opts.gates) {
+    // A fixed word order spawns no gate past its last word, so a short list ends early.
+    const target = kind.mode === "game" ? Math.min(opts.gates, opts.words.length) : opts.gates;
+    if (snap.over || snap.gateLog.length >= target) {
       const result: MiniResult = {
         cleared: count(snap, ...CLEARED),
         total: snap.gateLog.length,

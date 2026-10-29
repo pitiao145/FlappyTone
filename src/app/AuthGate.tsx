@@ -12,7 +12,7 @@ import { track } from "../analytics/client";
 import { getAccount } from "../data/account.ts";
 import { getSupabase } from "../data/supabase.ts";
 import { parseChallengeName } from "../share/shareName.ts";
-import { authSource, canPlay, consumeMagicLink, restoreReturn, weakPairLine } from "./authGate.ts";
+import { authSource, canPlay, consumeMagicLink, ownSubmitPending, restoreReturn, weakPairLine } from "./authGate.ts";
 import GameApp, { parseChallengeScore } from "./GameApp.tsx";
 
 /**
@@ -64,10 +64,13 @@ export default function AuthGate() {
           }
         }
         playingRef.current = play;
-        // The auth screen was up this page: it reloads itself once its own
-        // signup/login call has finished (sync, consent), so the game starts
-        // from a clean page with the URL params intact and none of its CSS.
-        if (play && shownAuthRef.current) return;
+        // The auth screen was up this page: the game starts from a clean page
+        // (URL params intact, none of its CSS). Its own submit reloads once it
+        // has finished (sync, consent); any other sign-in reloads here.
+        if (play && shownAuthRef.current) {
+          if (!ownSubmitPending()) window.location.reload();
+          return;
+        }
         if (!play) shownAuthRef.current = true;
         setState(play ? "play" : "auth");
       });
@@ -75,6 +78,9 @@ export default function AuthGate() {
     const supabase = getSupabase();
     const sub = supabase?.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setRecovery(true);
+      // The first check() above covers the initial session; a refreshed
+      // token cannot change who may play.
+      if (event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") return;
       check();
     });
     return () => {

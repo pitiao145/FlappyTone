@@ -27,10 +27,12 @@ export function DemoOverlay({
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  // Read on the first render, before showModal moves focus into the dialog.
+  const opener = useRef<Element | null>(document.activeElement);
 
   useEffect(() => {
     const d = dialog.current;
-    return d ? openModal(d, document) : undefined;
+    return d ? openModal(d, document, opener.current) : undefined;
   }, []);
 
   /** Esc closes it natively; every close fires `close`, and the host unmounts us. */
