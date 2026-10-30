@@ -32,7 +32,7 @@ function useTalk(talking: boolean) {
 
 // ---------------------------------------------------------------- Tony
 
-export type TonyExpression = "neutral" | "hopeful" | "crushed" | "epiphany" | "happy" | "shocked";
+export type TonyExpression = "neutral" | "hopeful" | "crushed" | "epiphany" | "happy" | "shocked" | "bored";
 
 const TONY_BROWS: Record<TonyExpression, [string, string]> = {
   neutral: ["M150 168 Q170 160 190 168", "M214 168 Q234 160 254 168"],
@@ -41,6 +41,7 @@ const TONY_BROWS: Record<TonyExpression, [string, string]> = {
   epiphany: ["M148 150 Q170 136 192 148", "M212 148 Q234 136 256 150"],
   happy: ["M150 162 Q170 150 190 162", "M214 162 Q234 150 254 162"],
   shocked: ["M148 140 Q170 124 192 136", "M212 136 Q234 124 256 140"],
+  bored: ["M150 176 L190 176", "M214 176 L254 176"],
 };
 
 const TONY_MOUTH: Record<TonyExpression, string> = {
@@ -50,6 +51,7 @@ const TONY_MOUTH: Record<TonyExpression, string> = {
   epiphany: "M188 236 Q202 262 216 236 Q202 230 188 236",
   happy: "M168 228 Q202 274 236 228 Q202 238 168 228",
   shocked: "",
+  bored: "M184 244 Q202 240 220 246",
 };
 
 /** Arm rotations (deg) about the shoulder: [left, right]. */
@@ -60,6 +62,7 @@ const TONY_ARMS: Record<TonyExpression, [number, number]> = {
   epiphany: [8, -130],
   happy: [120, -120],
   shocked: [4, -4],
+  bored: [2, -2],
 };
 
 export function Tony({
@@ -85,13 +88,13 @@ export function Tony({
   shades?: boolean;
 }) {
   const blinkNow = useBlink(90);
-  const blink = eyesClosed ? 0.1 : expression === "shocked" ? 1 : blinkNow;
+  const blink = eyesClosed ? 0.1 : expression === "shocked" ? 1 : expression === "bored" ? 0.45 * blinkNow : blinkNow;
   const talk = useTalk(talking);
   const f = useCurrentFrame();
   const sway = Math.sin(f / 12) * 1.5;
   const [la, ra0] = TONY_ARMS[expression];
   const ra = holding === "phone" ? -105 : ra0;
-  const headTilt = expression === "crushed" ? 8 : expression === "happy" ? Math.sin(f / 5) * 4 : sway;
+  const headTilt = expression === "crushed" ? 8 : expression === "bored" ? 9 + Math.sin(f / 25) * 3 : expression === "happy" ? Math.sin(f / 5) * 4 : sway;
   const headDrop = expression === "crushed" ? 14 : 0;
   const mouthOpen = 6 + talk * 20;
 

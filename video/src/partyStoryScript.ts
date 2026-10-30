@@ -7,10 +7,10 @@ import type { Cap } from "./tonyStoryScript.ts";
 
 export const PARTY_FPS = 30;
 
-/** Scene lengths in frames, in play order: ≈20s in all. */
-export const P = { call: 75, mishear: 60, glowup: 54, reveal: 75, rescue: 48, game: 126, queueParty: 75, cta: 90 };
+/** Scene lengths in frames, in play order: ≈32s in all. */
+export const P = { hook: 60, bored: 90, call: 105, mishear: 120, glowup: 75, reveal: 105, rescue: 60, game: 147, queueParty: 120, cta: 90 };
 export type PartyScene = keyof typeof P;
-export const PARTY_ORDER: PartyScene[] = ["call", "mishear", "glowup", "reveal", "rescue", "game", "queueParty", "cta"];
+export const PARTY_ORDER: PartyScene[] = ["hook", "bored", "call", "mishear", "glowup", "reveal", "rescue", "game", "queueParty", "cta"];
 export const PARTY_STORY_FRAMES = Object.values(P).reduce((a, b) => a + b, 0);
 
 /**
@@ -20,16 +20,21 @@ export const PARTY_STORY_FRAMES = Object.values(P).reduce((a, b) => a + b, 0);
  * at 2.67 (= its resolvedAt); gate 2 (對面, 4+4, shown as 派對) is flown
  * 3.4–4.77, when the card clears.
  */
-export const PGAME_START = 1.0;
+export const PGAME_START = 0.3;
 export const PGAME = { fly1: 1.6, done1: 2.667, card2: 2.667, fly2: 3.4, done2: 4.767 };
 export const pGameFrame = (clipS: number) => Math.round((clipS - PGAME_START) * PARTY_FPS);
 
 /** Every burned-in caption, in scene frames. */
 export const PCAPS: Record<PartyScene, Cap[]> = {
-  call: [{ text: "He heard “party.” They said “queue.”", from: 4, to: P.call }],
-  mishear: [{ text: "我們在派對?! Send me the location!!", from: 18, to: P.mishear, tone: "highlight" }],
+  hook: [],
+  bored: [
+    { text: "Meet Toney 👋", from: 6, to: 44, y: 300 },
+    { text: "He's bored… so he calls his friend Kai 📞", from: 44, to: P.bored },
+  ],
+  call: [],
+  mishear: [{ text: "派對?! Send me the location!! 📍", from: 78, to: P.mishear, tone: "highlight" }],
   glowup: [{ text: "Toney got ready.", from: 2, to: P.glowup }],
-  reveal: [{ text: "…it was a line for 雞排 🍗", from: 20, to: P.reveal, tone: "highlight" }],
+  reveal: [{ text: "…it was a line for 雞排 🍗", from: 28, to: P.reveal, tone: "highlight" }],
   rescue: [{ text: "páiduì ↗ = line up · pàiduì ↘ = party", from: 4, to: P.rescue, tone: "accent" }],
   game: [
     // Right of the bird's column (x≈90–190), under the word card.
