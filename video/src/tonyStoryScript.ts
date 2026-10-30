@@ -37,6 +37,7 @@ export interface Cap {
   from: number;
   to: number;
   y?: number;
+  left?: number;
   tone?: "ink" | "accent" | "highlight";
 }
 

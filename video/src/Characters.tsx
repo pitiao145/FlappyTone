@@ -1,9 +1,11 @@
 /**
- * Cartoon cast for TonyStory: Tony (tourist), the night-market vendor, Dumpling
- * Pip (the roster's xiao_long_bao art, animated only), and two props.
+ * Cartoon cast for TonyStory and PartyStory: Tony (tourist), the night-market
+ * vendor, Kai (Tony's friend), Dumpling Pip (the roster's xiao_long_bao art,
+ * animated only), and props.
  * Flat vector, five colours from the brand palette, thick rounded outlines.
  */
 
+import { useId } from "react";
 import { Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 
 /** The whole cast palette: ink, paper, skin (BRAND.md `demo`), accent, beak. */
@@ -30,7 +32,7 @@ function useTalk(talking: boolean) {
 
 // ---------------------------------------------------------------- Tony
 
-export type TonyExpression = "neutral" | "hopeful" | "crushed" | "epiphany" | "happy";
+export type TonyExpression = "neutral" | "hopeful" | "crushed" | "epiphany" | "happy" | "shocked";
 
 const TONY_BROWS: Record<TonyExpression, [string, string]> = {
   neutral: ["M150 168 Q170 160 190 168", "M214 168 Q234 160 254 168"],
@@ -38,6 +40,7 @@ const TONY_BROWS: Record<TonyExpression, [string, string]> = {
   crushed: ["M150 172 Q172 168 190 154", "M214 154 Q232 168 254 172"],
   epiphany: ["M148 150 Q170 136 192 148", "M212 148 Q234 136 256 150"],
   happy: ["M150 162 Q170 150 190 162", "M214 162 Q234 150 254 162"],
+  shocked: ["M148 140 Q170 124 192 136", "M212 136 Q234 124 256 140"],
 };
 
 const TONY_MOUTH: Record<TonyExpression, string> = {
@@ -46,6 +49,7 @@ const TONY_MOUTH: Record<TonyExpression, string> = {
   crushed: "M178 248 Q202 232 226 248",
   epiphany: "M188 236 Q202 262 216 236 Q202 230 188 236",
   happy: "M168 228 Q202 274 236 228 Q202 238 168 228",
+  shocked: "",
 };
 
 /** Arm rotations (deg) about the shoulder: [left, right]. */
@@ -55,6 +59,7 @@ const TONY_ARMS: Record<TonyExpression, [number, number]> = {
   crushed: [2, -2],
   epiphany: [8, -130],
   happy: [120, -120],
+  shocked: [4, -4],
 };
 
 export function Tony({
@@ -63,6 +68,9 @@ export function Tony({
   size = 600,
   holding,
   eyesClosed = false,
+  hat = "cap",
+  hatDroop = 0,
+  shades = false,
 }: {
   expression?: TonyExpression;
   talking?: boolean;
@@ -70,9 +78,14 @@ export function Tony({
   /** "phone": right arm raised, holding a phone toward his face. */
   holding?: "phone";
   eyesClosed?: boolean;
+  /** "party": his cap swapped for spiky hair and a party hat. */
+  hat?: "cap" | "party";
+  /** 0 = party hat upright, 1 = flopped over to the side. */
+  hatDroop?: number;
+  shades?: boolean;
 }) {
   const blinkNow = useBlink(90);
-  const blink = eyesClosed ? 0.1 : blinkNow;
+  const blink = eyesClosed ? 0.1 : expression === "shocked" ? 1 : blinkNow;
   const talk = useTalk(talking);
   const f = useCurrentFrame();
   const sway = Math.sin(f / 12) * 1.5;
@@ -120,21 +133,38 @@ export function Tony({
         <circle cx="202" cy="196" r="96" fill={CAST.skin} {...STROKE} />
         <ellipse cx="108" cy="206" rx="14" ry="20" fill={CAST.skin} {...STROKE} />
         <ellipse cx="296" cy="206" rx="14" ry="20" fill={CAST.skin} {...STROKE} />
-        {/* cap */}
-        <g style={{ translate: "0px -22px" }}>
-        <path d="M110 160 Q118 72 206 74 Q290 76 296 160 Z" fill={CAST.accent} {...STROKE} />
-        <path d="M206 150 Q300 132 350 160 Q300 176 206 164 Z" fill={CAST.accent} {...STROKE} />
-        <circle cx="206" cy="78" r="9" fill={CAST.beak} {...STROKE} strokeWidth={6} />
-        </g>
+        {hat === "cap" ? (
+          <g style={{ translate: "0px -22px" }}>
+          <path d="M110 160 Q118 72 206 74 Q290 76 296 160 Z" fill={CAST.accent} {...STROKE} />
+          <path d="M206 150 Q300 132 350 160 Q300 176 206 164 Z" fill={CAST.accent} {...STROKE} />
+          <circle cx="206" cy="78" r="9" fill={CAST.beak} {...STROKE} strokeWidth={6} />
+          </g>
+        ) : (
+          <>
+            <TonyHair />
+            <PartyHat droop={hatDroop} />
+          </>
+        )}
 
         <g id="eyes">
           {[170, 234].map((cx) => (
             <g key={cx} style={{ transformOrigin: `${cx}px 196px`, scale: `1 ${blink}` }}>
-              <ellipse cx={cx} cy="196" rx="16" ry={expression === "epiphany" ? 22 : 18} fill={CAST.paper} {...STROKE} strokeWidth={6} />
-              <circle cx={cx + 3} cy={expression === "crushed" ? 202 : 196} r="8" fill={CAST.ink} />
+              <ellipse cx={cx} cy="196" rx={expression === "shocked" ? 22 : 16} ry={expression === "epiphany" ? 22 : expression === "shocked" ? 26 : 18} fill={CAST.paper} {...STROKE} strokeWidth={6} />
+              <circle cx={expression === "shocked" ? cx : cx + 3} cy={expression === "crushed" ? 202 : 196} r={expression === "shocked" ? 5 : 8} fill={CAST.ink} />
             </g>
           ))}
         </g>
+        {shades && (
+          <g id="shades">
+            <path d="M138 186 L266 186" {...STROKE} strokeWidth={8} />
+            {[170, 234].map((cx) => (
+              <g key={cx}>
+                <rect x={cx - 32} y="178" width="64" height="40" rx="16" fill={CAST.ink} {...STROKE} strokeWidth={6} />
+                <path d={`M${cx - 18} 188 L${cx - 6} 188`} stroke={CAST.paper} strokeWidth={6} strokeLinecap="round" opacity={0.8} />
+              </g>
+            ))}
+          </g>
+        )}
         <g id="brows">
           {TONY_BROWS[expression].map((d) => (
             <path key={d} d={d} {...STROKE} fill="none" />
@@ -144,6 +174,8 @@ export function Tony({
         <g id="mouth">
           {talking ? (
             <ellipse cx="202" cy="242" rx="18" ry={mouthOpen} fill={CAST.ink} />
+          ) : expression === "shocked" ? (
+            <ellipse cx="202" cy="246" rx="12" ry="16" fill={CAST.ink} />
           ) : (
             <path d={TONY_MOUTH[expression]} {...STROKE} strokeWidth={8} fill={expression === "happy" || expression === "epiphany" ? CAST.ink : "none"} />
           )}
@@ -152,6 +184,44 @@ export function Tony({
 
       {expression === "epiphany" && <Lightbulb />}
     </svg>
+  );
+}
+
+/** Tony's hair under the cap: a dark crown plus spikes. */
+function TonyHair() {
+  const spikes = [128, 158, 188, 218, 248, 276];
+  return (
+    <g id="hair">
+      {spikes.map((x, i) => {
+        const base = 112 + Math.abs(x - 202) * 0.42;
+        const h = 34 + (i % 2) * 14;
+        return <path key={x} d={`M${x - 20} ${base + 8} L${x + 4 * (i % 2 ? 1 : -1)} ${base - h} L${x + 20} ${base + 8} Z`} fill={CAST.ink} {...STROKE} strokeWidth={6} />;
+      })}
+      <path d="M108 182 Q106 100 202 100 Q298 100 296 182 Q262 140 202 146 Q140 140 108 182 Z" fill={CAST.ink} {...STROKE} />
+    </g>
+  );
+}
+
+/** A striped party-hat cone on top of the head; `droop` 0..1 bends the tip over to the right. */
+function PartyHat({ droop }: { droop: number }) {
+  const id = useId();
+  const lerp = (a: number, b: number) => a + (b - a) * droop;
+  const tip = [lerp(206, 322), lerp(-40, 96)];
+  const d = `M156 112 Q${lerp(181, 196)} ${lerp(36, -30)} ${tip[0]} ${tip[1]} Q${lerp(231, 262)} ${lerp(36, 20)} 250 104 Z`;
+  return (
+    <g id="party-hat">
+      <clipPath id={id}>
+        <path d={d} />
+      </clipPath>
+      <path d={d} fill={CAST.beak} />
+      <g clipPath={`url(#${id})`}>
+        {[-60, -10, 40, 90].map((y) => (
+          <path key={y} d={`M120 ${y + 60} L340 ${y}`} stroke={CAST.accent} strokeWidth={18} />
+        ))}
+      </g>
+      <path d={d} fill="none" {...STROKE} />
+      <circle cx={tip[0]} cy={tip[1]} r="16" fill="#a3341f" {...STROKE} strokeWidth={6} />
+    </g>
   );
 }
 
@@ -304,6 +374,92 @@ export function Steamer({ size = 280, open = true }: { size?: number; open?: boo
       <path d="M30 116 L270 116 L256 200 Q150 216 44 200 Z" fill={CAST.beak} {...STROKE} />
       <path d="M38 150 L262 150" stroke={CAST.ink} strokeWidth={6} />
       <path d="M30 116 L270 116" {...STROKE} />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------- Kai
+
+export type KaiExpression = "neutral" | "grin";
+
+/**
+ * Kai, Tony's friend: curly hair, round glasses, hoodie. `reach` swings the
+ * left-of-frame arm up about the shoulder (deg, clockwise = toward the left and
+ * up): a wave, or a dance move.
+ */
+export function Kai({
+  expression = "neutral",
+  size = 600,
+  reach = 0,
+}: {
+  expression?: KaiExpression;
+  size?: number;
+  reach?: number;
+}) {
+  const blink = useBlink(100, 25);
+  const f = useCurrentFrame();
+  const grin = expression === "grin";
+  const tilt = grin ? -6 + Math.sin(f / 6) * 2 : Math.sin(f / 14) * 2;
+  return (
+    <svg viewBox="0 0 400 600" width={(size * 400) / 600} height={size} style={{ overflow: "visible" }}>
+      <g id="body">
+        <path d="M184 470 L176 560 M220 470 L228 560" {...STROKE} strokeWidth={34} />
+        <path d="M184 470 L176 560 M220 470 L228 560" stroke={CAST.ink} strokeWidth={14} strokeLinecap="round" />
+        <rect x="128" y="292" width="148" height="196" rx="56" fill={CAST.beak} {...STROKE} />
+        <path d="M150 300 Q202 350 254 300" fill="none" {...STROKE} strokeWidth={8} />
+        <path d="M186 330 L182 372 M218 330 L222 372" stroke={CAST.paper} strokeWidth={6} strokeLinecap="round" />
+        <rect x="164" y="412" width="76" height="40" rx="14" fill="none" {...STROKE} strokeWidth={6} />
+      </g>
+      <g id="arms">
+        <g style={{ transformOrigin: "260px 320px", rotate: "-6deg" }}>
+          <path d="M260 320 L280 440" {...STROKE} strokeWidth={34} />
+          <path d="M260 320 L280 440" stroke={CAST.beak} strokeWidth={14} strokeLinecap="round" />
+          <circle cx="282" cy="446" r="20" fill={CAST.skin} {...STROKE} />
+        </g>
+        <g style={{ transformOrigin: "144px 320px", rotate: `${8 + reach}deg` }}>
+          <path d="M144 320 L110 470" {...STROKE} strokeWidth={34} />
+          <path d="M144 320 L110 470" stroke={CAST.beak} strokeWidth={14} strokeLinecap="round" />
+          <circle cx="108" cy="478" r="20" fill={CAST.skin} {...STROKE} />
+        </g>
+      </g>
+      <g id="head" style={{ transformOrigin: "202px 296px", rotate: `${tilt}deg` }}>
+        <circle cx="202" cy="196" r="92" fill={CAST.skin} {...STROKE} />
+        <ellipse cx="112" cy="206" rx="14" ry="20" fill={CAST.skin} {...STROKE} />
+        <ellipse cx="292" cy="206" rx="14" ry="20" fill={CAST.skin} {...STROKE} />
+        {/* curls */}
+        {[[120, 150], [140, 112], [176, 92], [214, 88], [252, 104], [278, 140], [160, 128], [236, 126], [200, 116]].map(([x, y]) => (
+          <circle key={`${x}-${y}`} cx={x} cy={y} r="30" fill={CAST.ink} />
+        ))}
+        <g id="eyes" style={{ transformOrigin: "202px 200px", scale: `1 ${blink}` }}>
+          <circle cx="168" cy="200" r="9" fill={CAST.ink} />
+          <circle cx="236" cy="200" r="9" fill={CAST.ink} />
+        </g>
+        <g id="glasses" fill="none" {...STROKE} strokeWidth={6}>
+          <circle cx="168" cy="200" r="26" />
+          <circle cx="236" cy="200" r="26" />
+          <path d="M194 198 Q202 192 210 198" />
+        </g>
+        <g id="brows">
+          {grin ? (
+            <>
+              <path d="M146 164 Q166 156 188 168" {...STROKE} strokeWidth={8} fill="none" />
+              <path d="M214 160 Q236 146 258 156" {...STROKE} strokeWidth={8} fill="none" />
+            </>
+          ) : (
+            <>
+              <path d="M148 166 Q168 158 188 166" {...STROKE} strokeWidth={8} fill="none" />
+              <path d="M216 166 Q236 158 256 166" {...STROKE} strokeWidth={8} fill="none" />
+            </>
+          )}
+        </g>
+        <g id="mouth">
+          {grin ? (
+            <path d="M170 238 Q210 278 244 232 Q206 248 170 238 Z" fill={CAST.ink} {...STROKE} strokeWidth={8} />
+          ) : (
+            <path d="M180 244 Q202 258 224 244" {...STROKE} strokeWidth={8} fill="none" />
+          )}
+        </g>
+      </g>
     </svg>
   );
 }

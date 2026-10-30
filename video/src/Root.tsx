@@ -3,6 +3,7 @@ import { Thumbnail, type ThumbnailProps } from "./Thumbnail.tsx";
 import { Story, storyFrames, type StoryProps } from "./Story.tsx";
 import { CharacterSheet } from "./CharacterSheet.tsx";
 import { TONY_STORY_FRAMES, TonyStory } from "./TonyStory.tsx";
+import { PARTY_STORY_FRAMES, PartyStory, ThumbParty } from "./PartyStory.tsx";
 import { HowTo, howToFrames, type HowToProps } from "./HowTo.tsx";
 import { ThumbHowTo } from "./ThumbHowTo.tsx";
 import { FPS, Promo, SIZE, sections, type PromoProps } from "./Promo.tsx";
@@ -21,6 +22,8 @@ export function Root() {
   return (
     <>
     <Composition id="TonyStory" component={TonyStory} fps={FPS} width={1080} height={1920} durationInFrames={TONY_STORY_FRAMES} defaultProps={{ captions: true, voices: true, sfx: true }} />
+    <Composition id="PartyStory" component={PartyStory} fps={FPS} width={1080} height={1920} durationInFrames={PARTY_STORY_FRAMES} defaultProps={{ captions: true, voices: true, sfx: true }} />
+    <Composition id="ThumbParty" component={ThumbParty} fps={FPS} width={1080} height={1920} durationInFrames={1} />
     <Composition
       id="HowTo"
       component={HowTo}

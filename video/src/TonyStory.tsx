@@ -30,8 +30,8 @@ import { DISPLAY, FPS, SANS } from "./Promo.tsx";
 import { CAPS, GAME, GAME_START, S, SCENE_ORDER, gameFrame, type SceneKey } from "./tonyStoryScript.ts";
 import { createContext, useContext } from "react";
 
-const HAN = `${SANS}, "PingFang TC", "Noto Sans TC", sans-serif`;
-const RED = "#a3341f"; // --danger, tone 4's line colour
+export const HAN = `${SANS}, "PingFang TC", "Noto Sans TC", sans-serif`;
+export const RED = "#a3341f"; // --danger, tone 4's line colour
 const GREEN = "#2c8f61";
 
 export { TONY_STORY_FRAMES } from "./tonyStoryScript.ts";
@@ -43,18 +43,18 @@ export interface TonyStoryProps {
   sfx?: boolean;
   [key: string]: unknown;
 }
-const Layers = createContext<Required<Pick<TonyStoryProps, "captions" | "voices" | "sfx">>>({ captions: true, voices: true, sfx: true });
+export const Layers = createContext<Required<Pick<TonyStoryProps, "captions" | "voices" | "sfx">>>({ captions: true, voices: true, sfx: true });
 
-const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
+export const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
-function usePop(delay = 0, damping = 11) {
+export function usePop(delay = 0, damping = 11) {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   return spring({ frame: f - delay, fps, config: { damping, mass: 0.6 } });
 }
 
 /** A sound effect at frame `at` of the current scene. */
-function Sfx({ name, at, volume = 0.6 }: { name: string; at: number; volume?: number }) {
+export function Sfx({ name, at, volume = 0.6 }: { name: string; at: number; volume?: number }) {
   if (!useContext(Layers).sfx) return null;
   return (
     <Sequence from={at} layout="none">
@@ -64,7 +64,7 @@ function Sfx({ name, at, volume = 0.6 }: { name: string; at: number; volume?: nu
 }
 
 /** A voice clip from video/public/audio: Jane's, or the Tony recordings. */
-function Jane({ word, at }: { word: string; at: number }) {
+export function Jane({ word, at }: { word: string; at: number }) {
   if (!useContext(Layers).voices) return null;
   return (
     <Sequence from={at} layout="none">
@@ -75,7 +75,7 @@ function Jane({ word, at }: { word: string; at: number }) {
 
 // ---------------------------------------------------------------- shared bits
 
-function Caption({ text, from, to, y = 270, tone = "ink" }: { text: string; from: number; to: number; y?: number; tone?: "ink" | "accent" | "highlight" }) {
+export function Caption({ text, from, to, y = 270, left = 70, tone = "ink" }: { text: string; from: number; to: number; y?: number; left?: number; tone?: "ink" | "accent" | "highlight" }) {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { captions } = useContext(Layers);
@@ -84,7 +84,7 @@ function Caption({ text, from, to, y = 270, tone = "ink" }: { text: string; from
   const out = interpolate(f, [to - 6, to], [1, 0], clamp);
   const bg = tone === "accent" ? CAST.accent : tone === "highlight" ? CAST.beak : CAST.ink;
   return (
-    <div style={{ position: "absolute", left: 70, right: 130, top: y, display: "flex", justifyContent: "center", opacity: out }}>
+    <div style={{ position: "absolute", left, right: 130, top: y, display: "flex", justifyContent: "center", opacity: out }}>
       <div
         style={{
           background: bg,
@@ -118,7 +118,7 @@ function SceneCaptions({ scene }: { scene: SceneKey }) {
 
 type Tail = "left" | "right" | "side";
 
-function SpeechBubble({
+export function SpeechBubble({
   x,
   y,
   han,
@@ -130,7 +130,7 @@ function SpeechBubble({
 }: {
   x: number;
   y: number;
-  han: string;
+  han: React.ReactNode;
   pinyin?: string;
   en?: string;
   delay?: number;
@@ -193,7 +193,7 @@ function Stall({ dim = 0 }: { dim?: number }) {
 }
 
 /** Draws a multi-subpath `d` front to back: dash offsets reset per subpath, so each one gets its share of `progress`. */
-function TracedPath({ d, progress, ...rest }: { d: string; progress: number } & React.SVGProps<SVGPathElement>) {
+export function TracedPath({ d, progress, ...rest }: { d: string; progress: number } & React.SVGProps<SVGPathElement>) {
   const parts = d.split(/(?=M)/).map((p) => p.trim()).filter(Boolean);
   const lens = parts.map((p) => getLength(p));
   const total = lens.reduce((a, b) => a + b, 0);
@@ -277,7 +277,7 @@ function ToneLine({
   );
 }
 
-function BrandPip({ size }: { size: number }) {
+export function BrandPip({ size }: { size: number }) {
   const f = useCurrentFrame();
   const phase = Math.sin(f / 3.2);
   return (
@@ -288,7 +288,7 @@ function BrandPip({ size }: { size: number }) {
   );
 }
 
-function Puff({ at }: { at: number }) {
+export function Puff({ at }: { at: number }) {
   const f = useCurrentFrame() - at;
   if (f < 0 || f > 16) return null;
   const t = f / 16;
@@ -510,8 +510,11 @@ function ShapesScene() {
   );
 }
 
-/** The word card's text area, repainted (水餃 isn't in the catalog; and the card lags the next cue). */
-function CardPatch({ pinyin, han, marks }: { pinyin: string; han: string; marks: "23" | "44" }) {
+/**
+ * The word card's text area, repainted (水餃 isn't in the catalog; and the card lags the next cue).
+ * `marks` repaints the tone marks too; leave it out to keep the game's own.
+ */
+export function CardPatch({ pinyin, han, marks }: { pinyin: string; han: string; marks?: "23" | "44" }) {
   const col = marks === "44" ? RED : CAST.accent;
   return (
     <>
@@ -519,13 +522,13 @@ function CardPatch({ pinyin, han, marks }: { pinyin: string; han: string; marks:
         <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 58, color: CAST.ink, lineHeight: 1.1 }}>{pinyin}</div>
         <div style={{ fontFamily: HAN, fontSize: 44, color: "#6b6151" }}>{han}</div>
       </div>
-      <svg width="130" height="60" style={{ position: "absolute", left: 630, top: 245, background: "rgb(236,229,205)" }}>
+      {marks && <svg width="130" height="60" style={{ position: "absolute", left: 630, top: 245, background: "rgb(236,229,205)" }}>
         {marks === "44" ? (
           <path d="M10 14 L50 44 M70 14 L110 44" stroke={col} strokeWidth={6} fill="none" strokeLinecap="round" />
         ) : (
           <path d="M10 44 L50 14 M70 22 Q90 54 112 18" stroke={col} strokeWidth={6} fill="none" strokeLinecap="round" />
         )}
-      </svg>
+      </svg>}
     </>
   );
 }
