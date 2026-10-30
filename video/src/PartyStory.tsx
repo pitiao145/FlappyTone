@@ -1,5 +1,5 @@
 /**
- * PartyStory: a ≈32s cartoon promo in TonyStory's style. Bored Tony phones
+ * PartyStory: a ≈55s cartoon promo in TonyStory's style. Bored Tony phones
  * Kai, who answers 我們在排隊 páiduì (we're queueing); Tony hears 派對 pàiduì (party), gets
  * ready, and finds a 雞排 queue; the FlappyTone bird comes to the rescue and
  * Tony practises both tone patterns in the real game; the queue throws a party
@@ -188,9 +188,9 @@ function HookScene() {
   return (
     <AbsoluteFill style={{ background: CAST.paper, alignItems: "center", justifyContent: "center", gap: 80, paddingRight: 60 }}>
       <Sfx name="pop" at={4} volume={0.5} />
-      <Sfx name="pop" at={24} volume={0.5} />
+      <Sfx name="pop" at={30} volume={0.5} />
       <HookLine pop={spring({ frame: f - 4, fps, config: { damping: 11 } })} who="He heard" word="“party.”" han="派對 🎉" color={RED} />
-      <HookLine pop={spring({ frame: f - 24, fps, config: { damping: 11 } })} who="They said" word="“queue.”" han="排隊" color={CAST.accent} />
+      <HookLine pop={spring({ frame: f - 30, fps, config: { damping: 11 } })} who="They said" word="“queue.”" han="排隊" color={CAST.accent} />
     </AbsoluteFill>
   );
 }
@@ -210,7 +210,7 @@ function Clock({ f }: { f: number }) {
 }
 
 const TONY_SOFA = { left: 230, top: 880, size: 640 };
-const DIAL = 54;
+const DIAL = 85;
 
 function BoredScene() {
   const f = useCurrentFrame();
@@ -268,7 +268,7 @@ function PhoneLine({ misheard }: { misheard: boolean }) {
   );
 }
 
-const KAI_REPLY = 60;
+const KAI_REPLY = 95;
 
 function CallScene() {
   const f = useCurrentFrame();
@@ -279,7 +279,7 @@ function CallScene() {
       <Sfx name="pop" at={4} volume={0.5} />
       <Sfx name="pop" at={KAI_REPLY} volume={0.5} />
       <div style={{ position: "absolute", ...TONY_SOFA }}>
-        <Tony expression={asking ? "hopeful" : "neutral"} holding="phone" talking={f > 6 && f < 44} size={TONY_SOFA.size} />
+        <Tony expression={asking ? "hopeful" : "neutral"} holding="phone" talking={f > 6 && f < 60} size={TONY_SOFA.size} />
       </div>
       <SofaFront />
       {asking && (
@@ -319,8 +319,8 @@ function SaidHeard({ said, heard }: { said: number; heard: number }) {
   );
 }
 
-const FLIP = 24;
-const COMPARE = 50;
+const FLIP = 40;
+const COMPARE = 90;
 
 function MishearScene() {
   const f = useCurrentFrame();
@@ -329,7 +329,7 @@ function MishearScene() {
   const jump = spring({ frame: f - FLIP - 2, fps, config: { damping: 7, mass: 0.6 } });
   const misheard = f >= FLIP;
   const said = spring({ frame: f - COMPARE, fps, config: { damping: 12 } });
-  const heard = spring({ frame: f - COMPARE - 14, fps, config: { damping: 10 } });
+  const heard = spring({ frame: f - COMPARE - 24, fps, config: { damping: 10 } });
   return (
     <AbsoluteFill>
       <LivingRoom />
@@ -337,7 +337,7 @@ function MishearScene() {
       <Sfx name="sparkle" at={FLIP} volume={0.5} />
       <Sfx name="pop" at={FLIP} />
       <Sfx name="pop" at={COMPARE} volume={0.5} />
-      <Sfx name="pop" at={COMPARE + 14} volume={0.5} />
+      <Sfx name="pop" at={COMPARE + 24} volume={0.5} />
       <div style={{ position: "absolute", ...TONY_SOFA, translate: `0px ${misheard ? -Math.sin(jump * Math.PI) * 120 : 0}px` }}>
         <Tony expression={misheard ? "shocked" : "neutral"} holding="phone" size={TONY_SOFA.size} />
       </div>
@@ -358,7 +358,7 @@ function MishearScene() {
 
 const RAY_COLORS = [CAST.beak, RED, CAST.accent, PURPLE, BLUE, CAST.beak];
 
-const BEAT = 25;
+const BEAT = 35;
 
 function GlowUpScene() {
   const f = useCurrentFrame();
@@ -420,24 +420,29 @@ function GlowUpScene() {
   );
 }
 
-const SCRATCH = 20;
+const SCRATCH = 40;
 
 function RevealScene() {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const walk = spring({ frame: f, fps, config: { damping: 14 } });
-  const droop = interpolate(f, [44, 70], [0, 1], clamp);
+  const droop = interpolate(f, [80, 120], [0, 1], clamp);
   const punch = interpolate(f, [SCRATCH, SCRATCH + 3, SCRATCH + 10], [1, 1.08, 1.03], clamp);
-  const expr = f < SCRATCH ? "happy" : f < 44 ? "shocked" : "crushed";
+  const expr = f < SCRATCH ? "happy" : f < 80 ? "shocked" : "crushed";
   return (
     <AbsoluteFill style={{ scale: `${punch}`, rotate: `${f >= SCRATCH ? -1.5 : 0}deg` }}>
       <Street />
       <Sfx name="scratch" at={SCRATCH} volume={0.8} />
-      <Sfx name="wahwah" at={46} volume={0.4} />
-      <Queue wave={f >= 30} />
+      <Sfx name="wahwah" at={84} volume={0.4} />
+      <Queue wave={f >= 60} />
       <div style={{ position: "absolute", left: -40, top: 1080, translate: `${interpolate(walk, [0, 1], [-500, 0])}px ${f < SCRATCH ? -Math.abs(Math.sin(f / 2.5)) * 30 : 0}px` }}>
         <Tony expression={expr} hat="party" hatDroop={droop} shades={f < SCRATCH} size={600} />
       </div>
+      {f >= 120 && (
+        <div style={{ position: "absolute", left: 170, top: 860, scale: `${spring({ frame: f - 120, fps, config: { damping: 10 } })}`, padding: "12px 32px", borderRadius: 999, background: CAST.accent, color: CAST.paper, border: `6px solid ${CAST.ink}`, fontFamily: HAN, fontWeight: 800, fontSize: 52 }}>
+          排隊 páiduì ↗ = lining up
+        </div>
+      )}
       {f >= SCRATCH && f < SCRATCH + 12 && <AbsoluteFill style={{ background: CAST.paper, opacity: interpolate(f, [SCRATCH, SCRATCH + 12], [0.6, 0]) }} />}
       <SceneCaptions scene="reveal" />
     </AbsoluteFill>
@@ -462,7 +467,7 @@ function RescueScene() {
       <div style={{ position: "absolute", left: 540 - 170, top: 840 - 170, scale: `${interpolate(zoom, [0, 1], [3, 1.3])}` }}>
         <BrandPip size={340} />
       </div>
-      <Sequence from={14} layout="none">
+      <Sequence from={20} layout="none">
         {/* Above the bird, tail down to its head (bird ≈ x 500–690, y 790–970 once settled). */}
         <SpeechBubble x={510} y={540} han={"Leave your\ntones to me!"} hanSize={58} tail="left" />
       </Sequence>
@@ -502,8 +507,8 @@ function GameScene() {
   );
 }
 
-const SPEAKER_AT = 55;
-const BANNER_AT = 75;
+const SPEAKER_AT = 120;
+const BANNER_AT = 150;
 
 /** A boombox with pulsing woofers. */
 function Speaker({ f }: { f: number }) {
@@ -535,6 +540,7 @@ function QueuePartyScene() {
       <Sfx name="pop" at={2} volume={0.4} />
       <Sfx name="pop" at={SPEAKER_AT} />
       <Sfx name="beat" at={SPEAKER_AT + 2} volume={0.7} />
+      <Sfx name="beat" at={SPEAKER_AT + 77} volume={0.7} />
       <Sfx name="tada" at={BANNER_AT} volume={0.35} />
       <Queue danceFrom={SPEAKER_AT + 2} />
       <div style={{ position: "absolute", left: -40, top: 1080, transformOrigin: "50% 100%", translate: `0px ${dancing ? -Math.abs(Math.sin(f / 4.8)) * 40 : 0}px` }}>
