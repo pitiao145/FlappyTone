@@ -20,7 +20,7 @@
 
 import { loadShareData, type CalibrationSettings } from "../game/settings.ts";
 import type { SpeechStyle } from "../game/words.ts";
-import { deviceBucket, type AnalyticsEvent } from "./session.ts";
+import { deviceBucket, type AnalyticsEvent, type SeoPageViewProps } from "./session.ts";
 import {
   captureGameEvent,
   initPostHog,
@@ -35,13 +35,14 @@ import {
 let initialized = false;
 
 /**
- * Starts the PostHog client. Call once, from app start — later calls are
- * ignored so a React strict-mode double-mount cannot start it twice.
+ * Starts the PostHog client. Call once, from the entry module before the first
+ * render: an event tracked before this is dropped, not queued. Later calls are
+ * ignored, so pass a route-table page's `$pageview` props on this first call.
  */
-export function initAnalytics(): void {
+export function initAnalytics(pageProps?: SeoPageViewProps): void {
   if (initialized) return;
   initialized = true;
-  initPostHog(loadShareData());
+  initPostHog(loadShareData(), pageProps);
   if (typeof navigator !== "undefined") {
     setDeviceProperty(deviceBucket(navigator.userAgent));
   }

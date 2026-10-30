@@ -482,65 +482,70 @@ export type SettingKey =
  * Which consent gate an event answers to. Gameplay events are dropped when
  * the player has turned off "Anonymous game data" (`setPostHogConsent`);
  * global events always send in production, gated only by `posthog.ts`'s
- * `enabled()` check. A new event type must be added here explicitly — the
- * switch is exhaustive by construction (a missing case is a type error), so
- * this is the one place tier is decided, never inferred at a call site.
+ * `enabled()` check. A new event type must be added to `EVENT_TIERS` below —
+ * it is exhaustive by construction (a missing key is a type error), so this
+ * is the one place tier is decided, never inferred at a call site.
  */
 export type AnalyticsTier = "gameplay" | "global";
 
+/**
+ * Every event type with its tier. A `Record` over the union, so a new type
+ * without a tier, or a tier for a type that does not exist, is a type error.
+ * `posthog.ts`'s `APP_EVENTS` (the sanitizer's list) is built from these keys.
+ */
+export const EVENT_TIERS: Record<AnalyticsEvent["type"], AnalyticsTier> = {
+  mic: "gameplay",
+  calib_step: "gameplay",
+  calib_done: "gameplay",
+  calib_abandoned: "gameplay",
+  recal_offered: "gameplay",
+  recal_resolved: "gameplay",
+  run_feedback: "gameplay",
+  run_start: "gameplay",
+  gate: "gameplay",
+  run_end: "gameplay",
+  cue_fallback: "gameplay",
+  visualiser_session: "gameplay",
+  landed: "global",
+  share_clicked: "global",
+  challenge_landed: "global",
+  challenge_resolved: "global",
+  leaderboard_viewed: "global",
+  join_board_shown: "global",
+  join_board_submitted: "global",
+  score_submitted: "global",
+  mode_selected: "global",
+  screen_viewed: "global",
+  setting_changed: "global",
+  signup_started: "global",
+  signup_completed: "global",
+  auth_screen_viewed: "global",
+  login_completed: "global",
+  daily_limit_reached: "global",
+  earlybird_modal_shown: "global",
+  earlybird_create_account_click: "global",
+  earlybird_pay_click: "global",
+  earlybird_checkout_opened: "global",
+  profile_earlybird_cta_click: "global",
+  progress_locked_cta_click: "global",
+  progress_earlybird_pricing_click: "global",
+  feedback_submitted: "global",
+  update_banner: "global",
+  inapp_prompt: "global",
+  tool_used: "global",
+  tool_summary: "global",
+  word_page_action: "global",
+  tool_cta_click: "global",
+  seo_cta_click: "global",
+  app_open: "global",
+  toneder_swipe: "global",
+  toneder_round_done: "global",
+  toneder_cap_hit: "global",
+  toneder_upgrade_click: "global",
+};
+
 export function eventTier(type: AnalyticsEvent["type"]): AnalyticsTier {
-  switch (type) {
-    case "mic":
-    case "calib_step":
-    case "calib_done":
-    case "calib_abandoned":
-    case "recal_offered":
-    case "recal_resolved":
-    case "run_feedback":
-    case "run_start":
-    case "gate":
-    case "run_end":
-    case "cue_fallback":
-    case "visualiser_session":
-      return "gameplay";
-    case "landed":
-    case "share_clicked":
-    case "challenge_landed":
-    case "challenge_resolved":
-    case "leaderboard_viewed":
-    case "join_board_shown":
-    case "join_board_submitted":
-    case "score_submitted":
-    case "mode_selected":
-    case "screen_viewed":
-    case "setting_changed":
-    case "signup_started":
-    case "signup_completed":
-    case "auth_screen_viewed":
-    case "login_completed":
-    case "daily_limit_reached":
-    case "earlybird_modal_shown":
-    case "earlybird_create_account_click":
-    case "earlybird_pay_click":
-    case "earlybird_checkout_opened":
-    case "profile_earlybird_cta_click":
-    case "progress_locked_cta_click":
-    case "progress_earlybird_pricing_click":
-    case "feedback_submitted":
-    case "update_banner":
-    case "inapp_prompt":
-    case "tool_used":
-    case "tool_summary":
-    case "word_page_action":
-    case "tool_cta_click":
-    case "seo_cta_click":
-    case "app_open":
-    case "toneder_swipe":
-    case "toneder_round_done":
-    case "toneder_cap_hit":
-    case "toneder_upgrade_click":
-      return "global";
-  }
+  return EVENT_TIERS[type];
 }
 
 export interface SessionCalibration {

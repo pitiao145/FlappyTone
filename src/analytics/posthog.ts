@@ -66,6 +66,7 @@ import type { BeforeSendFn, CaptureResult } from "posthog-js";
 import type posthogType from "posthog-js";
 import type { SpeechStyle } from "../game/words.ts";
 import {
+  EVENT_TIERS,
   eventTier,
   roundCalibration,
   type AnalyticsEvent,
@@ -123,57 +124,12 @@ function enabled(): boolean {
  * the landing site, `$pageview`, newsletter events) keeps PostHog's normal
  * properties, since those were never built from `session.ts`'s closed union
  * in the first place.
+ *
+ * Built from `EVENT_TIERS`, so every union type is sanitized by construction.
+ * A hand-kept list here once missed `seo_cta_click`, which then shipped with
+ * PostHog's full defaults.
  */
-export const APP_EVENTS = new Set<string>([
-  "landed",
-  "mic",
-  "calib_step",
-  "calib_done",
-  "calib_abandoned",
-  "calib_numbers",
-  "recal_offered",
-  "recal_resolved",
-  "run_feedback",
-  "run_start",
-  "gate",
-  "run_end",
-  "cue_fallback",
-  "share_clicked",
-  "challenge_landed",
-  "challenge_resolved",
-  "leaderboard_viewed",
-  "join_board_shown",
-  "join_board_submitted",
-  "score_submitted",
-  "mode_selected",
-  "screen_viewed",
-  "setting_changed",
-  "signup_started",
-  "signup_completed",
-  "auth_screen_viewed",
-  "login_completed",
-  "daily_limit_reached",
-  "earlybird_modal_shown",
-  "earlybird_create_account_click",
-  "earlybird_pay_click",
-  "earlybird_checkout_opened",
-  "profile_earlybird_cta_click",
-  "progress_locked_cta_click",
-  "progress_earlybird_pricing_click",
-  "visualiser_session",
-  "feedback_submitted",
-  "update_banner",
-  "inapp_prompt",
-  "tool_used",
-  "tool_summary",
-  "word_page_action",
-  "tool_cta_click",
-  "app_open",
-  "toneder_swipe",
-  "toneder_round_done",
-  "toneder_cap_hit",
-  "toneder_upgrade_click",
-]);
+export const APP_EVENTS = new Set<string>([...Object.keys(EVENT_TIERS), "calib_numbers"]);
 
 /**
  * The only `$`-prefixed properties allowed through on an app event. Each one
@@ -414,14 +370,24 @@ export function captureGameEvent(event: AnalyticsEvent): void {
   if (eventTier(event.type) === "gameplay" && !gameplayConsent) return;
   const { type, ...rest } = event;
   capturePostHogEvent(type, rest as Record<string, string | number | boolean>, {
-    // These leave the page for /app; a batched send would be lost.
-    instant:
-      type === "run_end" ||
-      type === "tool_summary" ||
-      type === "tool_cta_click" ||
-      (type === "seo_cta_click" && event.target === "signup"),
+    instant: INSTANT_EVENTS.has(type) || (type === "seo_cta_click" && event.target === "signup"),
   });
 }
+
+/**
+ * Sent at once, not in the 250ms batch: each is followed by a page change
+ * (to /app, a reload after signup, or the checkout), where a batched send can
+ * be lost. `run_end` is here because it is the most valuable event to keep.
+ */
+const INSTANT_EVENTS = new Set<AnalyticsEvent["type"]>([
+  "run_end",
+  "tool_summary",
+  "tool_cta_click",
+  "signup_completed",
+  "login_completed",
+  "earlybird_pay_click",
+  "earlybird_checkout_opened",
+]);
 
 /**
  * Stamps calibration numbers two ways: as person properties, so any later

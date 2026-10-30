@@ -1,7 +1,5 @@
 import { useEffect } from "react";
 import { initAnalytics } from "./analytics/client";
-import { initPostHog } from "./analytics/posthog.ts";
-import { loadShareData } from "./game/settings";
 import { SkyLanding } from "./ui/landing/SkyLanding.tsx";
 import { setAppLinkSource } from "./ui/appLink.ts";
 import { routeFor } from "./site/routes.ts";
@@ -22,20 +20,19 @@ import "./App.css";
  */
 export default function LandingApp() {
   /**
-   * Traffic analytics for the marketing site. The gameplay pipeline starts
-   * separately on `/app` — both call `initPostHog`, both are idempotent, and
-   * both read the same consent flag.
+   * Traffic analytics for the marketing site. `/app` starts its own client
+   * (`src/app/main.tsx`); both read the same consent flag.
    *
    * Note `landed` is *not* fired here. It means "opened the game" and belongs
    * to the game entry; a visit to this page is a `$pageview`.
    */
   useEffect(() => {
-    initAnalytics();
     // `/` is a route-table page: its `$pageview` carries the page metadata and
-    // its CTAs carry `?src=/` (see src/site/routes.ts).
+    // its CTAs carry `?src=/` (see src/site/routes.ts). The props go in the
+    // first and only start call; a later `initPostHog` would be ignored.
     const route = routeFor("/");
     if (route) setAppLinkSource(route.path);
-    initPostHog(loadShareData(), route ? pageViewProps(route) : undefined);
+    initAnalytics(route ? pageViewProps(route) : undefined);
   }, []);
 
   return <SkyLanding />;

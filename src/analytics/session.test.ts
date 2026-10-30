@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deviceBucket, eventTier, gateEvent, roundCalibration } from "./session.ts";
+import { EVENT_TIERS, deviceBucket, eventTier, gateEvent, roundCalibration } from "./session.ts";
 import type { GateLogEntry } from "../game/run.ts";
 import type { AnalyticsEvent, MicFailureReason, TrackedScreen } from "./session.ts";
 import type { MicErrorKind } from "../audio/mic.ts";
@@ -286,6 +286,13 @@ describe("eventTier", () => {
     "tool_used",
     "tool_summary",
     "word_page_action",
+    "tool_cta_click",
+    "seo_cta_click",
+    "app_open",
+    "toneder_swipe",
+    "toneder_round_done",
+    "toneder_cap_hit",
+    "toneder_upgrade_click",
   ];
 
   for (const type of GAMEPLAY) {
@@ -301,57 +308,20 @@ describe("eventTier", () => {
 
   it("covers every AnalyticsEvent type exactly once, split between the two lists above", () => {
     expect(new Set([...GAMEPLAY, ...GLOBAL]).size).toBe(GAMEPLAY.length + GLOBAL.length);
+    expect([...GAMEPLAY, ...GLOBAL].sort()).toEqual(Object.keys(EVENT_TIERS).sort());
   });
 });
 
 describe("APP_EVENTS", () => {
   it("contains every AnalyticsEvent type, so sanitization can't silently miss one", () => {
-    const allTypes = new Set<AnalyticsEvent["type"]>([
-      "landed",
-      "mic",
-      "calib_step",
-      "calib_done",
-      "calib_abandoned",
-      "recal_offered",
-      "recal_resolved",
-      "run_feedback",
-      "run_start",
-      "gate",
-      "run_end",
-      "cue_fallback",
-      "share_clicked",
-      "challenge_landed",
-      "challenge_resolved",
-      "leaderboard_viewed",
-      "join_board_shown",
-      "join_board_submitted",
-      "score_submitted",
-      "mode_selected",
-      "screen_viewed",
-      "setting_changed",
-      "signup_started",
-      "signup_completed",
-      "auth_screen_viewed",
-      "login_completed",
-      "daily_limit_reached",
-      "earlybird_modal_shown",
-      "earlybird_create_account_click",
-      "earlybird_pay_click",
-      "earlybird_checkout_opened",
-      "profile_earlybird_cta_click",
-      "progress_locked_cta_click",
-      "progress_earlybird_pricing_click",
-      "visualiser_session",
-      "feedback_submitted",
-      "update_banner",
-      "inapp_prompt",
-      "tool_used",
-      "tool_summary",
-      "word_page_action",
-    ]);
-    for (const type of allTypes) {
+    for (const type of Object.keys(EVENT_TIERS)) {
       expect(APP_EVENTS.has(type), `APP_EVENTS is missing "${type}"`).toBe(true);
     }
+    expect(APP_EVENTS.has("calib_numbers")).toBe(true);
+  });
+
+  it("sanitizes seo_cta_click (a hand-kept list once missed it)", () => {
+    expect(APP_EVENTS.has("seo_cta_click")).toBe(true);
   });
 
   it("sanitizes a representative global-tier event exactly like a gameplay one, proving sanitization is tier-independent", () => {

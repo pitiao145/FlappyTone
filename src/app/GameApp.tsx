@@ -1,10 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { initAnalytics, track, trackCalibration, trackFirstSeoTouch, trackInAppBrowser, trackSpeechStyle } from "../analytics/client";
+import { track, trackCalibration, trackFirstSeoTouch, trackInAppBrowser, trackSpeechStyle } from "../analytics/client";
 import { seoSource } from "../site/pageAnalytics.ts";
 import { detectInAppBrowser } from "../lib/inAppBrowser";
 import { InAppBrowserPrompt } from "../ui/InAppBrowserPrompt";
 import { useTier } from "../data/tier.ts";
-import { initPostHog } from "../analytics/posthog.ts";
 import type { TrackedScreen } from "../analytics/session.ts";
 import { adoptInventory, inventorySpeaker, loadInventory } from "../audio/inventory";
 import { getPlayTicket, invalidatePlayTicket } from "../audio/clipToken";
@@ -38,7 +37,6 @@ import {
   loadProficiency,
   loadRecalTracking,
   loadSettings,
-  loadShareData,
   loadWordMix,
   saveLastLevel,
   saveProficiency,
@@ -982,17 +980,6 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     });
   }, [dailyLimitReached, openEarlyBird, requestMicAndThen]);
 
-  /**
-   * Starts the analytics client and drains anything an earlier visit failed to
-   * send. Runs once — `initAnalytics` ignores repeat calls, so React's
-   * strict-mode double-mount cannot register two visibility listeners.
-   *
-   * `landed` is recorded here rather than on a click because the interesting
-   * case is the tester who arrives and does nothing: without it, they are
-   * indistinguishable from someone who never opened the game. Note that since
-   * the split it means "opened /app", not "visited the site" — a visit to the
-   * marketing page is a `$pageview` on the other entry.
-   */
   // The post-calibration loading beat: hold the "personalising your grid"
   // screen briefly, then land on the tutorial success screen. Cleared if the
   // screen changes first.
@@ -1002,11 +989,16 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     return () => clearTimeout(t);
   }, [screen]);
 
+  /**
+   * `landed` is recorded here rather than on a click because the interesting
+   * case is the tester who arrives and does nothing: without it, they are
+   * indistinguishable from someone who never opened the game. It means "the
+   * game opened": past the login gate, so a signed-out visitor sends
+   * `auth_screen_viewed` instead, and `landed` after signing up. A visit to
+   * the marketing page is a `$pageview` on the other entry.
+   */
   useEffect(() => {
-    initAnalytics();
-    // Traffic analytics, deliberately separate from the gameplay pipeline
-    // above — see src/analytics/posthog.ts. Pageviews only, same consent flag.
-    initPostHog(loadShareData());
+    // The client itself is started in `src/app/main.tsx`, before the login gate.
     // Read `ref` before it's stripped below — `landed` is the only place
     // share-driven traffic is visible at all (see AnalyticsEvent's own
     // comment: PostHog's own URL/referrer fields are stripped from every
