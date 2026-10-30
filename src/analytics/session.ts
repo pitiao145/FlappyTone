@@ -480,7 +480,7 @@ export type SettingKey =
 
 /**
  * Which consent gate an event answers to. Gameplay events are dropped when
- * the player has turned off "Anonymous game data" (`setPostHogConsent`);
+ * the player has turned off "Share game data" (`setPostHogConsent`);
  * global events always send in production, gated only by `posthog.ts`'s
  * `enabled()` check. A new event type must be added to `EVENT_TIERS` below —
  * it is exhaustive by construction (a missing key is a type error), so this

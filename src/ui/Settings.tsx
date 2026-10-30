@@ -618,7 +618,7 @@ export function Settings({
           <SettingIcon>
             <ChartIcon />
           </SettingIcon>
-          <h3>Anonymous game data</h3>
+          <h3>Share game data</h3>
         </div>
         <Choice
           options={SHARING}
@@ -637,8 +637,8 @@ export function Settings({
         />
         <p className="param-help">
           {sharing === "on"
-            ? "Sends what happens during a run: which gates you hit or miss, your calibration numbers, and your Tone Visualiser practice, so the game can be tuned against real attempts. No audio, no recordings, no precise location (country only), and nothing that identifies you."
-            : "Run and calibration data stops being sent. Anonymous usage data not tied to a specific run, like which screens you visit or what's tapped, still helps track how the app is used overall."}
+            ? "Sends what happens during a run: which gates you hit or miss, your calibration numbers, and your Tone Visualiser practice, so the game can be tuned against real attempts. Never audio or recordings, and never linked to your account or email. Details are in the privacy policy."
+            : "Run and calibration data stops being sent. General usage data, like which screens you visit or what's tapped, is still sent, to see how the app is used. Details are in the privacy policy."}
         </p>
       </section>
 

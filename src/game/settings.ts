@@ -355,7 +355,7 @@ const SHARE_DATA_KEY = "toneflap.sharedata.v1";
 const NOTICE_KEY = "toneflap.analytics.notice.v1";
 
 /**
- * Whether anonymous gameplay data is sent home. On by default — the game is in
+ * Whether gameplay data is sent home ("Share game data" in Settings). On by default — the game is in
  * testing and the whole point of this round is to find out where it fails.
  *
  * Defaults to true when storage is unreadable, matching every other read here:

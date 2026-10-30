@@ -94,7 +94,7 @@ export function trackInAppBrowser(app: string): void {
 }
 
 /**
- * Mirrors the "Anonymous game data" toggle — the gameplay tier only. Off
+ * Mirrors the "Share game data" toggle — the gameplay tier only. Off
  * stops gameplay/calibration events immediately; global-tier events (screen
  * views, mode selection, the leaderboard/signup funnel) are unaffected. See
  * `posthog.ts`'s `setPostHogConsent`.

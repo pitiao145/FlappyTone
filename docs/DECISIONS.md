@@ -1472,3 +1472,25 @@ Why: bot filtering, per-host analysis and a clean before/after measurement of
 the login-gate release. Cost: the "closed vocabulary" rule is looser; game
 events now carry the user agent and screen sizes. Nothing typed and no full
 URL is added. The privacy policy says so (same commit).
+
+## The privacy policy describes what PostHog stores, instead of trimming it (30 Oct 2026)
+
+An audit of live PostHog data found two gaps between the policy and reality:
+every event and person holds the full `$ip` and PostHog's city-level GeoIP
+(city, region, postcode, lat/long, time zone), and site events (`$pageview`,
+`$pageleave`, `$web_vitals`, `landing_cta_clicked`, `newsletter_signup_*`)
+carry the full page URL and referrer. `before_send`'s country-only rule never
+covered this: PostHog adds GeoIP at ingest, after `before_send`, and site
+events are outside `APP_EVENTS`.
+
+Pierre chose to update the policy rather than change the data: the PostHog
+project is shared with his other apps (`anonymize_ips` is project-wide), and
+full URLs keep campaign and referrer detail for traffic analysis. The policy
+now names the IP, the estimated location, full page addresses and the
+analytics profile. The Settings toggle is renamed from "Anonymous game data"
+to "Share game data", since data stored with an IP is not anonymous under the
+GDPR; its help text no longer says "country only".
+
+Revisit if FlappyTone gets its own PostHog project: "Discard client IP data"
+plus a country-only GeoIP transformation would let the policy go back to
+"approximate country".

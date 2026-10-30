@@ -1,6 +1,6 @@
 # FlappyTone — Privacy Policy
 
-**Last updated: 29 October 2026**
+**Last updated: 30 October 2026**
 
 This policy explains what personal data FlappyTone ("we", "us") collects, why, and your rights over it. FlappyTone is operated by Pierre Bruyninckx, an independent developer, at [flappytone.com](https://flappytone.com). For any privacy question or request, contact [pierre@pierrebuilds.dev](mailto:pierre@pierrebuilds.dev).
 
@@ -29,7 +29,11 @@ FlappyTone listens to your voice through your device's microphone to drive the g
 - Your purchase is handled by **Lemon Squeezy** as merchant of record. They collect the payment and billing details needed for the transaction and tax. **We do not receive or store your card number.** We receive confirmation that your account has access, and basic order information (such as your email and order reference).
 
 **When you use the site (analytics):**
-- **Usage analytics** via **PostHog**, in two categories. General usage data, such as which screens you visit, which game mode you pick, and settings or account actions, is collected to understand how the app is used and to fix problems; this does not require a separate opt-in. Gameplay data, such as which gates you hit or miss, your calibration numbers, and Tone Visualiser practice, is only collected if you leave "Anonymous game data" turned on in Settings. Turning it off stops that data immediately; it does not delete the anonymous identifier already used for general usage data. PostHog events also include technical information about your device and visit: your browser and operating system (user agent), device type, screen size, the site page (host and path), a visit/session identifier, and your approximate country from your IP address. We don't send the full page address or anything you type.
+- **Usage analytics** via **PostHog**, in two categories. General usage data, such as which screens you visit, which game mode you pick, and settings or account actions, is collected to understand how the app is used and to fix problems; this does not require a separate opt-in. Gameplay data, such as which gates you hit or miss, your calibration numbers, and Tone Visualiser practice, is only collected if you leave "Share game data" turned on in Settings. Turning it off stops that data immediately; it does not delete the random identifier already used for general usage data. PostHog events also include technical information about your device and visit: your browser and operating system (user agent), device type, screen size, the site page (host and path), and a visit/session identifier.
+- **Your IP address and approximate location.** PostHog receives your IP address with every event and stores it. PostHog also uses it to estimate where you are: country, region, city, postal code, time zone and approximate coordinates. This location is an estimate from the IP address, not your device's GPS. We use it to understand which countries and regions our players come from.
+- **Page addresses.** Page views, page exits, page-speed measurements, landing page button clicks and newsletter sign-ups include the full page address, with any tags in the link (for example, which campaign sent you, or an ad click identifier), and the address of the page that sent you to us (the referrer). Before an event is sent, we remove the player name that a challenge link can carry. Game and demo events include only the page path, not the full address.
+- **Your analytics profile.** PostHog keeps a profile for a random identifier stored on your device. It holds the latest of the details above, the first page you visited and how you arrived (referrer, link tags and ad click identifiers), and, if "Share game data" is on, your calibration numbers.
+- We never send anything you type, and analytics is not linked to your account or your email address.
 
 ## Legal bases for processing
 
@@ -43,7 +47,7 @@ We don't sell your data or share it publicly, except as needed to run the servic
 
 - **Supabase** — database, authentication, and hosting of your account data (project hosted in the Tokyo (ap-northeast-1) region). Access is protected by row-level security.
 - **Lemon Squeezy** — payment processing as merchant of record.
-- **PostHog** — product analytics.
+- **PostHog** — product analytics (PostHog Cloud, hosted in the United States).
 - **Kit (ConvertKit)** — sending our newsletter / product-update emails to people who opted in.
 - **Vercel** — application hosting and delivery.
 

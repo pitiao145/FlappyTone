@@ -37,17 +37,15 @@
  * cost a few marketing clicks — now it would silently drop 100% of a blocked
  * player's gameplay events too, so the proxy is no longer optional.
  *
- * ## Country-level geo — the one deliberate exception to "no geolocation"
+ * ## IP address and geo — stored by PostHog, not decided here
  *
- * PostHog enriches events with `$geoip_*` properties from the request IP at
- * ingest. `before_send` keeps only `$geoip_country_name`/`$geoip_country_code`
- * on gameplay events and drops city/region/lat-long. Raw IP retention itself
- * is a project-level setting (`anonymize_ips`) this file does not control —
- * the PostHog project is shared across several of Pierre's other apps, so
- * that setting is left as-is rather than changed on FlappyTone's behalf; see
- * CLAUDE.md. Country-level data answers a real open product question (PRD
- * §14: Taiwan vs. Beijing reference audio) at a re-identification risk no
- * higher than the `device` bucket this file already sends.
+ * `before_send` keeps only `$geoip_country_name`/`$geoip_country_code` on app
+ * events, but that only filters what the browser sends. PostHog adds `$ip`
+ * and its full GeoIP set (city, region, postcode, lat/long, time zone) to
+ * every event and person at ingest, after `before_send` has run. IP retention
+ * is the project-level `anonymize_ips` setting, and the project is shared
+ * with Pierre's other apps, so it is left as-is. The privacy policy states
+ * this (30 Oct 2026, DECISIONS.md). Do not claim "country only" anywhere.
  *
  * ## The pre-load race
  *
@@ -140,7 +138,8 @@ export const APP_EVENTS = new Set<string>([...Object.keys(EVENT_TIERS), "calib_n
  *   sizes. PostHog's bot filter reads the user agent; without it every app
  *   event was classed as "Automation" (DECISIONS.md, 2026-10-29).
  * - SDK/session: what ingestion and session funnels need.
- * - geo: country only, never city/region/lat-long.
+ * - geo: country only from the client. PostHog adds `$ip` and city-level
+ *   `$geoip_*` again at ingestion, after this runs (see the header note).
  */
 export const PH_ALLOW = new Set([
   "$host",
@@ -474,7 +473,7 @@ export function setInAppBrowserProperty(app: string): void {
 }
 
 /**
- * Mirrors the "Anonymous game data" toggle — the gameplay tier only (mic,
+ * Mirrors the "Share game data" toggle — the gameplay tier only (mic,
  * calibration, run/gate events, Visualiser practice; see `session.ts`'s
  * `eventTier`). Turning it off stops those events immediately, checked at
  * `captureGameEvent`/`setCalibrationProperties`.
