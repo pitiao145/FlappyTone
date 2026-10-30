@@ -463,7 +463,8 @@ function RescueScene() {
         <BrandPip size={340} />
       </div>
       <Sequence from={14} layout="none">
-        <SpeechBubble x={470} y={1110} han={"Leave your\ntones to me!"} hanSize={58} tail="left" />
+        {/* Above the bird, tail down to its head (bird ≈ x 500–690, y 790–970 once settled). */}
+        <SpeechBubble x={510} y={540} han={"Leave your\ntones to me!"} hanSize={58} tail="left" />
       </Sequence>
       <div style={{ position: "absolute", left: 10, top: 1330 }}>
         <Tony expression={f >= 20 ? "hopeful" : "crushed"} hat="party" hatDroop={1} size={520} />
