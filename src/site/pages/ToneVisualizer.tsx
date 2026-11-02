@@ -182,7 +182,7 @@ function Visualizer() {
     checkerRef.current?.setTarget(nextRef, nextMode);
   };
 
-  // `?tone=3-3&mode=textbook`. Read after mount so the prerendered markup
+  // `?tone=3-3&mode=real`. Read after mount so the prerendered markup
   // (Tone 3, Standard) and the first client render agree.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);

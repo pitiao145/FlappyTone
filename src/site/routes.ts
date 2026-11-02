@@ -122,8 +122,8 @@ const BASE_ROUTES: readonly SiteRoute[] = [
     lang: "en",
     title: "Mandarin Tone Visualizer & Pronunciation Checker (Free)",
     description:
-      "Free Chinese tone checker: say a Mandarin tone and see your pitch drawn over a native speaker's tone shape or the textbook one, with a score. No sign-up.",
-    lastmod: "2026-10-22",
+      "Free Chinese tone checker: say a Mandarin tone or tone pair and see your pitch drawn over a native speaker's tone shape, slow or at everyday speed, with a score. No sign-up.",
+    lastmod: "2026-11-02",
     pageType: "tool",
     angle: "learner",
     shell: "site",
