@@ -124,9 +124,11 @@ as a fixed guide from the bird's rest point (`scrollGuide` in
 `render/visualiser.ts`, which the app's Free tab does not set). Each attempt
 read off the trail is scored against the picked line and fills the app's two
 readout cards (Tone accuracy = running average on that line, Tone = the
-selected attempt's per-syllable read) and its corner thumbnail
-(`MobileAttemptThumb`, CSS in `src/ui/attemptThumbs.css`, with the guide drawn
-behind each attempt). `board.ts` (no mic) holds the shared renderer/scorer
+selected attempt's per-syllable read) and its attempt views, with the guide
+drawn behind each attempt: from 1024px a portrait board with the desktop
+strip (`AttemptThumbs`) beside it, below that the corner thumbnail
+(`MobileAttemptThumb`); phones get a tall 3:4 board. Both components' CSS is in
+`src/ui/attemptThumbs.css`, shared with the app. `board.ts` (no mic) holds the shared renderer/scorer
 and draws the idle board; `engine.ts` is the mic chunk and never imports
 `Visualiser.tsx`. **Both `engine.ts` and the app's `Visualiser.tsx` run the
 same per-frame core, `src/game/visualiserCore.ts`** (`VisualiserCore`): when

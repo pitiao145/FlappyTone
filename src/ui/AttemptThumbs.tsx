@@ -18,6 +18,8 @@ export function AttemptThumbs(props: {
   attempts: readonly FreeAttempt[];
   selectedId: number | null;
   onSelect: (id: number) => void;
+  /** A target line drawn behind each attempt (the public tone visualizer). */
+  guide?: Polyline | null;
 }) {
   const selected = props.attempts.find((a) => a.id === props.selectedId) ?? null;
   const newestFirst = [...props.attempts].reverse();
@@ -32,7 +34,7 @@ export function AttemptThumbs(props: {
       </p>
       <div className="vis-attempts">
         <div className="vis-attempt-preview">
-          {selected && <AttemptCanvas attempt={selected} grid />}
+          {selected && <AttemptCanvas attempt={selected} grid guide={props.guide} />}
         </div>
         <div className="vis-attempt-list" aria-label="Recent attempts">
           {newestFirst.map((a, i) => (
@@ -43,7 +45,7 @@ export function AttemptThumbs(props: {
               aria-label={i === 0 ? "Latest attempt" : `Attempt ${i + 1} from latest`}
               aria-pressed={a.id === props.selectedId}
             >
-              <AttemptCanvas attempt={a} grid={false} />
+              <AttemptCanvas attempt={a} grid={false} guide={props.guide} />
             </button>
           ))}
         </div>

@@ -24,7 +24,7 @@ import {
 // Types only: erased at build, so neither chunk lands in this one.
 import type { CalStep, Checker, FreeAttempt } from "../checker/engine.ts";
 // No audio: draws finished attempts only (the app's own corner thumbnail).
-import { MobileAttemptThumb } from "../../ui/AttemptThumbs.tsx";
+import { AttemptThumbs, MobileAttemptThumb } from "../../ui/AttemptThumbs.tsx";
 import { InAppMicNotice, MicAllowNote, MicHelpPanel, continueInApp } from "../../ui/MicHelp.tsx";
 
 const PATH = "/tools/tone-visualizer";
@@ -431,35 +431,54 @@ function Visualizer() {
           </div>
         </div>
 
-        <div className="tc-stage" ref={stageRef}>
-          <canvas ref={canvasRef} className="tc-canvas" aria-hidden="true" />
-          {attempts.length > 0 && (
-            <MobileAttemptThumb
-              attempts={attempts}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-              guide={polylineOf(ref, mode)}
-            />
-          )}
-          {phase === "cal" && (
-            <div className="tc-stage-say" aria-hidden="true">
-              <span>Step {calStep === "high" ? 1 : 2}/2</span>
-              Say{" "}
-              <b style={{ color: TONE_LINE_COLOR[calStep === "high" ? 1 : 3] }}>
-                {calStep === "high" ? "mā" : "mǎ"}
-              </b>
-            </div>
-          )}
-          {!boardDrawn && (
-            <svg
-              className="tc-idle"
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-            >
-              <path d={shapePath(ref, mode)} style={{ stroke: color }} />
-            </svg>
-          )}
+        {/* Wide screens: the board and the attempt strip side by side, as in
+            the app's desktop panel. Narrow ones: the corner thumbnail, as on
+            the app's mobile screen. site.css picks one. */}
+        <div className="tc-board-row">
+          <div className="tc-stage" ref={stageRef}>
+            <canvas ref={canvasRef} className="tc-canvas" aria-hidden="true" />
+            {attempts.length > 0 && (
+              <MobileAttemptThumb
+                attempts={attempts}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                guide={polylineOf(ref, mode)}
+              />
+            )}
+            {phase === "cal" && (
+              <div className="tc-stage-say" aria-hidden="true">
+                <span>Step {calStep === "high" ? 1 : 2}/2</span>
+                Say{" "}
+                <b style={{ color: TONE_LINE_COLOR[calStep === "high" ? 1 : 3] }}>
+                  {calStep === "high" ? "mā" : "mǎ"}
+                </b>
+              </div>
+            )}
+            {!boardDrawn && (
+              <svg
+                className="tc-idle"
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path d={shapePath(ref, mode)} style={{ stroke: color }} />
+              </svg>
+            )}
+          </div>
+          <div className="tc-attempts">
+            {attempts.length > 0 ? (
+              <AttemptThumbs
+                attempts={attempts}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                guide={polylineOf(ref, mode)}
+              />
+            ) : (
+              <p className="tc-attempts-empty">
+                Your last attempts show here, with the line behind them.
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="tc-status" aria-live="polite">

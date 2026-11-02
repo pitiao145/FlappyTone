@@ -1667,6 +1667,58 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
 .tc-tier-ok { color: var(--warn); }
 .tc-tier-bad { color: var(--danger); }
 
+/* The board, and beside it on wide screens the app's attempt strip. */
+.tc-attempts {
+  display: none;
+}
+
+.tc-attempts-empty {
+  margin: 0;
+  padding: var(--space-3);
+  border: 2px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+/* Phones: a tall board, as on the app's mobile screen. */
+@media (max-width: 760px) {
+  .tc-readouts {
+    max-width: none;
+  }
+  .tc-stage {
+    aspect-ratio: 3 / 4;
+    max-width: none;
+    max-height: 72svh;
+  }
+}
+
+/* Wide: a narrow portrait board with the attempt strip to its right, as in
+   the app's desktop panel; the corner thumbnail is not needed. */
+@media (min-width: 1024px) {
+  .tc-readouts {
+    max-width: none;
+  }
+  .tc-board-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-3);
+  }
+  .tc-stage {
+    aspect-ratio: 3 / 4;
+    max-width: none;
+  }
+  .tc-attempts {
+    display: block;
+  }
+  /* Three classes: beats `.screen .vis-mthumb` whatever the load order. */
+  .tc-board-row .tc-stage .vis-mthumb,
+  .tc-board-row .tc-stage .vis-mthumb-sheet {
+    display: none;
+  }
+}
+
 .tc-canvas {
   position: absolute;
   inset: 0;
