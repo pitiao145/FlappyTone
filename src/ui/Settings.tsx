@@ -6,7 +6,7 @@ import { getAccount, signOut, type Account } from "../data/account.ts";
 import { fireAuthToast } from "../data/authToast.ts";
 import { micErrorCopy } from "./micErrors.ts";
 import { setSharingEnabled, track, trackSpeechStyle } from "../analytics/client.ts";
-import { CORRIDOR_WIDTHS, type CorridorWidth } from "../game/gates.ts";
+import { CORRIDOR_WIDTH_LABEL, CORRIDOR_WIDTHS, type CorridorWidth } from "../game/gates.ts";
 import type { CueStyle } from "../game/run.ts";
 import {
   clearSettings,
@@ -79,6 +79,7 @@ const PROFICIENCY_LABEL: Record<Proficiency, string> = {
 };
 
 const WIDTH_HELP: Record<CorridorWidth, string> = {
+  extraNarrow: "Very demanding. Pitch and timing both have to be close.",
   narrow: "Demanding. Your pitch has to sit close to the line.",
   normal: "Moderate difficulty. Good for practice.",
   wide: "Forgiving on pitch. Good while a tone is still new.",
@@ -526,6 +527,7 @@ export function Settings({
           <Choice
             options={CORRIDOR_WIDTHS}
             value={width}
+            label={(w) => CORRIDOR_WIDTH_LABEL[w]}
             onChange={(w) => {
               setWidth(w);
               saveCorridorWidth(w);

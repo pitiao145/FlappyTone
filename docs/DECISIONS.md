@@ -1508,3 +1508,14 @@ plus a country-only GeoIP transformation would let the policy go back to
 **Rejected.** Awaiting `permissions.query` before `getUserMedia`: an await between the tap and `AudioContext.resume()` risks the iOS gesture (hard rule 4), so the read starts in the tap and is joined after the result. `mic_help` in the gameplay tier: it is UI help, like `inapp_prompt`, so it is global. A UA-parsing dependency: 13 regexes, tested against real PostHog user agents, are enough.
 
 **Privacy.** The policy now names the in-app browser and the mic result (whether it was allowed, the prior state, the time, the error type, the help buttons). Still no audio.
+
+## Extra narrow tunnel, and narrow widths shrink the slope widening too (3 Nov 2026)
+
+**Evidence.** A pro player on Narrow asked for narrower tunnels. A check of the width setting found that Narrow (×0.75) shrank only the base half-height. The timing widening on slopes (`corridorToleranceAt`) stayed the same in chao on every width, so at its widest point Narrow was only 16% tighter than Normal on T2 and 14% on T3, not 25%.
+
+**Decided.**
+- New width `extraNarrow`, ×0.55, shown as "extra narrow". Not flown in the Lab yet — fly it before treating 0.55 as tuned.
+- On the narrow widths only, the slope widening is multiplied by the width factor too (`corridorWidenScale`, carried on each gate as `widenScale`), so the whole corridor shrinks by the factor. Normal and Wide keep the full widening: it forgives timing, and a wider setting should not forgive less of it.
+- `run_start.corridor` and `setting_changed` (`tunnel_width`) can now carry `extraNarrow`.
+
+**Rejected.** Changing Narrow's own factor: it would make the game harder for every current Narrow player without warning. A free slider: more UI and storage, and a player who sets it too tight loses hearts and blames the game.

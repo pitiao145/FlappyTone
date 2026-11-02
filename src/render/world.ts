@@ -375,9 +375,10 @@ function edgeProfile(
   shape: GateShape,
   tolChao: number,
   steps: number,
+  widenScale: number,
 ): EdgeProfile {
   const t = tuning();
-  const key = `${tolChao}|${steps}|${t.timingSlackS}|${t.maxTimingWidenFactor}|${t.slackSmoothS}`;
+  const key = `${tolChao}|${widenScale}|${steps}|${t.timingSlackS}|${t.maxTimingWidenFactor}|${t.slackSmoothS}`;
   const cached = edgeProfiles.get(shape);
   if (cached && cached.key === key) return cached;
 
@@ -389,7 +390,7 @@ function edgeProfile(
     // Local tolerance, so the corridor visibly flares where it forgives
     // timing. Collision uses the same function — the wall the player sees is
     // exactly the wall they hit.
-    const tol = corridorToleranceAt(shape, tt, tolChao);
+    const tol = corridorToleranceAt(shape, tt, tolChao, widenScale);
     topChao.push(centre + tol);
     bottomChao.push(centre - tol);
   }
@@ -409,9 +410,10 @@ export function corridorEdges(
   x0: number,
   x1: number,
   height: number,
+  widenScale = 1,
 ): { top: Pt[]; bottom: Pt[] } {
   const steps = corridorSteps(x1 - x0);
-  const { topChao, bottomChao } = edgeProfile(shape, tolChao, steps);
+  const { topChao, bottomChao } = edgeProfile(shape, tolChao, steps, widenScale);
   const top: Pt[] = [];
   const bottom: Pt[] = [];
   for (let i = 0; i <= steps; i++) {
@@ -433,9 +435,10 @@ export function drawGate(
   theme: ThemeId = THEME,
 ): void {
   const { x0, x1, tone, shape, tolChao } = gate;
+  const widenScale = gate.widenScale ?? 1;
   if (x1 < 0 || x0 > width) return;
 
-  const { top, bottom } = corridorEdges(shape, tolChao, x0, x1, height);
+  const { top, bottom } = corridorEdges(shape, tolChao, x0, x1, height, widenScale);
   const steps = top.length - 1;
 
   const [r, g, b] = TONE_LIGHT[tone] ?? TONE_LIGHT[1];
@@ -459,7 +462,7 @@ export function drawGate(
     top,
     bottom,
     shape,
-    cacheKey: `${tolChao}|${steps}|${t.timingSlackS}|${t.maxTimingWidenFactor}|${t.slackSmoothS}`,
+    cacheKey: `${tolChao}|${widenScale}|${steps}|${t.timingSlackS}|${t.maxTimingWidenFactor}|${t.slackSmoothS}`,
     active,
   });
   ctx.lineJoin = "round";

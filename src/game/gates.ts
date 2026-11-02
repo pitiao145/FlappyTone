@@ -307,11 +307,17 @@ function vertexWiden(points: Polyline, i: number, dtNorm: number): number {
  * Because the renderer draws this same function (see `edgeProfile` in
  * world.ts), the corridor visibly widens where it forgives — this is
  * something the player can see, not a hidden fudge factor.
+ *
+ * `widenScale` shrinks the widening itself, for the narrow width settings
+ * (see `corridorWidenScale`). Without it the widening is the same in chao on
+ * every setting, so Narrow was only ~15% tighter than Normal on T2/T3 slopes
+ * instead of the 25% it is on the flat.
  */
 export function corridorToleranceAt(
   shape: GateShape,
   t: number,
   baseTolChao: number,
+  widenScale = 1,
 ): number {
   const points = shape.polyline;
   if (points.length < 2) return baseTolChao;
@@ -321,7 +327,7 @@ export function corridorToleranceAt(
   const cap = baseTolChao * tun.maxTimingWidenFactor;
   const widenProfile: Polyline = points.map(([tt], i) => [
     tt,
-    softCap(vertexWiden(points, i, dtNorm), cap),
+    softCap(vertexWiden(points, i, dtNorm) * widenScale, cap),
   ]);
 
   return baseTolChao + splineAt(widenProfile, t);
@@ -347,12 +353,16 @@ export interface Gate {
   xStart: number;
   widthPx: number;
   tolChao: number;
+  /** Scales the timing widening — see `corridorToleranceAt`. 1 unless narrow. */
+  widenScale: number;
 }
 
 export interface Difficulty {
   scrollSpeed: number;
   toleranceH: number;
   restMs: number;
+  /** Set by `applyCorridorWidth` on the narrow widths only; absent means 1. */
+  widenScale?: number;
 }
 
 const TOLERANCE_FLOOR = 0.07;
@@ -371,22 +381,46 @@ export function newDifficulty(): Difficulty {
  * Player-selectable corridor width. Scales the tolerance (tunnel half-height)
  * only — speed and rest are fixed elsewhere. Applied after the ramp, so the
  * ramp's tolerance floor scales proportionally too.
+ *
+ * Extra narrow (3 Nov 2026) is for the players who asked for tighter than
+ * Narrow. Its factor has not been flown in the Lab yet.
  */
-export type CorridorWidth = "narrow" | "normal" | "wide";
+export type CorridorWidth = "extraNarrow" | "narrow" | "normal" | "wide";
 
-export const CORRIDOR_WIDTHS: CorridorWidth[] = ["narrow", "normal", "wide"];
+export const CORRIDOR_WIDTHS: CorridorWidth[] = ["extraNarrow", "narrow", "normal", "wide"];
+
+/** What the settings show. The stored value stays the key above. */
+export const CORRIDOR_WIDTH_LABEL: Record<CorridorWidth, string> = {
+  extraNarrow: "extra narrow",
+  narrow: "narrow",
+  normal: "normal",
+  wide: "wide",
+};
 
 const CORRIDOR_WIDTH_FACTORS: Record<CorridorWidth, number> = {
+  extraNarrow: 0.55,
   narrow: 0.75,
   normal: 1,
   wide: 1.4,
 };
 
+/**
+ * How much the narrow widths also shrink the timing widening, so the whole
+ * corridor — slopes included — shrinks by the width factor. Normal and Wide
+ * keep the full widening: it exists to forgive timing, and a wider setting
+ * should not forgive less of it.
+ */
+export function corridorWidenScale(width: CorridorWidth): number {
+  return Math.min(CORRIDOR_WIDTH_FACTORS[width], 1);
+}
+
 export function applyCorridorWidth(
   d: Difficulty,
   width: CorridorWidth,
 ): Difficulty {
-  return { ...d, toleranceH: d.toleranceH * CORRIDOR_WIDTH_FACTORS[width] };
+  const scaled = { ...d, toleranceH: d.toleranceH * CORRIDOR_WIDTH_FACTORS[width] };
+  const widenScale = corridorWidenScale(width);
+  return widenScale < 1 ? { ...scaled, widenScale } : scaled;
 }
 
 /**
@@ -467,5 +501,6 @@ export function makeGate(source: Word | Tone, xStart: number, d: Difficulty): Ga
     widthPx: d.scrollSpeed * shape.durationS,
     xStart,
     tolChao: toleranceChao(tones, d.toleranceH),
+    widenScale: d.widenScale ?? 1,
   };
 }

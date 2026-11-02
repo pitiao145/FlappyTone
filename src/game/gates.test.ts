@@ -4,6 +4,7 @@ import {
   applyCorridorWidth,
   corridorChaoAt,
   corridorToleranceAt,
+  corridorWidenScale,
   GATE_DURATION_S,
   MAX_TIMING_WIDEN_FACTOR,
   makeGate,
@@ -283,6 +284,43 @@ describe("applyCorridorWidth", () => {
     const d = applyCorridorWidth(ramped, "wide");
     expect(d.toleranceH).toBeCloseTo(0.07 * 1.4);
   });
+
+  it("extra narrow tightens tolerance to 0.55x", () => {
+    const d = applyCorridorWidth(newDifficulty(), "extraNarrow");
+    expect(d.toleranceH).toBeCloseTo(DEFAULT_TUNING.baseToleranceH * 0.55);
+  });
+
+  it("only the narrow widths shrink the timing widening", () => {
+    expect(applyCorridorWidth(newDifficulty(), "extraNarrow").widenScale).toBeCloseTo(0.55);
+    expect(applyCorridorWidth(newDifficulty(), "narrow").widenScale).toBeCloseTo(0.75);
+    expect(applyCorridorWidth(newDifficulty(), "wide").widenScale).toBeUndefined();
+  });
+
+  it("the gate carries the width's widen scale", () => {
+    const narrow = makeGate(4, 0, applyCorridorWidth(newDifficulty(), "narrow"));
+    expect(narrow.widenScale).toBeCloseTo(0.75);
+    expect(makeGate(4, 0, newDifficulty()).widenScale).toBe(1);
+  });
+
+  // The weak point this fixes: the slope widening was the same in chao on
+  // every width, so Narrow was only ~15% tighter than Normal on T2/T3 slopes.
+  it.each(["extraNarrow", "narrow"] as const)(
+    "%s shrinks the whole corridor, slopes included, by its factor",
+    (width) => {
+      const BASE = 0.8;
+      const f = corridorWidenScale(width);
+      for (const tone of [1, 2, 3, 4] as const) {
+        const shape = shapeForTone(tone);
+        for (let i = 0; i <= 40; i++) {
+          const t = i / 40;
+          expect(corridorToleranceAt(shape, t, BASE * f, f)).toBeCloseTo(
+            f * corridorToleranceAt(shape, t, BASE),
+            10,
+          );
+        }
+      }
+    },
+  );
 });
 
 describe("corridorToleranceAt", () => {

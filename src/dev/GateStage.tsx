@@ -107,6 +107,7 @@ export function GatePreview({
               x0,
               x1,
               tolChao: d.toleranceH,
+              widenScale: d.widenScale,
               xStart: 0,
             },
             true,

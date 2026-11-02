@@ -260,6 +260,11 @@ describe("Corridor width persistence", () => {
     expect(loadCorridorWidth()).toBe("wide");
   });
 
+  it("round-trips extra narrow", () => {
+    saveCorridorWidth("extraNarrow");
+    expect(loadCorridorWidth()).toBe("extraNarrow");
+  });
+
   it("falls back to the default on a corrupt value", () => {
     localStorage.setItem("toneflap.width.v1", "gigantic");
     expect(loadCorridorWidth()).toBe("wide");

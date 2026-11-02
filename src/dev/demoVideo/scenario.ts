@@ -7,6 +7,8 @@
  * invented. This file is pure: no DOM, no Run, testable in Node.
  */
 
+import type { CorridorWidth } from "../../game/gates.ts";
+
 export type Format = "9:16" | "1:1" | "16:9";
 
 /**
@@ -72,7 +74,7 @@ export interface Scenario {
   /** Draw score, combo, hearts and the word label. Default true. */
   hud?: boolean;
   /** Corridor width, as the setting. Default "normal". */
-  corridor?: "narrow" | "normal" | "wide";
+  corridor?: CorridorWidth;
   /** Gap between gates as a share of the game's own rest gap. Default 0.5; 1 = as played. */
   gap?: number;
   /** Optional caption shown along the bottom for the whole clip. */

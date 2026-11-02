@@ -68,7 +68,7 @@ export function ThemePreview({
             ctx,
             width,
             height,
-            { tone: word.tone, tones: word.tones, word, shape, x0, x1: x0 + widthPx, tolChao: d.toleranceH, xStart },
+            { tone: word.tone, tones: word.tones, word, shape, x0, x1: x0 + widthPx, tolChao: d.toleranceH, widenScale: d.widenScale, xStart },
             true,
             theme,
           );

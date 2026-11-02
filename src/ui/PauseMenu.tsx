@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CORRIDOR_WIDTHS, type CorridorWidth } from "../game/gates.ts";
+import { CORRIDOR_WIDTH_LABEL, CORRIDOR_WIDTHS, type CorridorWidth } from "../game/gates.ts";
 import type { CueStyle, RunMode } from "../game/run.ts";
 import type { RunStats } from "../game/scoring.ts";
 import {
@@ -21,6 +21,7 @@ import { GearIcon, PauseIcon, PlayIcon, RestartIcon } from "./icons.tsx";
 import { Switch } from "./Switch.tsx";
 
 const WIDTH_HELP: Record<CorridorWidth, string> = {
+  extraNarrow: "Very demanding. Pitch and timing both have to be close.",
   narrow: "Demanding. Your pitch has to sit close to the line.",
   normal: "Moderate difficulty. Good for practice.",
   wide: "Forgiving on pitch. Good while a tone is still new.",
@@ -135,6 +136,7 @@ export function PauseMenu({
             <Choice
               options={CORRIDOR_WIDTHS}
               value={width}
+              label={(w) => CORRIDOR_WIDTH_LABEL[w]}
               onChange={(w) => {
                 setWidth(w);
                 saveCorridorWidth(w);

@@ -164,7 +164,7 @@ export const brand = {
       },
       {
         title: "Tunnel width",
-        choices: "Narrow · Normal · Wide",
+        choices: "Extra narrow · Narrow · Normal · Wide",
         body: "Make the corridor forgiving while a tone is new, or demanding once it isn't.",
       },
     ],

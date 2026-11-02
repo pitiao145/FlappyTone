@@ -4,6 +4,7 @@ import { ensureMic, stopMic } from "../audio/session.ts";
 import { catalogFromFallback } from "../data/words.ts";
 import {
   applyCorridorWidth,
+  CORRIDOR_WIDTH_LABEL,
   CORRIDOR_WIDTHS,
   newDifficulty,
   toleranceChao,
@@ -148,6 +149,7 @@ export function Lab({ onBack }: Props) {
           <Choice
             options={CORRIDOR_WIDTHS}
             value={corridorWidth}
+            label={(w) => CORRIDOR_WIDTH_LABEL[w]}
             onChange={(w) => {
               setCorridorWidth(w);
               saveCorridorWidth(w);

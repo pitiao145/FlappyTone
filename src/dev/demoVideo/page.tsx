@@ -307,7 +307,7 @@ function voice(snap: RunSnapshot, st: State): PitchState {
       if (t < LEAD_T || t > TRAIL_T) continue;
       const flight = st.flights.get(g.xStart) ?? "perfect";
       const tc = Math.min(1, Math.max(0, t));
-      const tol = corridorToleranceAt(g.shape, tc, g.tolChao);
+      const tol = corridorToleranceAt(g.shape, tc, g.tolChao, g.widenScale);
       chao = flightChao(flight, t, (u) => corridorChaoAt(g.shape, u), tol);
       break;
     }

@@ -227,6 +227,8 @@ export interface GateView {
   /** Right edge in screen px. */
   x1: number;
   tolChao: number;
+  /** The gate's `widenScale`. Optional so a one-off preview can leave it at 1. */
+  widenScale?: number;
   /**
    * Stable world-space identity for this gate (its left edge in world px).
    * Unlike x0/x1 (screen space, changes every frame as the world scrolls),
@@ -779,7 +781,12 @@ export class Run {
     const errChao = Math.abs(this.targetChao - corridor);
     // Local, not the gate's base: on a moving stretch of corridor a small
     // timing error is worth more chao than the whole corridor is wide.
-    const tolChao = corridorToleranceAt(active.gate.shape, t, active.gate.tolChao);
+    const tolChao = corridorToleranceAt(
+      active.gate.shape,
+      t,
+      active.gate.tolChao,
+      active.gate.widenScale,
+    );
     active.samples.push({
       errChao,
       tolChao,
@@ -983,6 +990,7 @@ export class Run {
         x0: this.screenX(g.xStart),
         x1: this.screenX(g.xStart + g.widthPx),
         tolChao: g.tolChao,
+        widenScale: g.widenScale,
         xStart: g.xStart,
       })),
       activeGate: active
@@ -994,6 +1002,7 @@ export class Run {
             tolChao: corridorToleranceAt(active.gate.shape,
               this.progressIn(active.gate),
               active.gate.tolChao,
+              active.gate.widenScale,
             ),
             corridorChao: corridorChaoAt(active.gate.shape,
               this.progressIn(active.gate),
@@ -1163,7 +1172,7 @@ export class Run {
     if (i === 0) return [];
 
     const corridor = corridorChaoAt(gate.shape, 0);
-    const tolChao = corridorToleranceAt(gate.shape, 0, gate.tolChao);
+    const tolChao = corridorToleranceAt(gate.shape, 0, gate.tolChao, gate.widenScale);
     return buf.slice(i).map((s) => ({
       errChao: Math.abs(s.chao - corridor),
       tolChao,
