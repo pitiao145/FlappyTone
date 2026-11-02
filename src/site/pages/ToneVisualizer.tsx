@@ -404,8 +404,8 @@ function Visualizer() {
           href={appHref("visualiser", PATH)}
           onClick={() => trackSignupCta(PATH, "visualizer_hear_example")}
         >
-          <span aria-hidden="true">🔊</span> Want to hear it first? Listen to our native speaker in
-          the full visualizer
+          <span aria-hidden="true">🔊</span> Want to hear it first? Sign up and listen to our
+          native speaker in the full visualizer.
         </a>
       </div>
 
@@ -484,7 +484,7 @@ function Visualizer() {
               />
             ) : (
               <p className="tc-attempts-empty">
-                Your last attempts show here, with the line behind them.
+                Your last attempts show here.
               </p>
             )}
           </div>
