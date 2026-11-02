@@ -1931,7 +1931,8 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
 /* "Want to hear it first?" — this page has no audio, the app does. */
 .legal-body a.tc-hear-link {
   display: inline-block;
-  margin-top: var(--space-2);
+  /* The picker's section gap is wide; this belongs with the card above. */
+  margin-top: calc(var(--space-3) - var(--space-6));
   font-weight: 700;
   color: var(--ink);
 }
