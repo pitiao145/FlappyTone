@@ -20,7 +20,7 @@ SELECT
   landing_ctas, seo_ctas, tool_ctas, app_opens, tools,
   demo_opened, demo_finished, demo_ctas,
   reached_app, auth_screens, signup_started, signup_completed, login_completed,
-  mic_ok, calib_done, game_runs, tutorial_runs, run_ends, best_score, score_submitted,
+  mic_ok, mic_denied, calib_done, game_runs, tutorial_runs, run_ends, best_score, score_submitted,
   toneder_rounds, visualiser_sessions, leaderboard_views,
   daily_limit, earlybird_shown, earlybird_clicks, feedback
 FROM (
@@ -90,7 +90,9 @@ FROM (
     countIf(event = 'signup_started') AS signup_started,
     countIf(event = 'signup_completed') AS signup_completed,
     countIf(event = 'login_completed') AS login_completed,
-    countIf(event = 'mic') AS mic_ok,
+    -- `mic` fires with ok=false on a failure (reason e.g. permission-denied); count the two apart.
+    countIf(event = 'mic' AND properties.ok = true) AS mic_ok,
+    countIf(event = 'mic' AND properties.ok = false) AS mic_denied,
     countIf(event = 'calib_done') AS calib_done,
     countIf(event = 'run_start' AND properties.mode != 'tutorial') AS game_runs,
     countIf(event = 'run_start' AND properties.mode = 'tutorial') AS tutorial_runs,

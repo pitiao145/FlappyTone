@@ -55,7 +55,7 @@ Never print IP addresses or Supabase user ids. Display names (CleverKite98) are 
 | Demo | `demo_opened`, `demo_finished`, `demo_ctas` (`demo_gameover_signup` / `_retry` / `_pairs`) |
 | Free tools | `tools`: `tone-test:*`, `tone-visualizer:*`; `app_opens` = tone test's button into `/app` |
 | Signup wall | `auth_screens` (`signup`/`login`); since 2026-10-29 `/app` needs an account |
-| Played | "Played" = `game_runs ≥ 1`. `tutorial_runs` only = "tutorial only". Also `best_score`, `mic_ok`, `calib_done`; reached `/app` with `mic_ok = 0` = never got the mic going |
+| Played | "Played" = `game_runs ≥ 1`. `tutorial_runs` only = "tutorial only". Also `best_score`, `mic_ok`, `calib_done`; `mic_denied > 0` with `mic_ok = 0` = blocked the mic and could not play (name it in Notes); reached `/app` with both 0 = never asked for the mic |
 | Money | `daily_limit`, `earlybird_shown`, `earlybird_clicks`; purchase = Supabase `entitlement` row |
 
 ## Pitfalls
