@@ -173,6 +173,7 @@ export type SeoCta =
   | "pip_cta"
   | "tone_test_result"
   | "tone_test_play_link"
+  /** No longer shown (removed 2 Nov 2026); kept so old events still type. */
   | "visualizer_above_stage"
   | "visualizer_result_good"
   /** No longer shown (removed 2 Nov 2026); kept so old events still type. */

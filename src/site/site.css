@@ -1548,7 +1548,8 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
 .tc-picker {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  /* Room between the sections; each section keeps its own tighter gap. */
+  gap: var(--space-6);
   padding: var(--space-6);
   border-right: 2px solid var(--ink);
   background: var(--surface-panel);
@@ -1667,34 +1668,48 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
 .tc-tier-ok { color: var(--warn); }
 .tc-tier-bad { color: var(--danger); }
 
-/* The folded tone pairs row's header: label, the picked pair (or the
-   count), and a chevron. Two classes beat the app's `.screen button`. */
-.screen .tc-pairs-toggle {
+/* One block of the picker: its label and its controls. */
+.tc-section {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Tone pairs: a 4 × 4 grid, every chip the same width. */
+.tc-pair-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-2);
+}
+
+.tc-pair-grid .tc-chip {
   width: 100%;
+  justify-content: center;
+}
+
+/* "Show all 16 pairs": a quiet text button under the grid. Two classes
+   beat the app's `.screen button`. */
+.screen .tc-pairs-toggle {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 4px;
   margin: 0;
   padding: 0;
   border: none;
   border-radius: 0;
   background: none;
   box-shadow: none;
-  color: var(--ink);
+  color: var(--ink-muted);
   font: inherit;
-  text-align: left;
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.tc-pairs-hint {
-  font-size: 0.85rem;
-  color: var(--ink-muted);
-}
-
 .tc-pairs-chevron {
-  width: 18px;
-  height: 18px;
-  margin-left: auto;
+  width: 16px;
+  height: 16px;
 }
 
 /* The board, and beside it on wide screens the app's attempt strip. */
@@ -1903,14 +1918,9 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
   font-size: 0.95rem;
 }
 
-.legal-body a.tc-app-link,
 .legal-body a.tc-result-cta {
   font-weight: 700;
   color: var(--ink);
-}
-
-.legal-body a.tc-app-link {
-  margin-top: auto;
 }
 
 .legal-body a.tc-result-cta {
@@ -1924,14 +1934,6 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
   margin-top: var(--space-2);
   font-weight: 700;
   color: var(--ink);
-}
-
-/* What the in-app visualizer adds, under its signup links. */
-.tc-app-features {
-  flex-basis: 100%;
-  margin: 4px 0 0;
-  font-size: 0.85rem;
-  color: var(--color-ink-2);
 }
 
 .tc-cal {

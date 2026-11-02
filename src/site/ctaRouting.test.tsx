@@ -44,12 +44,15 @@ describe("site CTA routing (brief 25)", () => {
     expect(weakPairLine("")).toBeNull();
   });
 
-  it("tone visualizer: every CTA goes to signup, with the feature line (rows 12, 15)", () => {
+  it("tone visualizer: every CTA goes to signup (rows 12, 15)", () => {
     const out = html("/tools/tone-visualizer");
     expect(overlays(out)).toBe(0);
     expect(out).toContain('href="/app?intent=visualiser&amp;src=/tools/tone-visualizer"');
     expect(out).toContain(PIP_CTA_LABEL.signup);
-    expect(out).toContain("tc-app-features");
+    // The one in-tool link: no audio here, so "hear it first" leads to the app.
+    expect(out).toContain("tc-hear-link");
+    // The extra "Practise in the full visualizer" + feature line went (2 Nov 2026).
+    expect(out).not.toContain("tc-app-features");
   });
 
   it("word viewer: Try it opens the overlay (rows 3, 5)", () => {

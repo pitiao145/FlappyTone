@@ -30,15 +30,6 @@ import { InAppMicNotice, MicAllowNote, MicHelpPanel, continueInApp } from "../..
 
 const PATH = "/tools/tone-visualizer";
 
-/**
- * What the in-app visualizer adds over this free tool, shown under its
- * signup links (brief 25). Each item checked in src/ui/Visualiser.tsx and
- * src/game/tiers.ts for a free account: words per tone (`wordsPerTone`: 5),
- * the Tone pairs tab (`visualiserPairWords`), TOCFL lists (`beginner.levels`).
- */
-const APP_FEATURES =
-  "The full visualizer adds real words for each tone, two-syllable tone pairs and TOCFL word lists, each with our native speaker's recording. Free with an account.";
-
 type EngineModule = typeof import("../checker/engine.ts");
 type BoardModule = typeof import("../checker/board.ts");
 
@@ -200,8 +191,9 @@ function Visualizer() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the URL is read once, after hydration
     setRef(next.ref);
     setMode(next.mode);
-    // A pair from the URL must be visible, so its row opens.
-    if (next.ref.tones.length > 1) setPairsOpen(true);
+    // A pair from the URL must be visible: open the grid unless it is in
+    // the first row (1 + n), which always shows.
+    if (next.ref.tones.length > 1 && next.ref.tones[0] !== 1) setPairsOpen(true);
   }, []);
 
   // The idle board, drawn by the app's own renderer (grid, corridor, bird).
@@ -341,48 +333,52 @@ function Visualizer() {
     <div className="tc-tool" role="group" aria-label="Mandarin tone visualizer">
       <Pip size={72} tilt={-10} className="tm-tool-pip" />
       <div className="tc-picker">
-        <div className="tc-picker-label">Pick a tone</div>
-        <div className="tc-row">
-          {SINGLE.map((r) => (
-            <RefChip key={r.id} r={r} selected={r.id === ref.id} pick={() => choose(r, mode)} />
-          ))}
-        </div>
-        {/* Folded by default: 16 chips would crowd the panel. */}
-        <button
-          type="button"
-          className="tc-pairs-toggle"
-          aria-expanded={pairsOpen}
-          aria-controls="tc-pairs"
-          onClick={() => setPairsOpen((o) => !o)}
-        >
-          <span className="tc-picker-label">Tone pairs</span>
-          <span className="tc-pairs-hint">
-            {ref.tones.length > 1 ? ref.label : `${PAIRS.length} pairs`}
-          </span>
-          <ChevronIcon open={pairsOpen} className="tc-pairs-chevron" />
-        </button>
-        {pairsOpen && (
-          <div className="tc-row" id="tc-pairs">
-            {PAIRS.map((r) => (
+        <div className="tc-section">
+          <div className="tc-picker-label">Pick a tone</div>
+          <div className="tc-row">
+            {SINGLE.map((r) => (
               <RefChip key={r.id} r={r} selected={r.id === ref.id} pick={() => choose(r, mode)} />
             ))}
           </div>
-        )}
+        </div>
 
-        <div className="tc-picker-label">Practise against</div>
-        <div className="tc-toggle" role="radiogroup" aria-label="Reference line">
-          {(["textbook", "real"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              role="radio"
-              aria-checked={mode === m}
-              className={mode === m ? "tc-toggle-on" : undefined}
-              onClick={() => choose(ref, m)}
-            >
-              {m === "real" ? "Spoken" : "Standard"}
-            </button>
-          ))}
+        {/* A 4 × 4 grid, first tone across, second tone down. Only the
+            first row shows until it is opened, so the panel stays calm. */}
+        <div className="tc-section">
+          <div className="tc-picker-label">Tone pairs</div>
+          <div className="tc-pair-grid" id="tc-pairs">
+            {(pairsOpen ? PAIRS : PAIRS.slice(0, 4)).map((r) => (
+              <RefChip key={r.id} r={r} selected={r.id === ref.id} pick={() => choose(r, mode)} />
+            ))}
+          </div>
+          <button
+            type="button"
+            className="tc-pairs-toggle"
+            aria-expanded={pairsOpen}
+            aria-controls="tc-pairs"
+            onClick={() => setPairsOpen((o) => !o)}
+          >
+            {pairsOpen ? "Show fewer pairs" : `Show all ${PAIRS.length} pairs`}
+            <ChevronIcon open={pairsOpen} className="tc-pairs-chevron" />
+          </button>
+        </div>
+
+        <div className="tc-section">
+          <div className="tc-picker-label">Practise against</div>
+          <div className="tc-toggle" role="radiogroup" aria-label="Reference line">
+            {(["textbook", "real"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={mode === m}
+                className={mode === m ? "tc-toggle-on" : undefined}
+                onClick={() => choose(ref, m)}
+              >
+                {m === "real" ? "Spoken" : "Standard"}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="tc-ref-card" style={{ borderColor: color }}>
@@ -409,15 +405,6 @@ function Visualizer() {
             in the full visualizer
           </a>
         </div>
-
-        <a
-          className="tc-app-link"
-          href={appHref("visualiser", PATH)}
-          onClick={() => trackSignupCta(PATH, "visualizer_above_stage")}
-        >
-          Practise in the full visualizer
-        </a>
-        <p className="tc-app-features">{APP_FEATURES}</p>
       </div>
 
       <div className="tc-main">
