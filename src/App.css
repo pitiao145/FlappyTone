@@ -3847,7 +3847,12 @@
     padding: 0;
     align-items: stretch;
     text-align: left;
-    overflow: hidden;
+    /* Scrolls as a whole when the attempt thumbnails push the settings
+       below the fold (Free mode has no word strip to absorb the squeeze). */
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--ink-dim) transparent;
   }
 
   /* Accuracy + Tone are the panel's headline — one row, equal cards, big
@@ -3937,7 +3942,8 @@
     align-content: start;
     gap: 8px 12px;
     flex: 1 1 auto;
-    min-height: 0;
+    /* Never squeezed to nothing: below this the panel scrolls instead. */
+    min-height: 160px;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--ink-dim) transparent;
@@ -9299,16 +9305,17 @@ button.switch-track.switch-on {
 }
 .screen .tt-style button:disabled { cursor: default; opacity: 0.6; }
 
-/* Free mode's recent attempts (desktop only — the strip lives in
-   .visualiser-panel, which mobile hides). Same two columns and gap as the
-   readout cards above: a portrait preview under Tone accuracy, three
-   stacked thumbnails under Tone. The panel's selector beats the global
-   pill button style. */
+/* Free mode's recent attempts on desktop (mobile uses .vis-mthumb below).
+   A portrait preview on the left and three stacked thumbnails on the right.
+   3fr / 1fr makes the thumbnails portrait too: the preview's 3:4 height
+   split in three, over a column a third of its width, is close to 3:4.
+   The panel's selector beats the global pill button style. */
 .visualiser-panel .vis-attempts {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
   gap: 12px;
   margin-top: 12px;
+  flex: 0 0 auto;
 }
 
 .visualiser-panel .vis-attempt-preview {
@@ -9366,6 +9373,104 @@ button.switch-track.switch-on {
 .visualiser-panel .vis-attempt:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Free mode's recent attempts on mobile (MobileAttemptThumb): the latest
+   one as a small portrait card in the canvas's bottom-right corner; a tap
+   opens a swipeable sheet over the canvas. `.stage .vis-mthumb` (two
+   classes) beats the global `.screen button` pill style. */
+.stage .vis-mthumb {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  width: 60px;
+  aspect-ratio: 3 / 4;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: none;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(var(--ink-rgb), 0.18);
+  cursor: pointer;
+}
+
+.visualiser-screen .stage .vis-mthumb canvas,
+.visualiser-screen .stage .vis-mthumb-card canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.vis-mthumb-sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(var(--surface-rgb), 0.85);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+/* One attempt per slide; native scroll-snap does the swipe. */
+.vis-mthumb-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.vis-mthumb-track::-webkit-scrollbar {
+  display: none;
+}
+
+.vis-mthumb-slide {
+  flex: 0 0 100%;
+  display: flex;
+  justify-content: center;
+  scroll-snap-align: center;
+}
+
+.vis-mthumb-card {
+  position: relative;
+  width: min(72%, 300px);
+  aspect-ratio: 3 / 4;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: default;
+}
+
+.vis-mthumb-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.vis-mthumb-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+
+.vis-mthumb-dots span.active {
+  background: var(--accent);
+}
+
+@media (min-width: 720px) {
+  .stage .vis-mthumb,
+  .vis-mthumb-sheet {
+    display: none;
+  }
 }
 
 /* Practice list (brief 21, phase 2). */

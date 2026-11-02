@@ -42,6 +42,90 @@ export function AttemptThumbs(props: {
 }
 
 /**
+ * Mobile's version of the strip: one small portrait card in the canvas's
+ * bottom-right corner, always the latest attempt. A tap opens it large
+ * (with the chao grid); swiping sideways walks back through the older ones
+ * and selects each, so the Tone card follows like a thumbnail click on
+ * desktop. A tap on the dimmed backdrop closes it.
+ */
+export function MobileAttemptThumb(props: {
+  attempts: readonly FreeAttempt[];
+  selectedId: number | null;
+  onSelect: (id: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const newestFirst = [...props.attempts].reverse();
+  const latest = newestFirst[0];
+  const selectedIndex = Math.max(0, newestFirst.findIndex((a) => a.id === props.selectedId));
+
+  // Open on the selected attempt, not always the first slide.
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!open || !track) return;
+    track.scrollLeft = selectedIndex * track.clientWidth;
+    // Only on open: later swipes move the scroll themselves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  if (!latest) return null;
+
+  const onScroll = () => {
+    const track = trackRef.current;
+    if (!track || track.clientWidth === 0) return;
+    const i = Math.round(track.scrollLeft / track.clientWidth);
+    const a = newestFirst[i];
+    if (a && a.id !== props.selectedId) props.onSelect(a.id);
+  };
+
+  return (
+    <>
+      <button
+        className="vis-mthumb"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(true);
+        }}
+        aria-label="Show recent attempts"
+      >
+        <AttemptCanvas attempt={latest} grid={false} />
+      </button>
+      {open && (
+        <div
+          className="vis-mthumb-sheet"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(false);
+          }}
+        >
+          <div
+            className="vis-mthumb-track"
+            ref={trackRef}
+            onScroll={onScroll}
+            aria-label="Recent attempts, newest first"
+          >
+            {newestFirst.map((a) => (
+              <div className="vis-mthumb-slide" key={a.id}>
+                <div className="vis-mthumb-card" onClick={(e) => e.stopPropagation()}>
+                  <AttemptCanvas attempt={a} grid />
+                </div>
+              </div>
+            ))}
+          </div>
+          {newestFirst.length > 1 && (
+            <div className="vis-mthumb-dots" aria-hidden="true">
+              {newestFirst.map((a, i) => (
+                <span key={a.id} className={i === selectedIndex ? "active" : undefined} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
  * One attempt, drawn at its box's real CSS size (times DPR) and never
  * stretched by CSS — stretching a small bitmap is what made it blurry.
  */

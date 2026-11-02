@@ -42,7 +42,7 @@ import { PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawVisualiser } from "../render/visualiser.ts";
 import { readAttempt, readContourSyllables, type FreeAttempt } from "../game/freeAttempts.ts";
-import { AttemptThumbs } from "./AttemptThumbs.tsx";
+import { AttemptThumbs, MobileAttemptThumb } from "./AttemptThumbs.tsx";
 import { micErrorCopy } from "./micErrors.ts";
 import { SPEECH_STYLE_LABEL } from "./Settings.tsx";
 import {
@@ -1389,6 +1389,16 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         <div className="vis-canvas-column">
           <div className="stage" ref={stageRef}>
             <canvas ref={canvasRef} width={canvasW} height={canvasH} />
+
+            {/* Mobile only (App.css hides it on desktop, where the panel's
+                strip shows the same attempts). */}
+            {popoverTab === "free" && freeAttempts.length > 0 && (
+              <MobileAttemptThumb
+                attempts={freeAttempts}
+                selectedId={selectedAttemptId}
+                onSelect={setSelectedAttemptId}
+              />
+            )}
 
             {paused && (
               <div className="overlay" onClick={() => resumeRef.current()}>
