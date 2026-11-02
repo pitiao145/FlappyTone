@@ -143,8 +143,8 @@ show one tone, and the read is never judged against the target yet. Textbook sco
 `toneAccuracyDetail` (the cue measures likeness to real speech). Calibration:
 the game's own (`loadSettings()`) if the device has one, else a ~10 s quick
 one (one mā, one mǎ, `quickCal.ts`) under **`flappytone.quickcal.v1`** — never
-`toneflap.settings.v3`, never read by /app. `?tone=<1-4|3-3|3-4>&mode=textbook`
-preselect. Analytics: `tool_used {tool:"tone-visualizer", action}` (each once
+`toneflap.settings.v3`, never read by /app. `?tone=<1-4|a-b>&mode=real`
+preselect; the default is Standard (`textbook`), as in the app. Analytics: `tool_used {tool:"tone-visualizer", action}` (each once
 per load) and `tool_summary {attempts, targets}` on `pagehide`, global tier,
 counts only.
 

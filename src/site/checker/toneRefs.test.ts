@@ -29,11 +29,14 @@ describe("tone visualizer references", () => {
     }
   });
 
-  it("?tone= and ?mode= fall back to Tone 3 / real speech", () => {
+  it("?tone= and ?mode= fall back to Tone 3 / Standard", () => {
     expect(refFor("3-4").id).toBe("3-4");
     expect(refFor("zzz").id).toBe("3");
     expect(refFor(null).id).toBe("3");
     expect(modeFor("textbook")).toBe("textbook");
-    expect(modeFor("x")).toBe("real");
+    expect(modeFor("real")).toBe("real");
+    expect(modeFor("spoken")).toBe("real");
+    expect(modeFor("x")).toBe("textbook");
+    expect(modeFor(null)).toBe("textbook");
   });
 });

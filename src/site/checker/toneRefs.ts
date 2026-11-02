@@ -146,9 +146,9 @@ export function refFor(id: string | null | undefined): ToneRef {
   return TONE_REFS.find((r) => r.id === id) ?? TONE_REFS.find((r) => r.id === DEFAULT_REF)!;
 }
 
-/** `?mode=textbook` → textbook; anything else → real speech. */
+/** `?mode=real` (or `spoken`) → real speech; anything else → Standard. */
 export function modeFor(v: string | null | undefined): RefMode {
-  return v === "textbook" ? "textbook" : "real";
+  return v === "real" || v === "spoken" ? "real" : "textbook";
 }
 
 export function polylineOf(ref: ToneRef, mode: RefMode): Polyline {

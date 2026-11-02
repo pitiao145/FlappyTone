@@ -140,7 +140,8 @@ function useReporter(): CheckerReporter {
 /** The tool: pick a tone and a version, say it, see your line over it. */
 function Visualizer() {
   const [ref, setRef] = useState<ToneRef>(() => refFor(DEFAULT_REF));
-  const [mode, setMode] = useState<RefMode>("real");
+  // Standard first, as in the app (a guest always starts on Standard).
+  const [mode, setMode] = useState<RefMode>("textbook");
   const [phase, setPhase] = useState<Phase>("idle");
   const [calStep, setCalStep] = useState<CalStep>("high");
   const [calRetry, setCalRetry] = useState(false);
@@ -182,7 +183,7 @@ function Visualizer() {
   };
 
   // `?tone=3-3&mode=textbook`. Read after mount so the prerendered markup
-  // (Tone 3, real speech) and the first client render agree.
+  // (Tone 3, Standard) and the first client render agree.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     if (!q.has("tone") && !q.has("mode")) return;
