@@ -1,16 +1,16 @@
 /**
- * The tone visualizer's targets (/tools/tone-visualizer): each tone, and two
- * sandhi pairs, in two versions the visitor chooses between and is scored
- * against:
+ * The tone visualizer's targets (/tools/tone-visualizer): each tone and all
+ * 16 tone pairs, in two versions the visitor chooses between and is scored
+ * against — the same two the app calls Spoken and Standard:
  *
- * - **Real speech**: our native speaker's natural-speed average for that tone
- *   or pair (`AVERAGED_TONE_SHAPE.natural` / `AVERAGED_PAIR_SHAPE.natural`,
- *   the same averages the app's tone accuracy uses), over the median length
- *   of her natural takes.
- * - **Textbook**: the classic Chao tone letters (55, 35, 214, 51) drawn as
- *   lines, stretched over the same length, so only the shape differs.
+ * - **Real speech** (Spoken): our native speaker's natural-speed average for
+ *   that tone or pair (`AVERAGED_TONE_SHAPE.natural` /
+ *   `AVERAGED_PAIR_SHAPE.natural`, the averages the app's tone accuracy uses).
+ * - **Textbook** (Standard): her average at slow, clear speed
+ *   (`AVERAGED_*.textbook`), what the app's Standard style plays.
  *
- * No audio: hearing real words is what the app adds. Pure data + math.
+ * Both are drawn over the same length, so only the shape differs. No audio:
+ * hearing real words is what the app adds. Pure data + math.
  */
 
 import type { Tone } from "../../game/gates.ts";
@@ -18,7 +18,7 @@ import { AVERAGED_PAIR_SHAPE, AVERAGED_TONE_SHAPE } from "../../game/toneAverage
 import type { Polyline } from "../../game/tuning.ts";
 
 export type RefMode = "real" | "textbook";
-export type RefId = "1" | "2" | "3" | "4" | "3-3" | "3-4";
+export type RefId = "1" | "2" | "3" | "4" | `${Tone}-${Tone}`;
 
 export interface ToneRef {
   id: RefId;
@@ -29,13 +29,14 @@ export interface ToneRef {
   /** Example in pinyin + characters (Traditional), for the caption only. */
   example: string;
   /**
-   * Median length of our speaker's natural takes for this target, seconds
-   * (default speaker, published, 19 Oct 2026). Both versions use it.
+   * Length the line is drawn over, seconds. Single tones and 3 + 3 / 3 + 4
+   * are the median of our speaker's natural takes (19 Oct 2026); the other
+   * pairs use 0.85 s, between those two, until they are measured.
    */
   durationS: number;
   real: Polyline;
   textbook: Polyline;
-  /** One line on how real speech differs from the textbook line. */
+  /** One line on how real speech differs from the slow, clear line. */
   diff: string;
 }
 
@@ -44,33 +45,14 @@ function fromAverage(points: number[]): Polyline {
   return points.map((c, i) => [i / (points.length - 1), c] as [number, number]);
 }
 
-/** Chao tone letters for one syllable, over [t0, t1]. */
-const LETTERS: Record<Tone, number[]> = {
-  1: [5, 5],
-  2: [3, 5],
-  3: [2, 1, 4],
-  4: [5, 1],
-};
-
-function letters(tones: Tone[]): Polyline {
-  const out: Polyline = [];
-  const span = 1 / tones.length;
-  // A short pause between syllables, so the spline does not bend one
-  // syllable's end into the next one's start.
-  const gap = tones.length > 1 ? 0.04 : 0;
-  tones.forEach((t, k) => {
-    const t0 = k * span + (k > 0 ? gap / 2 : 0);
-    const t1 = (k + 1) * span - (k < tones.length - 1 ? gap / 2 : 0);
-    const ls = LETTERS[t];
-    ls.forEach((c, i) => out.push([t0 + ((t1 - t0) * i) / (ls.length - 1), c]));
-  });
-  return out;
-}
+const HALF_THIRD = "A third tone before another tone stays low and never rises: a “half third tone”.";
 
 const nat = AVERAGED_TONE_SHAPE.natural;
+const std = AVERAGED_TONE_SHAPE.textbook;
 const natPair = AVERAGED_PAIR_SHAPE.natural;
+const stdPair = AVERAGED_PAIR_SHAPE.textbook;
 
-export const TONE_REFS: readonly ToneRef[] = [
+const SINGLES: readonly ToneRef[] = [
   {
     id: "1",
     label: "First tone",
@@ -78,7 +60,7 @@ export const TONE_REFS: readonly ToneRef[] = [
     example: "mā 媽",
     durationS: 0.719,
     real: fromAverage(nat[1]),
-    textbook: letters([1]),
+    textbook: fromAverage(std[1]),
     diff: "Real speech holds it level, but a little below the very top of the voice.",
   },
   {
@@ -88,7 +70,7 @@ export const TONE_REFS: readonly ToneRef[] = [
     example: "má 麻",
     durationS: 0.751,
     real: fromAverage(nat[2]),
-    textbook: letters([2]),
+    textbook: fromAverage(std[2]),
     diff: "Real speech dips a little first, rises only in the second half, and stops short of the top.",
   },
   {
@@ -98,7 +80,7 @@ export const TONE_REFS: readonly ToneRef[] = [
     example: "mǎ 馬",
     durationS: 0.709,
     real: fromAverage(nat[3]),
-    textbook: letters([3]),
+    textbook: fromAverage(std[3]),
     diff: "Real speech starts higher, dips in the middle but not to the floor, then climbs back.",
   },
   {
@@ -108,31 +90,54 @@ export const TONE_REFS: readonly ToneRef[] = [
     example: "mà 罵",
     durationS: 0.495,
     real: fromAverage(nat[4]),
-    textbook: letters([4]),
+    textbook: fromAverage(std[4]),
     diff: "Real speech peaks just below the top and falls fast, but not all the way to the floor.",
   },
-  {
-    id: "3-3",
-    label: "3 + 3",
-    tones: [3, 3],
+];
+
+/** One example per pair, from the catalog's own (Traditional) words. */
+const PAIR_INFO: Record<string, { example: string; durationS?: number; diff?: string }> = {
+  "1-1": { example: "jīn tiān 今天" },
+  "1-2": { example: "zhōng guó 中國" },
+  "1-3": { example: "duō shǎo 多少" },
+  "1-4": { example: "chū qù 出去" },
+  "2-1": { example: "tái wān 台灣" },
+  "2-2": { example: "xué xí 學習" },
+  "2-3": { example: "péng yǒu 朋友" },
+  "2-4": { example: "xué xiào 學校" },
+  "3-1": { example: "hǎo chī 好吃", diff: HALF_THIRD },
+  "3-2": { example: "měi guó 美國", diff: HALF_THIRD },
+  "3-3": {
     example: "nǐ hǎo 你好",
     durationS: 0.986,
-    // Spoken as 2 + 3: the third-tone sandhi rule.
-    real: fromAverage(natPair["2-3"]),
-    textbook: letters([3, 3]),
     diff: "Two third tones in a row: the first one rises like a second tone (ní hǎo).",
   },
-  {
-    id: "3-4",
-    label: "3 + 4",
-    tones: [3, 4],
-    example: "kě shì 可是",
-    durationS: 0.741,
-    real: fromAverage(natPair["3-4"]),
-    textbook: letters([3, 4]),
-    diff: "A third tone before another tone stays low and never rises: a “half third tone”.",
-  },
-];
+  "3-4": { example: "kě shì 可是", durationS: 0.741, diff: HALF_THIRD },
+  "4-1": { example: "shàng bān 上班" },
+  "4-2": { example: "wèn tí 問題" },
+  "4-3": { example: "xià wǔ 下午" },
+  "4-4": { example: "zài jiàn 再見" },
+};
+
+const PAIRS: readonly ToneRef[] = Object.entries(PAIR_INFO).map(([id, info]) => {
+  const tones = id.split("-").map(Number) as Tone[];
+  // 3 + 3 is said as 2 + 3 (the third-tone sandhi rule), in both versions.
+  const key = id === "3-3" ? "2-3" : id;
+  return {
+    id: id as RefId,
+    label: `${tones[0]} + ${tones[1]}`,
+    tones,
+    example: info.example,
+    durationS: info.durationS ?? 0.85,
+    real: fromAverage(natPair[key]),
+    textbook: fromAverage(stdPair[key]),
+    diff:
+      info.diff ??
+      "Each syllable keeps its own tone, but both are shorter and narrower than when said alone.",
+  };
+});
+
+export const TONE_REFS: readonly ToneRef[] = [...SINGLES, ...PAIRS];
 
 export const DEFAULT_REF: RefId = "3";
 

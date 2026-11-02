@@ -22,7 +22,9 @@ import {
   type CheckerReporter,
 } from "../checker/checkerCopy.ts";
 // Types only: erased at build, so neither chunk lands in this one.
-import type { CalStep, Checker } from "../checker/engine.ts";
+import type { CalStep, Checker, FreeAttempt } from "../checker/engine.ts";
+// No audio: draws finished attempts only (the app's own corner thumbnail).
+import { MobileAttemptThumb } from "../../ui/AttemptThumbs.tsx";
 import { InAppMicNotice, MicAllowNote, MicHelpPanel, continueInApp } from "../../ui/MicHelp.tsx";
 
 const PATH = "/tools/tone-visualizer";
@@ -77,6 +79,30 @@ type Phase =
 const SINGLE = TONE_REFS.filter((r) => r.tones.length === 1);
 const PAIRS = TONE_REFS.filter((r) => r.tones.length > 1);
 
+/** Attempts kept for the corner thumbnail, as in the app's Free tab. */
+const MAX_ATTEMPTS = 3;
+
+/** The same 85 % / 60 % cut points as the app's accuracy card. */
+function tierOf(v: number): "good" | "ok" | "bad" {
+  return v >= 0.85 ? "good" : v >= 0.6 ? "ok" : "bad";
+}
+
+/**
+ * The Tone card for one attempt, as the app's Free tab shows it: "T3" with
+ * its confidence for one syllable, "T2 · T3" for two, "?" for a syllable too
+ * short to judge (never a wrong tone, hard rule 8).
+ */
+function toneCard(a: FreeAttempt | null): { value: string; sub: string | null } | null {
+  if (!a) return null;
+  const s = a.syllables;
+  const one = (r: (typeof s)[number]) => (!r ? "?" : r.tone === "none" ? "–" : `T${r.tone}`);
+  if (s.length === 1) {
+    const r = s[0];
+    return { value: one(r), sub: r && r.tone !== "none" ? `${Math.round(r.confidence * 100)}%` : null };
+  }
+  return { value: s.map(one).join(" · "), sub: null };
+}
+
 /**
  * The prerendered stand-in until the real renderer draws: the same line, on
  * the board's own axes (time from the bird's rest point, chao 1–5 over the
@@ -92,8 +118,8 @@ function shapePath(ref: ToneRef, mode: RefMode): string {
 
 const FAQ = [
   {
-    q: "What is the difference between Real speech and Textbook?",
-    a: "Textbook is the classic tone chart: first tone high and level (55), second tone rising (35), third tone dipping and rising (214), fourth tone falling (51). Real speech is the average shape of many words recorded by our native Taiwan Mandarin speaker at everyday speed. They often differ: real third tone rarely rises as high as the chart says, and two third tones in a row are not said as written. Pick the one you want to practise; you are scored against that line.",
+    q: "What is the difference between Standard and Spoken?",
+    a: "Both lines are the average shape of many words recorded by our native Taiwan Mandarin speaker. Standard is her slow, clear speech, close to how tones are taught. Spoken is her everyday speed. They often differ: in everyday speech the third tone rarely rises as high, and two third tones in a row are not said as written. Pick the one you want to practise; you are scored against that line.",
   },
   {
     q: "Does it work on my phone?",
@@ -131,6 +157,11 @@ function Visualizer() {
   /** The last mic failure's kind; `permission-denied` shows the unblock help. */
   const [micKind, setMicKind] = useState<string | null>(null);
   const [result, setResult] = useState<AttemptView | null>(null);
+  /** The last few attempts, for the corner thumbnail and the Tone card. */
+  const [attempts, setAttempts] = useState<FreeAttempt[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  /** Running tone accuracy on the current line; reset on a new line or Clear. */
+  const [stats, setStats] = useState({ sum: 0, n: 0 });
   const [boardDrawn, setBoardDrawn] = useState(false);
   const reporter = useReporter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -140,11 +171,19 @@ function Visualizer() {
 
   const running = phase === "cal" || phase === "ready" || phase === "paused";
 
+  /** Forgets every attempt and the running accuracy. */
+  const resetAttempts = () => {
+    setResult(null);
+    setAttempts([]);
+    setSelectedId(null);
+    setStats({ sum: 0, n: 0 });
+  };
+
   const choose = (nextRef: ToneRef, nextMode: RefMode) => {
     targetRef.current = { ref: nextRef, mode: nextMode };
     setRef(nextRef);
     setMode(nextMode);
-    setResult(null);
+    resetAttempts();
     checkerRef.current?.setTarget(nextRef, nextMode);
   };
 
@@ -240,10 +279,16 @@ function Visualizer() {
               setPhase("ready");
               reporter.action("calibrated");
             },
-            onAttempt(r) {
+            onAttempt(r, attempt) {
               const t = targetRef.current.ref;
               reporter.attempt(t.id);
               setResult(attemptView(r, t.tones[0], t.tones.length));
+              if (attempt) {
+                setAttempts((prev) => [...prev, attempt].slice(-MAX_ATTEMPTS));
+                setSelectedId(attempt.id);
+              }
+              const acc = r.accuracy;
+              if (acc !== null) setStats((s) => ({ sum: s.sum + acc, n: s.n + 1 }));
             },
             onPaused() {
               setPhase("paused");
@@ -284,6 +329,8 @@ function Visualizer() {
   const startLabel =
     phase === "tap-again" ? "Allow the microphone" : phase === "error" ? "Try again" : "Start";
   const color = TONE_LINE_COLOR[ref.tones[0]];
+  const accuracy = stats.n > 0 ? stats.sum / stats.n : null;
+  const tone = toneCard(attempts.find((a) => a.id === selectedId) ?? null);
 
   return (
     <div className="tc-tool" role="group" aria-label="Mandarin tone visualizer">
@@ -295,7 +342,7 @@ function Visualizer() {
             <RefChip key={r.id} r={r} selected={r.id === ref.id} pick={() => choose(r, mode)} />
           ))}
         </div>
-        <div className="tc-picker-label">Tone pairs (tone sandhi)</div>
+        <div className="tc-picker-label">Tone pairs</div>
         <div className="tc-row">
           {PAIRS.map((r) => (
             <RefChip key={r.id} r={r} selected={r.id === ref.id} pick={() => choose(r, mode)} />
@@ -328,7 +375,7 @@ function Visualizer() {
           <p>
             {mode === "real"
               ? "The line is our native speaker's average at everyday speed. "
-              : "The line is the textbook tone chart, stretched to the same length. "}
+              : "The line is our native speaker's average at slow, clear speed. "}
             {ref.diff}
           </p>
         </div>
@@ -344,8 +391,46 @@ function Visualizer() {
       </div>
 
       <div className="tc-main">
+        {/* The app visualiser's two readout cards. */}
+        <div className="tc-readouts" aria-live="polite">
+          <div className="tc-card">
+            <span className="tc-card-label">Tone accuracy</span>
+            {accuracy !== null ? (
+              <>
+                <strong className={`tc-card-value tc-tier-${tierOf(accuracy)}`}>
+                  {Math.round(accuracy * 100)}%
+                </strong>
+                <span className="tc-card-sub">
+                  {stats.n} {stats.n === 1 ? "try" : "tries"}
+                </span>
+              </>
+            ) : (
+              <span className="tc-card-value tc-card-empty">–</span>
+            )}
+          </div>
+          <div className="tc-card">
+            <span className="tc-card-label">Tone</span>
+            {tone ? (
+              <>
+                <strong className="tc-card-value">{tone.value}</strong>
+                {tone.sub && <span className="tc-card-sub">{tone.sub}</span>}
+              </>
+            ) : (
+              <span className="tc-card-value tc-card-empty">–</span>
+            )}
+          </div>
+        </div>
+
         <div className="tc-stage" ref={stageRef}>
           <canvas ref={canvasRef} className="tc-canvas" aria-hidden="true" />
+          {attempts.length > 0 && (
+            <MobileAttemptThumb
+              attempts={attempts}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              guide={polylineOf(ref, mode)}
+            />
+          )}
           {phase === "cal" && (
             <div className="tc-stage-say" aria-hidden="true">
               <span>Step {calStep === "high" ? 1 : 2}/2</span>
@@ -436,7 +521,7 @@ function Visualizer() {
               {result.read && <span className="tc-read">{result.read}</span>}
               {result.percent !== null && (
                 <span className="tc-note">
-                  Tone accuracy against the {mode === "real" ? "real-speech" : "textbook"} line.
+                  Tone accuracy against the {mode === "real" ? "Spoken" : "Standard"} line.
                 </span>
               )}
               {result.tier === "good" && (
@@ -499,7 +584,7 @@ function Visualizer() {
               className="tc-button"
               onClick={() => {
                 checkerRef.current?.clear();
-                setResult(null);
+                resetAttempts();
               }}
             >
               Clear
@@ -510,7 +595,7 @@ function Visualizer() {
               type="button"
               className="tc-link"
               onClick={() => {
-                setResult(null);
+                resetAttempts();
                 checkerRef.current?.recalibrate();
               }}
             >
@@ -548,9 +633,9 @@ export function ToneVisualizer() {
         <header className="tm-head">
           <h1>Mandarin tone visualizer</h1>
           <p className="site-answer">
-            See your Chinese tones as you say them. Pick a tone, choose the
-            textbook shape or how a native speaker really says it, and your pitch
-            is drawn over that line with a tone accuracy score. A free Chinese
+            See your Chinese tones as you say them. Pick a tone or a tone pair,
+            choose how a native speaker says it slowly or at everyday speed, and
+            your pitch is drawn over that line with a tone accuracy score. A free Chinese
             pronunciation checker for tones, no sign-up.
           </p>
         </header>

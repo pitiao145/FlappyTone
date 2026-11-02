@@ -46,6 +46,13 @@ export interface VisualiserScene {
    * `PitchTrail`'s clock, which stops in silence — so does the scroll.
    */
   scroll?: { points: readonly TrailPoint[]; nowMs: number; originMs: number | null } | null;
+  /**
+   * With `scroll`: also draw the target (`tone`/`word`) as a fixed guide,
+   * starting at the bird's rest point on the scroll's own time scale, so a
+   * first attempt traces over it. The public tone visualizer sets it; the
+   * app's Free tab does not.
+   */
+  scrollGuide?: boolean;
 }
 
 /** Samples used to trace the target contour. */
@@ -95,12 +102,15 @@ export function drawVisualiser(
     const headX = originMs === null
       ? startX
       : Math.min(width * SCROLL_HEAD_FRAC, startX + (nowMs - originMs) * pxPerMs);
+    if (scene.scrollGuide && scene.tone !== null) {
+      drawTarget(ctx, height, scene, (tMs) => startX + tMs * pxPerMs);
+    }
     drawScrolling(ctx, height, points, nowMs, pxPerMs, headX);
     drawPip(ctx, height, scene.chao, headX, 0, "flying", scene.voiced, performance.now(), Infinity, true, width);
     return;
   }
 
-  if (scene.tone !== null) drawTarget(ctx, width, height, scene);
+  if (scene.tone !== null) drawTarget(ctx, height, scene, (tMs) => xFor(tMs, scene.spanMs, width));
 
   // Older attempts recede; the newest finished one is the one worth comparing.
   scene.finished.forEach((c, i) => {
@@ -138,9 +148,10 @@ export function drawVisualiser(
  */
 function drawTarget(
   ctx: CanvasRenderingContext2D,
-  width: number,
   height: number,
   scene: VisualiserScene,
+  /** Where a time on the shape's own clock lands on the canvas. */
+  xAt: (tMs: number) => number,
 ): void {
   const tone = scene.tone;
   if (tone === null) return;
@@ -153,7 +164,7 @@ function drawTarget(
   ctx.beginPath();
   for (let i = 0; i <= TARGET_STEPS; i++) {
     const shapeT = i / TARGET_STEPS;
-    const x = xFor(shapeT * durationMs, scene.spanMs, width);
+    const x = xAt(shapeT * durationMs);
     const y = chaoToY(corridorChaoAt(shape, shapeT), height);
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);

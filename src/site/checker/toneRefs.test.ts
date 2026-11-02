@@ -3,12 +3,18 @@ import { AVERAGED_PAIR_SHAPE, AVERAGED_TONE_SHAPE } from "../../game/toneAverage
 import { modeFor, refFor, TONE_REFS } from "./toneRefs.ts";
 
 describe("tone visualizer references", () => {
-  it("real speech is the natural average, textbook is the Chao letters", () => {
+  it("real speech is the natural average, textbook the slow, clear average", () => {
     expect(refFor("3").real.map(([, c]) => c)).toEqual(AVERAGED_TONE_SHAPE.natural[3]);
-    // 3 + 3 is said as 2 + 3 (third-tone sandhi).
+    expect(refFor("4").textbook.map(([, c]) => c)).toEqual(AVERAGED_TONE_SHAPE.textbook[4]);
+    // 3 + 3 is said as 2 + 3 (third-tone sandhi), in both versions.
     expect(refFor("3-3").real.map(([, c]) => c)).toEqual(AVERAGED_PAIR_SHAPE.natural["2-3"]);
-    expect(refFor("4").textbook).toEqual([[0, 5], [1, 1]]);
-    expect(refFor("3").textbook).toEqual([[0, 2], [0.5, 1], [1, 4]]);
+    expect(refFor("3-3").textbook.map(([, c]) => c)).toEqual(AVERAGED_PAIR_SHAPE.textbook["2-3"]);
+    expect(refFor("4-2").real.map(([, c]) => c)).toEqual(AVERAGED_PAIR_SHAPE.natural["4-2"]);
+  });
+
+  it("offers the four tones and all 16 pairs", () => {
+    expect(TONE_REFS.filter((r) => r.tones.length === 1)).toHaveLength(4);
+    expect(TONE_REFS.filter((r) => r.tones.length === 2)).toHaveLength(16);
   });
 
   it("every line runs 0..1 in time, inside chao 1..5", () => {

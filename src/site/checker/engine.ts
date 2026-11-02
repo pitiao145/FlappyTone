@@ -15,6 +15,8 @@
 
 import { ensureMic, getMicSession, setFrameSink, stopMic } from "../../audio/session.ts";
 import { MicError } from "../../audio/mic.ts";
+import type { Contour, TrailPoint } from "../../game/contours.ts";
+import { readAttempt, type FreeAttempt } from "../../game/freeAttempts.ts";
 import { VisualiserCore } from "../../game/visualiserCore.ts";
 import { loadSettings } from "../../game/settings.ts";
 import { sessionNoiseMeter, startingNoiseFloor } from "../../game/sessionNoise.ts";
@@ -49,6 +51,21 @@ const UNCLEAR_MIN_MS = 80;
 const SEED_F0 = 168;
 
 export type CalStep = "high" | "low";
+export type { FreeAttempt };
+
+function durationOf(points: readonly TrailPoint[]): number {
+  return points.length === 0 ? 0 : points[points.length - 1].atMs - points[0].atMs;
+}
+
+/** A Free-mode attempt as the time-zeroed contour scoring reads. */
+function trailContour(points: readonly TrailPoint[]): Contour {
+  const t0 = points[0]?.atMs ?? 0;
+  return {
+    points: points.map((p) => ({ tMs: p.atMs - t0, chao: p.chao })),
+    startedAtMs: t0,
+    endedAtMs: points.at(-1)?.atMs ?? t0,
+  };
+}
 
 export interface CheckerEvents {
   /** A calibration take is wanted (`retry` after a take that failed). */
@@ -57,7 +74,12 @@ export interface CheckerEvents {
   onCalProgress(fraction: number): void;
   /** The board is ready (`fromApp` = the game's own calibration was used). */
   onReady(fromApp: boolean): void;
-  onAttempt(result: AttemptResult): void;
+  /**
+   * One finished attempt, scored against the chosen line. `attempt` is its
+   * Free-mode read (for the thumbnails and the Tone card), or null when it
+   * was too short to read ("couldn't hear that").
+   */
+  onAttempt(result: AttemptResult, attempt: FreeAttempt | null): void;
   /** Tab hidden: the audio is suspended until the next tap. */
   onPaused(): void;
 }
@@ -138,7 +160,7 @@ export function startChecker(
   let tracker: PitchTracker | null = null;
   /** The per-frame core shared with the app's Visualiser. */
   const core = new VisualiserCore(SPAN_MS);
-  let hadLive = false;
+  let nextAttemptId = 1;
   let rafId = 0;
 
   const beginCal = (step: CalStep, retry: boolean) => {
@@ -230,20 +252,20 @@ export function startChecker(
 
   const tick = (now: number) => {
     if (destroyed) return;
-    const frame = core.step(now, { syllables: word.syllables, free: false });
-    const { live, finished } = frame;
-    const head = live?.points.at(-1);
-    const latest = frame.attempt;
-    if (latest) {
-      hadLive = false;
-      events.onAttempt(scoreAttempt(latest, word, mode));
-    } else if (live) {
-      if ((head?.tMs ?? 0) >= UNCLEAR_MIN_MS) hadLive = true;
-    } else if (hadLive) {
-      // A voiced run closed without becoming an attempt: shorter than
-      // `minUtteranceMs`. Neutral, never a wrong score (hard rule 8).
-      hadLive = false;
-      events.onAttempt({ accuracy: null, read: null, syllables: null });
+    // The app's Free tab: one scrolling line, attempts read off the trail.
+    // Calibration keeps the still board, so the asked-for tone is drawn.
+    const free = calStep === null;
+    const frame = core.step(now, { syllables: word.syllables, free });
+    // Event-driven, not per-frame: only runs when an attempt just ended.
+    for (const pts of frame.freeAttempts) {
+      const attempt = readAttempt(nextAttemptId++, pts);
+      if (attempt) {
+        events.onAttempt(scoreAttempt(trailContour(pts), word, mode), attempt);
+      } else if (durationOf(pts) >= UNCLEAR_MIN_MS) {
+        // Shorter than `minUtteranceMs`: neutral, never a wrong score
+        // (hard rule 8). A shorter run is a click and says nothing.
+        events.onAttempt({ accuracy: null, read: null, syllables: null }, null);
+      }
     }
 
     if (ctx) {
@@ -253,11 +275,13 @@ export function startChecker(
       drawVisualiser(ctx, width, height, {
         tone: shown.tone,
         word: shown,
-        live: calStep ? null : live,
-        finished: calStep ? [] : finished,
+        live: null,
+        finished: [],
         spanMs: SPAN_MS,
         chao: frame.chao,
         voiced: !calStep && frame.dotVoiced,
+        scroll: frame.scroll,
+        scrollGuide: true,
       });
     }
     rafId = requestAnimationFrame(tick);
@@ -279,11 +303,9 @@ export function startChecker(
       mode = m;
       word = targetWord(ref, m);
       core.clear();
-      hadLive = false;
     },
     clear() {
       core.clear();
-      hadLive = false;
     },
     recalibrate() {
       clearQuickCal();

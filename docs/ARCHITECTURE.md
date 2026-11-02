@@ -113,11 +113,20 @@ Four rules hold the split together:
 **The public tone visualizer (`/tools/tone-visualizer`, `src/site/checker/`).**
 The in-app visualiser's engine on a free, no-signup page, with **no word
 audio** (hearing real words is what the app adds). The visitor picks a tone
-(1–4) or a sandhi pair (3+3, 3+4) and a version to practise and be scored
-against: **Real speech** = our speaker's natural-speed average
-(`AVERAGED_TONE_SHAPE.natural` / `AVERAGED_PAIR_SHAPE.natural`, 3+3 reads the
-spoken "2-3"), or **Textbook** = the Chao letters (55/35/214/51) over the same
-duration (`toneRefs.ts`). `board.ts` (no mic) holds the shared renderer/scorer
+(1–4) or any of the 16 tone pairs and a version to practise and be scored
+against, named like the app's speech styles: **Spoken** (`real`) = our
+speaker's natural-speed average (`AVERAGED_TONE_SHAPE.natural` /
+`AVERAGED_PAIR_SHAPE.natural`), **Standard** (`textbook`) = her slow, clear
+average (`AVERAGED_*.textbook`); 3+3 reads "2-3" in both (`toneRefs.ts`). The
+left panel (picker, reference card) is the page's own; the right side runs the
+app's **Free mode**: one scrolling line, with the picked line drawn behind it
+as a fixed guide from the bird's rest point (`scrollGuide` in
+`render/visualiser.ts`, which the app's Free tab does not set). Each attempt
+read off the trail is scored against the picked line and fills the app's two
+readout cards (Tone accuracy = running average on that line, Tone = the
+selected attempt's per-syllable read) and its corner thumbnail
+(`MobileAttemptThumb`, CSS in `src/ui/attemptThumbs.css`, with the guide drawn
+behind each attempt). `board.ts` (no mic) holds the shared renderer/scorer
 and draws the idle board; `engine.ts` is the mic chunk and never imports
 `Visualiser.tsx`. **Both `engine.ts` and the app's `Visualiser.tsx` run the
 same per-frame core, `src/game/visualiserCore.ts`** (`VisualiserCore`): when

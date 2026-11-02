@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { FreeAttempt } from "../game/freeAttempts.ts";
+import type { Polyline } from "../game/tuning.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { rgba } from "../render/palette.ts";
 import { BACKDROP, chaoToY, drawChaoGrid } from "../render/scene.ts";
 import { scrollSegments } from "../render/visualiser.ts";
+import "./attemptThumbs.css";
 
 /**
  * Free mode's recent attempts: a large portrait preview of the selected one
@@ -55,12 +57,14 @@ export function AttemptThumbs(props: {
  * bottom-right corner, always the latest attempt. A tap opens it large
  * (with the chao grid); swiping sideways walks back through the older ones
  * and selects each, so the Tone card follows like a thumbnail click on
- * desktop. A tap on the dimmed backdrop closes it.
+ * desktop. A tap on the dimmed backdrop closes it. `guide` (the public tone
+ * visualizer's picked line) is drawn behind each attempt, over the same width.
  */
 export function MobileAttemptThumb(props: {
   attempts: readonly FreeAttempt[];
   selectedId: number | null;
   onSelect: (id: number) => void;
+  guide?: Polyline | null;
 }) {
   const [open, setOpen] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -97,7 +101,7 @@ export function MobileAttemptThumb(props: {
         }}
         aria-label="Show your last attempts"
       >
-        <AttemptCanvas attempt={latest} grid={false} />
+        <AttemptCanvas attempt={latest} grid={false} guide={props.guide} />
       </button>
       {open && (
         <div
@@ -122,7 +126,7 @@ export function MobileAttemptThumb(props: {
             {newestFirst.map((a) => (
               <div className="vis-mthumb-slide" key={a.id}>
                 <div className="vis-mthumb-card" onClick={(e) => e.stopPropagation()}>
-                  <AttemptCanvas attempt={a} grid />
+                  <AttemptCanvas attempt={a} grid guide={props.guide} />
                 </div>
               </div>
             ))}
@@ -147,7 +151,16 @@ export function MobileAttemptThumb(props: {
  * One attempt, drawn at its box's real CSS size (times DPR) and never
  * stretched by CSS — stretching a small bitmap is what made it blurry.
  */
-function AttemptCanvas({ attempt, grid }: { attempt: FreeAttempt; grid: boolean }) {
+function AttemptCanvas({
+  attempt,
+  grid,
+  guide = null,
+}: {
+  attempt: FreeAttempt;
+  grid: boolean;
+  /** A target line over normalised time, drawn dashed behind the attempt. */
+  guide?: Polyline | null;
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   useEffect(() => {
@@ -189,6 +202,21 @@ function AttemptCanvas({ attempt, grid }: { attempt: FreeAttempt; grid: boolean 
     const left = grid ? 28 : 8;
     const right = 8;
     const spanMs = Math.max(1, last.atMs - first.atMs);
+    if (guide && guide.length > 1) {
+      // Stretched over the attempt's own width: tone accuracy ignores speed,
+      // so the shapes are compared, not the timing.
+      ctx.setLineDash([4, 6]);
+      ctx.strokeStyle = rgba("demo", 0.55);
+      ctx.lineWidth = grid ? 2 : 1.25;
+      ctx.beginPath();
+      guide.forEach(([t, c], i) => {
+        const x = left + t * (w - left - right);
+        const y = chaoToY(c, h);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
     // The same chao scale as the main canvas (chaoToY), so heights compare.
     const segs = scrollSegments(pts, last.atMs, (w - left - right) / spanMs, w - right, h);
     ctx.lineJoin = "round";
@@ -202,6 +230,6 @@ function AttemptCanvas({ attempt, grid }: { attempt: FreeAttempt; grid: boolean 
       seg.points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
       ctx.stroke();
     }
-  }, [attempt, grid, size]);
+  }, [attempt, grid, guide, size]);
   return <canvas ref={ref} />;
 }
