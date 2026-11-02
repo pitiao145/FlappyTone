@@ -25,6 +25,7 @@ import {
 import type { CalStep, Checker, FreeAttempt } from "../checker/engine.ts";
 // No audio: draws finished attempts only (the app's own corner thumbnail).
 import { AttemptThumbs, MobileAttemptThumb } from "../../ui/AttemptThumbs.tsx";
+import { ChevronIcon } from "../../ui/toneIcons.tsx";
 import { InAppMicNotice, MicAllowNote, MicHelpPanel, continueInApp } from "../../ui/MicHelp.tsx";
 
 const PATH = "/tools/tone-visualizer";
@@ -163,6 +164,8 @@ function Visualizer() {
   /** Running tone accuracy on the current line; reset on a new line or Clear. */
   const [stats, setStats] = useState({ sum: 0, n: 0 });
   const [boardDrawn, setBoardDrawn] = useState(false);
+  /** The tone pairs row; closed at first (the prerender has it closed too). */
+  const [pairsOpen, setPairsOpen] = useState(false);
   const reporter = useReporter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -197,6 +200,8 @@ function Visualizer() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the URL is read once, after hydration
     setRef(next.ref);
     setMode(next.mode);
+    // A pair from the URL must be visible, so its row opens.
+    if (next.ref.tones.length > 1) setPairsOpen(true);
   }, []);
 
   // The idle board, drawn by the app's own renderer (grid, corridor, bird).
@@ -342,12 +347,27 @@ function Visualizer() {
             <RefChip key={r.id} r={r} selected={r.id === ref.id} pick={() => choose(r, mode)} />
           ))}
         </div>
-        <div className="tc-picker-label">Tone pairs</div>
-        <div className="tc-row">
-          {PAIRS.map((r) => (
-            <RefChip key={r.id} r={r} selected={r.id === ref.id} pick={() => choose(r, mode)} />
-          ))}
-        </div>
+        {/* Folded by default: 16 chips would crowd the panel. */}
+        <button
+          type="button"
+          className="tc-pairs-toggle"
+          aria-expanded={pairsOpen}
+          aria-controls="tc-pairs"
+          onClick={() => setPairsOpen((o) => !o)}
+        >
+          <span className="tc-picker-label">Tone pairs</span>
+          <span className="tc-pairs-hint">
+            {ref.tones.length > 1 ? ref.label : `${PAIRS.length} pairs`}
+          </span>
+          <ChevronIcon open={pairsOpen} className="tc-pairs-chevron" />
+        </button>
+        {pairsOpen && (
+          <div className="tc-row" id="tc-pairs">
+            {PAIRS.map((r) => (
+              <RefChip key={r.id} r={r} selected={r.id === ref.id} pick={() => choose(r, mode)} />
+            ))}
+          </div>
+        )}
 
         <div className="tc-picker-label">Practise against</div>
         <div className="tc-toggle" role="radiogroup" aria-label="Reference line">
