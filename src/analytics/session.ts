@@ -70,7 +70,60 @@ export type MicFailureReason =
   | "permission-denied"
   | "no-microphone"
   | "no-audioworklet"
+  | "in-use"
   | "unknown";
+
+/** Restates `audio/mic.ts`'s `MicErrorName`; `session.test.ts` pins the two together. */
+export type MicErrorNameValue =
+  | "NotAllowedError"
+  | "SecurityError"
+  | "NotFoundError"
+  | "NotReadableError"
+  | "OverconstrainedError"
+  | "AbortError"
+  | "TypeError"
+  | "other";
+
+/** Which page asked for the mic. The recording booth sends no `mic` event. */
+export type MicSurface = "app" | "demo" | "visualizer-tool";
+
+/** Restates `lib/micPermission.ts`'s `MicPermission`; pinned in `session.test.ts`. */
+export type MicPermissionValue = "granted" | "prompt" | "denied" | "unsupported";
+
+/** Restates `lib/inAppBrowser.ts`'s `InAppApp`; pinned in `session.test.ts`. */
+export type InAppAppValue =
+  | "instagram"
+  | "facebook"
+  | "threads"
+  | "line"
+  | "wechat"
+  | "tiktok"
+  | "linkedin"
+  | "snapchat"
+  | "pinterest"
+  | "reddit"
+  | "x"
+  | "kakaotalk"
+  | "google-app"
+  | "webview-android"
+  | "webview-ios"
+  | "none";
+
+/** Why the mic help panel or the in-app notice is on screen. */
+export type MicHelpReason = "permission-denied" | "blocked-before" | "in-app" | "in-use";
+
+/**
+ * Every mic request's context. `perm_before` is the browser's permission
+ * state read just before `getUserMedia`; `ms` is tap → result, rounded to
+ * 100 ms (a denial under ~1 s means no prompt was shown); `attempt` counts
+ * requests in this page load. `in_app_browser` rides on the super property.
+ */
+export interface MicContext {
+  surface: MicSurface;
+  perm_before: MicPermissionValue;
+  ms: number;
+  attempt: number;
+}
 
 /**
  * Properties a route-table page adds to its own `$pageview` (global tier).
@@ -143,8 +196,18 @@ export type AnalyticsEvent =
       seoPage?: string;
       seoAngle?: "learner" | "teacher" | "general";
     }
-  | { type: "mic"; ok: true }
-  | { type: "mic"; ok: false; reason: MicFailureReason }
+  | ({ type: "mic"; ok: true } & MicContext)
+  | ({ type: "mic"; ok: false; reason: MicFailureReason; error_name: MicErrorNameValue } & MicContext)
+  /**
+   * The mic help shown at the mic step (`src/ui/MicHelp.tsx`): the blocked-mic
+   * panel and the in-app "open in your browser" notice. Closed values only.
+   */
+  | {
+      type: "mic_help";
+      action: "shown" | "reload" | "try_again" | "open_external" | "copy_link" | "dismissed";
+      surface: MicSurface;
+      reason: MicHelpReason;
+    }
   | { type: "calib_step"; step: CalibStep }
   | { type: "calib_done" }
   | { type: "calib_abandoned"; step: CalibStep }
@@ -312,11 +375,12 @@ export type AnalyticsEvent =
   /**
    * The Play home's "open in your browser" prompt, shown only inside the
    * Instagram/TikTok/Facebook in-app browsers (`src/lib/inAppBrowser.ts`).
-   * `detected` once per session; the rest follow the overlay. Closed unions.
+   * `detected` once per /app load for any in-app browser; the rest follow the
+   * overlay. Closed unions.
    */
   | {
       type: "inapp_prompt";
-      app: "instagram" | "tiktok" | "facebook";
+      app: Exclude<InAppAppValue, "none">;
       platform: "ios" | "android" | "other";
       action: "detected" | "shown" | "dismissed" | "open_external_clicked" | "copy_link_clicked";
     }
@@ -495,6 +559,7 @@ export type AnalyticsTier = "gameplay" | "global";
  */
 export const EVENT_TIERS: Record<AnalyticsEvent["type"], AnalyticsTier> = {
   mic: "gameplay",
+  mic_help: "global",
   calib_step: "gameplay",
   calib_done: "gameplay",
   calib_abandoned: "gameplay",

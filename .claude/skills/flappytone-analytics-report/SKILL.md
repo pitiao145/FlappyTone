@@ -56,6 +56,8 @@ Never print IP addresses or Supabase user ids. Display names (CleverKite98) are 
 | Free tools | `tools`: `tone-test:*`, `tone-visualizer:*`; `app_opens` = tone test's button into `/app` |
 | Signup wall | `auth_screens` (`signup`/`login`); since 2026-10-29 `/app` needs an account |
 | Played | "Played" = `game_runs ≥ 1`. `tutorial_runs` only = "tutorial only". Also `best_score`, `mic_ok`, `calib_done`; `mic_denied > 0` with `mic_ok = 0` = blocked the mic and could not play (name it in Notes); reached `/app` with both 0 = never asked for the mic |
+| Which browser | `in_app`: `none` = normal browser, else the app (`instagram`, `line`, `facebook`, `x`, `google-app`, `threads`, `wechat`, `tiktok`, …, `webview-android`/`webview-ios`). From the `in_app_browser` super property since brief 27; before it, from the first page view's user agent with the same rules as `src/lib/inAppBrowser.ts` |
+| Mic trouble | `mic_ok`/`mic_denied` count the game only (`surface = app`; before brief 27 the demo and visualizer were mixed in). `mic_perm_first` = browser permission before the first request (`prompt`/`granted`/`denied`/`unsupported`). `mic_errors` = `surface:error_name` per failure (`NotAllowedError` = blocked, `NotReadableError` = mic used by another app). `mic_help` = `surface:reason:action` from the help panel (`reload`, `try_again`, `open_external`, `copy_link`). To compare "only denied" by browser, group `mic_denied > 0 AND mic_ok = 0` by `in_app` |
 | Money | `daily_limit`, `earlybird_shown`, `earlybird_clicks`; purchase = Supabase `entitlement` row |
 
 ## Pitfalls
@@ -67,4 +69,5 @@ Never print IP addresses or Supabase user ids. Display names (CleverKite98) are 
 - **New or returning:** `returning` = a `flappytone.com` page view in the 90 days before the window.
 - **A lone `$pageleave`** with no page view is a stale tab. The query drops it; do not add it back.
 - **Source on returning people** is the source of this visit, not their first visit ever.
+- **`perm_before`, `error_name`, `mic_help`** exist only from the brief-27 deploy; earlier rows show `(null)` / `[]`. PostHog warns that they are not in the taxonomy until the first event arrives; ignore it.
 - **Edit the rules only in `journey.sql`.** If you find a new bot pattern or a new Pierre device, change the query, re-run it on a known day, and say so in Notes.

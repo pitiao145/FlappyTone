@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PH_ALLOW, sanitizeGameProperties, scrubNameFromUrls, stripPersonUrls, withPageViewProps } from "./posthog.ts";
+import { PH_ALLOW, sanitizeGameProperties, scrubNameFromUrls, stripPersonUrls, withPageViewProps, inAppBrowserProperties } from "./posthog.ts";
 
 describe("sanitizeGameProperties", () => {
   it("passes through our own event fields untouched", () => {
@@ -124,6 +124,22 @@ describe("scrubNameFromUrls", () => {
       $initial_referrer: "https://x.com/",
       $pathname: "/app",
       name: "kept",
+    });
+  });
+});
+
+describe("inAppBrowserProperties", () => {
+  it("sends `none` for a normal browser, so a filter can select it", () => {
+    expect(inAppBrowserProperties({ app: "none", platform: "ios" })).toEqual({
+      register: { in_app_browser: "none", in_app_platform: "ios" },
+      set: { last_in_app_browser: "none" },
+      setOnce: { initial_in_app_browser: "none" },
+    });
+  });
+  it("sends the app and platform for an in-app browser", () => {
+    expect(inAppBrowserProperties({ app: "line", platform: "android" }).register).toEqual({
+      in_app_browser: "line",
+      in_app_platform: "android",
     });
   });
 });

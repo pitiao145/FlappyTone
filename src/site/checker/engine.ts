@@ -80,7 +80,7 @@ export interface Checker {
  * await. Rejects with a `MicError`; `micErrorMessage` turns it into copy.
  */
 export function openMic(): Promise<unknown> {
-  return ensureMic();
+  return ensureMic("visualizer-tool");
 }
 
 export function micErrorKind(err: unknown): string {

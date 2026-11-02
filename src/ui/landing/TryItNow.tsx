@@ -31,6 +31,7 @@ import { Confetti } from "../Confetti.tsx";
 import { toneBreakdown, type RunStats } from "../../game/scoring.ts";
 import { appHref } from "../appLink.ts";
 import { playableSeed, seededRound } from "./demoSeed.ts";
+import { InAppMicNotice, MicAllowNote, MicHelpPanel, continueInApp } from "../MicHelp.tsx";
 import "./tryItNow.css";
 
 type MiniModule = typeof import("./miniGame.ts");
@@ -108,7 +109,7 @@ type Step =
   | { kind: "preparing" }
   | { kind: "playing" }
   | { kind: "done"; stats: RunStats; level: Level }
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: string; micKind?: string };
 
 /**
  * The hero's demo, with a "Try it now" button over it. Tap once: the mic
@@ -258,6 +259,8 @@ export function TryItNow({
     const level = picked?.level ?? classicLevel;
     setRunMode(picked?.run.mode ?? "game");
     lastRef.current = { mini, voice };
+    // Starting here is the in-app notice's "continue here" (brief 27).
+    continueInApp();
     setStep({ kind: "preparing" });
     trackTry("started", { voice: mini.hasSavedCalibration() ? "saved" : voice });
     const attempt = ++attemptRef.current;
@@ -325,7 +328,7 @@ export function TryItNow({
         if (!current()) return;
         const kind = mini.micErrorKind(err);
         trackTry(kind === "permission-denied" ? "mic_denied" : "error");
-        setStep({ kind: "error", message: mini.micErrorCopy(kind) });
+        setStep({ kind: "error", message: mini.micErrorCopy(kind), micKind: kind });
       });
   };
 
@@ -461,6 +464,7 @@ export function TryItNow({
         )}
         {step.kind === "choose" && (
           <div className="sky-try-panel">
+            <InAppMicNotice surface="demo" />
             <p>
               {step.calibrated
                 ? "Listen to each word, then say it to fly through its tunnel."
@@ -480,6 +484,7 @@ export function TryItNow({
                 </button>
               </div>
             )}
+            <MicAllowNote className="sky-small" />
             <p className="sky-small">{brand.requirement}</p>
           </div>
         )}
@@ -511,7 +516,21 @@ export function TryItNow({
             />
           </div>
         )}
-        {step.kind === "error" && (
+        {step.kind === "error" && step.micKind === "permission-denied" && (
+          <div className="sky-try-panel">
+            <MicHelpPanel
+              surface="demo"
+              reason="permission-denied"
+              onTryAgain={() => {
+                const last = lastRef.current;
+                // Asks again inside this tap (hard rule 4).
+                if (last) start(last.mini, last.voice);
+                else void open();
+              }}
+            />
+          </div>
+        )}
+        {step.kind === "error" && step.micKind !== "permission-denied" && (
           <div className="sky-try-panel" role="alert">
             <p>{step.message}</p>
             <button className="sky-btn sky-btn-ghost" onClick={open}>

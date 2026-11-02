@@ -1,32 +1,73 @@
-// Detects the Instagram / TikTok / Facebook in-app browsers from the
-// user-agent. Pure: no `window`, no storage, so it tests offline. Those
-// browsers keep their own localStorage, so a player who later returns via
-// Safari/Chrome starts from zero and PostHog splits them in two — the reason
-// the Play home shows a soft "open in your browser" prompt. The game itself
-// works there (mic included), so nothing here blocks or redirects.
+// Detects which app's in-app browser (if any) a page runs in, from the
+// user-agent. Pure: no `window`, no storage, so it tests offline against real
+// UA strings (`inAppBrowser.fixtures.ts`). Those browsers keep their own
+// localStorage, so a player who later returns via Safari/Chrome starts from
+// zero and PostHog splits them in two — the reason the Play home shows a soft
+// "open in your browser" prompt. The mic does not always work there: some
+// (LINE on Android, seen 2026-11) deny it at once with no prompt, so the mic
+// step also offers to open the page in the real browser. Nothing here blocks
+// or redirects.
 
-export type InAppApp = "instagram" | "tiktok" | "facebook";
+/** A closed set: every value is safe to send to analytics as-is. */
+export type InAppApp =
+  | "instagram"
+  | "facebook"
+  | "threads"
+  | "line"
+  | "wechat"
+  | "tiktok"
+  | "linkedin"
+  | "snapchat"
+  | "pinterest"
+  | "reddit"
+  | "x"
+  | "kakaotalk"
+  | "google-app"
+  | "webview-android"
+  | "webview-ios"
+  | "none";
 export type InAppPlatform = "ios" | "android" | "other";
 
 export interface InAppBrowser {
-  app: InAppApp | null;
+  app: InAppApp;
   platform: InAppPlatform;
 }
 
+/**
+ * Named apps first, in order: Threads ("Barcelona") and Instagram before
+ * Facebook, whose tokens can sit beside theirs. The generic webviews last.
+ */
+const APP_RULES: ReadonlyArray<readonly [InAppApp, RegExp]> = [
+  ["threads", /Barcelona/],
+  ["instagram", /Instagram/i],
+  ["facebook", /FBAN|FBAV|FB_IAB|FB4A/], // Messenger included (FBAN/MessengerForiOS, FB_IAB/MESSENGER)
+  ["line", /\bLine\//],
+  ["wechat", /MicroMessenger/i],
+  ["tiktok", /musical_ly|BytedanceWebview|TikTok|trill_/i],
+  ["linkedin", /LinkedInApp/i],
+  ["snapchat", /Snapchat/i],
+  ["pinterest", /Pinterest/i],
+  ["reddit", /Reddit/i],
+  ["x", /Twitter/i],
+  ["kakaotalk", /KAKAOTALK/i],
+  ["google-app", /\bGSA\//],
+];
+
+/** iOS browsers that, like a webview, leave `Safari/` out of their UA. */
+const IOS_BROWSERS = /CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|DuckDuckGo|Brave|YaBrowser/;
+
 export function detectInAppBrowser(userAgent: string): InAppBrowser {
   const ua = userAgent ?? "";
-  const platform: InAppPlatform = /iPhone|iPad|iPod/i.test(ua)
-    ? "ios"
-    : /Android/i.test(ua)
-      ? "android"
-      : "other";
-  // Instagram first: its Android UA can sit next to Facebook-family tokens.
-  let app: InAppApp | null = null;
-  if (/Instagram/i.test(ua)) app = "instagram";
-  else if (/musical_ly|BytedanceWebview|TikTok/i.test(ua)) app = "tiktok";
-  else if (/FBAN|FBAV/.test(ua)) app = "facebook";
-  return { app, platform };
+  const ios = /iPhone|iPad|iPod/i.test(ua);
+  const platform: InAppPlatform = ios ? "ios" : /Android/i.test(ua) ? "android" : "other";
+  for (const [app, re] of APP_RULES) if (re.test(ua)) return { app, platform };
+  if (platform === "android" && /; wv\)/.test(ua)) return { app: "webview-android", platform };
+  if (ios && !/Safari\//.test(ua) && !IOS_BROWSERS.test(ua)) return { app: "webview-ios", platform };
+  return { app: "none", platform };
 }
+
+/** The apps that get the Play home's open-in-browser prompt (brief 03). */
+export const PROMPT_APPS: ReadonlySet<InAppApp> = new Set(["instagram", "tiktok", "facebook"]);
 
 /**
  * The Android Chrome intent for a page URL. Path, query (so `utm_*` survives)

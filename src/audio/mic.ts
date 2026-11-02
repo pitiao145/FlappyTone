@@ -4,15 +4,67 @@ export type MicErrorKind =
   | "permission-denied"
   | "no-microphone"
   | "no-audioworklet"
+  | "in-use"
   | "unknown";
+
+/** The exception name behind a failure, a closed set (analytics `error_name`). */
+export type MicErrorName =
+  | "NotAllowedError"
+  | "SecurityError"
+  | "NotFoundError"
+  | "NotReadableError"
+  | "OverconstrainedError"
+  | "AbortError"
+  | "TypeError"
+  | "other";
+
+const KNOWN_NAMES = new Set<string>([
+  "NotAllowedError",
+  "SecurityError",
+  "NotFoundError",
+  "NotReadableError",
+  "OverconstrainedError",
+  "AbortError",
+  "TypeError",
+]);
 
 export class MicError extends Error {
   kind: MicErrorKind;
+  errorName: MicErrorName;
 
-  constructor(kind: MicErrorKind, message: string) {
+  constructor(kind: MicErrorKind, message: string, errorName: MicErrorName = "other") {
     super(message);
     this.name = "MicError";
     this.kind = kind;
+    this.errorName = errorName;
+  }
+}
+
+/** The closed `MicErrorName` for any thrown value. Pure. */
+export function micErrorName(err: unknown): MicErrorName {
+  if (err instanceof MicError) return err.errorName;
+  const name = (err as { name?: unknown } | null)?.name;
+  return typeof name === "string" && KNOWN_NAMES.has(name) ? (name as MicErrorName) : "other";
+}
+
+/**
+ * Maps whatever `getUserMedia` threw to a `MicError`. Pure, for tests.
+ * `NotReadableError` is the mic held by another app (a call, a recorder).
+ */
+export function toMicError(err: unknown): MicError {
+  if (err instanceof MicError) return err;
+  const name = micErrorName(err);
+  switch (name) {
+    case "NotAllowedError":
+    case "SecurityError":
+      return new MicError("permission-denied", "Microphone access was denied.", name);
+    case "NotFoundError":
+    case "OverconstrainedError":
+      return new MicError("no-microphone", "No microphone was found.", name);
+    case "NotReadableError":
+      return new MicError("in-use", "The microphone is in use by another app.", name);
+    default:
+      return new MicError("unknown", String(err), name);
   }
 }
 
@@ -218,21 +270,7 @@ export async function startMic(
           },
         });
       } catch (err) {
-        if (err instanceof DOMException) {
-          if (err.name === "NotAllowedError" || err.name === "SecurityError") {
-            throw new MicError(
-              "permission-denied",
-              "Microphone access was denied.",
-            );
-          }
-          if (
-            err.name === "NotFoundError" ||
-            err.name === "OverconstrainedError"
-          ) {
-            throw new MicError("no-microphone", "No microphone was found.");
-          }
-        }
-        throw new MicError("unknown", String(err));
+        throw toMicError(err);
       }
       // A release happened (or another acquire won) while we awaited: this
       // stream is stale — stop it rather than connect a mic nobody expects.

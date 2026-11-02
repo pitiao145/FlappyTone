@@ -6,7 +6,6 @@ vi.mock("./posthog.ts", () => ({
   initPostHog: (...args: unknown[]) => initPostHog(...args),
   setCalibrationProperties: vi.fn(),
   setDeviceProperty: vi.fn(),
-  setInAppBrowserProperty: vi.fn(),
   setFirstSeoTouch: vi.fn(),
   setPostHogConsent: vi.fn(),
   setSpeechStyleProperty: vi.fn(),

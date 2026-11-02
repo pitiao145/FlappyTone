@@ -7,6 +7,7 @@ let lastOnLost: (() => void) | undefined;
 
 vi.mock("./mic.ts", () => ({
   MicError: class extends Error {},
+  micErrorName: () => "other",
   startMic: vi.fn(
     (_sink: unknown, onLost?: () => void) =>
       new Promise((resolve) => {

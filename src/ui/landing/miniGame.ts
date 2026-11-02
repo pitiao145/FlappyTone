@@ -105,7 +105,7 @@ export function micErrorKind(err: unknown): string {
 export async function startMiniGame(opts: MiniGameOptions): Promise<MiniGame> {
   // Inside the tap, before any await: lets later cue clips play on iOS.
   unlockAudio();
-  await ensureMic();
+  await ensureMic("demo");
   // Every cue loads before the first gate, so no gate flies in silence.
   await Promise.race([
     Promise.all(opts.words.map((w) => clipUrl(w.id))),

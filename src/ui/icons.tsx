@@ -183,6 +183,17 @@ export function SpeakerHighIcon() {
   );
 }
 
+/** Phosphor `Microphone`, Bold — the "allow the microphone" step's glyph. */
+export function MicrophoneIcon() {
+  return (
+    <svg {...BOX}>
+      <rect x="88" y="24" width="80" height="144" rx="40" {...STROKE_BOLD} />
+      <line x1="128" y1="200" x2="128" y2="240" {...STROKE_BOLD} />
+      <path d="M200,128a72,72,0,0,1-144,0" {...STROKE_BOLD} />
+    </svg>
+  );
+}
+
 /** Phosphor `BellSimpleRinging`, Bold — the silent-mode warning's ring glyph. */
 export function BellRingingIcon() {
   return (

@@ -15,12 +15,33 @@ SELECT
   ip,  -- merge key only: rows with the same ip are one person on two devices or IDs. Never print it.
   first_pv, last_seen, round(span_s) AS span_s,
   cc, city, device, os, browser,
+  -- Which app's in-app browser: the `in_app_browser` super property (every event since brief 27),
+  -- else the first page view's user agent, with the rules of src/lib/inAppBrowser.ts.
+  coalesce(nullIf(iab_prop, ''), multiIf(
+    match(first_ua, 'Barcelona'), 'threads',
+    match(first_ua, '(?i)Instagram'), 'instagram',
+    match(first_ua, 'FBAN|FBAV|FB_IAB|FB4A'), 'facebook',
+    match(first_ua, '[^A-Za-z]Line/'), 'line',
+    match(first_ua, '(?i)MicroMessenger'), 'wechat',
+    match(first_ua, '(?i)musical_ly|BytedanceWebview|TikTok|trill_'), 'tiktok',
+    match(first_ua, '(?i)LinkedInApp'), 'linkedin',
+    match(first_ua, '(?i)Snapchat'), 'snapchat',
+    match(first_ua, '(?i)Pinterest'), 'pinterest',
+    match(first_ua, '(?i)Reddit'), 'reddit',
+    match(first_ua, '(?i)Twitter'), 'x',
+    match(first_ua, '(?i)KAKAOTALK'), 'kakaotalk',
+    match(first_ua, '[^A-Za-z]GSA/'), 'google-app',
+    match(first_ua, 'Android') AND match(first_ua, '; wv[)]'), 'webview-android',
+    match(first_ua, 'iPhone|iPad|iPod') AND NOT match(first_ua, 'Safari/')
+      AND NOT match(first_ua, 'CriOS|FxiOS|EdgiOS|OPiOS|OPT/|DuckDuckGo|Brave|YaBrowser'), 'webview-ios',
+    'none'
+  )) AS in_app,
   entry_path, first_ref, utm_source, utm_medium, utm_campaign, social_hint, seo_src,
   paths, pageviews,
   landing_ctas, seo_ctas, tool_ctas, app_opens, tools,
   demo_opened, demo_finished, demo_ctas,
   reached_app, auth_screens, signup_started, signup_completed, login_completed,
-  mic_ok, mic_denied, calib_done, game_runs, tutorial_runs, run_ends, best_score, score_submitted,
+  mic_ok, mic_denied, mic_perm_first, mic_errors, mic_help, calib_done, game_runs, tutorial_runs, run_ends, best_score, score_submitted,
   toneder_rounds, visualiser_sessions, leaderboard_views,
   daily_limit, earlybird_shown, earlybird_clicks, feedback
 FROM (
@@ -61,6 +82,8 @@ FROM (
     anyIf(properties.$device_type, event = '$pageview') AS device,
     anyIf(properties.$os, event = '$pageview') AS os,
     anyIf(properties.$browser, event = '$pageview') AS browser,
+    anyIf(properties.in_app_browser, coalesce(properties.in_app_browser, '') != '') AS iab_prop,
+    argMinIf(properties.$raw_user_agent, timestamp, event = '$pageview') AS first_ua,
     argMinIf(properties.$pathname, timestamp, event = '$pageview') AS entry_path,
     argMinIf(properties.$referring_domain, timestamp, event = '$pageview') AS first_ref,
     argMinIf(properties.utm_source, timestamp, event = '$pageview') AS utm_source,
@@ -91,8 +114,15 @@ FROM (
     countIf(event = 'signup_completed') AS signup_completed,
     countIf(event = 'login_completed') AS login_completed,
     -- `mic` fires with ok=false on a failure (reason e.g. permission-denied); count the two apart.
-    countIf(event = 'mic' AND properties.ok = true) AS mic_ok,
-    countIf(event = 'mic' AND properties.ok = false) AS mic_denied,
+    -- Game only: since brief 27 the demo and the tone visualizer send `surface` = demo / visualizer-tool.
+    -- Before it, every surface sent `mic` with no `surface`.
+    countIf(event = 'mic' AND properties.ok = true AND coalesce(properties.surface, 'app') = 'app') AS mic_ok,
+    countIf(event = 'mic' AND properties.ok = false AND coalesce(properties.surface, 'app') = 'app') AS mic_denied,
+    -- Brief 27 fields, all surfaces: the permission state before the first request,
+    -- each failure as surface:error_name, each help action as surface:reason:action.
+    argMinIf(properties.perm_before, timestamp, event = 'mic' AND coalesce(properties.perm_before, '') != '') AS mic_perm_first,
+    toString(groupUniqArrayIf(concat(toString(properties.surface), ':', toString(properties.error_name)), event = 'mic' AND properties.ok = false AND coalesce(properties.error_name, '') != '')) AS mic_errors,
+    toString(groupUniqArrayIf(concat(toString(properties.surface), ':', toString(properties.reason), ':', toString(properties.action)), event = 'mic_help')) AS mic_help,
     countIf(event = 'calib_done') AS calib_done,
     countIf(event = 'run_start' AND properties.mode != 'tutorial') AS game_runs,
     countIf(event = 'run_start' AND properties.mode = 'tutorial') AS tutorial_runs,

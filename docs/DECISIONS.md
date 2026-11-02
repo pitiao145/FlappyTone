@@ -1494,3 +1494,17 @@ GDPR; its help text no longer says "country only".
 Revisit if FlappyTone gets its own PostHog project: "Discard client IP data"
 plus a country-only GeoIP transformation would let the policy go back to
 "approximate country".
+
+## The mic step helps instead of failing, and every visit names its browser (2 Nov 2026, brief 27)
+
+**Evidence.** In the 45 days to 2 Nov, 23 people who asked for the mic never got it working (14 normal browser, 5 Instagram, 3 LINE, 1 Facebook) — more than the login gate had lost. Three patterns, read from the gap between the gate and the `mic` event: a slow denial (the player tapped Block; permanent on Android Chrome), a denial ~1 s after every tap with no prompt (LINE's Android webview cannot ask), and fast denials that cleared on reload (Safari remembers a denial until the page reloads). The "Before you start" screen never mentioned the mic, and the error copy was the same on every device.
+
+**Decided.**
+- The gate shows "Allow the microphone" first when the permission is not `granted`, and a blocked mic gets a per-browser fix (iOS: reload first; Android/desktop: the site-settings path; in-app: open in Chrome/Safari) with "Try again" in the tap. On `/app` a blocked or busy mic keeps the player on the gate; it used to send them home with one line of text.
+- Inside an app's browser the gate offers the real browser before the first request, with "Continue here" as the second button. It never blocks or redirects, and the Play home prompt keeps its old three apps — the mic notice covers the rest, at the moment it matters.
+- `in_app_browser` is now set on every event of every entry, `none` included. Before, it was set only on `/app` and only when Instagram/TikTok/Facebook was detected, so "normal browser" could not be filtered and LINE was invisible.
+- The `mic` event says why (`error_name`, `in-use` split out of `unknown`), whether the browser could have prompted (`perm_before`), and how fast it answered (`ms`).
+
+**Rejected.** Awaiting `permissions.query` before `getUserMedia`: an await between the tap and `AudioContext.resume()` risks the iOS gesture (hard rule 4), so the read starts in the tap and is joined after the result. `mic_help` in the gameplay tier: it is UI help, like `inapp_prompt`, so it is global. A UA-parsing dependency: 13 regexes, tested against real PostHog user agents, are enough.
+
+**Privacy.** The policy now names the in-app browser and the mic result (whether it was allowed, the prior state, the time, the error type, the help buttons). Still no audio.

@@ -23,6 +23,7 @@ import {
 } from "../checker/checkerCopy.ts";
 // Types only: erased at build, so neither chunk lands in this one.
 import type { CalStep, Checker } from "../checker/engine.ts";
+import { InAppMicNotice, MicAllowNote, MicHelpPanel, continueInApp } from "../../ui/MicHelp.tsx";
 
 const PATH = "/tools/tone-visualizer";
 
@@ -127,6 +128,8 @@ function Visualizer() {
   const [calRetry, setCalRetry] = useState(false);
   const [calProgress, setCalProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  /** The last mic failure's kind; `permission-denied` shows the unblock help. */
+  const [micKind, setMicKind] = useState<string | null>(null);
   const [result, setResult] = useState<AttemptView | null>(null);
   const [boardDrawn, setBoardDrawn] = useState(false);
   const reporter = useReporter();
@@ -212,6 +215,9 @@ function Visualizer() {
   const open = (mod: EngineModule) => {
     setPhase("opening");
     setError(null);
+    setMicKind(null);
+    // Starting here is the in-app notice's "continue here" (brief 27).
+    continueInApp();
     mod
       .openMic()
       .then(() => {
@@ -250,6 +256,7 @@ function Visualizer() {
         if (kind === "permission-denied" || kind === "no-microphone") {
           reporter.action("mic_denied");
         }
+        setMicKind(kind);
         setError(mod.micErrorMessage(err));
         setPhase("error");
         mod.shutdownMic();
@@ -361,6 +368,7 @@ function Visualizer() {
         </div>
 
         <div className="tc-status" aria-live="polite">
+          {(phase === "idle" || phase === "tap-again") && <InAppMicNotice surface="visualizer-tool" />}
           {phase === "idle" && (
             <p>
               Tap Start, then say any syllable in {ref.label.toLowerCase()} (or{" "}
@@ -371,7 +379,19 @@ function Visualizer() {
           {phase === "loading" && <p>Loading the visualizer…</p>}
           {phase === "tap-again" && <p>Ready. Tap once more to allow the microphone.</p>}
           {phase === "opening" && <p>Allow the microphone when your browser asks.</p>}
-          {phase === "error" && <p className="tc-error">{error}</p>}
+          {phase === "error" && micKind === "permission-denied" ? (
+            <MicHelpPanel
+              surface="visualizer-tool"
+              reason="permission-denied"
+              onTryAgain={() => {
+                // Asks again inside this tap (hard rule 4).
+                if (engineLoaded) open(engineLoaded);
+                else start();
+              }}
+            />
+          ) : (
+            phase === "error" && <p className="tc-error">{error}</p>
+          )}
           {phase === "cal" && (
             <div className="tc-cal">
               <div className="tc-cal-step">
@@ -446,7 +466,7 @@ function Visualizer() {
         </div>
 
         <div className="tc-controls">
-          {!running && (
+          {!running && !(phase === "error" && micKind === "permission-denied") && (
             <button
               type="button"
               className="tc-button tc-primary"
@@ -460,6 +480,7 @@ function Visualizer() {
               {startLabel}
             </button>
           )}
+          {(phase === "idle" || phase === "tap-again") && <MicAllowNote />}
           {phase === "paused" && (
             <button
               type="button"

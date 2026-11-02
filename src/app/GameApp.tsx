@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { track, trackCalibration, trackFirstSeoTouch, trackInAppBrowser, trackSpeechStyle } from "../analytics/client";
+import { track, trackCalibration, trackFirstSeoTouch, trackSpeechStyle } from "../analytics/client";
 import { seoSource } from "../site/pageAnalytics.ts";
 import { detectInAppBrowser } from "../lib/inAppBrowser";
 import { InAppBrowserPrompt } from "../ui/InAppBrowserPrompt";
@@ -7,7 +7,7 @@ import { useTier } from "../data/tier.ts";
 import type { TrackedScreen } from "../analytics/session.ts";
 import { adoptInventory, inventorySpeaker, loadInventory } from "../audio/inventory";
 import { getPlayTicket, invalidatePlayTicket } from "../audio/clipToken";
-import { MicError } from "../audio/mic";
+import { MicError, type MicErrorKind } from "../audio/mic";
 import { ensurePlaybackCtx } from "../audio/reference";
 import { ensureMic, getMicSession, MicCancelled, stopMic } from "../audio/session";
 import { incrementDailyRuns, loadDailyRuns, refreshServerDailyRuns } from "../game/dailyLimit.ts";
@@ -645,6 +645,11 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
   const micGateResumeRef = useRef<(() => void | Promise<void>) | null>(null);
   /** Whether the gate's "OK" button is mid-`ensureMic()`. */
   const [silentGateBusy, setSilentGateBusy] = useState(false);
+  /**
+   * The last mic failure the gate can help with in place (blocked, or the mic
+   * held by another app). The player stays on the gate with "Try again".
+   */
+  const [micFailure, setMicFailure] = useState<MicErrorKind | null>(null);
 
   const goHome = useCallback(() => {
     navRef.current += 1;
@@ -669,6 +674,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
   const requestMicAndThen = useCallback((resume: () => void | Promise<void>) => {
     micGateResumeRef.current = resume;
     setError(null);
+    setMicFailure(null);
     setScreen("silentGate");
   }, []);
 
@@ -691,8 +697,17 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
       await resume?.();
     } catch (err) {
       if (gen !== navRef.current) return;
-      if (!(err instanceof MicCancelled)) {
-        setError(micErrorCopy(err instanceof MicError ? err.kind : "unknown"));
+      if (err instanceof MicCancelled) {
+        goHome();
+        return;
+      }
+      const kind = err instanceof MicError ? err.kind : "unknown";
+      setError(micErrorCopy(kind));
+      // Blocked or busy: stay on the gate, which shows how to fix it and a
+      // "Try again" that asks again inside its own tap.
+      if (kind === "permission-denied" || kind === "in-use") {
+        setMicFailure(kind);
+        return;
       }
       goHome();
     } finally {
@@ -1026,12 +1041,11 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
       ...(isShareRef ? { ref: "share" as const } : {}),
       ...(seo ? { seoPage: seo.path, seoAngle: seo.angle } : {}),
     });
-    // In-app browsers (Instagram/TikTok/Facebook): once per session, nothing
-    // at all for a normal browser.
+    // In-app browsers: once per /app load, nothing for a normal browser.
+    // The `in_app_browser` super property itself is set at PostHog start.
     try {
       const inApp = detectInAppBrowser(navigator.userAgent);
-      if (inApp.app) {
-        trackInAppBrowser(inApp.app);
+      if (inApp.app !== "none") {
         track({ type: "inapp_prompt", app: inApp.app, platform: inApp.platform, action: "detected" });
       }
     } catch {
@@ -1236,7 +1250,12 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
           <SilentModeGate
             busy={silentGateBusy}
             error={error}
+            micFailure={micFailure}
             onConfirm={() => void confirmSilentGate()}
+            onBack={() => {
+              setError(null);
+              goHome();
+            }}
             canvasWidth={CANVAS_W}
             canvasHeight={GAME_CANVAS_H}
           />

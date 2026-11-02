@@ -63,6 +63,7 @@
 import type { BeforeSendFn, CaptureResult } from "posthog-js";
 import type posthogType from "posthog-js";
 import type { SpeechStyle } from "../game/words.ts";
+import { detectInAppBrowser, type InAppBrowser } from "../lib/inAppBrowser.ts";
 import {
   EVENT_TIERS,
   eventTier,
@@ -315,6 +316,9 @@ export function initPostHog(consent: boolean, pageProps?: SeoPageViewProps): voi
           // file gates gameplay events itself, before they ever reach `ph`.
           opt_out_capturing_by_default: false,
         });
+        // Registered before the first `$pageview`, which the SDK sends on a
+        // 1 ms timer after init, so every event of the visit carries it.
+        registerInAppBrowser(posthog);
         const queued = pending;
         pending = [];
         for (const run of queued) run();
@@ -458,18 +462,36 @@ export function setFirstSeoTouch(page: string, angle: string): void {
 }
 
 /**
- * Stamps `in_app_browser` on every later event (a super property), so charts
- * can split Instagram/TikTok/Facebook in-app sessions from normal browsers.
- * Only ever called when an in-app browser was detected. Global tier.
+ * The in-app browser super properties and person properties for a UA. Every
+ * value comes from `detectInAppBrowser`'s closed sets; `none` is sent too, so
+ * a filter can select "normal browser". Pure, for tests.
  */
-export function setInAppBrowserProperty(app: string): void {
-  runOrQueue(() => {
-    try {
-      ph?.register({ in_app_browser: app });
-    } catch {
-      // ignore
-    }
-  });
+export function inAppBrowserProperties(info: InAppBrowser): {
+  register: { in_app_browser: string; in_app_platform: string };
+  set: { last_in_app_browser: string };
+  setOnce: { initial_in_app_browser: string };
+} {
+  return {
+    register: { in_app_browser: info.app, in_app_platform: info.platform },
+    set: { last_in_app_browser: info.app },
+    setOnce: { initial_in_app_browser: info.app },
+  };
+}
+
+/**
+ * Stamps `in_app_browser`/`in_app_platform` on every event of the visit
+ * (super properties), and the first/last value on the person. Runs at SDK
+ * start on every entry (`/`, the site pages, `/app`). Global tier.
+ */
+function registerInAppBrowser(client: typeof posthogType): void {
+  try {
+    if (typeof navigator === "undefined") return;
+    const p = inAppBrowserProperties(detectInAppBrowser(navigator.userAgent));
+    client.register(p.register);
+    client.setPersonProperties(p.set, p.setOnce);
+  } catch {
+    // ignore
+  }
 }
 
 /**

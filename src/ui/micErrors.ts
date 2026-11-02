@@ -3,6 +3,7 @@ export const ERROR_COPY: Record<string, string> = {
   "permission-denied":
     "Microphone access was denied. Allow the mic in your browser's site settings and reload.",
   "no-microphone": "No microphone found. Plug one in and reload.",
+  "in-use": "Another app is using the microphone. Close it, then try again.",
   "no-audioworklet":
     "This browser doesn't support AudioWorklet. Try a recent Chrome, Firefox or Safari.",
   unknown: "Couldn't start the microphone.",

@@ -26,7 +26,6 @@ import {
   initPostHog,
   setCalibrationProperties,
   setDeviceProperty,
-  setInAppBrowserProperty,
   setFirstSeoTouch,
   setPostHogConsent,
   setSpeechStyleProperty,
@@ -79,15 +78,6 @@ export function trackSpeechStyle(style: SpeechStyle): void {
 export function trackFirstSeoTouch(page: string, angle: string): void {
   try {
     setFirstSeoTouch(page, angle);
-  } catch {
-    // ignore
-  }
-}
-
-/** Stamps the in-app browser (instagram/tiktok/facebook) as a super property. */
-export function trackInAppBrowser(app: string): void {
-  try {
-    setInAppBrowserProperty(app);
   } catch {
     // ignore
   }

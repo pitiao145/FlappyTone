@@ -8,40 +8,21 @@ import {
   detectInAppBrowser,
   dismissInAppPrompt,
   isInAppPromptDismissed,
+  PROMPT_APPS,
   type InAppBrowser,
 } from "../lib/inAppBrowser.ts";
 import { PROMPT_COPY, promptLang } from "./inAppPromptCopy.ts";
+import { copyText } from "../lib/copyText.ts";
 
-type Detected = InAppBrowser & { app: NonNullable<InAppBrowser["app"]> };
+type Detected = InAppBrowser & { app: Exclude<InAppBrowser["app"], "none"> };
 
+/** Only the apps in `PROMPT_APPS` get this prompt; the mic step covers the rest. */
 function detect(): Detected | null {
   try {
     const d = detectInAppBrowser(navigator.userAgent);
-    return d.app ? (d as Detected) : null;
+    return PROMPT_APPS.has(d.app) ? (d as Detected) : null;
   } catch {
     return null;
-  }
-}
-
-async function copyText(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    // Older webviews: execCommand fallback.
-    try {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand("copy");
-      ta.remove();
-      return ok;
-    } catch {
-      return false;
-    }
   }
 }
 

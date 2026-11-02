@@ -1,18 +1,30 @@
 import { loadReduceMotion } from "../game/settings.ts";
-import { BatteryFullIcon, BellRingingIcon, SpeakerHighIcon } from "./icons.tsx";
+import type { MicErrorKind } from "../audio/mic.ts";
+import { BatteryFullIcon, BellRingingIcon, MicrophoneIcon, SpeakerHighIcon } from "./icons.tsx";
+import {
+  InAppMicNotice,
+  MicHelpPanel,
+  micAllowStepCopy,
+  shouldShowInAppNotice,
+  useMicPermission,
+} from "./MicHelp.tsx";
+import { useState } from "react";
 
 const STEPS = [
   {
+    key: "bell",
     Icon: BellRingingIcon,
     title: "Switch to loud mode",
     body: "Flip your phone's silent switch off. The game doesn't work in silent mode.",
   },
   {
+    key: "speaker",
     Icon: SpeakerHighIcon,
     title: "Turn up your volume",
     body: "You need to hear the example before you say it.",
   },
   {
+    key: "battery",
     Icon: BatteryFullIcon,
     title: "Turn off power saving",
     body: "Low power mode lowers the frame rate, so the game looks slow.",
@@ -22,7 +34,14 @@ const STEPS = [
 interface Props {
   busy: boolean;
   error: string | null;
+  /**
+   * Set when the last mic request was blocked (`permission-denied`): the
+   * gate then shows how to unblock it instead of the steps.
+   */
+  micFailure?: MicErrorKind | null;
   onConfirm: () => void;
+  /** Leaves the gate from the blocked-mic panel. */
+  onBack?: () => void;
   canvasWidth: number;
   canvasHeight: number;
 }
@@ -42,8 +61,30 @@ interface Props {
  *
  * Shown every single time, deliberately not persisted/dismissible — the
  * player's mic (and therefore this duck) gets reopened fresh on every run.
+ *
+ * The mic step's help (brief 27): an "Allow the microphone" item first when
+ * the mic is not granted yet; inside an app's browser, the "open in your
+ * browser" notice in place of OK (its "Continue here" is the OK); and when
+ * the mic is blocked, the unblock panel in place of the steps.
  */
-export function SilentModeGate({ busy, error, onConfirm, canvasWidth, canvasHeight }: Props) {
+export function SilentModeGate({
+  busy,
+  error,
+  micFailure,
+  onConfirm,
+  onBack,
+  canvasWidth,
+  canvasHeight,
+}: Props) {
+  const perm = useMicPermission();
+  const [inApp] = useState(() => shouldShowInAppNotice());
+  const blocked = micFailure === "permission-denied" || (micFailure == null && perm === "denied");
+  const allow = micAllowStepCopy();
+  const steps =
+    perm !== null && perm !== "granted"
+      ? [{ key: "mic", Icon: MicrophoneIcon, ...allow }, ...STEPS]
+      : STEPS;
+
   return (
     <div className="stage game-stage playhome-stage">
       <div
@@ -52,28 +93,44 @@ export function SilentModeGate({ busy, error, onConfirm, canvasWidth, canvasHeig
       >
         <div className="screen playhome-overlay">
           <h1>Before you start</h1>
-          <ol className={`silent-gate-steps${loadReduceMotion() ? " silent-gate-steps--still" : ""}`}>
-            {STEPS.map(({ Icon, title, body }) => (
-              <li key={title} className="silent-gate-step">
-                <span className="silent-gate-icon">
-                  <Icon />
-                </span>
-                <span className="silent-gate-text">
-                  <strong>{title}</strong>
-                  <span>{body}</span>
-                </span>
-              </li>
-            ))}
-          </ol>
-          <p className="note">
-            For best results, do not use bluetooth headphones as they may cause lag.
-          </p>
-          <div className="menu playhome-menu">
-            <button className="primary" disabled={busy} onClick={onConfirm}>
-              {busy ? "Opening mic…" : "OK"}
-            </button>
-          </div>
-          {error && <p className="error">{error}</p>}
+          {blocked ? (
+            <MicHelpPanel
+              surface="app"
+              reason={micFailure === "permission-denied" ? "permission-denied" : "blocked-before"}
+              onTryAgain={onConfirm}
+              onBack={onBack}
+              busy={busy}
+            />
+          ) : (
+            <>
+              <ol className={`silent-gate-steps${loadReduceMotion() ? " silent-gate-steps--still" : ""}`}>
+                {steps.map(({ key, Icon, title, body }) => (
+                  <li key={key} className={`silent-gate-step silent-gate-step--${key}`}>
+                    <span className="silent-gate-icon">
+                      <Icon />
+                    </span>
+                    <span className="silent-gate-text">
+                      <strong>{title}</strong>
+                      <span>{body}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <p className="note">
+                For best results, do not use bluetooth headphones as they may cause lag.
+              </p>
+              {inApp ? (
+                <InAppMicNotice surface="app" onContinue={onConfirm} busy={busy} />
+              ) : (
+                <div className="menu playhome-menu">
+                  <button className="primary" disabled={busy} onClick={onConfirm}>
+                    {busy ? "Opening mic…" : "OK"}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+          {error && !blocked && <p className="error">{error}</p>}
         </div>
       </div>
     </div>

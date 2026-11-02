@@ -8,7 +8,9 @@
  * its own frame sink.
  */
 import { track } from "../analytics/client.ts";
-import { MicError, startMic, type MicSession } from "./mic.ts";
+import type { MicSurface } from "../analytics/session.ts";
+import { queryMicPermission } from "../lib/micPermission.ts";
+import { MicError, micErrorName, startMic, type MicSession } from "./mic.ts";
 
 export type FrameSink = (frame: Float32Array, sampleRate: number) => void;
 
@@ -23,6 +25,8 @@ let startingGen = -1;
  * current session — otherwise the mic and its AudioContext leak, live, forever.
  */
 let generation = 0;
+/** Mic requests made in this page load, for the `mic` event's `attempt`. */
+let attempts = 0;
 
 /**
  * Opens the mic if it isn't already open. **Must be called synchronously from
@@ -30,7 +34,7 @@ let generation = 0;
  *
  * Rejects with `MicCancelled` if `stopMic()` was called while it was in flight.
  */
-export function ensureMic(): Promise<MicSession> {
+export function ensureMic(surface: MicSurface = "app"): Promise<MicSession> {
   if (session) return Promise.resolve(session);
   // Only share an in-flight start from the *current* generation. A start that
   // `stopMic` already doomed is going to reject with MicCancelled, and handing
@@ -38,6 +42,27 @@ export function ensureMic(): Promise<MicSession> {
   if (starting && startingGen === generation) return starting;
 
   const gen = generation;
+  // The `mic` event's context. The permission read starts before
+  // `startMic` (so before `getUserMedia`) but is not awaited: nothing may sit
+  // between the tap and the AudioContext's resume (hard rule 4).
+  const t0 = performance.now();
+  const attempt = ++attempts;
+  const permBefore = queryMicPermission();
+  const report = (outcome: { ok: true } | { ok: false; err: unknown }) => {
+    const ms = Math.round((performance.now() - t0) / 100) * 100;
+    void permBefore.then((perm_before) => {
+      const ctx = { surface, perm_before, ms, attempt };
+      if (outcome.ok) track({ type: "mic", ok: true, ...ctx });
+      else
+        track({
+          type: "mic",
+          ok: false,
+          reason: outcome.err instanceof MicError ? outcome.err.kind : "unknown",
+          error_name: micErrorName(outcome.err),
+          ...ctx,
+        });
+    });
+  };
   const clearIfCurrent = () => {
     if (startingGen === gen) {
       starting = null;
@@ -62,7 +87,7 @@ export function ensureMic(): Promise<MicSession> {
       // The single choke point for mic outcome — four UI call sites route
       // through here, and a denied mic is the most common reason a tester
       // never reaches a gate at all.
-      track({ type: "mic", ok: true });
+      report({ ok: true });
       return s;
     },
     (err: unknown) => {
@@ -70,11 +95,7 @@ export function ensureMic(): Promise<MicSession> {
       // MicCancelled is the player navigating away, not a failure. Counting it
       // as one would invent a permission problem out of an ordinary back tap.
       if (!(err instanceof MicCancelled)) {
-        track({
-          type: "mic",
-          ok: false,
-          reason: err instanceof MicError ? err.kind : "unknown",
-        });
+        report({ ok: false, err });
       }
       throw err;
     },

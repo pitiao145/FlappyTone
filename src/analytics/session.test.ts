@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { EVENT_TIERS, deviceBucket, eventTier, gateEvent, roundCalibration } from "./session.ts";
 import type { GateLogEntry } from "../game/run.ts";
-import type { AnalyticsEvent, MicFailureReason, TrackedScreen } from "./session.ts";
-import type { MicErrorKind } from "../audio/mic.ts";
+import type {
+  AnalyticsEvent,
+  InAppAppValue,
+  MicErrorNameValue,
+  MicFailureReason,
+  MicPermissionValue,
+  TrackedScreen,
+} from "./session.ts";
+import type { MicErrorKind, MicErrorName } from "../audio/mic.ts";
+import type { InAppApp } from "../lib/inAppBrowser.ts";
+import type { MicPermission } from "../lib/micPermission.ts";
 import type { Screen } from "../app/GameApp.tsx";
 import { APP_EVENTS, sanitizeGameProperties } from "./posthog.ts";
 
@@ -19,6 +28,15 @@ const _reasonMatchesMic: MicErrorKind = null as unknown as MicFailureReason;
 const _micMatchesReason: MicFailureReason = null as unknown as MicErrorKind;
 void _reasonMatchesMic;
 void _micMatchesReason;
+
+// The same both-ways pins for the other restated unions (brief 27).
+const _nameA: MicErrorName = null as unknown as MicErrorNameValue;
+const _nameB: MicErrorNameValue = null as unknown as MicErrorName;
+const _permA: MicPermission = null as unknown as MicPermissionValue;
+const _permB: MicPermissionValue = null as unknown as MicPermission;
+const _appA: InAppApp = null as unknown as InAppAppValue;
+const _appB: InAppAppValue = null as unknown as InAppApp;
+void [_nameA, _nameB, _permA, _permB, _appA, _appB];
 
 /**
  * `session.ts` restates `GameApp.tsx`'s `Screen` type (minus the dev-only
@@ -283,6 +301,7 @@ describe("eventTier", () => {
     "feedback_submitted",
     "update_banner",
     "inapp_prompt",
+    "mic_help",
     "tool_used",
     "tool_summary",
     "word_page_action",
@@ -335,5 +354,111 @@ describe("APP_EVENTS", () => {
     expect(sent.$host).toBe("flappytone.com");
     expect(sent).not.toHaveProperty("$current_url");
     expect(sent.$geoip_country_code).toBe("TW");
+  });
+});
+
+describe("mic, mic_help and inapp_prompt shapes (brief 27)", () => {
+  type Keys<T> = T extends unknown ? keyof T : never;
+  type MicOk = Extract<AnalyticsEvent, { type: "mic"; ok: true }>;
+  type MicFail = Extract<AnalyticsEvent, { type: "mic"; ok: false }>;
+  type MicHelp = Extract<AnalyticsEvent, { type: "mic_help" }>;
+  type InApp = Extract<AnalyticsEvent, { type: "inapp_prompt" }>;
+
+  it("pins the mic event fields", () => {
+    const ok: Record<Keys<MicOk>, true> = { type: true, ok: true, surface: true, perm_before: true, ms: true, attempt: true };
+    const fail: Record<Keys<MicFail>, true> = {
+      type: true,
+      ok: true,
+      reason: true,
+      error_name: true,
+      surface: true,
+      perm_before: true,
+      ms: true,
+      attempt: true,
+    };
+    expect(Object.keys(ok).sort()).toEqual(["attempt", "ms", "ok", "perm_before", "surface", "type"]);
+    expect(Object.keys(fail)).toHaveLength(8);
+  });
+
+  it("pins the closed values", () => {
+    const surfaces: Record<MicOk["surface"], true> = { app: true, demo: true, "visualizer-tool": true };
+    const perms: Record<MicOk["perm_before"], true> = { granted: true, prompt: true, denied: true, unsupported: true };
+    const names: Record<MicFail["error_name"], true> = {
+      NotAllowedError: true,
+      SecurityError: true,
+      NotFoundError: true,
+      NotReadableError: true,
+      OverconstrainedError: true,
+      AbortError: true,
+      TypeError: true,
+      other: true,
+    };
+    const reasons: Record<MicFail["reason"], true> = {
+      "permission-denied": true,
+      "no-microphone": true,
+      "no-audioworklet": true,
+      "in-use": true,
+      unknown: true,
+    };
+    const actions: Record<MicHelp["action"], true> = {
+      shown: true,
+      reload: true,
+      try_again: true,
+      open_external: true,
+      copy_link: true,
+      dismissed: true,
+    };
+    const helpReasons: Record<MicHelp["reason"], true> = {
+      "permission-denied": true,
+      "blocked-before": true,
+      "in-app": true,
+      "in-use": true,
+    };
+    const apps: Record<InApp["app"], true> = {
+      instagram: true,
+      facebook: true,
+      threads: true,
+      line: true,
+      wechat: true,
+      tiktok: true,
+      linkedin: true,
+      snapchat: true,
+      pinterest: true,
+      reddit: true,
+      x: true,
+      kakaotalk: true,
+      "google-app": true,
+      "webview-android": true,
+      "webview-ios": true,
+    };
+    expect(Object.keys(surfaces)).toHaveLength(3);
+    expect(Object.keys(perms)).toHaveLength(4);
+    expect(Object.keys(names)).toHaveLength(8);
+    expect(Object.keys(reasons)).toHaveLength(5);
+    expect(Object.keys(actions)).toHaveLength(6);
+    expect(Object.keys(helpReasons)).toHaveLength(4);
+    expect(Object.keys(apps)).toHaveLength(15);
+  });
+
+  it("sends a mic failure's fields unchanged through the sanitizer", () => {
+    const ev: AnalyticsEvent = {
+      type: "mic",
+      ok: false,
+      reason: "permission-denied",
+      error_name: "NotAllowedError",
+      surface: "demo",
+      perm_before: "prompt",
+      ms: 800,
+      attempt: 2,
+    };
+    const { type, ...props } = ev;
+    expect(APP_EVENTS.has(type)).toBe(true);
+    expect(APP_EVENTS.has("mic_help")).toBe(true);
+    expect(sanitizeGameProperties(props)).toEqual(props);
+  });
+
+  it("keeps mic gameplay and mic_help global", () => {
+    expect(eventTier("mic")).toBe("gameplay");
+    expect(eventTier("mic_help")).toBe("global");
   });
 });
