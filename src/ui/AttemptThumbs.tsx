@@ -19,26 +19,43 @@ export function AttemptThumbs(props: {
 }) {
   const selected = props.attempts.find((a) => a.id === props.selectedId) ?? null;
   const newestFirst = [...props.attempts].reverse();
+  const selectedIndex = newestFirst.findIndex((a) => a.id === props.selectedId);
   return (
-    <div className="vis-attempts">
-      <div className="vis-attempt-preview">
-        {selected && <AttemptCanvas attempt={selected} grid />}
+    <div className="vis-attempts-block">
+      <div className="vis-setting-head">
+        <span className="vis-setting-label">Your last attempts</span>
       </div>
-      <div className="vis-attempt-list" aria-label="Recent attempts">
-        {newestFirst.map((a, i) => (
-          <button
-            key={a.id}
-            className={a.id === props.selectedId ? "vis-attempt active" : "vis-attempt"}
-            onClick={() => props.onSelect(a.id)}
-            aria-label={i === 0 ? "Latest attempt" : `Attempt ${i + 1} from latest`}
-            aria-pressed={a.id === props.selectedId}
-          >
-            <AttemptCanvas attempt={a} grid={false} />
-          </button>
-        ))}
+      <p className="vis-setting-desc">
+        The pitch you just said, start to end. Click a small one to see it large. The Tone card reads the one you
+        pick.
+      </p>
+      <div className="vis-attempts">
+        <div className="vis-attempt-preview">
+          {selected && <AttemptCanvas attempt={selected} grid />}
+          {selected && <span className="vis-attempt-tag is-big">{attemptLabel(selectedIndex)}</span>}
+        </div>
+        <div className="vis-attempt-list" aria-label="Recent attempts">
+          {newestFirst.map((a, i) => (
+            <button
+              key={a.id}
+              className={a.id === props.selectedId ? "vis-attempt active" : "vis-attempt"}
+              onClick={() => props.onSelect(a.id)}
+              aria-label={`${attemptLabel(i)} attempt`}
+              aria-pressed={a.id === props.selectedId}
+            >
+              <AttemptCanvas attempt={a} grid={false} />
+              <span className={i === 0 ? "vis-attempt-tag is-latest" : "vis-attempt-tag"}>{attemptLabel(i)}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
+}
+
+/** Newest-first position as words: there are at most three attempts. */
+function attemptLabel(newestFirstIndex: number): string {
+  return ["Latest", "Previous", "Earlier"][newestFirstIndex] ?? "Earlier";
 }
 
 /**
@@ -86,9 +103,10 @@ export function MobileAttemptThumb(props: {
           e.stopPropagation();
           setOpen(true);
         }}
-        aria-label="Show recent attempts"
+        aria-label="Show your last attempts"
       >
         <AttemptCanvas attempt={latest} grid={false} />
+        <span className="vis-attempt-tag is-latest">Latest</span>
       </button>
       {open && (
         <div
@@ -98,6 +116,13 @@ export function MobileAttemptThumb(props: {
             setOpen(false);
           }}
         >
+          <div className="vis-mthumb-head">
+            <strong>
+              {attemptLabel(selectedIndex)} attempt
+              {newestFirst.length > 1 && ` · ${selectedIndex + 1} of ${newestFirst.length}`}
+            </strong>
+            <span>The pitch you just said, start to end. The Tone card reads this one.</span>
+          </div>
           <div
             className="vis-mthumb-track"
             ref={trackRef}
@@ -119,6 +144,9 @@ export function MobileAttemptThumb(props: {
               ))}
             </div>
           )}
+          <p className="vis-mthumb-hint">
+            {newestFirst.length > 1 ? "Swipe for older attempts · tap outside to close" : "Tap outside to close"}
+          </p>
         </div>
       )}
     </>

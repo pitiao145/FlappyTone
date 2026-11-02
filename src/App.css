@@ -9310,12 +9310,47 @@ button.switch-track.switch-on {
    3fr / 1fr makes the thumbnails portrait too: the preview's 3:4 height
    split in three, over a column a third of its width, is close to 3:4.
    The panel's selector beats the global pill button style. */
+.visualiser-panel .vis-attempts-block {
+  flex: 0 0 auto;
+  margin-top: 12px;
+}
+
 .visualiser-panel .vis-attempts {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
   gap: 12px;
-  margin-top: 12px;
-  flex: 0 0 auto;
+}
+
+/* "Latest" / "Previous" / "Earlier" on each attempt. Thumbnails carry it
+   bottom-left; the preview carries it top-right, clear of the grid labels.
+   The latest one is filled, so it stands out in the stack. */
+.vis-attempt-tag {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  z-index: 1;
+  padding: 1px 5px;
+  border-radius: var(--radius-pill);
+  background: rgba(var(--surface-rgb), 0.9);
+  color: var(--ink-muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.vis-attempt-tag.is-latest {
+  background: var(--accent);
+  color: var(--surface);
+}
+
+.vis-attempt-tag.is-big {
+  left: auto;
+  bottom: auto;
+  top: 8px;
+  right: 8px;
+  font-size: 12px;
+  padding: 2px 8px;
 }
 
 .visualiser-panel .vis-attempt-preview {
@@ -9464,6 +9499,32 @@ button.switch-track.switch-on {
 
 .vis-mthumb-dots span.active {
   background: var(--accent);
+}
+
+.vis-mthumb-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0 20px;
+  text-align: center;
+}
+
+.vis-mthumb-head strong {
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.vis-mthumb-head span,
+.vis-mthumb-hint {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.vis-mthumb-hint {
+  margin: 0;
+  text-align: center;
+  font-style: italic;
 }
 
 @media (min-width: 720px) {
