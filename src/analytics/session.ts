@@ -175,7 +175,10 @@ export type SeoCta =
   | "tone_test_play_link"
   | "visualizer_above_stage"
   | "visualizer_result_good"
-  | "visualizer_result_retry";
+  /** No longer shown (removed 2 Nov 2026); kept so old events still type. */
+  | "visualizer_result_retry"
+  /** "Hear it first" in the tone visualizer's reference card. */
+  | "visualizer_hear_example";
 
 export type AnalyticsEvent =
   /**

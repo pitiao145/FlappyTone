@@ -378,6 +378,16 @@ function Visualizer() {
               : "The line is our native speaker's average at slow, clear speed. "}
             {ref.diff}
           </p>
+          {/* This page plays no audio (hearing real words is what the app
+              adds), so the wish to hear the tone first leads there. */}
+          <a
+            className="tc-hear-link"
+            href={appHref("visualiser", PATH)}
+            onClick={() => trackSignupCta(PATH, "visualizer_hear_example")}
+          >
+            <span aria-hidden="true">🔊</span> Want to hear it first? Listen to our native speaker
+            in the full visualizer
+          </a>
         </div>
 
         <a
@@ -532,18 +542,6 @@ function Visualizer() {
                 >
                   Now fly it: your voice steers the bird in FlappyTone
                 </a>
-              )}
-              {(result.tier === "ok" || result.tier === "bad") && (
-                <>
-                  <a
-                    className="tc-result-cta"
-                    href={appHref("visualiser", PATH)}
-                    onClick={() => trackSignupCta(PATH, "visualizer_result_retry")}
-                  >
-                    Practise in the full visualizer
-                  </a>
-                  <span className="tc-app-features">{APP_FEATURES}</span>
-                </>
               )}
             </div>
           )}
