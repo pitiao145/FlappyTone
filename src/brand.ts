@@ -278,10 +278,15 @@ export const brand = {
     blurb: "A tiny voice-controlled game for practicing Mandarin tones.",
     builtByPrefix: "Built while 🏄 by",
     learnHeading: "Learn & tools",
+    socialHeading: "Socials",
     connectHeading: "Connect",
+    social: [
+      { href: "https://x.com/pierreBuildsDev", label: "Follow on X", external: true, icon: "x" },
+      { href: "https://www.instagram.com/flappytone/", label: "Instagram", external: true, icon: "instagram" },
+      { href: "https://www.tiktok.com/@flappytone", label: "TikTok", external: true, icon: "tiktok" },
+    ],
     connect: [
       { href: "https://pierrebuilds.dev", label: "pierrebuilds.dev", external: true, icon: "web" },
-      { href: "https://x.com/pierreBuildsDev", label: "Follow on X", external: true, icon: "x" },
       {
         href: "https://www.buymeacoffee.com/pierrebuilds",
         label: "Buy me a bubble tea",

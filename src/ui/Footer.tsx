@@ -1,10 +1,12 @@
 import { brand } from "../brand.ts";
 import { LEARN_LINKS } from "../site/links.ts";
-import { CoffeeIcon, MailIcon, WebIcon, XIcon } from "./icons.tsx";
+import { CoffeeIcon, InstagramIcon, MailIcon, TiktokIcon, WebIcon, XIcon } from "./icons.tsx";
 
 const CONNECT_ICONS = {
   web: WebIcon,
   x: XIcon,
+  instagram: InstagramIcon,
+  tiktok: TiktokIcon,
   coffee: CoffeeIcon,
   mail: MailIcon,
 } as const;
@@ -47,28 +49,33 @@ export function Footer() {
           </ul>
         </nav>
 
-        <div className="footer-connect">
-          <h3>{brand.footer.connectHeading}</h3>
-          <ul>
-            {brand.footer.connect.map((link) => {
-              const Icon = CONNECT_ICONS[link.icon];
-              return (
-                <li key={link.href}>
-                  <a
-                    href={link.href}
-                    {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                    className="footer-link"
-                  >
-                    <span className="footer-link-icon">
-                      <Icon />
-                    </span>
-                    <span>{link.label}</span>
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        {[
+          { heading: brand.footer.socialHeading, links: brand.footer.social },
+          { heading: brand.footer.connectHeading, links: brand.footer.connect },
+        ].map(({ heading, links }) => (
+          <div className="footer-connect" key={heading}>
+            <h3>{heading}</h3>
+            <ul>
+              {links.map((link) => {
+                const Icon = CONNECT_ICONS[link.icon];
+                return (
+                  <li key={link.href}>
+                    <a
+                      href={link.href}
+                      {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                      className="footer-link"
+                    >
+                      <span className="footer-link-icon">
+                        <Icon />
+                      </span>
+                      <span>{link.label}</span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </div>
 
       <div className="footer-bottom">

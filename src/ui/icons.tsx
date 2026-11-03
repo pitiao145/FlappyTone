@@ -95,6 +95,27 @@ export function XIcon() {
   );
 }
 
+/** Phosphor `InstagramLogo`, Regular. */
+export function InstagramIcon() {
+  return (
+    <svg {...BOX}>
+      <rect x="32" y="32" width="192" height="192" rx="48" {...STROKE} />
+      <circle cx="128" cy="128" r="40" {...STROKE} />
+      <circle cx="180" cy="76" r="12" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** Phosphor `TiktokLogo`, Regular. */
+export function TiktokIcon() {
+  return (
+    <svg {...BOX}>
+      <path d="M168,24a48,48,0,0,0,48,48" {...STROKE} />
+      <path d="M168,24V156a44,44,0,1,1-44-44" {...STROKE} />
+    </svg>
+  );
+}
+
 /** Phosphor `Coffee`, Regular. */
 export function CoffeeIcon() {
   return (
