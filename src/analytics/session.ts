@@ -495,7 +495,9 @@ export type AnalyticsEvent =
   | { type: "toneder_cap_hit"; tier: string }
   | { type: "toneder_upgrade_click"; tier: string; from: "cap" | "spoken" }
   /** FeedbackWidget.tsx's submit, once it resolves ok. Never carries the free-text message — screen/rating/tier only. */
-  | { type: "feedback_submitted"; screen: string; rating: number | null; tier: string };
+  | { type: "feedback_submitted"; screen: string; rating: number | null; tier: string }
+  /** The browser's `appinstalled` (Chromium only; iOS has no install event, see `display_mode`). */
+  | { type: "pwa_installed" };
 
 /**
  * A closed set mirroring `GameApp.tsx`'s `Screen` type, restated here rather
@@ -611,6 +613,7 @@ export const EVENT_TIERS: Record<AnalyticsEvent["type"], AnalyticsTier> = {
   toneder_round_done: "global",
   toneder_cap_hit: "global",
   toneder_upgrade_click: "global",
+  pwa_installed: "global",
 };
 
 export function eventTier(type: AnalyticsEvent["type"]): AnalyticsTier {

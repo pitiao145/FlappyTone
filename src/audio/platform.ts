@@ -6,6 +6,8 @@
 // covers exactly the surface the routing fix targets — see
 // docs/flappytone-SPEC-ios-audio-routing.md.
 
+import { currentDisplayMode } from "../lib/displayMode.ts";
+
 /**
  * True on iPhone/iPad/iPod (any browser). iPadOS 13+ reports as "MacIntel", so
  * a Mac UA with a touch screen is treated as iPad — the false-positive cost is
@@ -37,11 +39,5 @@ export function isChromeIOS(): boolean {
  * is the iOS signal; the display-mode query covers other platforms.
  */
 export function isStandalonePWA(): boolean {
-  if (typeof navigator === "undefined") return false;
-  const iosStandalone = (navigator as { standalone?: boolean }).standalone;
-  if (iosStandalone) return true;
-  return (
-    typeof matchMedia === "function" &&
-    matchMedia("(display-mode: standalone)").matches
-  );
+  return currentDisplayMode() === "standalone";
 }

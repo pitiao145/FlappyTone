@@ -312,6 +312,7 @@ describe("eventTier", () => {
     "toneder_round_done",
     "toneder_cap_hit",
     "toneder_upgrade_click",
+    "pwa_installed",
   ];
 
   for (const type of GAMEPLAY) {

@@ -36,6 +36,7 @@ SELECT
       AND NOT match(first_ua, 'CriOS|FxiOS|EdgiOS|OPiOS|OPT/|DuckDuckGo|Brave|YaBrowser'), 'webview-ios',
     'none'
   )) AS in_app,
+  display_modes,
   entry_path, first_ref, utm_source, utm_medium, utm_campaign, social_hint, seo_src,
   paths, pageviews,
   landing_ctas, seo_ctas, tool_ctas, app_opens, tools,
@@ -83,6 +84,7 @@ FROM (
     anyIf(properties.$os, event = '$pageview') AS os,
     anyIf(properties.$browser, event = '$pageview') AS browser,
     anyIf(properties.in_app_browser, coalesce(properties.in_app_browser, '') != '') AS iab_prop,
+    toString(groupUniqArrayIf(toString(properties.display_mode), coalesce(properties.display_mode, '') != '')) AS display_modes,
     argMinIf(properties.$raw_user_agent, timestamp, event = '$pageview') AS first_ua,
     argMinIf(properties.$pathname, timestamp, event = '$pageview') AS entry_path,
     argMinIf(properties.$referring_domain, timestamp, event = '$pageview') AS first_ref,

@@ -64,6 +64,7 @@ import type { BeforeSendFn, CaptureResult } from "posthog-js";
 import type posthogType from "posthog-js";
 import type { SpeechStyle } from "../game/words.ts";
 import { detectInAppBrowser, type InAppBrowser } from "../lib/inAppBrowser.ts";
+import { currentDisplayMode, type DisplayMode } from "../lib/displayMode.ts";
 import {
   EVENT_TIERS,
   eventTier,
@@ -479,16 +480,42 @@ export function inAppBrowserProperties(info: InAppBrowser): {
 }
 
 /**
- * Stamps `in_app_browser`/`in_app_platform` on every event of the visit
- * (super properties), and the first/last value on the person. Runs at SDK
- * start on every entry (`/`, the site pages, `/app`). Global tier.
+ * The display-mode super property and person properties. `first_standalone_at`
+ * is set once, on the first Home Screen launch: on iOS, which has no install
+ * event, that is the install signal. Pure, for tests.
+ */
+export function displayModeProperties(
+  mode: DisplayMode,
+  now: Date,
+): {
+  register: { display_mode: DisplayMode };
+  set: { last_display_mode: DisplayMode };
+  setOnce: { initial_display_mode: DisplayMode; first_standalone_at?: string };
+} {
+  return {
+    register: { display_mode: mode },
+    set: { last_display_mode: mode },
+    setOnce: {
+      initial_display_mode: mode,
+      ...(mode === "standalone" ? { first_standalone_at: now.toISOString() } : {}),
+    },
+  };
+}
+
+/**
+ * Stamps `in_app_browser`/`in_app_platform`/`display_mode` on every event of
+ * the visit (super properties), and the first/last value on the person. Runs
+ * at SDK start on every entry (`/`, the site pages, `/app`). Also listens for
+ * `appinstalled` (Chromium only) to send `pwa_installed`. Global tier.
  */
 function registerInAppBrowser(client: typeof posthogType): void {
   try {
     if (typeof navigator === "undefined") return;
     const p = inAppBrowserProperties(detectInAppBrowser(navigator.userAgent));
-    client.register(p.register);
-    client.setPersonProperties(p.set, p.setOnce);
+    const d = displayModeProperties(currentDisplayMode(), new Date());
+    client.register({ ...p.register, ...d.register });
+    client.setPersonProperties({ ...p.set, ...d.set }, { ...p.setOnce, ...d.setOnce });
+    window.addEventListener("appinstalled", () => captureGameEvent({ type: "pwa_installed" }), { once: true });
   } catch {
     // ignore
   }

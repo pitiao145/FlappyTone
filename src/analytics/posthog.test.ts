@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PH_ALLOW, sanitizeGameProperties, scrubNameFromUrls, stripPersonUrls, withPageViewProps, inAppBrowserProperties } from "./posthog.ts";
+import { PH_ALLOW, sanitizeGameProperties, scrubNameFromUrls, stripPersonUrls, withPageViewProps, inAppBrowserProperties, displayModeProperties } from "./posthog.ts";
 
 describe("sanitizeGameProperties", () => {
   it("passes through our own event fields untouched", () => {
@@ -140,6 +140,24 @@ describe("inAppBrowserProperties", () => {
     expect(inAppBrowserProperties({ app: "line", platform: "android" }).register).toEqual({
       in_app_browser: "line",
       in_app_platform: "android",
+    });
+  });
+});
+
+describe("displayModeProperties", () => {
+  const now = new Date("2026-11-04T00:00:00.000Z");
+  it("stamps the first Home Screen launch once, as the install signal", () => {
+    expect(displayModeProperties("standalone", now)).toEqual({
+      register: { display_mode: "standalone" },
+      set: { last_display_mode: "standalone" },
+      setOnce: { initial_display_mode: "standalone", first_standalone_at: "2026-11-04T00:00:00.000Z" },
+    });
+  });
+  it("sends `browser` without an install date in a tab", () => {
+    expect(displayModeProperties("browser", now)).toEqual({
+      register: { display_mode: "browser" },
+      set: { last_display_mode: "browser" },
+      setOnce: { initial_display_mode: "browser" },
     });
   });
 });
