@@ -49,3 +49,34 @@ export function nextPendingId(
   const fallback = pending.find((w) => !captured.has(w.id));
   return fallback?.id ?? null;
 }
+
+/**
+ * The words the recording screen steps through with its arrows and shows in
+ * its strip: the fixed `order`, plus the word she opened on when it is not
+ * in it (a redo of an already-recorded word), placed first.
+ */
+export function buildSequence(order: string[], startId: string | null): string[] {
+  return startId !== null && !order.includes(startId) ? [startId, ...order] : order;
+}
+
+/** The neighbour of `currentId` in `sequence` (-1 back, +1 forward), or `null` at an end. */
+export function stepId(sequence: string[], currentId: string | null, dir: -1 | 1): string | null {
+  if (currentId === null) return null;
+  const idx = sequence.indexOf(currentId);
+  if (idx === -1) return null;
+  return sequence[idx + dir] ?? null;
+}
+
+/**
+ * The slice of `sequence` the strip shows: `before` words behind the current
+ * one and `after` ahead. Near either end the window stays the same size where
+ * the sequence allows, so the strip doesn't shrink on the first word.
+ */
+export function stripWindow(sequence: string[], currentId: string | null, before = 1, after = 4): string[] {
+  const size = before + 1 + after;
+  const idx = currentId === null ? -1 : sequence.indexOf(currentId);
+  if (idx === -1) return sequence.slice(0, size);
+  let start = Math.max(0, idx - before);
+  start = Math.max(0, Math.min(start, sequence.length - size));
+  return sequence.slice(start, start + size);
+}

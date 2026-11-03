@@ -58,3 +58,21 @@ export function needsRedoConfirm(status: BoothWordStatus): boolean {
 export function afterTake(status: BoothWordStatus): { advance: boolean; armed: boolean } {
   return status === "published" ? { advance: false, armed: false } : { advance: true, armed: true };
 }
+
+/**
+ * Whether the microphone stays live after an arrow step to another word.
+ *
+ * An arrow is how she skips a word she can't say. Stepping onto an untouched
+ * pending word is the same move the bulk pass makes after every take, so a
+ * live microphone stays live (a skip should not cost a Resume tap). Anything
+ * else lands paused: a word already captured this session, or one with a take
+ * on the server. An arrow never arms a paused microphone. A `published`
+ * target never reaches here: it goes through `ConfirmRedo` first.
+ */
+export function armedAfterStep(
+  wasArmed: boolean,
+  targetStatus: BoothWordStatus,
+  capturedThisSession: boolean,
+): boolean {
+  return wasArmed && targetStatus === "pending" && !capturedThisSession;
+}

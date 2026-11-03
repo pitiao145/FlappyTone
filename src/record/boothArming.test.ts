@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { initialArmed, needsRedoConfirm, afterTake } from "./boothArming.ts";
+import { initialArmed, needsRedoConfirm, afterTake, armedAfterStep } from "./boothArming.ts";
 import { TakeDetector } from "./takeDetector.ts";
 
 describe("initialArmed", () => {
@@ -55,5 +55,21 @@ describe("a paused detector", () => {
     detector.disarm();
     detector.arm();
     expect(detector.push(0, true, 0.4)).toEqual({ type: "onset", atMs: 0 });
+  });
+});
+
+describe("armedAfterStep", () => {
+  it("keeps a live mic live when skipping to an untouched pending word", () => {
+    expect(armedAfterStep(true, "pending", false)).toBe(true);
+  });
+
+  it("never arms a paused mic", () => {
+    expect(armedAfterStep(false, "pending", false)).toBe(false);
+  });
+
+  it("lands paused on a word that already has a take", () => {
+    expect(armedAfterStep(true, "pending", true)).toBe(false);
+    expect(armedAfterStep(true, "recorded", false)).toBe(false);
+    expect(armedAfterStep(true, "published", false)).toBe(false);
   });
 });

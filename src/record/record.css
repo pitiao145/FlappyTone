@@ -796,3 +796,130 @@ body {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* --------------------------------------------- arrows and progress track */
+
+.rec-word-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rec-word-row .rec-word {
+  min-width: 0;
+}
+
+.rec-arrow {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px solid #2a3442;
+  background: #0e141c;
+  color: var(--rec-fg);
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.rec-arrow:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+/* Previous, current and the next few, in order. Current is the big one. */
+.rec-track {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  flex: none;
+}
+
+.rec-track-item {
+  position: relative;
+  width: 100%;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 2px;
+  border-radius: 10px;
+  border: 1px solid #2a3442;
+  background: #0e141c;
+  color: var(--rec-dim);
+  cursor: pointer;
+}
+
+.rec-track-hanzi {
+  font-size: 1.3rem;
+  line-height: 1.1;
+}
+
+.rec-track-pinyin {
+  font-size: 0.75rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rec-track-mark {
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.rec-track-current {
+  border: 2px solid var(--rec-accent);
+  background: rgba(74, 179, 255, 0.12);
+  color: var(--rec-fg);
+  cursor: default;
+}
+
+.rec-track-done {
+  border-color: #1f4030;
+  background: rgba(74, 222, 128, 0.08);
+  color: var(--rec-good);
+}
+
+.rec-track-skipped {
+  border-color: #4a3a12;
+  border-style: dashed;
+  color: var(--rec-warn-c);
+}
+
+.rec-track-next {
+  opacity: 0.75;
+}
+
+.rec-track-legend {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--rec-dim);
+}
+
+.rec-track-key-done {
+  color: var(--rec-good);
+}
+
+.rec-track-key-skipped {
+  color: var(--rec-warn-c);
+}
+
+@media (max-width: 380px) {
+  .rec-arrow {
+    width: 48px;
+    height: 48px;
+  }
+}

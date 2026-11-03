@@ -29,8 +29,8 @@ import { TakeDetector, type RejectReason } from "./takeDetector.ts";
 import { ConfirmRedo } from "./ConfirmRedo.tsx";
 import type { Uploader, UploadState } from "./upload.ts";
 import { statusFor, type BoothStyle, type BoothWord, type BoothWordStatus } from "./boothWords.ts";
-import { nextPendingId } from "./boothQueue.ts";
-import { afterTake, initialArmed, needsRedoConfirm, type BoothEntry } from "./boothArming.ts";
+import { buildSequence, nextPendingId, stepId, stripWindow } from "./boothQueue.ts";
+import { afterTake, armedAfterStep, initialArmed, needsRedoConfirm, type BoothEntry } from "./boothArming.ts";
 import { STYLE_COPY, englishOf, percentDone, timeLeftLabel } from "./boothPlan.ts";
 
 const FRAME_MS_HZ = 10;
@@ -87,6 +87,14 @@ export function Recorder({
   const [currentId, setCurrentId] = useState<string | null>(
     () => startId ?? pending[0]?.id ?? null,
   );
+  /** What the arrows step through and the strip shows — `boothQueue.ts`. */
+  const [sequence] = useState<string[]>(() => buildSequence(order, startId));
+  /**
+   * Bumped on every manual move (arrow, strip, confirm). A take's delayed
+   * auto-advance checks it, so a word she just stepped to is not skipped
+   * past by the "got it" timer of the word she left.
+   */
+  const navTokenRef = useRef(0);
   const [armed, setArmedState] = useState(() => initialArmed(entry));
   const [feedback, setFeedback] = useState<Feedback>(() =>
     initialArmed(entry) ? { kind: "idle" } : { kind: "paused" },
@@ -231,8 +239,10 @@ export function Recorder({
       setFeedback({ kind: "got-it" });
 
       const after = afterTake(statusRef.current.get(id) ?? "pending");
+      const token = navTokenRef.current;
 
       setTimeout(() => {
+        if (navTokenRef.current !== token) return;
         if (!after.advance) {
           // A take that just replaced a published clip. Stop here rather than
           // running on into the next word with the microphone still live.
@@ -285,11 +295,50 @@ export function Recorder({
         setConfirming(word);
         return;
       }
+      navTokenRef.current++;
       setCurrentId(word.id);
       setArmed(false);
     },
     [setArmed, style],
   );
+
+  const byId = useCallback(
+    (id: string) => pending.find((w) => w.id === id) ?? recorded.find((w) => w.id === id),
+    [pending, recorded],
+  );
+
+  /**
+   * The arrows: skip a word she can't say, or go back one. A live mic stays
+   * live only onto an untouched pending word (`armedAfterStep`); a published
+   * word asks first, like every other way of reaching it.
+   */
+  const step = useCallback(
+    (dir: -1 | 1) => {
+      const id = stepId(sequence, currentIdRef.current, dir);
+      const target = id ? byId(id) : undefined;
+      if (!target) return;
+      const status = statusFor(target, style);
+      if (needsRedoConfirm(status)) {
+        setConfirming(target);
+        return;
+      }
+      navTokenRef.current++;
+      setCurrentId(target.id);
+      setArmed(armedAfterStep(armedRef.current, status, captured.has(target.id)));
+    },
+    [sequence, byId, style, captured, setArmed],
+  );
+
+  // Left/right arrow keys do the same, for a laptop booth.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (confirming) return;
+      if (e.key === "ArrowLeft") step(-1);
+      else if (e.key === "ArrowRight") step(1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [step, confirming]);
 
   if (!allDone && !current) {
     // Shouldn't happen — pending is non-empty but currentId didn't resolve.
@@ -373,12 +422,30 @@ export function Recorder({
         <div className="rec-level-fill" style={{ width: `${Math.min(100, level * 140)}%` }} />
       </div>
 
-      <div className="rec-word">
-        <div className="rec-hanzi">{word.hanzi}</div>
-        <div className="rec-pinyin">
-          {word.pinyin} <span className="rec-tone">({word.tone})</span>
+      <div className="rec-word-row">
+        <button
+          className="rec-arrow"
+          onClick={() => step(-1)}
+          disabled={stepId(sequence, word.id, -1) === null}
+          aria-label="Previous word"
+        >
+          ‹
+        </button>
+        <div className="rec-word">
+          <div className="rec-hanzi">{word.hanzi}</div>
+          <div className="rec-pinyin">
+            {word.pinyin} <span className="rec-tone">({word.tone})</span>
+          </div>
+          <div className="rec-english">{englishOf(word)}</div>
         </div>
-        <div className="rec-english">{englishOf(word)}</div>
+        <button
+          className="rec-arrow"
+          onClick={() => step(1)}
+          disabled={stepId(sequence, word.id, 1) === null}
+          aria-label="Skip to next word"
+        >
+          ›
+        </button>
       </div>
 
       <div className={`rec-feedback rec-feedback-${feedback.kind}`}>
@@ -400,23 +467,38 @@ export function Recorder({
         Every take saves by itself. You can go back to the list anytime.
       </p>
 
-      <div className="rec-strip">
-        {pending.map((w) => (
-          <button
-            key={w.id}
-            className={
-              "rec-chip" +
-              (w.id === word.id ? " rec-chip-current" : "") +
-              (captured.has(w.id) ? " rec-chip-done" : "")
-            }
-            onClick={() => goTo(w)}
-            title={`re-record ${w.pinyin}`}
-          >
-            {captured.has(w.id) ? "✓ " : ""}
-            {w.pinyin}
-          </button>
-        ))}
-      </div>
+      <ol className="rec-track" aria-label="Words in this pass">
+        {stripWindow(sequence, word.id).map((id) => {
+          const w = byId(id);
+          if (!w) return null;
+          const isCurrent = id === word.id;
+          const done = captured.has(id) || statusFor(w, style) !== "pending";
+          // Behind the current word and still without a take: she skipped it.
+          const skipped = !done && !isCurrent && sequence.indexOf(id) < sequence.indexOf(word.id);
+          const state = isCurrent ? "current" : done ? "done" : skipped ? "skipped" : "next";
+          return (
+            <li key={id}>
+              <button
+                className={`rec-track-item rec-track-${state}`}
+                onClick={() => !isCurrent && goTo(w)}
+                aria-current={isCurrent ? "step" : undefined}
+                title={done ? "Recorded. Tap to redo." : skipped ? "Skipped. Tap to record." : w.pinyin}
+              >
+                <span className="rec-track-mark" aria-hidden="true">
+                  {done ? "✓" : skipped ? "!" : ""}
+                </span>
+                <span className="rec-track-hanzi">{w.hanzi}</span>
+                <span className="rec-track-pinyin">{w.pinyin}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="rec-track-legend">
+        <span className="rec-track-key rec-track-key-done">✓ recorded</span>
+        <span className="rec-track-key rec-track-key-skipped">! skipped</span>
+        <span className="rec-track-key">○ to do</span>
+      </p>
 
       {recorded.length > 0 && (
         <div className="rec-recorded">
@@ -468,6 +550,7 @@ export function Recorder({
           onConfirm={() => {
             const w = confirming;
             setConfirming(null);
+            navTokenRef.current++;
             setCurrentId(w.id);
             setArmed(false);
           }}
