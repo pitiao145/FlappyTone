@@ -21,7 +21,7 @@
  * Since migration 0024 gave a recording a style, a word can hold up to two
  * `word_clips` rows for this speaker — one per style — so the embed is no
  * longer collapsed to one status. Response shape carries BOTH: `{id, hanzi,
- * pinyin, tone, lists, textbook, natural}`, each style field a status
+ * pinyin, tone, english, lists, textbook, natural}`, each style field a status
  * (`pending`/`recorded`/`published`). One fetch, both styles, no
  * reconciliation — the list picker's pills are (list × style), and a pill's
  * green state needs the OTHER style's pending count too (to decide whether
@@ -41,6 +41,9 @@ interface BoothWord {
   hanzi: string;
   pinyin: string;
   tone: number;
+  /** English gloss from `words.english` (default `''` in the catalog). Added
+   * for the booth's word cards; additive, so an older client ignores it. */
+  english: string;
   textbook: string;
   natural: string;
   /** This word's list memberships (`hsk1`, `tocfl2`, `core-120`, …) — lets the
@@ -53,6 +56,7 @@ interface WordRow {
   hanzi: string;
   pinyin: string;
   tone: number;
+  english: string | null;
   position: number;
   word_clips: { style: string; status: string }[] | { style: string; status: string } | null;
   word_lists: { list_id: string }[] | null;
@@ -93,7 +97,7 @@ export async function handleBoothWords(req: Request, env: Env): Promise<Response
   // speaker — so the booth can group/greylist by list client-side.
   const { data, error } = await db
     .from("words")
-    .select("id,hanzi,pinyin,tone,position,word_clips(style,status),word_lists(list_id)")
+    .select("id,hanzi,pinyin,tone,english,position,word_clips(style,status),word_lists(list_id)")
     .eq("word_clips.speaker_id", speaker)
     .order("position", { ascending: true });
 
@@ -107,6 +111,7 @@ export async function handleBoothWords(req: Request, env: Env): Promise<Response
     hanzi: row.hanzi,
     pinyin: row.pinyin,
     tone: row.tone,
+    english: row.english ?? "",
     ...statusByStyle(row),
     lists: (row.word_lists ?? []).map((l) => l.list_id),
   }));

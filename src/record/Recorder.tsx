@@ -31,6 +31,7 @@ import type { Uploader, UploadState } from "./upload.ts";
 import { statusFor, type BoothStyle, type BoothWord, type BoothWordStatus } from "./boothWords.ts";
 import { nextPendingId } from "./boothQueue.ts";
 import { afterTake, initialArmed, needsRedoConfirm, type BoothEntry } from "./boothArming.ts";
+import { STYLE_COPY, englishOf, percentDone, timeLeftLabel } from "./boothPlan.ts";
 
 const FRAME_MS_HZ = 10;
 /** How long "got it" stays up before the next word. Long enough to register. */
@@ -149,6 +150,10 @@ export function Recorder({
     pending.find((w) => w.id === currentId) ?? recorded.find((w) => w.id === currentId);
   const allDone = pending.length === 0;
   const total = pending.length + recorded.length;
+  // A take captured this session counts as done straight away, before its
+  // upload confirms and moves the word to `recorded` — that is what she sees.
+  const left = pending.filter((w) => !captured.has(w.id)).length;
+  const progress = { done: total - left, total, pending: left };
 
   /**
    * `nextPendingId` needs *current* `pending`/`captured`, not whatever they
@@ -343,6 +348,27 @@ export function Recorder({
         </div>
       )}
 
+      <header className="rec-rec-head">
+        <p className={`rec-style-tag rec-style-tag-${style}`}>
+          Recording: {STYLE_COPY[style].name}
+        </p>
+        <p className="rec-sub">{STYLE_COPY[style].reminder}</p>
+      </header>
+
+      <div className="rec-rec-progress">
+        <div className="rec-progress" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={progress.done}>
+          <div className="rec-progress-fill" style={{ width: `${percentDone(progress)}%` }} />
+        </div>
+        <span className="rec-count">
+          {progress.done} of {total} done · {timeLeftLabel(left)}
+        </span>
+      </div>
+
+      <div className={`rec-mic-state rec-mic-state-${armed ? "on" : "off"}`} role="status">
+        <span className="rec-mic-dot" aria-hidden="true" />
+        {armed ? "Listening" : "Paused, not recording"}
+      </div>
+
       <div className="rec-level" aria-hidden>
         <div className="rec-level-fill" style={{ width: `${Math.min(100, level * 140)}%` }} />
       </div>
@@ -352,11 +378,12 @@ export function Recorder({
         <div className="rec-pinyin">
           {word.pinyin} <span className="rec-tone">({word.tone})</span>
         </div>
+        <div className="rec-english">{englishOf(word)}</div>
       </div>
 
       <div className={`rec-feedback rec-feedback-${feedback.kind}`}>
-        {feedback.kind === "idle" && "Say it when you're ready"}
-        {feedback.kind === "paused" && "Mic paused — nothing is being recorded"}
+        {feedback.kind === "idle" && "Say the word once. It moves on by itself when it hears you."}
+        {feedback.kind === "paused" && "Tap Resume, then say the word once."}
         {feedback.kind === "hearing" && "listening…"}
         {feedback.kind === "got-it" && "got it ✓"}
         {feedback.kind === "rejected" && REJECT_COPY[feedback.reason]}
@@ -368,6 +395,10 @@ export function Recorder({
       >
         {armed ? "Pause mic" : "Resume — start listening"}
       </button>
+
+      <p className="rec-reassure">
+        Every take saves by itself. You can go back to the list anytime.
+      </p>
 
       <div className="rec-strip">
         {pending.map((w) => (
@@ -425,9 +456,9 @@ export function Recorder({
           </button>
         )}
         <span className="rec-count">
-          {recorded.length} / {total}
-          {uploads.pending > 0 && ` · ${uploads.pending} uploading`}
-          {uploads.failed > 0 && ` · ${uploads.failed} failed`}
+          {uploads.pending > 0 && `${uploads.pending} uploading`}
+          {uploads.pending > 0 && uploads.failed > 0 && " · "}
+          {uploads.failed > 0 && `${uploads.failed} failed`}
         </span>
       </div>
 

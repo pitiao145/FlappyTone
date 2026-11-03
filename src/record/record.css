@@ -96,6 +96,7 @@ body {
 
 .rec-btn {
   width: 100%;
+  min-height: 48px;
   padding: 14px;
   font-size: 1rem;
   border-radius: 10px;
@@ -204,150 +205,6 @@ body {
   color: var(--rec-fg);
 }
 
-/* Wraps rather than scrolls: every list must be visible without swiping. */
-.rec-list-picker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 8px;
-  flex: none;
-}
-
-.rec-pill {
-  flex: none;
-  padding: 8px 12px;
-  border-radius: 999px;
-  border: 1px solid #2a3442;
-  background: #0e141c;
-  color: var(--rec-dim);
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.rec-pill-active {
-  border-color: var(--rec-accent);
-  color: var(--rec-fg);
-}
-
-/* Fully recorded (0 pending) for this list+style — same green as a
-   recorded/published badge, so "done" reads the same way everywhere. */
-.rec-pill-done {
-  border-color: var(--rec-good);
-  color: var(--rec-good);
-}
-
-.rec-pill-done.rec-pill-active {
-  background: var(--rec-good);
-  color: #0e141c;
-}
-
-.rec-pill-icon {
-  opacity: 0.7;
-}
-
-.rec-pill:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.rec-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.rec-pill-count {
-  font-variant-numeric: tabular-nums;
-  opacity: 0.6;
-  font-size: 0.8rem;
-}
-
-/* Mobile: each style is a labelled row of pills; desktop stacks them. */
-.rec-pill-group {
-  display: flex;
-  flex-wrap: wrap;
-  flex: 1 1 100%;
-  align-items: center;
-  gap: 8px;
-}
-
-.rec-pill-group-head {
-  flex: 1 1 100%;
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--rec-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.rec-layout,
-.rec-main {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  min-width: 0;
-}
-
-/* Desktop: lists down the left, words on the right, using the full width. */
-@media (min-width: 900px) {
-  .rec-wide {
-    max-width: 1120px;
-  }
-
-  .rec-layout {
-    display: grid;
-    grid-template-columns: 260px minmax(0, 1fr);
-    align-items: start;
-    gap: 32px;
-  }
-
-  .rec-list-picker {
-    flex-direction: column;
-    flex-wrap: nowrap;
-    position: sticky;
-    top: 20px;
-    gap: 6px;
-  }
-
-  .rec-pill-group {
-    flex-direction: column;
-    flex-wrap: nowrap;
-    flex: none;
-    align-items: stretch;
-    gap: 6px;
-    margin-top: 12px;
-  }
-
-  .rec-pill-group-head {
-    margin: 0 0 2px;
-  }
-
-  .rec-list-picker .rec-pill {
-    width: 100%;
-    border-radius: 10px;
-    padding: 10px 14px;
-    text-align: left;
-  }
-
-  .rec-pill-label {
-    flex: 1;
-  }
-
-  .rec-wide .rec-main .rec-btn-primary {
-    max-width: 360px;
-  }
-
-  .rec-wide .rec-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .rec-wide .rec-list > .rec-list-head,
-  .rec-wide .rec-list > .rec-recorded-toggle {
-    grid-column: 1 / -1;
-  }
-}
-
 .rec-footer {
   display: flex;
   align-items: center;
@@ -411,34 +268,6 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin: 4px 0 0;
-}
-
-.rec-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid #1c2531;
-  border-radius: 10px;
-  background: #0b1118;
-}
-
-.rec-row-word {
-  flex: 1;
-  min-width: 0;
-  color: var(--rec-fg);
-}
-
-.rec-row-hanzi {
-  font-size: 1.4rem;
-  margin-right: 4px;
-}
-
-.rec-row-btn {
-  width: auto;
-  flex: none;
-  padding: 8px 12px;
-  font-size: 0.85rem;
 }
 
 .rec-badge {
@@ -516,4 +345,454 @@ body {
 .rec-confirm-word {
   font-size: 2.4rem;
   margin: 0;
+}
+
+/* ------------------------------------------------------------ revamp (28) */
+
+.rec-wide {
+  max-width: 1040px;
+}
+
+.rec-badge {
+  white-space: nowrap;
+}
+
+.rec-alert {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rec-alert .rec-warn {
+  margin: 0;
+}
+
+/* The first thing a volunteer reads: how big the job is, how far along. */
+.rec-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid #1c2531;
+  background: #0b1118;
+}
+
+.rec-summary p {
+  margin: 0;
+}
+
+.rec-summary-scope {
+  color: var(--rec-dim);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.rec-summary-count {
+  font-size: 1.5rem;
+}
+
+.rec-progress {
+  height: 10px;
+  border-radius: 5px;
+  background: #16202c;
+  overflow: hidden;
+}
+
+.rec-progress-fill {
+  height: 100%;
+  background: var(--rec-good);
+  transition: width 200ms ease;
+}
+
+.rec-style-toggle {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.rec-style-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 56px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #2a3442;
+  background: #0e141c;
+  color: var(--rec-fg);
+  text-align: left;
+  cursor: pointer;
+}
+
+.rec-style-btn-active {
+  border-color: var(--rec-accent);
+  box-shadow: inset 0 0 0 1px var(--rec-accent);
+}
+
+.rec-style-name {
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.rec-style-hint,
+.rec-style-count {
+  color: var(--rec-dim);
+  font-size: 0.85rem;
+}
+
+.rec-chunks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rec-chunk-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.rec-chunk {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #1c2531;
+  background: #0b1118;
+}
+
+.rec-chunk-active {
+  border-color: var(--rec-accent);
+}
+
+.rec-chunk-done {
+  border-color: #1f4030;
+}
+
+.rec-chunk-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--rec-fg);
+  font-size: 1.05rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rec-chunk-name {
+  font-weight: 600;
+}
+
+.rec-chunk-done .rec-chunk-name {
+  color: var(--rec-good);
+}
+
+.rec-chunk-count {
+  color: var(--rec-dim);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rec-chunk-note {
+  margin: 0;
+  color: var(--rec-good);
+  font-size: 0.9rem;
+}
+
+.rec-link {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--rec-accent);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.rec-tip {
+  font-size: 0.9rem;
+}
+
+.rec-words {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rec-words-head {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rec-filter {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.rec-filter-btn {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid #2a3442;
+  background: #0e141c;
+  color: var(--rec-dim);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.rec-filter-btn-active {
+  border-color: var(--rec-accent);
+  color: var(--rec-fg);
+}
+
+.rec-legend {
+  margin: 0;
+  color: var(--rec-dim);
+  font-size: 0.85rem;
+  line-height: 2;
+}
+
+.rec-card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.rec-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "hanzi pinyin"
+    "hanzi english"
+    "chips chips";
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 4px;
+  min-height: 64px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #1c2531;
+  background: #0b1118;
+  color: var(--rec-fg);
+  text-align: left;
+  cursor: pointer;
+}
+
+.rec-card:hover,
+.rec-card:focus-visible {
+  border-color: var(--rec-accent);
+}
+
+.rec-card-hanzi {
+  grid-area: hanzi;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.rec-card-pinyin {
+  grid-area: pinyin;
+  font-size: 1.05rem;
+}
+
+.rec-card-english {
+  grid-area: english;
+  color: var(--rec-dim);
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rec-card-chips {
+  grid-area: chips;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+/* --------------------------------------------------------------- details */
+
+.rec-details {
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.rec-details p {
+  margin: 0;
+}
+
+.rec-details-pinyin {
+  font-size: 1.4rem;
+}
+
+.rec-details-english {
+  color: var(--rec-dim);
+  font-size: 1.05rem;
+}
+
+.rec-details-style {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #1c2531;
+  text-align: left;
+}
+
+.rec-details-style-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+/* ---------------------------------------------------------- recording screen */
+
+.rec-rec-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+
+.rec-rec-head p {
+  margin: 0;
+}
+
+.rec-style-tag {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.rec-style-tag-textbook {
+  color: var(--rec-accent);
+}
+
+.rec-style-tag-natural {
+  color: #c4a1ff;
+}
+
+.rec-rec-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rec-rec-progress .rec-count {
+  margin-left: 0;
+  text-align: center;
+}
+
+/* Listening vs paused: colour, dot and words, so it reads at a glance. */
+.rec-mic-state {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.rec-mic-state-on {
+  background: rgba(74, 222, 128, 0.12);
+  border: 1px solid var(--rec-good);
+  color: var(--rec-good);
+}
+
+.rec-mic-state-off {
+  background: rgba(255, 176, 32, 0.12);
+  border: 1px solid var(--rec-warn-c);
+  color: var(--rec-warn-c);
+}
+
+.rec-mic-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.rec-mic-state-on .rec-mic-dot {
+  animation: rec-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes rec-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rec-mic-state-on .rec-mic-dot {
+    animation: none;
+  }
+}
+
+.rec-english {
+  color: var(--rec-dim);
+  font-size: 1.1rem;
+}
+
+.rec-paused .rec-english {
+  opacity: 0.45;
+}
+
+.rec-reassure {
+  margin: 0;
+  text-align: center;
+  color: var(--rec-dim);
+  font-size: 0.9rem;
+}
+
+.rec-chip {
+  min-height: 44px;
+}
+
+/* Wider than a phone: two-up styles, a grid of lists and word cards. */
+@media (min-width: 640px) {
+  .rec-style-toggle {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .rec-chunk-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rec-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rec-words-head {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .rec-filter {
+    min-width: 320px;
+  }
+}
+
+@media (min-width: 900px) {
+  .rec-chunk-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .rec-card-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }

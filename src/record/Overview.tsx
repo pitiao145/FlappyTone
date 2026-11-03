@@ -28,6 +28,18 @@ import { loadProgress, saveProgress } from "./progress.ts";
 import { needsRedoConfirm, type BoothEntry } from "./boothArming.ts";
 import { orderPills } from "./pillOrder.ts";
 import { Uploader, type UploadState } from "./upload.ts";
+import {
+  STATUS_COPY,
+  STYLE_COPY,
+  englishOf,
+  filterWords,
+  listProgress,
+  minutesLeft,
+  percentDone,
+  timeLeftLabel,
+  type ListProgress,
+  type WordFilter,
+} from "./boothPlan.ts";
 
 /**
  * Which lists a recorder should work through right now — a workflow choice
@@ -52,10 +64,7 @@ const LIST_LABELS: Record<string, string> = {
 };
 const LIST_ORDER = ["core-120", "tonepairs-v1", "seo-words", "tocfl1", "tocfl2", "tocfl3", "hsk1", "hsk2", "hsk3"];
 
-/** A style suffix on the list label, since a pill is now (list × style). */
-function listLabel(id: string, style: BoothStyle): string {
-  return `${LIST_LABELS[id] ?? id} ${style}`;
-}
+const STYLES: BoothStyle[] = ["textbook", "natural"];
 
 const MIC_COPY: Record<string, string> = {
   "permission-denied":
@@ -90,7 +99,9 @@ export function Overview({ passcode }: Props) {
   // A confirmed upload flips one style's field in place, in one update.
   const [words, setWords] = useState<BoothWord[]>([]);
   const [mode, setMode] = useState<Mode>({ kind: "overview" });
-  const [showRecorded, setShowRecorded] = useState(false);
+  const [filter, setFilter] = useState<WordFilter>("todo");
+  // The word whose details panel is open, if any.
+  const [details, setDetails] = useState<BoothWord | null>(null);
   // `null` = every list. Reset on every fresh load (see `load` below) so a
   // stale filter from a previous passcode/session can't hide words silently.
   const [selectedList, setSelectedList] = useState<string | null>(null);
@@ -99,7 +110,7 @@ export function Overview({ passcode }: Props) {
   // style"), so choosing "All" after a natural pill still shows natural.
   const [selectedStyle, setSelectedStyle] = useState<BoothStyle>("textbook");
   const [micError, setMicError] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState<BoothWord | null>(null);
+  const [confirming, setConfirming] = useState<{ word: BoothWord; style: BoothStyle } | null>(null);
   const [uploads, setUploads] = useState<UploadState>({ byId: {}, pending: 0, failed: 0 });
 
   /** Captured this session but not yet acknowledged by the server. */
@@ -177,7 +188,6 @@ export function Overview({ passcode }: Props) {
     () => workable.filter((w) => statusForActive(w) !== "pending"),
     [workable, statusForActive],
   );
-  const total = pending.length + recorded.length;
 
   const listIds = useMemo(() => {
     const ids = new Set<string>();
@@ -204,6 +214,15 @@ export function Overview({ passcode }: Props) {
     [listIds, words],
   );
 
+  // Chunks for the active style, pending lists first (pillOrder.ts).
+  const chunks = useMemo(
+    () =>
+      pills
+        .filter((p) => p.style === selectedStyle)
+        .map((p) => ({ listId: p.listId, progress: listProgress(words, p.listId, selectedStyle) })),
+    [pills, words, selectedStyle],
+  );
+
   const visiblePending = useMemo(
     () => (selectedList ? pending.filter((w) => w.lists?.includes(selectedList)) : pending),
     [pending, selectedList],
@@ -225,12 +244,26 @@ export function Overview({ passcode }: Props) {
     );
   };
 
-  const recordOne = (word: BoothWord) => {
-    if (needsRedoConfirm(statusFor(word, selectedStyle))) {
-      setConfirming(word);
+  /**
+   * Record one word in one style, from the details panel. Lands paused
+   * (`entry: "redo"`), and a published take asks first — boothArming.ts.
+   * The style is switched here, synchronously, so the upload is tagged with
+   * the style the button named (`uploadStyleRef` reads it at confirm time).
+   */
+  const recordOne = (word: BoothWord, style: BoothStyle) => {
+    setDetails(null);
+    setSelectedStyle(style);
+    if (needsRedoConfirm(statusFor(word, style))) {
+      setConfirming({ word, style });
       return;
     }
     enterRecording(word.id, "redo");
+  };
+
+  /** A list's CTA: select it, then the bulk pass (the one path that arms on arrival). */
+  const recordList = (listId: string | null) => {
+    setSelectedList(listId);
+    enterRecording(null, "bulk");
   };
 
   const exitToList = useCallback(() => {
@@ -274,117 +307,163 @@ export function Overview({ passcode }: Props) {
     );
   }
 
+  const scope: ListProgress = listProgress(workable, selectedList, selectedStyle);
+  const scopeName = selectedList ? (LIST_LABELS[selectedList] ?? selectedList) : "All lists";
+  const visibleWords = filterWords([...visiblePending, ...visibleRecorded], filter, selectedStyle);
+
   return (
     <div className="rec rec-wide">
       <header className="rec-head">
         <h1 className="rec-title">Recording booth</h1>
-        <p className="rec-sub">
-          Recording as: {speaker?.name ?? "—"} · {recorded.length} of {total} recorded
-        </p>
+        <p className="rec-sub">Recording as {speaker?.name ?? "—"}</p>
       </header>
 
-      <div className="rec-layout">
-      {pills.length > 0 && (
-        <nav className="rec-list-picker" aria-label="Word lists">
-          <button
-            className={`rec-pill${selectedList === null ? " rec-pill-active" : ""}`}
-            onClick={() => setSelectedList(null)}
-          >
-            All
-          </button>
-          {(["textbook", "natural"] as const).map((groupStyle) => (
-            <div className="rec-pill-group" key={groupStyle}>
-              <h2 className="rec-pill-group-head">{groupStyle}</h2>
-              {pills
-                .filter((p) => p.style === groupStyle)
-                .map(({ listId, style: pillStyle }) => {
-                  const pendingCount = words.filter(
-                    (w) => w.lists?.includes(listId) && statusFor(w, pillStyle) === "pending",
-                  ).length;
-                  const done = pendingCount === 0;
-                  const active = selectedList === listId && selectedStyle === pillStyle;
-                  return (
-                    <button
-                      key={`${listId}:${pillStyle}`}
-                      className={
-                        `rec-pill${active ? " rec-pill-active" : ""}` + (done ? " rec-pill-done" : "")
-                      }
-                      onClick={() => {
-                        setSelectedList(listId);
-                        setSelectedStyle(pillStyle);
-                      }}
-                    >
-                      <span className="rec-pill-icon" aria-hidden="true">
-                        {done ? "✓" : "○"}
-                      </span>{" "}
-                      <span className="rec-pill-label">{LIST_LABELS[listId] ?? listId}</span>
-                      <span className="rec-pill-count">{pendingCount}</span>
-                    </button>
-                  );
-                })}
-            </div>
-          ))}
-        </nav>
-      )}
-
-      <div className="rec-main">
-      {visiblePending.length > 0 ? (
-        <>
-          <p className="rec-sub">
-            Somewhere quiet, phone about a hand's width from your mouth. You'll see one word at a
-            time — just say it, and it moves on by itself. The microphone only starts when you tap
-            below.
-          </p>
-          <button className="rec-btn rec-btn-primary" onClick={() => enterRecording(null, "bulk")}>
-            Start recording ({visiblePending.length} left)
-          </button>
-        </>
-      ) : (
-        <p className="rec-sub">
-          {selectedList
-            ? `Everything in ${listLabel(selectedList, selectedStyle)} is recorded — thank you!`
-            : "Everything is recorded — thank you!"}{" "}
-          You can still re-record any word below.
+      <section className="rec-summary" aria-label="Progress">
+        <p className="rec-summary-scope">
+          {scopeName} · {STYLE_COPY[selectedStyle].name}
         </p>
-      )}
+        <p className="rec-summary-count">
+          <strong>{scope.done}</strong> of {scope.total} done
+        </p>
+        <ProgressBar progress={scope} />
+        <p className="rec-sub">
+          {timeLeftLabel(scope.pending)}. Every take saves by itself. You can stop anytime and
+          nothing is lost.
+        </p>
+      </section>
+
+      <div className="rec-style-toggle" role="radiogroup" aria-label="Speaking style">
+        {STYLES.map((st) => {
+          const p = listProgress(workable, selectedList, st);
+          return (
+            <button
+              key={st}
+              role="radio"
+              aria-checked={selectedStyle === st}
+              className={"rec-style-btn" + (selectedStyle === st ? " rec-style-btn-active" : "")}
+              onClick={() => setSelectedStyle(st)}
+            >
+              <span className="rec-style-name">{STYLE_COPY[st].name}</span>
+              <span className="rec-style-hint">{STYLE_COPY[st].reminder}</span>
+              <span className="rec-style-count">
+                {p.done} of {p.total} done
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
       {micError && <p className="rec-warn">{micError}</p>}
 
       {uploads.failed > 0 && (
-        <>
+        <div className="rec-alert">
           <p className="rec-warn">
             {uploads.failed} didn't reach the server. Nothing is lost while this page stays open.
           </p>
           <button className="rec-btn" onClick={() => uploader.retryFailed()}>
             Try those again
           </button>
-        </>
+        </div>
       )}
 
-      {visiblePending.length > 0 && (
-        <section className="rec-list">
-          <h2 className="rec-list-head">To record ({visiblePending.length})</h2>
-          {visiblePending.map((w) => (
-            <WordRow key={w.id} word={w} style={selectedStyle} captured={captured.has(w.id)} onPick={recordOne} />
-          ))}
+      {chunks.length > 0 && (
+        <section className="rec-chunks" aria-label="Word lists">
+          <h2 className="rec-list-head">Pick a list</h2>
+          <div className="rec-chunk-grid">
+            {chunks.map(({ listId, progress }) => {
+              const label = LIST_LABELS[listId] ?? listId;
+              const done = progress.pending === 0;
+              const active = selectedList === listId;
+              return (
+                <div
+                  key={listId}
+                  className={
+                    "rec-chunk" + (active ? " rec-chunk-active" : "") + (done ? " rec-chunk-done" : "")
+                  }
+                >
+                  <button className="rec-chunk-head" onClick={() => setSelectedList(active ? null : listId)}>
+                    <span className="rec-chunk-name">
+                      {done && <span aria-hidden="true">✓ </span>}
+                      {label}
+                    </span>
+                    <span className="rec-chunk-count">
+                      {progress.done} of {progress.total}
+                    </span>
+                  </button>
+                  <ProgressBar progress={progress} />
+                  {done ? (
+                    <p className="rec-chunk-note">All done. Thank you!</p>
+                  ) : (
+                    <button className="rec-btn rec-btn-primary rec-chunk-cta" onClick={() => recordList(listId)}>
+                      Record {label} (~{minutesLeft(progress.pending)} min)
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {selectedList !== null && (
+            <button className="rec-link" onClick={() => setSelectedList(null)}>
+              Show all lists
+            </button>
+          )}
         </section>
       )}
 
-      {visibleRecorded.length > 0 && (
-        <section className="rec-list">
-          <button
-            className="rec-recorded-toggle"
-            onClick={() => setShowRecorded((s) => !s)}
-            aria-expanded={showRecorded}
-          >
-            {showRecorded ? "▾" : "▸"} Recorded ({visibleRecorded.length})
-          </button>
-          {showRecorded &&
-            visibleRecorded.map((w) => (
-              <WordRow key={w.id} word={w} style={selectedStyle} captured={captured.has(w.id)} onPick={recordOne} />
+      {chunks.length === 0 && visiblePending.length > 0 && (
+        <button className="rec-btn rec-btn-primary" onClick={() => recordList(null)}>
+          Start recording ({visiblePending.length} left, ~{minutesLeft(visiblePending.length)} min)
+        </button>
+      )}
+
+      <p className="rec-sub rec-tip">
+        Somewhere quiet, phone about a hand's width from your mouth. The microphone only starts
+        when you tap a Record button.
+      </p>
+
+      <section className="rec-words" aria-label="Words">
+        <div className="rec-words-head">
+          <h2 className="rec-list-head">
+            Words in {scopeName} ({STYLE_COPY[selectedStyle].name})
+          </h2>
+          <div className="rec-filter" role="radiogroup" aria-label="Show">
+            {(
+              [
+                ["all", "All"],
+                ["todo", "To record"],
+                ["done", "Done"],
+              ] as const
+            ).map(([f, label]) => (
+              <button
+                key={f}
+                role="radio"
+                aria-checked={filter === f}
+                className={"rec-filter-btn" + (filter === f ? " rec-filter-btn-active" : "")}
+                onClick={() => setFilter(f)}
+              >
+                {label}
+              </button>
             ))}
-        </section>
-      )}
+          </div>
+        </div>
+
+        <p className="rec-legend">
+          <span className="rec-badge rec-badge-recorded">recorded</span> {STATUS_COPY.recorded.explain}{" "}
+          <span className="rec-badge rec-badge-published">published</span> {STATUS_COPY.published.explain}
+        </p>
+
+        {visibleWords.length === 0 ? (
+          <p className="rec-sub">
+            {filter === "todo" ? "Nothing left to record here. Thank you!" : "No words here yet."}
+          </p>
+        ) : (
+          <div className="rec-card-grid">
+            {visibleWords.map((w) => (
+              <WordCard key={w.id} word={w} captured={captured.has(w.id)} activeStyle={selectedStyle} onOpen={setDetails} />
+            ))}
+          </div>
+        )}
+      </section>
 
       <div className="rec-footer">
         <button className="rec-btn" onClick={() => void load()}>
@@ -396,14 +475,23 @@ export function Overview({ passcode }: Props) {
           {uploads.failed > 0 && `${uploads.failed} failed`}
         </span>
       </div>
-      </div>
-      </div>
+
+      {details && (
+        <WordDetails
+          word={details}
+          captured={captured.has(details.id)}
+          activeStyle={selectedStyle}
+          listLabel={(id) => LIST_LABELS[id] ?? id}
+          onRecord={recordOne}
+          onClose={() => setDetails(null)}
+        />
+      )}
 
       {confirming && (
         <ConfirmRedo
-          word={confirming}
+          word={confirming.word}
           onConfirm={() => {
-            const word = confirming;
+            const { word } = confirming;
             setConfirming(null);
             enterRecording(word.id, "redo");
           }}
@@ -414,29 +502,118 @@ export function Overview({ passcode }: Props) {
   );
 }
 
-function WordRow({
-  word,
-  style,
-  captured,
-  onPick,
-}: {
+function ProgressBar({ progress }: { progress: ListProgress }) {
+  const pct = percentDone(progress);
+  return (
+    <div
+      className="rec-progress"
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={progress.total}
+      aria-valuenow={progress.done}
+    >
+      <div className="rec-progress-fill" style={{ width: `${pct}%` }} />
+    </div>
+  );
+}
+
+/** The status a chip shows: a take captured this session but not yet confirmed reads "uploading". */
+function chipStatus(word: BoothWord, style: BoothStyle, captured: boolean, activeStyle: BoothStyle) {
+  const status = statusFor(word, style);
+  const uploading = captured && style === activeStyle && status === "pending";
+  return { status, uploading };
+}
+
+function StatusChip({ word, style, captured, activeStyle }: {
   word: BoothWord;
   style: BoothStyle;
   captured: boolean;
-  onPick: (w: BoothWord) => void;
+  activeStyle: BoothStyle;
 }) {
-  const status = statusFor(word, style);
+  const { status, uploading } = chipStatus(word, style, captured, activeStyle);
   return (
-    <div className="rec-row">
-      <span className="rec-row-word">
-        <span className="rec-row-hanzi">{word.hanzi}</span> {word.pinyin}
+    <span
+      className={`rec-badge rec-badge-${uploading ? "recorded" : status}`}
+      title={uploading ? "Uploading…" : STATUS_COPY[status].explain}
+    >
+      {STYLE_COPY[style].name}: {uploading ? "uploading" : STATUS_COPY[status].chip}
+    </span>
+  );
+}
+
+function WordCard({
+  word,
+  captured,
+  activeStyle,
+  onOpen,
+}: {
+  word: BoothWord;
+  captured: boolean;
+  activeStyle: BoothStyle;
+  onOpen: (w: BoothWord) => void;
+}) {
+  return (
+    <button className="rec-card" onClick={() => onOpen(word)}>
+      <span className="rec-card-hanzi">{word.hanzi}</span>
+      <span className="rec-card-pinyin">{word.pinyin}</span>
+      <span className="rec-card-english">{englishOf(word)}</span>
+      <span className="rec-card-chips">
+        {STYLES.map((st) => (
+          <StatusChip key={st} word={word} style={st} captured={captured} activeStyle={activeStyle} />
+        ))}
       </span>
-      <span className={`rec-badge rec-badge-${captured ? "recorded" : status}`}>
-        {captured && status === "pending" ? "uploading" : status}
-      </span>
-      <button className="rec-btn rec-row-btn" onClick={() => onPick(word)}>
-        Record this one
-      </button>
+    </button>
+  );
+}
+
+/** Tap a card: everything about one word, and a record button per style. */
+function WordDetails({
+  word,
+  captured,
+  activeStyle,
+  listLabel,
+  onRecord,
+  onClose,
+}: {
+  word: BoothWord;
+  captured: boolean;
+  activeStyle: BoothStyle;
+  listLabel: (id: string) => string;
+  onRecord: (w: BoothWord, style: BoothStyle) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="rec-confirm" role="dialog" aria-modal="true" aria-label={`${word.pinyin} details`} onClick={onClose}>
+      <div className="rec-confirm-card rec-details" onClick={(e) => e.stopPropagation()}>
+        <p className="rec-confirm-word">{word.hanzi}</p>
+        <p className="rec-details-pinyin">
+          {word.pinyin} <span className="rec-tone">· tone {word.tone}</span>
+        </p>
+        <p className="rec-details-english">{englishOf(word)}</p>
+        {word.lists && word.lists.length > 0 && (
+          <p className="rec-sub">In: {word.lists.map(listLabel).join(", ")}</p>
+        )}
+        {STYLES.map((st) => {
+          const status = statusFor(word, st);
+          return (
+            <div className="rec-details-style" key={st}>
+              <div className="rec-details-style-text">
+                <StatusChip word={word} style={st} captured={captured} activeStyle={activeStyle} />
+                <span className="rec-sub">{STATUS_COPY[status].explain}</span>
+              </div>
+              <button
+                className={"rec-btn" + (status === "pending" ? " rec-btn-primary" : "")}
+                onClick={() => onRecord(word, st)}
+              >
+                {status === "pending" ? "Record" : "Re-record"} {STYLE_COPY[st].name.toLowerCase()}
+              </button>
+            </div>
+          );
+        })}
+        <button className="rec-btn" onClick={onClose}>
+          Close
+        </button>
+      </div>
     </div>
   );
 }

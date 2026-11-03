@@ -6,6 +6,7 @@ interface Row {
   hanzi: string;
   pinyin: string;
   tone: number;
+  english?: string;
   position: number;
   /** speaker id → style → that recording's status; absent means no row for that (speaker, style). */
   clips: Record<string, Record<string, string>>;
@@ -19,6 +20,7 @@ const state = vi.hoisted(() => ({
     hanzi: string;
     pinyin: string;
     tone: number;
+    english?: string;
     position: number;
     clips: Record<string, Record<string, string>>;
     lists?: string[];
@@ -59,6 +61,9 @@ vi.mock("../src/db.ts", () => ({
                     hanzi: r.hanzi,
                     pinyin: r.pinyin,
                     tone: r.tone,
+                    // The catalog column is `not null default ''`; `null` here
+                    // models a missing value defensively.
+                    english: r.english ?? null,
                     position: r.position,
                     // A left join scoped to one speaker: no row for them ⇒ [].
                     // Up to two rows now — one per style.
@@ -99,7 +104,7 @@ interface BoothWordBody {
 }
 
 const rows: Row[] = [
-  { id: "ma1", hanzi: "媽", pinyin: "mā", tone: 1, position: 2, clips: {}, lists: ["core-120"] },
+  { id: "ma1", hanzi: "媽", pinyin: "mā", tone: 1, english: "mom", position: 2, clips: {}, lists: ["core-120"] },
   {
     id: "ma2",
     hanzi: "麻",
@@ -183,11 +188,11 @@ describe("GET /booth/words", () => {
     expect(byId.ma1).toMatchObject({ textbook: "pending", natural: "pending" });
   });
 
-  it("shapes each word as {id, hanzi, pinyin, tone, textbook, natural, lists} only", async () => {
+  it("shapes each word as {id, hanzi, pinyin, tone, english, textbook, natural, lists} only", async () => {
     const res = await get();
     const body = (await res.json()) as { words: Record<string, unknown>[] };
     expect(Object.keys(body.words[0]).sort()).toEqual(
-      ["hanzi", "id", "lists", "natural", "pinyin", "textbook", "tone"],
+      ["english", "hanzi", "id", "lists", "natural", "pinyin", "textbook", "tone"],
     );
   });
 
@@ -199,6 +204,14 @@ describe("GET /booth/words", () => {
     // ma3 has no word_lists row at all — the response carries an empty
     // array, never undefined, so the client never has to null-check it.
     expect(byId.ma3).toEqual([]);
+  });
+
+  it("carries each word's English gloss, and an empty string when there is none", async () => {
+    const res = await get();
+    const body = (await res.json()) as { words: { id: string; english: string }[] };
+    const byId = Object.fromEntries(body.words.map((w) => [w.id, w.english]));
+    expect(byId.ma1).toBe("mom");
+    expect(byId.ma2).toBe("");
   });
 
   it("503s when the words query fails", async () => {

@@ -34,6 +34,12 @@ export interface BoothWord {
    * updates first, must degrade to "no picker," never crash the booth.
    */
   lists?: string[];
+  /**
+   * English gloss, for the word cards. Optional for the same rollout reason
+   * as `lists`: a Worker deployed before this field must not break the booth.
+   * Read it through `englishOf` (`boothPlan.ts`), which shows "–" when absent.
+   */
+  english?: string;
 }
 
 /** A word's status for one style — what the rest of the booth actually reads. */
