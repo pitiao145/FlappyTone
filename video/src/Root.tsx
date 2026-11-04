@@ -6,6 +6,7 @@ import { TONY_STORY_FRAMES, TonyStory } from "./TonyStory.tsx";
 import { PARTY_STORY_FRAMES, PartyStory, ThumbParty } from "./PartyStory.tsx";
 import { HowTo, howToFrames, type HowToProps } from "./HowTo.tsx";
 import { ThumbHowTo } from "./ThumbHowTo.tsx";
+import { TalkingHead, cutList, type TalkingHeadProps } from "./TalkingHead.tsx";
 import { FPS, Promo, SIZE, sections, type PromoProps } from "./Promo.tsx";
 
 /** Studio's default props. A real promo passes its own: `--props=video/props/<name>.json`. */
@@ -54,6 +55,16 @@ export function Root() {
       durationInFrames={300}
       defaultProps={{ scenes: [{ kind: "pip", seconds: 3 }] } as StoryProps}
       calculateMetadata={({ props }) => ({ durationInFrames: storyFrames(props) })}
+    />
+    <Composition
+      id="TalkingHead"
+      component={TalkingHead}
+      fps={FPS}
+      width={1080}
+      height={1920}
+      durationInFrames={300}
+      defaultProps={{ shots: {}, segments: [] } as TalkingHeadProps}
+      calculateMetadata={({ props }) => ({ durationInFrames: Math.max(1, cutList(props).total) })}
     />
     <Composition
       id="Promo"

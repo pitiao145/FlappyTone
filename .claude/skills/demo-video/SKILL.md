@@ -48,6 +48,8 @@ Two layers: `render-demo` films the real game; Remotion (`video/`, composition `
 3. **Check stills** before the full render: `npx remotion still Promo video/out/<name>-f.png --props=video/props/<name>.json --frame=<n>` (30 fps) and Read them — captions must not cover the word card at the top or the bird.
 4. **Render:** `npm run video:render -- video/out/<name>.mp4 --props=video/props/<name>.json` (≈5× clip length). Send it.
 
+**Founder talking-head videos** use the `TalkingHead` composition (`video/src/TalkingHead.tsx`, example `video/props/origin.json`): A-roll cut list, B-roll overlays (stills or clips, `sync` lands a clip moment on a word), 1–4 word captions, title, zoom, CTA. Every time is `{ shot, t }` in the source take, so re-cutting never moves a caption. Word text: `node --experimental-strip-types video/transcribe.ts <whisperDir> <out.json> <16k.wav>...` (whisper.cpp 1.5.5 may need a manual `make` with `-isysroot $(xcrun --show-sdk-path)` on macOS; its word times drift, so cut on loudness gaps and check each join by transcribing the spliced audio). Render: `npx remotion render TalkingHead video/out/<name>.mp4 --props=video/props/<name>.json`.
+
 `npm run video:studio` opens Remotion Studio for Pierre to scrub and tweak props himself. Need a new kind of shot (split screen, side-by-side tones)? Add a composition in `video/src/` rather than bending `Promo`; the remotion-dev skills (`npx skills add remotion-dev/skills`) cover the API.
 
 ## Scenario

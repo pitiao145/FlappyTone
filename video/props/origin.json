@@ -1,0 +1,916 @@
+{
+ "shots": {
+  "1": "aroll/origin/shot1.mp4",
+  "2": "aroll/origin/shot2.mp4",
+  "3": "aroll/origin/shot3.mp4",
+  "4": "aroll/origin/shot4.mp4",
+  "5": "aroll/origin/shot5.mp4",
+  "6": "aroll/origin/shot6.mp4"
+ },
+ "segments": [
+  {
+   "shot": 1,
+   "from": 6.11,
+   "to": 7.41
+  },
+  {
+   "shot": 1,
+   "from": 7.76,
+   "to": 9.6
+  },
+  {
+   "shot": 1,
+   "from": 10.62,
+   "to": 12.65
+  },
+  {
+   "shot": 2,
+   "from": 2.61,
+   "to": 5.39
+  },
+  {
+   "shot": 2,
+   "from": 6.03,
+   "to": 6.93
+  },
+  {
+   "shot": 2,
+   "from": 7.88,
+   "to": 9.48
+  },
+  {
+   "shot": 2,
+   "from": 11.54,
+   "to": 14.97
+  },
+  {
+   "shot": 2,
+   "from": 16.14,
+   "to": 17.73
+  },
+  {
+   "shot": 3,
+   "from": 2.8,
+   "to": 4.56
+  },
+  {
+   "shot": 3,
+   "from": 5.11,
+   "to": 7.78
+  },
+  {
+   "shot": 3,
+   "from": 13.4,
+   "to": 13.99
+  },
+  {
+   "shot": 3,
+   "from": 14.2,
+   "to": 16.77
+  },
+  {
+   "shot": 4,
+   "from": 3.04,
+   "to": 4.34
+  },
+  {
+   "shot": 4,
+   "from": 4.6,
+   "to": 6.34
+  },
+  {
+   "shot": 4,
+   "from": 6.94,
+   "to": 9.41
+  },
+  {
+   "shot": 4,
+   "from": 11.65,
+   "to": 12.96
+  },
+  {
+   "shot": 4,
+   "from": 14.0,
+   "to": 14.89
+  },
+  {
+   "shot": 4,
+   "from": 16.12,
+   "to": 18.92
+  },
+  {
+   "shot": 4,
+   "from": 19.29,
+   "to": 20.48
+  },
+  {
+   "shot": 5,
+   "from": 5.02,
+   "to": 5.82
+  },
+  {
+   "shot": 5,
+   "from": 6.02,
+   "to": 7.89
+  },
+  {
+   "shot": 5,
+   "from": 8.72,
+   "to": 9.97
+  },
+  {
+   "shot": 5,
+   "from": 18.79,
+   "to": 20.21
+  },
+  {
+   "shot": 5,
+   "from": 21.08,
+   "to": 22.35
+  },
+  {
+   "shot": 6,
+   "from": 2.35,
+   "to": 5.24
+  },
+  {
+   "shot": 6,
+   "from": 5.4,
+   "to": 7.22
+  },
+  {
+   "shot": 6,
+   "from": 7.35,
+   "to": 8.36
+  },
+  {
+   "shot": 6,
+   "from": 8.75,
+   "to": 9.81
+  },
+  {
+   "shot": 6,
+   "from": 15.59,
+   "to": 17.99
+  }
+ ],
+ "title": {
+  "text": "I built a music visualizer.",
+  "sub": "It became a Mandarin game.",
+  "seconds": 3
+ },
+ "overlays": [
+  {
+   "src": "broll/BetterShot_2026-11-04-14-17-08.preview.png",
+   "from": {
+    "shot": 2,
+    "t": 3.9
+   },
+   "to": {
+    "shot": 2,
+    "t": 7.88
+   },
+   "push": 1.12
+  },
+  {
+   "src": "broll/BetterShot_2026-11-04-14-18-53.preview.png",
+   "from": {
+    "shot": 2,
+    "t": 11.54
+   },
+   "to": {
+    "shot": 2,
+    "t": 17.73
+   },
+   "fit": "contain",
+   "push": 1.1
+  },
+  {
+   "src": "clips/origin-flight.mp4",
+   "from": {
+    "shot": 3,
+    "t": 13.4
+   },
+   "to": {
+    "shot": 3,
+    "t": 16.0
+   },
+   "start": 14.75
+  },
+  {
+   "src": "clips/origin-flight.mp4",
+   "from": {
+    "shot": 4,
+    "t": 3.04
+   },
+   "to": {
+    "shot": 4,
+    "t": 20.48
+   },
+   "sync": {
+    "at": {
+     "shot": 4,
+     "t": 17.26
+    },
+    "clipT": 11.88
+   }
+  }
+ ],
+ "zooms": [
+  {
+   "from": {
+    "shot": 5,
+    "t": 18.79
+   },
+   "to": {
+    "shot": 5,
+    "t": 20.21
+   },
+   "scaleTo": 1.1
+  }
+ ],
+ "cta": {
+  "text": "Comment TONES 👇",
+  "from": {
+   "shot": 6,
+   "t": 2.35
+  },
+  "to": {
+   "shot": 6,
+   "t": 17.99
+  }
+ },
+ "captions": [
+  {
+   "text": "I wasn't trying",
+   "from": {
+    "shot": 1,
+    "t": 6.17
+   },
+   "to": {
+    "shot": 1,
+    "t": 6.88
+   }
+  },
+  {
+   "text": "to build",
+   "from": {
+    "shot": 1,
+    "t": 6.88
+   },
+   "to": {
+    "shot": 1,
+    "t": 7.41
+   }
+  },
+  {
+   "text": "a Mandarin tone",
+   "from": {
+    "shot": 1,
+    "t": 7.82
+   },
+   "to": {
+    "shot": 1,
+    "t": 8.67
+   }
+  },
+  {
+   "text": "practicing app,",
+   "from": {
+    "shot": 1,
+    "t": 8.67
+   },
+   "to": {
+    "shot": 1,
+    "t": 9.6
+   }
+  },
+  {
+   "text": "I was trying",
+   "from": {
+    "shot": 1,
+    "t": 10.68
+   },
+   "to": {
+    "shot": 1,
+    "t": 11.27
+   }
+  },
+  {
+   "text": "to build a",
+   "from": {
+    "shot": 1,
+    "t": 11.27
+   },
+   "to": {
+    "shot": 1,
+    "t": 11.79
+   }
+  },
+  {
+   "text": "music visualizer.",
+   "from": {
+    "shot": 1,
+    "t": 11.79
+   },
+   "to": {
+    "shot": 1,
+    "t": 12.65
+   }
+  },
+  {
+   "text": "One weekend",
+   "from": {
+    "shot": 2,
+    "t": 2.67
+   },
+   "to": {
+    "shot": 2,
+    "t": 3.34
+   }
+  },
+  {
+   "text": "I was stuck inside",
+   "from": {
+    "shot": 2,
+    "t": 3.34
+   },
+   "to": {
+    "shot": 2,
+    "t": 4.33
+   }
+  },
+  {
+   "text": "during the typhoon",
+   "from": {
+    "shot": 2,
+    "t": 4.33
+   },
+   "to": {
+    "shot": 2,
+    "t": 5.39
+   }
+  },
+  {
+   "text": "here in Taiwan.",
+   "from": {
+    "shot": 2,
+    "t": 6.09
+   },
+   "to": {
+    "shot": 2,
+    "t": 6.93
+   }
+  },
+  {
+   "text": "I had some",
+   "from": {
+    "shot": 2,
+    "t": 7.94
+   },
+   "to": {
+    "shot": 2,
+    "t": 8.54
+   }
+  },
+  {
+   "text": "free AI credits,",
+   "from": {
+    "shot": 2,
+    "t": 8.54
+   },
+   "to": {
+    "shot": 2,
+    "t": 9.48
+   }
+  },
+  {
+   "text": "so I just tried",
+   "from": {
+    "shot": 2,
+    "t": 11.6
+   },
+   "to": {
+    "shot": 2,
+    "t": 12.34
+   }
+  },
+  {
+   "text": "to build a",
+   "from": {
+    "shot": 2,
+    "t": 12.34
+   },
+   "to": {
+    "shot": 2,
+    "t": 12.88
+   }
+  },
+  {
+   "text": "music visualizer,",
+   "from": {
+    "shot": 2,
+    "t": 12.88
+   },
+   "to": {
+    "shot": 2,
+    "t": 13.69
+   }
+  },
+  {
+   "text": "you know,",
+   "from": {
+    "shot": 2,
+    "t": 13.69
+   },
+   "to": {
+    "shot": 2,
+    "t": 14.19
+   }
+  },
+  {
+   "text": "like those old",
+   "from": {
+    "shot": 2,
+    "t": 14.19
+   },
+   "to": {
+    "shot": 2,
+    "t": 14.97
+   }
+  },
+  {
+   "text": "Windows Media",
+   "from": {
+    "shot": 2,
+    "t": 16.2
+   },
+   "to": {
+    "shot": 2,
+    "t": 16.95
+   }
+  },
+  {
+   "text": "Player ones.",
+   "from": {
+    "shot": 2,
+    "t": 16.95
+   },
+   "to": {
+    "shot": 2,
+    "t": 17.73
+   }
+  },
+  {
+   "text": "After playing",
+   "from": {
+    "shot": 3,
+    "t": 2.86
+   },
+   "to": {
+    "shot": 3,
+    "t": 3.49
+   }
+  },
+  {
+   "text": "with it",
+   "from": {
+    "shot": 3,
+    "t": 3.49
+   },
+   "to": {
+    "shot": 3,
+    "t": 3.89
+   }
+  },
+  {
+   "text": "for a while,",
+   "from": {
+    "shot": 3,
+    "t": 3.89
+   },
+   "to": {
+    "shot": 3,
+    "t": 4.56
+   }
+  },
+  {
+   "text": "I realized that",
+   "from": {
+    "shot": 3,
+    "t": 5.17
+   },
+   "to": {
+    "shot": 3,
+    "t": 5.97
+   }
+  },
+  {
+   "text": "the thing also",
+   "from": {
+    "shot": 3,
+    "t": 5.97
+   },
+   "to": {
+    "shot": 3,
+    "t": 6.73
+   }
+  },
+  {
+   "text": "reacts to my voice.",
+   "from": {
+    "shot": 3,
+    "t": 6.73
+   },
+   "to": {
+    "shot": 3,
+    "t": 7.78
+   }
+  },
+  {
+   "text": "It was",
+   "from": {
+    "shot": 3,
+    "t": 13.46
+   },
+   "to": {
+    "shot": 3,
+    "t": 13.99
+   }
+  },
+  {
+   "text": "moving up and down",
+   "from": {
+    "shot": 3,
+    "t": 14.26
+   },
+   "to": {
+    "shot": 3,
+    "t": 15.6
+   }
+  },
+  {
+   "text": "with my pitch.",
+   "from": {
+    "shot": 3,
+    "t": 15.6
+   },
+   "to": {
+    "shot": 3,
+    "t": 16.77
+   }
+  },
+  {
+   "text": "That's when",
+   "from": {
+    "shot": 4,
+    "t": 3.1
+   },
+   "to": {
+    "shot": 4,
+    "t": 3.61
+   }
+  },
+  {
+   "text": "I thought, huh.",
+   "from": {
+    "shot": 4,
+    "t": 3.61
+   },
+   "to": {
+    "shot": 4,
+    "t": 4.34
+   }
+  },
+  {
+   "text": "That looks familiar.",
+   "from": {
+    "shot": 4,
+    "t": 4.66
+   },
+   "to": {
+    "shot": 4,
+    "t": 5.55
+   }
+  },
+  {
+   "text": "That just looks",
+   "from": {
+    "shot": 4,
+    "t": 5.55
+   },
+   "to": {
+    "shot": 4,
+    "t": 6.34
+   }
+  },
+  {
+   "text": "like the Mandarin",
+   "from": {
+    "shot": 4,
+    "t": 7.0
+   },
+   "to": {
+    "shot": 4,
+    "t": 8.11
+   }
+  },
+  {
+   "text": "tones in textbooks.",
+   "from": {
+    "shot": 4,
+    "t": 8.11
+   },
+   "to": {
+    "shot": 4,
+    "t": 9.41
+   }
+  },
+  {
+   "text": "Why not",
+   "from": {
+    "shot": 4,
+    "t": 11.71
+   },
+   "to": {
+    "shot": 4,
+    "t": 12.21
+   }
+  },
+  {
+   "text": "make a game",
+   "from": {
+    "shot": 4,
+    "t": 12.21
+   },
+   "to": {
+    "shot": 4,
+    "t": 12.96
+   }
+  },
+  {
+   "text": "where you fly a bird",
+   "from": {
+    "shot": 4,
+    "t": 14.06
+   },
+   "to": {
+    "shot": 4,
+    "t": 14.89
+   }
+  },
+  {
+   "text": "through obstacles",
+   "from": {
+    "shot": 4,
+    "t": 16.18
+   },
+   "to": {
+    "shot": 4,
+    "t": 17.13
+   }
+  },
+  {
+   "text": "shaped like",
+   "from": {
+    "shot": 4,
+    "t": 17.13
+   },
+   "to": {
+    "shot": 4,
+    "t": 17.8
+   }
+  },
+  {
+   "text": "the Mandarin tones?",
+   "from": {
+    "shot": 4,
+    "t": 17.8
+   },
+   "to": {
+    "shot": 4,
+    "t": 18.92
+   }
+  },
+  {
+   "text": "Makes total sense.",
+   "from": {
+    "shot": 4,
+    "t": 19.35
+   },
+   "to": {
+    "shot": 4,
+    "t": 20.48
+   }
+  },
+  {
+   "text": "Until now,",
+   "from": {
+    "shot": 5,
+    "t": 5.08
+   },
+   "to": {
+    "shot": 5,
+    "t": 5.82
+   }
+  },
+  {
+   "text": "the Mandarin tones",
+   "from": {
+    "shot": 5,
+    "t": 6.08
+   },
+   "to": {
+    "shot": 5,
+    "t": 6.77
+   }
+  },
+  {
+   "text": "were something",
+   "from": {
+    "shot": 5,
+    "t": 6.77
+   },
+   "to": {
+    "shot": 5,
+    "t": 7.34
+   }
+  },
+  {
+   "text": "that I just",
+   "from": {
+    "shot": 5,
+    "t": 7.34
+   },
+   "to": {
+    "shot": 5,
+    "t": 7.89
+   }
+  },
+  {
+   "text": "couldn't understand.",
+   "from": {
+    "shot": 5,
+    "t": 8.78
+   },
+   "to": {
+    "shot": 5,
+    "t": 9.97
+   }
+  },
+  {
+   "text": "Seeing the tones",
+   "from": {
+    "shot": 5,
+    "t": 18.85
+   },
+   "to": {
+    "shot": 5,
+    "t": 19.68
+   }
+  },
+  {
+   "text": "though…",
+   "from": {
+    "shot": 5,
+    "t": 19.68
+   },
+   "to": {
+    "shot": 5,
+    "t": 20.21
+   }
+  },
+  {
+   "text": "Too easy.",
+   "from": {
+    "shot": 5,
+    "t": 21.14
+   },
+   "to": {
+    "shot": 5,
+    "t": 22.35
+   }
+  },
+  {
+   "text": "If you also",
+   "from": {
+    "shot": 6,
+    "t": 2.41
+   },
+   "to": {
+    "shot": 6,
+    "t": 3.25
+   }
+  },
+  {
+   "text": "want to stop",
+   "from": {
+    "shot": 6,
+    "t": 3.25
+   },
+   "to": {
+    "shot": 6,
+    "t": 4.15
+   }
+  },
+  {
+   "text": "trying to hear",
+   "from": {
+    "shot": 6,
+    "t": 4.15
+   },
+   "to": {
+    "shot": 6,
+    "t": 5.24
+   }
+  },
+  {
+   "text": "Mandarin tones",
+   "from": {
+    "shot": 6,
+    "t": 5.46
+   },
+   "to": {
+    "shot": 6,
+    "t": 6.35
+   }
+  },
+  {
+   "text": "or trying to",
+   "from": {
+    "shot": 6,
+    "t": 6.35
+   },
+   "to": {
+    "shot": 6,
+    "t": 7.22
+   }
+  },
+  {
+   "text": "pronounce them just",
+   "from": {
+    "shot": 6,
+    "t": 7.41
+   },
+   "to": {
+    "shot": 6,
+    "t": 8.36
+   }
+  },
+  {
+   "text": "out of thin air,",
+   "from": {
+    "shot": 6,
+    "t": 8.81
+   },
+   "to": {
+    "shot": 6,
+    "t": 9.81
+   }
+  },
+  {
+   "text": "comment TONES",
+   "from": {
+    "shot": 6,
+    "t": 15.65
+   },
+   "to": {
+    "shot": 6,
+    "t": 16.21
+   }
+  },
+  {
+   "text": "down below",
+   "from": {
+    "shot": 6,
+    "t": 16.21
+   },
+   "to": {
+    "shot": 6,
+    "t": 16.68
+   }
+  },
+  {
+   "text": "and I'll send",
+   "from": {
+    "shot": 6,
+    "t": 16.68
+   },
+   "to": {
+    "shot": 6,
+    "t": 17.25
+   }
+  },
+  {
+   "text": "the link to you.",
+   "from": {
+    "shot": 6,
+    "t": 17.25
+   },
+   "to": {
+    "shot": 6,
+    "t": 17.99
+   }
+  }
+ ]
+}
