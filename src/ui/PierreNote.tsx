@@ -48,14 +48,11 @@ export function PierreNote({ onDone, preview: previewProp = false }: { onDone: (
   const [stage, setStage] = useState<Stage>("collapsed");
   const [message, setMessage] = useState("");
   const [wantsChat, setWantsChat] = useState(false);
-  const [email, setEmail] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(preview ? "player@preview.dev" : null);
   const [status, setStatus] = useState<Status>("idle");
 
   useEffect(() => {
-    if (preview) {
-      setEmail("player@preview.dev");
-      return;
-    }
+    if (preview) return;
     track({ type: "note_shown" });
     void accountEmail().then(setEmail);
   }, [preview]);
