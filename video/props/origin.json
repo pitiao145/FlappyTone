@@ -186,16 +186,19 @@
    "push": 1.1
   },
   {
-   "src": "clips/origin-flight.mp4",
+   "src": "broll/origin/visualizer-app.mp4",
    "from": {
     "shot": 3,
-    "t": 13.4
+    "t": 6.73
    },
    "to": {
     "shot": 3,
-    "t": 16.0
+    "t": 16.77
    },
-   "start": 14.75
+   "fit": "contain",
+   "push": 1.1,
+   "scale": 1.4,
+   "brightness": 1.6
   },
   {
    "src": "clips/origin-flight.mp4",

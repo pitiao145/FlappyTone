@@ -44,10 +44,14 @@ export interface Overlay {
   start?: number;
   /** For a video: play clip second `clipT` at source moment `at` (wins over `start`), e.g. a gate passing on a word. */
   sync?: { at: At; clipT: number };
-  /** Still: slow push-in from 1 to this scale over its time on screen. Default 1.08. */
+  /** Slow push-in from 1 to this scale over its time on screen. Stills default to 1.08; videos only push when set. */
   push?: number;
   /** "cover" (default) fills the frame; "contain" letterboxes on a blurred copy. */
   fit?: "cover" | "contain";
+  /** Fixed scale under the push, e.g. to fill more of a 9:16 frame with a landscape clip. Default 1. */
+  scale?: number;
+  /** CSS brightness for a dim recording. Default 1. */
+  brightness?: number;
 }
 
 export interface THCaption {
@@ -146,7 +150,12 @@ function BRoll({ o, len, start }: { o: Overlay; len: number; start: number }) {
           {media({ width: "100%", height: "100%", objectFit: "cover" })}
         </AbsoluteFill>
       )}
-      <AbsoluteFill style={{ transform: `scale(${isVideo ? 1 : push})` }}>
+      <AbsoluteFill
+        style={{
+          transform: `scale(${(o.scale ?? 1) * (isVideo && o.push === undefined ? 1 : push)})`,
+          filter: o.brightness ? `brightness(${o.brightness})` : undefined,
+        }}
+      >
         {media({ width: "100%", height: "100%", objectFit: o.fit ?? "cover" })}
       </AbsoluteFill>
     </AbsoluteFill>
