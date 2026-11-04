@@ -1,4 +1,5 @@
 -- 0033_feedback_notes — the "note from Pierre" card for engaged free players.
+-- Applied 2026-11-04.
 --
 -- A sent note is a row in the existing `feedback` table (source 'note'), so
 -- every reply is read in one place. "Not now" is a count and a time on the

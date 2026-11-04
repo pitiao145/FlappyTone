@@ -125,34 +125,46 @@ export type Database = {
       }
       feedback: {
         Row: {
+          app_context: Json | null
+          contact_email: string | null
           created_at: string
           id: number
           message: string
           rating: number | null
           screen: string | null
+          source: string
           tier: string | null
           user_agent: string | null
           user_id: string | null
+          wants_chat: boolean
         }
         Insert: {
+          app_context?: Json | null
+          contact_email?: string | null
           created_at?: string
           id?: never
           message: string
           rating?: number | null
           screen?: string | null
+          source?: string
           tier?: string | null
           user_agent?: string | null
           user_id?: string | null
+          wants_chat?: boolean
         }
         Update: {
+          app_context?: Json | null
+          contact_email?: string | null
           created_at?: string
           id?: never
           message?: string
           rating?: number | null
           screen?: string | null
+          source?: string
           tier?: string | null
           user_agent?: string | null
           user_id?: string | null
+          wants_chat?: boolean
         }
         Relationships: []
       }
@@ -253,6 +265,8 @@ export type Database = {
           is_public: boolean
           marketing_consent: boolean
           marketing_consent_at: string | null
+          note_dismissals: number
+          note_last_dismissed_at: string | null
           streak_best: number
           streak_current: number
           streak_last_day: string | null
@@ -269,6 +283,8 @@ export type Database = {
           is_public?: boolean
           marketing_consent?: boolean
           marketing_consent_at?: string | null
+          note_dismissals?: number
+          note_last_dismissed_at?: string | null
           streak_best?: number
           streak_current?: number
           streak_last_day?: string | null
@@ -285,6 +301,8 @@ export type Database = {
           is_public?: boolean
           marketing_consent?: boolean
           marketing_consent_at?: string | null
+          note_dismissals?: number
+          note_last_dismissed_at?: string | null
           streak_best?: number
           streak_current?: number
           streak_last_day?: string | null
@@ -669,6 +687,11 @@ export type Database = {
         Returns: boolean
       }
       merge_words: { Args: { p_a: string[]; p_b: string[] }; Returns: string[] }
+      note_dismiss: { Args: { p_user: string }; Returns: undefined }
+      note_eligible: {
+        Args: { p_min_days: number; p_min_runs: number; p_user: string }
+        Returns: boolean
+      }
       record_run: {
         Args: {
           p_day: string
