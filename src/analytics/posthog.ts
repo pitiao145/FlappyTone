@@ -342,12 +342,19 @@ export function initPostHog(consent: boolean, pageProps?: SeoPageViewProps): voi
 export function capturePostHogEvent(
   name: string,
   properties?: Record<string, string | number | boolean>,
-  options?: { instant?: boolean },
+  options?: { instant?: boolean; beacon?: boolean },
 ): void {
   try {
     runOrQueue(() => {
       try {
-        ph?.capture(name, properties, options?.instant ? { send_instantly: true } : undefined);
+        // `beacon`: the page is going away (pagehide), so only sendBeacon is
+        // sure to leave before it does.
+        const opts = options?.beacon
+          ? { send_instantly: true, transport: "sendBeacon" as const }
+          : options?.instant
+            ? { send_instantly: true }
+            : undefined;
+        ph?.capture(name, properties, opts);
       } catch {
         // Same posture as everywhere else in this file.
       }
@@ -375,6 +382,7 @@ export function captureGameEvent(event: AnalyticsEvent): void {
   const { type, ...rest } = event;
   capturePostHogEvent(type, rest as Record<string, string | number | boolean>, {
     instant: INSTANT_EVENTS.has(type) || (type === "seo_cta_click" && event.target === "signup"),
+    beacon: type === "mic_unanswered",
   });
 }
 

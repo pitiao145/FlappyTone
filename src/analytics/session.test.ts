@@ -4,12 +4,14 @@ import type { GateLogEntry } from "../game/run.ts";
 import type {
   AnalyticsEvent,
   InAppAppValue,
+  MicDenialValue,
   MicErrorNameValue,
   MicFailureReason,
   MicPermissionValue,
+  MicStageValue,
   TrackedScreen,
 } from "./session.ts";
-import type { MicErrorKind, MicErrorName } from "../audio/mic.ts";
+import type { MicDenial, MicErrorKind, MicErrorName, MicStage } from "../audio/mic.ts";
 import type { InAppApp } from "../lib/inAppBrowser.ts";
 import type { MicPermission } from "../lib/micPermission.ts";
 import type { Screen } from "../app/GameApp.tsx";
@@ -37,6 +39,11 @@ const _permB: MicPermissionValue = null as unknown as MicPermission;
 const _appA: InAppApp = null as unknown as InAppAppValue;
 const _appB: InAppAppValue = null as unknown as InAppApp;
 void [_nameA, _nameB, _permA, _permB, _appA, _appB];
+const _stageA: MicStage = null as unknown as MicStageValue;
+const _stageB: MicStageValue = null as unknown as MicStage;
+const _denialA: MicDenial = null as unknown as MicDenialValue;
+const _denialB: MicDenialValue = null as unknown as MicDenial;
+void [_stageA, _stageB, _denialA, _denialB];
 
 /**
  * `session.ts` restates `GameApp.tsx`'s `Screen` type (minus the dev-only
@@ -262,6 +269,8 @@ describe("eventTier", () => {
   // implementation.
   const GAMEPLAY: AnalyticsEvent["type"][] = [
     "mic",
+    "mic_unanswered",
+    "mic_reacquire",
     "calib_step",
     "calib_done",
     "calib_abandoned",
@@ -372,17 +381,27 @@ describe("mic, mic_help and inapp_prompt shapes (brief 27)", () => {
       ok: true,
       reason: true,
       error_name: true,
+      stage: true,
+      denial: true,
       surface: true,
       perm_before: true,
       ms: true,
       attempt: true,
     };
     expect(Object.keys(ok).sort()).toEqual(["attempt", "ms", "ok", "perm_before", "surface", "type"]);
-    expect(Object.keys(fail)).toHaveLength(8);
+    expect(Object.keys(fail)).toHaveLength(10);
   });
 
   it("pins the closed values", () => {
-    const surfaces: Record<MicOk["surface"], true> = { app: true, demo: true, "visualizer-tool": true };
+    const surfaces: Record<MicOk["surface"], true> = {
+      app: true,
+      "app-visualiser": true,
+      "app-settings": true,
+      demo: true,
+      "visualizer-tool": true,
+    };
+    const stages: Record<MicFail["stage"], true> = { context: true, worklet: true, gum: true };
+    const denials: Record<MicFail["denial"], true> = { dismissed: true, denied: true, system: true, other: true, none: true };
     const perms: Record<MicOk["perm_before"], true> = { granted: true, prompt: true, denied: true, unsupported: true };
     const names: Record<MicFail["error_name"], true> = {
       NotAllowedError: true,
@@ -432,7 +451,9 @@ describe("mic, mic_help and inapp_prompt shapes (brief 27)", () => {
       "webview-android": true,
       "webview-ios": true,
     };
-    expect(Object.keys(surfaces)).toHaveLength(3);
+    expect(Object.keys(surfaces)).toHaveLength(5);
+    expect(Object.keys(stages)).toHaveLength(3);
+    expect(Object.keys(denials)).toHaveLength(5);
     expect(Object.keys(perms)).toHaveLength(4);
     expect(Object.keys(names)).toHaveLength(8);
     expect(Object.keys(reasons)).toHaveLength(5);
@@ -447,6 +468,8 @@ describe("mic, mic_help and inapp_prompt shapes (brief 27)", () => {
       ok: false,
       reason: "permission-denied",
       error_name: "NotAllowedError",
+      stage: "gum",
+      denial: "other",
       surface: "demo",
       perm_before: "prompt",
       ms: 800,
@@ -458,8 +481,30 @@ describe("mic, mic_help and inapp_prompt shapes (brief 27)", () => {
     expect(sanitizeGameProperties(props)).toEqual(props);
   });
 
+  it("pins the mic_unanswered and mic_reacquire fields", () => {
+    type Unanswered = Extract<AnalyticsEvent, { type: "mic_unanswered" }>;
+    type ReOk = Extract<AnalyticsEvent, { type: "mic_reacquire"; ok: true }>;
+    type ReFail = Extract<AnalyticsEvent, { type: "mic_reacquire"; ok: false }>;
+    const u: Record<Keys<Unanswered>, true> = { type: true, surface: true, ms: true, attempt: true };
+    const ok: Record<Keys<ReOk>, true> = { type: true, ok: true, phase: true, idle_ms: true };
+    const fail: Record<Keys<ReFail>, true> = {
+      type: true,
+      ok: true,
+      phase: true,
+      idle_ms: true,
+      reason: true,
+      error_name: true,
+      denial: true,
+    };
+    expect(Object.keys(u)).toHaveLength(4);
+    expect(Object.keys(ok)).toHaveLength(4);
+    expect(Object.keys(fail)).toHaveLength(7);
+  });
+
   it("keeps mic gameplay and mic_help global", () => {
     expect(eventTier("mic")).toBe("gameplay");
+    expect(eventTier("mic_unanswered")).toBe("gameplay");
+    expect(eventTier("mic_reacquire")).toBe("gameplay");
     expect(eventTier("mic_help")).toBe("global");
   });
 });

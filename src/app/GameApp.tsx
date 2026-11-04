@@ -4,7 +4,7 @@ import { seoSource } from "../site/pageAnalytics.ts";
 import { detectInAppBrowser } from "../lib/inAppBrowser";
 import { InAppBrowserPrompt } from "../ui/InAppBrowserPrompt";
 import { useTier } from "../data/tier.ts";
-import type { TrackedScreen } from "../analytics/session.ts";
+import type { MicSurface, TrackedScreen } from "../analytics/session.ts";
 import { adoptInventory, inventorySpeaker, loadInventory } from "../audio/inventory";
 import { getPlayTicket, invalidatePlayTicket } from "../audio/clipToken";
 import { MicError, type MicErrorKind } from "../audio/mic";
@@ -643,6 +643,8 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
    * `requestMicAndThen`, consumed and cleared by `confirmSilentGate`.
    */
   const micGateResumeRef = useRef<(() => void | Promise<void>) | null>(null);
+  /** Who the gate's mic request is for, for the `mic` event's `surface`. */
+  const micGateSurfaceRef = useRef<MicSurface>("app");
   /** Whether the gate's "OK" button is mid-`ensureMic()`. */
   const [silentGateBusy, setSilentGateBusy] = useState(false);
   /**
@@ -671,8 +673,9 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
    * first tap (it ducks iOS output volume in a way the gate's own warning
    * would then be too late to fix).
    */
-  const requestMicAndThen = useCallback((resume: () => void | Promise<void>) => {
+  const requestMicAndThen = useCallback((resume: () => void | Promise<void>, surface: MicSurface = "app") => {
     micGateResumeRef.current = resume;
+    micGateSurfaceRef.current = surface;
     setError(null);
     setMicFailure(null);
     setScreen("silentGate");
@@ -690,7 +693,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     const gen = ++navRef.current;
     try {
       void ensurePlaybackCtx(); // resume cue-playback ctx in-gesture (reference.ts)
-      await ensureMic();
+      await ensureMic(micGateSurfaceRef.current);
       if (gen !== navRef.current) return;
       const resume = micGateResumeRef.current;
       micGateResumeRef.current = null;
@@ -1164,7 +1167,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
       if (audio && audio.state === "suspended") await audio.resume();
       setVisualiserMicReady(true);
       setScreen(settings ? "visualiser" : "calibrate");
-    });
+    }, "app-visualiser");
   }, [settings, gameAlive, requestMicAndThen]);
 
   /**

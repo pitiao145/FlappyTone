@@ -364,7 +364,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     setMuteError(null);
     try {
       void ensurePlaybackCtx(); // resume cue-playback ctx in-gesture (reference.ts)
-      await ensureMic();
+      await ensureMic("app-visualiser");
       setFrameSink(frameSinkRef.current);
       setMuted(false);
     } catch (err) {

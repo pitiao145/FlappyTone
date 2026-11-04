@@ -10,7 +10,7 @@
 import { track } from "../analytics/client.ts";
 import type { MicSurface } from "../analytics/session.ts";
 import { queryMicPermission } from "../lib/micPermission.ts";
-import { MicError, micErrorName, startMic, type MicSession } from "./mic.ts";
+import { MicError, micDenial, micErrorName, startMic, type MicSession } from "./mic.ts";
 
 export type FrameSink = (frame: Float32Array, sampleRate: number) => void;
 
@@ -27,6 +27,24 @@ let startingGen = -1;
 let generation = 0;
 /** Mic requests made in this page load, for the `mic` event's `attempt`. */
 let attempts = 0;
+
+/** Rounds a duration to 100 ms, the resolution every mic event uses. */
+const round100 = (ms: number): number => Math.round(ms / 100) * 100;
+
+/**
+ * The request still waiting for an answer, for `mic_unanswered`: set when a
+ * request starts, cleared when it settles. Read once, on `pagehide`.
+ */
+let unanswered: { surface: MicSurface; t0: number; attempt: number } | null = null;
+
+if (typeof window !== "undefined") {
+  window.addEventListener("pagehide", () => {
+    const u = unanswered;
+    if (!u) return;
+    unanswered = null;
+    track({ type: "mic_unanswered", surface: u.surface, ms: round100(performance.now() - u.t0), attempt: u.attempt });
+  });
+}
 
 /**
  * Opens the mic if it isn't already open. **Must be called synchronously from
@@ -48,8 +66,10 @@ export function ensureMic(surface: MicSurface = "app"): Promise<MicSession> {
   const t0 = performance.now();
   const attempt = ++attempts;
   const permBefore = queryMicPermission();
+  const pendingAsk = { surface, t0, attempt };
+  unanswered = pendingAsk;
   const report = (outcome: { ok: true } | { ok: false; err: unknown }) => {
-    const ms = Math.round((performance.now() - t0) / 100) * 100;
+    const ms = round100(performance.now() - t0);
     void permBefore.then((perm_before) => {
       const ctx = { surface, perm_before, ms, attempt };
       if (outcome.ok) track({ type: "mic", ok: true, ...ctx });
@@ -59,11 +79,15 @@ export function ensureMic(surface: MicSurface = "app"): Promise<MicSession> {
           ok: false,
           reason: outcome.err instanceof MicError ? outcome.err.kind : "unknown",
           error_name: micErrorName(outcome.err),
+          stage: outcome.err instanceof MicError ? outcome.err.stage : "gum",
+          denial: micDenial(outcome.err),
           ...ctx,
         });
     });
   };
   const clearIfCurrent = () => {
+    // Settled either way: the prompt is no longer open.
+    if (unanswered === pendingAsk) unanswered = null;
     if (startingGen === gen) {
       starting = null;
       startingGen = -1;
@@ -126,6 +150,27 @@ export function getMicSession(): MicSession | null {
  */
 let cueReleaseActive = false;
 
+/** When the mic was last let go for a cue, or found lost, for `idle_ms`. */
+let idleSince = 0;
+
+/** `mic_reacquire` failures sent in this page load; capped so a deaf run can't flood. */
+let reacquireFailures = 0;
+const MAX_REACQUIRE_FAILURE_EVENTS = 5;
+
+function reportReacquireFailure(phase: "cue" | "recovery", err: unknown): void {
+  if (reacquireFailures >= MAX_REACQUIRE_FAILURE_EVENTS) return;
+  reacquireFailures += 1;
+  track({
+    type: "mic_reacquire",
+    ok: false,
+    phase,
+    idle_ms: round100(performance.now() - idleSince),
+    reason: err instanceof MicError ? err.kind : "unknown",
+    error_name: micErrorName(err),
+    denial: micDenial(err),
+  });
+}
+
 /**
  * Releases the current session's mic stream (keeping its context alive) so iOS
  * reverts the output route to the loud speaker for a reference cue. No-op if no
@@ -133,6 +178,7 @@ let cueReleaseActive = false;
  */
 export function releaseMicStream(): void {
   cueReleaseActive = true;
+  idleSince = performance.now();
   session?.releaseStream();
 }
 
@@ -153,6 +199,7 @@ export async function acquireMicStream(): Promise<void> {
     await s.acquireStream();
   } catch (err) {
     if (!(err instanceof MicError)) throw err;
+    reportReacquireFailure("cue", err);
     // A re-acquire that fails (e.g. the OS still holds the mic after a cue)
     // leaves the game deaf. Mark it lost so the UI shows it and the
     // visibility/gesture retry (Fix B) can recover.
@@ -218,6 +265,7 @@ let recovering = false;
 function onMicLost(): void {
   // Ignore a loss reported after the session was already torn down.
   if (!session) return;
+  idleSince = performance.now();
   setMicStatus("lost");
   void recoverMic();
 }
@@ -247,8 +295,13 @@ export async function recoverMic(): Promise<void> {
         // retry below covers it.
       }
     }
-    setMicStatus(s.hasStream() && s.ctx.state === "running" ? "live" : "lost");
-  } catch {
+    const live = s.hasStream() && s.ctx.state === "running";
+    if (live) {
+      track({ type: "mic_reacquire", ok: true, phase: "recovery", idle_ms: round100(performance.now() - idleSince) });
+    }
+    setMicStatus(live ? "live" : "lost");
+  } catch (err) {
+    reportReacquireFailure("recovery", err);
     setMicStatus("lost");
   } finally {
     recovering = false;

@@ -28,15 +28,41 @@ const KNOWN_NAMES = new Set<string>([
   "TypeError",
 ]);
 
+/**
+ * Which step of opening the mic failed (analytics `stage`): the audio engine
+ * (`context`), the capture worklet (`worklet`) or the mic itself (`gum`).
+ */
+export type MicStage = "context" | "worklet" | "gum";
+
+/**
+ * What a `NotAllowedError` says about the refusal (analytics `denial`), from
+ * the browser's message, never the raw text. Chrome: "Permission dismissed"
+ * (prompt closed), "Permission denied" / "… by user" (blocked, or the 7-day
+ * block after repeated dismissals), "Permission denied by system" (the OS
+ * blocks the browser). Safari's messages carry no such detail: `other`.
+ * `none` for every failure that is not a `NotAllowedError`.
+ */
+export type MicDenial = "dismissed" | "denied" | "system" | "other" | "none";
+
 export class MicError extends Error {
   kind: MicErrorKind;
   errorName: MicErrorName;
+  stage: MicStage;
+  denial: MicDenial;
 
-  constructor(kind: MicErrorKind, message: string, errorName: MicErrorName = "other") {
+  constructor(
+    kind: MicErrorKind,
+    message: string,
+    errorName: MicErrorName = "other",
+    stage: MicStage = "gum",
+    denial: MicDenial = "none",
+  ) {
     super(message);
     this.name = "MicError";
     this.kind = kind;
     this.errorName = errorName;
+    this.stage = stage;
+    this.denial = denial;
   }
 }
 
@@ -47,24 +73,37 @@ export function micErrorName(err: unknown): MicErrorName {
   return typeof name === "string" && KNOWN_NAMES.has(name) ? (name as MicErrorName) : "other";
 }
 
+/** The closed `MicDenial` for any thrown value. Pure. */
+export function micDenial(err: unknown): MicDenial {
+  if (err instanceof MicError) return err.denial;
+  if (micErrorName(err) !== "NotAllowedError") return "none";
+  const message = (err as { message?: unknown } | null)?.message;
+  if (typeof message !== "string") return "other";
+  if (/dismissed/i.test(message)) return "dismissed";
+  if (/by system/i.test(message)) return "system";
+  if (/^permission denied/i.test(message.trim())) return "denied";
+  return "other";
+}
+
 /**
- * Maps whatever `getUserMedia` threw to a `MicError`. Pure, for tests.
+ * Maps whatever a mic-opening step threw to a `MicError`. Pure, for tests.
  * `NotReadableError` is the mic held by another app (a call, a recorder).
  */
-export function toMicError(err: unknown): MicError {
+export function toMicError(err: unknown, stage: MicStage = "gum"): MicError {
   if (err instanceof MicError) return err;
   const name = micErrorName(err);
+  const denial = micDenial(err);
   switch (name) {
     case "NotAllowedError":
     case "SecurityError":
-      return new MicError("permission-denied", "Microphone access was denied.", name);
+      return new MicError("permission-denied", "Microphone access was denied.", name, stage, denial);
     case "NotFoundError":
     case "OverconstrainedError":
-      return new MicError("no-microphone", "No microphone was found.", name);
+      return new MicError("no-microphone", "No microphone was found.", name, stage, denial);
     case "NotReadableError":
-      return new MicError("in-use", "The microphone is in use by another app.", name);
+      return new MicError("in-use", "The microphone is in use by another app.", name, stage, denial);
     default:
-      return new MicError("unknown", String(err), name);
+      return new MicError("unknown", String(err), name, stage, denial);
   }
 }
 
@@ -140,9 +179,26 @@ class CaptureProcessor extends AudioWorkletProcessor {
 registerProcessor("capture-processor", CaptureProcessor);
 `;
 
+/** The mic stream, with all voice processing off. Throws `MicError`. */
+async function requestStream(): Promise<MediaStream> {
+  try {
+    // Called synchronously up to here, so a caller inside a tap keeps the tap.
+    return await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+      },
+    });
+  } catch (err) {
+    throw toMicError(err, "gum");
+  }
+}
+
 /**
  * Must be called from a user gesture handler (iOS Safari requires a gesture
- * for both getUserMedia and AudioContext.resume).
+ * for both getUserMedia and AudioContext.resume), and synchronously: it asks
+ * for the mic before its first `await`.
  */
 export async function startMic(
   onFrame: (frame: Float32Array, sampleRate: number) => void,
@@ -163,27 +219,58 @@ export async function startMic(
     );
   }
 
+  // Ask for the mic FIRST, before any `await`. WebKit reads the tap only at
+  // the moment getUserMedia is called, and an `await` ends the tap. A request
+  // without a tap reuses an earlier denial in this page load (no new prompt,
+  // "denied until reload"), and on iPhone it loses an earlier grant once the
+  // mic has been idle for over a minute. See
+  // docs/reports/mic-permission-research-2026-11-04.md.
+  const firstStream = requestStream();
+  // Read after the context is ready; until then a rejection is not unhandled.
+  firstStream.catch(() => {});
+  const discardFirstStream = (): void => {
+    void firstStream.then(
+      (s) => s.getTracks().forEach((t) => t.stop()),
+      () => {},
+    );
+  };
+
   // The context and worklet are created once and persist for the whole
   // session; only the MediaStream + its source node come and go (see
-  // MicSession's doc comment). Creating the context here — before the first
-  // getUserMedia — is still inside the caller's user gesture, which is what
-  // iOS requires for resume().
-  const ctx = new AudioContext();
-  await ctx.resume();
-
-  const workletUrl = URL.createObjectURL(
-    new Blob([WORKLET_SOURCE], { type: "application/javascript" }),
-  );
+  // MicSession's doc comment). resume() is called in the same tap, right
+  // after the mic request, which is what iOS requires for it.
+  let ctx: AudioContext;
   try {
-    await ctx.audioWorklet.addModule(workletUrl);
-  } finally {
-    URL.revokeObjectURL(workletUrl);
+    ctx = new AudioContext();
+  } catch (err) {
+    discardFirstStream();
+    throw toMicError(err, "context");
   }
 
-  const node = new AudioWorkletNode(ctx, "capture-processor", {
-    numberOfInputs: 1,
-    numberOfOutputs: 0,
-  });
+  let stage: MicStage = "context";
+  let node: AudioWorkletNode;
+  try {
+    const resumed = ctx.resume();
+    const workletUrl = URL.createObjectURL(
+      new Blob([WORKLET_SOURCE], { type: "application/javascript" }),
+    );
+    const loaded = ctx.audioWorklet
+      .addModule(workletUrl)
+      .finally(() => URL.revokeObjectURL(workletUrl));
+    loaded.catch(() => {});
+    await resumed;
+    stage = "worklet";
+    await loaded;
+    node = new AudioWorkletNode(ctx, "capture-processor", {
+      numberOfInputs: 1,
+      numberOfOutputs: 0,
+    });
+  } catch (err) {
+    // A failure before the mic step must not leak the context or the mic.
+    discardFirstStream();
+    void ctx.close();
+    throw toMicError(err, stage);
+  }
   node.port.onmessage = (e: MessageEvent<Float32Array>) => {
     onFrame(e.data, ctx.sampleRate);
   };
@@ -243,6 +330,31 @@ export async function startMic(
     stream = null;
   };
 
+  /** Connects a fresh stream to the worklet, unless it went stale meanwhile. */
+  const attachStream = (s: MediaStream, epoch: number): void => {
+    // A release happened (or another acquire won) while we awaited: this
+    // stream is stale — stop it rather than connect a mic nobody expects.
+    if (epoch !== streamEpoch || source) {
+      s.getTracks().forEach((t) => t.stop());
+      return;
+    }
+    stream = s;
+    source = ctx.createMediaStreamSource(stream);
+    source.connect(node);
+    // A fresh stream can be lost again; re-arm and watch this stream's track.
+    // `mute` fires on an OS interruption; `ended` when the device is reclaimed.
+    // Skipped on the Chrome/Firefox-iOS legacy path — those run production's
+    // no-recovery behaviour, where a transient mute must not tear the mic down
+    // mid-utterance (see reference.ts's getPlaybackCtx).
+    lostFired = false;
+    if (!isChromeIOS()) {
+      for (const t of stream.getAudioTracks()) {
+        t.addEventListener("ended", fireLost);
+        t.addEventListener("mute", fireLost);
+      }
+    }
+  };
+
   const acquireStream = (): Promise<void> => {
     // Idempotent: a live source means the stream is already connected.
     if (source) return Promise.resolve();
@@ -260,39 +372,7 @@ export async function startMic(
     const epoch = streamEpoch;
     acquiringEpoch = epoch;
     const p = (async () => {
-      let s: MediaStream;
-      try {
-        s = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false,
-          },
-        });
-      } catch (err) {
-        throw toMicError(err);
-      }
-      // A release happened (or another acquire won) while we awaited: this
-      // stream is stale — stop it rather than connect a mic nobody expects.
-      if (epoch !== streamEpoch || source) {
-        s.getTracks().forEach((t) => t.stop());
-        return;
-      }
-      stream = s;
-      source = ctx.createMediaStreamSource(stream);
-      source.connect(node);
-      // A fresh stream can be lost again; re-arm and watch this stream's track.
-      // `mute` fires on an OS interruption; `ended` when the device is reclaimed.
-      // Skipped on the Chrome/Firefox-iOS legacy path — those run production's
-      // no-recovery behaviour, where a transient mute must not tear the mic down
-      // mid-utterance (see reference.ts's getPlaybackCtx).
-      lostFired = false;
-      if (!isChromeIOS()) {
-        for (const t of stream.getAudioTracks()) {
-          t.addEventListener("ended", fireLost);
-          t.addEventListener("mute", fireLost);
-        }
-      }
+      attachStream(await requestStream(), epoch);
     })();
 
     const wrapped = p.finally(() => {
@@ -303,13 +383,14 @@ export async function startMic(
   };
 
   try {
-    // Initial acquire, still inside the gesture. A failure here must not leak
-    // the context we just opened.
-    await acquireStream();
+    // The first stream, already requested inside the gesture above. A failure
+    // here must not leak the context we just opened, or the mic.
+    attachStream(await firstStream, streamEpoch);
   } catch (err) {
     node.port.onmessage = null;
+    discardFirstStream();
     void ctx.close();
-    throw err;
+    throw toMicError(err, "gum");
   }
 
   return {

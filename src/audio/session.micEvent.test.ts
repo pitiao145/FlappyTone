@@ -13,7 +13,11 @@ vi.mock("./mic.ts", async (orig) => {
   return { ...real, startMic: vi.fn(() => nextStart()) };
 });
 
-const { ensureMic, stopMic } = await import("./session.ts");
+// The node test env has no window; session.ts listens for pagehide on it.
+const fakeWindow = new EventTarget();
+vi.stubGlobal("window", fakeWindow);
+
+const { acquireMicStream, ensureMic, releaseMicStream, stopMic } = await import("./session.ts");
 const { toMicError } = await import("./mic.ts");
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -48,6 +52,8 @@ describe("mic event", () => {
       ok: false,
       reason: "in-use",
       error_name: "NotReadableError",
+      stage: "gum",
+      denial: "none",
       surface: "visualizer-tool",
       perm_before: "prompt",
     });
@@ -59,5 +65,59 @@ describe("mic event", () => {
     await ensureMic();
     await flush();
     expect(tracked[0]).toMatchObject({ surface: "app" });
+  });
+
+  it("sends the denial kind of a refused mic", async () => {
+    nextStart = async () => {
+      throw toMicError(new DOMException("Permission dismissed", "NotAllowedError"));
+    };
+    await expect(ensureMic("app-settings")).rejects.toThrow();
+    await flush();
+    expect(tracked[0]).toMatchObject({ reason: "permission-denied", denial: "dismissed", surface: "app-settings" });
+  });
+
+  it("sends mic_unanswered on pagehide while the prompt is open, once", async () => {
+    let settle: (v: unknown) => void = () => {};
+    nextStart = () => new Promise((r) => (settle = r));
+    const pending = ensureMic("demo");
+    fakeWindow.dispatchEvent(new Event("pagehide"));
+    fakeWindow.dispatchEvent(new Event("pagehide"));
+    expect(tracked).toEqual([{ type: "mic_unanswered", surface: "demo", ms: expect.any(Number), attempt: expect.any(Number) }]);
+    settle({ stop: vi.fn() });
+    await pending;
+  });
+
+  it("sends nothing on pagehide once the request has settled", async () => {
+    nextStart = async () => ({ stop: vi.fn() });
+    await ensureMic("demo");
+    tracked.length = 0;
+    fakeWindow.dispatchEvent(new Event("pagehide"));
+    expect(tracked).toEqual([]);
+  });
+
+  it("sends mic_reacquire when taking the mic back after a cue fails", async () => {
+    const session = {
+      stop: vi.fn(),
+      releaseStream: vi.fn(),
+      acquireStream: vi.fn(async () => {
+        throw toMicError(new DOMException("Permission denied", "NotAllowedError"));
+      }),
+    };
+    nextStart = async () => session;
+    await ensureMic();
+    tracked.length = 0;
+    releaseMicStream();
+    await acquireMicStream();
+    expect(tracked).toEqual([
+      {
+        type: "mic_reacquire",
+        ok: false,
+        phase: "cue",
+        idle_ms: expect.any(Number),
+        reason: "permission-denied",
+        error_name: "NotAllowedError",
+        denial: "denied",
+      },
+    ]);
   });
 });

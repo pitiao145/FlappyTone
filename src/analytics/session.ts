@@ -84,8 +84,19 @@ export type MicErrorNameValue =
   | "TypeError"
   | "other";
 
-/** Which page asked for the mic. The recording booth sends no `mic` event. */
-export type MicSurface = "app" | "demo" | "visualizer-tool";
+/**
+ * Which page asked for the mic. `app` is the game's gate (runs);
+ * `app-visualiser` is the in-app Visualiser (its gate and its unmute);
+ * `app-settings` is Settings' recalibrate/tutorial links. The recording booth
+ * sends no `mic` event.
+ */
+export type MicSurface = "app" | "app-visualiser" | "app-settings" | "demo" | "visualizer-tool";
+
+/** Restates `audio/mic.ts`'s `MicStage`; `session.test.ts` pins the two together. */
+export type MicStageValue = "context" | "worklet" | "gum";
+
+/** Restates `audio/mic.ts`'s `MicDenial`; `session.test.ts` pins the two together. */
+export type MicDenialValue = "dismissed" | "denied" | "system" | "other" | "none";
 
 /** Restates `lib/micPermission.ts`'s `MicPermission`; pinned in `session.test.ts`. */
 export type MicPermissionValue = "granted" | "prompt" | "denied" | "unsupported";
@@ -201,7 +212,39 @@ export type AnalyticsEvent =
       seoAngle?: "learner" | "teacher" | "general";
     }
   | ({ type: "mic"; ok: true } & MicContext)
-  | ({ type: "mic"; ok: false; reason: MicFailureReason; error_name: MicErrorNameValue } & MicContext)
+  | ({
+      type: "mic";
+      ok: false;
+      reason: MicFailureReason;
+      error_name: MicErrorNameValue;
+      /** Which step failed: the audio engine, the capture worklet or the mic. */
+      stage: MicStageValue;
+      /** A `NotAllowedError`'s kind, from the browser's message; `none` otherwise. */
+      denial: MicDenialValue;
+    } & MicContext)
+  /**
+   * The page was hidden or closed while a mic request was still waiting for
+   * an answer (the prompt left open). Sent with `sendBeacon`. Chrome counts
+   * this as an "ignore" (4 in a row block the site for 7 days).
+   */
+  | { type: "mic_unanswered"; surface: MicSurface; ms: number; attempt: number }
+  /**
+   * Taking the mic back during a session, outside a tap: after a cue
+   * (`phase: cue`) or after an OS interruption (`phase: recovery`). A failure
+   * leaves the game deaf. `idle_ms` is the time since the mic was let go or
+   * lost, rounded to 100 ms (WebKit forgets a grant without a tap after 1 min
+   * on iPhone). A success is sent only for a recovery.
+   */
+  | ({ type: "mic_reacquire"; ok: true; phase: "recovery"; idle_ms: number })
+  | {
+      type: "mic_reacquire";
+      ok: false;
+      phase: "cue" | "recovery";
+      idle_ms: number;
+      reason: MicFailureReason;
+      error_name: MicErrorNameValue;
+      denial: MicDenialValue;
+    }
   /**
    * The mic help shown at the mic step (`src/ui/MicHelp.tsx`): the blocked-mic
    * panel and the in-app "open in your browser" notice. Closed values only.
@@ -565,6 +608,8 @@ export type AnalyticsTier = "gameplay" | "global";
  */
 export const EVENT_TIERS: Record<AnalyticsEvent["type"], AnalyticsTier> = {
   mic: "gameplay",
+  mic_unanswered: "gameplay",
+  mic_reacquire: "gameplay",
   mic_help: "global",
   calib_step: "gameplay",
   calib_done: "gameplay",

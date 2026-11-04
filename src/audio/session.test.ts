@@ -5,9 +5,12 @@ const pendingStarts: Array<(s: unknown) => void> = [];
 /** The `onLost` callback handed to the most recent startMic. */
 let lastOnLost: (() => void) | undefined;
 
+vi.mock("../analytics/client.ts", () => ({ track: () => {} }));
+
 vi.mock("./mic.ts", () => ({
   MicError: class extends Error {},
   micErrorName: () => "other",
+  micDenial: () => "none",
   startMic: vi.fn(
     (_sink: unknown, onLost?: () => void) =>
       new Promise((resolve) => {

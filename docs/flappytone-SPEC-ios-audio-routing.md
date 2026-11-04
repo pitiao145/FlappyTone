@@ -183,6 +183,23 @@ wait for `unmute`, which on iOS frequently never fires:
   until the OS releases the mic" bug has no JS fix. Detect the persistently
   dead mic and show a "reopen the app" message rather than spinning silently.
 
+## Opening the mic: `getUserMedia` first, inside the tap (Nov 2026)
+
+`startMic` calls `getUserMedia` before its first `await`, then creates and
+resumes the persistent `AudioContext` and loads the worklet in the same tap.
+WebKit reads the user gesture only at the moment `getUserMedia` is called; an
+`await` before it ends the gesture. Without a gesture WebKit reuses an earlier
+denial for the whole page load (no new prompt), and on iPhone it stops reusing
+an earlier grant once no mic has been live for 1 minute (10 minutes for
+everyone, with or without a gesture). See
+`docs/reports/mic-permission-research-2026-11-04.md`.
+
+This changes only the first open. The cue release/re-acquire above is
+unchanged: it runs outside a tap, but the mic was live seconds before, well
+inside WebKit's 1-minute window. A failed re-acquire is now reported as
+`mic_reacquire` (with `idle_ms`), so a re-acquire after a long pause with the
+mic released would show up there.
+
 ## Guardrail (both fixes)
 
 **Never mutate `location.hash` or call `pushState`/`replaceState` during a

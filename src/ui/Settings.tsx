@@ -343,7 +343,7 @@ export function Settings({
     setError(null);
     try {
       void ensurePlaybackCtx(); // resume cue-playback ctx in-gesture (reference.ts)
-      await ensureMic();
+      await ensureMic("app-settings");
       then();
     } catch (err) {
       if (!(err instanceof MicCancelled)) {
