@@ -105,6 +105,11 @@
   },
   {
    "shot": 5,
+   "from": 2.54,
+   "to": 4.87
+  },
+  {
+   "shot": 5,
    "from": 5.02,
    "to": 5.82
   },
@@ -116,7 +121,22 @@
   {
    "shot": 5,
    "from": 8.72,
-   "to": 9.97
+   "to": 10.86
+  },
+  {
+   "shot": 5,
+   "from": 11.53,
+   "to": 12.4
+  },
+  {
+   "shot": 5,
+   "from": 12.55,
+   "to": 13.71
+  },
+  {
+   "shot": 5,
+   "from": 15.12,
+   "to": 17.35
   },
   {
    "shot": 5,
@@ -217,10 +237,9 @@
     },
     "clipT": 11.88
    }
-  }
- ],
- "zooms": [
+  },
   {
+   "src": "clips/origin-flight.mp4",
    "from": {
     "shot": 5,
     "t": 18.79
@@ -228,6 +247,19 @@
    "to": {
     "shot": 5,
     "t": 20.21
+   },
+   "start": 15.3
+  }
+ ],
+ "zooms": [
+  {
+   "from": {
+    "shot": 5,
+    "t": 21.08
+   },
+   "to": {
+    "shot": 5,
+    "t": 21.4
    },
    "scaleTo": 1.1
   }
@@ -707,7 +739,40 @@
    }
   },
   {
-   "text": "Until now,",
+   "text": "Actually, for me",
+   "from": {
+    "shot": 5,
+    "t": 2.6
+   },
+   "to": {
+    "shot": 5,
+    "t": 3.43
+   }
+  },
+  {
+   "text": "it did make sense,",
+   "from": {
+    "shot": 5,
+    "t": 3.43
+   },
+   "to": {
+    "shot": 5,
+    "t": 4.34
+   }
+  },
+  {
+   "text": "because",
+   "from": {
+    "shot": 5,
+    "t": 4.34
+   },
+   "to": {
+    "shot": 5,
+    "t": 4.87
+   }
+  },
+  {
+   "text": "until now,",
    "from": {
     "shot": 5,
     "t": 5.08
@@ -758,7 +823,73 @@
    },
    "to": {
     "shot": 5,
-    "t": 9.97
+    "t": 9.64
+   }
+  },
+  {
+   "text": "I just couldn't",
+   "from": {
+    "shot": 5,
+    "t": 9.64
+   },
+   "to": {
+    "shot": 5,
+    "t": 10.32
+   }
+  },
+  {
+   "text": "grasp it.",
+   "from": {
+    "shot": 5,
+    "t": 10.32
+   },
+   "to": {
+    "shot": 5,
+    "t": 10.86
+   }
+  },
+  {
+   "text": "My ear,",
+   "from": {
+    "shot": 5,
+    "t": 11.59
+   },
+   "to": {
+    "shot": 5,
+    "t": 12.4
+   }
+  },
+  {
+   "text": "my audio",
+   "from": {
+    "shot": 5,
+    "t": 12.61
+   },
+   "to": {
+    "shot": 5,
+    "t": 13.71
+   }
+  },
+  {
+   "text": "intelligence",
+   "from": {
+    "shot": 5,
+    "t": 15.18
+   },
+   "to": {
+    "shot": 5,
+    "t": 16.08
+   }
+  },
+  {
+   "text": "was just too low.",
+   "from": {
+    "shot": 5,
+    "t": 16.08
+   },
+   "to": {
+    "shot": 5,
+    "t": 17.35
    }
   },
   {
