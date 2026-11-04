@@ -347,7 +347,9 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
   }, [tier]);
   // The note-from-Pierre card: after a finished run or TONEder round, the Play
   // home asks the server once whether this free player qualifies (api/note.ts).
-  const [noteOpen, setNoteOpen] = useState(false);
+  // Dev only: `/app?note` shows the card at once, writing nothing (hard rule 7).
+  const notePreview = import.meta.env.DEV && new URLSearchParams(window.location.search).has("note");
+  const [noteOpen, setNoteOpen] = useState(notePreview);
   const closeNote = useCallback(() => setNoteOpen(false), []);
   const mainRef = useRef<HTMLDivElement>(null);
   const { w: CANVAS_W, h: CANVAS_H, desktop } = useCanvasSize(mainRef);
@@ -1527,7 +1529,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
 
       {FEEDBACK_SCREENS.has(screen) && <FeedbackWidget screen={screen} />}
 
-      {noteOpen && screen === "play" && <PierreNote onDone={closeNote} />}
+      {noteOpen && screen === "play" && <PierreNote onDone={closeNote} preview={notePreview} />}
 
       {earlyBird && (
         <EarlyBirdModal

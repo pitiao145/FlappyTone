@@ -35,11 +35,14 @@ function Avatar({ className }: { className: string }) {
  * The note-from-Pierre card (migration 0033, `api/note.ts`): a small card at
  * the bottom of the Play home, then the full card with one question.
  *
- * `GameApp.tsx` mounts it only after the server said this player qualifies.
+ * `GameApp.tsx` mounts it only after the server said this player qualifies,
+ * or with `preview` from the dev-only `/app?note` (no server call, no event).
  * Portaled to `<body>`: `.frame` is a `container-type` element, so
  * `position: fixed` inside it would anchor to the frame (same as FeedbackWidget).
  */
-export function PierreNote({ onDone }: { onDone: () => void }) {
+export function PierreNote({ onDone, preview: previewProp = false }: { onDone: () => void; preview?: boolean }) {
+  // Constant-false in production, so the build drops every preview branch.
+  const preview = import.meta.env.DEV && previewProp;
   const titleId = useId();
   const textId = useId();
   const [stage, setStage] = useState<Stage>("collapsed");
@@ -49,9 +52,13 @@ export function PierreNote({ onDone }: { onDone: () => void }) {
   const [status, setStatus] = useState<Status>("idle");
 
   useEffect(() => {
+    if (preview) {
+      setEmail("player@preview.dev");
+      return;
+    }
     track({ type: "note_shown" });
     void accountEmail().then(setEmail);
-  }, []);
+  }, [preview]);
 
   // Close on its own a moment after the thank-you.
   useEffect(() => {
@@ -61,9 +68,11 @@ export function PierreNote({ onDone }: { onDone: () => void }) {
   }, [stage, onDone]);
 
   const dismiss = (from: "collapsed" | "card") => {
-    markNoteAnswered();
-    track({ type: "note_dismissed", stage: from });
-    void dismissNote(noteContext());
+    if (!preview) {
+      markNoteAnswered();
+      track({ type: "note_dismissed", stage: from });
+      void dismissNote(noteContext());
+    }
     onDone();
   };
 
@@ -72,6 +81,10 @@ export function PierreNote({ onDone }: { onDone: () => void }) {
   const send = async () => {
     if (!canSend) return;
     setStatus("sending");
+    if (preview) {
+      setStage("sent");
+      return;
+    }
     const ok = await sendNote(message, wantsChat, noteContext());
     if (!ok) {
       setStatus("failed");
