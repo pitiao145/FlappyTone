@@ -5,7 +5,8 @@
   "3": "aroll/origin/shot3.mp4",
   "4": "aroll/origin/shot4.mp4",
   "5": "aroll/origin/shot5.mp4",
-  "6": "aroll/origin/shot6.mp4"
+  "6": "aroll/origin/shot6.mp4",
+  "7": "aroll/origin/shot7.mp4"
  },
  "segments": [
   {
@@ -139,14 +140,19 @@
    "to": 17.35
   },
   {
-   "shot": 5,
-   "from": 18.79,
-   "to": 20.21
+   "shot": 7,
+   "from": 0.15,
+   "to": 2.3
   },
   {
-   "shot": 5,
-   "from": 21.08,
-   "to": 22.35
+   "shot": 7,
+   "from": 2.6,
+   "to": 4.85
+  },
+  {
+   "shot": 7,
+   "from": 6.05,
+   "to": 7.75
   },
   {
    "shot": 6,
@@ -237,29 +243,17 @@
     },
     "clipT": 11.88
    }
-  },
-  {
-   "src": "clips/origin-flight.mp4",
-   "from": {
-    "shot": 5,
-    "t": 18.79
-   },
-   "to": {
-    "shot": 5,
-    "t": 20.21
-   },
-   "start": 15.3
   }
  ],
  "zooms": [
   {
    "from": {
-    "shot": 5,
-    "t": 21.08
+    "shot": 7,
+    "t": 6.05
    },
    "to": {
-    "shot": 5,
-    "t": 21.4
+    "shot": 7,
+    "t": 7.75
    },
    "scaleTo": 1.1
   }
@@ -893,36 +887,91 @@
    }
   },
   {
-   "text": "Seeing the tones",
+   "text": "But when",
    "from": {
-    "shot": 5,
-    "t": 18.85
+    "shot": 7,
+    "t": 0.21
    },
    "to": {
-    "shot": 5,
-    "t": 19.68
+    "shot": 7,
+    "t": 0.72
    }
   },
   {
-   "text": "though…",
+   "text": "I realized that",
    "from": {
-    "shot": 5,
-    "t": 19.68
+    "shot": 7,
+    "t": 0.72
    },
    "to": {
-    "shot": 5,
-    "t": 20.21
+    "shot": 7,
+    "t": 1.54
    }
   },
   {
-   "text": "Too easy.",
+   "text": "I could just",
    "from": {
-    "shot": 5,
-    "t": 21.14
+    "shot": 7,
+    "t": 1.54
    },
    "to": {
-    "shot": 5,
-    "t": 22.35
+    "shot": 7,
+    "t": 2.3
+   }
+  },
+  {
+   "text": "see the tones",
+   "from": {
+    "shot": 7,
+    "t": 2.66
+   },
+   "to": {
+    "shot": 7,
+    "t": 3.34
+   }
+  },
+  {
+   "text": "instead of just",
+   "from": {
+    "shot": 7,
+    "t": 3.34
+   },
+   "to": {
+    "shot": 7,
+    "t": 4.09
+   }
+  },
+  {
+   "text": "hearing them,",
+   "from": {
+    "shot": 7,
+    "t": 4.09
+   },
+   "to": {
+    "shot": 7,
+    "t": 4.85
+   }
+  },
+  {
+   "text": "everything just clicked",
+   "from": {
+    "shot": 7,
+    "t": 6.11
+   },
+   "to": {
+    "shot": 7,
+    "t": 7.03
+   }
+  },
+  {
+   "text": "and got easier.",
+   "from": {
+    "shot": 7,
+    "t": 7.03
+   },
+   "to": {
+    "shot": 7,
+    "t": 7.75
    }
   },
   {
