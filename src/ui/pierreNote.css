@@ -244,12 +244,48 @@
   cursor: pointer;
 }
 
+/* An empty outlined box, not the browser's filled one (which read as ticked). */
 .pn-check input {
+  appearance: none;
+  -webkit-appearance: none;
   flex-shrink: 0;
+  display: grid;
+  place-content: center;
   width: 22px;
   height: 22px;
   margin: 0;
-  accent-color: var(--accent);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: var(--pn-paper);
+  cursor: pointer;
+}
+
+.pn-check input::after {
+  content: "";
+  width: 6px;
+  height: 11px;
+  margin-top: -2px;
+  border: solid var(--pn-paper);
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg) scale(0);
+}
+
+.pn-check input:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.pn-check input:checked::after {
+  transform: rotate(45deg) scale(1);
+}
+
+.pn-check input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.pn-kicker--chat {
+  margin-bottom: var(--space-2);
 }
 
 .pn-email {

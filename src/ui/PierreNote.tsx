@@ -149,7 +149,7 @@ export function PierreNote({ onDone, preview: previewProp = false }: { onDone: (
           </p>
         ) : (
           <>
-            <p className="pn-body">You've been training your tones a lot. That really made my week.</p>
+            <p className="pn-body">You've been training your tones a lot, that's awesome! I really hope this helps.</p>
             <p className="pn-kicker">Quick question:</p>
             <label htmlFor={textId} className="pn-question">
               What are you learning Mandarin for, and what's one thing I should fix?
@@ -163,9 +163,10 @@ export function PierreNote({ onDone, preview: previewProp = false }: { onDone: (
               value={message}
               onChange={(e) => setMessage(e.target.value)}
             />
+            <p className="pn-kicker pn-kicker--chat">Want to talk more?</p>
             <label className="pn-check">
               <input type="checkbox" checked={wantsChat} onChange={(e) => setWantsChat(e.target.checked)} />
-              <span>Happy to chat for 10 min (I'll email you)</span>
+              <span>Happy to do a 10-min chat (I'll email you)</span>
             </label>
             {wantsChat && email && <p className="pn-email">I'll write to {email}</p>}
             {status === "failed" && (

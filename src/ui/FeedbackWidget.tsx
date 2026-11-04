@@ -96,7 +96,7 @@ function FeedbackSheet({ screen, onClose }: { screen: string; onClose: () => voi
         </button>
 
         <div className="feedback-header">
-          <img src="/Bird-hor-no-halo.png" alt="" className="feedback-avatar" />
+          <img src="/pierre-note.jpg" alt="Pierre" className="feedback-avatar" />
           <div>
             <h2 id={titleId} className="feedback-title">
               Your feedback is crucial 🐥

@@ -7638,14 +7638,16 @@ button.switch-track.switch-on {
   margin: 0 var(--space-6) var(--space-5) 0;
 }
 
+/* Pierre's photo (public/pierre-note.jpg, shared with the note card). */
 .feedback-avatar {
   width: 52px;
   height: 52px;
   flex: none;
-  padding: 6px;
+  box-sizing: border-box;
+  border: 2px solid var(--ink);
   border-radius: 50%;
   background: var(--surface-deep);
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .feedback-title {
