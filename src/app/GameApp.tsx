@@ -60,6 +60,8 @@ import { Loading } from "../ui/Loading";
 import { LevelSelect } from "../ui/LevelSelect.tsx";
 import { ModeSelect } from "../ui/ModeSelect.tsx";
 import { PlayHome, type PlayIntent } from "../ui/PlayHome";
+import { PierreNote } from "../ui/PierreNote.tsx";
+import { armNote, checkNote, takeNoteCheck } from "../data/note.ts";
 import type { Tone } from "../game/gates.ts";
 import { Profile } from "../ui/Profile.tsx";
 import { Progress } from "../ui/Progress.tsx";
@@ -343,6 +345,10 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
   useEffect(() => {
     trackSpeechStyle(effectiveSpeechStyle(tier));
   }, [tier]);
+  // The note-from-Pierre card: after a finished run or TONEder round, the Play
+  // home asks the server once whether this free player qualifies (api/note.ts).
+  const [noteOpen, setNoteOpen] = useState(false);
+  const closeNote = useCallback(() => setNoteOpen(false), []);
   const mainRef = useRef<HTMLDivElement>(null);
   const { w: CANVAS_W, h: CANVAS_H, desktop } = useCanvasSize(mainRef);
   // A run's own top breathing room on desktop (App.css's .game-screen
@@ -389,6 +395,17 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     if (screen === "lab" || screen === "devlogin") return;
     track({ type: "screen_viewed", screen: screen as TrackedScreen });
   }, [screen]);
+  // Free accounts only; the server re-checks tier, activity and show rules.
+  useEffect(() => {
+    if (screen !== "play" || tier !== "free" || !takeNoteCheck()) return;
+    let live = true;
+    void checkNote().then((show) => {
+      if (live && show) setNoteOpen(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, [screen, tier]);
   /**
    * Whether the mic session backing the Visualiser screen is actually open.
    * Landing here via `onNavigate("visualiser")` (a real click) only ever
@@ -937,6 +954,8 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
       lastModeRef.current === "pairs"
     ) {
       recordRun(snap, snap.stats.hearts <= 0 ? "out_of_hearts" : "finished");
+      // The next Play home may ask the server for the note-from-Pierre card.
+      armNote();
       // Only a completed run (finished or out of hearts) counts against the
       // free tier — a quit shouldn't cost the player one of their 5 daily
       // runs. See `onRunQuit` below, which deliberately does not call this.
@@ -1507,6 +1526,8 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
       )}
 
       {FEEDBACK_SCREENS.has(screen) && <FeedbackWidget screen={screen} />}
+
+      {noteOpen && screen === "play" && <PierreNote onDone={closeNote} />}
 
       {earlyBird && (
         <EarlyBirdModal

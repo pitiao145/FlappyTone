@@ -3,6 +3,7 @@ import { track } from "../analytics/client.ts";
 import { getPlayTicket } from "../audio/clipToken.ts";
 import { DEFAULT_SPEAKER_ID } from "../data/catalogRows.ts";
 import { catalogFromCache, catalogFromFallback, fetchCatalog } from "../data/words.ts";
+import { armNote } from "../data/note.ts";
 import { useTier } from "../data/tier.ts";
 import { tierLimits, type Tier } from "../game/tiers.ts";
 import { Toneder } from "../toneder/Toneder.tsx";
@@ -22,7 +23,7 @@ interface Props {
 /**
  * The app's TONEder tab: the same swipe game as `/tools/tone-test`, with a
  * daily swipe cap per tier and Spoken for an account (free or Pro). Standalone on purpose: no
- * stats, XP, streaks or DB writes, only analytics counts.
+ * stats, XP, streaks or DB writes, only analytics counts (and arming the note card's next check).
  */
 export function TonederScreen({ onCreateAccount, onUpgrade, onPlay }: Props) {
   const tier = useTier();
@@ -122,6 +123,8 @@ export function TonederScreen({ onCreateAccount, onUpgrade, onPlay }: Props) {
         onRoundDone={(result) => {
           flush();
           track({ type: "toneder_round_done", tier, correct: result.correct });
+          // The next Play home may ask for the note-from-Pierre card.
+          armNote();
         }}
         capScreen={capScreen}
         doneCta={() => (

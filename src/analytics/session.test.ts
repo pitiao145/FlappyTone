@@ -322,6 +322,9 @@ describe("eventTier", () => {
     "toneder_cap_hit",
     "toneder_upgrade_click",
     "pwa_installed",
+    "note_shown",
+    "note_sent",
+    "note_dismissed",
   ];
 
   for (const type of GAMEPLAY) {

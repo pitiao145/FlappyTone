@@ -540,7 +540,15 @@ export type AnalyticsEvent =
   /** FeedbackWidget.tsx's submit, once it resolves ok. Never carries the free-text message — screen/rating/tier only. */
   | { type: "feedback_submitted"; screen: string; rating: number | null; tier: string }
   /** The browser's `appinstalled` (Chromium only; iOS has no install event, see `display_mode`). */
-  | { type: "pwa_installed" };
+  | { type: "pwa_installed" }
+  /**
+   * The note-from-Pierre card (`src/ui/PierreNote.tsx`). Never carries the
+   * message or the email. `note_dismissed`'s `stage`: the small card or the
+   * opened full card.
+   */
+  | { type: "note_shown" }
+  | { type: "note_sent"; wants_chat: boolean }
+  | { type: "note_dismissed"; stage: "collapsed" | "card" };
 
 /**
  * A closed set mirroring `GameApp.tsx`'s `Screen` type, restated here rather
@@ -659,6 +667,9 @@ export const EVENT_TIERS: Record<AnalyticsEvent["type"], AnalyticsTier> = {
   toneder_cap_hit: "global",
   toneder_upgrade_click: "global",
   pwa_installed: "global",
+  note_shown: "global",
+  note_sent: "global",
+  note_dismissed: "global",
 };
 
 export function eventTier(type: AnalyticsEvent["type"]): AnalyticsTier {

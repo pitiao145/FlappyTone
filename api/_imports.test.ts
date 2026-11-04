@@ -44,6 +44,7 @@ describe("api/ deploy surface", () => {
   it("only exposes the endpoints we meant to expose", () => {
     expect(files.filter((f) => !f.startsWith("_")).sort()).toEqual([
       "newsletter.ts",
+      "note.ts",
       "run.ts",
       "runlog.ts",
       "score.ts",

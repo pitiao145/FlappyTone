@@ -1,0 +1,187 @@
+import { useEffect, useId, useState } from "react";
+import { createPortal } from "react-dom";
+import { track } from "../analytics/client.ts";
+import { accountEmail, dismissNote, markNoteAnswered, NOTE_MAX_CHARS, sendNote, type NoteContext } from "../data/note.ts";
+import { currentDisplayMode } from "../lib/displayMode.ts";
+import "./pierreNote.css";
+
+/** Pierre's photo. Until the file exists the avatar falls back to the bird. */
+const PHOTO = "/pierre-note.jpg";
+const BIRD = "/Bird-hor-no-halo.png";
+
+type Stage = "collapsed" | "card" | "sent";
+type Status = "idle" | "sending" | "failed";
+
+function noteContext(): NoteContext {
+  return {
+    screen: "play",
+    tier: "free",
+    display_mode: currentDisplayMode(),
+    lang: typeof navigator === "undefined" ? null : navigator.language.slice(0, 20),
+  };
+}
+
+function Avatar({ className }: { className: string }) {
+  const [src, setSrc] = useState(PHOTO);
+  return (
+    <span className={`pn-avatar ${className}`}>
+      <img src={src} alt="Pierre" className="pn-photo" onError={() => setSrc(BIRD)} />
+      <img src={BIRD} alt="" className="pn-badge" />
+    </span>
+  );
+}
+
+/**
+ * The note-from-Pierre card (migration 0033, `api/note.ts`): a small card at
+ * the bottom of the Play home, then the full card with one question.
+ *
+ * `GameApp.tsx` mounts it only after the server said this player qualifies.
+ * Portaled to `<body>`: `.frame` is a `container-type` element, so
+ * `position: fixed` inside it would anchor to the frame (same as FeedbackWidget).
+ */
+export function PierreNote({ onDone }: { onDone: () => void }) {
+  const titleId = useId();
+  const textId = useId();
+  const [stage, setStage] = useState<Stage>("collapsed");
+  const [message, setMessage] = useState("");
+  const [wantsChat, setWantsChat] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
+  const [status, setStatus] = useState<Status>("idle");
+
+  useEffect(() => {
+    track({ type: "note_shown" });
+    void accountEmail().then(setEmail);
+  }, []);
+
+  // Close on its own a moment after the thank-you.
+  useEffect(() => {
+    if (stage !== "sent") return;
+    const t = setTimeout(onDone, 2500);
+    return () => clearTimeout(t);
+  }, [stage, onDone]);
+
+  const dismiss = (from: "collapsed" | "card") => {
+    markNoteAnswered();
+    track({ type: "note_dismissed", stage: from });
+    void dismissNote(noteContext());
+    onDone();
+  };
+
+  const canSend = message.trim().length > 0 && status !== "sending";
+
+  const send = async () => {
+    if (!canSend) return;
+    setStatus("sending");
+    const ok = await sendNote(message, wantsChat, noteContext());
+    if (!ok) {
+      setStatus("failed");
+      return;
+    }
+    markNoteAnswered();
+    // Never the message or the email: counts and flags only.
+    track({ type: "note_sent", wants_chat: wantsChat });
+    setStage("sent");
+  };
+
+  if (stage === "collapsed") {
+    return createPortal(
+      <div className="pn-peek" role="dialog" aria-labelledby={titleId}>
+        <button type="button" className="pn-x" onClick={() => dismiss("collapsed")} aria-label="Close">
+          ×
+        </button>
+        <div className="pn-peek-row">
+          <Avatar className="pn-avatar--peek" />
+          <div>
+            <p id={titleId} className="pn-peek-title">
+              Hey, Pierre here!
+            </p>
+            <p className="pn-peek-body">You've been practising a lot, can I ask you one question?</p>
+          </div>
+        </div>
+        <div className="pn-actions">
+          <button type="button" className="pn-later" onClick={() => dismiss("collapsed")}>
+            Not now
+          </button>
+          <button type="button" className="pn-primary" onClick={() => setStage("card")}>
+            Sure, open it
+          </button>
+        </div>
+      </div>,
+      document.body,
+    );
+  }
+
+  return createPortal(
+    <div className="pn-backdrop">
+      <div className="pn-card" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <span className="pn-tag">
+          <img src={BIRD} alt="" />
+          Flappy greetings
+        </span>
+        {stage === "card" && (
+          <button type="button" className="pn-x" onClick={() => dismiss("card")} aria-label="Close">
+            ×
+          </button>
+        )}
+        <div className="pn-head">
+          <Avatar className="pn-avatar--card" />
+          <h2 id={titleId} className="pn-title">
+            Hey, Pierre here. I build FlappyTone alone.
+          </h2>
+        </div>
+
+        {stage === "sent" ? (
+          <p className="pn-thanks" role="status">
+            Thank you! I read every one of these myself.
+          </p>
+        ) : (
+          <>
+            <p className="pn-body">You've been training your tones a lot. That really made my week.</p>
+            <p className="pn-kicker">Quick question:</p>
+            <label htmlFor={textId} className="pn-question">
+              What are you learning Mandarin for, and what's one thing I should fix?
+            </label>
+            <textarea
+              id={textId}
+              className="pn-text"
+              rows={4}
+              maxLength={NOTE_MAX_CHARS}
+              placeholder="Type anything, short is fine"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
+            <label className="pn-check">
+              <input type="checkbox" checked={wantsChat} onChange={(e) => setWantsChat(e.target.checked)} />
+              <span>Happy to chat for 10 min (I'll email you)</span>
+            </label>
+            {wantsChat && email && <p className="pn-email">I'll write to {email}</p>}
+            {status === "failed" && (
+              <p className="pn-error" role="alert">
+                Couldn't send that. Check your connection and try again.
+              </p>
+            )}
+            <div className="pn-actions">
+              <button type="button" className="pn-later" onClick={() => dismiss("card")}>
+                Not now
+              </button>
+              <button type="button" className="pn-primary pn-send" onClick={() => void send()} disabled={!canSend}>
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <path
+                    d="M21 3 10 14M21 3l-7 18-4-7-7-4 18-7Z"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                {status === "sending" ? "Sending…" : "Send to Pierre"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>,
+    document.body,
+  );
+}
