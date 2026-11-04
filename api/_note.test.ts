@@ -16,12 +16,19 @@ async function load(opts: {
   rpcError?: unknown;
 } = {}) {
   const user = "user" in opts ? opts.user : { id: "user-1", is_anonymous: false, email: "a@b.co" };
-  const rpc = vi.fn(async () => ({ data: opts.eligible ?? true, error: opts.rpcError ?? null }));
+  const rpc = vi.fn(async (name: string) =>
+    name === "note_eligible"
+      ? { data: opts.eligible ?? true, error: opts.rpcError ?? null }
+      : { data: null, error: null },
+  );
   const insert = vi.fn(async () => ({ error: null }));
   vi.doMock("@supabase/supabase-js", () => ({
     createClient: vi.fn(() => ({
       auth: { getUser: vi.fn(async () => ({ data: { user }, error: null })) },
-      from: vi.fn(() => ({ insert })),
+      from: vi.fn((table: string) => {
+        expect(table).toBe("feedback");
+        return { insert };
+      }),
       rpc,
     })),
   }));
@@ -104,16 +111,22 @@ describe("POST /api/note", () => {
     await POST(req({ action: "send", message: "hi", wantsChat: true, context: { email: "evil@x.co" } }));
     await POST(req({ action: "send", message: "hi", wantsChat: false }));
     const rows = insert.mock.calls.map((c) => (c as unknown[])[0] as Record<string, unknown>);
-    expect(rows[0]).toMatchObject({ user_id: "user-1", message: "hi", wants_chat: true, contact_email: "a@b.co" });
+    expect(rows[0]).toMatchObject({
+      user_id: "user-1",
+      source: "note",
+      message: "hi",
+      wants_chat: true,
+      contact_email: "a@b.co",
+      tier: "free",
+    });
     expect(rows[1]).toMatchObject({ wants_chat: false, contact_email: null });
   });
 
-  it("writes a dismiss row with no message", async () => {
-    const { POST, insert } = await load();
+  it("records a dismiss on the profile, not as feedback", async () => {
+    const { POST, insert, rpc } = await load();
     expect((await POST(req({ action: "dismiss" }))).status).toBe(200);
-    const row = (insert.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
-    expect(row.message).toBeUndefined();
-    expect(typeof row.dismissed_at).toBe("string");
+    expect(rpc).toHaveBeenCalledWith("note_dismiss", { p_user: "user-1" });
+    expect(insert).not.toHaveBeenCalled();
   });
 
   it("returns 502 when the eligibility check fails", async () => {

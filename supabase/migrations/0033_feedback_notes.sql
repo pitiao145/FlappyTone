@@ -1,45 +1,35 @@
 -- 0033_feedback_notes — the "note from Pierre" card for engaged free players.
 --
--- One row per action: a sent note (message set) or a "Not now" / close
--- (dismissed_at set, message null). A card that was shown and ignored writes
--- nothing, so it can show again after the next run.
+-- A sent note is a row in the existing `feedback` table (source 'note'), so
+-- every reply is read in one place. "Not now" is a count and a time on the
+-- player's `profiles` row (a dismiss has no message, and feedback.message is
+-- required). A card that was shown and ignored writes nothing.
 --
--- Reads: owner-only RLS. Writes: none from the client. api/note.ts (service
--- role) is the sole writer: it checks eligibility first, and takes
--- contact_email from the session (never from the body), only when the player
--- ticked "happy to chat".
+-- Sole writer of notes and dismisses: api/note.ts (service role). It checks
+-- eligibility first, and takes contact_email from the session (never from the
+-- body), only when the player ticked "happy to chat".
 
-create table public.feedback_notes (
-  id            bigint generated always as identity primary key,
-  user_id       uuid not null references auth.users (id) on delete cascade,
-  message       text check (char_length(message) between 1 and 1000),
-  wants_chat    boolean not null default false,
-  contact_email text check (char_length(contact_email) <= 320),
-  app_context   jsonb not null default '{}'::jsonb
-                check (pg_column_size(app_context) <= 2000),
-  created_at    timestamptz not null default now(),
-  dismissed_at  timestamptz,
-  -- A row is either a sent note or a dismiss, never both or neither.
-  check ((message is null) <> (dismissed_at is null)),
-  -- An email is stored only when the player ticked the chat box.
-  check (contact_email is null or wants_chat)
-);
+-- feedback: the note's columns. Defaults keep every widget row as it was.
+alter table public.feedback
+  add column source text not null default 'widget' check (source in ('widget', 'note')),
+  add column wants_chat boolean not null default false,
+  add column contact_email text check (char_length(contact_email) <= 320),
+  add column app_context jsonb check (pg_column_size(app_context) <= 2000),
+  add constraint feedback_email_only_for_chat check (contact_email is null or wants_chat);
 
-create index feedback_notes_user_idx on public.feedback_notes (user_id);
+create index feedback_note_user_idx on public.feedback (user_id) where source = 'note';
 
-alter table public.feedback_notes enable row level security;
+-- The browser still inserts widget feedback, but only into the old columns, so
+-- it cannot write a 'note' row or an email (0023 left a table-level INSERT).
+-- user_id and created_at come from their defaults, which need no grant.
+revoke insert on public.feedback from anon, authenticated;
+grant insert (message, rating, screen, tier, user_agent) on public.feedback to anon, authenticated;
 
-create policy feedback_notes_select_own on public.feedback_notes
-  for select to authenticated
-  using ((select auth.uid()) = user_id);
-
--- Supabase default privileges grant ALL to anon/authenticated (0023's lesson).
-revoke all on public.feedback_notes from anon, authenticated;
-grant select on public.feedback_notes to authenticated;
-grant all on public.feedback_notes to service_role;
-
-comment on table public.feedback_notes is
-  'Note-from-Pierre card: one row per send or "Not now". Owner reads; sole writer api/note.ts (service role). contact_email only when wants_chat.';
+-- profiles: "Not now" state. Not in 0031's client column grants, so
+-- server-written only.
+alter table public.profiles
+  add column note_dismissals smallint not null default 0,
+  add column note_last_dismissed_at timestamptz;
 
 -- Should this account see the card now? Free accounts only (no Pro access).
 -- Activity comes from counted_runs (server-written, one row per user per
@@ -52,19 +42,35 @@ returns boolean language sql stable security invoker set search_path = '' as $$
     select count(*) as days, coalesce(sum(count), 0) as runs
     from public.counted_runs
     where user_id = p_user and day >= current_date - 13
-  ), notes as (
-    select count(*) filter (where message is not null)      as sent,
-           count(*) filter (where dismissed_at is not null) as dismissed,
-           max(dismissed_at)                                as last_dismiss
-    from public.feedback_notes where user_id = p_user
   )
-  select act.days >= p_min_days and act.runs >= p_min_runs
-     and notes.sent = 0 and notes.dismissed < 2
-     and (notes.last_dismiss is null or notes.last_dismiss <= now() - interval '3 days')
-     and not exists (select 1 from public.entitlements e
-                     where e.user_id = p_user and e.has_access)
-  from act, notes
+  select coalesce((
+    select act.days >= p_min_days and act.runs >= p_min_runs
+       and p.note_dismissals < 2
+       and (p.note_last_dismissed_at is null or p.note_last_dismissed_at <= now() - interval '3 days')
+       and not exists (select 1 from public.feedback f
+                       where f.user_id = p_user and f.source = 'note')
+       and not exists (select 1 from public.entitlements e
+                       where e.user_id = p_user and e.has_access)
+    from public.profiles p, act
+    where p.id = p_user
+  ), false)
+$$;
+
+-- One "Not now": adds to the count, atomically.
+create function public.note_dismiss(p_user uuid)
+returns void language sql security invoker set search_path = '' as $$
+  update public.profiles
+     set note_dismissals = note_dismissals + 1,
+         note_last_dismissed_at = now()
+   where id = p_user
 $$;
 
 revoke execute on function public.note_eligible(uuid, integer, integer) from public, anon, authenticated;
+revoke execute on function public.note_dismiss(uuid) from public, anon, authenticated;
 grant execute on function public.note_eligible(uuid, integer, integer) to service_role;
+grant execute on function public.note_dismiss(uuid) to service_role;
+
+comment on column public.feedback.source is
+  'widget = the in-app Feedback tab (client insert); note = the note-from-Pierre card (api/note.ts only).';
+comment on column public.feedback.contact_email is
+  'Note rows only: the account email, stored only when wants_chat.';

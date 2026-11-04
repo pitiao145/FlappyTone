@@ -1,16 +1,18 @@
 /**
- * Sole writer of `feedback_notes` (migration 0033): the "note from Pierre"
- * card shown to engaged free players.
+ * Sole writer of the "note from Pierre" card (migration 0033): a sent note is
+ * a `feedback` row with `source = 'note'`; a "Not now" adds to the player's
+ * `profiles.note_dismissals` (`note_dismiss()`).
  *
- * Same shape as `api/shapes.ts` — service-role key, JWT-verified `user_id`,
- * no client write policy on the table. The client may not decide: who the
+ * Same shape as `api/shapes.ts` — service-role key, JWT-verified `user_id`.
+ * The browser may insert widget feedback, but not the note columns (0033's
+ * column grant). The client may not decide: who the
  * player is, whether they qualify (`note_eligible()`, from `counted_runs` and
  * `entitlements`), or which email is stored (the session's, and only when the
  * player ticked "happy to chat").
  *
  * Body `{action: "check"}` answers `{show}`. `{action: "send", message,
- * wantsChat, context}` and `{action: "dismiss", context}` write one row, and
- * only while the player still qualifies, so a stale tab cannot add rows.
+ * wantsChat, context}` and `{action: "dismiss"}` write, and only while the
+ * player still qualifies, so a stale tab cannot add rows.
  */
 import { createClient } from "@supabase/supabase-js";
 import { json } from "./_json.js";
@@ -105,21 +107,27 @@ export async function POST(request: Request): Promise<Response> {
   if (parsed.action === "check") return json(200, { show: eligible === true });
   if (eligible !== true) return json(409, { error: "This note is no longer open." });
 
-  const row: Record<string, unknown> =
-    parsed.action === "send"
-      ? {
-          user_id: user.id,
-          message: parsed.message,
-          wants_chat: parsed.wantsChat,
-          contact_email: parsed.wantsChat ? (user.email ?? null) : null,
-          app_context: parsed.context,
-        }
-      : {
-          user_id: user.id,
-          dismissed_at: new Date().toISOString(),
-          app_context: parsed.context,
-        };
-  const { error } = await supabase.from("feedback_notes").insert(row);
+  if (parsed.action === "dismiss") {
+    const { error } = await supabase.rpc("note_dismiss", { p_user: user.id });
+    if (error) {
+      console.error("[note] note_dismiss failed", error);
+      return json(502, { error: "Could not save that." });
+    }
+    return json(200, { ok: true });
+  }
+
+  const { error } = await supabase.from("feedback").insert({
+    user_id: user.id,
+    source: "note",
+    message: parsed.message,
+    wants_chat: parsed.wantsChat,
+    contact_email: parsed.wantsChat ? (user.email ?? null) : null,
+    // note_eligible() only passes free accounts on the Play home.
+    screen: "play",
+    tier: "free",
+    user_agent: request.headers.get("user-agent")?.slice(0, 400) ?? null,
+    app_context: parsed.context,
+  });
   if (error) {
     console.error("[note] insert failed", error);
     return json(502, { error: "Could not save the note." });
