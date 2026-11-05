@@ -12,172 +12,315 @@
   {
    "shot": 1,
    "from": 6.11,
-   "to": 7.41
+   "to": 7.41,
+   "say": [
+    "I wasn't trying",
+    "to build"
+   ]
   },
   {
    "shot": 1,
    "from": 7.76,
-   "to": 9.6
+   "to": 9.6,
+   "say": [
+    "a Mandarin tone",
+    "practicing app,"
+   ]
   },
   {
    "shot": 1,
    "from": 10.62,
-   "to": 12.65
+   "to": 12.65,
+   "say": [
+    "I was trying",
+    "to build a",
+    "music visualizer."
+   ]
   },
   {
    "shot": 2,
    "from": 2.61,
-   "to": 5.39
+   "to": 5.39,
+   "say": [
+    "One weekend",
+    "I was stuck inside",
+    "during the typhoon"
+   ]
   },
   {
    "shot": 2,
    "from": 6.03,
-   "to": 6.93
+   "to": 6.93,
+   "say": [
+    "here in Taiwan."
+   ]
   },
   {
    "shot": 2,
    "from": 7.88,
-   "to": 9.48
+   "to": 9.48,
+   "say": [
+    "I had some",
+    "free AI credits,"
+   ]
   },
   {
    "shot": 2,
    "from": 11.54,
-   "to": 14.97
+   "to": 14.97,
+   "say": [
+    "so I just tried",
+    "to build a",
+    "music visualizer,",
+    "you know,",
+    "like those old"
+   ]
   },
   {
    "shot": 2,
    "from": 16.14,
-   "to": 17.73
+   "to": 17.73,
+   "say": [
+    "Windows Media",
+    "Player ones."
+   ]
   },
   {
    "shot": 3,
    "from": 2.8,
-   "to": 4.56
+   "to": 4.56,
+   "say": [
+    "After playing",
+    "with it",
+    "for a while,"
+   ]
   },
   {
    "shot": 3,
    "from": 5.11,
-   "to": 7.78
+   "to": 7.78,
+   "say": [
+    "I realized that",
+    "the thing also",
+    "reacts to my voice."
+   ]
   },
   {
    "shot": 3,
    "from": 13.4,
-   "to": 13.99
+   "to": 13.99,
+   "say": [
+    "It was"
+   ]
   },
   {
    "shot": 3,
    "from": 14.2,
-   "to": 16.77
+   "to": 16.77,
+   "say": [
+    "moving up and down",
+    "with my pitch."
+   ]
   },
   {
    "shot": 4,
    "from": 3.04,
-   "to": 4.34
+   "to": 4.34,
+   "say": [
+    "That's when",
+    "I thought, huh."
+   ]
   },
   {
    "shot": 4,
    "from": 4.6,
-   "to": 6.34
+   "to": 6.34,
+   "say": [
+    "That looks familiar.",
+    "That just looks"
+   ]
   },
   {
    "shot": 4,
    "from": 6.94,
-   "to": 9.41
+   "to": 9.41,
+   "say": [
+    "like the Mandarin",
+    "tones in textbooks."
+   ]
   },
   {
    "shot": 4,
    "from": 11.65,
-   "to": 12.96
+   "to": 12.96,
+   "say": [
+    "Why not",
+    "make a game"
+   ]
   },
   {
    "shot": 4,
    "from": 14.0,
-   "to": 14.89
+   "to": 14.89,
+   "say": [
+    "where you fly a bird"
+   ]
   },
   {
    "shot": 4,
    "from": 16.12,
-   "to": 18.92
+   "to": 18.92,
+   "say": [
+    "through obstacles",
+    "shaped like",
+    "the Mandarin tones?"
+   ]
   },
   {
    "shot": 4,
    "from": 19.29,
-   "to": 20.48
+   "to": 20.48,
+   "say": [
+    "Makes total sense."
+   ]
   },
   {
    "shot": 5,
    "from": 2.54,
-   "to": 4.87
+   "to": 4.87,
+   "say": [
+    "Actually, for me",
+    "it did make sense,",
+    "because"
+   ]
   },
   {
    "shot": 5,
    "from": 5.02,
-   "to": 5.82
+   "to": 5.82,
+   "say": [
+    "until now,"
+   ]
   },
   {
    "shot": 5,
    "from": 6.02,
-   "to": 7.89
+   "to": 7.89,
+   "say": [
+    "the Mandarin tones",
+    "were something",
+    "that I just"
+   ]
   },
   {
    "shot": 5,
    "from": 8.72,
-   "to": 10.86
+   "to": 10.86,
+   "say": [
+    "couldn't understand.",
+    "I just couldn't",
+    "grasp it."
+   ]
   },
   {
    "shot": 5,
    "from": 11.53,
-   "to": 12.4
+   "to": 12.4,
+   "say": [
+    "My ear,"
+   ]
   },
   {
    "shot": 5,
    "from": 12.55,
-   "to": 13.71
+   "to": 13.71,
+   "say": [
+    "my audio"
+   ]
   },
   {
    "shot": 5,
    "from": 15.12,
-   "to": 17.35
+   "to": 17.35,
+   "say": [
+    "intelligence",
+    "was just too low."
+   ]
   },
   {
    "shot": 7,
    "from": 0.15,
-   "to": 2.3
+   "to": 2.3,
+   "say": [
+    "When",
+    "I realized that",
+    "I could just"
+   ]
   },
   {
    "shot": 7,
    "from": 2.6,
-   "to": 4.85
+   "to": 4.85,
+   "say": [
+    "see the tones",
+    "instead of just",
+    "hearing them,"
+   ]
   },
   {
    "shot": 7,
    "from": 6.05,
-   "to": 7.75
+   "to": 7.75,
+   "say": [
+    "everything just clicked",
+    "and got easier."
+   ]
   },
   {
    "shot": 6,
    "from": 2.35,
-   "to": 5.24
+   "to": 5.24,
+   "say": [
+    "If you also",
+    "want to stop",
+    "trying to hear"
+   ]
   },
   {
    "shot": 6,
    "from": 5.4,
-   "to": 7.22
+   "to": 7.22,
+   "say": [
+    "Mandarin tones",
+    "or trying to"
+   ]
   },
   {
    "shot": 6,
    "from": 7.35,
-   "to": 8.36
+   "to": 8.36,
+   "say": [
+    "pronounce them just"
+   ]
   },
   {
    "shot": 6,
    "from": 8.75,
-   "to": 9.81
+   "to": 9.81,
+   "say": [
+    "out of thin air,"
+   ]
   },
   {
    "shot": 6,
    "from": 15.59,
-   "to": 17.99
+   "to": 17.99,
+   "say": [
+    "comment TONES",
+    "down below",
+    "and I'll send",
+    "the link to you."
+   ]
   }
  ],
  "title": {
@@ -894,25 +1037,25 @@
    },
    "to": {
     "shot": 7,
-    "t": 0.72
+    "t": 0.58
    }
   },
   {
    "text": "I realized that",
    "from": {
     "shot": 7,
-    "t": 0.72
+    "t": 0.58
    },
    "to": {
     "shot": 7,
-    "t": 1.54
+    "t": 1.47
    }
   },
   {
    "text": "I could just",
    "from": {
     "shot": 7,
-    "t": 1.54
+    "t": 1.47
    },
    "to": {
     "shot": 7,
