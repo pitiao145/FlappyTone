@@ -12,6 +12,9 @@
  * - visualiser: `drawVisualiser` and the visualiser's readout markup. The
  *   attempts are scripted (Jane's Tone 3 average said for a Tone 2 word); the
  *   readouts are the real `toneAccuracy` and `classifyTone` of that attempt.
+ * - visualiser-pair: the same visualiser, two correct attempts in a row —
+ *   麻 (Tone 2) then 馬 (Tone 3), each Jane's textbook average for its tone.
+ *   Readouts are the real `toneAccuracy` and `classifyTone` of each attempt.
  * - pro: `drawPlayerShapeChart` and the evolution card's markup, with the
  *   sample player's real shapes as "now" and an invented flatter "then".
  *   The frame says "example data".
@@ -34,7 +37,7 @@ import { SAMPLE_TONE_SHAPES } from "../../ui/sampleToneShapes.ts";
 import { drawPlayerShapeChart, TONE_AVERAGE_COLOR } from "../../ui/toneAverageChart.ts";
 import { frameSize, type Format } from "./scenario.ts";
 
-export type PanelKind = "tones" | "visualiser" | "pro";
+export type PanelKind = "tones" | "visualiser" | "visualiser-pair" | "pro";
 
 interface PanelScenario {
   panel: PanelKind;
@@ -193,6 +196,100 @@ function Visualiser({ t }: { t: number }) {
 
 const h = (w: number) => Math.round(w * 1.25);
 
+/** Jane's textbook average for `tone`, at `word`'s length, with a little wobble. */
+function correctAttempt(word: Word, tone: Tone, jitter: number): Contour {
+  const avg = AVERAGED_TONE_SHAPE.textbook[tone];
+  const ms = shapeForWord(word).durationS * 1000;
+  const points = avg.map((c, i) => ({ tMs: (i / 60) * ms, chao: c + 0.06 * Math.sin(i * 0.5 + jitter) }));
+  return { points, startedAtMs: 0, endedAtMs: ms };
+}
+
+const tierOf = (v: number) => (v >= 0.85 ? "good" : v >= 0.6 ? "ok" : "bad");
+
+/** 麻 (Tone 2) said right, then 馬 (Tone 3) said right: same screen, two shapes. Two tries per word, half the clip each. */
+function VisualiserPair({ t }: { t: number }) {
+  const { w, scale } = st!;
+  const half = (st!.sc.seconds ?? 6) / 2;
+  const steps: { hanzi: string; tone: Tone; from: number }[] = [
+    { hanzi: "麻", tone: 2, from: 0 },
+    { hanzi: "馬", tone: 3, from: half },
+  ];
+  const step = t >= steps[1].from ? steps[1] : steps[0];
+  const word = st!.catalog.find((x) => x.hanzi === step.hanzi && x.tone === step.tone)!;
+  const ms = shapeForWord(word).durationS * 1000;
+  const starts = [step.from + 0.4, step.from + half * 0.5 + 0.2];
+  const finished: Contour[] = [];
+  let live: Contour | null = null;
+  let shown: Contour | null = null;
+  starts.forEach((s, i) => {
+    const tr = correctAttempt(word, step.tone, step.tone + i * 2);
+    const el = (t - s) * 1000;
+    if (el < 0) return;
+    if (el >= ms) {
+      finished.push(tr);
+      shown = tr;
+    } else live = { ...tr, points: tr.points.filter((p) => p.tMs <= el), endedAtMs: null };
+  });
+  const readFrom = shown as Contour | null;
+  const acc = readFrom ? toneAccuracy(readFrom.points, [step.tone]) : null;
+  const cls = readFrom ? classifyTone(readFrom) : null;
+  const clsTier = cls ? (cls.tone === step.tone ? "good" : "bad") : "";
+  const ch = h(w);
+  const liveHead = (live as Contour | null)?.points.at(-1);
+  return (
+    <div className="screen visualiser-screen stage game-stage demo-panel" style={{ width: w }}>
+      <div className="visualiser-body">
+        <div className="vis-top-bar">
+          <div className="vis-readouts">
+            <div className="vis-accuracy">
+              <span className="vis-accuracy-label">tone accuracy</span>
+              {acc !== null ? (
+                <strong className={`vis-accuracy-value tier-${tierOf(acc)}`}>{Math.round(acc * 100)}%</strong>
+              ) : (
+                <span className="vis-accuracy-value vis-accuracy-empty">–</span>
+              )}
+            </div>
+            <div className={cls ? `vis-accuracy tier-${clsTier}` : "vis-accuracy"}>
+              <span className="vis-accuracy-label">Tone</span>
+              {cls ? (
+                <strong className={`vis-accuracy-value tier-${clsTier}`}>{cls.tone === "none" ? "none" : `T${cls.tone}`}</strong>
+              ) : (
+                <span className="vis-accuracy-value vis-accuracy-empty">–</span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="vis-target-word">
+          <span className="syllable">{word.pinyin}</span> <span className="hanzi">{word.hanzi}</span> · Tone {step.tone}
+        </div>
+        <div className="vis-canvas-column">
+          <div className="stage">
+            <canvas
+              ref={(c) => {
+                if (!c) return;
+                const ctx = c.getContext("2d")!;
+                ctx.setTransform(scale, 0, 0, scale, 0, 0);
+                drawVisualiser(ctx, w, ch, {
+                  tone: step.tone,
+                  word,
+                  live,
+                  finished,
+                  spanMs: Math.max(1600, ms * 1.25),
+                  chao: liveHead?.chao ?? corridorChaoAt(shapeForWord(word), 0),
+                  voiced: !!liveHead,
+                });
+              }}
+              width={Math.round(w * scale)}
+              height={Math.round(ch * scale)}
+              style={{ width: w, height: ch }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Pro({ t }: { t: number }) {
   const keys = ["2", "3", "4"];
   return (
@@ -242,7 +339,7 @@ function Pro({ t }: { t: number }) {
 
 function setup(raw: unknown): { fps: number } {
   const sc = raw as PanelScenario;
-  if (!["tones", "visualiser", "pro"].includes(sc.panel)) throw new Error(`panel "${sc.panel}" — use tones, visualiser or pro`);
+  if (!["tones", "visualiser", "visualiser-pair", "pro"].includes(sc.panel)) throw new Error(`panel "${sc.panel}" — use tones, visualiser, visualiser-pair or pro`);
   const fps = sc.fps ?? 60;
   const { outW, w, h: hh } = frameSize(sc.format ?? "9:16");
   st = { sc, fps, w, h: hh, scale: outW / w, frames: Math.round((sc.seconds ?? 5) * fps), catalog: catalogFromFallback() };
@@ -252,7 +349,7 @@ function setup(raw: unknown): { fps: number } {
 function render(i: number): boolean {
   if (!st || i >= st.frames) return false;
   const t = i / st.fps;
-  const P = st.sc.panel === "tones" ? Tones : st.sc.panel === "pro" ? Pro : Visualiser;
+  const P = { tones: Tones, pro: Pro, visualiser: Visualiser, "visualiser-pair": VisualiserPair }[st.sc.panel];
   flushSync(() =>
     root.render(
       <div className="demo-panel-frame" style={{ width: st!.w, height: st!.h }}>

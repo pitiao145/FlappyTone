@@ -78,6 +78,10 @@ export interface TalkingHeadProps {
   zooms?: THZoom[];
   /** Big caption over a range, e.g. the CTA. */
   cta?: { text: string; from: At; to: At };
+  /** Pop-in text over a range, mid-screen by default (`top` in % of the frame height). */
+  popups?: { text: string; from: At; to: At; top?: number }[];
+  /** Captions that start inside a zone sit at `top` (% of the frame height) instead of 68%, e.g. above a pitch line. */
+  captionZones?: { from: At; to: At; top: number }[];
   [key: string]: unknown;
 }
 
@@ -212,7 +216,7 @@ function Title({ text, sub, len }: { text: string; sub?: string; len: number }) 
 }
 
 /** A 1–4 word chunk, centre-low. Hard cut in, small pop, so fast chunks stay readable. */
-function Chunk({ text }: { text: string }) {
+function Chunk({ text, top = 68 }: { text: string; top?: number }) {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const pop = spring({ frame: f, fps, config: { damping: 12, mass: 0.5 } });
@@ -221,7 +225,7 @@ function Chunk({ text }: { text: string }) {
       <div
         style={{
           position: "absolute",
-          top: "68%",
+          top: `${top}%`,
           maxWidth: "88%",
           fontFamily: SANS,
           fontWeight: 700,
@@ -241,6 +245,37 @@ function Chunk({ text }: { text: string }) {
   );
 }
 
+/** Pop-in text: springs in with a tilt, holds, fades out. */
+function Popup({ text, top, len }: { text: string; top: number; len: number }) {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const a = spring({ frame: f, fps, config: { damping: 9, mass: 0.6 } });
+  const out = interpolate(f, [len - 6, len], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  return (
+    <AbsoluteFill style={{ alignItems: "center" }}>
+      <div
+        style={{
+          position: "absolute",
+          top: `${top}%`,
+          fontFamily: DISPLAY,
+          fontWeight: 600,
+          fontSize: 96,
+          color: BRAND.ink,
+          background: BRAND.surface,
+          padding: "20px 44px",
+          borderRadius: 28,
+          boxShadow: `8px 8px 0 ${BRAND.beak}`,
+          opacity: out,
+          transform: `scale(${a}) rotate(${-4 * a}deg)`,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {text}
+      </div>
+    </AbsoluteFill>
+  );
+}
+
 function Cta({ text }: { text: string }) {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -252,7 +287,7 @@ function Cta({ text }: { text: string }) {
         style={{
           fontFamily: DISPLAY,
           fontWeight: 600,
-          fontSize: 104,
+          fontSize: 92,
           color: BRAND.surface,
           background: BRAND.accent,
           padding: "26px 54px",
@@ -260,6 +295,7 @@ function Cta({ text }: { text: string }) {
           boxShadow: `10px 10px 0 ${BRAND.ink}`,
           transform: `scale(${a}) translateY(${bob}px)`,
           textAlign: "center",
+          whiteSpace: "nowrap",
         }}
       >
         {text}
@@ -300,11 +336,20 @@ export function TalkingHead(p: TalkingHeadProps) {
             </Sequence>
           );
         })()}
+      {(p.popups ?? []).map((u, i) => {
+        const s = span(u.from, u.to);
+        return (
+          <Sequence key={i} from={s.from} durationInFrames={s.len} name={`Pop ${u.text}`}>
+            <Popup text={u.text} top={u.top ?? 38} len={s.len} />
+          </Sequence>
+        );
+      })}
       {(p.captions ?? []).map((c, i) => {
         const s = span(c.from, c.to);
+        const zone = (p.captionZones ?? []).find((z) => s.from >= toFrame(cuts, z.from) && s.from < toFrame(cuts, z.to));
         return (
           <Sequence key={i} from={s.from} durationInFrames={s.len} name={c.text}>
-            <Chunk text={c.text} />
+            <Chunk text={c.text} top={zone?.top} />
           </Sequence>
         );
       })}

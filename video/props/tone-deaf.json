@@ -1,0 +1,1098 @@
+{
+ "shots": {
+  "1": "aroll/tone-deaf/shot1.mp4",
+  "2": "aroll/tone-deaf/shot2.mp4",
+  "3": "aroll/tone-deaf/shot3.mp4",
+  "4": "aroll/tone-deaf/shot4.mp4",
+  "5": "aroll/tone-deaf/shot5.mp4",
+  "6": "aroll/tone-deaf/shot6.mp4"
+ },
+ "segments": [
+  {
+   "shot": 1,
+   "from": 15.35,
+   "to": 17.22,
+   "say": [
+    "I can't even",
+    "tune a guitar."
+   ]
+  },
+  {
+   "shot": 1,
+   "from": 17.65,
+   "to": 20.16,
+   "say": [
+    "So recognizing",
+    "Mandarin tones?"
+   ]
+  },
+  {
+   "shot": 1,
+   "from": 21.37,
+   "to": 22.61,
+   "say": [
+    "No chance."
+   ]
+  },
+  {
+   "shot": 2,
+   "from": 1.43,
+   "to": 7.17,
+   "say": [
+    "Years of playing guitar,",
+    "but I still need",
+    "an app to tune it",
+    "every time.",
+    "I can't do it",
+    "by ear."
+   ]
+  },
+  {
+   "shot": 3,
+   "from": 3.53,
+   "to": 5.86,
+   "say": [
+    "Tone 2,",
+    "Tone 3,"
+   ]
+  },
+  {
+   "shot": 3,
+   "from": 6.21,
+   "to": 11.99,
+   "say": [
+    "to me they sounded",
+    "all exactly the same.",
+    "Just like when",
+    "I'm trying to",
+    "tune a guitar,",
+    "it just all",
+    "sounds the same."
+   ]
+  },
+  {
+   "shot": 4,
+   "from": 5.04,
+   "to": 5.69,
+   "say": [
+    "Then,"
+   ]
+  },
+  {
+   "shot": 4,
+   "from": 6.47,
+   "to": 9.59,
+   "say": [
+    "when I started",
+    "seeing my tones",
+    "instead of",
+    "hearing them,"
+   ]
+  },
+  {
+   "shot": 4,
+   "from": 10.56,
+   "to": 17.24,
+   "say": [
+    "suddenly the tones",
+    "were not something",
+    "abstract anymore,",
+    "but they were",
+    "something that",
+    "I could see,",
+    "something that",
+    "I could relate to."
+   ]
+  },
+  {
+   "shot": 4,
+   "from": 17.8,
+   "to": 19.35,
+   "say": [
+    "They were just",
+    "shapes now,"
+   ]
+  },
+  {
+   "shot": 4,
+   "from": 19.57,
+   "to": 20.29,
+   "say": [
+    "rather than"
+   ]
+  },
+  {
+   "shot": 4,
+   "from": 20.71,
+   "to": 21.47,
+   "say": [
+    "sounds."
+   ]
+  },
+  {
+   "shot": 5,
+   "from": 4.8,
+   "to": 9.66,
+   "say": [
+    "So I made this game",
+    "with which you can",
+    "practice tones",
+    "and I've been playing",
+    "this game"
+   ]
+  },
+  {
+   "shot": 5,
+   "from": 9.66,
+   "to": 11.54,
+   "say": [
+    "every single day",
+    "because"
+   ]
+  },
+  {
+   "shot": 5,
+   "from": 11.81,
+   "to": 12.32,
+   "say": [
+    "well,"
+   ]
+  },
+  {
+   "shot": 5,
+   "from": 12.62,
+   "to": 15.08,
+   "say": [
+    "that's what happens",
+    "in development,",
+    "you gotta test a lot."
+   ]
+  },
+  {
+   "shot": 5,
+   "from": 16.57,
+   "to": 17.42,
+   "say": [
+    "But guess what?"
+   ]
+  },
+  {
+   "shot": 5,
+   "from": 18.18,
+   "to": 19.61,
+   "say": [
+    "Playing this",
+    "regularly"
+   ]
+  },
+  {
+   "shot": 5,
+   "from": 19.81,
+   "to": 20.54,
+   "say": [
+    "actually"
+   ]
+  },
+  {
+   "shot": 5,
+   "from": 20.9,
+   "to": 23.5,
+   "say": [
+    "did improve my tones.",
+    "People have been",
+    "telling me."
+   ]
+  },
+  {
+   "shot": 5,
+   "from": 23.87,
+   "to": 25.69,
+   "say": [
+    "My partner,",
+    "which happens to be"
+   ]
+  },
+  {
+   "shot": 5,
+   "from": 26.33,
+   "to": 30.31,
+   "say": [
+    "a Taiwan Mandarin",
+    "teacher,",
+    "told me",
+    "my tones improved."
+   ]
+  },
+  {
+   "shot": 5,
+   "from": 30.82,
+   "to": 31.78,
+   "say": [
+    "And I believe her."
+   ]
+  },
+  {
+   "shot": 6,
+   "from": 12.91,
+   "to": 14.33,
+   "say": [
+    "Comment TONES",
+    "down below"
+   ]
+  },
+  {
+   "shot": 6,
+   "from": 15.07,
+   "to": 16.26,
+   "say": [
+    "and I'll send you",
+    "the link."
+   ]
+  }
+ ],
+ "title": {
+  "text": "I'm tone-deaf.",
+  "sub": "My tones still improved.",
+  "seconds": 3
+ },
+ "overlays": [
+  {
+   "src": "broll/tone-deaf/tuner.mp4",
+   "from": {
+    "shot": 2,
+    "t": 1.43
+   },
+   "to": {
+    "shot": 2,
+    "t": 7.17
+   },
+   "start": 0.5
+  },
+  {
+   "src": "broll/tone-deaf/visualiser.mp4",
+   "from": {
+    "shot": 4,
+    "t": 5.04
+   },
+   "to": {
+    "shot": 4,
+    "t": 21.47
+   },
+   "start": 0
+  },
+  {
+   "src": "clips/origin-flight.mp4",
+   "from": {
+    "shot": 5,
+    "t": 9.66
+   },
+   "to": {
+    "shot": 5,
+    "t": 11.0
+   },
+   "start": 8.85
+  },
+  {
+   "src": "clips/origin-flight.mp4",
+   "from": {
+    "shot": 5,
+    "t": 11.0
+   },
+   "to": {
+    "shot": 5,
+    "t": 13.24
+   },
+   "start": 15.3
+  }
+ ],
+ "popups": [
+  {
+   "text": "tone 2 = tone 3 ??",
+   "from": {
+    "shot": 3,
+    "t": 6.9
+   },
+   "to": {
+    "shot": 3,
+    "t": 11.99
+   },
+   "top": 44
+  }
+ ],
+ "captionZones": [
+  {
+   "from": {
+    "shot": 4,
+    "t": 5.04
+   },
+   "to": {
+    "shot": 4,
+    "t": 21.47
+   },
+   "top": 27
+  },
+  {
+   "from": {
+    "shot": 5,
+    "t": 9.66
+   },
+   "to": {
+    "shot": 5,
+    "t": 13.24
+   },
+   "top": 84
+  }
+ ],
+ "zooms": [
+  {
+   "from": {
+    "shot": 5,
+    "t": 28.0
+   },
+   "to": {
+    "shot": 5,
+    "t": 31.78
+   },
+   "scaleTo": 1.1
+  }
+ ],
+ "cta": {
+  "text": "Comment TONES 👇",
+  "from": {
+   "shot": 6,
+   "t": 12.91
+  },
+  "to": {
+   "shot": 6,
+   "t": 16.26
+  }
+ },
+ "captions": [
+  {
+   "text": "I can't even",
+   "from": {
+    "shot": 1,
+    "t": 15.41
+   },
+   "to": {
+    "shot": 1,
+    "t": 16.22
+   }
+  },
+  {
+   "text": "tune a guitar.",
+   "from": {
+    "shot": 1,
+    "t": 16.22
+   },
+   "to": {
+    "shot": 1,
+    "t": 17.22
+   }
+  },
+  {
+   "text": "So recognizing",
+   "from": {
+    "shot": 1,
+    "t": 17.71
+   },
+   "to": {
+    "shot": 1,
+    "t": 18.86
+   }
+  },
+  {
+   "text": "Mandarin tones?",
+   "from": {
+    "shot": 1,
+    "t": 18.86
+   },
+   "to": {
+    "shot": 1,
+    "t": 20.16
+   }
+  },
+  {
+   "text": "No chance.",
+   "from": {
+    "shot": 1,
+    "t": 21.43
+   },
+   "to": {
+    "shot": 1,
+    "t": 22.61
+   }
+  },
+  {
+   "text": "Years of playing guitar,",
+   "from": {
+    "shot": 2,
+    "t": 1.49
+   },
+   "to": {
+    "shot": 2,
+    "t": 2.89
+   }
+  },
+  {
+   "text": "but I still need",
+   "from": {
+    "shot": 2,
+    "t": 2.89
+   },
+   "to": {
+    "shot": 2,
+    "t": 3.89
+   }
+  },
+  {
+   "text": "an app to tune it",
+   "from": {
+    "shot": 2,
+    "t": 3.89
+   },
+   "to": {
+    "shot": 2,
+    "t": 4.94
+   }
+  },
+  {
+   "text": "every time.",
+   "from": {
+    "shot": 2,
+    "t": 4.94
+   },
+   "to": {
+    "shot": 2,
+    "t": 5.69
+   }
+  },
+  {
+   "text": "I can't do it",
+   "from": {
+    "shot": 2,
+    "t": 5.69
+   },
+   "to": {
+    "shot": 2,
+    "t": 6.54
+   }
+  },
+  {
+   "text": "by ear.",
+   "from": {
+    "shot": 2,
+    "t": 6.54
+   },
+   "to": {
+    "shot": 2,
+    "t": 7.17
+   }
+  },
+  {
+   "text": "Tone 2,",
+   "from": {
+    "shot": 3,
+    "t": 3.59
+   },
+   "to": {
+    "shot": 3,
+    "t": 4.69
+   }
+  },
+  {
+   "text": "Tone 3,",
+   "from": {
+    "shot": 3,
+    "t": 4.69
+   },
+   "to": {
+    "shot": 3,
+    "t": 5.86
+   }
+  },
+  {
+   "text": "to me they sounded",
+   "from": {
+    "shot": 3,
+    "t": 6.27
+   },
+   "to": {
+    "shot": 3,
+    "t": 7.19
+   }
+  },
+  {
+   "text": "all exactly the same.",
+   "from": {
+    "shot": 3,
+    "t": 7.19
+   },
+   "to": {
+    "shot": 3,
+    "t": 8.23
+   }
+  },
+  {
+   "text": "Just like when",
+   "from": {
+    "shot": 3,
+    "t": 8.23
+   },
+   "to": {
+    "shot": 3,
+    "t": 8.99
+   }
+  },
+  {
+   "text": "I'm trying to",
+   "from": {
+    "shot": 3,
+    "t": 8.99
+   },
+   "to": {
+    "shot": 3,
+    "t": 9.7
+   }
+  },
+  {
+   "text": "tune a guitar,",
+   "from": {
+    "shot": 3,
+    "t": 9.7
+   },
+   "to": {
+    "shot": 3,
+    "t": 10.45
+   }
+  },
+  {
+   "text": "it just all",
+   "from": {
+    "shot": 3,
+    "t": 10.45
+   },
+   "to": {
+    "shot": 3,
+    "t": 11.07
+   }
+  },
+  {
+   "text": "sounds the same.",
+   "from": {
+    "shot": 3,
+    "t": 11.07
+   },
+   "to": {
+    "shot": 3,
+    "t": 11.99
+   }
+  },
+  {
+   "text": "Then,",
+   "from": {
+    "shot": 4,
+    "t": 5.1
+   },
+   "to": {
+    "shot": 4,
+    "t": 5.69
+   }
+  },
+  {
+   "text": "when I started",
+   "from": {
+    "shot": 4,
+    "t": 6.53
+   },
+   "to": {
+    "shot": 4,
+    "t": 7.32
+   }
+  },
+  {
+   "text": "seeing my tones",
+   "from": {
+    "shot": 4,
+    "t": 7.32
+   },
+   "to": {
+    "shot": 4,
+    "t": 8.15
+   }
+  },
+  {
+   "text": "instead of",
+   "from": {
+    "shot": 4,
+    "t": 8.15
+   },
+   "to": {
+    "shot": 4,
+    "t": 8.76
+   }
+  },
+  {
+   "text": "hearing them,",
+   "from": {
+    "shot": 4,
+    "t": 8.76
+   },
+   "to": {
+    "shot": 4,
+    "t": 9.59
+   }
+  },
+  {
+   "text": "suddenly the tones",
+   "from": {
+    "shot": 4,
+    "t": 10.62
+   },
+   "to": {
+    "shot": 4,
+    "t": 11.54
+   }
+  },
+  {
+   "text": "were not something",
+   "from": {
+    "shot": 4,
+    "t": 11.54
+   },
+   "to": {
+    "shot": 4,
+    "t": 12.46
+   }
+  },
+  {
+   "text": "abstract anymore,",
+   "from": {
+    "shot": 4,
+    "t": 12.46
+   },
+   "to": {
+    "shot": 4,
+    "t": 13.35
+   }
+  },
+  {
+   "text": "but they were",
+   "from": {
+    "shot": 4,
+    "t": 13.35
+   },
+   "to": {
+    "shot": 4,
+    "t": 14.06
+   }
+  },
+  {
+   "text": "something that",
+   "from": {
+    "shot": 4,
+    "t": 14.06
+   },
+   "to": {
+    "shot": 4,
+    "t": 14.81
+   }
+  },
+  {
+   "text": "I could see,",
+   "from": {
+    "shot": 4,
+    "t": 14.81
+   },
+   "to": {
+    "shot": 4,
+    "t": 15.48
+   }
+  },
+  {
+   "text": "something that",
+   "from": {
+    "shot": 4,
+    "t": 15.48
+   },
+   "to": {
+    "shot": 4,
+    "t": 16.24
+   }
+  },
+  {
+   "text": "I could relate to.",
+   "from": {
+    "shot": 4,
+    "t": 16.24
+   },
+   "to": {
+    "shot": 4,
+    "t": 17.24
+   }
+  },
+  {
+   "text": "They were just",
+   "from": {
+    "shot": 4,
+    "t": 17.86
+   },
+   "to": {
+    "shot": 4,
+    "t": 18.63
+   }
+  },
+  {
+   "text": "shapes now,",
+   "from": {
+    "shot": 4,
+    "t": 18.63
+   },
+   "to": {
+    "shot": 4,
+    "t": 19.35
+   }
+  },
+  {
+   "text": "rather than",
+   "from": {
+    "shot": 4,
+    "t": 19.63
+   },
+   "to": {
+    "shot": 4,
+    "t": 20.29
+   }
+  },
+  {
+   "text": "sounds.",
+   "from": {
+    "shot": 4,
+    "t": 20.77
+   },
+   "to": {
+    "shot": 4,
+    "t": 21.47
+   }
+  },
+  {
+   "text": "So I made this game",
+   "from": {
+    "shot": 5,
+    "t": 4.86
+   },
+   "to": {
+    "shot": 5,
+    "t": 5.93
+   }
+  },
+  {
+   "text": "with which you can",
+   "from": {
+    "shot": 5,
+    "t": 5.93
+   },
+   "to": {
+    "shot": 5,
+    "t": 6.96
+   }
+  },
+  {
+   "text": "practice tones",
+   "from": {
+    "shot": 5,
+    "t": 6.96
+   },
+   "to": {
+    "shot": 5,
+    "t": 7.8
+   }
+  },
+  {
+   "text": "and I've been playing",
+   "from": {
+    "shot": 5,
+    "t": 7.8
+   },
+   "to": {
+    "shot": 5,
+    "t": 8.97
+   }
+  },
+  {
+   "text": "this game",
+   "from": {
+    "shot": 5,
+    "t": 8.97
+   },
+   "to": {
+    "shot": 5,
+    "t": 9.66
+   }
+  },
+  {
+   "text": "every single day",
+   "from": {
+    "shot": 5,
+    "t": 9.72
+   },
+   "to": {
+    "shot": 5,
+    "t": 10.84
+   }
+  },
+  {
+   "text": "because",
+   "from": {
+    "shot": 5,
+    "t": 10.84
+   },
+   "to": {
+    "shot": 5,
+    "t": 11.54
+   }
+  },
+  {
+   "text": "well,",
+   "from": {
+    "shot": 5,
+    "t": 11.87
+   },
+   "to": {
+    "shot": 5,
+    "t": 12.32
+   }
+  },
+  {
+   "text": "that's what happens",
+   "from": {
+    "shot": 5,
+    "t": 12.68
+   },
+   "to": {
+    "shot": 5,
+    "t": 13.48
+   }
+  },
+  {
+   "text": "in development,",
+   "from": {
+    "shot": 5,
+    "t": 13.48
+   },
+   "to": {
+    "shot": 5,
+    "t": 14.13
+   }
+  },
+  {
+   "text": "you gotta test a lot.",
+   "from": {
+    "shot": 5,
+    "t": 14.13
+   },
+   "to": {
+    "shot": 5,
+    "t": 15.08
+   }
+  },
+  {
+   "text": "But guess what?",
+   "from": {
+    "shot": 5,
+    "t": 16.63
+   },
+   "to": {
+    "shot": 5,
+    "t": 17.42
+   }
+  },
+  {
+   "text": "Playing this",
+   "from": {
+    "shot": 5,
+    "t": 18.24
+   },
+   "to": {
+    "shot": 5,
+    "t": 18.95
+   }
+  },
+  {
+   "text": "regularly",
+   "from": {
+    "shot": 5,
+    "t": 18.95
+   },
+   "to": {
+    "shot": 5,
+    "t": 19.61
+   }
+  },
+  {
+   "text": "actually",
+   "from": {
+    "shot": 5,
+    "t": 19.87
+   },
+   "to": {
+    "shot": 5,
+    "t": 20.54
+   }
+  },
+  {
+   "text": "did improve my tones.",
+   "from": {
+    "shot": 5,
+    "t": 20.96
+   },
+   "to": {
+    "shot": 5,
+    "t": 21.98
+   }
+  },
+  {
+   "text": "People have been",
+   "from": {
+    "shot": 5,
+    "t": 21.98
+   },
+   "to": {
+    "shot": 5,
+    "t": 22.8
+   }
+  },
+  {
+   "text": "telling me.",
+   "from": {
+    "shot": 5,
+    "t": 22.8
+   },
+   "to": {
+    "shot": 5,
+    "t": 23.5
+   }
+  },
+  {
+   "text": "My partner,",
+   "from": {
+    "shot": 5,
+    "t": 23.93
+   },
+   "to": {
+    "shot": 5,
+    "t": 24.59
+   }
+  },
+  {
+   "text": "which happens to be",
+   "from": {
+    "shot": 5,
+    "t": 24.59
+   },
+   "to": {
+    "shot": 5,
+    "t": 25.69
+   }
+  },
+  {
+   "text": "a Taiwan Mandarin",
+   "from": {
+    "shot": 5,
+    "t": 26.39
+   },
+   "to": {
+    "shot": 5,
+    "t": 27.61
+   }
+  },
+  {
+   "text": "teacher,",
+   "from": {
+    "shot": 5,
+    "t": 27.61
+   },
+   "to": {
+    "shot": 5,
+    "t": 28.31
+   }
+  },
+  {
+   "text": "told me",
+   "from": {
+    "shot": 5,
+    "t": 28.31
+   },
+   "to": {
+    "shot": 5,
+    "t": 28.95
+   }
+  },
+  {
+   "text": "my tones improved.",
+   "from": {
+    "shot": 5,
+    "t": 28.95
+   },
+   "to": {
+    "shot": 5,
+    "t": 30.31
+   }
+  },
+  {
+   "text": "And I believe her.",
+   "from": {
+    "shot": 5,
+    "t": 30.88
+   },
+   "to": {
+    "shot": 5,
+    "t": 31.78
+   }
+  },
+  {
+   "text": "Comment TONES",
+   "from": {
+    "shot": 6,
+    "t": 12.97
+   },
+   "to": {
+    "shot": 6,
+    "t": 13.67
+   }
+  },
+  {
+   "text": "down below",
+   "from": {
+    "shot": 6,
+    "t": 13.67
+   },
+   "to": {
+    "shot": 6,
+    "t": 14.33
+   }
+  },
+  {
+   "text": "and I'll send you",
+   "from": {
+    "shot": 6,
+    "t": 15.13
+   },
+   "to": {
+    "shot": 6,
+    "t": 15.78
+   }
+  },
+  {
+   "text": "the link.",
+   "from": {
+    "shot": 6,
+    "t": 15.78
+   },
+   "to": {
+    "shot": 6,
+    "t": 16.26
+   }
+  }
+ ]
+}
