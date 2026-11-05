@@ -11,6 +11,7 @@
 
 import {
   AbsoluteFill,
+  Audio,
   Img,
   OffthreadVideo,
   Sequence,
@@ -27,6 +28,8 @@ export interface Segment {
   shot: number;
   from: number;
   to: number;
+  /** A held picture (path under video/public) instead of the shot's video, silent, e.g. a freeze frame. Give it its own shot number, not in `shots`. */
+  still?: string;
 }
 
 /** A moment in a source take. */
@@ -74,14 +77,16 @@ export interface TalkingHeadProps {
   segments: Segment[];
   overlays?: Overlay[];
   captions?: THCaption[];
-  title?: { text: string; sub?: string; seconds: number };
+  title?: { text: string; sub?: string; seconds: number; /** Where the title starts. Default: frame 0. */ at?: At };
   zooms?: THZoom[];
   /** Big caption over a range, e.g. the CTA. */
   cta?: { text: string; from: At; to: At };
   /** Pop-in text over a range, mid-screen by default (`top` in % of the frame height). */
-  popups?: { text: string; from: At; to: At; top?: number }[];
+  popups?: { text: string; from: At; to: At; top?: number; /** Font size, px. Default 96. */ size?: number }[];
   /** Captions that start inside a zone sit at `top` (% of the frame height) instead of 68%, e.g. above a pitch line. */
   captionZones?: { from: At; to: At; top: number }[];
+  /** Sound effects (path under video/public) at a source moment. */
+  sfx?: { src: string; at: At; volume?: number }[];
   [key: string]: unknown;
 }
 
@@ -125,11 +130,15 @@ function ARoll({ p, cuts }: { p: TalkingHeadProps; cuts: ReturnType<typeof cutLi
     <AbsoluteFill style={{ transform: `scale(${scale})`, transformOrigin: `50% ${height * 0.35}px` }}>
       {cuts.map((c, i) => (
         <Sequence key={i} from={c.outFrom} durationInFrames={c.len} name={`A${c.shot}`}>
-          <OffthreadVideo
-            src={staticFile(p.shots[String(c.shot)])}
-            startFrom={frames(c.from)}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
+          {c.still ? (
+            <Img src={staticFile(c.still)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <OffthreadVideo
+              src={staticFile(p.shots[String(c.shot)])}
+              startFrom={frames(c.from)}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          )}
         </Sequence>
       ))}
     </AbsoluteFill>
@@ -246,7 +255,7 @@ function Chunk({ text, top = 68 }: { text: string; top?: number }) {
 }
 
 /** Pop-in text: springs in with a tilt, holds, fades out. */
-function Popup({ text, top, len }: { text: string; top: number; len: number }) {
+function Popup({ text, top, len, size = 96 }: { text: string; top: number; len: number; size?: number }) {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const a = spring({ frame: f, fps, config: { damping: 9, mass: 0.6 } });
@@ -259,7 +268,7 @@ function Popup({ text, top, len }: { text: string; top: number; len: number }) {
           top: `${top}%`,
           fontFamily: DISPLAY,
           fontWeight: 600,
-          fontSize: 96,
+          fontSize: size,
           color: BRAND.ink,
           background: BRAND.surface,
           padding: "20px 44px",
@@ -323,10 +332,15 @@ export function TalkingHead(p: TalkingHeadProps) {
         );
       })}
       {p.title && (
-        <Sequence durationInFrames={frames(p.title.seconds)} name="Title">
+        <Sequence from={p.title.at ? toFrame(cuts, p.title.at) : 0} durationInFrames={frames(p.title.seconds)} name="Title">
           <Title text={p.title.text} sub={p.title.sub} len={frames(p.title.seconds)} />
         </Sequence>
       )}
+      {(p.sfx ?? []).map((x, i) => (
+        <Sequence key={i} from={toFrame(cuts, x.at)} name={`SFX ${x.src}`}>
+          <Audio src={staticFile(x.src)} volume={x.volume ?? 1} />
+        </Sequence>
+      ))}
       {p.cta &&
         (() => {
           const s = span(p.cta.from, p.cta.to);
@@ -340,7 +354,7 @@ export function TalkingHead(p: TalkingHeadProps) {
         const s = span(u.from, u.to);
         return (
           <Sequence key={i} from={s.from} durationInFrames={s.len} name={`Pop ${u.text}`}>
-            <Popup text={u.text} top={u.top ?? 38} len={s.len} />
+            <Popup text={u.text} top={u.top ?? 38} len={s.len} size={u.size} />
           </Sequence>
         );
       })}

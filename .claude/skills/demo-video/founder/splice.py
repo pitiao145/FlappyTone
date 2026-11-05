@@ -35,6 +35,10 @@ if caps:
 pick = segs[lo: hi + 1]
 inp, fc = [], []
 for k, s in enumerate(pick):
+    if s.get("still"):  # a held picture: silence
+        inp += ["-f", "lavfi", "-t", str(s["to"] - s["from"]), "-i", "anullsrc=r=48000:cl=mono"]
+        fc.append(f"[{k}:a]asetpts=PTS-STARTPTS[a{k}]")
+        continue
     inp += ["-i", os.path.join(pub, d["shots"][str(s["shot"])])]
     fc.append(f"[{k}:a]atrim={s['from']}:{s['to']},asetpts=PTS-STARTPTS[a{k}]")
 fc.append("".join(f"[a{k}]" for k in range(len(pick))) + f"concat=n={len(pick)}:v=0:a=1[o]")

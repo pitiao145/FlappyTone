@@ -5,9 +5,23 @@
   "3": "aroll/tone-deaf/shot3.mp4",
   "4": "aroll/tone-deaf/shot4.mp4",
   "5": "aroll/tone-deaf/shot5.mp4",
-  "6": "aroll/tone-deaf/shot6.mp4"
+  "6": "aroll/tone-deaf/shot6.mp4",
+  "7": "aroll/tone-deaf/shot7.mp4"
  },
  "segments": [
+  {
+   "shot": 7,
+   "from": 2.0,
+   "to": 6.0,
+   "say": []
+  },
+  {
+   "shot": 8,
+   "from": 0,
+   "to": 1.4,
+   "still": "broll/tone-deaf/freeze.png",
+   "say": []
+  },
   {
    "shot": 1,
    "from": 15.35,
@@ -253,7 +267,11 @@
  "title": {
   "text": "I'm tone-deaf.",
   "sub": "My tones still improved.",
-  "seconds": 3
+  "seconds": 3,
+  "at": {
+   "shot": 1,
+   "t": 15.35
+  }
  },
  "overlays": [
   {
@@ -306,6 +324,32 @@
   }
  ],
  "popups": [
+  {
+   "text": "Me, after tuning my guitar by ear 🎶",
+   "from": {
+    "shot": 7,
+    "t": 2.1
+   },
+   "to": {
+    "shot": 8,
+    "t": 1.4
+   },
+   "top": 12,
+   "size": 62
+  },
+  {
+   "text": "(it was not in tune)",
+   "from": {
+    "shot": 8,
+    "t": 0.05
+   },
+   "to": {
+    "shot": 8,
+    "t": 1.4
+   },
+   "top": 62,
+   "size": 80
+  },
   {
    "text": "tone 2 = tone 3 ??",
    "from": {
@@ -1092,6 +1136,15 @@
    "to": {
     "shot": 6,
     "t": 16.26
+   }
+  }
+ ],
+ "sfx": [
+  {
+   "src": "sfx/scratch.wav",
+   "at": {
+    "shot": 8,
+    "t": 0
    }
   }
  ]
