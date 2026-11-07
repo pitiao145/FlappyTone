@@ -13,7 +13,7 @@ FlappyTone is provided as-is. It may change, break, or go away without notice. I
 ## 2. Accounts
 
 - You can play FlappyTone as a **guest** without an account. Your progress is stored locally in your browser and is not synced.
-- Creating an **account** (email + password) lets your progress save and sync across devices, and lets you appear on the leaderboard.
+- Creating an **account** (an emailed sign-in code, Google, or email + password) lets your progress save and sync across devices, and lets you appear on the leaderboard.
 - You are responsible for keeping your login credentials secure and for activity under your account. Tell us promptly if you believe your account has been accessed without permission.
 - You must provide accurate information and be legally able to enter into these Terms. FlappyTone is not directed at children under 16.
 - You can delete your account at any time by contacting us (see Section 10). We may suspend or terminate accounts that abuse the service, attempt to cheat the leaderboard, or breach these Terms.

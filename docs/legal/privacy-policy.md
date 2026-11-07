@@ -1,6 +1,6 @@
 # FlappyTone — Privacy Policy
 
-**Last updated: 2 November 2026**
+**Last updated: 7 November 2026**
 
 This policy explains what personal data FlappyTone ("we", "us") collects, why, and your rights over it. FlappyTone is operated by Pierre Bruyninckx, an independent developer, at [flappytone.com](https://flappytone.com). For any privacy question or request, contact [pierre@pierrebuilds.dev](mailto:pierre@pierrebuilds.dev).
 
@@ -17,11 +17,17 @@ FlappyTone listens to your voice through your device's microphone to drive the g
 - If you played as a guest on this device in the past, that progress stays **locally in your browser** (localStorage) and is not sent to us. When you sign up, it is added to your account once.
 
 **If you create an account:**
-- **Email address** (to sign in, sync your data, and contact you about your account).
+- **Email address** (to sign in, sync your data, and contact you about your account). You can sign in with an emailed 6-digit code or link, with a password, or with Google (see below).
+- **If you choose "Continue with Google":** this is optional. Google tells our sign-in provider (Supabase) your Google account ID, your email address, and, as Google shares them, your name and profile picture address. Supabase stores these with your login. We use your email address to identify your account. We do not show your Google name or photo anywhere in FlappyTone. We never receive your Google password. Google handles your sign-in under its own [privacy policy](https://policies.google.com/privacy).
+- **If you already played with a guest account** and then sign in with Google or an email code, your guest progress stays with that account. The guest account is upgraded, not copied.
 - **Display name** you choose (shown on the leaderboard if you join it).
 - **Gameplay aggregates** stored with your account — best score, run and gate totals, streaks (including the last day you played), the words you have played, and per-tone accuracy statistics. If you played as a guest on this device before signing up or signing in, those local totals are added to your account once.
 - **Your last 5 runs** (free accounts). To show the same recent runs and tone accuracy on every device, we store your 5 most recent runs: when each happened, the game mode, your score, how many gates you flew, how the run ended, and your tone accuracy for the run and per tone (or two-tone combination). Older runs are deleted automatically when a new one is stored. These are numbers derived on your device, **not audio**. They are deleted with your account.
 - **Marketing consent** — whether you opted in to product-update emails, and when.
+
+**If you send us feedback or a note:**
+- The in-app feedback form stores your message, your emoji rating (if you pick one), the screen you sent it from, your account type (free or paid), your browser and operating system (user agent), and your account (so we can follow up). Do not put anything in the message you don't want us to read.
+- Sometimes a card asks for a short note from you. If you send one, we store the same details plus a few simple facts about your play that the app attaches (for example, which screen you were on). Only if you tick "happy to chat" do we also copy your account email into the note so we can reply. If you press "Not now", we only count that you did.
 
 **If you buy EarlyBird access:**
 - **Your average tone shape.** To show how your tones evolve over time, we store, per day and per tone (or two-tone combination), the running total of your pitch shapes and how many attempts it covers. A shape is 61 numbers describing how high or low your voice was across one attempt, measured on your device. It is **not audio** and cannot be turned back into your voice. We only compute and store this for EarlyBird accounts; guest and free accounts never send it. It is deleted with your account; to have it deleted on its own, email us.
@@ -29,7 +35,7 @@ FlappyTone listens to your voice through your device's microphone to drive the g
 - Your purchase is handled by **Lemon Squeezy** as merchant of record. They collect the payment and billing details needed for the transaction and tax. **We do not receive or store your card number.** We receive confirmation that your account has access, and basic order information (such as your email and order reference).
 
 **When you use the site (analytics):**
-- **Usage analytics** via **PostHog**, in two categories. General usage data, such as which screens you visit, which game mode you pick, settings or account actions, and a short summary of each round of the demo and the free tools on our site pages (for example, how many words you cleared or answered correctly, and your accuracy per tone), is collected to understand how the app is used and to fix problems; this does not require a separate opt-in. Gameplay data in the full game, such as which gates you hit or miss, your calibration numbers, and Tone Visualiser practice, is only collected if you leave "Share game data" turned on in Settings. Turning it off stops that data immediately; it does not delete the random identifier already used for general usage data. PostHog events also include technical information about your device and visit: your browser and operating system (user agent), device type, screen size, the site page (host and path), whether you use the built-in browser of an app (such as Instagram or LINE) and which app, and a visit/session identifier.
+- **Usage analytics** via **PostHog**, in two categories. General usage data, such as which screens you visit, which game mode you pick, settings or account actions, and a short summary of each round of the demo and the free tools on our site pages (for example, how many words you cleared or answered correctly, and your accuracy per tone), is collected to understand how the app is used and to fix problems; this does not require a separate opt-in. Account actions, such as which sign-in method you use and whether a sign-in code was sent or failed (never the code itself), are general usage data. Gameplay data in the full game, such as which gates you hit or miss, your calibration numbers, and Tone Visualiser practice, is only collected if you leave "Share game data" turned on in Settings. Turning it off stops that data immediately; it does not delete the random identifier already used for general usage data. PostHog events also include technical information about your device and visit: your browser and operating system (user agent), device type, screen size, the site page (host and path), whether you opened the app as an installed app or in a browser tab, why a run ended, whether you use the built-in browser of an app (such as Instagram or LINE) and which app, and a visit/session identifier.
 - **Whether the microphone worked.** When the game, the demo or a free tool asks for the microphone, we record whether your browser allowed it, whether it had already been allowed or blocked before it asked, how long the answer took, the type of error if it failed, and which help buttons you tapped. This tells us nothing about your voice. In the full game, the microphone result is gameplay data, so "Share game data" controls it; the help buttons are general usage data.
 - **Your IP address and approximate location.** PostHog receives your IP address with every event and stores it. PostHog also uses it to estimate where you are: country, region, city, postal code, time zone and approximate coordinates. This location is an estimate from the IP address, not your device's GPS. We use it to understand which countries and regions our players come from.
 - **Page addresses.** Page views, page exits, page-speed measurements, landing page button clicks and newsletter sign-ups include the full page address, with any tags in the link (for example, which campaign sent you, or an ad click identifier), and the address of the page that sent you to us (the referrer). Before an event is sent, we remove the player name that a challenge link can carry. Game and demo events include only the page path, not the full address.
@@ -38,7 +44,7 @@ FlappyTone listens to your voice through your device's microphone to drive the g
 
 ## Legal bases for processing
 
-- **Performance of a contract** — running your account, syncing your data, and providing paid access.
+- **Performance of a contract** — running your account, signing you in (including with Google), syncing your data, and providing paid access.
 - **Consent** — sending you marketing emails, and gameplay analytics (see above). You can withdraw consent at any time.
 - **Legitimate interests** — keeping the service secure, preventing cheating/abuse, general usage analytics (see above), and improving the product, balanced against your rights.
 
@@ -51,6 +57,9 @@ We don't sell your data or share it publicly, except as needed to run the servic
 - **PostHog** — product analytics (PostHog Cloud, hosted in the United States).
 - **Kit (ConvertKit)** — sending our newsletter / product-update emails to people who opted in.
 - **Vercel** — application hosting and delivery.
+- **Resend** — sending account emails (sign-in codes and links, password resets) for our sign-in provider. Resend states that its primary processing takes place in the United States.
+- **Cloudflare** — content delivery of the word audio clips (stored in Cloudflare R2 and served by a Cloudflare Worker). Your device's requests for a clip reach Cloudflare with your IP address, which it uses to deliver the clip, to limit abuse and to tie a short-lived play ticket to your connection. These clips are our recordings, not yours.
+- **Google** — only if you choose "Continue with Google" (see above).
 
 Each processes data on our behalf under its own terms. Some may process data outside your country, including outside the EU/EEA, under appropriate safeguards.
 
@@ -60,7 +69,7 @@ FlappyTone uses your browser's **local storage** to keep your game progress and 
 
 ## Marketing emails
 
-We only send product-update emails if you **opted in** (an unchecked box you tick at signup). Account/service emails (such as sign-in and purchase confirmations) are sent regardless, because they're necessary to provide the service. Every marketing email includes an unsubscribe link, and you can opt out at any time.
+We only send product-update emails if you **opted in** (an unchecked box you tick at signup). Account/service emails (such as sign-in codes, password resets and purchase confirmations) are sent regardless, because they're necessary to provide the service. Every marketing email includes an unsubscribe link, and you can opt out at any time.
 
 ## Data retention
 
