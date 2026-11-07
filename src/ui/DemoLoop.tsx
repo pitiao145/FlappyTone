@@ -29,14 +29,18 @@ function VideoLoop({
   ariaLabel,
   width,
   height,
+  videoRef: outerRef,
 }: {
   webmSrc: string;
   mp4Src: string;
   ariaLabel: string;
   width: number;
   height: number;
+  /** Shares the element with the host (the hero's face-cam keeps time with it). */
+  videoRef?: { current: HTMLVideoElement | null };
 }) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const innerRef = useRef<HTMLVideoElement | null>(null);
+  const videoRef = outerRef ?? innerRef;
   // Read once per mount: this decides between playback and a static figure,
   // and flipping between them mid-view would be its own motion.
   const reduced = prefersReduced();
@@ -101,18 +105,67 @@ function VideoLoop({
 export function DemoLoop({
   width = 300,
   height = Math.round((width * HERO_CLIP_HEIGHT) / HERO_CLIP_WIDTH),
+  faceCam = false,
 }: {
   width?: number;
   height?: number;
+  /**
+   * The landing hero only: the player's face, recorded during this same run,
+   * in a circle at the bottom of the clip (`/hero/hero-facecam.*`, muted,
+   * cut to the clip's exact 19.6s and aligned to it by mouth movement vs the
+   * bird). Kept in step with the clip, since two loops drift apart.
+   */
+  faceCam?: boolean;
 }) {
-  return (
+  const heroRef = useRef<HTMLVideoElement | null>(null);
+  const camRef = useRef<HTMLVideoElement | null>(null);
+  const reduced = prefersReduced();
+
+  useEffect(() => {
+    if (!faceCam || reduced) return;
+    // Twice a second: re-seek the face-cam if it strays more than a few
+    // frames from the clip (after a loop, a stall or a background tab).
+    const id = window.setInterval(() => {
+      const hero = heroRef.current;
+      const cam = camRef.current;
+      if (!hero || !cam || hero.readyState < 2 || cam.readyState < 2) return;
+      if (hero.paused !== cam.paused) void (hero.paused ? cam.pause() : cam.play().catch(() => {}));
+      if (Math.abs(cam.currentTime - hero.currentTime) > 0.15) cam.currentTime = hero.currentTime;
+    }, 500);
+    return () => window.clearInterval(id);
+  }, [faceCam, reduced]);
+
+  const clip = (
     <VideoLoop
       webmSrc="/hero/hero-flappytone.webm"
       mp4Src="/hero/hero-flappytone.mp4"
       ariaLabel="A recorded run of the game: the bird tracing each tone's corridor, mostly clean with one wall collision near the end."
       width={width}
       height={height}
+      videoRef={heroRef}
     />
+  );
+  // Reduced motion: the still figure only, no face-cam playback.
+  if (!faceCam || reduced) return clip;
+  return (
+    <div className="demo-loop-cam-wrap">
+      {clip}
+      <video
+        ref={camRef}
+        className="demo-facecam"
+        width={96}
+        height={96}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        aria-hidden="true"
+      >
+        <source src="/hero/hero-facecam.webm" type="video/webm" />
+        <source src="/hero/hero-facecam.mp4" type="video/mp4" />
+      </video>
+    </div>
   );
 }
 

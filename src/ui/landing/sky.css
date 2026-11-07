@@ -47,6 +47,30 @@
    button. On hover (and keyboard focus) the clip dims and a "Try it" button
    shows on it, so a mouse user sees it is clickable. */
 .sky-hero-video { position: relative; }
+/* The player's face from the same run, a circle on the clip's bottom-right
+   corner, hanging over the edge like a picture-in-picture bubble: clear of
+   the bird (left) and the game's "listen" pill (bottom centre). Under the
+   tap button, so a tap on it still opens the demo. */
+.demo-loop-cam-wrap { position: relative; }
+.sky-hero-video:has(.demo-facecam) { margin-bottom: 44px; }
+/* Phones: the clip runs nearly edge to edge, so the bubble stays inside the screen. */
+@media (max-width: 560px) {
+  .sky-screen video.demo-facecam { right: -4px; }
+}
+.sky-screen video.demo-facecam {
+  position: absolute;
+  right: -14px;
+  bottom: 0;
+  width: clamp(76px, 28%, 116px);
+  height: auto;
+  aspect-ratio: 1;
+  translate: 0 38%;
+  object-fit: cover;
+  border: var(--outline) solid var(--color-ink);
+  border-radius: 50%;
+  background: var(--color-cloud);
+  box-shadow: 4px 4px 0 var(--color-ink);
+}
 .sky-hero-video-btn {
   position: absolute;
   inset: 0;

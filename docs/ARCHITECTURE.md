@@ -205,7 +205,7 @@ One analytics consequence: **`landed` means "the game opened" (past the `/app` l
 
 ## Landing page demo clips
 
-`src/ui/DemoLoop.tsx` plays two recorded, muted loops on the landing page (hero + visualiser), each a `.webm`/`.mp4` pair in `public/hero/` and `public/visualiser/`. `npm run update-demo hero|visualiser [source-file]` keeps all four things in sync: both video files, `DemoLoop.tsx`'s native-size constants, and `src/dev/demoStub.tsx`'s matching constants (the prerendered placeholder). It strips audio and regenerates the `.webm`. Doesn't run the build — check with `npm run build` after.
+`src/ui/DemoLoop.tsx` plays two recorded, muted loops on the landing page (hero + visualiser), each a `.webm`/`.mp4` pair in `public/hero/` and `public/visualiser/`. `npm run update-demo hero|visualiser [source-file]` keeps all four things in sync: both video files, `DemoLoop.tsx`'s native-size constants, and `src/dev/demoStub.tsx`'s matching constants (the prerendered placeholder). It strips audio and regenerates the `.webm`. Doesn't run the build — check with `npm run build` after. The hero clip also carries the player's face from the same run, `public/hero/hero-facecam.{webm,mp4}` (240×240, muted, cut from `video/public/clips/Home-demo-Pierre.MOV` to the clip's exact 19.6s; the recording starts 0.6s into the clip, matched by mouth movement against the bird, the first 0.6s holds its first frame). `DemoLoop`'s `faceCam` shows it as a circle on the clip's bottom-right corner and re-seeks it whenever it drifts more than 0.15s from the clip. A new hero clip needs a new face-cam cut: `update-demo` does not make it.
 
 ## The clip catalog and its Worker
 

@@ -158,7 +158,7 @@ export function SkyLanding() {
         {/* A recorded run, muted and mic-free. Tapping it opens the same demo.
             `#demo` is the site pages' no-JS fallback target. */}
         <figure id="demo" className="sky-screen sky-hero-video">
-          <DemoLoop width={340} />
+          <DemoLoop width={340} faceCam />
           {/* Over the clip, not around it: the reduced-motion figure is not button content. */}
           <button
             type="button"
