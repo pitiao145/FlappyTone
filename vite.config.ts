@@ -59,8 +59,13 @@ export default defineConfig({
         // The getUserMedia code gets one stable chunk name, `mic-*.js`, shared
         // by /app, /record and the tone checker's lazy engine — so
         // `npm run check:mic-chunks` (and CLAUDE.md's grep) can name it.
+        // A manual chunk also takes in its dependencies, so anything mic.ts
+        // imports that site pages load up front needs a chunk of its own:
+        // `currentDisplayMode` (analytics' `display_mode` property, imported
+        // by mic.ts via platform.ts) once pulled `mic-*.js` into 17 site pages.
         manualChunks(id) {
           if (id.endsWith('/src/audio/mic.ts')) return 'mic'
+          if (id.endsWith('/src/lib/displayMode.ts')) return 'displayMode'
         },
       },
     },
