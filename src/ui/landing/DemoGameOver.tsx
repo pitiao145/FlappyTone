@@ -7,6 +7,7 @@ import { ToneMarkIcon } from "../toneIcons.tsx";
 import { TONE_LINE_COLOR } from "../toneColors.ts";
 import { Testimonial } from "../Testimonial.tsx";
 import { TESTIMONIALS } from "../testimonials.ts";
+import { toneName } from "../../site/toneNames.ts";
 
 const COPY = brand.demoGameOver;
 
@@ -40,8 +41,8 @@ export function DemoGameOver({
   const title = !weakest
     ? COPY.titleAny
     : pct >= COPY.strongPct
-      ? COPY.titleStrong(weakest.tone, pct)
-      : COPY.title(weakest.tone, pct);
+      ? COPY.titleStrong(toneName(weakest.tone), pct)
+      : COPY.title(toneName(weakest.tone), pct);
   // Only tones with a heard gate: an unheard one has nothing honest to show.
   const tones = breakdown.filter((b): b is typeof b & { pct: number } => b.pct !== null && b.gates > 0);
 
@@ -54,7 +55,7 @@ export function DemoGameOver({
           tones.length > 0 && (
             <ul className="go-demo-tones" aria-label="Tone accuracy this run">
               {tones.map((b) => (
-                <li key={b.tone} aria-label={`Tone ${b.tone}: ${Math.round(b.pct)}% tone accuracy`}>
+                <li key={b.tone} aria-label={`${toneName(b.tone, true)}: ${Math.round(b.pct)}% tone accuracy`}>
                   <span style={{ color: TONE_LINE_COLOR[b.tone] }}>
                     <ToneMarkIcon tone={b.tone} className="go-demo-tone-icon" />
                   </span>

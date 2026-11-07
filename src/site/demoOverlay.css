@@ -76,10 +76,10 @@
 .sky-try-overlay .sky-try-over { padding-top: 28px; }
 .sky-try-overlay .sky-try-over .screen.gameover-screen { gap: 14px; padding-bottom: 0; }
 @media (max-width: 560px) {
-  /* No HUD under the close button now, so the score card can start beside it. */
-  .demo-overlay-inner:has(.sky-try-over) { padding: 16px 12px 12px; }
-  /* Clear of the close button in the corner. */
-  .sky-try-overlay .go-header { margin-right: 52px; }
+  /* The score card runs full width, so the screen starts under the close
+     button (12px + 48px) instead of beside it. */
+  .demo-overlay-inner:has(.sky-try-over) { padding: 68px 12px 12px; }
+  .sky-try-overlay .sky-try-over { padding-top: 0; }
 }
 @media (min-width: 561px) and (max-width: 639px) {
   /* One centred column, clear of the close button in the corner. */

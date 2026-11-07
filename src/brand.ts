@@ -42,10 +42,12 @@ export const brand = {
     /**
      * The card's title, from this run's weakest heard tone. At or above
      * `strongPct` it reads as praise; `titleAny` when no tone was heard.
+     * `name` is the public tone name ("third tone", `site/toneNames.ts`),
+     * never "Tone 3".
      */
     strongPct: 80,
-    title: (tone: number, pct: number) => `Tone ${tone}: ${pct}%. Keep it climbing.`,
-    titleStrong: (tone: number, pct: number) => `Strong start! Tone ${tone} is your lowest at ${pct}%.`,
+    title: (name: string, pct: number) => `${name[0].toUpperCase()}${name.slice(1)}: ${pct}%. Keep it climbing.`,
+    titleStrong: (name: string, pct: number) => `Strong start! Your lowest is the ${name}, at ${pct}%.`,
     titleAny: "Keep your tones climbing.",
     /**
      * What a free account gives. The demo itself saves nothing, so nothing

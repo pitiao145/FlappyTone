@@ -15,7 +15,7 @@ describe("DemoGameOver", () => {
     stats = applyGate(stats, [4], "collision", 0.4);
     stats = applyGate(stats, [4], "ok", 0.4);
     const out = html(stats);
-    expect(out).toContain("Tone 4: 40%. Keep it climbing.");
+    expect(out).toContain("Fourth tone: 40%. Keep it climbing.");
     expect(out).toContain(`Free, ${DEFAULT_TIER_LIMITS.free.runsPerDay} runs a day, no card`);
     const order = ["go-score", "Keep it climbing", "go-demo-perks", "Save my scores", "go-demo-quote", "One more round"].map(
       (s) => out.indexOf(s),
@@ -31,9 +31,9 @@ describe("DemoGameOver", () => {
     stats = applyGate(stats, [3], "unheard", null);
     const out = html(stats);
     const card = out.slice(out.indexOf("go-header"), out.indexOf("go-demo-pitch"));
-    expect(card).toContain("Tone 1: 90% tone accuracy");
-    expect(card).toContain("Tone 4: 40% tone accuracy");
-    expect(card).not.toContain("Tone 3");
+    expect(card).toContain("First tone: 90% tone accuracy");
+    expect(card).toContain("Fourth tone: 40% tone accuracy");
+    expect(card).not.toContain("Third tone");
   });
 
   it("rotates the landing page's quotes, one per end screen", () => {
@@ -53,14 +53,14 @@ describe("DemoGameOver", () => {
     stats = applyGate(stats, [3], "good", 0.88);
     stats = applyGate(stats, [2], "ok", 0.55);
     stats = applyGate(stats, [1], "good", 0.8);
-    expect(html(stats)).toContain("Tone 2: 55%. Keep it climbing.");
+    expect(html(stats)).toContain("Second tone: 55%. Keep it climbing.");
   });
 
   it("praises a strong run: the lowest tone at 80% or more", () => {
     let stats = newRunStats();
     stats = applyGate(stats, [3], "good", 0.89);
     stats = applyGate(stats, [1], "perfect", 0.95);
-    expect(html(stats)).toContain("Strong start! Tone 3 is your lowest at 89%.");
+    expect(html(stats)).toContain("Strong start! Your lowest is the third tone, at 89%.");
   });
 
   it("never promises to save this run (the demo writes nothing)", () => {
@@ -84,8 +84,9 @@ describe("DemoGameOver", () => {
     stats = applyGate(stats, [3], "unheard", null);
     stats = applyGate(stats, [1], "ok", 0.7);
     const out = html(stats);
-    expect(out).toContain("Tone 1: 70%. Keep it climbing.");
-    expect(out).not.toContain("Tone 3");
+    expect(out).toContain("First tone: 70%. Keep it climbing.");
+    expect(out).not.toContain("third tone");
+    expect(out).not.toMatch(/Tone [1-4]/);
   });
 
   it("with no heard tone, a plain title", () => {

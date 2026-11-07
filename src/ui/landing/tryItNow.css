@@ -87,9 +87,9 @@
 .sky-try-over .go-demo-pitch {
   position: relative;
   display: grid;
-  gap: 10px;
+  gap: 18px;
   justify-items: center;
-  padding: 24px 18px 18px;
+  padding: 28px 24px 26px;
   text-align: center;
   border: 2px solid var(--ink);
   background: var(--accent);
@@ -101,17 +101,29 @@
   font: 400 1.35rem/1.15 var(--font-display);
   color: var(--accent-ink);
 }
+/* The site's pressed-edge primary (site.css .sky-btn), restated here: the
+   game's `.screen button` rules would otherwise win inside the end screen. */
 .sky-try-over .screen button.go-demo-pitch-btn {
   width: 100%;
-  min-height: 52px;
-  font-size: 1.1rem;
+  min-height: 56px;
+  margin-top: 4px;
+  padding: 4px 20px 0;
+  border: var(--outline, 3px) solid var(--ink);
+  border-radius: var(--radius, 14px);
+  font: 400 1.2rem/1 var(--font-display);
+  letter-spacing: 0.01em;
   background: var(--beak);
   color: var(--ink);
+  box-shadow: 0 5px 0 var(--ink);
+  transition: translate 120ms var(--ease-snap), box-shadow 120ms var(--ease-snap);
 }
+.sky-try-over .screen button.go-demo-pitch-btn:hover { translate: 0 -2px; box-shadow: 0 7px 0 var(--ink); }
+.sky-try-over .screen button.go-demo-pitch-btn:active { translate: 0 4px; box-shadow: 0 1px 0 var(--ink); }
+.sky-try-over .screen button.go-demo-pitch-btn:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
 /* Three plain perks, each with a check in the beak gold. */
 .sky-try-over .go-demo-perks {
   display: grid;
-  gap: 6px;
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -127,21 +139,29 @@
   font-weight: 800;
   color: var(--beak);
 }
-/* This run's tone accuracy, in the score card's right side: one small tile
-   per tone flown, its mark in the tone colour, then the percentage. Two
-   columns so four tones fit beside the score on a phone. */
+/* The score card: full width, in a light beak orange rather than plain
+   white. Its tone tiles get their own row under the score, so they never
+   cover it. */
+.sky-try-over .go-demo .go-header {
+  flex-wrap: wrap;
+  background: color-mix(in srgb, var(--beak) 26%, #fff);
+}
+.sky-try-over .go-demo .go-header-score { flex: 1 1 100%; }
+/* This run's tone accuracy: one small tile per tone flown, its mark in the
+   tone colour, then the percentage. */
 .sky-try-over .go-demo-tones {
   display: grid;
-  grid-template-columns: repeat(2, auto);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
+  width: 100%;
   margin: 0;
   padding: 0;
   list-style: none;
-  flex-shrink: 0;
 }
 .sky-try-over .go-demo-tones li {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   padding: 4px 8px 4px 4px;
   border: 2px solid var(--ink);
