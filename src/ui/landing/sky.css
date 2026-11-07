@@ -48,17 +48,25 @@
    shows on it, so a mouse user sees it is clickable. */
 .sky-hero-video { position: relative; }
 /* The player's face and phone from the same run, a circle on top of the
-   clip, in its bottom-right corner: above the game's "listen" pill and
-   clear of the bird (left). Under the tap button, so a tap on it still
-   opens the demo. */
-.demo-loop-cam-wrap { position: relative; }
+   clip, centred at its bottom, just above the game's "listen" / "nice T1"
+   pill. The wrapper shrinks to the clip's own width, so the circle centres
+   on the clip and never spills past it on any screen. Under the tap
+   button, so a tap on it still opens the demo. */
+.demo-loop-cam-wrap { position: relative; width: fit-content; max-width: 100%; margin-inline: auto; }
+/* Phones size the clip by width (min(100%, 340px), above): the wrapper takes
+   that width and the clip fills it, so both share one centre. */
+@media (max-width: 560px) {
+  .sky-hero-video .demo-loop-cam-wrap { width: min(100%, 340px); }
+  .sky-hero-video .demo-loop-cam-wrap video.demo-canvas { width: 100%; }
+}
 .sky-screen video.demo-facecam {
   position: absolute;
-  right: 10px;
-  bottom: 13%;
+  left: 50%;
+  bottom: 9%;
   width: 46%;
   height: auto;
   aspect-ratio: 1;
+  translate: -50% 0;
   object-fit: cover;
   border: var(--outline) solid var(--color-ink);
   border-radius: 50%;
