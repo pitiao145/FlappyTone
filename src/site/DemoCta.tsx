@@ -1,8 +1,9 @@
 /**
  * The site pages' CTA routing (brief 25). A visitor who has not played or
  * spoken yet gets the Try it now demo in an overlay on the same page
- * (`DemoTrigger`); one who already got a personal result, or chose Play in
- * the nav, goes to /app, which is signup (`trackSignupCta` on those links).
+ * (`DemoTrigger`, also the nav's "Try it free"); one who already got a
+ * personal result, or whose browser holds a signed-in session (the nav's
+ * Play), goes to /app (`trackSignupCta` on those links).
  *
  * This file is in the pages' initial chunk, so it stays small: the overlay
  * and the game load on the tap (`import("./DemoOverlay.tsx")`).

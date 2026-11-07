@@ -37,9 +37,6 @@ export const brand = {
   /** PRD §8 requires this to be visible before the mic is ever requested. */
   requirement: "Needs a microphone and a quiet room.",
 
-  /** Caption under the demo loop. */
-  demoCaption: "Flappytone in action.",
-
   /** The Try it now end screen (the real game-over, demo variant). */
   demoGameOver: {
     pitchTitle: "Save your tone scores",
@@ -50,11 +47,10 @@ export const brand = {
     pitchMore: "Plus: choose your level, words and speech style.",
     signup: "Sign up free",
     retry: "One more round",
-    harder: "Too easy? Try tone pairs",
   },
 
-  /** The hand-drawn arrow pointing at the hero demo's Try it now button. */
-  tryArrow: "Try it out now!",
+  /** The site nav's button: the no-signup demo overlay (signed-in players see "Play"). */
+  navTry: "Try it free",
 
   /** The two teaser cards directly under the hero: Play vs. Visualise. */
   heroCards: {
@@ -63,8 +59,6 @@ export const brand = {
       title: "Fly through corridors with your voice",
       body: "Fly through gates shaped like tone contours. Ace the pitch, clear the gate. This builds muscle memory without you even thinking about it.",
       cta: "Play the game",
-      /** Under the hero's Play button: opens the demo beside it. */
-      demoLink: "or try the demo",
     },
     visualise: {
       eyebrow: "For understanding",
@@ -106,17 +100,6 @@ export const brand = {
     3: { pinyin: "mǎ", hanzi: "馬", cue: "dip low, then rise" },
     4: { pinyin: "mà", hanzi: "罵", cue: "drop sharply top to bottom" },
   },
-
-  /**
-   * PRD §11, stated in the product rather than only in the spec. Shown as
-   * small pill tags at the foot of the "based on real speech" section.
-   */
-  limits: [
-    "Not pronunciation scoring",
-    "Not a fluency app",
-    "Real speech, not flashcards",
-    "No AI, just maths",
-  ],
 
   /** "Why this isn't textbook practice" — problem framing, sits between
    *  how-it-works and the visualiser deep-dive. */
@@ -221,7 +204,11 @@ export const brand = {
     },
     {
       q: "Do I need an account?",
-      a: "Yes, a free one, made in a few seconds with your email. It saves your progress across devices and gets you on the leaderboard. The tone test and tone visualizer need no account.",
+      a: "Not to try it: a short round runs right on this page, no signup. To keep playing you make a free account in a few seconds with your email. It saves your progress across devices and gets you on the leaderboard. The tone test and tone visualizer need no account.",
+    },
+    {
+      q: "Is there a mobile app?",
+      a: "Not yet. Add FlappyTone to your home screen for full screen play without the URL bar. iPhone or iPad (Safari or Chrome): open this page, tap Share, then Add to Home Screen. Android: open this page in Chrome, tap ⋮, then Install app.",
     },
   ],
 
@@ -232,36 +219,6 @@ export const brand = {
     cta: "Sign up and try the full visualiser",
     imageCaption: "mǎ, average pronunciation of a native Taiwanese speaker",
   },
-
-  mobile: {
-    eyebrow: "On mobile",
-    title: "Mobile app",
-    body: "iOS and Android apps aren't out yet. A native app would add offline play, practice reminders and a streak you can keep, sign up below to get notified when it's out!",
-    notify: {
-      placeholder: "you@example.com",
-      cta: "Notify me",
-      disclaimer: "Only for FlappyTone updates. No spam, unsubscribe anytime.",
-    },
-    homeScreen: {
-      title: "In the meantime, add it to your home screen",
-      body: "Same effect as an app icon: full screen, no URL bar eating a fifth of the display.",
-      ios: {
-        label: "iPhone / iPad (Safari or Chrome)",
-        steps: [
-          { icon: "share", text: "Open this page, then tap Share" },
-          { icon: "add", text: "Tap Add to Home Screen" },
-        ],
-      },
-      android: {
-        label: "Android",
-        steps: [
-          { icon: "menu", text: "Open this page in Chrome, then tap ⋮" },
-          { icon: "add", text: "Tap Install app" },
-        ],
-      },
-    },
-  },
-
 
   /** Footer credit for the reference clips. Jane recorded them; say so. */
   attribution:
@@ -313,7 +270,6 @@ export const brand = {
     { id: "leaderboard", title: "Leaderboard", navLabel: "Leaderboard" },
     { id: "pricing", title: "Free to start, one-time to go further", navLabel: "Pricing", inNav: true },
     { id: "faq", title: "Questions" },
-    { id: "mobile", title: "Mobile app", navLabel: "Mobile" },
     { id: "founder", title: "Made by a Mandarin learner" },
   ] as LandingSection[],
   /**
@@ -328,7 +284,11 @@ export const brand = {
      * brand-name `h1` is part of what got the sibling project deindexed.
      */
     headline: "Finally nail the Mandarin tones",
-    lede: "Your voice flies a bird through tunnels shaped like each tone. You build muscle memory without it feeling like study.",
+    lede: "Your voice flies a bird through tunnels shaped like each tone. Play a few minutes a day and watch your tone scores climb fast.",
+    /** The hero's one action: the demo overlay, no account. */
+    tryCta: "Try it now, no signup",
+    /** Under it, for returning players: /app (the auth screen). */
+    login: "Already playing? Log in",
     privacy: "Needs a microphone and a quiet room. Your voice stays on your device: no upload, no AI.",
     why: [
       "mā, má, mǎ, mà trace four different pitch shapes. That is all a tone mark is.",
@@ -366,7 +326,6 @@ export const brand = {
     pairsTitle: "Level up to tone pairs when you're ready",
     pairs: "Once single tones feel easy, Tone Pairs flies two syllables at a time: 好玩, 以前 and 240+ more. Each corridor comes from the exact recording, sandhi and all.",
     leaderboard: "Sign up free and every run counts. This week, this month or all-time.",
-    mobile: "Native apps aren't out yet. They'll add offline play, reminders and a streak. Get told when they ship:",
     founder: [
       "I'm Pierre, and I'm learning Mandarin too.",
       "I realised I learn far better with visuals than with audio alone, so I built a way to see the tones, not just hear them. Every word is recorded by a native speaker from Taiwan. Questions or ideas? Write to me.",

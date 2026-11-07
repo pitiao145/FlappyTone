@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { brand } from "../../brand.ts";
 import type { Tone } from "../../game/gates.ts";
@@ -7,16 +7,16 @@ import { DEFAULT_SPEAKER_ID } from "../../data/catalogRows.ts";
 import fallback from "../../data/wordsFallback.json";
 import { Pip } from "../../site/Pip.tsx";
 import { capturePostHogEvent } from "../../analytics/posthog.ts";
-import { VisualiserDemoLoop } from "../DemoLoop.tsx";
+import { DemoLoop, VisualiserDemoLoop } from "../DemoLoop.tsx";
 import { Footer } from "../Footer.tsx";
 import { Nav } from "../Nav.tsx";
 import { ScrollBird } from "../ScrollBird.tsx";
 import { FREE_HIGHLIGHTS, PRO_HIGHLIGHTS, PRO_PRICE } from "../plan.ts";
 import { TONE_LINE_COLOR } from "../toneColors.ts";
 import { ToneAverageCard } from "../ToneAverageCard.tsx";
-import { NotifyForm, TONES, go, goToPage, useWordsByTone } from "./shared.tsx";
+import { TONES, go, useWordsByTone } from "./shared.tsx";
 import { ProgressSection } from "./ProgressSection.tsx";
-import { TryItNow, type DemoControl } from "./TryItNow.tsx";
+import { appHref } from "../appLink.ts";
 
 type DemoMode = "game" | "drill" | "pairs";
 
@@ -113,12 +113,11 @@ export function SkyLanding() {
 
   const modes = brand.options.modes;
 
-  /** The hero's "or try the demo" link opens the demo beside it (TryItNow fills this). */
-  const demo = useRef<DemoControl | null>(null);
   /**
-   * The demo in a dialog, in one of the game's modes ("Try Tone Pairs", and
-   * the mode chooser's "Try it"). Loaded on the tap; the hero run stops first
-   * so two runs never share the mic.
+   * Every demo on this page opens in one dialog (`DemoOverlay`): the hero
+   * button and video, the nav's "Try it free", "Try Tone Pairs" and the mode
+   * chooser's "Try it". Loaded on the tap (hard rule 13), so no game or mic
+   * code is in the page's first load.
    */
   const [overlay, setOverlay] = useState<{
     mod: typeof import("../../site/DemoOverlay.tsx");
@@ -126,15 +125,19 @@ export function SkyLanding() {
   } | null>(null);
   const openDemo = (mode: DemoMode, cta: string, location: string) => {
     capturePostHogEvent("landing_cta_clicked", { cta, location });
-    demo.current?.stop();
     import("../../site/DemoOverlay.tsx")
       .then((mod) => setOverlay({ mod, mode }))
       .catch(() => go(cta, location, mode === "pairs" ? "pairs" : undefined));
   };
+  const logIn = () => capturePostHogEvent("landing_cta_clicked", { cta: "login", location: "hero" }, { instant: true });
 
   return (
     <div className="sky lp-sky">
-      <Nav onPlay={() => go("play", "nav")} />
+      <Nav
+        onTry={() => openDemo("game", "try_free", "nav")}
+        playHref={appHref()}
+        onPlayLinkClick={() => capturePostHogEvent("landing_cta_clicked", { cta: "play", location: "nav" }, { instant: true })}
+      />
       <ScrollBird />
       {overlay &&
         createPortal(
@@ -149,30 +152,28 @@ export function SkyLanding() {
           <h1>{COPY.headline}</h1>
           <p className="sky-lede">{COPY.lede}</p>
           <div className="sky-actions">
-            {/* Play and its demo link stay together: under it on wide screens, beside it on phones. */}
-            <div className="sky-play-group">
-              <button className="sky-btn" onClick={() => go("play", "hero_actions")}>
-                {brand.heroCards.play.cta}
-              </button>
-              <button
-                type="button"
-                className="sky-demo-link"
-                onClick={() => {
-                  capturePostHogEvent("landing_cta_clicked", { cta: "try_demo_link", location: "hero_actions" });
-                  demo.current?.start();
-                }}
-              >
-                {brand.heroCards.play.demoLink}
-              </button>
-            </div>
-            {/* The free tool first: "Try" must not land on signup. */}
-            <button className="sky-btn sky-btn-ghost" onClick={() => goToPage("visualiser_tool", "hero_actions", "/tools/tone-visualizer")}>
-              {brand.heroCards.visualise.cta}
+            <button className="sky-btn" aria-haspopup="dialog" onClick={() => openDemo("game", "try_now", "hero")}>
+              {COPY.tryCta}
             </button>
+            <a className="sky-login-link" href={appHref()} onClick={logIn}>
+              {COPY.login}
+            </a>
           </div>
           <p className="sky-small">{COPY.privacy}</p>
         </div>
-        <TryItNow controlRef={demo} />
+        {/* A recorded run, muted and mic-free. Tapping it opens the same demo.
+            `#demo` is the site pages' no-JS fallback target. */}
+        <figure id="demo" className="sky-screen sky-hero-video">
+          <DemoLoop width={340} />
+          {/* Over the clip, not around it: the reduced-motion figure is not button content. */}
+          <button
+            type="button"
+            className="sky-hero-video-btn"
+            aria-haspopup="dialog"
+            aria-label={COPY.tryCta}
+            onClick={() => openDemo("game", "hero_video", "hero")}
+          />
+        </figure>
       </header>
 
       <section className="sky-proof" aria-label="What players say">
@@ -256,19 +257,6 @@ export function SkyLanding() {
         </div>
         <Wall tone={2} edge="bottom" />
       </section>
-
-      <div className="sky-ticker" aria-label="What FlappyTone is not">
-        <ul className="sky-ticker-track">
-          {brand.limits.map((l) => (
-            <li key={l}>{l}</li>
-          ))}
-          {brand.limits.map((l) => (
-            <li key={`dup-${l}`} aria-hidden="true" className="sky-ticker-dup">
-              {l}
-            </li>
-          ))}
-        </ul>
-      </div>
 
       <section id="real-speech" className="sky-section">
         <div className="sky-split">
@@ -454,42 +442,6 @@ export function SkyLanding() {
               <p>{item.a}</p>
             </details>
           ))}
-        </div>
-      </section>
-
-      <section id="mobile" className="sky-section">
-        <div className="sky-split sky-mobile">
-          <video
-            className="sky-phone"
-            src="/PWA-instructions.mp4"
-            poster="/PWA-instructions-poster.jpg"
-            width={502}
-            height={1080}
-            autoPlay
-            muted
-            loop
-            playsInline
-          />
-          <div className="sky-head">
-            <h2>{brand.mobile.title}</h2>
-            <p>{COPY.mobile}</p>
-            <NotifyForm className="sky-notify" cta={brand.mobile.notify.cta} placeholder={brand.mobile.notify.placeholder} />
-            <p className="sky-small">{brand.mobile.notify.disclaimer}</p>
-            <h3>{brand.mobile.homeScreen.title}</h3>
-            <div className="sky-steps">
-              {[brand.mobile.homeScreen.ios, brand.mobile.homeScreen.android].map((p) => (
-                <div key={p.label}>
-                  <h4>{p.label}</h4>
-                  <ol>
-                    {p.steps.map((s) => (
-                      <li key={s.text}>{s.text}</li>
-                    ))}
-                  </ol>
-                </div>
-              ))}
-            </div>
-            <p className="sky-small">{brand.mobile.homeScreen.body}</p>
-          </div>
         </div>
       </section>
 

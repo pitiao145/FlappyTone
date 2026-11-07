@@ -163,11 +163,13 @@ export type SaySlug = (typeof SAY_SLUGS)[number];
 export type WordPageAction = "listen" | "see_it" | "practise_tone";
 
 /**
- * Where a Try it now run happened: the landing hero, or a site page's
- * overlay (`page` = route path, `seeded` = the word flown first, or null).
+ * Where a Try it now run happened: the demo overlay on the landing page
+ * (`page` null) or a site page (`page` = route path), `seeded` = the word
+ * flown first, or null.
  * Optional so older events still type-check.
  */
 export interface DemoWhere {
+  /** Always "overlay" since brief 29; "landing" was the old inline hero demo. */
   surface?: "landing" | "overlay";
   page?: string | null;
   seeded?: string | null;
@@ -500,7 +502,7 @@ export type AnalyticsEvent =
   | ({
       type: "tool_summary";
       tool: "try-now";
-      /** "pairs" is the "Too easy?" round of two-syllable words. */
+      /** "pairs": two-syllable words (the Tone Pairs demo; before brief 29 also "Too easy?"). */
       level: "single" | "pairs";
       cleared: number;
       total: number;
@@ -519,7 +521,7 @@ export type AnalyticsEvent =
       t4Acc: number | null;
     } & DemoWhere)
   /** Try it now's way into /app or a new round, from its end screen. */
-  | ({ type: "tool_cta_click"; tool: "try-now"; placement: "demo_gameover_signup" | "demo_gameover_retry" | "demo_gameover_pairs" } & DemoWhere)
+  | ({ type: "tool_cta_click"; tool: "try-now"; placement: "demo_gameover_signup" | "demo_gameover_retry" } & DemoWhere)
   /**
    * A routed CTA on a route-table page (brief 25): `overlay` opens the Try it
    * now demo on the page, `signup` leaves for /app. `page` is the route path,

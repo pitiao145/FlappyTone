@@ -1,16 +1,15 @@
-import { useId, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { Tone } from "../../game/gates.ts";
 import { wordsFromCatalog, wordsOfTone, type Word } from "../../game/words.ts";
 import { DEFAULT_SPEAKER_ID } from "../../data/catalogRows.ts";
 import fallback from "../../data/wordsFallback.json";
 import { capturePostHogEvent } from "../../analytics/posthog.ts";
 import { goToApp, type AppIntent } from "../appLink.ts";
-import { useNewsletterSubscribe } from "../useNewsletterSubscribe.ts";
 
 /**
  * The landing page's plumbing: the bundled words for its tone cards, the CTA
  * events (`landing_cta_clicked`, the names the dashboards already read), the
- * torn-edge helper and the newsletter form.
+ * torn-edge helper.
  */
 
 export const TONES: Tone[] = [1, 2, 3, 4];
@@ -31,12 +30,6 @@ export function useWordsByTone(): Map<Tone, Word[]> {
 export function go(cta: string, location: string, intent?: AppIntent) {
   capturePostHogEvent("landing_cta_clicked", { cta, location }, INSTANT);
   goToApp(intent);
-}
-
-/** Fire the landing CTA event, then leave for a site page (e.g. the free visualizer tool). */
-export function goToPage(cta: string, location: string, href: string) {
-  capturePostHogEvent("landing_cta_clicked", { cta, location }, INSTANT);
-  window.location.assign(href);
 }
 
 /**
@@ -61,41 +54,4 @@ export function tornEdge(seed: number, edges: "top" | "bottom" | "both" = "both"
     bottom.unshift(`${x.toFixed(2)}% ${(100 - jb).toFixed(2)}%`);
   }
   return `polygon(${[...top, ...bottom].join(", ")})`;
-}
-
-export function NotifyForm({ className, cta, placeholder }: { className?: string; cta: string; placeholder: string }) {
-  const id = useId();
-  const [email, setEmail] = useState("");
-  const newsletter = useNewsletterSubscribe("mobile");
-  if (newsletter.status === "success") {
-    return <p className={className} role="status">You&rsquo;re on the list.</p>;
-  }
-  return (
-    <form
-      className={className}
-      onSubmit={(e) => {
-        e.preventDefault();
-        newsletter.submit(email);
-      }}
-    >
-      <label htmlFor={id}>Email address</label>
-      <div>
-        <input
-          id={id}
-          type="email"
-          name="email"
-          placeholder={placeholder}
-          autoComplete="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          disabled={newsletter.status === "loading"}
-        />
-        <button type="submit" disabled={newsletter.status === "loading"}>
-          {newsletter.status === "loading" ? "Joining…" : cta}
-        </button>
-      </div>
-      {newsletter.error && <p role="alert">{newsletter.error}</p>}
-    </form>
-  );
 }
