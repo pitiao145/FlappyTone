@@ -110,8 +110,8 @@ export function DemoLoop({
   width?: number;
   height?: number;
   /**
-   * The landing hero only: the player's face, recorded during this same run,
-   * in a circle at the bottom of the clip (`/hero/hero-facecam.*`, muted,
+   * The landing hero only: the player's face and phone, recorded during this same run,
+   * in a circle on top of the clip's bottom-right corner (`/hero/hero-facecam.*`, muted,
    * cut to the clip's exact 19.6s and aligned to it by mouth movement vs the
    * bird). Kept in step with the clip, since two loops drift apart.
    */
@@ -153,8 +153,8 @@ export function DemoLoop({
       <video
         ref={camRef}
         className="demo-facecam"
-        width={96}
-        height={96}
+        width={160}
+        height={160}
         autoPlay
         muted
         loop
