@@ -17,6 +17,7 @@
 import { ensureMic, setFrameSink, stopMic } from "../../audio/session.ts";
 import { MicError } from "../../audio/mic.ts";
 import { Run, type RunSnapshot } from "../../game/run.ts";
+import type { OutcomeFlash } from "../GameHud.tsx";
 import type { RunStats } from "../../game/scoring.ts";
 import type { Tone } from "../../game/gates.ts";
 import { loadSettings, type CalibrationSettings } from "../../game/settings.ts";
@@ -86,6 +87,12 @@ export interface MiniGameOptions {
   onEnd: (result: MiniResult) => void;
   /** Every cue clip has loaded (or timed out); the run starts now. */
   onReady: () => void;
+  /**
+   * Once per resolved gate, from the rAF loop (never per frame), with the
+   * same reaction `Game.tsx` builds for its HUD: points, "nice T1", "that
+   * was a T3, not a T2", "couldn't hear that".
+   */
+  onGate?: (flash: OutcomeFlash, snap: RunSnapshot) => void;
 }
 
 export interface MiniGame {
@@ -178,10 +185,29 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<MiniGame> {
     return out;
   };
 
+  let lastFlashedAtMs = -1;
   const tick = (now: number) => {
     run.tickFrame(now - last, now);
     last = now;
     const snap = run.snapshot();
+    const resolved = snap.lastOutcome;
+    if (resolved && resolved.atMs !== lastFlashedAtMs) {
+      lastFlashedAtMs = resolved.atMs;
+      opts.onGate?.(
+        {
+          outcome: resolved.outcome,
+          points: resolved.points,
+          hint: resolved.hint,
+          tone: resolved.tone,
+          mismatchedAs: resolved.mismatchedAs,
+          mismatchedConfidence: resolved.mismatchedConfidence,
+          classifiedTone: resolved.classifiedTone,
+          classifiedConfidence: resolved.classifiedConfidence,
+          atMs: resolved.atMs,
+        },
+        snap,
+      );
+    }
     const ctx = scaleForDpr(opts.canvas, opts.width, opts.height);
     if (ctx) drawWorld(ctx, opts.width, opts.height, snap, now);
 

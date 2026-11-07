@@ -30,7 +30,8 @@ export function Profile({ onEarlyBird, onSignedOut }: Props) {
   // reads are captured once at mount and never revisited, which is why the
   // tab used to keep showing "Guest player" after a real sign-in.
   const version = useSessionVersion();
-  const daily = useMemo(() => loadDailyRuns(), [version]);
+  // `tier` too: the count ignores the server's number until the tier is known.
+  const daily = useMemo(() => loadDailyRuns(), [version, tier]);
   const boardName = useMemo(() => displayName(), [version]);
   const unlimited = !Number.isFinite(daily.limit);
   const usedPct = unlimited ? 0 : Math.min(100, (daily.count / daily.limit) * 100);

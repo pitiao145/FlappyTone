@@ -2,6 +2,8 @@ import { ScrollBird } from "../ui/ScrollBird.tsx";
 import { Nav } from "../ui/Nav.tsx";
 import { Footer } from "../ui/Footer.tsx";
 import { appHref } from "../ui/appLink.ts";
+import { brand } from "../brand.ts";
+import { DEMO_FALLBACK_HREF } from "./DemoCta.tsx";
 import { LEARN_LINKS } from "./links.ts";
 
 /**
@@ -11,7 +13,16 @@ import { LEARN_LINKS } from "./links.ts";
 export function NotFoundPage() {
   return (
     <div id="top" className="sky sky-site">
-      <Nav linkBase="/" playHref={appHref()} />
+      {/* No client bundle here: "Try it free" is a link to the landing hero. */}
+      <Nav
+        linkBase="/"
+        playHref={appHref()}
+        trySlot={
+          <a className="sky-btn sky-btn-small" href={DEMO_FALLBACK_HREF}>
+            {brand.navTry}
+          </a>
+        }
+      />
       <ScrollBird />
       <main className="sky-site-main">
         <div className="screen legal-screen site-page">

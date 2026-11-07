@@ -3,12 +3,15 @@
  * before hydration turns overlay links into buttons): overlay CTAs point at
  * the landing demo (`/#demo`, the no-JS fallback) and carry
  * `data-cta="overlay"`; signup CTAs are real links into /app with `?src=`.
+ * Since brief 29 the nav's button is "Try it free" (an overlay CTA) for
+ * everyone the prerender sees; only a signed-in browser gets Play → /app.
  */
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SITE_PAGES, SitePage } from "./pages.tsx";
 import { WordViewer } from "./WordViewer.tsx";
 import { PIP_CTA_LABEL } from "./Pip.tsx";
+import { brand } from "../brand.ts";
 import { gameHref } from "../toneder/cta.ts";
 import { weakPairLine } from "../app/authGate.ts";
 
@@ -18,9 +21,11 @@ const overlays = (out: string) => out.match(/<a [^>]*data-cta="overlay"[^>]*href
 const demoPages = Object.keys(SITE_PAGES).filter((p) => p !== "/tools/tone-visualizer");
 
 describe("site CTA routing (brief 25)", () => {
-  it("nav Play goes to signup on every page (row 1)", () => {
+  it("nav Try it free opens the demo overlay on every page (row 1, brief 29)", () => {
     for (const path of Object.keys(SITE_PAGES)) {
-      expect(html(path), path).toContain(`href="/app?src=${path}"`);
+      const out = html(path);
+      expect(out, path).toMatch(new RegExp(`<a [^>]*data-cta="overlay"[^>]*href="/#demo"[^>]*>${brand.navTry}</a>`));
+      expect(out, path).not.toContain(`href="/app?src=${path}"`);
     }
   });
 
@@ -32,7 +37,8 @@ describe("site CTA routing (brief 25)", () => {
   });
 
   it("tone test: the play link opens the overlay too (rows 10, 11)", () => {
-    expect(overlays(html("/tools/tone-test"))).toBe(2);
+    // Plus the nav's Try it free.
+    expect(overlays(html("/tools/tone-test"))).toBe(3);
   });
 
   it("tone test: the round result still goes to signup with ?weak= (row 9)", () => {
@@ -44,9 +50,10 @@ describe("site CTA routing (brief 25)", () => {
     expect(weakPairLine("")).toBeNull();
   });
 
-  it("tone visualizer: every CTA goes to signup (rows 12, 15)", () => {
+  it("tone visualizer: every in-page CTA goes to signup (rows 12, 15)", () => {
     const out = html("/tools/tone-visualizer");
-    expect(overlays(out)).toBe(0);
+    // Only the nav's Try it free opens the overlay.
+    expect(overlays(out)).toBe(1);
     expect(out).toContain('href="/app?intent=visualiser&amp;src=/tools/tone-visualizer"');
     expect(out).toContain(PIP_CTA_LABEL.signup);
     // The one in-tool link: no audio here, so "hear it first" leads to the app.

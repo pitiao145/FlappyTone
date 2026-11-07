@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   INAPP_DISMISS_KEY,
   INAPP_DISMISS_MS,
+  GOOGLE_BLOCKED_APPS,
+  canUseGoogleSignIn,
   chromeIntentUrl,
   detectInAppBrowser,
   dismissInAppPrompt,
@@ -80,5 +82,26 @@ describe("dismissal memory", () => {
     const s = mem();
     s.setItem(INAPP_DISMISS_KEY, "garbage");
     expect(isInAppPromptDismissed(2000, s)).toBe(false);
+  });
+});
+
+describe("Continue with Google (brief 30)", () => {
+  const shown = new Set(["none", "reddit", "x", "google-app"]);
+  for (const [name, f] of Object.entries(UA_FIXTURES)) {
+    it(`${shown.has(f.app) ? "shows" : "hides"} the button for ${name}`, () => {
+      expect(canUseGoogleSignIn(f.ua)).toBe(shown.has(f.app));
+    });
+  }
+
+  it("shows it for Safari and Chrome", () => {
+    for (const k of ["safariDesktop", "chromeDesktop", "safariIos", "chromeIos", "chromeAndroid"]) {
+      expect(canUseGoogleSignIn(UA_FIXTURES[k].ua)).toBe(true);
+    }
+  });
+
+  it("hides it for every app the brief lists", () => {
+    for (const app of ["instagram", "threads", "facebook", "tiktok", "linkedin", "line", "wechat", "snapchat", "kakaotalk", "webview-android", "webview-ios"]) {
+      expect(GOOGLE_BLOCKED_APPS.has(app as never)).toBe(true);
+    }
   });
 });

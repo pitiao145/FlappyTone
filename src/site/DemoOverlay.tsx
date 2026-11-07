@@ -1,7 +1,9 @@
 /**
- * The landing page's Try it now demo in a dialog over a site page (brief 25).
- * Loaded only on a CTA tap (`DemoCta.tsx`), with the demo and its mic chunk
- * behind it, so no game code is in a page's initial load (hard rule 13).
+ * The one Try it now surface (brief 25, brief 29): every demo entry point on
+ * the landing page and the site pages opens this dialog. Loaded only on a CTA
+ * tap (`DemoCta.tsx`, `SkyLanding.tsx`'s `openDemo`), with the demo and its
+ * mic chunk behind it, so no game code is in a page's initial load (hard
+ * rule 13).
  *
  * Full screen on phones, a large centred modal on wider screens. Close
  * button, Esc and a backdrop click all close it; closing unmounts the demo,
@@ -55,7 +57,7 @@ export function DemoOverlay({
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
         </button>
-        <TryItNow surface="overlay" page={page} seedId={seedId} mode={mode} onClose={close} />
+        <TryItNow page={page} seedId={seedId} mode={mode} onClose={close} />
       </div>
     </dialog>
   );

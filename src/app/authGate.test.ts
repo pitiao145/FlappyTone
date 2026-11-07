@@ -3,10 +3,14 @@ import {
   authSource,
   canPlay,
   challengeLine,
-  consumeMagicLink,
+  authMode,
+  codeFailReason,
+  consumeAuthPending,
   friendlyAuthError,
+  initialAuthCard,
   keptParams,
-  markMagicLinkSent,
+  markAuthPending,
+  oauthErrorFromUrl,
   parkReturn,
   restoreReturn,
 } from "./authGate.ts";
@@ -85,12 +89,60 @@ describe("challenge params survive signup", () => {
   });
 });
 
-describe("magic link completion", () => {
-  it("remembers which card sent it, once", () => {
+describe("pending sign-in (magic link, Google)", () => {
+  it("remembers how it started, once", () => {
     const s = memStorage();
-    markMagicLinkSent("login", s, 0);
-    expect(consumeMagicLink(s, 5)).toBe("login");
-    expect(consumeMagicLink(s, 6)).toBe(null);
+    markAuthPending({ method: "google", consent: true, wasAnonymous: false }, s, 0);
+    expect(consumeAuthPending(s, 5)).toEqual({ method: "google", consent: true, wasAnonymous: false, at: 0 });
+    expect(consumeAuthPending(s, 6)).toBe(null);
+  });
+
+  it("drops a marker older than an hour", () => {
+    const s = memStorage();
+    markAuthPending({ method: "magic_link", consent: false, wasAnonymous: false }, s, 0);
+    expect(consumeAuthPending(s, 60 * 60 * 1000)).toBe(null);
+  });
+
+  it("still counts a magic link sent before brief 30", () => {
+    const s = memStorage();
+    s.setItem("toneflap.magicPending.v1", JSON.stringify({ card: "login", at: 0 }));
+    expect(consumeAuthPending(s, 5)?.method).toBe("magic_link");
+  });
+});
+
+describe("authMode (new account vs login)", () => {
+  const sent = Date.parse("2026-11-07T10:00:00Z");
+  it("a guest upgrade is always a new account", () => {
+    expect(authMode("2026-01-01T00:00:00Z", sent, true)).toBe("signup");
+  });
+  it("a row created after the code was sent is new", () => {
+    expect(authMode("2026-11-07T10:00:01Z", sent, false)).toBe("signup");
+  });
+  it("an older row is a login", () => {
+    expect(authMode("2026-10-01T00:00:00Z", sent, false)).toBe("login");
+    expect(authMode(null, sent, false)).toBe("login");
+  });
+});
+
+describe("codeFailReason", () => {
+  it("splits Supabase's one otp_expired code by the code's age", () => {
+    expect(codeFailReason("otp_expired", "Token has expired or is invalid", 0, 60_000)).toBe("invalid");
+    expect(codeFailReason("otp_expired", "Token has expired or is invalid", 0, 2 * 60 * 60 * 1000)).toBe("expired");
+  });
+  it("names rate limits and network failures", () => {
+    expect(codeFailReason("over_email_send_rate_limit", "x", 0, 1)).toBe("rate_limited");
+    expect(codeFailReason(undefined, "network error", 0, 1)).toBe("network");
+  });
+});
+
+describe("oauthErrorFromUrl", () => {
+  it("reads the error Supabase puts in the hash or the query", () => {
+    expect(oauthErrorFromUrl("", "#error=server_error&error_code=identity_already_exists&error_description=Identity+is+already+linked")).toEqual({
+      code: "identity_already_exists",
+      description: "Identity is already linked",
+    });
+    expect(oauthErrorFromUrl("?error=access_denied", "")).toEqual({ code: "access_denied", description: "" });
+    expect(oauthErrorFromUrl("?c=300", "")).toBe(null);
   });
 });
 
@@ -102,5 +154,13 @@ describe("copy", () => {
   it("offers login for an existing email", () => {
     expect(friendlyAuthError("User already registered").existing).toBe(true);
     expect(friendlyAuthError("Invalid login credentials").existing).toBe(false);
+  });
+});
+
+describe("initialAuthCard", () => {
+  it("opens Log in only for ?auth=login", () => {
+    expect(initialAuthCard("?auth=login&src=/chinese-tones")).toBe("login");
+    expect(initialAuthCard("?src=hero")).toBe("signup");
+    expect(initialAuthCard("")).toBe("signup");
   });
 });

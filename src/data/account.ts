@@ -44,39 +44,65 @@ export interface Account {
   status: AccountStatus;
   userId: string | null;
   email: string | null;
+  /** When the auth user row was created (ISO), used to tell a new account from a login. */
+  createdAt?: string | null;
 }
 
 /** Who the player currently is. Never creates a session as a side effect. */
 export async function getAccount(): Promise<Account> {
   const session = await currentSession();
   const user = session?.user;
-  if (!user) return { status: "signed-out", userId: null, email: null };
+  if (!user) return { status: "signed-out", userId: null, email: null, createdAt: null };
   return {
     status: user.is_anonymous ? "anonymous" : "permanent",
     userId: user.id,
     email: user.email ?? null,
+    createdAt: user.created_at ?? null,
   };
 }
 
-export type AuthResult = { ok: true } | { ok: false; reason: string };
+/** `code` is Supabase's machine-readable error code, when it gave one. */
+export type AuthResult = { ok: true } | { ok: false; reason: string; code?: string };
+
+function fail(error: { message: string; code?: string }): { ok: false; reason: string; code?: string } {
+  return error.code ? { ok: false, reason: error.message, code: error.code } : { ok: false, reason: error.message };
+}
+
+/** The `/app` URL every email and OAuth flow comes back to (see `startEmailSignIn`). */
+function appRedirect(): string {
+  return new URL(APP_PATH, window.location.origin).toString();
+}
 
 /**
- * Starts the email sign-in, choosing the flow that preserves the player's
- * identity.
+ * Which `verifyOtp` type the emailed code needs. It follows from the call that
+ * sent it: `updateUser({ email })` sends an email-change code, verified with
+ * `type: "email_change"`; `signInWithOtp` sends a sign-in code, verified with
+ * `type: "email"` (Supabase docs, auth-js `EmailOtpType`).
+ */
+export type EmailCodeType = "email" | "email_change";
+
+export type CodeStartResult =
+  | { ok: true; otpType: EmailCodeType }
+  | { ok: false; reason: string; code?: string };
+
+/**
+ * Sends the 6-digit sign-in code (brief 30), choosing the flow that preserves
+ * the player's identity. The same email also carries the old magic link
+ * (same redirect), so either one signs the player in.
  *
  * For an anonymous player this is `updateUser({ email })`, which attaches the
  * address to the row they already have — that is the in-place upgrade the
  * whole architecture depends on. `signInWithOtp` would instead sign them into
  * a *different* user, silently abandoning the anonymous one along with its
  * scores, which is the single most damaging mistake available in this file.
+ * If the address already belongs to another account this fails with
+ * `email_exists`; the screen then asks before `startExistingAccountCode`.
  *
- * A player with no session at all (a fresh browser signing back in) does use
- * `signInWithOtp`, because there is no local identity worth preserving.
- *
- * Either way the player confirms by clicking a link in their inbox; nothing is
- * final until they do.
+ * A player with no session at all uses `signInWithOtp`, which creates the
+ * account when the email is new (`shouldCreateUser`), so the screen never
+ * asks "do you have an account?".
  */
-export async function startEmailSignIn(email: string): Promise<AuthResult> {
+export async function startEmailCode(email: string): Promise<CodeStartResult> {
   const supabase = getSupabase();
   if (!supabase) return { ok: false, reason: "no Supabase client" };
   const trimmed = email.trim();
@@ -90,22 +116,134 @@ export async function startEmailSignIn(email: string): Promise<AuthResult> {
     // CLAUDE.md's landing/game split). The confirmation would still succeed on
     // the server, but the tokens would land on a page with nothing to read
     // them, and the player would return to the game still signed out.
-    const redirect = new URL(APP_PATH, window.location.origin).toString();
+    const redirect = appRedirect();
+    const account = await getAccount();
+    if (account.status === "anonymous") {
+      const { error } = await supabase.auth.updateUser({ email: trimmed }, { emailRedirectTo: redirect });
+      if (error) {
+        warn("account", `email code (upgrade) failed: ${error.message}`);
+        return fail(error);
+      }
+      return { ok: true, otpType: "email_change" };
+    }
+    const { error } = await supabase.auth.signInWithOtp({
+      email: trimmed,
+      options: { emailRedirectTo: redirect, shouldCreateUser: true },
+    });
+    if (error) {
+      warn("account", `email code failed: ${error.message}`);
+      return fail(error);
+    }
+    return { ok: true, otpType: "email" };
+  } catch (err) {
+    warn("account", "email code threw", err);
+    return { ok: false, reason: "network error" };
+  }
+}
+
+/**
+ * Sends a sign-in code to an address that already has an account, even from
+ * an anonymous session. Only called after the player chose "sign in to that
+ * account" (the in-place upgrade failed with `email_exists`): the guest's
+ * progress is already snapshotted and is added to that account on sync.
+ */
+export async function startExistingAccountCode(email: string): Promise<CodeStartResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, reason: "no Supabase client" };
+  const trimmed = email.trim();
+  if (!trimmed) return { ok: false, reason: "no email given" };
+  try {
+    await snapshotGuestProgress();
+    const { error } = await supabase.auth.signInWithOtp({
+      email: trimmed,
+      options: { emailRedirectTo: appRedirect(), shouldCreateUser: false },
+    });
+    if (error) {
+      warn("account", `existing-account code failed: ${error.message}`);
+      return fail(error);
+    }
+    return { ok: true, otpType: "email" };
+  } catch (err) {
+    warn("account", "existing-account code threw", err);
+    return { ok: false, reason: "network error" };
+  }
+}
+
+/** Older callers (AccountCard): sends the code + link, nothing more. */
+export async function startEmailSignIn(email: string): Promise<AuthResult> {
+  const r = await startEmailCode(email);
+  return r.ok ? { ok: true } : r;
+}
+
+export type VerifyResult =
+  | { ok: true; createdAt: string | null }
+  | { ok: false; reason: string; code?: string };
+
+/**
+ * Checks the emailed code and finishes the sign-in: a fresh token (the
+ * upgrade's old one still says `is_anonymous`), the account sync (adopts the
+ * guest snapshot), then the marketing consent. Never throws.
+ */
+export async function verifyEmailCode(
+  email: string,
+  token: string,
+  otpType: EmailCodeType,
+  marketingConsent: boolean,
+): Promise<VerifyResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, reason: "no Supabase client" };
+  const trimmed = email.trim();
+  const code = token.replace(/\D/g, "");
+  if (!trimmed) return { ok: false, reason: "no email given" };
+  if (code.length < 6) return { ok: false, reason: "enter the 6-digit code", code: "code_too_short" };
+
+  try {
+    const { error } = await supabase.auth.verifyOtp({ email: trimmed, token: code, type: otpType });
+    if (error) {
+      warn("account", `code check failed: ${error.message}`);
+      return fail(error);
+    }
+    if (otpType === "email_change") await supabase.auth.refreshSession();
+    const synced = await syncAccount();
+    if (!synced.ok) warn("account", `post-code sync failed: ${synced.reason}`);
+    if (marketingConsent) await recordMarketingConsent(true);
+    return { ok: true, createdAt: (await getAccount()).createdAt ?? null };
+  } catch (err) {
+    warn("account", "code check threw", err);
+    return { ok: false, reason: "network error" };
+  }
+}
+
+/**
+ * Starts "Continue with Google" (brief 30). The browser leaves for Google and
+ * comes back to `/app`, where `AuthGate` sees the new session.
+ *
+ * An anonymous player links Google to the row they already have
+ * (`linkIdentity`, needs manual linking enabled in Supabase), never
+ * `signInWithOAuth`, for the same reason as `startEmailCode`. If that Google
+ * account already belongs to someone else, Supabase sends the player back
+ * with `identity_already_exists`; the screen explains it and offers
+ * `{ existing: true }`, an explicit sign-in to that account (guest progress
+ * snapshotted first, adopted on sync).
+ */
+export async function startGoogleSignIn(opts: { existing?: boolean } = {}): Promise<AuthResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, reason: "no Supabase client" };
+  try {
+    await snapshotGuestProgress();
+    const options = { redirectTo: appRedirect() };
     const account = await getAccount();
     const { error } =
-      account.status === "anonymous"
-        ? await supabase.auth.updateUser({ email: trimmed }, { emailRedirectTo: redirect })
-        : await supabase.auth.signInWithOtp({
-            email: trimmed,
-            options: { emailRedirectTo: redirect },
-          });
+      account.status === "anonymous" && !opts.existing
+        ? await supabase.auth.linkIdentity({ provider: "google", options })
+        : await supabase.auth.signInWithOAuth({ provider: "google", options });
     if (error) {
-      warn("account", `email sign-in failed: ${error.message}`);
-      return { ok: false, reason: error.message };
+      warn("account", `Google sign-in failed: ${error.message}`);
+      return fail(error);
     }
     return { ok: true };
   } catch (err) {
-    warn("account", "email sign-in threw", err);
+    warn("account", "Google sign-in threw", err);
     return { ok: false, reason: "network error" };
   }
 }
@@ -194,7 +332,7 @@ export async function requestPasswordReset(email: string): Promise<AuthResult> {
   if (!trimmed) return { ok: false, reason: "no email given" };
 
   try {
-    const redirect = new URL(APP_PATH, window.location.origin).toString();
+    const redirect = appRedirect();
     const { error } = await supabase.auth.resetPasswordForEmail(trimmed, { redirectTo: redirect });
     if (error) {
       warn("account", `password reset request failed: ${error.message}`);

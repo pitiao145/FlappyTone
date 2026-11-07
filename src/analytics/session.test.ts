@@ -299,6 +299,8 @@ describe("eventTier", () => {
     "signup_completed",
     "auth_screen_viewed",
     "login_completed",
+    "auth_code_sent",
+    "auth_code_failed",
     "daily_limit_reached",
     "earlybird_modal_shown",
     "earlybird_create_account_click",

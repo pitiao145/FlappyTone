@@ -3,16 +3,27 @@ import type { ReactNode } from "react";
 import { Footer } from "./Footer.tsx";
 import { Nav } from "./Nav.tsx";
 import { appHref } from "./appLink.ts";
+import { DemoTrigger } from "../site/DemoCta.tsx";
+import { brand } from "../brand.ts";
 import { renderMarkdown } from "./markdown.tsx";
 
 /**
  * The Sky site shell for a legal entry: the marketing nav and footer around
- * the document (`src/site/site.css`). Play carries `?src=<path>`.
+ * the document (`src/site/site.css`). The nav's "Try it free" opens the demo
+ * overlay; a signed-in player's Play carries `?src=<path>`.
  */
 export function LegalShell({ path, children }: { path: string; children: ReactNode }) {
   return (
     <div id="top" className="sky sky-site">
-      <Nav linkBase="/" playHref={appHref(undefined, path)} />
+      <Nav
+        linkBase="/"
+        playHref={appHref(undefined, path)}
+        trySlot={
+          <DemoTrigger page={path} cta="nav_play" className="sky-btn sky-btn-small">
+            {brand.navTry}
+          </DemoTrigger>
+        }
+      />
       <ScrollBird />
       <main className="sky-site-main">{children}</main>
       <div className="sky-footer">

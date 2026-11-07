@@ -8,7 +8,12 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   adoptGuestProgress,
   loadGuestSnapshot,
+  signInWithPassword,
   signUpWithPassword,
+  startEmailCode,
+  startExistingAccountCode,
+  startGoogleSignIn,
+  verifyEmailCode,
   snapshotGuestProgress,
   syncAccount,
 } from "./account.ts";
@@ -33,9 +38,24 @@ function fakeClient() {
   const signUp = vi.fn().mockResolvedValue({ error: null });
   const signInWithOtp = vi.fn().mockResolvedValue({ error: null });
   const refreshSession = vi.fn().mockResolvedValue({ data: {}, error: null });
+  const signInWithOAuth = vi.fn().mockResolvedValue({ data: {}, error: null });
+  const linkIdentity = vi.fn().mockResolvedValue({ data: {}, error: null });
+  const verifyOtp = vi.fn().mockResolvedValue({ data: {}, error: null });
+  const signInWithPassword = vi.fn().mockResolvedValue({ data: {}, error: null });
+  const getSession = vi.fn().mockResolvedValue({ data: { session: null } });
   const upsert = vi.fn().mockResolvedValue({ error: null });
   const client = {
-    auth: { updateUser, signUp, signInWithOtp, refreshSession },
+    auth: {
+      updateUser,
+      signUp,
+      signInWithOtp,
+      refreshSession,
+      signInWithOAuth,
+      linkIdentity,
+      verifyOtp,
+      signInWithPassword,
+      getSession,
+    },
     from: vi.fn(() => ({
       upsert,
       update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
@@ -44,7 +64,18 @@ function fakeClient() {
       })),
     })),
   };
-  return { client, updateUser, signUp, signInWithOtp, refreshSession, upsert };
+  return {
+    client,
+    updateUser,
+    signUp,
+    signInWithOtp,
+    refreshSession,
+    signInWithOAuth,
+    linkIdentity,
+    verifyOtp,
+    signInWithPassword,
+    upsert,
+  };
 }
 
 function session(status: "anonymous" | "permanent" | null) {
@@ -291,5 +322,127 @@ describe("guest adoption (brief 05)", () => {
     vi.mocked(supabaseModule.currentSession).mockResolvedValue(session(null));
     await snapshotGuestProgress();
     expect(loadGuestSnapshot()!.adoptId).toBe(adoptId);
+  });
+});
+
+/**
+ * Brief 30: the flow choice. An anonymous guest is upgraded in place (same
+ * user id); only a signed-out player may create or enter another user.
+ */
+describe("sign-in flow choice (anonymous vs signed out)", () => {
+  beforeEach(() => {
+    vi.mocked(supabaseModule.warn).mockReset();
+    vi.stubGlobal("window", { location: { origin: "https://flappytone.com" } });
+  });
+
+  function setup(status: "anonymous" | null) {
+    const fake = fakeClient();
+    vi.mocked(supabaseModule.getSupabase).mockReturnValue(fake.client as never);
+    vi.mocked(supabaseModule.currentSession).mockResolvedValue(session(status));
+    return fake;
+  }
+
+  /** The calls that would leave the anonymous user behind. */
+  function expectNoReplacement(f: ReturnType<typeof fakeClient>) {
+    expect(f.signInWithOtp).not.toHaveBeenCalled();
+    expect(f.signUp).not.toHaveBeenCalled();
+    expect(f.signInWithOAuth).not.toHaveBeenCalled();
+  }
+
+  it("code, anonymous: updateUser + email_change, never signInWithOtp", async () => {
+    const f = setup("anonymous");
+    const sent = await startEmailCode(" a@b.com ");
+    expect(sent).toEqual({ ok: true, otpType: "email_change" });
+    expect(f.updateUser).toHaveBeenCalledWith({ email: "a@b.com" }, { emailRedirectTo: "https://flappytone.com/app" });
+    await verifyEmailCode("a@b.com", "123 456", "email_change", false);
+    expect(f.verifyOtp).toHaveBeenCalledWith({ email: "a@b.com", token: "123456", type: "email_change" });
+    expect(f.refreshSession).toHaveBeenCalled();
+    expectNoReplacement(f);
+  });
+
+  it("code, signed out: signInWithOtp (creates the account) + email", async () => {
+    const f = setup(null);
+    const sent = await startEmailCode("a@b.com");
+    expect(sent).toEqual({ ok: true, otpType: "email" });
+    expect(f.signInWithOtp).toHaveBeenCalledWith({
+      email: "a@b.com",
+      options: { emailRedirectTo: "https://flappytone.com/app", shouldCreateUser: true },
+    });
+    expect(f.updateUser).not.toHaveBeenCalled();
+    await verifyEmailCode("a@b.com", "123456", "email", false);
+    expect(f.verifyOtp).toHaveBeenCalledWith({ email: "a@b.com", token: "123456", type: "email" });
+  });
+
+  it("code, anonymous, email taken: reports email_exists and does not fall back", async () => {
+    const f = setup("anonymous");
+    f.updateUser.mockResolvedValueOnce({ error: { message: "A user with this email address has already been registered", code: "email_exists" } });
+    const sent = await startEmailCode("taken@b.com");
+    expect(sent).toMatchObject({ ok: false, code: "email_exists" });
+    expectNoReplacement(f);
+  });
+
+  it("existing-account code is only the explicit choice, and never creates a user", async () => {
+    const f = setup("anonymous");
+    await startExistingAccountCode("taken@b.com");
+    expect(f.signInWithOtp).toHaveBeenCalledWith({
+      email: "taken@b.com",
+      options: { emailRedirectTo: "https://flappytone.com/app", shouldCreateUser: false },
+    });
+  });
+
+  it("a short code is refused before any network call", async () => {
+    const f = setup(null);
+    const r = await verifyEmailCode("a@b.com", "12", "email", false);
+    expect(r).toMatchObject({ ok: false, code: "code_too_short" });
+    expect(f.verifyOtp).not.toHaveBeenCalled();
+  });
+
+  it("Google, anonymous: linkIdentity, never signInWithOAuth", async () => {
+    const f = setup("anonymous");
+    expect((await startGoogleSignIn()).ok).toBe(true);
+    expect(f.linkIdentity).toHaveBeenCalledWith({
+      provider: "google",
+      options: { redirectTo: "https://flappytone.com/app" },
+    });
+    expectNoReplacement(f);
+  });
+
+  it("Google, signed out: signInWithOAuth", async () => {
+    const f = setup(null);
+    await startGoogleSignIn();
+    expect(f.signInWithOAuth).toHaveBeenCalledWith({
+      provider: "google",
+      options: { redirectTo: "https://flappytone.com/app" },
+    });
+    expect(f.linkIdentity).not.toHaveBeenCalled();
+  });
+
+  it("Google, anonymous, explicit sign-in to an existing account: signInWithOAuth", async () => {
+    const f = setup("anonymous");
+    await startGoogleSignIn({ existing: true });
+    expect(f.signInWithOAuth).toHaveBeenCalled();
+    expect(f.linkIdentity).not.toHaveBeenCalled();
+  });
+
+  it("password signup, anonymous: updateUser, never signUp", async () => {
+    const f = setup("anonymous");
+    await signUpWithPassword("a@b.com", "longenough", false);
+    expect(f.updateUser).toHaveBeenCalledWith({ email: "a@b.com", password: "longenough" });
+    expectNoReplacement(f);
+  });
+
+  it("password login, signed out: signInWithPassword only", async () => {
+    const f = setup(null);
+    await signInWithPassword("a@b.com", "pw");
+    expect(f.signInWithPassword).toHaveBeenCalledWith({ email: "a@b.com", password: "pw" });
+    expectNoReplacement(f);
+  });
+
+  it("a failure is a result, never a throw", async () => {
+    const f = setup(null);
+    f.signInWithOAuth.mockRejectedValueOnce(new Error("offline"));
+    expect(await startGoogleSignIn()).toEqual({ ok: false, reason: "network error" });
+    f.verifyOtp.mockResolvedValueOnce({ data: {}, error: { message: "Token has expired or is invalid", code: "otp_expired" } });
+    expect(await verifyEmailCode("a@b.com", "123456", "email", false)).toMatchObject({ ok: false, code: "otp_expired" });
   });
 });

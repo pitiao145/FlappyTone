@@ -163,11 +163,13 @@ export type SaySlug = (typeof SAY_SLUGS)[number];
 export type WordPageAction = "listen" | "see_it" | "practise_tone";
 
 /**
- * Where a Try it now run happened: the landing hero, or a site page's
- * overlay (`page` = route path, `seeded` = the word flown first, or null).
+ * Where a Try it now run happened: the demo overlay on the landing page
+ * (`page` null) or a site page (`page` = route path), `seeded` = the word
+ * flown first, or null.
  * Optional so older events still type-check.
  */
 export interface DemoWhere {
+  /** Always "overlay" since brief 29; "landing" was the old inline hero demo. */
   surface?: "landing" | "overlay";
   page?: string | null;
   seeded?: string | null;
@@ -191,6 +193,10 @@ export type SeoCta =
   | "visualizer_result_retry"
   /** "Hear it first" in the tone visualizer's reference card. */
   | "visualizer_hear_example";
+
+/** How a player signed in (brief 30). */
+export type AuthMethod = "otp" | "google" | "password" | "magic_link";
+export type AuthScreenStep = "signup" | "login" | "code" | "password" | "password_signup";
 
 export type AnalyticsEvent =
   /**
@@ -367,14 +373,31 @@ export type AnalyticsEvent =
   | { type: "screen_viewed"; screen: TrackedScreen }
   /** A Settings control changed. `value` is always stringified (booleans as "on"/"off") so the union stays flat primitives. */
   | { type: "setting_changed"; key: SettingKey; value: string }
-  /** AccountCard.tsx's submit handler, fired at the start of the attempt. */
-  | { type: "signup_started"; mode: "signup" | "login"; method?: "password" | "magic_link" }
-  /** AccountCard.tsx's submit handler, fired once `result.ok`. */
-  | { type: "signup_completed"; mode: "signup" | "login"; method?: "password" | "magic_link" }
-  /** AuthScreen.tsx (the /app login gate, brief 24): the signup or login card became visible. */
-  | { type: "auth_screen_viewed"; screen: "signup" | "login"; source: "challenge" | "direct" | "lp_cta" }
-  /** AuthScreen.tsx: a returning player signed in (password), or a magic link brought them back. */
-  | { type: "login_completed"; method: "password" | "magic_link" }
+  /**
+   * The start of a sign-in attempt (AuthScreen.tsx, AccountCard.tsx). For the
+   * email code and Google, new-vs-login is unknown until it succeeds, so
+   * `mode` is "signup" there; `signup_completed.mode` is the real one.
+   */
+  | { type: "signup_started"; mode: "signup" | "login"; method?: AuthMethod }
+  /**
+   * A sign-in succeeded. `mode` "signup" = a new account (or a guest
+   * upgraded), "login" = an existing one. Fired by AuthScreen.tsx (password,
+   * code) and AuthGate.tsx (magic link, Google, after the redirect).
+   */
+  | { type: "signup_completed"; mode: "signup" | "login"; method?: AuthMethod }
+  /**
+   * AuthScreen.tsx (the /app login gate): a step became visible: "signup"
+   * (Google + "Sign up with email"), "login" (Google + email login code),
+   * "code", "password" (log in), "password_signup". Between brief 30's first
+   * commit and its follow-up (never deployed) "email" replaced signup/login.
+   */
+  | { type: "auth_screen_viewed"; screen: AuthScreenStep; source: "challenge" | "direct" | "lp_cta" }
+  /** A returning player signed in to an existing account (`signup_completed` with mode "login"). */
+  | { type: "login_completed"; method: AuthMethod }
+  /** AuthScreen.tsx: the sign-in code email was sent (also first-time sends; `resend` for the button). */
+  | { type: "auth_code_sent"; resend: boolean }
+  /** AuthScreen.tsx: the code was refused, or could not be sent. */
+  | { type: "auth_code_failed"; reason: "expired" | "invalid" | "rate_limited" | "network"; stage: "send" | "verify" }
   /** The daily run cap blocked a start/retry — replaces the old ad-hoc `daily_limit_earlybird_shown`. */
   | { type: "daily_limit_reached"; trigger: "start" | "retry" }
   /** EarlyBirdModal.tsx's mount/surface-change effect. */
@@ -500,7 +523,7 @@ export type AnalyticsEvent =
   | ({
       type: "tool_summary";
       tool: "try-now";
-      /** "pairs" is the "Too easy?" round of two-syllable words. */
+      /** "pairs": two-syllable words (the Tone Pairs demo; before brief 29 also "Too easy?"). */
       level: "single" | "pairs";
       cleared: number;
       total: number;
@@ -519,7 +542,7 @@ export type AnalyticsEvent =
       t4Acc: number | null;
     } & DemoWhere)
   /** Try it now's way into /app or a new round, from its end screen. */
-  | ({ type: "tool_cta_click"; tool: "try-now"; placement: "demo_gameover_signup" | "demo_gameover_retry" | "demo_gameover_pairs" } & DemoWhere)
+  | ({ type: "tool_cta_click"; tool: "try-now"; placement: "demo_gameover_signup" | "demo_gameover_retry" } & DemoWhere)
   /**
    * A routed CTA on a route-table page (brief 25): `overlay` opens the Try it
    * now demo on the page, `signup` leaves for /app. `page` is the route path,
@@ -645,6 +668,8 @@ export const EVENT_TIERS: Record<AnalyticsEvent["type"], AnalyticsTier> = {
   signup_completed: "global",
   auth_screen_viewed: "global",
   login_completed: "global",
+  auth_code_sent: "global",
+  auth_code_failed: "global",
   daily_limit_reached: "global",
   earlybird_modal_shown: "global",
   earlybird_create_account_click: "global",

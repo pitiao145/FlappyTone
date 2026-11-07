@@ -19,7 +19,8 @@ import { Nav } from "../ui/Nav.tsx";
 import { Footer } from "../ui/Footer.tsx";
 import { appHref } from "../ui/appLink.ts";
 import { Breadcrumbs } from "./Breadcrumbs.tsx";
-import { trackSignupCta } from "./DemoCta.tsx";
+import { DemoTrigger, trackSignupCta } from "./DemoCta.tsx";
+import { brand } from "../brand.ts";
 import { ChineseTones, chineseTonesJsonLd } from "./pages/ChineseTones.tsx";
 import { ToneMarks, toneMarksJsonLd } from "./pages/ToneMarks.tsx";
 import { ToneVisualizer, toneVisualizerJsonLd } from "./pages/ToneVisualizer.tsx";
@@ -52,6 +53,11 @@ export function SitePage({ path }: { path: string }) {
         linkBase="/"
         playHref={appHref(undefined, path)}
         onPlayLinkClick={() => trackSignupCta(path, "nav_play")}
+        trySlot={
+          <DemoTrigger page={path} cta="nav_play" className="sky-btn sky-btn-small">
+            {brand.navTry}
+          </DemoTrigger>
+        }
       />
       <ScrollBird />
       <main className="sky-site-main">

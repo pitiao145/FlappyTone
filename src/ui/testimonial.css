@@ -1,0 +1,36 @@
+/* A player quote card (Testimonial.tsx): the landing proof row and the demo
+   end screen. Site tokens (site.css :root); the overlay mounts on <body>. */
+.sky-testimonial {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0;
+  padding: 24px 24px 20px;
+  border: 2px solid var(--color-ink);
+  border-radius: var(--radius);
+  background: var(--color-cloud);
+  box-shadow: var(--shadow-hard);
+}
+.sky-testimonial::before {
+  content: "\201C";
+  position: absolute;
+  top: -22px;
+  left: 18px;
+  font: 400 4rem/1 var(--font-display);
+  color: var(--color-rim-hi);
+}
+.sky-testimonial blockquote { margin: 0; font-weight: 600; line-height: 1.4; }
+.sky-testimonial figcaption { display: flex; align-items: center; gap: 12px; }
+.sky-testimonial img {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  padding: 4px;
+  border: 2px solid var(--color-ink);
+  border-radius: 50%;
+  background: var(--color-sky-1);
+  object-fit: contain;
+}
+.sky-testimonial cite { margin-top: 0; }

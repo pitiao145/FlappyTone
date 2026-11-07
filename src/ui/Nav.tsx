@@ -1,20 +1,30 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { brand } from "../brand.ts";
 import { LEARN_LINKS } from "../site/links.ts";
 import { Pip } from "../site/Pip.tsx";
+import { appHref } from "./appLink.ts";
+import { useSignedIn } from "./signedIn.ts";
 
 interface Props {
   /**
-   * The Play button as a handler (the landing page, which logs the click
-   * before it leaves for the game).
+   * The landing page: "Try it free" opens its demo overlay (the host logs the
+   * click and loads the overlay).
    */
-  onPlay?: () => void;
+  onTry?: () => void;
+  /**
+   * Other pages: the "Try it free" control itself, e.g. a site page's
+   * `DemoTrigger`, so the nav opens the overlay that page already uses.
+   */
+  trySlot?: ReactNode;
   /**
    * Route-table pages (`src/site/`): section links point back into the landing
-   * page (`/#how-it-works`) instead of this page, and Play is a real link
-   * (`appHref`, so it carries `?src=`) rather than a handler.
+   * page (`/#how-it-works`) instead of this page.
    */
   linkBase?: string;
+  /**
+   * Where "Play" goes for a signed-in player (`appHref`, so it carries
+   * `?src=`). Signed-in players get Play instead of "Try it free".
+   */
   playHref?: string;
   /** With `playHref`: called on the link's click (analytics), before it leaves. */
   onPlayLinkClick?: () => void;
@@ -37,13 +47,16 @@ function useScrolled(): boolean {
  * and every site page. The game at /app is a separate entry with its own bar
  * (`src/app/GameNav.tsx`), because none of these links mean anything mid-run.
  *
- * Sticky; on the first scroll it narrows into a floating, outlined bar. Play
- * is always in the bar. Phones fold the links into a menu panel.
+ * Sticky; on the first scroll it narrows into a floating, outlined bar. Its
+ * button is "Try it free" (the no-signup demo overlay), or "Play" (/app) when
+ * the browser already holds a signed-in session (`signedIn.ts`, no Supabase
+ * load). Pages that pass neither `onTry` nor `trySlot` show no button.
+ * Phones fold the links into a menu panel.
  *
  * Every link is a real anchor, so middle-click and open-in-new-tab keep
  * working. Section items come from `brand.sections` (`inNav`).
  */
-export function Nav({ onPlay, linkBase = "", playHref, onPlayLinkClick }: Props) {
+export function Nav({ onTry, trySlot, linkBase = "", playHref, onPlayLinkClick }: Props) {
   const items = brand.sections.filter((s) => s.inNav);
   const compact = useScrolled();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -58,13 +71,8 @@ export function Nav({ onPlay, linkBase = "", playHref, onPlayLinkClick }: Props)
     return () => removeEventListener("keydown", onKey);
   }, [menuOpen]);
 
-  // Phones show the short label; the bar has no room for the long one.
-  const playLabel = (
-    <>
-      <span className="sky-label-long">{brand.heroCards.play.cta}</span>
-      <span className="sky-label-short">Play</span>
-    </>
-  );
+  const signedIn = useSignedIn();
+  const hasButton = !!onTry || trySlot !== undefined;
 
   return (
     <div className={compact ? "sky-nav-bar is-compact" : "sky-nav-bar"}>
@@ -91,22 +99,24 @@ export function Nav({ onPlay, linkBase = "", playHref, onPlayLinkClick }: Props)
             </details>
           </li>
         </ul>
-        {playHref && (
-          <a className="sky-btn sky-btn-small" href={playHref} onClick={onPlayLinkClick}>
-            {playLabel}
+        {hasButton && signedIn ? (
+          <a className="sky-btn sky-btn-small" href={playHref ?? appHref()} onClick={onPlayLinkClick}>
+            Play
           </a>
-        )}
-        {onPlay && (
+        ) : onTry ? (
           <button
             type="button"
             className="sky-btn sky-btn-small"
+            aria-haspopup="dialog"
             onClick={() => {
               setMenuOpen(false);
-              onPlay();
+              onTry();
             }}
           >
-            {playLabel}
+            {brand.navTry}
           </button>
+        ) : (
+          trySlot
         )}
         <button
           type="button"

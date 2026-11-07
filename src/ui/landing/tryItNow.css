@@ -1,22 +1,8 @@
-/* Try it now: the demo run and its end screen. Loaded with TryItNow.tsx, so the
-   landing hero and the site pages' demo overlay (src/site/DemoOverlay.tsx) share it. */
+/* Try it now: the demo run and its end screen. Loaded with TryItNow.tsx, which
+   only ever runs inside the demo overlay (src/site/DemoOverlay.tsx); the
+   overlay sizes the live game frame (demoOverlay.css). */
 .sky-try-stage { position: relative; display: grid; place-items: center; }
 .sky-try-stage > * { grid-area: 1 / 1; }
-/* The game's own stage and HUD (App.css .stage/.game-stage/.hud), sized here. */
-.lp-sky .sky-try-game {
-  position: relative;
-  margin: 0;
-  aspect-ratio: 420 / 640;
-  /* A fixed width, not a percentage: the stage sits in a shrink-to-fit
-     figure, where 100% resolves to nothing and the game vanished on phones. */
-  width: 340px;
-  max-width: 100%;
-  overflow: hidden;
-  border: var(--outline) solid var(--color-ink);
-  border-radius: 20px;
-  box-shadow: var(--shadow-hard);
-}
-.lp-sky .sky-try-game[hidden] { display: none; }
 .sky-try-canvas { display: block; width: 100%; height: 100%; }
 /* The demo loop (and its prerendered placeholder) fits the screen like the
    live game does: width is capped so the clip's height stays within
@@ -26,7 +12,6 @@
   width: min(100%, 380px, calc((100svh - 168px) * 796 / 1734));
   height: auto;
 }
-.sky-try-button { align-self: end; margin-bottom: 32px; z-index: 1; }
 
 .sky-try-panel {
   z-index: 1;
@@ -102,67 +87,118 @@
 .sky-try-over .go-demo-pitch {
   position: relative;
   display: grid;
-  gap: 10px;
+  gap: 18px;
   justify-items: center;
-  padding: 24px 18px 18px;
+  padding: 28px 24px 26px;
   text-align: center;
   border: 2px solid var(--ink);
   background: var(--accent);
   box-shadow: var(--shadow-sticker);
 }
 .sky-try-over .go-demo-pitch p { margin: 0; color: var(--accent-ink); }
+.sky-try-over .go-demo-pitch-title span { display: block; }
 .sky-try-over .go-demo-pitch-title {
   margin: 0;
   font: 400 1.35rem/1.15 var(--font-display);
   color: var(--accent-ink);
 }
-.go-demo-pitch-body { font-weight: 600; }
+/* The site's pressed-edge primary (site.css .sky-btn), restated here: the
+   game's `.screen button` rules would otherwise win inside the end screen. */
 .sky-try-over .screen button.go-demo-pitch-btn {
   width: 100%;
-  min-height: 52px;
-  font-size: 1.1rem;
+  min-height: 56px;
+  margin-top: 4px;
+  padding: 4px 14px 0;
+  border: var(--outline, 3px) solid var(--ink);
+  border-radius: var(--radius, 14px);
+  font: 400 1.15rem/1.1 var(--font-display);
+  letter-spacing: 0.01em;
   background: var(--beak);
   color: var(--ink);
+  box-shadow: 0 5px 0 var(--ink);
+  transition: translate 120ms var(--ease-snap), box-shadow 120ms var(--ease-snap);
 }
-.sky-try-over .go-demo-pitch .go-demo-pitch-more { font-size: 0.85rem; opacity: 0.9; }
-/* More air between cards than the in-app screen, which has a full page. */
-.sky-try-over .screen.gameover-screen { gap: 22px; }
-/* The game's ghost button is see-through; over the game's sky it vanished. */
-.sky-try-over .screen button.go-btn-ghost {
+.sky-try-over .screen button.go-demo-pitch-btn:hover { translate: 0 -2px; box-shadow: 0 7px 0 var(--ink); }
+.sky-try-over .screen button.go-demo-pitch-btn:active { translate: 0 4px; box-shadow: 0 1px 0 var(--ink); }
+.sky-try-over .screen button.go-demo-pitch-btn:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
+/* Three plain perks, each with a check in the beak gold. */
+.sky-try-over .go-demo-perks {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  justify-self: stretch;
+  text-align: left;
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.sky-try-over .go-demo-perks li { display: flex; gap: 10px; align-items: baseline; }
+.sky-try-over .go-demo-perks li::before {
+  content: "✓";
+  flex: none;
+  font-weight: 800;
+  color: var(--beak);
+}
+/* The score card: full width, in a light beak orange rather than plain
+   white. The score sits centred; the bird perches on the card's corner,
+   outside it; the tone tiles get their own labelled row under the score. */
+.sky-try-over .go-demo .go-header {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 18px;
+  padding: 26px 18px 18px;
+  background: color-mix(in srgb, var(--beak) 26%, #fff);
+}
+.sky-try-over .go-demo .go-bird {
+  top: -44px;
+  left: -26px;
+  width: 78px;
+}
+.sky-try-over .go-demo .go-header-score { padding-left: 0; text-align: center; }
+.sky-try-over .go-demo .go-score-line { justify-content: center; }
+.sky-try-over .go-demo-tones-block {
+  display: grid;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 2px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+}
+.sky-try-over .go-demo-tones-label {
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+/* This run's tone accuracy: one tile per tone flown, its mark in the tone
+   colour, then the percentage. */
+.sky-try-over .go-demo-tones {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sky-try-over .go-demo-tones li {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 10px;
   border: 2px solid var(--ink);
+  border-radius: 10px;
   background: #fff;
+  font: 400 0.95rem/1 var(--font-display);
   color: var(--ink);
 }
-/* Try it now, with a hand-drawn arrow pointing at it (same as "See the gates"). */
-/* Centred on the demo video, where the eye already is. */
-.sky-try-cta {
-  z-index: 1;
-  align-self: center;
-  display: grid;
-  justify-items: center;
+.sky-try-over .go-demo-tone-icon { display: block; width: 30px; height: 22px; }
+.sky-try-over .go-demo-tones b { font-weight: 400; min-width: 3.2ch; text-align: right; }
+/* Wide enough for one row of four. */
+@media (min-width: 480px) {
+  .sky-try-over .go-demo-tones { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
-.sky-try-cta .sky-try-button { margin-bottom: 0; }
-/* Wide screens: in the gap left of the frame, near its top, pointing at it. */
-.sky-try { position: relative; }
-.sky-try .sky-try-arrow {
-  position: absolute;
-  top: 8%;
-  right: calc(100% + 8px);
-  margin: 0;
-  white-space: nowrap;
-  color: var(--color-ink);
-}
-/* Phones: the hero stacks, so the note sits above the frame, on its left. */
-@media (max-width: 560px) {
-  .sky-try .sky-try-arrow {
-    position: static;
-    justify-content: flex-start;
-    margin: 0 0 4px 8px;
-  }
-}
-.sky-try-arrow .sky-arrow { stroke: var(--color-ink); }
-
-@media (min-width: 561px) {
-  .lp-sky .sky-try-game { width: auto; height: min(calc(100svh - 168px), 760px); }
-}
-
+/* "One more round": quiet, but a real tap target. */
+.sky-try-over .go-demo-actions .go-subtle-link { min-height: 44px; padding-inline: 16px; }
+/* More air between cards than the in-app screen, which has a full page. */
+.sky-try-over .screen.gameover-screen { gap: 22px; }
