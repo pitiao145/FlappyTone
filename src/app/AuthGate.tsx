@@ -78,7 +78,10 @@ export default function AuthGate() {
         if (play && !playingRef.current) {
           // A magic link or Google redirect that started on the auth screen.
           // An in-page code or password sign-in clears the marker itself.
-          const pending = consumeAuthPending(storage());
+          // While the card's own code/password submit runs, it counts the
+          // sign-in itself (and clears the marker); counting here too would
+          // double it under the wrong method.
+          const pending = ownSubmitPending() ? null : consumeAuthPending(storage());
           if (pending) {
             const mode = authMode(account.createdAt ?? null, pending.at, pending.wasAnonymous);
             track({ type: "signup_completed", mode, method: pending.method });
