@@ -216,6 +216,15 @@ export function setFrameSink(fn: FrameSink | null): void {
   sink = fn;
 }
 
+/**
+ * True when `fn` is the frame consumer now, or there is none. A run left
+ * hidden behind the Visualiser must not stop the mic or clear the sink the
+ * Visualiser is using (brief 31).
+ */
+export function ownsFrameSink(fn: FrameSink): boolean {
+  return sink === null || sink === fn;
+}
+
 export function stopMic(): void {
   generation += 1;
   sink = null;

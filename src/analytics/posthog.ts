@@ -382,7 +382,9 @@ export function captureGameEvent(event: AnalyticsEvent): void {
   const { type, ...rest } = event;
   capturePostHogEvent(type, rest as Record<string, string | number | boolean>, {
     instant: INSTANT_EVENTS.has(type) || (type === "seo_cta_click" && event.target === "signup"),
-    beacon: type === "mic_unanswered",
+    // An abandoned run may end inside `pagehide` (brief 31), so it goes the
+    // same way: only sendBeacon is sure to leave a closing page.
+    beacon: type === "mic_unanswered" || (event.type === "run_end" && event.reason === "abandoned"),
   });
 }
 

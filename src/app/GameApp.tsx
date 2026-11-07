@@ -760,6 +760,33 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
   }, [goHome]);
 
   /**
+   * The hidden or backgrounded run was ended as abandoned (brief 31): `Game`
+   * has sent `run_end` and the run log and released the mic. Record it
+   * locally like a quit, drop the run, and leave the player where they are —
+   * on Progress, Settings, etc. Only a player still on the run's own screen
+   * (the page was hidden over it) lands on Play home, never on a frozen
+   * canvas. The mic is not stopped here: if the Visualiser is in front, it
+   * owns the mic now.
+   */
+  const onRunAbandon = useCallback((snap: RunSnapshot | null) => {
+    if (
+      snap &&
+      (lastModeRef.current === "game" ||
+        lastModeRef.current === "drill" ||
+        lastModeRef.current === "pairs")
+    ) {
+      recordRun(snap, "quit");
+    }
+    navRef.current += 1;
+    setGameAlive(false);
+    setScreen((s) => {
+      if (s !== "game" && s !== "tutorial" && s !== "drill" && s !== "learn" && s !== "pairs") return s;
+      pendingRef.current = null;
+      return "play";
+    });
+  }, []);
+
+  /**
    * No mic call here any more — see `SilentModeGate.tsx`. `opts.drillTone` is
    * only meaningful (and required) for `intent === "drill"`; `opts.pairCombo`
    * only for `intent === "pairs"` — both set by ModeSelect before this fires.
@@ -1471,6 +1498,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
             canvasHeight={GAME_CANVAS_H}
             onOver={onRunOver}
             onQuit={onRunQuit}
+            onAbandon={onRunAbandon}
             runNumber={gameRunNumberRef.current}
           />
         )}

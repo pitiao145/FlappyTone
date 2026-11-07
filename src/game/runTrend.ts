@@ -16,6 +16,23 @@ import { isSpokenKey } from "./words.ts";
 
 export type LogOutcome = "finished" | "out_of_hearts" | "quit" | "restart";
 
+/**
+ * The run log's outcome for a run that ended with analytics reason `reason`.
+ * Game over with hearts left is "finished" (a completed drill), matching
+ * `GameApp`'s local `recordRun`. An abandoned run logs as "quit": the server
+ * (`api/runlog.ts`) accepts only the four `LogOutcome`s, and a run left
+ * behind is a quit the player never confirmed (brief 31).
+ */
+export function runLogOutcome(
+  reason: LogOutcome | "abandoned",
+  mode: RunMode,
+  heartsLeft: number,
+): LogOutcome {
+  if (reason === "abandoned") return "quit";
+  if (reason === "out_of_hearts" && mode !== "tutorial" && heartsLeft > 0) return "finished";
+  return reason;
+}
+
 export interface PerKeyStat {
   /** Heard (measured) gates. */
   gates: number;

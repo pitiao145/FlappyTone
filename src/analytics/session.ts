@@ -49,8 +49,13 @@ import type { CueStyle, GateLogEntry, RunMode, WordMix } from "../game/run.ts";
 import type { SpeechStyle } from "../game/words.ts";
 import type { GateOutcome } from "../game/scoring.ts";
 
-/** Why a run stopped. `quit` and `restart` both come from the pause menu, which otherwise leaves no trace. */
-export type RunEndReason = "out_of_hearts" | "finished" | "quit" | "restart";
+/**
+ * Why a run stopped. `quit` and `restart` both come from the pause menu, which
+ * otherwise leaves no trace. `abandoned`: the run sat out of sight (another
+ * nav tab, or the page hidden) past `ABANDON_AFTER_MS`, or the page closed
+ * mid-run (brief 31); it carries `idle_ms`.
+ */
+export type RunEndReason = "out_of_hearts" | "finished" | "quit" | "restart" | "abandoned";
 
 /** The calibration steps, mirrored from Calibration.tsx's `Step`. */
 export type CalibStep = "quiet" | "talk" | "low" | "high" | "done" | "preview";
@@ -307,6 +312,11 @@ export type AnalyticsEvent =
       score: number;
       bestMult: number;
       missedEarly: number;
+      /**
+       * Only on `reason: "abandoned"`: how long the run had been out of sight
+       * when it ended, rounded to 100 ms (0 for a page closed while in view).
+       */
+      idle_ms?: number;
       /**
        * The voice the run was flown with — a speaker id from the roster
        * (`inventorySpeaker()`), never anything the player typed, so this

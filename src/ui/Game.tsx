@@ -22,6 +22,7 @@ import { MicStatusBanner } from "./MicStatus.tsx";
 import {
   acquireMicStream,
   getMicSession,
+  ownsFrameSink,
   releaseMicStream,
   setFrameSink,
   stopMic,
@@ -30,8 +31,9 @@ import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { getTier, tierReady, useTier } from "../data/tier.ts";
 import { levelFor, playerXp } from "../game/xp.ts";
 import { postShapes } from "../data/shapes.ts";
-import { postRunLog } from "../data/runlog.ts";
-import { buildRunLogEntry } from "../game/runTrend.ts";
+import { postRunLog, rememberRunAccount } from "../data/runlog.ts";
+import { buildRunLogEntry, runLogOutcome } from "../game/runTrend.ts";
+import { createAwayWatch, type AwayWatch } from "../game/abandonWatch.ts";
 import { resolvedPool, type Word } from "../game/words.ts";
 import type { Proficiency } from "../game/tiers.ts";
 import type { LevelChoice } from "../game/settings.ts";
@@ -57,6 +59,14 @@ import { JumpingPip } from "./bird/index.ts";
 import { PauseMenu } from "./PauseMenu.tsx";
 import { GameHud, type OutcomeFlash } from "./GameHud.tsx";
 import type { Tone } from "../game/gates.ts";
+
+/** The away watch of a host that does not handle abandonment (the Lab). */
+const NO_AWAY_WATCH: AwayWatch = {
+  setAway: () => {},
+  pageGone: () => {},
+  finish: () => {},
+  abandoned: () => false,
+};
 
 /** HUD refresh rate. React never renders per frame — the rAF loop owns the canvas. */
 const HUD_HZ = 4;
@@ -88,6 +98,13 @@ interface Props {
    * had started yet — the caller decides whether/how to record a partial
    * attempt; `onOver` is never called for this path. */
   onQuit: (snap: RunSnapshot | null) => void;
+  /**
+   * Called once when the run is ended as abandoned (brief 31): out of sight
+   * for `ABANDON_AFTER_MS`, or the page closed mid-run. `run_end` and the run
+   * log are already sent and the mic released (unless the Visualiser holds
+   * it). `snap` is null when the run never started. The caller unmounts this.
+   */
+  onAbandon?: (snap: RunSnapshot | null) => void;
   /** The word `mode: "single"` flies. Ignored otherwise. */
   singleWord?: Word;
   /** The fixed tone `mode: "drill"` flies every gate from. Ignored otherwise. */
@@ -149,6 +166,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   canvasHeight,
   onOver,
   onQuit,
+  onAbandon,
   singleWord,
   drillTone,
   pairCombo,
@@ -320,9 +338,20 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   /** This session's run count, shown in the pause menu. Bumped alongside `runGen`. */
   const [runIndex, setRunIndex] = useState(runNumber ?? 1);
   const onOverRef = useRef(onOver);
+  const onAbandonRef = useRef(onAbandon);
   useEffect(() => {
     onOverRef.current = onOver;
+    onAbandonRef.current = onAbandon;
   });
+  /**
+   * The current run's away watch (brief 31), set by the run-owning effect.
+   * Told when the run goes out of sight and comes back; ends it as
+   * abandoned if it stays away too long.
+   */
+  const awayRef = useRef<AwayWatch | null>(null);
+  /** Latest `hidden`, for the effect's own visibility handler. */
+  const hiddenRef = useRef(hidden ?? false);
+  hiddenRef.current = hidden ?? false;
 
   // Retire the reaction on a timer rather than by comparing clocks during
   // render — render must stay pure, and the CSS animations own the timing
@@ -354,11 +383,12 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
    * most valuable event to not lose to the navigation that follows.
    */
   const reportRunEnd = useCallback(
-    (snap: RunSnapshot, reason: RunEndReason): void => {
+    (snap: RunSnapshot, reason: RunEndReason, idleMs?: number): void => {
       reportGates(snap);
       track({
         type: "run_end",
         reason,
+        ...(reason === "abandoned" ? { idle_ms: Math.round((idleMs ?? 0) / 100) * 100 } : {}),
         gates: snap.gateLog.length,
         score: snap.stats.score,
         bestMult: snap.stats.bestMultiplier,
@@ -370,11 +400,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         speechStyle: runRef.current?.speechStyle,
       });
       // Every account's run goes to the server once (brief 05; a no-op for a
-      // guest). The log's outcome is the run's real end: game over with
-      // hearts left is "finished" (a completed drill), matching `GameApp`'s
-      // local `recordRun`; the analytics `reason` above is left as it was.
-      const outcome =
-        reason === "out_of_hearts" && mode !== "tutorial" && snap.stats.hearts > 0 ? "finished" : reason;
+      // guest). The log's outcome is the run's real end (`runLogOutcome`);
+      // the analytics `reason` above is left as it was.
+      const outcome = runLogOutcome(reason, mode, snap.stats.hearts);
       void postRunLog(buildRunLogEntry(snap.stats, mode, outcome, crypto.randomUUID(), snap.wordIds));
     },
     [reportGates, mode],
@@ -387,6 +415,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
    */
   const exitRun = useCallback(
     (go: (snap: RunSnapshot | null) => void) => () => {
+      awayRef.current?.finish();
       const snap = runRef.current?.snapshot() ?? null;
       if (snap) reportRunEnd(snap, "quit");
       go(snap);
@@ -401,6 +430,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
    * the same canvas element).
    */
   const restart = useCallback(() => {
+    awayRef.current?.finish();
     const snap = runRef.current?.snapshot();
     if (snap) reportRunEnd(snap, "restart");
     const audio = getMicSession()?.ctx;
@@ -512,6 +542,11 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     let rafId = 0;
     let running = true;
     let finished = false;
+    /** True once the loop has begun (`start()`); a run never started sends no `run_end`. */
+    let started = false;
+    // The account this run belongs to, learned now so a run ended inside
+    // `pagehide` can still reach the outbox (see `postRunLog`).
+    rememberRunAccount();
     let lastT = performance.now();
     // The run decides when a cue fires (snapshot.cue); the host only plays
     // the audio, edge-triggered on the cued gate's stable xStart.
@@ -702,6 +737,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       if (snap.over && !finished) {
         finished = true;
         running = false;
+        awayRef.current?.finish();
         // The tutorial has no hearts — reaching the end of it is finishing.
         reportRunEnd(snap, mode === "tutorial" ? "finished" : "out_of_hearts");
         clearInterval(hudTimer);
@@ -734,6 +770,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
 
     const start = () => {
       running = true;
+      started = true;
       lastT = performance.now();
       rafId = requestAnimationFrame(tick);
       startHud();
@@ -879,11 +916,54 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       }
     };
 
+    /**
+     * Ends the run as abandoned (brief 31): out of sight too long, or the page
+     * closing. Once only (`finished`, and the watch fires once). The mic is
+     * stopped, never re-acquired — unless the Visualiser took over the frame
+     * sink while this run sat hidden behind it, in which case the mic is its
+     * to keep and to stop.
+     */
+    const abandon = (idleMs: number) => {
+      if (finished) return;
+      finished = true;
+      running = false;
+      cancelAnimationFrame(rafId);
+      clearInterval(hudTimer);
+      cueTimers.forEach((id) => clearTimeout(id));
+      cueTimers.clear();
+      warmGenRef.current += 1;
+      warmingRef.current = false;
+      const snap = started ? run.snapshot() : null;
+      if (snap) reportRunEnd(snap, "abandoned", idleMs);
+      if (ownsFrameSink(onFrame)) {
+        setFrameSink(null);
+        stopMic();
+      }
+      releaseWakeLock();
+      onAbandonRef.current?.(snap);
+    };
+    // Only a host that handles the end (GameApp) gets it; the Lab's dev
+    // flights keep today's pause-forever behaviour.
+    const away = onAbandonRef.current ? createAwayWatch({ onAbandon: abandon }) : NO_AWAY_WATCH;
+    awayRef.current = away;
+    // A run that mounts hidden (never today, but cheap to be right about).
+    away.setAway(hiddenRef.current || document.visibilityState === "hidden");
+
     const onVisibility = () => {
-      if (document.visibilityState !== "hidden") return;
+      if (document.visibilityState !== "hidden") {
+        // Back in view; still away if GameApp is showing another tab over it.
+        away.setAway(hiddenRef.current);
+        return;
+      }
       pause();
+      away.setAway(true);
     };
     document.addEventListener("visibilitychange", onVisibility);
+    // The page is closing (or entering the back/forward cache): end the run
+    // now so it is logged. `run_end` goes by beacon, the run log is already
+    // in the outbox before the first await (see `postRunLog`).
+    const onPageHide = () => away.pageGone();
+    window.addEventListener("pagehide", onPageHide);
 
     // The tutorial holds until the player taps Start; a game run begins now.
     startRef.current = () => {
@@ -903,6 +983,8 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
 
     return () => {
       running = false;
+      away.finish();
+      if (awayRef.current === away) awayRef.current = null;
       // Every way a run ends (game over, quit, restart, leaving) tears this
       // effect down, so this is the one POST per run. keepalive lets it
       // outlive a page navigation. Fire-and-forget; empty for non-Pro.
@@ -919,13 +1001,15 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // streamless would make that run deaf. Restore it. A no-op when the run
       // ended via game-over (that path called stopMic, so there is no session)
       // or when the stream is already live.
+      // Never for an abandoned run: its mic was stopped on purpose (brief 31).
       const micSession = getMicSession();
-      if (micSession && !micSession.hasStream()) {
+      if (micSession && !micSession.hasStream() && !away.abandoned()) {
         void acquireMicStream();
       }
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", onPageHide);
       releaseWakeLock();
-      setFrameSink(null);
+      if (ownsFrameSink(onFrame)) setFrameSink(null);
       runRef.current = null;
     };
     // reportGates/reportRunEnd are stable (useCallback with no changing deps),
@@ -1061,6 +1145,15 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       }),
     [mode, proficiency, levelChoice],
   );
+
+  /**
+   * GameApp showing another nav tab over this run counts as away (brief 31),
+   * the same as the page being hidden. Coming back in time just disarms it;
+   * the player resumes from the pause menu as before.
+   */
+  useEffect(() => {
+    awayRef.current?.setAway(!!hidden || document.visibilityState === "hidden");
+  }, [hidden, runGen]);
 
   return (
     <div className="screen game-screen" style={hidden ? { display: "none" } : undefined}>

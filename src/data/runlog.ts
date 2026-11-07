@@ -62,15 +62,38 @@ export function flushRunOutbox(): Promise<number> {
 }
 
 /**
+ * The account a run in flight belongs to, learned when it started
+ * (`rememberRunAccount`). Lets `postRunLog` put the run in the outbox
+ * synchronously, before its first `await`: a run ended inside `pagehide`
+ * (brief 31) may never get past that `await`, and the outbox is what posts
+ * it on the next load. `undefined` = not known yet.
+ */
+let runAccount: string | null | undefined;
+
+/** Learns which account (if any) the run now starting belongs to. Never throws. */
+export function rememberRunAccount(): void {
+  void accountUserId().then(
+    (id) => {
+      runAccount = id;
+    },
+    () => undefined,
+  );
+}
+
+/**
  * Logs one run for an account (every tier; the server decides what it keeps
  * and counts). Fire-and-forget; a no-op for a guest, whose progress stays on
  * the device. Refreshes the local cache from the server once it landed.
  */
 export async function postRunLog(run: RunLogEntry): Promise<void> {
   try {
-    const userId = await accountUserId();
+    // Into the outbox now if the account is already known (see `runAccount`);
+    // the rest of this function only sends it.
+    const known = runAccount;
+    if (known) enqueueRun({ userId: known, day: localDay(), run });
+    const userId = known || (await accountUserId());
     if (!userId) return;
-    enqueueRun({ userId, day: localDay(), run });
+    if (!known) enqueueRun({ userId, day: localDay(), run });
     if ((await flushRunOutbox()) > 0) await refreshServerStats();
   } catch (err) {
     warn("runlog", "POST failed", err);

@@ -231,6 +231,23 @@ describe("run_end", () => {
     expect(ev.type === "run_end" && ev.voice).toBe("mark");
   });
 
+  it("an abandoned run carries idle_ms, and it survives sanitizing (brief 31)", () => {
+    const ev: AnalyticsEvent = {
+      type: "run_end",
+      reason: "abandoned",
+      idle_ms: 120000,
+      gates: 4,
+      score: 300,
+      bestMult: 1,
+      missedEarly: 0,
+    };
+    expect(ev.type === "run_end" && ev.idle_ms).toBe(120000);
+    expect(sanitizeGameProperties({ reason: "abandoned", idle_ms: 120000 })).toEqual({
+      reason: "abandoned",
+      idle_ms: 120000,
+    });
+  });
+
   it("carries the speech style, and it survives sanitizing", () => {
     const ev: AnalyticsEvent = {
       type: "run_end",
