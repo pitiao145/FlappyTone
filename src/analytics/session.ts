@@ -125,6 +125,25 @@ export type InAppAppValue =
   | "webview-ios"
   | "none";
 
+/**
+ * The blocked-mic panel's copy (brief 32), picked by `micHelpVariant` in
+ * `src/ui/micHelpCopy.ts`. `*-retry`: a prompt was refused, "Try again"
+ * first; `*-settings`: refused with no prompt, settings steps first.
+ */
+export type MicHelpVariantValue =
+  | "ios-safari-retry"
+  | "ios-safari-settings"
+  | "ios-chrome-retry"
+  | "ios-chrome-settings"
+  | "ios-other-retry"
+  | "ios-other-settings"
+  | "dismissed"
+  | "android-denied"
+  | "android-system"
+  | "desktop-denied"
+  | "desktop-system"
+  | "in-app";
+
 /** Why the mic help panel or the in-app notice is on screen. */
 export type MicHelpReason = "permission-denied" | "blocked-before" | "in-app" | "in-use";
 
@@ -265,6 +284,11 @@ export type AnalyticsEvent =
       action: "shown" | "reload" | "try_again" | "open_external" | "copy_link" | "dismissed";
       surface: MicSurface;
       reason: MicHelpReason;
+      /**
+       * Which copy the blocked-mic panel showed (brief 32), the closed
+       * `MicHelpVariant` of `src/ui/micHelpCopy.ts`. Absent on the in-app notice.
+       */
+      help_variant?: MicHelpVariantValue;
     }
   | { type: "calib_step"; step: CalibStep }
   | { type: "calib_done" }

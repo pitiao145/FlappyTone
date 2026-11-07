@@ -8,20 +8,27 @@
 // No audio code here: site pages load this up front (hard rule 13). Every
 // button that asks for the mic again calls the caller's handler inside the
 // tap (hard rule 4).
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { captureGameEvent } from "../analytics/posthog.ts";
 import type { MicHelpReason, MicSurface } from "../analytics/session.ts";
 import { copyText } from "../lib/copyText.ts";
 import { chromeIntentUrl, detectInAppBrowser, type InAppBrowser } from "../lib/inAppBrowser.ts";
+import { lastMicFailure, subscribeMicFailure } from "../lib/micFailure.ts";
 import { queryMicPermission, type MicPermission } from "../lib/micPermission.ts";
 import { promptLang } from "./inAppPromptCopy.ts";
-import { MIC_HELP_COPY, micHelpTarget } from "./micHelpCopy.ts";
+import { MIC_HELP_COPY, micHelpLayout, micHelpVariant, type MicHelpVariant } from "./micHelpCopy.ts";
 
 type HelpAction = "shown" | "reload" | "try_again" | "open_external" | "copy_link" | "dismissed";
 
-function send(action: HelpAction, surface: MicSurface, reason: MicHelpReason): void {
+function send(action: HelpAction, surface: MicSurface, reason: MicHelpReason, helpVariant?: MicHelpVariant): void {
   try {
-    captureGameEvent({ type: "mic_help", action, surface, reason });
+    captureGameEvent({
+      type: "mic_help",
+      action,
+      surface,
+      reason,
+      ...(helpVariant ? { help_variant: helpVariant } : {}),
+    });
   } catch {
     // analytics never breaks the mic step
   }
@@ -168,9 +175,22 @@ export function continueInApp(): void {
   continuedInApp = true;
 }
 
+function userAgent(): string {
+  try {
+    return navigator.userAgent;
+  } catch {
+    return "";
+  }
+}
+
 /**
- * The blocked-mic panel: the fix for the detected browser, a reload where a
- * reload is the fix, and always "Try again" (`onTryAgain` runs in the tap).
+ * The blocked-mic panel. Its copy follows the cause (brief 32,
+ * `micHelpVariant`): the browser, the refusal's kind and how fast it came.
+ * On iOS "Try again" comes first, since a tapped request shows the prompt
+ * again; the settings steps come first only when the refusal came with no
+ * prompt (under 1 s). Re-read after every failed "Try again".
+ * `onTryAgain` runs in the tap and must make exactly one mic request
+ * (`ensureMic`): WebKit gives a tap's trust to one request only.
  */
 export function MicHelpPanel({
   surface,
@@ -186,62 +206,65 @@ export function MicHelpPanel({
   busy?: boolean;
 }): React.ReactElement {
   const [info] = useState(browserInfo);
-  const target = micHelpTarget(info);
+  const [ua] = useState(userAgent);
+  const failure = useSyncExternalStore(subscribeMicFailure, lastMicFailure, lastMicFailure);
+  // "blocked-before": no request yet in this page load, so no failure to read.
+  const variant = micHelpVariant(ua, reason === "blocked-before" ? null : failure);
+  const layout = micHelpLayout(variant);
   useEffect(() => {
-    send("shown", surface, reason);
-    // Once per mount.
+    send("shown", surface, reason, variant);
+    // Once per mount and per change of copy.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [variant]);
   const t = copy();
-  const reload = (label: string, primary: boolean) => (
+  const reload = (primary: boolean) => (
     <button
       type="button"
       className={`inapp-prompt__btn${primary ? " inapp-prompt__btn--primary" : ""}`}
       onClick={() => {
-        send("reload", surface, reason);
+        send("reload", surface, reason, variant);
         window.location.reload();
       }}
     >
-      {label}
+      {t.reload}
     </button>
   );
-  const tryAgain = (
+  const tryAgain = (primary: boolean) => (
     <button
       type="button"
-      className="inapp-prompt__btn"
+      className={`inapp-prompt__btn${primary ? " inapp-prompt__btn--primary" : ""}`}
       disabled={busy}
       onClick={() => {
-        send("try_again", surface, reason);
+        send("try_again", surface, reason, variant);
         onTryAgain();
       }}
     >
       {t.tryAgain}
     </button>
   );
+  const lines = (keys: typeof layout.before) =>
+    keys.map((k) => (
+      <p key={k} className="mic-help__body">
+        {t[k]}
+      </p>
+    ));
   return (
     <div className="mic-help" role="alert">
       <strong className="mic-help__title">{t.blockedTitle}</strong>
-      {target === "ios" && (
-        <>
-          <div className="mic-help__actions">{reload(t.iosReload, true)}</div>
-          <p className="mic-help__body">{t.iosSteps}</p>
-          <p className="mic-help__body">{t.iosStill}</p>
-        </>
-      )}
-      {target === "android" && <p className="mic-help__body">{t.androidSteps}</p>}
-      {target === "desktop" && <p className="mic-help__body">{t.desktopSteps}</p>}
-      {target === "in-app" && <p className="mic-help__body">{t.inAppSteps}</p>}
-      {target === "in-app" && info.platform === "ios" && <p className="mic-help__hint">{t.iosHint}</p>}
+      {lines(layout.before)}
+      {variant === "in-app" && info.platform === "ios" && <p className="mic-help__hint">{t.iosHint}</p>}
       <div className="mic-help__actions">
-        {target === "in-app" && <OpenButtons info={info} surface={surface} reason={reason} primary />}
-        {(target === "android" || target === "desktop") && reload(t.reload, true)}
-        {tryAgain}
+        {layout.primary === "open" && <OpenButtons info={info} surface={surface} reason={reason} primary />}
+        {layout.primary === "try_again" && tryAgain(true)}
+        {layout.primary === "reload" && reload(true)}
+        {layout.reload && reload(false)}
+        {layout.primary !== "try_again" && tryAgain(false)}
         {onBack && (
           <button
             type="button"
             className="inapp-prompt__link"
             onClick={() => {
-              send("dismissed", surface, reason);
+              send("dismissed", surface, reason, variant);
               onBack();
             }}
           >
@@ -249,6 +272,7 @@ export function MicHelpPanel({
           </button>
         )}
       </div>
+      {lines(layout.after)}
     </div>
   );
 }

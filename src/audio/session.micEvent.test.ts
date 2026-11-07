@@ -121,3 +121,43 @@ describe("mic event", () => {
     ]);
   });
 });
+
+// Brief 32: one "Try again" tap makes exactly one mic request (WebKit gives a
+// tap's trust to one getUserMedia only), and the panel gets the failure's
+// cause to pick its copy. `startMic` calls getUserMedia exactly once, first
+// (mic.start.test.ts); here, a tap that reaches `ensureMic` more than once
+// still starts the mic once.
+describe("Try again: one mic request per tap", () => {
+  beforeEach(() => {
+    tracked.length = 0;
+    stopMic();
+  });
+
+  it("starts the mic once when one tap calls ensureMic twice", async () => {
+    const { startMic } = await import("./mic.ts");
+    const startSpy = vi.mocked(startMic);
+    nextStart = async () => {
+      throw toMicError(new DOMException("Permission denied", "NotAllowedError"));
+    };
+    await expect(ensureMic("app")).rejects.toThrow();
+    startSpy.mockClear();
+    // The "Try again" tap: a double handler, or a button and the gate both firing.
+    const a = ensureMic("app");
+    const b = ensureMic("app");
+    expect(startSpy).toHaveBeenCalledTimes(1);
+    expect(b).toBe(a);
+    await expect(a).rejects.toThrow();
+  });
+
+  it("records the refusal's cause for the help panel, and clears it on success", async () => {
+    const { lastMicFailure } = await import("../lib/micFailure.ts");
+    nextStart = async () => {
+      throw toMicError(new DOMException("Permission denied by system", "NotAllowedError"));
+    };
+    await expect(ensureMic("demo")).rejects.toThrow();
+    expect(lastMicFailure()).toMatchObject({ errorName: "NotAllowedError", denial: "system", ms: expect.any(Number) });
+    nextStart = async () => ({ stop: vi.fn() });
+    await ensureMic("demo");
+    expect(lastMicFailure()).toBeNull();
+  });
+});

@@ -9,6 +9,7 @@
  */
 import { track } from "../analytics/client.ts";
 import type { MicSurface } from "../analytics/session.ts";
+import { recordMicFailure } from "../lib/micFailure.ts";
 import { queryMicPermission } from "../lib/micPermission.ts";
 import { MicError, micDenial, micErrorName, startMic, type MicSession } from "./mic.ts";
 
@@ -107,6 +108,7 @@ export function ensureMic(surface: MicSurface = "app"): Promise<MicSession> {
         throw new MicCancelled();
       }
       session = s;
+      recordMicFailure(null);
       setMicStatus("live");
       // The single choke point for mic outcome — four UI call sites route
       // through here, and a denied mic is the most common reason a tester
@@ -119,6 +121,12 @@ export function ensureMic(surface: MicSurface = "app"): Promise<MicSession> {
       // MicCancelled is the player navigating away, not a failure. Counting it
       // as one would invent a permission problem out of an ordinary back tap.
       if (!(err instanceof MicCancelled)) {
+        // For the help panel's copy (brief 32), before the caller shows it.
+        recordMicFailure({
+          errorName: micErrorName(err),
+          denial: micDenial(err),
+          ms: performance.now() - t0,
+        });
         report({ ok: false, err });
       }
       throw err;
