@@ -166,7 +166,12 @@ export function SkyLanding() {
             aria-haspopup="dialog"
             aria-label={COPY.tryCta}
             onClick={() => openDemo("game", "hero_video", "hero")}
-          />
+          >
+            {/* Shown on hover and keyboard focus: the clip is a way in, too. */}
+            <span className="sky-hero-video-cta sky-btn" aria-hidden="true">
+              {COPY.videoCta}
+            </span>
+          </button>
         </figure>
       </header>
 

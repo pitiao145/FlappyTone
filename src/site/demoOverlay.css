@@ -77,9 +77,36 @@
 .sky-try-overlay .sky-try-over .screen.gameover-screen { gap: 14px; padding-bottom: 0; }
 @media (max-width: 560px) {
   /* The score card runs full width, so the screen starts under the close
-     button (12px + 48px) instead of beside it. */
-  .demo-overlay-inner:has(.sky-try-over) { padding: 68px 12px 12px; }
+     button (8px + 44px) instead of beside it. */
+  .demo-overlay-inner:has(.sky-try-over) { padding: 58px 12px 12px; }
+  .demo-overlay-inner:has(.sky-try-over) .demo-overlay-close { top: 8px; right: 8px; width: 44px; height: 44px; }
   .sky-try-overlay .sky-try-over { padding-top: 0; }
+
+  /* Phones: the whole end screen fits one screen height (checked from
+     667px tall up). Tighter cards here; the quote goes on short screens. */
+  .sky-try-overlay .sky-try-over .screen.gameover-screen { gap: 12px; }
+  .sky-try-overlay .go-demo .go-header { gap: 10px; padding: 16px 12px 12px; }
+  .sky-try-overlay .go-demo .go-bird { top: -30px; left: -16px; width: 60px; }
+  .sky-try-overlay .go-demo .go-score { font-size: var(--text-2xl); }
+  .sky-try-overlay .go-demo-tones-block { gap: 6px; padding-top: 10px; }
+  .sky-try-overlay .go-demo-tones-label { font-size: 0.82rem; }
+  .sky-try-overlay .go-demo-tones { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .sky-try-overlay .go-demo-tones li { gap: 3px; padding: 5px 4px; font-size: 0.88rem; }
+  .sky-try-overlay .go-demo-tone-icon { width: 22px; height: 16px; }
+  .sky-try-overlay .go-demo-tones b { min-width: 0; }
+  .sky-try-overlay .go-demo-pitch { gap: 12px; padding: 18px 16px 18px; }
+  .sky-try-overlay .go-demo-pitch-title { font-size: 1.2rem; }
+  .sky-try-overlay .go-demo-perks { gap: 6px; font-size: 0.95rem; }
+  .sky-try-overlay .sky-try-over .screen button.go-demo-pitch-btn { min-height: 50px; font-size: 1.05rem; }
+  .sky-try-overlay .go-demo-quote { gap: 10px; padding: 14px 16px 12px; }
+  .sky-try-overlay .go-demo-quote blockquote { font-size: 0.92rem; line-height: 1.35; }
+  .sky-try-overlay .go-demo-quote img { width: 36px; height: 36px; padding: 3px; }
+  .sky-try-overlay .go-demo-quote::before { top: -16px; font-size: 3rem; }
+  .sky-try-overlay .go-demo-actions .go-subtle-link { min-height: 40px; }
+}
+/* Short phones: the quote would push "One more round" off screen. */
+@media (max-width: 560px) and (max-height: 739px) {
+  .sky-try-overlay .go-demo-quote { display: none; }
 }
 @media (min-width: 561px) and (max-width: 639px) {
   /* One centred column, clear of the close button in the corner. */

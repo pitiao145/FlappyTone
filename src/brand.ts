@@ -305,6 +305,8 @@ export const brand = {
     lede: "Your voice flies a bird through tunnels shaped like each tone. Play a few minutes a day and watch your tone scores climb fast.",
     /** The hero's one action: the demo overlay, no account. */
     tryCta: "Try it now, no signup",
+    /** On the hero clip, on hover: it opens the same demo. */
+    videoCta: "Try it",
     /** Under it, for returning players: /app (the auth screen). */
     login: "Already playing? Log in",
     privacy: "Needs a microphone and a quiet room. Your voice stays on your device: no upload, no AI.",

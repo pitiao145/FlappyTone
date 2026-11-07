@@ -43,18 +43,33 @@
 }
 .sky-login-link:hover { text-decoration-thickness: 2px; }
 
-/* A transparent button over the hero video: a tap opens the same demo as the hero button. */
-.sky-hero-video { position: relative; transition: translate 120ms var(--ease-snap); }
-.sky-hero-video:has(.sky-hero-video-btn:hover) { translate: 0 -3px; }
+/* A button over the hero video: a tap opens the same demo as the hero
+   button. On hover (and keyboard focus) the clip dims and a "Try it" button
+   shows on it, so a mouse user sees it is clickable. */
+.sky-hero-video { position: relative; }
 .sky-hero-video-btn {
   position: absolute;
   inset: 0;
+  display: grid;
+  place-items: center;
   margin: 0;
   padding: 0;
   border: 0;
   border-radius: 20px;
-  background: none;
+  background: rgb(20 16 10 / 0);
   cursor: pointer;
+  transition: background-color 160ms var(--ease-snap);
+}
+.sky-hero-video-cta {
+  pointer-events: none;
+  opacity: 0;
+  translate: 0 8px;
+  transition: opacity 160ms var(--ease-snap), translate 160ms var(--ease-snap);
+}
+.sky-hero-video-btn:is(:hover, :focus-visible) { background: rgb(20 16 10 / 0.35); }
+.sky-hero-video-btn:is(:hover, :focus-visible) .sky-hero-video-cta { opacity: 1; translate: 0 0; }
+@media (prefers-reduced-motion: reduce) {
+  .sky-hero-video-btn, .sky-hero-video-cta { transition: none; }
 }
 .sky-hero-video-btn:focus-visible { outline: 3px solid var(--color-focus, var(--color-ink)); outline-offset: 4px; }
 
