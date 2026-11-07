@@ -39,13 +39,24 @@ export const brand = {
 
   /** The Try it now end screen (the real game-over, demo variant). */
   demoGameOver: {
-    pitchTitle: "Save your tone scores",
-    /** With this run's weakest tone; `pitchBodyAny` when no tone had enough gates. */
-    pitchBody: (tone: number, pct: number) =>
-      `Your Tone ${tone} is at ${pct}%. Sign up free to track it and watch it climb.`,
-    pitchBodyAny: "Sign up free to track your tones run after run and watch them climb.",
-    pitchMore: "Plus: choose your level, words and speech style.",
-    signup: "Sign up free",
+    /**
+     * The card's title, from this run's weakest heard tone. At or above
+     * `strongPct` it reads as praise; `titleAny` when no tone was heard.
+     */
+    strongPct: 80,
+    title: (tone: number, pct: number) => `Tone ${tone}: ${pct}%. Keep it climbing.`,
+    titleStrong: (tone: number, pct: number) => `Strong start! Tone ${tone} is your lowest at ${pct}%.`,
+    titleAny: "Keep your tones climbing.",
+    /**
+     * What a free account gives. The demo itself saves nothing, so nothing
+     * here promises to keep this run. `runs` is the free tier's daily runs.
+     */
+    perks: (runs: number) => [
+      "Save every run from now on",
+      "See which tone to practise next",
+      `Free, ${runs} runs a day, no card`,
+    ],
+    signup: "Save my scores, it's free",
     retry: "One more round",
   },
 
@@ -283,7 +294,9 @@ export const brand = {
      * (index.html, routes.ts) carries the keywords. Never the brand name: a
      * brand-name `h1` is part of what got the sibling project deindexed.
      */
-    headline: "Finally nail the Mandarin tones",
+    headline: "Finally nail the Mandarin tones.",
+    /** After the headline, in the beak orange. */
+    headlineAccent: "Fast.",
     lede: "Your voice flies a bird through tunnels shaped like each tone. Play a few minutes a day and watch your tone scores climb fast.",
     /** The hero's one action: the demo overlay, no account. */
     tryCta: "Try it now, no signup",

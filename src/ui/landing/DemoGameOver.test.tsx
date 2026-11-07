@@ -1,21 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { applyGate, newRunStats } from "../../game/scoring.ts";
+import { DEFAULT_TIER_LIMITS } from "../../game/tiers.ts";
 import { DemoGameOver } from "./DemoGameOver.tsx";
 
 const html = (stats = newRunStats()) =>
   renderToStaticMarkup(<DemoGameOver stats={stats} onSignup={() => {}} onRetry={() => {}} />);
 
 describe("DemoGameOver", () => {
-  it("shows the score, the signup card with the weakest tone, then One more round", () => {
+  it("score, then the card (title, perks, button), the quote, then One more round", () => {
     let stats = newRunStats();
     stats = applyGate(stats, [1], "good", 0.9);
     stats = applyGate(stats, [4], "collision", 0.4);
     stats = applyGate(stats, [4], "ok", 0.4);
     const out = html(stats);
-    expect(out).toContain("go-score");
-    expect(out).toContain("Your Tone 4 is at 40%");
-    const order = ["go-score", "Sign up free", "One more round"].map((s) => out.indexOf(s));
+    expect(out).toContain("Tone 4: 40%. Keep it climbing.");
+    expect(out).toContain(`Free, ${DEFAULT_TIER_LIMITS.free.runsPerDay} runs a day, no card`);
+    const order = ["go-score", "Keep it climbing", "go-demo-perks", "Save my scores", "go-demo-quote", "One more round"].map(
+      (s) => out.indexOf(s),
+    );
     expect(order.every((i) => i >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
@@ -26,26 +29,27 @@ describe("DemoGameOver", () => {
     stats = applyGate(stats, [3], "good", 0.88);
     stats = applyGate(stats, [2], "ok", 0.55);
     stats = applyGate(stats, [1], "good", 0.8);
-    const out = html(stats);
-    expect(out).toContain("Your Tone 2 is at 55%");
-    expect(out).toContain("go-demo-weak");
+    expect(html(stats)).toContain("Tone 2: 55%. Keep it climbing.");
   });
 
-  it("drops the per-tone breakdown, the coach card and the harder round", () => {
+  it("praises a strong run: the lowest tone at 80% or more", () => {
     let stats = newRunStats();
-    stats = applyGate(stats, [1], "good", 0.9);
-    stats = applyGate(stats, [4], "ok", 0.4);
-    const out = html(stats);
-    expect(out).not.toContain("tone accuracy");
-    expect(out).not.toContain("go-tones");
-    expect(out).not.toContain("Too easy");
+    stats = applyGate(stats, [3], "good", 0.89);
+    stats = applyGate(stats, [1], "perfect", 0.95);
+    expect(html(stats)).toContain("Strong start! Tone 3 is your lowest at 89%.");
   });
 
-  it("has no share, leaderboard, recalibration, XP or personal best", () => {
+  it("never promises to save this run (the demo writes nothing)", () => {
+    const out = html().toLowerCase();
+    expect(out).not.toContain("save this run");
+    expect(out).not.toContain("save my score<");
+  });
+
+  it("has no share, leaderboard, recalibration, XP, personal best or tone breakdown", () => {
     let stats = newRunStats();
     stats = applyGate(stats, [2], "perfect", 0.95);
     const out = html(stats).toLowerCase();
-    for (const s of ["share", "leaderboard", "board", "calibration", "xp", "personal best", "best "]) {
+    for (const s of ["share", "leaderboard", "board", "calibration", "xp", "personal best", "best ", "tone accuracy", "too easy"]) {
       expect(out).not.toContain(s);
     }
   });
@@ -56,7 +60,13 @@ describe("DemoGameOver", () => {
     stats = applyGate(stats, [3], "unheard", null);
     stats = applyGate(stats, [1], "ok", 0.7);
     const out = html(stats);
-    expect(out).toContain("Your Tone 1 is at 70%");
+    expect(out).toContain("Tone 1: 70%. Keep it climbing.");
     expect(out).not.toContain("Tone 3");
+  });
+
+  it("with no heard tone, a plain title", () => {
+    let stats = newRunStats();
+    stats = applyGate(stats, [2], "unheard", null);
+    expect(html(stats)).toContain("Keep your tones climbing.");
   });
 });

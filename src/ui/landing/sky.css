@@ -29,6 +29,9 @@
 }
 
 .sky-hero-text { display: grid; gap: 24px; }
+/* "Fast." after the headline, in the beak orange. The ink offset keeps the
+   light orange readable on the pale sky. */
+.sky-h1-accent { color: var(--color-beak); text-shadow: 3px 3px 0 var(--color-ink); }
 .sky-lede { font-size: 1.35rem; font-weight: 600; }
 /* One action: the demo. The login link is small, for returning players. */
 .sky-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }

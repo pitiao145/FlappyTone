@@ -101,7 +101,6 @@
   font: 400 1.35rem/1.15 var(--font-display);
   color: var(--accent-ink);
 }
-.go-demo-pitch-body { font-weight: 600; }
 .sky-try-over .screen button.go-demo-pitch-btn {
   width: 100%;
   min-height: 52px;
@@ -109,25 +108,49 @@
   background: var(--beak);
   color: var(--ink);
 }
-.sky-try-over .go-demo-pitch .go-demo-pitch-more { font-size: 0.85rem; opacity: 0.9; }
-/* The weakest tone's shape, the one thing to work on: its contour in its
-   tone colour on a paper tile, tilted like a sticker on the jade card. */
-.sky-try-over .go-demo-pitch .go-demo-weak {
-  display: inline-flex;
+/* Three plain perks, each with a check in the beak gold. */
+.sky-try-over .go-demo-perks {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  justify-self: stretch;
+  text-align: left;
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.sky-try-over .go-demo-perks li { display: flex; gap: 10px; align-items: baseline; }
+.sky-try-over .go-demo-perks li::before {
+  content: "✓";
+  flex: none;
+  font-weight: 800;
+  color: var(--beak);
+}
+/* A real player, under the card on phones, beside it on wide screens. */
+.sky-try-over .go-demo-quote {
+  margin: 0;
+  padding: 18px 20px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  box-shadow: var(--shadow-sticker);
+}
+.sky-try-over .go-demo-quote blockquote {
+  margin: 0;
+  font: 400 1.15rem/1.35 var(--font-display);
+  color: var(--ink);
+}
+.sky-try-over .go-demo-quote figcaption {
+  display: flex;
   align-items: center;
   gap: 10px;
-  margin: 2px 0;
-  padding: 6px 16px 6px 10px;
-  border: 2px solid var(--ink);
-  border-radius: 14px;
-  background: var(--accent-ink);
-  box-shadow: 3px 3px 0 var(--ink);
-  rotate: -2deg;
-  font: 400 1.15rem/1 var(--font-display);
+  margin-top: 12px;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
 }
-.go-demo-weak .contour-spark { color: inherit; opacity: 1; }
-.go-demo-weak .contour-spark polyline { stroke-width: 3.5; }
-.go-demo-weak span { color: var(--ink); padding-top: 3px; }
+.sky-try-over .go-demo-quote img { border-radius: 999px; }
+.sky-try-over .go-demo-quote cite { font-style: normal; font-weight: 600; }
 /* "One more round": quiet, but a real tap target. */
 .sky-try-over .go-demo-actions .go-subtle-link { min-height: 44px; padding-inline: 16px; }
 /* More air between cards than the in-app screen, which has a full page. */

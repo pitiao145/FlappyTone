@@ -149,7 +149,9 @@ export function SkyLanding() {
 
       <header id="top" className="sky-hero">
         <div className="sky-hero-text">
-          <h1>{COPY.headline}</h1>
+          <h1>
+            {COPY.headline} <span className="sky-h1-accent">{COPY.headlineAccent}</span>
+          </h1>
           <p className="sky-lede">{COPY.lede}</p>
           <div className="sky-actions">
             <button className="sky-btn" aria-haspopup="dialog" onClick={() => openDemo("game", "try_now", "hero")}>

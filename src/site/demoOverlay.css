@@ -99,9 +99,27 @@
   .demo-overlay-inner { padding-top: 40px; }
 }
 
-/* The end screen is one centred column: score, signup card, "One more
-   round". The inner grid centres it in the modal both ways. */
-.sky-try-overlay .sky-try-over { width: min(100%, 400px); margin-inline: auto; }
+/* The end screen: one centred column on phones (score, signup card, quote,
+   "One more round"); from 640px wide, the quote moves to a right column
+   beside the score and card. The inner grid centres it in the modal. */
+.sky-try-overlay .sky-try-over { width: min(100%, 420px); margin-inline: auto; }
+@media (min-width: 640px) {
+  .sky-try-overlay .sky-try-over { width: min(100%, 780px); }
+  .sky-try-overlay .sky-try-over .screen.gameover-screen {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    grid-template-areas:
+      "head quote"
+      "pitch quote"
+      "actions quote";
+    align-content: center;
+    gap: 16px 28px;
+  }
+  .sky-try-overlay .go-header { grid-area: head; }
+  .sky-try-overlay .go-demo-pitch { grid-area: pitch; }
+  .sky-try-overlay .go-demo-actions { grid-area: actions; }
+  .sky-try-overlay .go-demo-quote { grid-area: quote; align-self: center; rotate: 1.5deg; }
+}
 
 /* "Exit demo" centred under the game, as in the landing hero (sky.css .sky-screen figcaption). */
 .sky-try-overlay figcaption {
