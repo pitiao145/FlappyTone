@@ -1,27 +1,40 @@
 /**
- * The /app login gate's screen (brief 24): signup, login, reset and the
- * "check your inbox" state, all in one centred card. It only calls the auth
- * functions in `src/data/account.ts`; `AuthGate` notices the new session and
- * swaps in the game.
+ * The /app login gate's screen. Brief 30: one email-first flow for new and
+ * returning players alike — "Continue with Google", or an email that gets a
+ * 6-digit code typed on this same card (the email also carries the old
+ * magic link). A password form stays one small link away. It only calls the
+ * auth functions in `src/data/account.ts`; `AuthGate` notices the new
+ * session and swaps in the game.
  */
 import { useEffect, useId, useState } from "react";
 import { track } from "../analytics/client";
+import type { AuthMethod, AuthScreenStep } from "../analytics/session.ts";
 import {
+  getAccount,
   requestPasswordReset,
   signInWithPassword,
   signUpWithPassword,
-  startEmailSignIn,
+  startEmailCode,
+  startExistingAccountCode,
+  startGoogleSignIn,
+  verifyEmailCode,
+  type EmailCodeType,
 } from "../data/account.ts";
 import {
+  authMode,
   challengeLine,
+  codeFailReason,
+  consumeAuthPending,
   friendlyAuthError,
-  markMagicLinkSent,
+  markAuthPending,
   parkReturn,
   type AuthCard,
   type AuthSource,
   setOwnSubmit,
 } from "./authGate.ts";
 import { redirectToCheckoutForCurrentAccount } from "../data/checkout.ts";
+import { canUseGoogleSignIn } from "../lib/inAppBrowser.ts";
+import { InAppBrowserPrompt } from "../ui/InAppBrowserPrompt.tsx";
 import { Nav } from "../ui/Nav.tsx";
 import "../site/site.css";
 import "./AuthScreen.css";
@@ -30,16 +43,26 @@ import "./AuthScreen.css";
 const SKY_FONTS =
   "https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Lilita+One&display=swap";
 
+/** Seconds before "Resend code" works again (Supabase also rate-limits sends). */
+export const RESEND_COOLDOWN_S = 60;
+
 interface Props {
   source: AuthSource;
   challengeScore: number | null;
   challengeName: string | null;
   /** The tone test's weak pair, as a subtitle (`weakPairLine`); null otherwise. */
   weakLine?: string | null;
+  /** A Google round trip that came back with an error (`oauthErrorFromUrl`). */
+  oauthError?: { code: string; description: string } | null;
 }
 
-type View = AuthCard | "reset";
-type Sent = { kind: "magic" | "reset"; email: string } | null;
+type View = "email" | "code" | "password" | "password_signup" | "reset";
+
+/** A message on the card, with at most one way out. */
+interface CardError {
+  text: string;
+  action?: { label: string; run: () => void };
+}
 
 function storage(): Storage | undefined {
   try {
@@ -49,16 +72,28 @@ function storage(): Storage | undefined {
   }
 }
 
-export function AuthScreen({ source, challengeScore, challengeName, weakLine = null }: Props) {
-  const [view, setView] = useState<View>("signup");
-  const [emailOpen, setEmailOpen] = useState(false);
+export function AuthScreen({ source, challengeScore, challengeName, weakLine = null, oauthError = null }: Props) {
+  const [view, setView] = useState<View>("email");
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [otpType, setOtpType] = useState<EmailCodeType>("email");
+  /** The code went to an address that already had an account (anonymous guest path). */
+  const [existing, setExisting] = useState(false);
+  const [sentAt, setSentAt] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<{ text: string; existing: boolean } | null>(null);
-  const [sent, setSent] = useState<Sent>(null);
+  const [error, setError] = useState<CardError | null>(null);
+  const [resetSent, setResetSent] = useState<string | null>(null);
+  const [googleOk] = useState(() => {
+    try {
+      return canUseGoogleSignIn(navigator.userAgent);
+    } catch {
+      return true;
+    }
+  });
   const ids = useId();
 
   useEffect(() => {
@@ -71,37 +106,47 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
 
   useEffect(() => {
     if (view === "reset") return;
-    track({ type: "auth_screen_viewed", screen: view, source });
+    const screen: AuthScreenStep = view;
+    track({ type: "auth_screen_viewed", screen, source });
   }, [view, source]);
+
+  // A Google link that hit an account which already exists: say so plainly
+  // and let the player choose to sign in to it (never silently).
+  useEffect(() => {
+    if (!oauthError) return;
+    if (oauthError.code === "identity_already_exists") {
+      setError({
+        text: "This Google account already has a FlappyTone account.",
+        action: { label: "Sign in to that account", run: () => void google(true) },
+      });
+    } else if (oauthError.code !== "access_denied") {
+      setError({ text: friendlyAuthError(oauthError.description || oauthError.code, oauthError.code).text });
+    }
+    // Once, for the error the page arrived with.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The resend countdown ticks only while the code step shows.
+  useEffect(() => {
+    if (view !== "code") return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [view]);
+  const cooldown = Math.max(0, Math.ceil((sentAt + RESEND_COOLDOWN_S * 1000 - now) / 1000));
 
   function go(next: View) {
     setView(next);
     setError(null);
-    setSent(null);
+    setResetSent(null);
     setPassword("");
-    if (next === "signup") setEmailOpen(false);
+    setCode("");
   }
 
-  async function submitPassword(e: React.FormEvent) {
-    e.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    setOwnSubmit(true);
-    const mode = view === "login" ? "login" : "signup";
-    track({ type: "signup_started", mode, method: "password" });
-    const result =
-      mode === "signup"
-        ? await signUpWithPassword(email, password, consent)
-        : await signInWithPassword(email, password);
-    if (!result.ok) {
-      setOwnSubmit(false);
-      setBusy(false);
-      setError(friendlyAuthError(result.reason));
-      return;
-    }
-    track({ type: "signup_completed", mode, method: "password" });
-    if (mode === "login") track({ type: "login_completed", method: "password" });
+  /** After an in-page sign-in: checkout for a "Go Pro" visitor, else a clean reload into the game. */
+  function finish(mode: AuthCard, method: AuthMethod) {
+    consumeAuthPending(storage()); // this sign-in is counted here, not by AuthGate
+    track({ type: "signup_completed", mode, method });
+    if (mode === "login") track({ type: "login_completed", method });
     // The short wait lets the events above leave first. A visitor who came
     // from the landing page's "Go Pro" goes on to checkout (brief 24); anyone
     // else starts the game from a clean page, where AuthGate sees the account.
@@ -117,27 +162,111 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     }, 300);
   }
 
-  async function sendMagicLink() {
+  async function google(toExisting = false) {
     if (busy) return;
-    if (!email.trim()) {
-      setError({ text: "Enter your email first.", existing: false });
-      return;
-    }
     setBusy(true);
     setError(null);
-    const mode = view === "login" ? "login" : "signup";
-    track({ type: "signup_started", mode, method: "magic_link" });
+    track({ type: "signup_started", mode: "signup", method: "google" });
+    const wasAnonymous = !toExisting && (await getAccount()).status === "anonymous";
+    // The redirect comes back to bare /app: park the challenge params, and
+    // remember how this started for the completion event.
     parkReturn(window.location.search, storage());
-    markMagicLinkSent(mode, storage());
-    const result = await startEmailSignIn(email);
-    setBusy(false);
+    markAuthPending({ method: "google", consent, wasAnonymous }, storage());
+    const result = await startGoogleSignIn({ existing: toExisting });
     if (!result.ok) {
-      setError(friendlyAuthError(result.reason));
+      consumeAuthPending(storage());
+      setBusy(false);
+      setError({ text: friendlyAuthError(result.reason, result.code).text });
+    }
+    // On success the browser is already leaving for Google.
+  }
+
+  async function sendCode(opts: { resend?: boolean; toExisting?: boolean } = {}) {
+    if (busy) return;
+    if (!email.trim()) {
+      setError({ text: "Enter your email first." });
       return;
     }
-    // Marketing consent rides only on the password path: startEmailSignIn
-    // takes no consent, and this brief adds no auth backend code.
-    setSent({ kind: "magic", email: email.trim() });
+    const toExisting = opts.toExisting ?? (opts.resend ? existing : false);
+    setBusy(true);
+    setError(null);
+    if (!opts.resend) track({ type: "signup_started", mode: "signup", method: "otp" });
+    const wasAnonymous = !toExisting && (await getAccount()).status === "anonymous";
+    // The same email carries a magic link back to bare /app.
+    parkReturn(window.location.search, storage());
+    markAuthPending({ method: "magic_link", consent, wasAnonymous }, storage());
+    const result = toExisting ? await startExistingAccountCode(email) : await startEmailCode(email);
+    setBusy(false);
+    if (!result.ok) {
+      consumeAuthPending(storage());
+      if (result.code === "email_exists") {
+        // An anonymous guest typed an address that already has an account.
+        setError({
+          text: "This email already has an account.",
+          action: { label: "Send a code to sign in to it", run: () => void sendCode({ toExisting: true }) },
+        });
+        return;
+      }
+      track({ type: "auth_code_failed", reason: codeFailReason(result.code, result.reason, Date.now()), stage: "send" });
+      setError({ text: friendlyAuthError(result.reason, result.code).text });
+      return;
+    }
+    track({ type: "auth_code_sent", resend: !!opts.resend });
+    setOtpType(result.otpType);
+    setExisting(toExisting);
+    const t = Date.now();
+    setSentAt(t);
+    setNow(t);
+    if (!opts.resend) {
+      setCode("");
+      setView("code");
+    }
+  }
+
+  async function submitCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    setOwnSubmit(true);
+    const result = await verifyEmailCode(email, code, otpType, consent);
+    if (!result.ok) {
+      setOwnSubmit(false);
+      setBusy(false);
+      if (result.code !== "code_too_short") {
+        track({ type: "auth_code_failed", reason: codeFailReason(result.code, result.reason, sentAt), stage: "verify" });
+      }
+      setError({ text: friendlyAuthError(result.reason, result.code).text });
+      return;
+    }
+    const mode = otpType === "email_change" ? "signup" : authMode(result.createdAt, sentAt, false);
+    finish(mode, "otp");
+  }
+
+  async function submitPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    setOwnSubmit(true);
+    const mode: AuthCard = view === "password" ? "login" : "signup";
+    track({ type: "signup_started", mode, method: "password" });
+    const result =
+      mode === "signup"
+        ? await signUpWithPassword(email, password, consent)
+        : await signInWithPassword(email, password);
+    if (!result.ok) {
+      setOwnSubmit(false);
+      setBusy(false);
+      const f = friendlyAuthError(result.reason, result.code);
+      setError(
+        f.existing && mode === "signup"
+          ? { text: f.text, action: { label: "Log in instead", run: () => go("password") } }
+          : { text: f.text },
+      );
+      return;
+    }
+    finish(mode, "password");
   }
 
   async function submitReset(e: React.FormEvent) {
@@ -148,31 +277,32 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     const result = await requestPasswordReset(email);
     setBusy(false);
     if (!result.ok) {
-      setError(friendlyAuthError(result.reason));
+      setError({ text: friendlyAuthError(result.reason, result.code).text });
       return;
     }
-    setSent({ kind: "reset", email: email.trim() });
+    setResetSent(email.trim());
   }
 
+  const save = { title: "Save your progress" };
   const head =
-    view === "login"
-      ? { title: "Welcome back", sub: "Ready to fly your tones?" }
+    view === "password"
+      ? { title: "Welcome back", sub: "Log in with your password." }
       : view === "reset"
         ? { title: "Reset your password", sub: "We'll email you a link to set a new one." }
         : challengeScore != null
-          ? { title: "Save your progress", sub: challengeLine(challengeScore, challengeName) }
+          ? { ...save, sub: challengeLine(challengeScore, challengeName) }
           : weakLine
-            ? { title: "Save your progress", sub: weakLine }
-            : { title: "Save your progress", sub: "Sign up free to play, and track how your tones improve." };
+            ? { ...save, sub: weakLine }
+            : { ...save, sub: "Sign in free to play, and track how your tones improve." };
 
   const errorBox = error && (
     <p className="auth-error" role="alert">
       {error.text}
-      {error.existing && (
+      {error.action && (
         <>
           {" "}
-          <button type="button" className="auth-link" onClick={() => go("login")}>
-            Log in instead
+          <button type="button" className="auth-link" onClick={error.action.run} disabled={busy}>
+            {error.action.label}
           </button>
         </>
       )}
@@ -196,11 +326,18 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     </div>
   );
 
+  const consentBox = (
+    <label className="auth-consent">
+      <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+      <span>Email me tips and news about FlappyTone</span>
+    </label>
+  );
+
   const passwordField = (
     <div className="auth-field">
       <div className="auth-label-row">
         <label htmlFor={`${ids}-password`}>Password</label>
-        {view === "login" && (
+        {view === "password" && (
           <button type="button" className="auth-link auth-link-small" onClick={() => go("reset")}>
             Forgotten password?
           </button>
@@ -211,10 +348,10 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
           id={`${ids}-password`}
           type={showPassword ? "text" : "password"}
           name="password"
-          autoComplete={view === "login" ? "current-password" : "new-password"}
+          autoComplete={view === "password" ? "current-password" : "new-password"}
           required
-          minLength={view === "login" ? undefined : 8}
-          aria-describedby={view === "signup" ? `${ids}-pw-hint` : undefined}
+          minLength={view === "password" ? undefined : 8}
+          aria-describedby={view === "password_signup" ? `${ids}-pw-hint` : undefined}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
@@ -228,7 +365,7 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
           <EyeIcon open={!showPassword} />
         </button>
       </div>
-      {view === "signup" && (
+      {view === "password_signup" && (
         <p className="auth-hint" id={`${ids}-pw-hint`}>
           At least 8 characters.
         </p>
@@ -237,18 +374,16 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
   );
 
   let body: React.ReactNode;
-  if (sent) {
+  if (view === "reset" && resetSent) {
     body = (
       <div className="auth-sent" role="status">
         <img className="auth-sent-bird" src="/Bird-up-no-halo.png" alt="" width={80} height={80} />
         <h2>Check your inbox</h2>
         <p>
-          {sent.kind === "magic" ? "We sent a sign-in link to " : "We sent a reset link to "}
-          <strong>{sent.email}</strong>.{" "}
-          {sent.kind === "magic" ? "Open it on this device to start playing." : "Open it to set a new password."}
+          We sent a reset link to <strong>{resetSent}</strong>. Open it to set a new password.
         </p>
-        <button type="button" className="auth-link" onClick={() => setSent(null)}>
-          Use a different email
+        <button type="button" className="auth-link" onClick={() => go("password")}>
+          Back to log in
         </button>
       </div>
     );
@@ -260,19 +395,89 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
         <button type="submit" className="sky-btn auth-primary" disabled={busy}>
           {busy ? "Sending…" : "Send reset link"}
         </button>
-        <button type="button" className="auth-link" onClick={() => go("login")}>
+        <button type="button" className="auth-link" onClick={() => go("password")}>
           Back to log in
         </button>
       </form>
     );
-  } else if (view === "signup" && !emailOpen) {
+  } else if (view === "code") {
+    body = (
+      <form className="auth-form" onSubmit={submitCode}>
+        <p className="auth-code-note" role="status">
+          We sent a 6-digit code to <strong>{email.trim()}</strong>. Check spam too.
+        </p>
+        <div className="auth-field">
+          <label htmlFor={`${ids}-code`}>Code</label>
+          <input
+            id={`${ids}-code`}
+            className="auth-code-input"
+            type="text"
+            name="code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="[0-9]*"
+            maxLength={8}
+            required
+            autoFocus
+            value={code}
+            // Digits only, so a pasted "123 456" or "Code: 123456" still works.
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+          />
+        </div>
+        {errorBox}
+        <button type="submit" className="sky-btn auth-primary" disabled={busy}>
+          {busy ? "One moment…" : "Verify"}
+        </button>
+        <div className="auth-code-actions">
+          <button
+            type="button"
+            className="auth-link"
+            onClick={() => void sendCode({ resend: true })}
+            disabled={busy || cooldown > 0}
+          >
+            {cooldown > 0 ? `Resend code (${cooldown}s)` : "Resend code"}
+          </button>
+          <button type="button" className="auth-link" onClick={() => go("email")} disabled={busy}>
+            Use a different email
+          </button>
+        </div>
+      </form>
+    );
+  } else if (view === "email") {
     body = (
       <>
-        {/* Google / Apple go here in a later brief; nothing renders yet. */}
-        <div className="auth-providers" aria-hidden="true" />
-        <button type="button" className="sky-btn auth-primary" onClick={() => setEmailOpen(true)}>
-          <MailIcon />
-          Sign up with email
+        {googleOk && (
+          <>
+            <button
+              type="button"
+              className="sky-btn sky-btn-ghost auth-primary auth-google"
+              onClick={() => void google()}
+              disabled={busy}
+            >
+              <GoogleIcon />
+              Continue with Google
+            </button>
+            <p className="auth-or" aria-hidden="true">
+              <span>or</span>
+            </p>
+          </>
+        )}
+        <form
+          className="auth-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void sendCode();
+          }}
+        >
+          {emailField}
+          {consentBox}
+          {errorBox}
+          <button type="submit" className="sky-btn auth-primary" disabled={busy}>
+            {busy ? "Sending…" : "Continue"}
+          </button>
+        </form>
+        <button type="button" className="auth-link auth-link-small auth-center" onClick={() => go("password")}>
+          Log in with a password
         </button>
       </>
     );
@@ -281,64 +486,52 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
       <form className="auth-form" onSubmit={submitPassword}>
         {emailField}
         {passwordField}
-        {view === "signup" && (
-          <label className="auth-consent">
-            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-            <span>Email me tips and news about FlappyTone</span>
-          </label>
-        )}
+        {view === "password_signup" && consentBox}
         {errorBox}
         <button type="submit" className="sky-btn auth-primary" disabled={busy}>
-          {busy ? "One moment…" : view === "login" ? "Log in" : "Create account and play"}
+          {busy ? "One moment…" : view === "password" ? "Log in" : "Create account and play"}
         </button>
-        <button type="button" className="auth-link" onClick={() => void sendMagicLink()} disabled={busy}>
-          Email me a sign-in link instead
+        {view === "password" ? (
+          <button type="button" className="auth-link auth-link-small" onClick={() => go("password_signup")}>
+            New here? Create an account with a password
+          </button>
+        ) : (
+          <button type="button" className="auth-link auth-link-small" onClick={() => go("password")}>
+            I have an account
+          </button>
+        )}
+        <button type="button" className="auth-link auth-link-small" onClick={() => go("email")}>
+          Back to the email code
         </button>
       </form>
     );
   }
 
+  const showLegal = view === "email" || view === "code" || view === "password_signup";
+
   return (
     <div id="top" className="sky sky-site auth">
       <Nav linkBase="/" />
+      {/* Google is hidden in this in-app browser: offer the real browser. */}
+      {!googleOk && <InAppBrowserPrompt />}
       <main className="auth-main">
         <div className="auth-panel">
-          {/* Two clear doors at the top: new players and returning players. */}
-          <div className="auth-tabs" role="group" aria-label="Sign up or log in">
-            <button
-              type="button"
-              className="auth-tab"
-              aria-pressed={view === "signup"}
-              onClick={() => view !== "signup" && go("signup")}
-            >
-              I'm new
-            </button>
-            <button
-              type="button"
-              className="auth-tab"
-              aria-pressed={view !== "signup"}
-              onClick={() => view !== "login" && go("login")}
-            >
-              I have an account
-            </button>
-          </div>
           <img className="auth-bird" src="/Bird-hor-no-halo.png" alt="" width={96} height={96} />
           <h1 className="auth-title">{head.title}</h1>
           <p className="auth-sub">{head.sub}</p>
 
           <section
             className="auth-card"
-            aria-label={view === "login" ? "Log in" : view === "reset" ? "Reset password" : "Sign up"}
+            aria-label={view === "password" ? "Log in" : view === "reset" ? "Reset password" : "Sign in"}
           >
             {body}
-            {view === "signup" && !sent && (
+            {showLegal && (
               <p className="auth-legal">
-                By signing up, you agree to our <a href="/terms-of-service">Terms</a> &amp;{" "}
+                By continuing, you agree to our <a href="/terms-of-service">Terms</a> &amp;{" "}
                 <a href="/privacy-policy">Privacy Policy</a>.
               </p>
             )}
           </section>
-
         </div>
       </main>
     </div>
@@ -355,11 +548,14 @@ function EyeIcon({ open }: { open: boolean }) {
   );
 }
 
-function MailIcon() {
+/** Google's "G" mark, in its own colours (its brand guidelines ask for them). */
+function GoogleIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <path d="M3 7l9 6 9-6" />
+    <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
     </svg>
   );
 }

@@ -9,10 +9,19 @@
  */
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { track } from "../analytics/client";
-import { getAccount } from "../data/account.ts";
+import { getAccount, recordMarketingConsent } from "../data/account.ts";
 import { getSupabase } from "../data/supabase.ts";
 import { parseChallengeName } from "../share/shareName.ts";
-import { authSource, canPlay, consumeMagicLink, ownSubmitPending, restoreReturn, weakPairLine } from "./authGate.ts";
+import {
+  authMode,
+  authSource,
+  canPlay,
+  consumeAuthPending,
+  oauthErrorFromUrl,
+  ownSubmitPending,
+  restoreReturn,
+  weakPairLine,
+} from "./authGate.ts";
 import GameApp, { parseChallengeScore } from "./GameApp.tsx";
 
 /**
@@ -45,6 +54,20 @@ export default function AuthGate() {
   const [source] = useState(() =>
     authSource(window.location.search, document.referrer, window.location.origin),
   );
+  // A failed Google round trip comes back with the error in the URL (e.g.
+  // `identity_already_exists`). Read before the Supabase client starts (the
+  // first render, before the effect below), then cleared from the address bar.
+  const [oauthError] = useState(() => {
+    const err = oauthErrorFromUrl(window.location.search, window.location.hash);
+    if (err) {
+      consumeAuthPending(storage()); // that attempt is over: no completion event
+      const q = new URLSearchParams(window.location.search);
+      for (const k of ["error", "error_code", "error_description"]) q.delete(k);
+      const search = q.toString();
+      history.replaceState(null, "", `${window.location.pathname}${search ? `?${search}` : ""}`);
+    }
+    return err;
+  });
 
   useEffect(() => {
     let live = true;
@@ -53,10 +76,14 @@ export default function AuthGate() {
         if (!live) return;
         const play = canPlay(account.status);
         if (play && !playingRef.current) {
-          const card = consumeMagicLink(storage());
-          if (card) {
-            track({ type: "signup_completed", mode: card, method: "magic_link" });
-            if (card === "login") track({ type: "login_completed", method: "magic_link" });
+          // A magic link or Google redirect that started on the auth screen.
+          // An in-page code or password sign-in clears the marker itself.
+          const pending = consumeAuthPending(storage());
+          if (pending) {
+            const mode = authMode(account.createdAt ?? null, pending.at, pending.wasAnonymous);
+            track({ type: "signup_completed", mode, method: pending.method });
+            if (mode === "login") track({ type: "login_completed", method: pending.method });
+            if (pending.consent) void recordMarketingConsent(true);
           }
           const search = restoreReturn(window.location.search, storage());
           if (search !== window.location.search) {
@@ -87,7 +114,7 @@ export default function AuthGate() {
       live = false;
       sub?.data.subscription.unsubscribe();
     };
-  }, []);
+  }, [oauthError]);
 
   if (state === "checking") return <div style={LOADING} aria-busy="true" />;
   if (state === "play") return <GameApp recovery={recovery} />;
@@ -98,6 +125,7 @@ export default function AuthGate() {
         challengeScore={parseChallengeScore(window.location.search)}
         challengeName={parseChallengeName(window.location.search)}
         weakLine={weakPairLine(window.location.search)}
+        oauthError={oauthError}
       />
     </Suspense>
   );

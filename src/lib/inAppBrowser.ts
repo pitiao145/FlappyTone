@@ -70,6 +70,37 @@ export function detectInAppBrowser(userAgent: string): InAppBrowser {
 export const PROMPT_APPS: ReadonlySet<InAppApp> = new Set(["instagram", "tiktok", "facebook"]);
 
 /**
+ * In-app browsers where "Continue with Google" is hidden (brief 30). Google
+ * refuses OAuth inside an embedded webview (`403 disallowed_useragent`, its
+ * secure-browser policy since 2021), so the button would only lead to an
+ * error page. Not listed, so the button shows: `none`, `reddit`, `x` and
+ * `google-app` (they open links in SFSafariViewController / Custom Tabs, or
+ * are Google's own app). Discord is not detected at all: it opens links in
+ * SFSafariViewController / Custom Tabs, and Google works there. Pinterest is
+ * not in the brief's lists; it is a plain webview, so it is hidden too.
+ * Change this list if a real player hits the error.
+ */
+export const GOOGLE_BLOCKED_APPS: ReadonlySet<InAppApp> = new Set([
+  "instagram",
+  "threads",
+  "facebook",
+  "tiktok",
+  "linkedin",
+  "line",
+  "wechat",
+  "snapchat",
+  "kakaotalk",
+  "pinterest",
+  "webview-android",
+  "webview-ios",
+]);
+
+/** Whether the "Continue with Google" button may show for this user-agent. */
+export function canUseGoogleSignIn(userAgent: string): boolean {
+  return !GOOGLE_BLOCKED_APPS.has(detectInAppBrowser(userAgent).app);
+}
+
+/**
  * The Android Chrome intent for a page URL. Path, query (so `utm_*` survives)
  * are kept; the fragment is dropped because `#Intent;…` owns it.
  */

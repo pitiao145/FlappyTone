@@ -102,29 +102,108 @@ export function ownSubmitPending(): boolean {
   return ownSubmit;
 }
 
-/** A magic link is in flight: remembers which card sent it, for the completion event. */
-const MAGIC_KEY = "toneflap.magicPending.v1";
+/**
+ * A sign-in that finishes on a later page load: the magic link in the code
+ * email, or the Google round trip. Remembers how it started, so the load
+ * that sees the new session can send `signup_completed` with the right
+ * method and new-vs-login mode, and record the consent ticked before it.
+ */
+export type PendingMethod = "magic_link" | "google";
+export interface PendingAuth {
+  method: PendingMethod;
+  /** Marketing consent ticked on the auth screen. */
+  consent: boolean;
+  /** The session was an anonymous guest: any success upgrades it, a new account. */
+  wasAnonymous: boolean;
+  /** When the email or redirect was sent (ms). */
+  at: number;
+}
 
-export function markMagicLinkSent(card: AuthCard, storage: Storage | undefined, now = Date.now()): void {
+const PENDING_KEY = "toneflap.authPending.v1";
+/** Before brief 30: `{ card, at }`, read once so an in-flight link still counts. */
+const LEGACY_MAGIC_KEY = "toneflap.magicPending.v1";
+
+export function markAuthPending(p: Omit<PendingAuth, "at">, storage: Storage | undefined, now = Date.now()): void {
   try {
-    storage?.setItem(MAGIC_KEY, JSON.stringify({ card, at: now }));
+    storage?.setItem(PENDING_KEY, JSON.stringify({ ...p, at: now }));
   } catch {
     /* blocked storage: the completion event is just not sent */
   }
 }
 
-/** The card that sent a still-fresh magic link, consumed on read. */
-export function consumeMagicLink(storage: Storage | undefined, now = Date.now()): AuthCard | null {
+/** The still-fresh pending sign-in, consumed on read. */
+export function consumeAuthPending(storage: Storage | undefined, now = Date.now()): PendingAuth | null {
   try {
-    const raw = storage?.getItem(MAGIC_KEY);
-    storage?.removeItem(MAGIC_KEY);
-    if (!raw) return null;
-    const p = JSON.parse(raw) as { card?: unknown; at?: unknown };
-    if ((p.card === "signup" || p.card === "login") && typeof p.at === "number" && now - p.at < PARKED_TTL_MS) {
-      return p.card;
+    const raw = storage?.getItem(PENDING_KEY);
+    const legacy = storage?.getItem(LEGACY_MAGIC_KEY);
+    storage?.removeItem(PENDING_KEY);
+    storage?.removeItem(LEGACY_MAGIC_KEY);
+    if (raw) {
+      const p = JSON.parse(raw) as Partial<PendingAuth>;
+      if (
+        (p.method === "magic_link" || p.method === "google") &&
+        typeof p.at === "number" &&
+        now - p.at < PARKED_TTL_MS
+      ) {
+        return { method: p.method, consent: p.consent === true, wasAnonymous: p.wasAnonymous === true, at: p.at };
+      }
+    }
+    if (legacy) {
+      const p = JSON.parse(legacy) as { card?: unknown; at?: unknown };
+      if (typeof p.at === "number" && now - p.at < PARKED_TTL_MS) {
+        return { method: "magic_link", consent: false, wasAnonymous: false, at: p.at };
+      }
     }
   } catch {
     /* unreadable: ignore */
+  }
+  return null;
+}
+
+/**
+ * New account or login, for `signup_completed.mode`. An anonymous guest that
+ * finishes any sign-in became a permanent account: "signup". Otherwise the
+ * auth row is new when it was created after the code/redirect was sent
+ * (`signInWithOtp` creates it at send time, Google at the callback); a few
+ * seconds of slack covers clock skew. The analytics report still counts new
+ * accounts from Supabase `created_at` (`new_account`).
+ */
+export function authMode(
+  createdAt: string | null,
+  sentAt: number,
+  wasAnonymous: boolean,
+): AuthCard {
+  if (wasAnonymous) return "signup";
+  const t = createdAt ? Date.parse(createdAt) : NaN;
+  return Number.isFinite(t) && t >= sentAt - 10_000 ? "signup" : "login";
+}
+
+/** `auth_code_failed.reason`. */
+export type CodeFailReason = "expired" | "invalid" | "rate_limited" | "network";
+
+/**
+ * Supabase answers a wrong and an expired code with the same `otp_expired`
+ * code, so the age of the code decides: older than the hour a code lives is
+ * "expired", anything younger is "invalid".
+ */
+export function codeFailReason(code: string | undefined, reason: string, sentAt: number, now = Date.now()): CodeFailReason {
+  const r = reason.toLowerCase();
+  if (code?.startsWith("over_") || r.includes("rate limit") || r.includes("too many")) return "rate_limited";
+  if (r.includes("network") || r.includes("fetch") || r.includes("no supabase client")) return "network";
+  if (now - sentAt >= 60 * 60 * 1000) return "expired";
+  return "invalid";
+}
+
+/**
+ * An OAuth error sent back to `/app` in the URL (`#error_code=…` or
+ * `?error_code=…`), e.g. `identity_already_exists` when Google already
+ * belongs to another account. Null when there is none.
+ */
+export function oauthErrorFromUrl(search: string, hash: string): { code: string; description: string } | null {
+  for (const part of [hash.replace(/^#/, ""), search.replace(/^\?/, "")]) {
+    const p = new URLSearchParams(part);
+    const code = p.get("error_code") ?? p.get("error");
+    if (code) return { code, description: p.get("error_description") ?? "" };
   }
   return null;
 }
@@ -138,8 +217,16 @@ export function challengeLine(score: number, name: string | null): string {
  * Supabase's error text, turned into what a player can act on. `existing`
  * means "this email already has an account", so the card offers login.
  */
-export function friendlyAuthError(reason: string): { text: string; existing: boolean } {
+export function friendlyAuthError(reason: string, code?: string): { text: string; existing: boolean } {
   const r = reason.toLowerCase();
+  if (code === "identity_already_exists" || r.includes("identity is already linked")) {
+    return { text: "This Google account already has a FlappyTone account.", existing: true };
+  }
+  if (code === "otp_expired" || r.includes("token has expired or is invalid")) {
+    return { text: "That code didn't work. Check it, or send a new code.", existing: false };
+  }
+  if (code === "code_too_short") return { text: "Enter the 6-digit code from the email.", existing: false };
+  if (code === "email_exists") return { text: "This email already has an account.", existing: true };
   if (r.includes("already registered") || r.includes("already been registered") || r.includes("already exists")) {
     return { text: "This email already has an account.", existing: true };
   }
@@ -149,7 +236,7 @@ export function friendlyAuthError(reason: string): { text: string; existing: boo
   if (r.includes("network") || r.includes("fetch") || r.includes("no supabase client")) {
     return { text: "We couldn't reach the server. Check your connection and try again.", existing: false };
   }
-  if (r.includes("rate limit") || r.includes("too many")) {
+  if (code?.startsWith("over_") || r.includes("rate limit") || r.includes("too many")) {
     return { text: "Too many tries. Wait a minute, then try again.", existing: false };
   }
   return { text: reason.charAt(0).toUpperCase() + reason.slice(1), existing: false };
