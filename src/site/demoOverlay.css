@@ -78,15 +78,12 @@
 @media (max-width: 560px) {
   /* No HUD under the close button now, so the score card can start beside it. */
   .demo-overlay-inner:has(.sky-try-over) { padding: 16px 12px 12px; }
+  /* Clear of the close button in the corner. */
   .sky-try-overlay .go-header { margin-right: 52px; }
 }
 @media (min-width: 561px) and (max-width: 639px) {
   /* One centred column, clear of the close button in the corner. */
   .demo-overlay-inner:has(.sky-try-over) { padding: 24px 16px 12px; }
-}
-/* Short phones: the coach repeats the gold card's weakest tone; drop it. */
-@media (max-width: 639px) and (max-height: 760px) {
-  .sky-try-overlay .go-coach { display: none; }
 }
 
 @media (min-width: 561px) {
@@ -102,28 +99,9 @@
   .demo-overlay-inner { padding-top: 40px; }
 }
 
-/* ...and two columns where there is room: score, signup and actions on the
-   left, this run's tones and the coach on the right. Same cards as the
-   landing's end screen, only placed side by side. */
-@media (min-width: 640px) {
-  .sky-try-overlay .sky-try-over { width: min(100%, 780px); }
-  .sky-try-overlay .sky-try-over .screen.gameover-screen {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-areas:
-      "head tones"
-      "pitch tones"
-      "pitch coach"
-      "actions coach";
-    align-content: start;
-    gap: 16px 22px;
-  }
-  .sky-try-overlay .go-header { grid-area: head; }
-  .sky-try-overlay .go-demo-pitch { grid-area: pitch; align-self: start; }
-  .sky-try-overlay .go-demo-actions { grid-area: actions; align-self: start; }
-  .sky-try-overlay .go-tones { grid-area: tones; align-self: start; }
-  .sky-try-overlay .go-coach { grid-area: coach; align-self: start; }
-}
+/* The end screen is one centred column: score, signup card, "One more
+   round". The inner grid centres it in the modal both ways. */
+.sky-try-overlay .sky-try-over { width: min(100%, 400px); margin-inline: auto; }
 
 /* "Exit demo" centred under the game, as in the landing hero (sky.css .sky-screen figcaption). */
 .sky-try-overlay figcaption {

@@ -20,10 +20,16 @@ type Weakest = ToneBreakdownEntry & { pct: number };
  * can never disagree. `null` means no tone had enough scored gates to judge,
  * and the card doesn't render at all.
  */
-export function weakestTone(breakdown: ToneBreakdownEntry[]): Weakest | null {
-  const eligible = breakdown.filter(
-    (b): b is Weakest => b.pct !== null && b.gates >= MIN_SCORED_GATES_FOR_TAKEAWAY,
-  );
+export function weakestTone(
+  breakdown: ToneBreakdownEntry[],
+  /**
+   * Fewest scored gates a tone needs to be judged. The demo passes 1: its
+   * five words fly most tones once, and the 2-gate floor then left only the
+   * one tone flown twice, so it named a good tone instead of the worst.
+   */
+  minGates = MIN_SCORED_GATES_FOR_TAKEAWAY,
+): Weakest | null {
+  const eligible = breakdown.filter((b): b is Weakest => b.pct !== null && b.gates >= minGates);
   if (eligible.length === 0) return null;
   return eligible.reduce((min, b) => (b.pct < min.pct ? b : min));
 }

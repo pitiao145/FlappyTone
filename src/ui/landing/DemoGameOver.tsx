@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { brand } from "../../brand.ts";
 import { toneBreakdown, type RunStats } from "../../game/scoring.ts";
 import { GameOverHeader, weakestTone } from "../GameOverParts.tsx";
+import { ContourSpark } from "../ContourSpark.tsx";
+import { TONE_LINE_COLOR } from "../toneColors.ts";
 
 /**
  * Try it now's end screen. It has one job: the signup. Top to bottom: the
@@ -20,7 +22,9 @@ export function DemoGameOver({
   onRetry: () => void;
 }) {
   const breakdown = toneBreakdown(stats);
-  const weakest = useMemo(() => weakestTone(breakdown), [breakdown]);
+  // Any heard tone counts: a 5-word run flies most tones once (hard rule 8:
+  // an unheard gate has no accuracy, so it is never the weakest).
+  const weakest = useMemo(() => weakestTone(breakdown, 1), [breakdown]);
 
   return (
     <div className="screen gameover-screen go-demo">
@@ -28,6 +32,13 @@ export function DemoGameOver({
 
       <section className="go-card go-demo-pitch">
         <h3 className="go-demo-pitch-title">{brand.demoGameOver.pitchTitle}</h3>
+        {weakest && (
+          // The shape to work on, in its tone colour, on a paper tile (tone 2's jade would vanish on the card).
+          <p className="go-demo-weak" style={{ color: TONE_LINE_COLOR[weakest.tone] }}>
+            <ContourSpark tone={weakest.tone} width={64} height={30} />
+            <span>Tone {weakest.tone}</span>
+          </p>
+        )}
         <p className="go-demo-pitch-body">
           {weakest
             ? brand.demoGameOver.pitchBody(weakest.tone, Math.round(weakest.pct))

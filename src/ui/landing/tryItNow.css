@@ -110,5 +110,25 @@
   color: var(--ink);
 }
 .sky-try-over .go-demo-pitch .go-demo-pitch-more { font-size: 0.85rem; opacity: 0.9; }
+/* The weakest tone's shape, the one thing to work on: its contour in its
+   tone colour on a paper tile, tilted like a sticker on the jade card. */
+.sky-try-over .go-demo-pitch .go-demo-weak {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0;
+  padding: 6px 16px 6px 10px;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: var(--accent-ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  rotate: -2deg;
+  font: 400 1.15rem/1 var(--font-display);
+}
+.go-demo-weak .contour-spark { color: inherit; opacity: 1; }
+.go-demo-weak .contour-spark polyline { stroke-width: 3.5; }
+.go-demo-weak span { color: var(--ink); padding-top: 3px; }
+/* "One more round": quiet, but a real tap target. */
+.sky-try-over .go-demo-actions .go-subtle-link { min-height: 44px; padding-inline: 16px; }
 /* More air between cards than the in-app screen, which has a full page. */
 .sky-try-over .screen.gameover-screen { gap: 22px; }

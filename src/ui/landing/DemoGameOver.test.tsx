@@ -20,6 +20,17 @@ describe("DemoGameOver", () => {
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 
+  it("names the worst tone of the run, even one flown only once", () => {
+    let stats = newRunStats();
+    stats = applyGate(stats, [3], "good", 0.9);
+    stats = applyGate(stats, [3], "good", 0.88);
+    stats = applyGate(stats, [2], "ok", 0.55);
+    stats = applyGate(stats, [1], "good", 0.8);
+    const out = html(stats);
+    expect(out).toContain("Your Tone 2 is at 55%");
+    expect(out).toContain("go-demo-weak");
+  });
+
   it("drops the per-tone breakdown, the coach card and the harder round", () => {
     let stats = newRunStats();
     stats = applyGate(stats, [1], "good", 0.9);
@@ -45,7 +56,7 @@ describe("DemoGameOver", () => {
     stats = applyGate(stats, [3], "unheard", null);
     stats = applyGate(stats, [1], "ok", 0.7);
     const out = html(stats);
-    expect(out).toContain("Sign up free");
+    expect(out).toContain("Your Tone 1 is at 70%");
     expect(out).not.toContain("Tone 3");
   });
 });
