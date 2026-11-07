@@ -29,6 +29,7 @@ import {
   codeFailReason,
   consumeAuthPending,
   friendlyAuthError,
+  initialAuthCard,
   markAuthPending,
   parkReturn,
   type AuthCard,
@@ -76,7 +77,7 @@ function storage(): Storage | undefined {
 }
 
 export function AuthScreen({ source, challengeScore, challengeName, weakLine = null, oauthError = null }: Props) {
-  const [view, setView] = useState<View>("signup");
+  const [view, setView] = useState<View>(() => initialAuthCard(window.location.search));
   /** Sign up hides its email form behind "Sign up with email". */
   const [emailOpen, setEmailOpen] = useState(false);
   /** The door the code step came from: its copy and its way back. */

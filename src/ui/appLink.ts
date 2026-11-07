@@ -50,6 +50,15 @@ export function appHref(
 }
 
 /**
+ * `/app` opening on the Log in view of the auth screen (`?auth=login`) rather
+ * than Sign up. A signed-in player ignores it and goes straight to the game.
+ */
+export function loginHref(src: string | undefined = linkSource): string {
+  const href = appHref(undefined, src);
+  return `${href}${href.includes("?") ? "&" : "?"}auth=login`;
+}
+
+/**
  * Leave for the game.
  *
  * `assign` rather than `replace`: Back should return to the landing page, which

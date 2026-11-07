@@ -13,7 +13,8 @@
  * 3/3 who signs up becomes 3/10, not a fresh 0/10. Product logic, not a bug.
  */
 import { getSupabase } from "../data/supabase.ts";
-import { getTier } from "../data/tier.ts";
+import { getTier, tierReady } from "../data/tier.ts";
+import { bumpSessionVersion } from "../data/sessionVersion.ts";
 import { tierLimits } from "./tiers.ts";
 
 const KEY = "toneflap.daily.v1";
@@ -166,8 +167,12 @@ async function recordServerRun(): Promise<void> {
 /** Refreshes the cached server count for a signed-in player, e.g. on app
  * load. Never throws, never blocks — same contract as `src/data/`. */
 export async function refreshServerDailyRuns(): Promise<void> {
-  if (getTier() === "guest") return;
   try {
+    // Called on app load, often before the tier is known: `getTier()` still
+    // answers its "guest" default then, which skipped this read and left a
+    // new device at 0 runs today. Wait for the real tier first.
+    await tierReady();
+    if (getTier() === "guest") return;
     const supabase = getSupabase();
     if (!supabase) return;
     const { data } = await supabase.auth.getSession();
@@ -180,7 +185,10 @@ export async function refreshServerDailyRuns(): Promise<void> {
       .eq("day", today())
       .maybeSingle();
     if (error || !row) return;
+    if (loadServerCount() === row.count) return;
     saveServerCount(row.count);
+    // Profile reads the count once per session version: tell it to re-read.
+    bumpSessionVersion();
   } catch {
     // ignore — see module doc comment
   }

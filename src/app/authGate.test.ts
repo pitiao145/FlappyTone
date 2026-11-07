@@ -7,6 +7,7 @@ import {
   codeFailReason,
   consumeAuthPending,
   friendlyAuthError,
+  initialAuthCard,
   keptParams,
   markAuthPending,
   oauthErrorFromUrl,
@@ -153,5 +154,13 @@ describe("copy", () => {
   it("offers login for an existing email", () => {
     expect(friendlyAuthError("User already registered").existing).toBe(true);
     expect(friendlyAuthError("Invalid login credentials").existing).toBe(false);
+  });
+});
+
+describe("initialAuthCard", () => {
+  it("opens Log in only for ?auth=login", () => {
+    expect(initialAuthCard("?auth=login&src=/chinese-tones")).toBe("login");
+    expect(initialAuthCard("?src=hero")).toBe("signup");
+    expect(initialAuthCard("")).toBe("signup");
   });
 });

@@ -13,6 +13,11 @@ import type { AccountStatus } from "../data/account.ts";
 export type AuthCard = "signup" | "login";
 export type AuthSource = "challenge" | "direct" | "lp_cta";
 
+/** Which auth view `/app` opens on: `?auth=login` (the site's "Log in" links) or Sign up. */
+export function initialAuthCard(search: string): AuthCard {
+  return new URLSearchParams(search).get("auth") === "login" ? "login" : "signup";
+}
+
 /** Only a permanent account plays. */
 export function canPlay(status: AccountStatus): boolean {
   return status === "permanent";

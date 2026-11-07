@@ -18,7 +18,7 @@ import { Testimonial } from "../Testimonial.tsx";
 import { TESTIMONIALS } from "../testimonials.ts";
 import { TONES, go, useWordsByTone } from "./shared.tsx";
 import { ProgressSection } from "./ProgressSection.tsx";
-import { appHref } from "../appLink.ts";
+import { appHref, loginHref } from "../appLink.ts";
 
 type DemoMode = "game" | "drill" | "pairs";
 
@@ -149,7 +149,7 @@ export function SkyLanding() {
             <button className="sky-btn" aria-haspopup="dialog" onClick={() => openDemo("game", "try_now", "hero")}>
               {COPY.tryCta}
             </button>
-            <a className="sky-login-link" href={appHref()} onClick={logIn}>
+            <a className="sky-login-link" href={loginHref()} onClick={logIn}>
               {COPY.login}
             </a>
           </div>
