@@ -196,7 +196,7 @@ export type SeoCta =
 
 /** How a player signed in (brief 30). */
 export type AuthMethod = "otp" | "google" | "password" | "magic_link";
-export type AuthScreenStep = "email" | "code" | "password" | "password_signup";
+export type AuthScreenStep = "signup" | "login" | "code" | "password" | "password_signup";
 
 export type AnalyticsEvent =
   /**
@@ -386,9 +386,10 @@ export type AnalyticsEvent =
    */
   | { type: "signup_completed"; mode: "signup" | "login"; method?: AuthMethod }
   /**
-   * AuthScreen.tsx (the /app login gate): a step became visible. Brief 30:
-   * "email" (Google + email), "code", "password" (log in), "password_signup".
-   * Before brief 30: "signup" / "login".
+   * AuthScreen.tsx (the /app login gate): a step became visible: "signup"
+   * (Google + "Sign up with email"), "login" (Google + email login code),
+   * "code", "password" (log in), "password_signup". Between brief 30's first
+   * commit and its follow-up (never deployed) "email" replaced signup/login.
    */
   | { type: "auth_screen_viewed"; screen: AuthScreenStep; source: "challenge" | "direct" | "lp_cta" }
   /** A returning player signed in to an existing account (`signup_completed` with mode "login"). */

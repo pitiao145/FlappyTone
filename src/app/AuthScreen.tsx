@@ -1,8 +1,11 @@
 /**
- * The /app login gate's screen. Brief 30: one email-first flow for new and
- * returning players alike — "Continue with Google", or an email that gets a
- * 6-digit code typed on this same card (the email also carries the old
- * magic link). A password form stays one small link away. It only calls the
+ * The /app login gate's screen. Two doors, like most sign-up pages: "Sign up"
+ * (Google, or "Sign up with email") with "Already have an account? Log in"
+ * under it, and "Log in" (Google, or an email that gets a login code) with
+ * "Don't have an account? Sign up". Both email paths send a 6-digit code
+ * typed on this same card (the email also carries the magic link), and both
+ * work for a new or an existing address. A password form stays one small
+ * link away from Log in. It only calls the
  * auth functions in `src/data/account.ts`; `AuthGate` notices the new
  * session and swaps in the game.
  */
@@ -56,7 +59,7 @@ interface Props {
   oauthError?: { code: string; description: string } | null;
 }
 
-type View = "email" | "code" | "password" | "password_signup" | "reset";
+type View = "signup" | "login" | "code" | "password" | "password_signup" | "reset";
 
 /** A message on the card, with at most one way out. */
 interface CardError {
@@ -73,7 +76,11 @@ function storage(): Storage | undefined {
 }
 
 export function AuthScreen({ source, challengeScore, challengeName, weakLine = null, oauthError = null }: Props) {
-  const [view, setView] = useState<View>("email");
+  const [view, setView] = useState<View>("signup");
+  /** Sign up hides its email form behind "Sign up with email". */
+  const [emailOpen, setEmailOpen] = useState(false);
+  /** The door the code step came from: its copy and its way back. */
+  const [codeFrom, setCodeFrom] = useState<AuthCard>("signup");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [otpType, setOtpType] = useState<EmailCodeType>("email");
@@ -140,6 +147,7 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     setResetSent(null);
     setPassword("");
     setCode("");
+    if (next === "signup") setEmailOpen(false);
   }
 
   /** After an in-page sign-in: checkout for a "Go Pro" visitor, else a clean reload into the game. */
@@ -166,7 +174,7 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     if (busy) return;
     setBusy(true);
     setError(null);
-    track({ type: "signup_started", mode: "signup", method: "google" });
+    track({ type: "signup_started", mode: view === "login" ? "login" : "signup", method: "google" });
     const wasAnonymous = !toExisting && (await getAccount()).status === "anonymous";
     // The redirect comes back to bare /app: park the challenge params, and
     // remember how this started for the completion event.
@@ -190,7 +198,8 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     const toExisting = opts.toExisting ?? (opts.resend ? existing : false);
     setBusy(true);
     setError(null);
-    if (!opts.resend) track({ type: "signup_started", mode: "signup", method: "otp" });
+    const card: AuthCard = view === "login" ? "login" : view === "code" ? codeFrom : "signup";
+    if (!opts.resend) track({ type: "signup_started", mode: card, method: "otp" });
     const wasAnonymous = !toExisting && (await getAccount()).status === "anonymous";
     // The same email carries a magic link back to bare /app.
     parkReturn(window.location.search, storage());
@@ -219,6 +228,7 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     setNow(t);
     if (!opts.resend) {
       setCode("");
+      setCodeFrom(card);
       setView("code");
     }
   }
@@ -261,7 +271,7 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
       const f = friendlyAuthError(result.reason, result.code);
       setError(
         f.existing && mode === "signup"
-          ? { text: f.text, action: { label: "Log in instead", run: () => go("password") } }
+          ? { text: f.text, action: { label: "Log in instead", run: () => go("login") } }
           : { text: f.text },
       );
       return;
@@ -284,16 +294,17 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
   }
 
   const save = { title: "Save your progress" };
+  const back = { title: "Welcome back", sub: "Ready to fly your tones?" };
   const head =
-    view === "password"
-      ? { title: "Welcome back", sub: "Log in with your password." }
+    view === "login" || view === "password" || (view === "code" && codeFrom === "login")
+      ? back
       : view === "reset"
         ? { title: "Reset your password", sub: "We'll email you a link to set a new one." }
         : challengeScore != null
           ? { ...save, sub: challengeLine(challengeScore, challengeName) }
           : weakLine
             ? { ...save, sub: weakLine }
-            : { ...save, sub: "Sign in free to play, and track how your tones improve." };
+            : { ...save, sub: "Sign up free to play, and track how your tones improve." };
 
   const errorBox = error && (
     <p className="auth-error" role="alert">
@@ -404,7 +415,8 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     body = (
       <form className="auth-form" onSubmit={submitCode}>
         <p className="auth-code-note" role="status">
-          We sent a 6-digit code to <strong>{email.trim()}</strong>. Check spam too.
+          We sent a 6-digit code to <strong>{email.trim()}</strong>. Type it below to{" "}
+          {codeFrom === "login" ? "log in" : "finish signing up"}. Check spam too.
         </p>
         <div className="auth-field">
           <label htmlFor={`${ids}-code`}>Code</label>
@@ -437,13 +449,31 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
           >
             {cooldown > 0 ? `Resend code (${cooldown}s)` : "Resend code"}
           </button>
-          <button type="button" className="auth-link" onClick={() => go("email")} disabled={busy}>
+          <button type="button" className="auth-link" onClick={() => go(codeFrom)} disabled={busy}>
             Use a different email
           </button>
         </div>
       </form>
     );
-  } else if (view === "email") {
+  } else if (view === "signup" || view === "login") {
+    const verb = view === "signup" ? "Sign up" : "Log in";
+    const codeForm = (
+      <form
+        className="auth-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void sendCode();
+        }}
+      >
+        {emailField}
+        {view === "signup" && consentBox}
+        {errorBox}
+        <button type="submit" className="sky-btn auth-primary" disabled={busy}>
+          {busy ? "Sending…" : view === "signup" ? "Email me a sign-up code" : "Email me a login code"}
+        </button>
+        <p className="auth-hint auth-center-text">We'll email you a 6-digit code. No password needed.</p>
+      </form>
+    );
     body = (
       <>
         {googleOk && (
@@ -455,30 +485,29 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
               disabled={busy}
             >
               <GoogleIcon />
-              Continue with Google
+              {verb} with Google
             </button>
             <p className="auth-or" aria-hidden="true">
               <span>or</span>
             </p>
           </>
         )}
-        <form
-          className="auth-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void sendCode();
-          }}
-        >
-          {emailField}
-          {consentBox}
-          {errorBox}
-          <button type="submit" className="sky-btn auth-primary" disabled={busy}>
-            {busy ? "Sending…" : "Continue"}
+        {view === "login" || emailOpen ? (
+          codeForm
+        ) : (
+          <>
+            {errorBox}
+            <button type="button" className="sky-btn auth-primary" onClick={() => setEmailOpen(true)}>
+              <MailIcon />
+              Sign up with email
+            </button>
+          </>
+        )}
+        {view === "login" && (
+          <button type="button" className="auth-link auth-link-small auth-center" onClick={() => go("password")}>
+            Log in with a password instead
           </button>
-        </form>
-        <button type="button" className="auth-link auth-link-small auth-center" onClick={() => go("password")}>
-          Log in with a password
-        </button>
+        )}
       </>
     );
   } else {
@@ -492,22 +521,20 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
           {busy ? "One moment…" : view === "password" ? "Log in" : "Create account and play"}
         </button>
         {view === "password" ? (
-          <button type="button" className="auth-link auth-link-small" onClick={() => go("password_signup")}>
-            New here? Create an account with a password
+          <button type="button" className="auth-link auth-link-small" onClick={() => go("login")}>
+            Email me a login code instead
           </button>
         ) : (
-          <button type="button" className="auth-link auth-link-small" onClick={() => go("password")}>
-            I have an account
+          <button type="button" className="auth-link auth-link-small" onClick={() => go("signup")}>
+            Sign up with a code instead
           </button>
         )}
-        <button type="button" className="auth-link auth-link-small" onClick={() => go("email")}>
-          Back to the email code
-        </button>
       </form>
     );
   }
 
-  const showLegal = view === "email" || view === "code" || view === "password_signup";
+  const showLegal = view === "signup" || view === "password_signup" || (view === "code" && codeFrom === "signup");
+  const onLoginSide = view === "login" || view === "password" || view === "reset" || (view === "code" && codeFrom === "login");
 
   return (
     <div id="top" className="sky sky-site auth">
@@ -522,16 +549,25 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
 
           <section
             className="auth-card"
-            aria-label={view === "password" ? "Log in" : view === "reset" ? "Reset password" : "Sign in"}
+            aria-label={onLoginSide ? (view === "reset" ? "Reset password" : "Log in") : "Sign up"}
           >
             {body}
             {showLegal && (
               <p className="auth-legal">
-                By continuing, you agree to our <a href="/terms-of-service">Terms</a> &amp;{" "}
+                By signing up, you agree to our <a href="/terms-of-service">Terms</a> &amp;{" "}
                 <a href="/privacy-policy">Privacy Policy</a>.
               </p>
             )}
           </section>
+
+          {view !== "code" && (
+            <p className="auth-switch">
+              {onLoginSide ? "Don't have an account? " : "Already have an account? "}
+              <button type="button" className="auth-link" onClick={() => go(onLoginSide ? "signup" : "login")}>
+                {onLoginSide ? "Sign up" : "Log in"}
+              </button>
+            </p>
+          )}
         </div>
       </main>
     </div>
@@ -544,6 +580,15 @@ function EyeIcon({ open }: { open: boolean }) {
       <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
       <circle cx="12" cy="12" r="3" />
       {!open && <path d="M4 4l16 16" />}
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3 7l9 6 9-6" />
     </svg>
   );
 }

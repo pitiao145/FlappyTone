@@ -106,6 +106,17 @@
   align-self: center;
 }
 
+.auth-center-text {
+  text-align: center;
+}
+
+/* "Already have an account? Log in" under the card */
+.auth-switch {
+  margin: var(--space-5) 0 0;
+  font-size: 1rem;
+  color: var(--color-ink);
+}
+
 /* ---- the code step */
 .auth-code-note {
   margin: 0;
