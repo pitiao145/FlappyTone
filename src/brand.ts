@@ -51,7 +51,7 @@ export const brand = {
     titleAny: "Keep your tones climbing.",
     /**
      * What a free account gives. The demo itself saves nothing, so the perks
-     * speak of runs from now on. (The button's "Save my score" is Pierre's
+     * speak of runs from now on. (The button says "Save my progress", not "score": the demo run is not kept; Pierre's
      * call, 7 Nov 2026.) `runs` is the free tier's daily runs.
      */
     perks: (runs: number) => [
@@ -59,7 +59,7 @@ export const brand = {
       "See which tone to practise next",
       `Free, ${runs} runs a day, no card`,
     ],
-    signup: "Save my score, improve my tones",
+    signup: "Save my progress, improve my tones",
     /** Over the score card's tone tiles. */
     tonesLabel: "Tone accuracy this run",
     retry: "One more round",

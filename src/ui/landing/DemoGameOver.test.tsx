@@ -21,7 +21,7 @@ describe("DemoGameOver", () => {
     const out = html(stats);
     expect(out).toContain("Fourth tone: 40% accuracy. Keep it climbing.");
     expect(out).toContain(`Free, ${DEFAULT_TIER_LIMITS.free.runsPerDay} runs a day, no card`);
-    const order = ["go-score", "Keep it climbing", "go-demo-perks", "Save my score, improve my tones", "go-demo-quote", "One more round"].map(
+    const order = ["go-score", "Keep it climbing", "go-demo-perks", "Save my progress, improve my tones", "go-demo-quote", "One more round"].map(
       (s) => out.indexOf(s),
     );
     expect(order.every((i) => i >= 0)).toBe(true);
