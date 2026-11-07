@@ -3,26 +3,32 @@ import { brand } from "../../brand.ts";
 import { toneBreakdown, type RunStats } from "../../game/scoring.ts";
 import { DEFAULT_TIER_LIMITS } from "../../game/tiers.ts";
 import { GameOverHeader, weakestTone } from "../GameOverParts.tsx";
+import { ToneMarkIcon } from "../toneIcons.tsx";
+import { TONE_LINE_COLOR } from "../toneColors.ts";
+import { Testimonial } from "../Testimonial.tsx";
+import { TESTIMONIALS } from "../testimonials.ts";
 
 const COPY = brand.demoGameOver;
-const QUOTE = {
-  text: brand.notTextbook.quote,
-  who: brand.notTextbook.quoteAttribution.replace(/^—\s*/, ""),
-};
 
 /**
  * Try it now's end screen. It has one job: the signup. The score, then the
  * signup card (titled with this run's weakest heard tone, three plain perks,
- * the button), a real player's quote, then a small "One more round". Phones
- * stack it in that order; wider screens put the quote on the right.
+ * the button), a real player's quote, then a small "One more round". The
+ * score card also shows this run's tone accuracy per tone flown (heard gates
+ * only, like the game's own tiles). Phones stack it in that order; wider
+ * screens put the quote on the right. `quote` rotates the landing page's
+ * quotes, one per end screen.
  * Nothing here reads or writes storage or the server.
  */
 export function DemoGameOver({
   stats,
   onSignup,
   onRetry,
+  quote = 0,
 }: {
   stats: RunStats;
+  /** Index into `TESTIMONIALS`. */
+  quote?: number;
   onSignup: () => void;
   onRetry: () => void;
 }) {
@@ -36,10 +42,29 @@ export function DemoGameOver({
     : pct >= COPY.strongPct
       ? COPY.titleStrong(weakest.tone, pct)
       : COPY.title(weakest.tone, pct);
+  // Only tones with a heard gate: an unheard one has nothing honest to show.
+  const tones = breakdown.filter((b): b is typeof b & { pct: number } => b.pct !== null && b.gates > 0);
 
   return (
     <div className="screen gameover-screen go-demo">
-      <GameOverHeader eyebrow="Run over" score={stats.score} />
+      <GameOverHeader
+        eyebrow="Run over"
+        score={stats.score}
+        actions={
+          tones.length > 0 && (
+            <ul className="go-demo-tones" aria-label="Tone accuracy this run">
+              {tones.map((b) => (
+                <li key={b.tone} aria-label={`Tone ${b.tone}: ${Math.round(b.pct)}% tone accuracy`}>
+                  <span style={{ color: TONE_LINE_COLOR[b.tone] }}>
+                    <ToneMarkIcon tone={b.tone} className="go-demo-tone-icon" />
+                  </span>
+                  <b>{Math.round(b.pct)}%</b>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      />
 
       <section className="go-card go-demo-pitch">
         <h3 className="go-demo-pitch-title">{title}</h3>
@@ -53,13 +78,7 @@ export function DemoGameOver({
         </button>
       </section>
 
-      <figure className="go-demo-quote">
-        <blockquote>{QUOTE.text}</blockquote>
-        <figcaption>
-          <img src="/lp/birds/lu_rou_fan.webp" width={40} height={40} alt="" loading="lazy" />
-          <cite>{QUOTE.who}</cite>
-        </figcaption>
-      </figure>
+      <Testimonial className="go-demo-quote" quote={TESTIMONIALS[quote % TESTIMONIALS.length]} />
 
       <div className="go-demo-actions">
         <button type="button" className="go-subtle-link" onClick={onRetry}>

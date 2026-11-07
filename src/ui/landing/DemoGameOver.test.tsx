@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { applyGate, newRunStats } from "../../game/scoring.ts";
 import { DEFAULT_TIER_LIMITS } from "../../game/tiers.ts";
 import { DemoGameOver } from "./DemoGameOver.tsx";
+import { TESTIMONIALS, nextQuoteIndex } from "../testimonials.ts";
 
 const html = (stats = newRunStats()) =>
   renderToStaticMarkup(<DemoGameOver stats={stats} onSignup={() => {}} onRetry={() => {}} />);
@@ -21,6 +22,29 @@ describe("DemoGameOver", () => {
     );
     expect(order.every((i) => i >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  it("shows each heard tone's accuracy in the score card, never an unheard one", () => {
+    let stats = newRunStats();
+    stats = applyGate(stats, [1], "good", 0.9);
+    stats = applyGate(stats, [4], "ok", 0.4);
+    stats = applyGate(stats, [3], "unheard", null);
+    const out = html(stats);
+    const card = out.slice(out.indexOf("go-header"), out.indexOf("go-demo-pitch"));
+    expect(card).toContain("Tone 1: 90% tone accuracy");
+    expect(card).toContain("Tone 4: 40% tone accuracy");
+    expect(card).not.toContain("Tone 3");
+  });
+
+  it("rotates the landing page's quotes, one per end screen", () => {
+    const first = nextQuoteIndex();
+    const second = nextQuoteIndex();
+    expect(second).toBe((first + 1) % TESTIMONIALS.length);
+    for (const [i, q] of TESTIMONIALS.entries()) {
+      const out = renderToStaticMarkup(<DemoGameOver stats={newRunStats()} quote={i} onSignup={() => {}} onRetry={() => {}} />);
+      expect(out).toContain("sky-testimonial");
+      expect(out).toContain(`/lp/birds/${q.bird}.webp`);
+    }
   });
 
   it("names the worst tone of the run, even one flown only once", () => {
@@ -49,7 +73,7 @@ describe("DemoGameOver", () => {
     let stats = newRunStats();
     stats = applyGate(stats, [2], "perfect", 0.95);
     const out = html(stats).toLowerCase();
-    for (const s of ["share", "leaderboard", "board", "calibration", "xp", "personal best", "best ", "tone accuracy", "too easy"]) {
+    for (const s of ["share", "leaderboard", "board", "calibration", "xp", "personal best", "best ", "too easy"]) {
       expect(out).not.toContain(s);
     }
   });

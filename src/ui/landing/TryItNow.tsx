@@ -21,7 +21,8 @@ import {
 import type { Tone } from "../../game/gates.ts";
 import { DrillTonePicker, PairComboPicker } from "../ModePickers.tsx";
 import type { RunSnapshot } from "../../game/run.ts";
-import { GameHud } from "../GameHud.tsx";
+import { GameHud, type OutcomeFlash } from "../GameHud.tsx";
+import { nextQuoteIndex } from "../testimonials.ts";
 import { DEFAULT_SPEAKER_ID } from "../../data/catalogRows.ts";
 import fallback from "../../data/wordsFallback.json";
 import { DemoLoop } from "../DemoLoop.tsx";
@@ -47,6 +48,8 @@ function loadMini(): Promise<MiniModule> {
 }
 
 const GATES = 5;
+/** How long a gate's reaction stays up: Game.tsx's TOAST_MS. */
+const FLASH_MS = 1200;
 
 function shuffle<T>(items: T[]): T[] {
   const a = [...items];
@@ -100,7 +103,7 @@ type Step =
   | { kind: "choose"; mini: MiniModule; calibrated: boolean }
   | { kind: "preparing" }
   | { kind: "playing" }
-  | { kind: "done"; stats: RunStats }
+  | { kind: "done"; stats: RunStats; quote: number }
   | { kind: "error"; message: string; micKind?: string };
 
 /**
@@ -143,6 +146,14 @@ export function TryItNow({
   const attemptRef = useRef(0);
   /** The game's HUD, polled like Game.tsx does (never per frame). */
   const [hud, setHud] = useState<RunSnapshot | null>(null);
+  /** The last gate's reaction, as in the game: points, "nice T1", "that was a T3". */
+  const [flash, setFlash] = useState<OutcomeFlash | null>(null);
+  // Retired on a timer like Game.tsx's (TOAST_MS); a new gate replaces it.
+  useEffect(() => {
+    if (!flash) return;
+    const id = setTimeout(() => setFlash(null), FLASH_MS);
+    return () => clearTimeout(id);
+  }, [flash]);
   const [confettiDone, setConfettiDone] = useState(false);
   /** The live run's mode, for the game's HUD. */
   const [runMode, setRunMode] = useState<"game" | "drill" | "pairs">("game");
@@ -254,6 +265,12 @@ export function TryItNow({
         run: picked?.run,
         voice,
         gates: GATES,
+        onGate: (f, snap) => {
+          if (!current()) return;
+          // The numbers sync on the same beat as the reaction, as in the game.
+          setHud(snap);
+          setFlash(f);
+        },
         onReady: () => {
           if (!current()) return;
           trackTry("ready");
@@ -262,6 +279,7 @@ export function TryItNow({
         onEnd: (r) => {
           window.clearInterval(poll);
           setHud(null);
+          setFlash(null);
           stopRef.current = null;
           trackTry("finished");
           const acc = Object.fromEntries(toneBreakdown(r.stats).map((b) => [b.tone, b.pct === null ? null : Math.round(b.pct)]));
@@ -288,7 +306,7 @@ export function TryItNow({
             ...where,
           });
           setConfettiDone(false);
-          setStep({ kind: "done", stats: r.stats });
+          setStep({ kind: "done", stats: r.stats, quote: nextQuoteIndex() });
         },
       })
       .then((game) => {
@@ -338,7 +356,7 @@ export function TryItNow({
           {live && (
             <GameHud
               hud={hud}
-              flash={null}
+              flash={flash}
               mode={runMode}
               scored
               showTranslation={false}
@@ -428,6 +446,7 @@ export function TryItNow({
             {!confettiDone && <Confetti onDone={() => setConfettiDone(true)} />}
             <DemoGameOver
               stats={step.stats}
+              quote={step.quote}
               onSignup={() => {
                 captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_signup", ...where });
                 window.location.assign(appHref(undefined, page));

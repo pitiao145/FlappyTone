@@ -14,6 +14,8 @@ import { ScrollBird } from "../ScrollBird.tsx";
 import { FREE_HIGHLIGHTS, PRO_HIGHLIGHTS, PRO_PRICE } from "../plan.ts";
 import { TONE_LINE_COLOR } from "../toneColors.ts";
 import { ToneAverageCard } from "../ToneAverageCard.tsx";
+import { Testimonial } from "../Testimonial.tsx";
+import { TESTIMONIALS } from "../testimonials.ts";
 import { TONES, go, useWordsByTone } from "./shared.tsx";
 import { ProgressSection } from "./ProgressSection.tsx";
 import { appHref } from "../appLink.ts";
@@ -40,16 +42,6 @@ import "./sky.css";
  */
 
 const COPY = brand.landing;
-
-/**
- * Real quotes from players, as brand.ts has them. Never add one nobody said.
- * The avatars are roster birds (docs/bird-design/roster), not the players.
- */
-const QUOTES = [
-  { text: brand.notTextbook.quote, who: brand.notTextbook.quoteAttribution, bird: "lu_rou_fan" },
-  { text: brand.tonePairs.quote, who: brand.tonePairs.quoteAttribution, bird: "boba" },
-  { text: brand.pricing.quote, who: brand.pricing.quoteAttribution, bird: "ji_pai" },
-].map((q) => ({ ...q, who: q.who.replace(/^—\s*/, "") }));
 
 /** The real gate, drawn by the game's renderer. Off the first paint. */
 const GateDemo = lazy(() => import("./GateDemo.tsx"));
@@ -180,14 +172,8 @@ export function SkyLanding() {
 
       <section className="sky-proof" aria-label="What players say">
         <h2 className="sky-proof-title">What players say</h2>
-        {QUOTES.map((q) => (
-          <figure key={q.who} className="sky-testimonial">
-            <blockquote>{q.text}</blockquote>
-            <figcaption>
-              <img src={`/lp/birds/${q.bird}.webp`} width={48} height={48} alt="" loading="lazy" />
-              <cite>{q.who}</cite>
-            </figcaption>
-          </figure>
+        {TESTIMONIALS.map((q) => (
+          <Testimonial key={q.who} quote={q} />
         ))}
       </section>
 

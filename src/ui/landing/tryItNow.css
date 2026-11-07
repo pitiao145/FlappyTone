@@ -127,30 +127,31 @@
   font-weight: 800;
   color: var(--beak);
 }
-/* A real player, under the card on phones, beside it on wide screens. */
-.sky-try-over .go-demo-quote {
+/* This run's tone accuracy, in the score card's right side: one small tile
+   per tone flown, its mark in the tone colour, then the percentage. Two
+   columns so four tones fit beside the score on a phone. */
+.sky-try-over .go-demo-tones {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 6px;
   margin: 0;
-  padding: 18px 20px;
-  border: 2px solid var(--ink);
-  border-radius: var(--radius-lg);
-  background: #fff;
-  box-shadow: var(--shadow-sticker);
+  padding: 0;
+  list-style: none;
+  flex-shrink: 0;
 }
-.sky-try-over .go-demo-quote blockquote {
-  margin: 0;
-  font: 400 1.15rem/1.35 var(--font-display);
-  color: var(--ink);
-}
-.sky-try-over .go-demo-quote figcaption {
+.sky-try-over .go-demo-tones li {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 12px;
-  font-size: 0.9rem;
-  color: var(--ink-soft);
+  gap: 4px;
+  padding: 4px 8px 4px 4px;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: #fff;
+  font: 400 0.95rem/1 var(--font-display);
+  color: var(--ink);
 }
-.sky-try-over .go-demo-quote img { border-radius: 999px; }
-.sky-try-over .go-demo-quote cite { font-style: normal; font-weight: 600; }
+.sky-try-over .go-demo-tone-icon { display: block; width: 30px; height: 22px; }
+.sky-try-over .go-demo-tones b { font-weight: 400; min-width: 2.6ch; text-align: right; }
 /* "One more round": quiet, but a real tap target. */
 .sky-try-over .go-demo-actions .go-subtle-link { min-height: 44px; padding-inline: 16px; }
 /* More air between cards than the in-app screen, which has a full page. */

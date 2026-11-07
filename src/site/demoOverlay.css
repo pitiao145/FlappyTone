@@ -118,7 +118,7 @@
   .sky-try-overlay .go-header { grid-area: head; }
   .sky-try-overlay .go-demo-pitch { grid-area: pitch; }
   .sky-try-overlay .go-demo-actions { grid-area: actions; }
-  .sky-try-overlay .go-demo-quote { grid-area: quote; align-self: center; rotate: 1.5deg; }
+  .sky-try-overlay .go-demo-quote { grid-area: quote; align-self: center; }
 }
 
 /* "Exit demo" centred under the game, as in the landing hero (sky.css .sky-screen figcaption). */
