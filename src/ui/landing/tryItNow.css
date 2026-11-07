@@ -96,6 +96,7 @@
   box-shadow: var(--shadow-sticker);
 }
 .sky-try-over .go-demo-pitch p { margin: 0; color: var(--accent-ink); }
+.sky-try-over .go-demo-pitch-title span { display: block; }
 .sky-try-over .go-demo-pitch-title {
   margin: 0;
   font: 400 1.35rem/1.15 var(--font-display);
@@ -107,10 +108,10 @@
   width: 100%;
   min-height: 56px;
   margin-top: 4px;
-  padding: 4px 20px 0;
+  padding: 4px 14px 0;
   border: var(--outline, 3px) solid var(--ink);
   border-radius: var(--radius, 14px);
-  font: 400 1.2rem/1 var(--font-display);
+  font: 400 1.15rem/1.1 var(--font-display);
   letter-spacing: 0.01em;
   background: var(--beak);
   color: var(--ink);
@@ -140,20 +141,41 @@
   color: var(--beak);
 }
 /* The score card: full width, in a light beak orange rather than plain
-   white. Its tone tiles get their own row under the score, so they never
-   cover it. */
+   white. The score sits centred; the bird perches on the card's corner,
+   outside it; the tone tiles get their own labelled row under the score. */
 .sky-try-over .go-demo .go-header {
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 18px;
+  padding: 26px 18px 18px;
   background: color-mix(in srgb, var(--beak) 26%, #fff);
 }
-.sky-try-over .go-demo .go-header-score { flex: 1 1 100%; }
-/* This run's tone accuracy: one small tile per tone flown, its mark in the
-   tone colour, then the percentage. */
+.sky-try-over .go-demo .go-bird {
+  top: -44px;
+  left: -26px;
+  width: 78px;
+}
+.sky-try-over .go-demo .go-header-score { padding-left: 0; text-align: center; }
+.sky-try-over .go-demo .go-score-line { justify-content: center; }
+.sky-try-over .go-demo-tones-block {
+  display: grid;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 2px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+}
+.sky-try-over .go-demo-tones-label {
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+/* This run's tone accuracy: one tile per tone flown, its mark in the tone
+   colour, then the percentage. */
 .sky-try-over .go-demo-tones {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -162,8 +184,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 4px 8px 4px 4px;
+  gap: 8px;
+  padding: 6px 10px;
   border: 2px solid var(--ink);
   border-radius: 10px;
   background: #fff;
@@ -171,7 +193,11 @@
   color: var(--ink);
 }
 .sky-try-over .go-demo-tone-icon { display: block; width: 30px; height: 22px; }
-.sky-try-over .go-demo-tones b { font-weight: 400; min-width: 2.6ch; text-align: right; }
+.sky-try-over .go-demo-tones b { font-weight: 400; min-width: 3.2ch; text-align: right; }
+/* Wide enough for one row of four. */
+@media (min-width: 480px) {
+  .sky-try-over .go-demo-tones { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
 /* "One more round": quiet, but a real tap target. */
 .sky-try-over .go-demo-actions .go-subtle-link { min-height: 44px; padding-inline: 16px; }
 /* More air between cards than the in-app screen, which has a full page. */

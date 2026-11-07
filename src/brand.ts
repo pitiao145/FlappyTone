@@ -46,19 +46,22 @@ export const brand = {
      * never "Tone 3".
      */
     strongPct: 80,
-    title: (name: string, pct: number) => `${name[0].toUpperCase()}${name.slice(1)}: ${pct}%. Keep it climbing.`,
-    titleStrong: (name: string, pct: number) => `Strong start! Your lowest is the ${name}, at ${pct}%.`,
+    title: (name: string, pct: number) => `${name[0].toUpperCase()}${name.slice(1)}: ${pct}% accuracy. Keep it climbing.`,
+    titleStrong: (name: string, pct: number) => `Strong start! Your lowest is the ${name}, at ${pct}% accuracy.`,
     titleAny: "Keep your tones climbing.",
     /**
-     * What a free account gives. The demo itself saves nothing, so nothing
-     * here promises to keep this run. `runs` is the free tier's daily runs.
+     * What a free account gives. The demo itself saves nothing, so the perks
+     * speak of runs from now on. (The button's "Save my score" is Pierre's
+     * call, 7 Nov 2026.) `runs` is the free tier's daily runs.
      */
     perks: (runs: number) => [
       "Save every run from now on",
       "See which tone to practise next",
       `Free, ${runs} runs a day, no card`,
     ],
-    signup: "Save my scores, it's free",
+    signup: "Save my score, improve my tones",
+    /** Over the score card's tone tiles. */
+    tonesLabel: "Tone accuracy this run",
     retry: "One more round",
   },
 

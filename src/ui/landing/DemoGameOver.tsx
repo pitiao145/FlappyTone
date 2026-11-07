@@ -53,7 +53,9 @@ export function DemoGameOver({
         score={stats.score}
         actions={
           tones.length > 0 && (
-            <ul className="go-demo-tones" aria-label="Tone accuracy this run">
+            <div className="go-demo-tones-block">
+              <p className="go-demo-tones-label">{COPY.tonesLabel}</p>
+              <ul className="go-demo-tones">
               {tones.map((b) => (
                 <li key={b.tone} aria-label={`${toneName(b.tone, true)}: ${Math.round(b.pct)}% tone accuracy`}>
                   <span style={{ color: TONE_LINE_COLOR[b.tone] }}>
@@ -62,13 +64,19 @@ export function DemoGameOver({
                   <b>{Math.round(b.pct)}%</b>
                 </li>
               ))}
-            </ul>
+              </ul>
+            </div>
           )
         }
       />
 
       <section className="go-card go-demo-pitch">
-        <h3 className="go-demo-pitch-title">{title}</h3>
+        <h3 className="go-demo-pitch-title">
+          {/* One sentence per line, so a phrase never breaks mid-way. */}
+          {title.split(/(?<=[.!]) /).map((line) => (
+            <span key={line}>{line}</span>
+          ))}
+        </h3>
         <ul className="go-demo-perks">
           {COPY.perks(DEFAULT_TIER_LIMITS.free.runsPerDay).map((p) => (
             <li key={p}>{p}</li>
