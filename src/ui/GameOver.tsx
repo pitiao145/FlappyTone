@@ -19,6 +19,7 @@ import {
   type Board,
 } from "../data/leaderboard.ts";
 import { setPendingJoin } from "../data/joinIntent.ts";
+import { currentAccountId } from "../data/accountScope.ts";
 import { JoinBoardModal } from "./JoinBoardModal.tsx";
 import { HighScoreModal } from "./HighScoreModal.tsx";
 import { Leaderboard } from "./Leaderboard.tsx";
@@ -277,7 +278,7 @@ export function GameOver({
    * the signup detour.
    */
   const acceptUpgrade = () => {
-    setPendingJoin(stats.score);
+    setPendingJoin(stats.score, currentAccountId());
     track({ type: "join_board_submitted", accepted: true, joined: false, ok: false });
     setJoinOffer(false);
     onUpgrade();

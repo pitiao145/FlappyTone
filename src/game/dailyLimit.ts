@@ -1,24 +1,38 @@
 /**
- * The daily run cap — tier-aware, server-authoritative for accounts.
+ * The daily run cap — tier-aware, counted on the server for accounts.
  *
- * The local day counter is unchanged from v1: still device-local, still not
- * tamper-proof (CLAUDE.md's hard rule — clearing storage or editing devtools
- * defeats it, and that's fine for a guest since a cleared guest mints a new
- * anonymous identity anyway). What changed is where the *limit* comes from
- * (`TIER_LIMITS[getTier()].runsPerDay`, not a flat constant) and that a
- * signed-in player's count is also recorded server-side (`api/run.ts`),
- * which a guest cannot be — no durable identity to count against.
+ * The cap is soft: `api/run.ts` counts every run and never refuses one, and
+ * the client decides from the larger of two numbers, its own local count and
+ * the last count the server gave it. Neither is tamper-proof (the `chk` field
+ * only deters a casual devtools edit), and that is fine. The limit itself is
+ * `TIER_LIMITS[getTier()].runsPerDay`.
  *
- * The local counter is deliberately never reset on a tier change: a guest at
- * 3/3 who signs up becomes 3/10, not a fresh 0/10. Product logic, not a bug.
+ * Per account, not per device (brief 34). Both numbers are saved under the
+ * account's user id, so a second account on a used browser starts at 0, and
+ * switching back and forth never resets a count. Format: one key per number,
+ * each a map `{ [userId]: { date, count } }` (the local one also has `chk`).
+ * Each save keeps only today's entries, so the map never grows past the
+ * accounts that played today. The pre-brief-34 keys had no owner: they are
+ * dropped (`accountScope.ts`), and the server count comes back on the next
+ * refresh.
+ *
+ * The account is `currentAccountId()`: the one AuthGate noted on this page,
+ * or else the one this browser held last. With no account at all (no
+ * session read yet on a fresh browser) the count lives in a slot of its own
+ * that no account ever reads, and no server count applies — the same safe
+ * behaviour as before: local count only, a run is never blocked by an
+ * unknown number.
  */
 import { getSupabase } from "../data/supabase.ts";
 import { getTier, tierReady } from "../data/tier.ts";
 import { bumpSessionVersion } from "../data/sessionVersion.ts";
+import { currentAccountId } from "../data/accountScope.ts";
 import { tierLimits } from "./tiers.ts";
 
-const KEY = "toneflap.daily.v1";
-const SERVER_COUNT_KEY = "toneflap.daily.server.v1";
+const KEY = "toneflap.daily.v2";
+const SERVER_COUNT_KEY = "toneflap.daily.server.v2";
+/** The slot used while no account is known. Never a Supabase user id. */
+const NO_ACCOUNT = "-";
 
 interface DailyState {
   date: string; // YYYY-MM-DD, local
@@ -31,9 +45,9 @@ function today(): string {
 }
 
 /** Small non-cryptographic checksum — deters casual edits, nothing more. */
-function checksum(date: string, count: number): string {
+function checksum(owner: string, date: string, count: number): string {
   let h = 0;
-  const s = `${date}:${count}:ft-daily`;
+  const s = `${owner}:${date}:${count}:ft-daily`;
   for (let i = 0; i < s.length; i++) {
     h = (h * 31 + s.charCodeAt(i)) | 0;
   }
@@ -44,58 +58,69 @@ function fresh(): DailyState {
   return { date: today(), count: 0 };
 }
 
-function load(): DailyState {
+function owner(): string {
+  return currentAccountId() ?? NO_ACCOUNT;
+}
+
+/** The whole per-account map under `key`; `{}` on anything unreadable. */
+function loadMap(key: string): Record<string, unknown> {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return fresh();
-    const parsed = JSON.parse(raw) as { date?: unknown; count?: unknown; chk?: unknown };
-    if (
-      typeof parsed.date !== "string" ||
-      typeof parsed.count !== "number" ||
-      typeof parsed.chk !== "string" ||
-      parsed.chk !== checksum(parsed.date, parsed.count)
-    ) {
-      return fresh();
-    }
-    if (parsed.date !== today()) return fresh();
-    return { date: parsed.date, count: parsed.count };
+    const raw = localStorage.getItem(key);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
   } catch {
+    return {};
+  }
+}
+
+/** Writes `entry` for `who`, keeping only the other accounts' entries for today. */
+function saveEntry(key: string, who: string, entry: Record<string, unknown>): void {
+  try {
+    const day = today();
+    const map: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(loadMap(key))) {
+      if (k !== who && (v as { date?: unknown } | null)?.date === day) map[k] = v;
+    }
+    map[who] = entry;
+    localStorage.setItem(key, JSON.stringify(map));
+  } catch {
+    // ignore
+  }
+}
+
+function load(who: string): DailyState {
+  const parsed = loadMap(KEY)[who] as { date?: unknown; count?: unknown; chk?: unknown } | undefined;
+  if (
+    !parsed ||
+    typeof parsed.date !== "string" ||
+    typeof parsed.count !== "number" ||
+    typeof parsed.chk !== "string" ||
+    parsed.chk !== checksum(who, parsed.date, parsed.count) ||
+    parsed.date !== today()
+  ) {
     return fresh();
   }
+  return { date: parsed.date, count: parsed.count };
 }
 
-function save(state: DailyState): void {
-  try {
-    localStorage.setItem(
-      KEY,
-      JSON.stringify({ ...state, chk: checksum(state.date, state.count) }),
-    );
-  } catch {
-    // ignore
-  }
+function save(who: string, state: DailyState): void {
+  saveEntry(KEY, who, { ...state, chk: checksum(who, state.date, state.count) });
 }
 
-/** Cached last-known server count, for a signed-in player only. Read back
- * so a page reload still shows a number without waiting on a network call. */
-function loadServerCount(): number | null {
-  try {
-    const raw = localStorage.getItem(SERVER_COUNT_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { date?: unknown; count?: unknown };
-    if (typeof parsed.date !== "string" || typeof parsed.count !== "number") return null;
-    if (parsed.date !== today()) return null;
-    return parsed.count;
-  } catch {
-    return null;
-  }
+/** Cached last-known server count for one account. Read back so a page
+ * reload still shows a number without waiting on a network call. */
+function loadServerCount(userId: string): number | null {
+  const parsed = loadMap(SERVER_COUNT_KEY)[userId] as { date?: unknown; count?: unknown } | undefined;
+  if (!parsed || typeof parsed.date !== "string" || typeof parsed.count !== "number") return null;
+  if (parsed.date !== today()) return null;
+  return parsed.count;
 }
 
-function saveServerCount(count: number): void {
-  try {
-    localStorage.setItem(SERVER_COUNT_KEY, JSON.stringify({ date: today(), count }));
-  } catch {
-    // ignore
-  }
+function saveServerCount(userId: string, count: number): void {
+  saveEntry(SERVER_COUNT_KEY, userId, { date: today(), count });
 }
 
 export interface DailyRuns {
@@ -110,8 +135,11 @@ function currentLimit(): number {
 }
 
 export function loadDailyRuns(): DailyRuns {
-  const local = load().count;
-  const server = getTier() !== "guest" ? loadServerCount() : null;
+  const who = owner();
+  const local = load(who).count;
+  // A server count is saved only under a real user id, so it can only ever
+  // be this account's own.
+  const server = who !== NO_ACCOUNT ? loadServerCount(who) : null;
   // The larger of the two: an offline session that only updated local
   // should not show a number that goes backwards once the server is known.
   const count = server != null ? Math.max(local, server) : local;
@@ -122,17 +150,18 @@ export function loadDailyRuns(): DailyRuns {
  * Call once per run start (behind the same mic gesture every run start
  * already requires).
  *
- * Guest: local only, same as before. Signed-in: also POSTs to `api/run.ts`
- * and caches the returned count — but local is incremented either way, so an
- * offline session still shows an honest number, and a failed request never
+ * Increments this account's local count. Once the tier is known it also
+ * POSTs to `api/run.ts` and caches the returned count — but local is
+ * incremented either way, so an offline session still shows an honest number, and a failed request never
  * blocks the run that's already starting. This is a deliberate bypass: a
  * network blip must not make the game unplayable (CLAUDE.md's "never scores
  * the player wrong" spirit applies here too).
  */
 export function incrementDailyRuns(): DailyRuns {
-  const state = load();
+  const who = owner();
+  const state = load(who);
   const next = { date: state.date, count: state.count + 1 };
-  save(next);
+  save(who, next);
   const limit = currentLimit();
 
   if (getTier() !== "guest") {
@@ -148,7 +177,8 @@ async function recordServerRun(): Promise<void> {
     if (!supabase) return;
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
-    if (!token) return;
+    const userId = data.session?.user.id;
+    if (!token || !userId) return;
     const res = await fetch("/api/run", {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
@@ -156,7 +186,8 @@ async function recordServerRun(): Promise<void> {
     });
     if (!res.ok) return;
     const payload = (await res.json()) as { count: number };
-    if (typeof payload.count === "number") saveServerCount(payload.count);
+    // Saved under the account the server counted, never under another one.
+    if (typeof payload.count === "number") saveServerCount(userId, payload.count);
   } catch {
     // Never blocks a run — see this function's doc comment above. The local
     // count above has already been saved, so the player still sees a
@@ -184,9 +215,12 @@ export async function refreshServerDailyRuns(): Promise<void> {
       .eq("user_id", userId)
       .eq("day", today())
       .maybeSingle();
-    if (error || !row) return;
-    if (loadServerCount() === row.count) return;
-    saveServerCount(row.count);
+    if (error) return;
+    // No row: this account has not played today. Save 0 for it (brief 34) —
+    // returning early here once kept another account's number on screen.
+    const count = row?.count ?? 0;
+    if (loadServerCount(userId) === count) return;
+    saveServerCount(userId, count);
     // Profile reads the count once per session version: tell it to re-read.
     bumpSessionVersion();
   } catch {

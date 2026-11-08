@@ -12,6 +12,7 @@ import { ensurePlaybackCtx } from "../audio/reference";
 import { ensureMic, getMicSession, MicCancelled, stopMic } from "../audio/session";
 import { incrementDailyRuns, loadDailyRuns, refreshServerDailyRuns } from "../game/dailyLimit.ts";
 import { getAccount, syncAccount } from "../data/account.ts";
+import { noteAccount } from "../data/accountScope.ts";
 import { loadRoster } from "../data/speakers.ts";
 import { fetchCatalog } from "../data/words.ts";
 import { resolveSpeaker } from "../game/voice.ts";
@@ -516,9 +517,11 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     return () => clearTimeout(timer);
   }, [authToast]);
   /**
-   * "You're on the board — #N of M!" — shown once a guest who declined the
-   * board CTA (`GameOver`'s `acceptUpgrade`, via `setPendingJoin`) finishes
-   * signup. Same auto-dismiss shape as `authToast`.
+   * "You're on the board — #N of M!" — shown once a player sent to account
+   * creation from the board CTA (`GameOver`'s `acceptUpgrade`, via
+   * `setPendingJoin`) has an account. `/app` has no guests since brief 24, so
+   * this fires only when the end screen rendered before the tier loaded.
+   * Same auto-dismiss shape as `authToast`.
    */
   const [boardJoinToast, setBoardJoinToast] = useState<string | null>(null);
   /** Which copy the shared signup gate (`checkoutSignup` screen) shows. */
@@ -531,7 +534,8 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
   /**
    * The intent is only consumed once the account is confirmed permanent —
    * reading it on a still-anonymous version bump would burn the flag on a
-   * signup that hasn't actually landed yet.
+   * signup that hasn't actually landed yet — and only by the account that set
+   * it, or the first account after a signed-out flag (brief 34).
    */
   const sessionVersion = useSessionVersion();
   useEffect(() => {
@@ -539,7 +543,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
       try {
         const account = await getAccount();
         if (account.status !== "permanent") return;
-        const score = consumePendingJoin();
+        const score = consumePendingJoin(account.userId);
         if (score == null) return;
         await joinBoard();
         const result = await submitScore(score);
@@ -1166,6 +1170,9 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     // before their first run, post any run still in the outbox, and replace
     // the local stats cache with the server's (`syncAccount`, brief 05).
     void getAccount().then((account) => {
+      // Brief 34: which account this browser holds now. A different one from
+      // last time runs the account-change steps before anything reads them.
+      noteAccount(account.status === "permanent" ? account.userId : null);
       if (account.status !== "permanent") return;
       void refreshServerDailyRuns();
       void syncAccount();

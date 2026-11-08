@@ -7,8 +7,8 @@
  * board score on the pending-join flag, both after a successful signup.
  */
 import { useEffect } from "react";
-import { consumePendingCheckout } from "../data/checkoutIntent.ts";
-import { consumePendingJoin } from "../data/joinIntent.ts";
+import { clearPendingCheckout } from "../data/checkoutIntent.ts";
+import { clearPendingJoin } from "../data/joinIntent.ts";
 import { AccountCard } from "./AccountCard.tsx";
 
 interface Props {
@@ -34,8 +34,8 @@ export function CheckoutSignup({ onBack, reason = "checkout" }: Props) {
   // flags so a stray one can't fire on an unrelated later signup.
   useEffect(
     () => () => {
-      void consumePendingCheckout();
-      void consumePendingJoin();
+      clearPendingCheckout();
+      clearPendingJoin();
     },
     [],
   );

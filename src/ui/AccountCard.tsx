@@ -90,7 +90,7 @@ export function AccountCard({ hideGuestHeader = false, onSignedOut }: Props) {
       fireAuthToast("signed-in");
       // Only consume the flag on success — a failed attempt shouldn't burn the
       // guest's one shot at getting bounced through to checkout.
-      if (consumePendingCheckout()) void redirectToCheckoutForCurrentAccount();
+      if (consumePendingCheckout((await getAccount()).userId)) void redirectToCheckoutForCurrentAccount();
     }
   }
 

@@ -10,6 +10,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { track } from "../analytics/client";
 import { getAccount, recordMarketingConsent } from "../data/account.ts";
+import { noteAccount } from "../data/accountScope.ts";
 import { getSupabase } from "../data/supabase.ts";
 import { parseChallengeName } from "../share/shareName.ts";
 import {
@@ -93,6 +94,9 @@ export default function AuthGate() {
             history.replaceState(null, "", `${window.location.pathname}${search}${window.location.hash}`);
           }
         }
+        // Brief 34: note which account this browser holds before GameApp
+        // mounts, so a second account never reads the first one's values.
+        noteAccount(play ? account.userId : null);
         playingRef.current = play;
         // The auth screen was up this page: the game starts from a clean page
         // (URL params intact, none of its CSS). Its own submit reloads once it

@@ -1,6 +1,6 @@
 # FlappyTone — Privacy Policy
 
-**Last updated: 7 November 2026**
+**Last updated: 8 November 2026**
 
 This policy explains what personal data FlappyTone ("we", "us") collects, why, and your rights over it. FlappyTone is operated by Pierre Bruyninckx, an independent developer, at [flappytone.com](https://flappytone.com). For any privacy question or request, contact [pierre@pierrebuilds.dev](mailto:pierre@pierrebuilds.dev).
 
@@ -21,7 +21,7 @@ FlappyTone listens to your voice through your device's microphone to drive the g
 - **If you choose "Continue with Google":** this is optional. Google tells our sign-in provider (Supabase) your Google account ID, your email address, and, as Google shares them, your name and profile picture address. Supabase stores these with your login. We use your email address to identify your account. We do not show your Google name or photo anywhere in FlappyTone. We never receive your Google password. Google handles your sign-in under its own [privacy policy](https://policies.google.com/privacy).
 - **If you already played with a guest account** and then sign in with Google or an email code, your guest progress stays with that account. The guest account is upgraded, not copied.
 - **Display name** you choose (shown on the leaderboard if you join it).
-- **Gameplay aggregates** stored with your account — best score, run and gate totals, streaks (including the last day you played), the words you have played, and per-tone accuracy statistics. If you played as a guest on this device before signing up or signing in, those local totals are added to your account once.
+- **Gameplay aggregates** stored with your account — best score, run and gate totals, streaks (including the last day you played), the words you have played, and per-tone accuracy statistics.
 - **Your last 5 runs** (free accounts). To show the same recent runs and tone accuracy on every device, we store your 5 most recent runs: when each happened, the game mode, your score, how many gates you flew, how the run ended, and your tone accuracy for the run and per tone (or two-tone combination). Older runs are deleted automatically when a new one is stored. These are numbers derived on your device, **not audio**. They are deleted with your account.
 - **Marketing consent** — whether you opted in to product-update emails, and when.
 

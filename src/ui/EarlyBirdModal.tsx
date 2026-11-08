@@ -3,6 +3,7 @@ import { track } from "../analytics/client.ts";
 import { getAccount } from "../data/account.ts";
 import { buildCheckoutUrl, redirectToCheckoutForCurrentAccount } from "../data/checkout.ts";
 import { setPendingCheckout } from "../data/checkoutIntent.ts";
+import { currentAccountId } from "../data/accountScope.ts";
 import { useTier } from "../data/tier.ts";
 import { tierLimits } from "../game/tiers.ts";
 import { brand } from "../brand.ts";
@@ -209,7 +210,7 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
                   // (or anyone we can't check out) detours through account
                   // creation, which picks the intent back up post-signup.
                   if (!isGuest && (await redirectToCheckoutForCurrentAccount())) return;
-                  setPendingCheckout();
+                  setPendingCheckout(currentAccountId());
                   onCreateAccount?.("checkout");
                 })();
               }}

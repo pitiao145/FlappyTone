@@ -10,6 +10,31 @@ approach, or where the obvious-looking alternative was tried and failed.
 
 ## Backend, accounts & persistence
 
+### A new account on a used browser starts fresh (8 Nov 2026, brief 34)
+
+A player used all 10 runs on account A, then logged in with a second Google
+account (B) in the same browser. B's new profile took A's name, and B was at
+10/10 at once: the browser kept the name and both daily counts with no account
+id, and a refresh with no server row kept A's number. The server data was
+correct for both (`docs/reports/account-switch-case-2026-11-08.md`).
+
+Decided (Pierre):
+
+- **Browser-side account values are per account.** Name, local and saved
+  server daily counts, run-history and streak cache, pending intents: each
+  carries its owner (`src/data/accountScope.ts`). A new account starts with
+  fresh runs and its own new name; A → B → A shows A's values again, and
+  switching never resets a count. The rejected alternative, one daily counter
+  per device, was a rule left over from guests (a guest at 3/3 who signed up
+  stayed at 3/10); `/app` has no guests since brief 24.
+- **Device settings stay per device.** Calibration, theme, pinyin, speech
+  style, tunnel width and the other `toneflap.settings*` keys follow the
+  device, not the account.
+- **The run cap stays soft.** `api/run.ts` counts and never refuses; the
+  client decides. A player who clears storage or opens a private window gets
+  the server count back on the next refresh. A hard server cap was considered
+  and left out.
+
 ### Two tier gates, two meanings — and every word is free (15 Sep 2026)
 
 `docs/SPECS/flappytone-SPEC-clip-catalog-r2.md` had the clip pipeline mark the

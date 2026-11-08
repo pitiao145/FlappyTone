@@ -10,14 +10,17 @@
  * "claim your guest data" step to write, and no window where a player owns two
  * identities.
  *
- * Accounts are a Pro feature and the UI is dev-gated, so nothing here is
- * reachable by a player yet. This is the plumbing, built ahead of the product.
+ * `/app` needs a permanent account since brief 24: there are no guests in the
+ * game any more. The guest -> account paths below (`snapshotGuestProgress`,
+ * `adoptGuestProgress`, the anonymous in-place upgrade) stay for an old
+ * anonymous session that comes back, and are kept until a brief removes them.
  *
- * Progress (brief 05): the server owns an account's stats. A guest's local
- * progress is ADDED to the account once, on the guest -> account step
- * (`adoptGuestProgress`, idempotent by an adopt id), and from then on the
- * device's stores are only a cache of the server (`stats.ts`). There is no
- * max-merge any more: it lost a second device's runs (brief 04).
+ * Progress (brief 05): the server owns an account's stats. Local guest
+ * progress is ADDED to the account once (`adoptGuestProgress`, idempotent by
+ * an adopt id), and from then on the device's stores are only a cache of the
+ * server (`stats.ts`). There is no max-merge any more: it lost a second
+ * device's runs (brief 04). Browser-side values that belong to one account
+ * carry its id (brief 34, `accountScope.ts`).
  *
  * Same contract as the rest of `src/data/`: nothing throws. A failed adoption
  * keeps its snapshot and retries on the next sync; the guest's numbers are
@@ -32,6 +35,7 @@ import {
 } from "../game/runHistory.ts";
 import { clearStreak, loadStreakState } from "../game/streak.ts";
 import { displayName, setLocalDisplayName } from "./leaderboard.ts";
+import { noteAccount } from "./accountScope.ts";
 import { bumpSessionVersion } from "./sessionVersion.ts";
 import { flushRunOutbox } from "./runlog.ts";
 import { ensureProfile, refreshServerStats } from "./stats.ts";
@@ -386,7 +390,7 @@ export async function recordMarketingConsent(consented: boolean): Promise<void> 
     const { error: ensureError } = await supabase
       .from("profiles")
       .upsert(
-        { id: account.userId, display_name: displayName() },
+        { id: account.userId, display_name: displayName(account.userId) },
         { onConflict: "id", ignoreDuplicates: true },
       );
     if (ensureError) warn("account", `could not create the profile row: ${ensureError.message}`);
@@ -420,13 +424,15 @@ export async function signOut(): Promise<void> {
   if (!supabase) return;
   try {
     await supabase.auth.signOut();
-    // The stats on this device were the account's cache, not guest progress:
-    // a guest starts fresh, and the account's numbers stay on the server.
-    // Left in place they would mix with the guest's own runs.
+    // The stats on this device were the account's cache: the account's
+    // numbers stay on the server, and the next account must not see them.
     clearRunHistory();
     clearStreak();
-    // Every surface reading account-derived data needs to re-read and fall
-    // back to guest — see `sessionVersion.ts`.
+    // The browser now holds no account (brief 34). The name, daily counts and
+    // intents keep their owner, so they need no clearing here.
+    noteAccount(null);
+    // Every surface reading account-derived data needs to re-read — see
+    // `sessionVersion.ts`.
     bumpSessionVersion();
   } catch (err) {
     warn("account", "sign-out failed", err);
@@ -462,7 +468,7 @@ export async function renameAccount(name: string): Promise<AuthResult> {
     }
     // The board name is cached locally (`displayName()` reads it without a
     // round trip); without this, a rename shows nowhere until the next sync.
-    setLocalDisplayName(trimmed);
+    setLocalDisplayName(trimmed, account.userId);
     bumpSessionVersion();
     return { ok: true };
   } catch (err) {
@@ -603,6 +609,9 @@ export async function syncAccount(): Promise<AuthResult> {
   if (account.status !== "permanent" || !account.userId) {
     return { ok: false, reason: "sync needs an account" };
   }
+  // Runs the account-change steps first when this browser held another
+  // account (brief 34), so nothing below reads or writes that account's values.
+  noteAccount(account.userId);
   if (!(await ensureProfile(account.userId))) return { ok: false, reason: "could not create the profile row" };
   await adoptGuestProgress();
   await flushRunOutbox();
@@ -613,7 +622,7 @@ export async function syncAccount(): Promise<AuthResult> {
   // name (set at signup, or renamed since on another device), so the local
   // cache adopts it. Only `renameAccount()` may change the server's `display_name`.
   if (refreshed.displayName) {
-    setLocalDisplayName(refreshed.displayName);
+    setLocalDisplayName(refreshed.displayName, account.userId);
     bumpSessionVersion();
   }
   return { ok: true };

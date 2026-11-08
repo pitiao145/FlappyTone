@@ -44,7 +44,7 @@ export async function ensureProfile(userId: string): Promise<boolean> {
   try {
     const { error } = await supabase
       .from("profiles")
-      .upsert({ id: userId, display_name: displayName() }, { onConflict: "id", ignoreDuplicates: true });
+      .upsert({ id: userId, display_name: displayName(userId) }, { onConflict: "id", ignoreDuplicates: true });
     if (error) warn("stats", `could not create the profile row: ${error.message}`);
     return !error;
   } catch (err) {

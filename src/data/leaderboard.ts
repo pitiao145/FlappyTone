@@ -19,6 +19,7 @@
  * recomputes it from server time when it writes, because a device clock is
  * something a player can set.
  */
+import { currentAccountId } from "./accountScope.ts";
 import { currentSession, ensureAnonSession, getSupabase, warn } from "./supabase.ts";
 
 const IDENTITY_KEY = "toneflap.identity.v1";
@@ -81,6 +82,28 @@ function randomName(): string {
   return `${a}${b}${Math.floor(Math.random() * 90) + 10}`;
 }
 
+/** The saved board name and the account it belongs to (`null`: no account). */
+function loadIdentity(): { name: string; owner: string | null } | null {
+  try {
+    const raw = localStorage.getItem(IDENTITY_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { name?: unknown; owner?: unknown };
+    if (typeof parsed.name !== "string" || parsed.name.length < 1 || parsed.name.length > 24) return null;
+    // A name saved before brief 34 has no owner: it belongs to no account.
+    return { name: parsed.name, owner: typeof parsed.owner === "string" ? parsed.owner : null };
+  } catch {
+    return null;
+  }
+}
+
+function saveIdentity(name: string, owner: string | null): void {
+  try {
+    localStorage.setItem(IDENTITY_KEY, JSON.stringify(owner ? { name, owner } : { name }));
+  } catch {
+    // Storage blocked — the name just won't survive a reload.
+  }
+}
+
 /**
  * The player's board name, minted on first ask and stable thereafter.
  *
@@ -88,25 +111,18 @@ function randomName(): string {
  * name *before* the row exists — the player sees what they are agreeing to.
  * Names are not unique and are not meant to be; two BraveSparrow42s are
  * distinguished by their user id, and picking your own name is a Pro feature.
+ *
+ * Brief 34: the saved name keeps its owner. It is returned only to that
+ * account (`owner`, default: the account this browser holds now). Any other
+ * account gets a new random name of its own, so a second account on a used
+ * browser never takes the first one's name. The server name stays the truth:
+ * `syncAccount()` writes it down here, and only `renameAccount()` changes it.
  */
-export function displayName(): string {
-  try {
-    const raw = localStorage.getItem(IDENTITY_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as { name?: unknown };
-      if (typeof parsed.name === "string" && parsed.name.length >= 1 && parsed.name.length <= 24) {
-        return parsed.name;
-      }
-    }
-  } catch {
-    // Fall through and mint a new one.
-  }
+export function displayName(owner: string | null = currentAccountId()): string {
+  const saved = loadIdentity();
+  if (saved && saved.owner === owner) return saved.name;
   const name = randomName();
-  try {
-    localStorage.setItem(IDENTITY_KEY, JSON.stringify({ name }));
-  } catch {
-    // Storage blocked — the name just won't survive a reload.
-  }
+  saveIdentity(name, owner);
   return name;
 }
 
@@ -116,12 +132,8 @@ export function displayName(): string {
  * pull a name *down* from the server here, never push a locally-minted name
  * up — that direction is `renameAccount()` alone, Pro-gated and explicit.
  */
-export function setLocalDisplayName(name: string): void {
-  try {
-    localStorage.setItem(IDENTITY_KEY, JSON.stringify({ name }));
-  } catch {
-    // Storage blocked — the name just won't survive a reload.
-  }
+export function setLocalDisplayName(name: string, owner: string | null = currentAccountId()): void {
+  saveIdentity(name, owner);
 }
 
 /** Whether this player already has a board profile. Never signs them in. */
@@ -169,7 +181,7 @@ export async function joinBoard(): Promise<boolean> {
   try {
     const { error } = await supabase
       .from("profiles")
-      .upsert({ id: userId, display_name: displayName() }, { onConflict: "id", ignoreDuplicates: true });
+      .upsert({ id: userId, display_name: displayName(userId) }, { onConflict: "id", ignoreDuplicates: true });
     if (error) {
       warn("leaderboard", `could not create the profile row: ${error.message}`);
       return false;
