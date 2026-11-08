@@ -17,9 +17,6 @@ import { loadRoster } from "../data/speakers.ts";
 import { fetchCatalog } from "../data/words.ts";
 import { resolveSpeaker } from "../game/voice.ts";
 import { AUTH_TOAST_TEXT, subscribeAuthToast, type AuthToastKind } from "../data/authToast.ts";
-import { consumePendingJoin } from "../data/joinIntent.ts";
-import { getBoard, joinBoard, submitScore } from "../data/leaderboard.ts";
-import { useSessionVersion } from "../data/sessionVersion.ts";
 import { getSupabase } from "../data/supabase.ts";
 import { usePurchaseReturn } from "../data/purchaseReturn.ts";
 import {
@@ -55,7 +52,6 @@ import { Game, type GameHandle } from "../ui/Game";
 import { GameOver } from "../ui/GameOver";
 import { EarlyBirdModal, type EarlyBirdSurface } from "../ui/EarlyBirdModal.tsx";
 import { FeedbackWidget } from "../ui/FeedbackWidget.tsx";
-import { CheckoutSignup } from "../ui/CheckoutSignup.tsx";
 import { HowTo } from "../ui/HowTo";
 import { Loading } from "../ui/Loading";
 import { LevelSelect } from "../ui/LevelSelect.tsx";
@@ -98,7 +94,6 @@ export type Screen =
   | "visualiser"
   | "progress"
   | "profile"
-  | "checkoutSignup"
   | "resetPassword"
   | "toneder"
   | "lab"
@@ -125,7 +120,6 @@ const FEEDBACK_SCREENS: ReadonlySet<Screen> = new Set<Screen>([
   "settings",
   "progress",
   "profile",
-  "checkoutSignup",
   "toneder",
 ]);
 
@@ -139,7 +133,6 @@ function navTabFor(screen: Screen): NavTab {
     case "progress":
       return "progress";
     case "profile":
-    case "checkoutSignup":
       return "profile";
     case "howto":
     case "settings":
@@ -516,51 +509,6 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     const timer = setTimeout(() => setAuthToast(null), 5000);
     return () => clearTimeout(timer);
   }, [authToast]);
-  /**
-   * "You're on the board — #N of M!" — shown once a player sent to account
-   * creation from the board CTA (`GameOver`'s `acceptUpgrade`, via
-   * `setPendingJoin`) has an account. `/app` has no guests since brief 24, so
-   * this fires only when the end screen rendered before the tier loaded.
-   * Same auto-dismiss shape as `authToast`.
-   */
-  const [boardJoinToast, setBoardJoinToast] = useState<string | null>(null);
-  /** Which copy the shared signup gate (`checkoutSignup` screen) shows. */
-  const [signupReason, setSignupReason] = useState<"checkout" | "join">("checkout");
-  useEffect(() => {
-    if (!boardJoinToast) return;
-    const timer = setTimeout(() => setBoardJoinToast(null), 5000);
-    return () => clearTimeout(timer);
-  }, [boardJoinToast]);
-  /**
-   * The intent is only consumed once the account is confirmed permanent —
-   * reading it on a still-anonymous version bump would burn the flag on a
-   * signup that hasn't actually landed yet — and only by the account that set
-   * it, or the first account after a signed-out flag (brief 34).
-   */
-  const sessionVersion = useSessionVersion();
-  useEffect(() => {
-    void (async () => {
-      try {
-        const account = await getAccount();
-        if (account.status !== "permanent") return;
-        const score = consumePendingJoin(account.userId);
-        if (score == null) return;
-        await joinBoard();
-        const result = await submitScore(score);
-        if (!result.ok) return;
-        const board = await getBoard();
-        setBoardJoinToast(
-          board.myRank != null
-            ? `You're on the board — #${board.myRank} of ${board.total}!`
-            : "You're on the board!",
-        );
-        // They came here to join — land them on Progress where the board is.
-        setScreen("progress");
-      } catch {
-        // Never blocks anything — the player just doesn't get the toast.
-      }
-    })();
-  }, [sessionVersion]);
   /**
    * A reset-password link opens with `detectSessionInUrl` and Supabase fires
    * `PASSWORD_RECOVERY` on the client, not a URL param — the only reliable
@@ -1359,9 +1307,6 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
           />
         )}
 
-        {screen === "checkoutSignup" && (
-          <CheckoutSignup reason={signupReason} onBack={() => setScreen("play")} />
-        )}
 
         {screen === "settings" && (
           <Settings
@@ -1383,10 +1328,6 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
 
         {screen === "toneder" && (
           <TonederScreen
-            onCreateAccount={() => {
-              setSignupReason("join");
-              setScreen("checkoutSignup");
-            }}
             onUpgrade={(from) => openEarlyBird("toneder", from === "cap" ? "toneder-cap" : "toneder-spoken")}
             onPlay={() => onNavigate("play")}
           />
@@ -1524,12 +1465,6 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
             mode={lastModeRef.current}
             challengeScore={challengeScoreState}
             challengeName={challengeNameState}
-            onUpgrade={() => {
-              // Guest chose to join: they already know an account is needed, so
-              // go straight to the signup gate — no EarlyBird modal in between.
-              setSignupReason("join");
-              setScreen("checkoutSignup");
-            }}
             onViewFullLeaderboard={() => {
               progressLeaderboardRef.current = true;
               setScreen("progress");
@@ -1556,12 +1491,6 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
         </div>
       )}
 
-      {boardJoinToast && (
-        <div className="app-toast app-toast-positive" role="status">
-          {boardJoinToast}
-        </div>
-      )}
-
       {FEEDBACK_SCREENS.has(screen) && <FeedbackWidget screen={screen} />}
 
       {noteOpen && screen === "play" && <PierreNote onDone={closeNote} preview={notePreview} />}
@@ -1571,15 +1500,6 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
           surface={earlyBird.surface}
           feature={earlyBird.feature}
           onClose={() => setEarlyBird(null)}
-          onCreateAccount={(intent) => {
-            setEarlyBird(null);
-            if (intent === "checkout") {
-              setSignupReason("checkout");
-              setScreen("checkoutSignup");
-            } else {
-              setScreen("profile");
-            }
-          }}
         />
       )}
     </div>

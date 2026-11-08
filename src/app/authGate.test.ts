@@ -92,14 +92,14 @@ describe("challenge params survive signup", () => {
 describe("pending sign-in (magic link, Google)", () => {
   it("remembers how it started, once", () => {
     const s = memStorage();
-    markAuthPending({ method: "google", consent: true, wasAnonymous: false }, s, 0);
-    expect(consumeAuthPending(s, 5)).toEqual({ method: "google", consent: true, wasAnonymous: false, at: 0 });
+    markAuthPending({ method: "google", consent: true }, s, 0);
+    expect(consumeAuthPending(s, 5)).toEqual({ method: "google", consent: true, at: 0 });
     expect(consumeAuthPending(s, 6)).toBe(null);
   });
 
   it("drops a marker older than an hour", () => {
     const s = memStorage();
-    markAuthPending({ method: "magic_link", consent: false, wasAnonymous: false }, s, 0);
+    markAuthPending({ method: "magic_link", consent: false }, s, 0);
     expect(consumeAuthPending(s, 60 * 60 * 1000)).toBe(null);
   });
 
@@ -112,15 +112,12 @@ describe("pending sign-in (magic link, Google)", () => {
 
 describe("authMode (new account vs login)", () => {
   const sent = Date.parse("2026-11-07T10:00:00Z");
-  it("a guest upgrade is always a new account", () => {
-    expect(authMode("2026-01-01T00:00:00Z", sent, true)).toBe("signup");
-  });
   it("a row created after the code was sent is new", () => {
-    expect(authMode("2026-11-07T10:00:01Z", sent, false)).toBe("signup");
+    expect(authMode("2026-11-07T10:00:01Z", sent)).toBe("signup");
   });
   it("an older row is a login", () => {
-    expect(authMode("2026-10-01T00:00:00Z", sent, false)).toBe("login");
-    expect(authMode(null, sent, false)).toBe("login");
+    expect(authMode("2026-10-01T00:00:00Z", sent)).toBe("login");
+    expect(authMode(null, sent)).toBe("login");
   });
 });
 

@@ -634,7 +634,6 @@ export type TrackedScreen =
   | "visualiser"
   | "progress"
   | "profile"
-  | "checkoutSignup"
   | "resetPassword"
   | "toneder";
 

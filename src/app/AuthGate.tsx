@@ -1,6 +1,6 @@
 /**
  * The /app login gate (brief 24): a permanent account gets the game, anyone
- * else (signed out, or an anonymous guest session) gets `AuthScreen`.
+ * else (signed out, or an old anonymous session) gets `AuthScreen`.
  *
  * It decides once per auth change, before GameApp mounts, so GameApp keeps
  * reading its one-shot URL params (`c`, `n`, `intent`, …) on mount exactly as
@@ -56,7 +56,7 @@ export default function AuthGate() {
     authSource(window.location.search, document.referrer, window.location.origin),
   );
   // A failed Google round trip comes back with the error in the URL (e.g.
-  // `identity_already_exists`). Read before the Supabase client starts (the
+  // `access_denied`). Read before the Supabase client starts (the
   // first render, before the effect below), then cleared from the address bar.
   const [oauthError] = useState(() => {
     const err = oauthErrorFromUrl(window.location.search, window.location.hash);
@@ -84,7 +84,7 @@ export default function AuthGate() {
           // double it under the wrong method.
           const pending = ownSubmitPending() ? null : consumeAuthPending(storage());
           if (pending) {
-            const mode = authMode(account.createdAt ?? null, pending.at, pending.wasAnonymous);
+            const mode = authMode(account.createdAt ?? null, pending.at);
             track({ type: "signup_completed", mode, method: pending.method });
             if (mode === "login") track({ type: "login_completed", method: pending.method });
             if (pending.consent) void recordMarketingConsent(true);

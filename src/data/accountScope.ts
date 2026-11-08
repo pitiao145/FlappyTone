@@ -1,127 +1,103 @@
 /**
  * Which account this browser holds now (brief 34).
  *
- * Some browser-side values belong to one account: the board name, the daily
- * run counts, the run-history and streak cache, the pending intents. Each of
- * them carries its owner's user id, and reads this module to know who the
- * owner should be. A second account on a used browser therefore starts fresh,
- * and the first account gets its own values back when it returns.
+ * Every value the game saves in the browser is per account
+ * (`src/lib/accountStorage.ts`): a second account on a used browser starts
+ * fresh, and the first account finds its own values when it returns. Only the
+ * mic calibration stays per device.
  *
- * `noteAccount()` runs on every account resolve (AuthGate's check, GameApp's
- * mount, `syncAccount()`, `signOut()`). When the account differs from the one
- * saved last, it runs the account-change steps once, then saves the new id.
- * Device settings (`toneflap.settings*`, calibration, theme) are not here:
- * they stay with the device.
+ * `noteAccount()` runs on every account resolve: AuthGate's check (before
+ * GameApp mounts), GameApp's mount, `syncAccount()`, `signOut()`. Only a
+ * permanent account counts; signed out or anonymous is `null`.
  *
- * Only a permanent account counts. A signed-out or anonymous visitor is
- * `null`: `/app` has no guests since brief 24, and an anonymous session
- * keeps its id when it upgrades in place, so nothing is lost by it.
+ * The first account noted after this change also takes over the values the
+ * browser saved before keys were per account (`migrateLegacy`), so an
+ * existing player keeps their settings. Values that name another owner, or
+ * that cannot be tied to one, are dropped instead.
  *
- * Same contract as the rest of `src/data/`: nothing throws. A storage
- * failure means "fresh values", never a broken screen or a blocked run.
+ * Same contract as the rest of `src/data/`: nothing throws.
  */
-import { clearRunHistory, loadRunHistory } from "../game/runHistory.ts";
-import { clearStreak } from "../game/streak.ts";
-import { clearPendingCheckout } from "./checkoutIntent.ts";
-import { clearPendingJoin } from "./joinIntent.ts";
+import { accountKey, setCurrentAccount } from "../lib/accountStorage.ts";
 
-const KEY = "toneflap.account.v1";
+export { currentAccountId } from "../lib/accountStorage.ts";
 
-/** Keys from before brief 34 that held per-account values with no owner. */
-const LEGACY_KEYS = ["toneflap.daily.v1", "toneflap.daily.server.v1"];
+/** Set once the legacy (unscoped) values have been handed to an account. */
+const MIGRATED_KEY = "toneflap.scoped.v1";
 
-/** The account noted on this page; `undefined` until the first note. */
-let current: string | null | undefined;
+/** Unscoped keys moved, as they are, to the first account. */
+const MOVE_KEYS = [
+  "toneflap.width.v1",
+  "toneflap.translation.v1",
+  "toneflap.pinyin.v1",
+  "toneflap.tonemarks.v1",
+  "toneflap.demo.v1",
+  "toneflap.wordmix.v1",
+  "toneflap.motion.v1",
+  "toneflap.sharedata.v1",
+  "toneflap.analytics.notice.v1",
+  "toneflap.proficiency.v1",
+  "toneflap.lastlevel.v1",
+  "toneflap.speechstyle.v1",
+  "toneflap.theme.v1",
+  "toneflap.runFeedback.v1",
+  "toneflap.shareName.v1",
+  "flappytone.toneder.swipes.v1",
+  "flappytone.tonetest.last.v1",
+  "flappytone.dismissedUpdates",
+];
 
-function loadSaved(): string | null {
+/** Unscoped keys whose owner cannot be known: dropped. The server restores
+ * the name and the daily count on the next sync. */
+const DROP_KEYS = [
+  "toneflap.identity.v1",
+  "toneflap.daily.v1",
+  "toneflap.daily.server.v1",
+  "toneflap.joinIntent.v1",
+  "toneflap.checkoutIntent.v1",
+  "toneflap.adopt.v1",
+];
+
+const HISTORY_KEY = "toneflap.history.v1";
+const STREAK_KEY = "toneflap.streak.v1";
+
+/** Records the account the session resolved to (`null`: signed out or anonymous). */
+export function noteAccount(userId: string | null): void {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { id?: unknown };
-    return typeof parsed.id === "string" && parsed.id ? parsed.id : null;
+    setCurrentAccount(userId);
+    if (userId) migrateLegacy(userId);
   } catch {
-    return null;
+    // Never throws: the account is already set in memory.
   }
 }
 
-function save(id: string | null): void {
+function migrateLegacy(userId: string): void {
   try {
-    if (id) localStorage.setItem(KEY, JSON.stringify({ id }));
-    else localStorage.removeItem(KEY);
-  } catch {
-    // Blocked storage: the owner checks on each value still keep accounts apart.
-  }
-}
-
-/**
- * The account this browser holds: the one noted on this page, or else the
- * one saved last (the best guess before the session is read). `null` when
- * no account is known.
- */
-export function currentAccountId(): string | null {
-  return current !== undefined ? current : loadSaved();
-}
-
-/** What `noteAccount` found, for callers and tests. */
-export type AccountChange = "same" | "switch" | "first" | "signed-out";
-
-/**
- * Records the account the session resolved to (`null` for signed out or
- * anonymous). On a change of account it runs the account-change steps once:
- *
- * - account A -> account B: clear the run-history and streak cache and the
- *   pending intents. Names and daily counts carry their owner, so they need
- *   no clearing, and A gets its own back on return.
- * - no account -> account B: clear the history and streak cache only if it
- *   belongs to another account (a signed-out state left it there). An
- *   unowned store is guest progress and stays for `adoptGuestProgress`.
- * - account A -> no account: nothing to clear here (`signOut()` clears the
- *   cache itself).
- *
- * The first resolve after the brief-34 deploy also drops the old ownerless
- * daily-count keys: their owner is unknown, and the server count comes back
- * on the next refresh.
- */
-export function noteAccount(userId: string | null): AccountChange {
-  try {
-    const next = userId || null;
-    current = next;
-    dropLegacyKeys();
-    const prev = loadSaved();
-    if (prev === next) return "same";
-    let change: AccountChange;
-    if (next === null) {
-      change = "signed-out";
-    } else if (prev !== null) {
-      change = "switch";
-      clearRunHistory();
-      clearStreak();
-      clearPendingJoin();
-      clearPendingCheckout();
-    } else {
-      change = "first";
-      const owner = loadRunHistory().owner;
-      if (owner && owner !== next) {
-        clearRunHistory();
-        clearStreak();
-      }
+    if (localStorage.getItem(MIGRATED_KEY)) return;
+    for (const base of MOVE_KEYS) {
+      const value = localStorage.getItem(base);
+      if (value === null) continue;
+      const target = accountKey(base, userId);
+      if (localStorage.getItem(target) === null) localStorage.setItem(target, value);
+      localStorage.removeItem(base);
     }
-    save(next);
-    return change;
+    // The run-history cache names its owner; the streak cache goes with it.
+    const history = localStorage.getItem(HISTORY_KEY);
+    const streak = localStorage.getItem(STREAK_KEY);
+    let owner: unknown = null;
+    try {
+      owner = history ? (JSON.parse(history) as { owner?: unknown }).owner : null;
+    } catch {
+      owner = null;
+    }
+    if (owner === userId) {
+      if (history) localStorage.setItem(accountKey(HISTORY_KEY, userId), history);
+      if (streak) localStorage.setItem(accountKey(STREAK_KEY, userId), streak);
+    }
+    localStorage.removeItem(HISTORY_KEY);
+    localStorage.removeItem(STREAK_KEY);
+    for (const base of DROP_KEYS) localStorage.removeItem(base);
+    localStorage.setItem(MIGRATED_KEY, "1");
   } catch {
-    return "same";
+    // Blocked storage: nothing to migrate, every account starts fresh.
   }
-}
-
-function dropLegacyKeys(): void {
-  try {
-    for (const k of LEGACY_KEYS) localStorage.removeItem(k);
-  } catch {
-    // ignore
-  }
-}
-
-/** Test seam: forget the account noted on this page. */
-export function resetAccountScopeForTests(): void {
-  current = undefined;
 }

@@ -11,6 +11,8 @@
  * the stored value on a day change would defeat the whole point of the field.
  */
 
+import { accountStorage } from "../lib/accountStorage.ts";
+
 const KEY = "toneflap.runFeedback.v1";
 
 interface FeedbackState {
@@ -38,7 +40,7 @@ function fresh(): FeedbackState {
 
 function load(): FeedbackState {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = accountStorage.getItem(KEY);
     if (!raw) return fresh();
     const parsed = JSON.parse(raw) as { lastShownDate?: unknown; chk?: unknown };
     if (typeof parsed.lastShownDate !== "string" || typeof parsed.chk !== "string") {
@@ -54,7 +56,7 @@ function load(): FeedbackState {
 
 function save(state: FeedbackState): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ ...state, chk: checksum(state) }));
+    accountStorage.setItem(KEY, JSON.stringify({ ...state, chk: checksum(state) }));
   } catch {
     // ignore
   }

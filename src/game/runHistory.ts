@@ -3,16 +3,17 @@
  * per-tone stats, for the Progress tab. Same localStorage conventions as
  * `settings.ts` (versioned key, try/catch/validate on load).
  *
- * Two roles (brief 05). For a guest it is the source of truth: device-local,
- * not tamper-proof. For an account it is only a render cache of what the
- * server holds (`cacheFromServer`, owner = the account's user id): the server
- * adds every run (`api/runlog.ts`), and `recordRun` here is just the
- * optimistic local write until the next refresh replaces it.
+ * A render cache of what the server holds for the account (brief 05,
+ * `cacheFromServer`, owner = the account's user id): the server adds every
+ * run (`api/runlog.ts`), and `recordRun` here is just the optimistic local
+ * write until the next refresh replaces it. Saved per account (brief 34,
+ * `accountStorage`), so another account on this browser never sees it.
  *
  * The per-tone and per-combo numbers are TONE accuracy (spec A), not the
  * score — see `STATS_VERSION` for the reset that came with that change.
  */
 
+import { accountStorage } from "../lib/accountStorage.ts";
 import type { RunSnapshot } from "./run.ts";
 import type { RunStats } from "./scoring.ts";
 import type { Tone } from "./gates.ts";
@@ -112,7 +113,7 @@ function isValid(s: unknown): s is Pick<RunHistoryStore, "totalRuns" | "bestScor
 
 export function loadRunHistory(): RunHistoryStore {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = accountStorage.getItem(KEY);
     if (!raw) return emptyStore();
     const parsed = JSON.parse(raw);
     if (!isValid(parsed)) return emptyStore();
@@ -147,7 +148,7 @@ export function loadRunHistory(): RunHistoryStore {
 
 function saveRunHistory(store: RunHistoryStore): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(store));
+    accountStorage.setItem(KEY, JSON.stringify(store));
   } catch {
     // Blocked/full storage — the stats just don't persist this session.
   }
@@ -155,7 +156,7 @@ function saveRunHistory(store: RunHistoryStore): void {
 
 export function clearRunHistory(): void {
   try {
-    localStorage.removeItem(KEY);
+    accountStorage.removeItem(KEY);
   } catch {
     // ignore
   }
@@ -302,11 +303,6 @@ export function cacheFromServer(server: ServerStats, userId: string): RunHistory
   };
   saveRunHistory(next);
   return next;
-}
-
-/** True when an unowned (guest) store holds anything worth adopting into an account. */
-export function hasGuestProgress(store: RunHistoryStore): boolean {
-  return !store.owner && (store.totalRuns > 0 || store.wordIds.length > 0);
 }
 
 /** Lifetime tone accuracy as a flat list of targets, shaped for the account sync layer. */

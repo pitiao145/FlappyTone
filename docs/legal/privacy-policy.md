@@ -14,12 +14,10 @@ FlappyTone listens to your voice through your device's microphone to drive the g
 
 **If you try FlappyTone without an account:**
 - You can try the demo on our pages without an account. Nothing from the demo is stored on our servers or sent to us, apart from the analytics described below. Playing the full game needs an account.
-- If you played as a guest on this device in the past, that progress stays **locally in your browser** (localStorage) and is not sent to us. When you sign up, it is added to your account once.
 
 **If you create an account:**
 - **Email address** (to sign in, sync your data, and contact you about your account). You can sign in with an emailed 6-digit code or link, with a password, or with Google (see below).
 - **If you choose "Continue with Google":** this is optional. Google tells our sign-in provider (Supabase) your Google account ID, your email address, and, as Google shares them, your name and profile picture address. Supabase stores these with your login. We use your email address to identify your account. We do not show your Google name or photo anywhere in FlappyTone. We never receive your Google password. Google handles your sign-in under its own [privacy policy](https://policies.google.com/privacy).
-- **If you already played with a guest account** and then sign in with Google or an email code, your guest progress stays with that account. The guest account is upgraded, not copied.
 - **Display name** you choose (shown on the leaderboard if you join it).
 - **Gameplay aggregates** stored with your account — best score, run and gate totals, streaks (including the last day you played), the words you have played, and per-tone accuracy statistics.
 - **Your last 5 runs** (free accounts). To show the same recent runs and tone accuracy on every device, we store your 5 most recent runs: when each happened, the game mode, your score, how many gates you flew, how the run ended, and your tone accuracy for the run and per tone (or two-tone combination). Older runs are deleted automatically when a new one is stored. These are numbers derived on your device, **not audio**. They are deleted with your account.
@@ -31,7 +29,7 @@ FlappyTone listens to your voice through your device's microphone to drive the g
 
 **If you buy EarlyBird access:**
 - **Your average tone shape.** To show how your tones evolve over time, we store, per day and per tone (or two-tone combination), the running total of your pitch shapes and how many attempts it covers. A shape is 61 numbers describing how high or low your voice was across one attempt, measured on your device. It is **not audio** and cannot be turned back into your voice. We only compute and store this for EarlyBird accounts; guest and free accounts never send it. It is deleted with your account; to have it deleted on its own, email us.
-- **Your run history.** To show your history and your daily progress, we store one row per run you play after you get access: when it happened, the game mode, your score, how many gates you flew, how the run ended, and your tone accuracy for the run and per tone (or two-tone combination). These are numbers derived on your device, **not audio**. We keep every run for EarlyBird accounts (free accounts keep only their last 5, above; guests keep their last runs on their own device only). It is deleted with your account; to have it deleted on its own, email us.
+- **Your run history.** To show your history and your daily progress, we store one row per run you play after you get access: when it happened, the game mode, your score, how many gates you flew, how the run ended, and your tone accuracy for the run and per tone (or two-tone combination). These are numbers derived on your device, **not audio**. We keep every run for EarlyBird accounts (free accounts keep only their last 5, above). It is deleted with your account; to have it deleted on its own, email us.
 - Your purchase is handled by **Lemon Squeezy** as merchant of record. They collect the payment and billing details needed for the transaction and tax. **We do not receive or store your card number.** We receive confirmation that your account has access, and basic order information (such as your email and order reference).
 
 **When you use the site (analytics):**
@@ -73,7 +71,7 @@ We only send product-update emails if you **opted in** (an unchecked box you tic
 
 ## Data retention
 
-We keep account data for as long as your account exists. If you delete your account (or ask us to), we delete or anonymise your personal data within a reasonable period, except where we must keep certain records (for example, transaction records Lemon Squeezy holds for tax/legal reasons). Locally stored guest data lives only in your browser until you clear it.
+We keep account data for as long as your account exists. If you delete your account (or ask us to), we delete or anonymise your personal data within a reasonable period, except where we must keep certain records (for example, transaction records Lemon Squeezy holds for tax/legal reasons). Your browser also keeps your settings and a copy of your stats for each account you sign in with; they stay there until you clear your browser storage.
 
 ## Your rights
 

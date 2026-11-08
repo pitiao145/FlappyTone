@@ -4,6 +4,7 @@
  * and their preferred tone range.
  */
 
+import { accountStorage } from "../lib/accountStorage.ts";
 import {
   RANGE_DOWN_SEMITONES_MIN,
   RANGE_SEMITONES_MAX,
@@ -208,14 +209,14 @@ const DEFAULT_WIDTH: CorridorWidth = "wide";
 
 /** Load the player's chosen corridor width. Falls back to DEFAULT_WIDTH when unset or corrupt. */
 export function loadCorridorWidth(): CorridorWidth {
-  const raw = localStorage.getItem(WIDTH_KEY);
+  const raw = accountStorage.getItem(WIDTH_KEY);
   return raw !== null && (CORRIDOR_WIDTHS as string[]).includes(raw)
     ? (raw as CorridorWidth)
     : DEFAULT_WIDTH;
 }
 
 export function saveCorridorWidth(width: CorridorWidth): void {
-  localStorage.setItem(WIDTH_KEY, width);
+  accountStorage.setItem(WIDTH_KEY, width);
 }
 
 // -------------------------------------------------------- English translation
@@ -231,14 +232,14 @@ const TRANSLATION_KEY = "toneflap.translation.v1";
  * the point — reading the hanzi without a crutch.
  */
 export function loadShowTranslation(): boolean {
-  const raw = localStorage.getItem(TRANSLATION_KEY);
+  const raw = accountStorage.getItem(TRANSLATION_KEY);
   // Anything other than an explicit "off" is on, so a corrupt value fails to
   // the more useful state rather than silently hiding the translations.
   return raw !== "off";
 }
 
 export function saveShowTranslation(show: boolean): void {
-  localStorage.setItem(TRANSLATION_KEY, show ? "on" : "off");
+  accountStorage.setItem(TRANSLATION_KEY, show ? "on" : "off");
 }
 
 // --------------------------------------------------------------- pinyin
@@ -250,12 +251,12 @@ const PINYIN_KEY = "toneflap.pinyin.v1";
  * fail-open precedent as `loadShowTranslation`.
  */
 export function loadShowPinyin(): boolean {
-  const raw = localStorage.getItem(PINYIN_KEY);
+  const raw = accountStorage.getItem(PINYIN_KEY);
   return raw !== "off";
 }
 
 export function saveShowPinyin(show: boolean): void {
-  localStorage.setItem(PINYIN_KEY, show ? "on" : "off");
+  accountStorage.setItem(PINYIN_KEY, show ? "on" : "off");
 }
 
 // ----------------------------------------------------------- tone marks
@@ -268,12 +269,12 @@ const TONE_MARKS_KEY = "toneflap.tonemarks.v1";
  * `loadShowTranslation`.
  */
 export function loadShowToneMarks(): boolean {
-  const raw = localStorage.getItem(TONE_MARKS_KEY);
+  const raw = accountStorage.getItem(TONE_MARKS_KEY);
   return raw !== "off";
 }
 
 export function saveShowToneMarks(show: boolean): void {
-  localStorage.setItem(TONE_MARKS_KEY, show ? "on" : "off");
+  accountStorage.setItem(TONE_MARKS_KEY, show ? "on" : "off");
 }
 
 // ------------------------------------------------------------------ demo cue
@@ -287,14 +288,14 @@ const DEFAULT_CUE_STYLE: CueStyle = "pause";
  * player's attempt.
  */
 export function loadCueStyle(): CueStyle {
-  const raw = localStorage.getItem(CUE_STYLE_KEY);
+  const raw = accountStorage.getItem(CUE_STYLE_KEY);
   return raw !== null && (CUE_STYLES as string[]).includes(raw)
     ? (raw as CueStyle)
     : DEFAULT_CUE_STYLE;
 }
 
 export function saveCueStyle(style: CueStyle): void {
-  localStorage.setItem(CUE_STYLE_KEY, style);
+  accountStorage.setItem(CUE_STYLE_KEY, style);
 }
 
 // ------------------------------------------------------------- word mix
@@ -309,14 +310,14 @@ const DEFAULT_WORD_MIX: WordMix = "single";
  * `multiWords(words).length === 0` visibility gate.
  */
 export function loadWordMix(): WordMix {
-  const raw = localStorage.getItem(WORD_MIX_KEY);
+  const raw = accountStorage.getItem(WORD_MIX_KEY);
   return raw !== null && (WORD_MIXES as string[]).includes(raw)
     ? (raw as WordMix)
     : DEFAULT_WORD_MIX;
 }
 
 export function saveWordMix(mix: WordMix): void {
-  localStorage.setItem(WORD_MIX_KEY, mix);
+  accountStorage.setItem(WORD_MIX_KEY, mix);
 }
 
 // -------------------------------------------------------------- reduce motion
@@ -335,7 +336,7 @@ export function loadReduceMotion(): boolean | null {
   // environment has no localStorage — and "follow the OS" is the right answer
   // when we cannot tell.
   try {
-    const raw = localStorage.getItem(MOTION_KEY);
+    const raw = accountStorage.getItem(MOTION_KEY);
     if (raw === "on") return true;
     if (raw === "off") return false;
   } catch {
@@ -345,8 +346,8 @@ export function loadReduceMotion(): boolean | null {
 }
 
 export function saveReduceMotion(v: boolean | null): void {
-  if (v === null) localStorage.removeItem(MOTION_KEY);
-  else localStorage.setItem(MOTION_KEY, v ? "on" : "off");
+  if (v === null) accountStorage.removeItem(MOTION_KEY);
+  else accountStorage.setItem(MOTION_KEY, v ? "on" : "off");
 }
 
 // ------------------------------------------------------------ analytics
@@ -363,7 +364,7 @@ const NOTICE_KEY = "toneflap.analytics.notice.v1";
  */
 export function loadShareData(): boolean {
   try {
-    return localStorage.getItem(SHARE_DATA_KEY) !== "off";
+    return accountStorage.getItem(SHARE_DATA_KEY) !== "off";
   } catch {
     return true;
   }
@@ -371,7 +372,7 @@ export function loadShareData(): boolean {
 
 export function saveShareData(v: boolean): void {
   try {
-    localStorage.setItem(SHARE_DATA_KEY, v ? "on" : "off");
+    accountStorage.setItem(SHARE_DATA_KEY, v ? "on" : "off");
   } catch {
     // Blocked storage. The toggle still applies to this session.
   }
@@ -386,7 +387,7 @@ export function saveShareData(v: boolean): void {
  */
 export function loadNoticeSeen(): boolean {
   try {
-    return localStorage.getItem(NOTICE_KEY) === "seen";
+    return accountStorage.getItem(NOTICE_KEY) === "seen";
   } catch {
     // Unreadable storage means we cannot know it was shown. Showing a notice
     // twice is a small annoyance; never showing it is a broken disclosure.
@@ -396,7 +397,7 @@ export function loadNoticeSeen(): boolean {
 
 export function saveNoticeSeen(): void {
   try {
-    localStorage.setItem(NOTICE_KEY, "seen");
+    accountStorage.setItem(NOTICE_KEY, "seen");
   } catch {
     // ignore
   }
@@ -413,7 +414,7 @@ const DEFAULT_PROFICIENCY: Proficiency = "beginner";
  * play on the pre-game screen). Defaults to Beginner for a new player.
  */
 export function loadProficiency(): Proficiency {
-  const raw = localStorage.getItem(PROFICIENCY_KEY);
+  const raw = accountStorage.getItem(PROFICIENCY_KEY);
   return raw === "beginner" || raw === "intermediate" ? raw : DEFAULT_PROFICIENCY;
 }
 
@@ -440,7 +441,7 @@ export function loadProficiency(): Proficiency {
  * grew to include.
  */
 export function saveProficiency(p: Proficiency): void {
-  localStorage.setItem(PROFICIENCY_KEY, p);
+  accountStorage.setItem(PROFICIENCY_KEY, p);
   saveWordMix(p === "beginner" ? "single" : "all");
 }
 
@@ -466,7 +467,7 @@ function isLevelChoice(v: unknown): v is LevelChoice {
 
 export function loadLastLevel(proficiency: Proficiency): LevelChoice | null {
   try {
-    const raw = localStorage.getItem(LAST_LEVEL_KEY);
+    const raw = accountStorage.getItem(LAST_LEVEL_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as LastLevelState;
     const v = s[proficiency];
@@ -479,13 +480,13 @@ export function loadLastLevel(proficiency: Proficiency): LevelChoice | null {
 export function saveLastLevel(proficiency: Proficiency, level: LevelChoice): void {
   let state: LastLevelState = {};
   try {
-    const raw = localStorage.getItem(LAST_LEVEL_KEY);
+    const raw = accountStorage.getItem(LAST_LEVEL_KEY);
     if (raw) state = JSON.parse(raw) as LastLevelState;
   } catch {
     state = {};
   }
   state[proficiency] = level;
-  localStorage.setItem(LAST_LEVEL_KEY, JSON.stringify(state));
+  accountStorage.setItem(LAST_LEVEL_KEY, JSON.stringify(state));
 }
 
 // -------------------------------------------------------- speech style
@@ -499,7 +500,7 @@ const SPEECH_STYLE_KEY = "toneflap.speechstyle.v1";
  */
 export function loadSpeechStyle(): SpeechStyle {
   try {
-    const raw = localStorage.getItem(SPEECH_STYLE_KEY);
+    const raw = accountStorage.getItem(SPEECH_STYLE_KEY);
     return raw === "natural" ? "natural" : "textbook";
   } catch {
     return "textbook";
@@ -507,7 +508,7 @@ export function loadSpeechStyle(): SpeechStyle {
 }
 
 export function saveSpeechStyle(style: SpeechStyle): void {
-  localStorage.setItem(SPEECH_STYLE_KEY, style);
+  accountStorage.setItem(SPEECH_STYLE_KEY, style);
 }
 
 /**
@@ -532,7 +533,7 @@ const THEME_KEY = "toneflap.theme.v1";
 export function loadTheme(): ThemeId {
   // Guarded: the renderer reads this where tests have no localStorage.
   try {
-    const raw = localStorage.getItem(THEME_KEY);
+    const raw = accountStorage.getItem(THEME_KEY);
     return isThemeId(raw) ? raw : DEFAULT_THEME;
   } catch {
     return DEFAULT_THEME;
@@ -540,5 +541,5 @@ export function loadTheme(): ThemeId {
 }
 
 export function saveTheme(id: ThemeId): void {
-  localStorage.setItem(THEME_KEY, id);
+  accountStorage.setItem(THEME_KEY, id);
 }

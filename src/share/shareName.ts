@@ -6,6 +6,8 @@
  * (src/analytics/session.ts promises nothing the player typed is sent).
  */
 
+import { accountStorage } from "../lib/accountStorage.ts";
+
 export const SHARE_NAME_MAX = 20;
 
 const NAME_KEY = "toneflap.shareName.v1";
@@ -34,7 +36,7 @@ export function parseChallengeName(search: string): string | null {
 /** The last name this player shared under, so a second share is one tap. Never throws. */
 export function loadShareName(): string {
   try {
-    return cleanShareName(localStorage.getItem(NAME_KEY) ?? "");
+    return cleanShareName(accountStorage.getItem(NAME_KEY) ?? "");
   } catch {
     return "";
   }
@@ -42,8 +44,8 @@ export function loadShareName(): string {
 
 export function saveShareName(name: string): void {
   try {
-    if (name === "") localStorage.removeItem(NAME_KEY);
-    else localStorage.setItem(NAME_KEY, name);
+    if (name === "") accountStorage.removeItem(NAME_KEY);
+    else accountStorage.setItem(NAME_KEY, name);
   } catch {
     /* private window / blocked storage — the name just isn't remembered */
   }

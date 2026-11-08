@@ -18,8 +18,6 @@ import {
   submitScore,
   type Board,
 } from "../data/leaderboard.ts";
-import { setPendingJoin } from "../data/joinIntent.ts";
-import { currentAccountId } from "../data/accountScope.ts";
 import { JoinBoardModal } from "./JoinBoardModal.tsx";
 import { HighScoreModal } from "./HighScoreModal.tsx";
 import { Leaderboard } from "./Leaderboard.tsx";
@@ -62,8 +60,6 @@ interface Props {
   challengeScore: number | null;
   /** Who set `challengeScore`, from the link's `?n=` — null for an older or nameless link. */
   challengeName?: string | null;
-  /** Opens the account/upgrade path — a guest gets this instead of joining the board. */
-  onUpgrade: () => void;
   /** Navigates to the full (week/month/all-time) leaderboard on the Progress screen. */
   onViewFullLeaderboard: () => void;
 }
@@ -81,19 +77,10 @@ export function GameOver({
   mode,
   challengeScore,
   challengeName,
-  onUpgrade,
   onViewFullLeaderboard,
 }: Props) {
   const breakdown = toneBreakdown(stats);
   const tier = useTier();
-  /**
-   * A guest (signed-out or anonymous) can see the board and their own
-   * would-be rank, but cannot join it — no row, no submission. Only a
-   * permanent account (free or Pro) can. This is a hard product rule, not a
-   * teaser: it also blocks a legacy anonymous row (one joined before this
-   * rule existed) from silently continuing to submit.
-   */
-  const canJoin = tier !== "guest";
   const [dismissed, setDismissed] = useState(false);
   const [applied, setApplied] = useState(false);
   // Read once on mount. GameApp's onRunOver has already called recordRun()
@@ -195,7 +182,7 @@ export function GameOver({
    * The celebration modal folds the join offer into itself, so a new best
    * shows ONE modal, not two: this replaces the old "open JoinBoardModal
    * directly on a new best" path. Tapping its join CTA closes this and opens
-   * JoinBoardModal, reusing the existing acceptJoin/acceptUpgrade flow.
+   * JoinBoardModal, reusing the existing acceptJoin flow.
    */
   const [celebrateOpen, setCelebrateOpen] = useState(isNewBest && boardEligible);
 
@@ -210,24 +197,18 @@ export function GameOver({
       // error on the end screen of a run the player just finished. The
       // leaderboard is never worth that.
       try {
-        if (canJoin) {
-          const alreadyJoined = await hasJoined();
+        // `/app` always has an account (brief 24), so every player may join.
+        const alreadyJoined = await hasJoined();
+        if (!live) return;
+        setJoined(alreadyJoined);
+        if (alreadyJoined) {
+          const result = await submitScore(stats.score);
           if (!live) return;
-          setJoined(alreadyJoined);
-          if (alreadyJoined) {
-            const result = await submitScore(stats.score);
-            if (!live) return;
-            track({ type: "score_submitted", score: stats.score, is_best: isNewBest, ok: result.ok });
-            if (!result.ok) setBoardError(result.reason);
-          } else if (isNewBest) {
-            // The celebration modal (celebrateOpen, opened on mount) carries
-            // this offer now — no separate JoinBoardModal pops up alongside it.
-            track({ type: "join_board_shown", score: stats.score });
-          }
+          track({ type: "score_submitted", score: stats.score, is_best: isNewBest, ok: result.ok });
+          if (!result.ok) setBoardError(result.reason);
         } else if (isNewBest) {
-          // Guest: nothing to submit, but the personal-best moment is still
-          // when the "you'd rank #N" teaser (and the upgrade nudge) means
-          // the most. Folded into the celebration modal, same as above.
+          // The celebration modal (celebrateOpen, opened on mount) carries
+          // this offer now — no separate JoinBoardModal pops up alongside it.
           track({ type: "join_board_shown", score: stats.score });
         }
         // Fetched last so a joined player's freshly-submitted score is
@@ -248,7 +229,7 @@ export function GameOver({
     return () => {
       live = false;
     };
-  }, [boardEligible, canJoin, stats.score, isNewBest]);
+  }, [boardEligible, stats.score, isNewBest]);
 
   /** "Posting N would land you around #R of M" — omitted entirely without a board. */
   const projected = useMemo(() => {
@@ -271,24 +252,7 @@ export function GameOver({
     return gap > 0 ? gap : null;
   }, [board, userId]);
 
-  /**
-   * A guest tapping the modal's CTA: no join, just the upgrade path. The
-   * score is stashed so GameApp can post it automatically once the account
-   * exists — otherwise the whole reason they tapped through gets lost in
-   * the signup detour.
-   */
-  const acceptUpgrade = () => {
-    setPendingJoin(stats.score, currentAccountId());
-    track({ type: "join_board_submitted", accepted: true, joined: false, ok: false });
-    setJoinOffer(false);
-    onUpgrade();
-  };
-
   const acceptJoin = async () => {
-    if (!canJoin) {
-      acceptUpgrade();
-      return;
-    }
     setJoining(true);
     // Same belt as the effect above: whatever happens, the modal closes and
     // the end screen stays intact.
@@ -546,23 +510,19 @@ export function GameOver({
           {boardEligible && !joined && isNewBest && (
             <section className="go-card go-board-cta">
               <h3 className="go-board-cta-title">
-                {canJoin ? "🏆 Post your score" : "🏆 See where you'd rank"}
+                🏆 Post your score
               </h3>
               <p className="go-board-cta-body">
                 {projected
-                  ? canJoin
-                    ? `${stats.score.toLocaleString()} would put you at #${projected.rank} this week.`
-                    : `${stats.score.toLocaleString()} would put you at #${projected.rank} this week — create a free account to claim it.`
-                  : canJoin
-                    ? "Share your best score on this week's public board."
-                    : "Create a free account to add your score to this week's public board."}
+                  ? `${stats.score.toLocaleString()} would put you at #${projected.rank} this week.`
+                  : "Share your best score on this week's public board."}
               </p>
               <button
                 type="button"
                 className="go-btn-gold"
                 onClick={() => setJoinOffer(true)}
               >
-                {canJoin ? "Add to leaderboard" : "Create free account"}
+                Add to leaderboard
               </button>
             </section>
           )}
@@ -676,7 +636,6 @@ export function GameOver({
           name={boardName}
           busy={joining}
           projected={projected}
-          canJoin={canJoin}
           onJoin={() => void acceptJoin()}
           onDismiss={declineJoin}
         />
@@ -687,7 +646,6 @@ export function GameOver({
           score={stats.score}
           rank={projected?.rank ?? board?.myRank ?? null}
           total={projected?.total ?? board?.total ?? null}
-          canJoin={canJoin}
           joined={joined}
           shareBusy={shareBusy}
           onClose={() => setCelebrateOpen(false)}

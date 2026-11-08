@@ -7,32 +7,20 @@
  * only deters a casual devtools edit), and that is fine. The limit itself is
  * `TIER_LIMITS[getTier()].runsPerDay`.
  *
- * Per account, not per device (brief 34). Both numbers are saved under the
- * account's user id, so a second account on a used browser starts at 0, and
- * switching back and forth never resets a count. Format: one key per number,
- * each a map `{ [userId]: { date, count } }` (the local one also has `chk`).
- * Each save keeps only today's entries, so the map never grows past the
- * accounts that played today. The pre-brief-34 keys had no owner: they are
- * dropped (`accountScope.ts`), and the server count comes back on the next
- * refresh.
- *
- * The account is `currentAccountId()`: the one AuthGate noted on this page,
- * or else the one this browser held last. With no account at all (no
- * session read yet on a fresh browser) the count lives in a slot of its own
- * that no account ever reads, and no server count applies — the same safe
- * behaviour as before: local count only, a run is never blocked by an
- * unknown number.
+ * Per account, like everything the game saves (brief 34): both numbers go
+ * through `accountStorage`, so a second account on a used browser starts at
+ * 0, and switching back and forth never resets a count. The pre-brief-34
+ * keys had no owner and are dropped (`accountScope.ts`); the server count
+ * comes back on the next refresh.
  */
 import { getSupabase } from "../data/supabase.ts";
 import { getTier, tierReady } from "../data/tier.ts";
 import { bumpSessionVersion } from "../data/sessionVersion.ts";
-import { currentAccountId } from "../data/accountScope.ts";
+import { accountKey, accountStorage, currentAccountId } from "../lib/accountStorage.ts";
 import { tierLimits } from "./tiers.ts";
 
 const KEY = "toneflap.daily.v2";
 const SERVER_COUNT_KEY = "toneflap.daily.server.v2";
-/** The slot used while no account is known. Never a Supabase user id. */
-const NO_ACCOUNT = "-";
 
 interface DailyState {
   date: string; // YYYY-MM-DD, local
@@ -44,10 +32,11 @@ function today(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Small non-cryptographic checksum — deters casual edits, nothing more. */
-function checksum(owner: string, date: string, count: number): string {
+/** Small non-cryptographic checksum — deters casual edits (and copying one
+ * account's entry to another), nothing more. */
+function checksum(date: string, count: number): string {
   let h = 0;
-  const s = `${owner}:${date}:${count}:ft-daily`;
+  const s = `${currentAccountId() ?? ""}:${date}:${count}:ft-daily`;
   for (let i = 0; i < s.length; i++) {
     h = (h * 31 + s.charCodeAt(i)) | 0;
   }
@@ -58,69 +47,56 @@ function fresh(): DailyState {
   return { date: today(), count: 0 };
 }
 
-function owner(): string {
-  return currentAccountId() ?? NO_ACCOUNT;
-}
-
-/** The whole per-account map under `key`; `{}` on anything unreadable. */
-function loadMap(key: string): Record<string, unknown> {
+function load(): DailyState {
   try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return {};
-    const parsed: unknown = JSON.parse(raw);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : {};
+    const raw = accountStorage.getItem(KEY);
+    if (!raw) return fresh();
+    const parsed = JSON.parse(raw) as { date?: unknown; count?: unknown; chk?: unknown };
+    if (
+      typeof parsed.date !== "string" ||
+      typeof parsed.count !== "number" ||
+      typeof parsed.chk !== "string" ||
+      parsed.chk !== checksum(parsed.date, parsed.count)
+    ) {
+      return fresh();
+    }
+    if (parsed.date !== today()) return fresh();
+    return { date: parsed.date, count: parsed.count };
   } catch {
-    return {};
+    return fresh();
   }
 }
 
-/** Writes `entry` for `who`, keeping only the other accounts' entries for today. */
-function saveEntry(key: string, who: string, entry: Record<string, unknown>): void {
+function save(state: DailyState): void {
   try {
-    const day = today();
-    const map: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(loadMap(key))) {
-      if (k !== who && (v as { date?: unknown } | null)?.date === day) map[k] = v;
-    }
-    map[who] = entry;
-    localStorage.setItem(key, JSON.stringify(map));
+    accountStorage.setItem(KEY, JSON.stringify({ ...state, chk: checksum(state.date, state.count) }));
   } catch {
     // ignore
   }
 }
 
-function load(who: string): DailyState {
-  const parsed = loadMap(KEY)[who] as { date?: unknown; count?: unknown; chk?: unknown } | undefined;
-  if (
-    !parsed ||
-    typeof parsed.date !== "string" ||
-    typeof parsed.count !== "number" ||
-    typeof parsed.chk !== "string" ||
-    parsed.chk !== checksum(who, parsed.date, parsed.count) ||
-    parsed.date !== today()
-  ) {
-    return fresh();
+/** Cached last-known server count for the current account. Read back so a
+ * page reload still shows a number without waiting on a network call. */
+function loadServerCount(): number | null {
+  try {
+    const raw = accountStorage.getItem(SERVER_COUNT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { date?: unknown; count?: unknown };
+    if (typeof parsed.date !== "string" || typeof parsed.count !== "number") return null;
+    if (parsed.date !== today()) return null;
+    return parsed.count;
+  } catch {
+    return null;
   }
-  return { date: parsed.date, count: parsed.count };
 }
 
-function save(who: string, state: DailyState): void {
-  saveEntry(KEY, who, { ...state, chk: checksum(who, state.date, state.count) });
-}
-
-/** Cached last-known server count for one account. Read back so a page
- * reload still shows a number without waiting on a network call. */
-function loadServerCount(userId: string): number | null {
-  const parsed = loadMap(SERVER_COUNT_KEY)[userId] as { date?: unknown; count?: unknown } | undefined;
-  if (!parsed || typeof parsed.date !== "string" || typeof parsed.count !== "number") return null;
-  if (parsed.date !== today()) return null;
-  return parsed.count;
-}
-
+/** Saves a server count under the account the server counted (`userId`). */
 function saveServerCount(userId: string, count: number): void {
-  saveEntry(SERVER_COUNT_KEY, userId, { date: today(), count });
+  try {
+    localStorage.setItem(accountKey(SERVER_COUNT_KEY, userId), JSON.stringify({ date: today(), count }));
+  } catch {
+    // ignore
+  }
 }
 
 export interface DailyRuns {
@@ -135,11 +111,8 @@ function currentLimit(): number {
 }
 
 export function loadDailyRuns(): DailyRuns {
-  const who = owner();
-  const local = load(who).count;
-  // A server count is saved only under a real user id, so it can only ever
-  // be this account's own.
-  const server = who !== NO_ACCOUNT ? loadServerCount(who) : null;
+  const local = load().count;
+  const server = loadServerCount();
   // The larger of the two: an offline session that only updated local
   // should not show a number that goes backwards once the server is known.
   const count = server != null ? Math.max(local, server) : local;
@@ -158,10 +131,9 @@ export function loadDailyRuns(): DailyRuns {
  * the player wrong" spirit applies here too).
  */
 export function incrementDailyRuns(): DailyRuns {
-  const who = owner();
-  const state = load(who);
+  const state = load();
   const next = { date: state.date, count: state.count + 1 };
-  save(who, next);
+  save(next);
   const limit = currentLimit();
 
   if (getTier() !== "guest") {
@@ -219,7 +191,7 @@ export async function refreshServerDailyRuns(): Promise<void> {
     // No row: this account has not played today. Save 0 for it (brief 34) —
     // returning early here once kept another account's number on screen.
     const count = row?.count ?? 0;
-    if (loadServerCount(userId) === count) return;
+    if (currentAccountId() === userId && loadServerCount() === count) return;
     saveServerCount(userId, count);
     // Profile reads the count once per session version: tell it to re-read.
     bumpSessionVersion();

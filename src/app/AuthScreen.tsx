@@ -13,15 +13,12 @@ import { useEffect, useId, useState } from "react";
 import { track } from "../analytics/client";
 import type { AuthMethod, AuthScreenStep } from "../analytics/session.ts";
 import {
-  getAccount,
   requestPasswordReset,
   signInWithPassword,
   signUpWithPassword,
   startEmailCode,
-  startExistingAccountCode,
   startGoogleSignIn,
   verifyEmailCode,
-  type EmailCodeType,
 } from "../data/account.ts";
 import {
   authMode,
@@ -84,9 +81,6 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
   const [codeFrom, setCodeFrom] = useState<AuthCard>("signup");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
-  const [otpType, setOtpType] = useState<EmailCodeType>("email");
-  /** The code went to an address that already had an account (anonymous guest path). */
-  const [existing, setExisting] = useState(false);
   const [sentAt, setSentAt] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const [password, setPassword] = useState("");
@@ -118,16 +112,11 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     track({ type: "auth_screen_viewed", screen, source });
   }, [view, source]);
 
-  // A Google link that hit an account which already exists: say so plainly
-  // and let the player choose to sign in to it (never silently).
+  // A Google round trip that came back with an error: say what happened
+  // (a player who cancelled at Google needs no message).
   useEffect(() => {
     if (!oauthError) return;
-    if (oauthError.code === "identity_already_exists") {
-      setError({
-        text: "This Google account already has a FlappyTone account.",
-        action: { label: "Sign in to that account", run: () => void google(true) },
-      });
-    } else if (oauthError.code !== "access_denied") {
+    if (oauthError.code !== "access_denied") {
       setError({ text: friendlyAuthError(oauthError.description || oauthError.code, oauthError.code).text });
     }
     // Once, for the error the page arrived with.
@@ -171,17 +160,16 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     }, 300);
   }
 
-  async function google(toExisting = false) {
+  async function google() {
     if (busy) return;
     setBusy(true);
     setError(null);
     track({ type: "signup_started", mode: view === "login" ? "login" : "signup", method: "google" });
-    const wasAnonymous = !toExisting && (await getAccount()).status === "anonymous";
     // The redirect comes back to bare /app: park the challenge params, and
     // remember how this started for the completion event.
     parkReturn(window.location.search, storage());
-    markAuthPending({ method: "google", consent, wasAnonymous }, storage());
-    const result = await startGoogleSignIn({ existing: toExisting });
+    markAuthPending({ method: "google", consent }, storage());
+    const result = await startGoogleSignIn();
     if (!result.ok) {
       consumeAuthPending(storage());
       setBusy(false);
@@ -190,40 +178,28 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     // On success the browser is already leaving for Google.
   }
 
-  async function sendCode(opts: { resend?: boolean; toExisting?: boolean } = {}) {
+  async function sendCode(opts: { resend?: boolean } = {}) {
     if (busy) return;
     if (!email.trim()) {
       setError({ text: "Enter your email first." });
       return;
     }
-    const toExisting = opts.toExisting ?? (opts.resend ? existing : false);
     setBusy(true);
     setError(null);
     const card: AuthCard = view === "login" ? "login" : view === "code" ? codeFrom : "signup";
     if (!opts.resend) track({ type: "signup_started", mode: card, method: "otp" });
-    const wasAnonymous = !toExisting && (await getAccount()).status === "anonymous";
     // The same email carries a magic link back to bare /app.
     parkReturn(window.location.search, storage());
-    markAuthPending({ method: "magic_link", consent, wasAnonymous }, storage());
-    const result = toExisting ? await startExistingAccountCode(email) : await startEmailCode(email);
+    markAuthPending({ method: "magic_link", consent }, storage());
+    const result = await startEmailCode(email);
     setBusy(false);
     if (!result.ok) {
       consumeAuthPending(storage());
-      if (result.code === "email_exists") {
-        // An anonymous guest typed an address that already has an account.
-        setError({
-          text: "This email already has an account.",
-          action: { label: "Send a code to sign in to it", run: () => void sendCode({ toExisting: true }) },
-        });
-        return;
-      }
       track({ type: "auth_code_failed", reason: codeFailReason(result.code, result.reason, Date.now()), stage: "send" });
       setError({ text: friendlyAuthError(result.reason, result.code).text });
       return;
     }
     track({ type: "auth_code_sent", resend: !!opts.resend });
-    setOtpType(result.otpType);
-    setExisting(toExisting);
     const t = Date.now();
     setSentAt(t);
     setNow(t);
@@ -240,7 +216,7 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     setBusy(true);
     setError(null);
     setOwnSubmit(true);
-    const result = await verifyEmailCode(email, code, otpType, consent);
+    const result = await verifyEmailCode(email, code, consent);
     if (!result.ok) {
       setOwnSubmit(false);
       setBusy(false);
@@ -250,7 +226,7 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
       setError({ text: friendlyAuthError(result.reason, result.code).text });
       return;
     }
-    const mode = otpType === "email_change" ? "signup" : authMode(result.createdAt, sentAt, false);
+    const mode = authMode(result.createdAt, sentAt);
     finish(mode, "otp");
   }
 

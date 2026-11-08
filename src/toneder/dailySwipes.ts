@@ -1,12 +1,13 @@
 /**
- * The app's TONEder daily swipe cap: how many answers this device has given
- * today, per local day. The limit itself is `tierLimits()[tier].tonederSwipesPerDay`.
+ * The app's TONEder daily swipe cap: how many answers this account has given
+ * today on this browser, per local day (saved per account, `accountStorage`). The limit itself is `tierLimits()[tier].tonederSwipesPerDay`.
  *
  * Device-local and not tamper-proof, by decision (brief 20): a guest who
  * clears storage gets a fresh count. Never throws (hard rule 10): blocked
  * storage reads as 0 used.
  */
 import { tierLimits, type Tier } from "../game/tiers.ts";
+import { accountStorage } from "../lib/accountStorage.ts";
 
 const KEY = "flappytone.toneder.swipes.v1";
 
@@ -19,7 +20,9 @@ type Store = Pick<Storage, "getItem" | "setItem">;
 
 function store(): Store | null {
   try {
-    return localStorage;
+    // Throws here, not later, when storage is blocked.
+    void localStorage;
+    return accountStorage;
   } catch {
     return null;
   }

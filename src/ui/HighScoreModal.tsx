@@ -11,7 +11,6 @@ interface Props {
   onViewLeaderboard: () => void;
   onShare: () => void;
   shareBusy: boolean;
-  canJoin: boolean;
   joined: boolean;
   onJoin: () => void;
 }
@@ -24,7 +23,6 @@ export function HighScoreModal({
   onViewLeaderboard,
   onShare,
   shareBusy,
-  canJoin,
   joined,
   onJoin,
 }: Props) {
@@ -63,7 +61,7 @@ export function HighScoreModal({
 
         {!joined && (
           <button type="button" className="go-btn-gold hsm-join-btn" onClick={onJoin}>
-            {canJoin ? "Add to leaderboard" : "Create free account"}
+            Add to leaderboard
           </button>
         )}
 

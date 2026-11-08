@@ -20,16 +20,21 @@ correct for both (`docs/reports/account-switch-case-2026-11-08.md`).
 
 Decided (Pierre):
 
-- **Browser-side account values are per account.** Name, local and saved
-  server daily counts, run-history and streak cache, pending intents: each
-  carries its owner (`src/data/accountScope.ts`). A new account starts with
-  fresh runs and its own new name; A → B → A shows A's values again, and
-  switching never resets a count. The rejected alternative, one daily counter
-  per device, was a rule left over from guests (a guest at 3/3 who signed up
-  stayed at 3/10); `/app` has no guests since brief 24.
-- **Device settings stay per device.** Calibration, theme, pinyin, speech
-  style, tunnel width and the other `toneflap.settings*` keys follow the
-  device, not the account.
+- **Everything the game saves in the browser is per account; only the mic
+  calibration stays per device.** One mechanism (`src/lib/accountStorage.ts`,
+  keys `<key>@<userId>`) for name, daily counts, stats cache, every setting,
+  TONEder swipes and the rest. A new account starts with fresh runs and its
+  own new name; A → B → A shows A's values again, and switching never resets
+  a count. The first version of this brief kept device settings per device
+  and tagged each account value with an owner; Pierre overturned that the
+  same day ("anything per account, otherwise it's too complicated"). The
+  calibration stays with the browser because it measures the mic and room,
+  and recalibrating per account would be annoying. The rejected alternative,
+  one daily counter per device, was a rule left over from guests.
+- **Guest code in `/app` is removed.** No anonymous in-place upgrade, no
+  guest-progress adoption, no "create an account first" detours or pending
+  intents: `/app` has had no guests since brief 24. The `guest` tier stays
+  for site pages and the guest clip ticket.
 - **The run cap stays soft.** `api/run.ts` counts and never refuses; the
   client decides. A player who clears storage or opens a private window gets
   the server count back on the next refresh. A hard server cap was considered

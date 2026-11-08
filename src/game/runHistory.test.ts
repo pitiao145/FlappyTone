@@ -3,7 +3,6 @@ import {
   cacheFromServer,
   comboAccuracyFromHistory,
   entriesFromRows,
-  hasGuestProgress,
   lifetimeComboAccuracy,
   lifetimeTargetStats,
   lifetimeToneAccuracy,
@@ -206,19 +205,12 @@ describe("cacheFromServer (brief 05: the account's server state replaces the cac
     expect(store.lifetimePerCombo["3-2"].attempts).toBe(4);
     expect(store.lastRuns).toHaveLength(1);
     expect(store.lastRuns[0].perTone[2]).toEqual({ gates: 2, accSum: 1.6, unheard: 0 });
-    expect(hasGuestProgress(store)).toBe(false);
   });
 
-  it("recordRun keeps the owner, so an optimistic local run never turns the cache into guest data", () => {
+  it("recordRun keeps the owner on an optimistic local run", () => {
     cacheFromServer(server, "u1");
     const store = recordRun(fakeSnapshot(1, [], (s) => s), "finished");
     expect(store.owner).toBe("u1");
-    expect(hasGuestProgress(store)).toBe(false);
-  });
-
-  it("a guest store with runs is guest progress", () => {
-    const store = recordRun(fakeSnapshot(1, [], (s) => s), "quit");
-    expect(hasGuestProgress(store)).toBe(true);
   });
 
   it("entriesFromRows splits per_key into tones and combos", () => {

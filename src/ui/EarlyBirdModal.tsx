@@ -2,10 +2,7 @@ import { useEffect, useId, useState } from "react";
 import { track } from "../analytics/client.ts";
 import { getAccount } from "../data/account.ts";
 import { buildCheckoutUrl, redirectToCheckoutForCurrentAccount } from "../data/checkout.ts";
-import { setPendingCheckout } from "../data/checkoutIntent.ts";
-import { currentAccountId } from "../data/accountScope.ts";
 import { useTier } from "../data/tier.ts";
-import { tierLimits } from "../game/tiers.ts";
 import { brand } from "../brand.ts";
 import { PRO_HIGHLIGHTS, PRO_PRICE } from "./plan.ts";
 
@@ -16,26 +13,10 @@ interface Props {
   /** Which specific CTA opened the modal — tags the `earlybird_pay_click` event, not shown in copy. */
   feature: string;
   onClose: () => void;
-  /**
-   * Routes to the account UI (`AccountCard.tsx`, on the Profile screen) — the
-   * "create a free account" door. Only shown to a guest, and only when the
-   * caller wires this in; omit it to keep the door hidden (e.g. a spot that
-   * can't navigate to Profile). `GameApp.tsx` should pass something that
-   * switches to the Profile tab and closes this modal. Passing `"checkout"`
-   * (the guest Pay button below) tells the caller to open the dedicated
-   * checkout-signup screen instead, so the account form isn't buried under
-   * the Profile tab's other cards on the way to paying.
-   */
-  onCreateAccount?: (intent?: "checkout") => void;
 }
 
-/**
- * Copy that actually differs by surface, and by whether the player is a
- * guest (no account) or already free (account, no Pro). A guest's copy names
- * the free account as the immediate next step; a free player's copy is
- * Pro-only, since they already took that step.
- */
-const COPY: Record<EarlyBirdSurface, { title: string; body: string; guestBody?: string }> = {
+/** Copy that differs by surface. Every player here has an account, so it is Pro-only. */
+const COPY: Record<EarlyBirdSurface, { title: string; body: string }> = {
   progress: {
     title: "See every run, not just the last five",
     body: "Pro keeps your full history and trends, so you can watch each tone improve.",
@@ -47,7 +28,6 @@ const COPY: Record<EarlyBirdSurface, { title: string; body: string; guestBody?: 
   "daily-limit": {
     title: "You've flown all your free runs today",
     body: "Come back tomorrow, or go Pro and keep flying right now.",
-    guestBody: `Come back tomorrow, or create a free account for ${tierLimits().free.runsPerDay} runs a day instead of ${tierLimits().guest.runsPerDay}.`,
   },
   leaderboard: {
     title: "Fly under your own name",
@@ -66,20 +46,15 @@ const COPY: Record<EarlyBirdSurface, { title: string; body: string; guestBody?: 
 /**
  * The EarlyBird signup modal — every locked "Soon" section across Progress
  * and Profile opens this same component, and so does hitting the daily
- * runs cap (`dailyLimitReached` in GameApp.tsx). A guest also sees a second
- * door here: creating a free account, a smaller step than paying. Pay is a
- * live Lemon Squeezy checkout for a signed-in free account; a guest's Pay
- * routes through the create-account-first screen and on to checkout. Its
+ * runs cap (`dailyLimitReached` in GameApp.tsx). Pay is a live Lemon
+ * Squeezy checkout for the signed-in account (`/app` has no guests). Its
  * offer (launch tag, price, value line, highlights) is the landing page's Pro
  * card word for word (`brand.pricing.pro`, `PRO_HIGHLIGHTS`).
  */
-export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: Props) {
+export function EarlyBirdModal({ surface, feature, onClose }: Props) {
   const inputId = useId();
   const tier = useTier();
-  const isGuest = tier === "guest";
   const copy = COPY[surface];
-  const body = (isGuest && copy.guestBody) || copy.body;
-  const showAccountDoor = isGuest && !!onCreateAccount;
 
   // The store doesn't exist yet, so an unset checkout URL keeps today's
   // behaviour exactly: the "disabled-look" button opens the email-capture
@@ -101,8 +76,8 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
   // a permanent account (sign-in is required before paying — a purchase with
   // no user_id has nothing to attach to), and that account id has loaded.
   // `free` is "permanent account, not Pro yet" — the state this button
-  // exists for; a guest gets the account door instead, and a `pro` player
-  // has no reason to see Pay at all.
+  // exists for; a `pro` player has no reason to see Pay at all. Before the
+  // tier has loaded, the button below checks out the account directly.
   const checkoutUrl =
     checkoutBase && tier === "free" && account?.userId
       ? buildCheckoutUrl(checkoutBase, account.userId, account.email)
@@ -146,25 +121,7 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
 
           <span className="upsell-launch">{brand.pricing.pro.launch}</span>
           <h2 id={`${inputId}-title`}>{copy.title}</h2>
-          <p className="modal-body">{body}</p>
-
-          {showAccountDoor && (
-            <>
-              <button
-                type="button"
-                className="primary modal-create-account"
-                onClick={() => {
-                  track({ type: "earlybird_create_account_click", surface, feature });
-                  onCreateAccount?.();
-                }}
-              >
-                Create a free account
-              </button>
-              <div className="modal-divider">
-                <span>or go further</span>
-              </div>
-            </>
-          )}
+          <p className="modal-body">{copy.body}</p>
 
           <div className="upsell-offer">
             <p className="upsell-price">
@@ -205,13 +162,9 @@ export function EarlyBirdModal({ surface, feature, onClose, onCreateAccount }: P
               onClick={() => {
                 void (async () => {
                   track({ type: "earlybird_pay_click", surface, feature });
-                  // A signed-in player whose account id hadn't loaded when the
-                  // page rendered can still go straight to checkout. A guest
-                  // (or anyone we can't check out) detours through account
-                  // creation, which picks the intent back up post-signup.
-                  if (!isGuest && (await redirectToCheckoutForCurrentAccount())) return;
-                  setPendingCheckout(currentAccountId());
-                  onCreateAccount?.("checkout");
+                  // The account id (or the tier) hadn't loaded when the modal
+                  // rendered: go straight to checkout for the signed-in account.
+                  await redirectToCheckoutForCurrentAccount();
                 })();
               }}
             >

@@ -1,6 +1,7 @@
 /**
- * Brief 34: a new account on a used browser starts fresh. One browser, two
- * accounts (A, B), switched with and without a sign-out.
+ * Brief 34: everything the game saves in the browser is per account, except
+ * the mic calibration. One browser, two accounts (A, B), switched with and
+ * without a sign-out.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,7 +10,6 @@ const session = vi.hoisted(() => ({ userId: "A" as string | null, serverRow: nul
 vi.mock("./supabase.ts", () => ({
   warn: vi.fn(),
   currentSession: vi.fn(async () => (session.userId ? { user: { id: session.userId } } : null)),
-  ensureAnonSession: vi.fn(),
   getSupabase: () => ({
     auth: {
       getSession: async () => ({
@@ -28,13 +28,22 @@ vi.mock("./supabase.ts", () => ({
 }));
 vi.mock("./tier.ts", () => ({ getTier: () => "free", tierReady: async () => {} }));
 
-import { currentAccountId, noteAccount, resetAccountScopeForTests } from "./accountScope.ts";
-import { consumePendingCheckout, setPendingCheckout } from "./checkoutIntent.ts";
-import { consumePendingJoin, setPendingJoin } from "./joinIntent.ts";
+import { currentAccountId, noteAccount } from "./accountScope.ts";
+import { resetAccountStorageForTests } from "../lib/accountStorage.ts";
 import { displayName, setLocalDisplayName } from "./leaderboard.ts";
 import { incrementDailyRuns, loadDailyRuns, refreshServerDailyRuns } from "../game/dailyLimit.ts";
 import { cacheFromServer, loadRunHistory } from "../game/runHistory.ts";
 import { cacheStreakFromServer, loadStreakState } from "../game/streak.ts";
+import {
+  loadShowPinyin,
+  loadSettings,
+  loadTheme,
+  saveSettings,
+  saveShowPinyin,
+  saveTheme,
+  type CalibrationSettings,
+} from "../game/settings.ts";
+import { countSwipe, swipesUsed } from "../toneder/dailySwipes.ts";
 
 let storageMap: Record<string, string>;
 
@@ -51,7 +60,7 @@ beforeEach(() => {
   } as Storage);
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-11-08T12:00:00"));
-  resetAccountScopeForTests();
+  resetAccountStorageForTests();
   session.userId = "A";
   session.serverRow = null;
 });
@@ -63,53 +72,37 @@ afterEach(() => {
 
 /** A page load (or in-page login) that resolves to `id`. */
 function login(id: string | null): void {
-  resetAccountScopeForTests();
+  resetAccountStorageForTests();
   session.userId = id;
   noteAccount(id);
 }
 
 function serverStats(userId: string, totalRuns: number) {
-  return {
-    userId,
-    displayName: null,
-    totalRuns,
-    bestScore: 100,
-    totalGates: 10,
-    wordIds: ["ma1"],
-    perTarget: [],
-    recent: [],
-  };
+  return { userId, displayName: null, totalRuns, bestScore: 100, totalGates: 10, wordIds: ["ma1"], perTarget: [], recent: [] };
 }
 
-describe("accountScope", () => {
-  it("names the change", () => {
-    expect(noteAccount("A")).toBe("first");
-    expect(noteAccount("A")).toBe("same");
-    expect(noteAccount("B")).toBe("switch");
-    expect(noteAccount(null)).toBe("signed-out");
-    expect(noteAccount("A")).toBe("first");
-  });
+const calibration: CalibrationSettings = {
+  f0Center: 120,
+  noiseFloor: 0.01,
+  rangeSemitones: 6,
+  rangeDownSemitones: 5,
+};
 
+describe("accountScope", () => {
   it("falls back to the last saved account before this page noted one", () => {
     noteAccount("A");
-    resetAccountScopeForTests();
+    resetAccountStorageForTests();
     expect(currentAccountId()).toBe("A");
     noteAccount(null);
+    resetAccountStorageForTests();
     expect(currentAccountId()).toBeNull();
   });
 
   it("never throws when storage is blocked", () => {
-    vi.stubGlobal("localStorage", {
-      getItem: () => {
-        throw new Error("blocked");
-      },
-      setItem: () => {
-        throw new Error("blocked");
-      },
-      removeItem: () => {
-        throw new Error("blocked");
-      },
-    } as unknown as Storage);
+    const boom = () => {
+      throw new Error("blocked");
+    };
+    vi.stubGlobal("localStorage", { getItem: boom, setItem: boom, removeItem: boom } as unknown as Storage);
     expect(() => noteAccount("A")).not.toThrow();
     expect(() => loadDailyRuns()).not.toThrow();
     expect(() => incrementDailyRuns()).not.toThrow();
@@ -150,7 +143,6 @@ describe("daily runs are per account", () => {
     session.serverRow = { count: 10 };
     await refreshServerDailyRuns();
     expect(loadDailyRuns().count).toBe(10);
-
     login("B");
     expect(loadDailyRuns().count).toBe(0);
     login("A");
@@ -159,151 +151,108 @@ describe("daily runs are per account", () => {
 
   it("refreshServerDailyRuns with no row saves 0 for the current account", async () => {
     login("B");
-    session.serverRow = null;
     await refreshServerDailyRuns();
-    const saved = JSON.parse(storageMap["toneflap.daily.server.v2"]) as Record<string, { count: number }>;
-    expect(saved.B.count).toBe(0);
+    expect(JSON.parse(storageMap["toneflap.daily.server.v2@B"]).count).toBe(0);
     expect(loadDailyRuns().count).toBe(0);
-  });
-
-  it("drops the old ownerless keys without error", () => {
-    storageMap["toneflap.daily.v1"] = JSON.stringify({ date: "2026-11-08", count: 8, chk: "x" });
-    storageMap["toneflap.daily.server.v1"] = JSON.stringify({ date: "2026-11-08", count: 10 });
-    login("B");
-    expect(loadDailyRuns().count).toBe(0);
-    expect(storageMap["toneflap.daily.v1"]).toBeUndefined();
-    expect(storageMap["toneflap.daily.server.v1"]).toBeUndefined();
   });
 
   it("an entry copied to another account fails its checksum", () => {
     login("A");
     for (let i = 0; i < 3; i++) incrementDailyRuns();
-    const map = JSON.parse(storageMap["toneflap.daily.v2"]) as Record<string, unknown>;
-    storageMap["toneflap.daily.v2"] = JSON.stringify({ ...map, B: { ...(map.A as object), count: 0 } });
+    storageMap["toneflap.daily.v2@B"] = storageMap["toneflap.daily.v2@A"];
     login("B");
     expect(loadDailyRuns().count).toBe(0);
-  });
-
-  it("keeps only today's entries", () => {
-    login("A");
-    incrementDailyRuns();
-    vi.setSystemTime(new Date("2026-11-09T12:00:00"));
-    login("B");
-    incrementDailyRuns();
-    const map = JSON.parse(storageMap["toneflap.daily.v2"]) as Record<string, unknown>;
-    expect(Object.keys(map)).toEqual(["B"]);
   });
 });
 
 describe("the board name is per account", () => {
-  it("A's saved name is not used for B; back on A it is A's server name", () => {
+  it("A's name is not used for B; back on A it is A's name", () => {
     login("A");
-    setLocalDisplayName("KeenPlover32", "A"); // syncAccount writes the server name down
-    expect(displayName()).toBe("KeenPlover32");
-
+    setLocalDisplayName("KeenPlover32");
     login("B");
     const bName = displayName();
     expect(bName).not.toBe("KeenPlover32");
-    expect(displayName()).toBe(bName); // stable for B
-
+    expect(displayName()).toBe(bName);
     login("A");
-    setLocalDisplayName("KeenPlover32", "A"); // A's sync on return
     expect(displayName()).toBe("KeenPlover32");
-  });
-
-  it("an ownerless (old-format) name belongs to no account", () => {
-    storageMap["toneflap.identity.v1"] = JSON.stringify({ name: "KeenPlover32" });
-    login("B");
-    expect(displayName()).not.toBe("KeenPlover32");
-    expect(displayName("B")).toBe(displayName());
   });
 });
 
 describe("run history and streak", () => {
-  it("after A -> B without sign-out, B sees neither A's runs nor A's streak", () => {
+  it("after A -> B without sign-out, B sees neither A's runs nor A's streak; A gets them back", () => {
     login("A");
     cacheFromServer(serverStats("A", 11), "A");
     cacheStreakFromServer({ current: 2, best: 2, lastDay: "2026-11-08" });
-    expect(loadRunHistory().totalRuns).toBe(11);
-
     login("B");
     expect(loadRunHistory().totalRuns).toBe(0);
     expect(loadStreakState().current).toBe(0);
-  });
-
-  it("clears another account's cache left behind with no account noted", () => {
-    cacheFromServer(serverStats("A", 11), "A");
-    cacheStreakFromServer({ current: 2, best: 2, lastDay: "2026-11-08" });
-    login("B"); // nothing saved yet: the "first" path
-    expect(loadRunHistory().totalRuns).toBe(0);
-    expect(loadStreakState().current).toBe(0);
-  });
-
-  it("keeps the same account's cache and unowned guest progress", () => {
-    login("A");
-    cacheFromServer(serverStats("A", 11), "A");
     login("A");
     expect(loadRunHistory().totalRuns).toBe(11);
-
-    // Unowned guest progress (no `owner`), waiting for adoption.
-    storageMap = {};
-    cacheFromServer(serverStats("x", 1), "x");
-    const guest = JSON.parse(storageMap["toneflap.history.v1"]) as Record<string, unknown>;
-    delete guest.owner;
-    storageMap["toneflap.history.v1"] = JSON.stringify(guest);
-    resetAccountScopeForTests();
-    noteAccount("B");
-    expect(loadRunHistory().totalRuns).toBe(1);
+    expect(loadStreakState().current).toBe(2);
   });
 });
 
-describe("pending intents", () => {
-  it("an intent set by A is not consumed by B", () => {
+describe("settings: per account, except calibration", () => {
+  it("theme, pinyin and the TONEder swipe count follow the account", () => {
     login("A");
-    setPendingJoin(500, currentAccountId());
-    setPendingCheckout(currentAccountId());
-    expect(consumePendingJoin("B")).toBeNull();
-    expect(consumePendingCheckout("B")).toBe(false);
-  });
-
-  it("an intent set by A is consumed by A", () => {
-    login("A");
-    setPendingJoin(500, "A");
-    setPendingCheckout("A");
-    expect(consumePendingJoin("A")).toBe(500);
-    expect(consumePendingCheckout("A")).toBe(true);
-  });
-
-  it("a switch from A to B clears A's intents", () => {
-    login("A");
-    setPendingJoin(500, "A");
-    setPendingCheckout("A");
+    saveTheme("pixel-flappy");
+    saveShowPinyin(false);
+    countSwipe();
+    countSwipe();
     login("B");
-    expect(storageMap["toneflap.joinIntent.v1"]).toBeUndefined();
-    expect(storageMap["toneflap.checkoutIntent.v1"]).toBeUndefined();
+    expect(loadTheme()).not.toBe("pixel-flappy");
+    expect(loadShowPinyin()).toBe(true);
+    expect(swipesUsed()).toBe(0);
+    login("A");
+    expect(loadTheme()).toBe("pixel-flappy");
+    expect(loadShowPinyin()).toBe(false);
+    expect(swipesUsed()).toBe(2);
   });
 
-  it("a signed-out intent is consumed by the first account", () => {
+  it("the calibration stays with the browser", () => {
+    login("A");
+    saveSettings(calibration);
+    login("B");
+    expect(loadSettings()?.f0Center).toBe(120);
     login(null);
-    setPendingJoin(700, currentAccountId());
-    setPendingCheckout(currentAccountId());
+    expect(loadSettings()?.f0Center).toBe(120);
+  });
+});
+
+describe("migration of values saved before keys were per account", () => {
+  it("the first account takes the settings; ownerless name and counts are dropped", () => {
+    storageMap["toneflap.theme.v1"] = "pixel-flappy";
+    storageMap["toneflap.pinyin.v1"] = "off";
+    storageMap["toneflap.identity.v1"] = JSON.stringify({ name: "KeenPlover32" });
+    storageMap["toneflap.daily.v1"] = JSON.stringify({ date: "2026-11-08", count: 8, chk: "x" });
+    storageMap["toneflap.daily.server.v1"] = JSON.stringify({ date: "2026-11-08", count: 10 });
     login("B");
-    expect(consumePendingJoin("B")).toBe(700);
-    expect(consumePendingCheckout("B")).toBe(true);
+    expect(loadTheme()).toBe("pixel-flappy");
+    expect(loadShowPinyin()).toBe(false);
+    expect(displayName()).not.toBe("KeenPlover32");
+    expect(loadDailyRuns().count).toBe(0);
+    for (const k of ["toneflap.theme.v1", "toneflap.identity.v1", "toneflap.daily.v1", "toneflap.daily.server.v1"]) {
+      expect(storageMap[k]).toBeUndefined();
+    }
+    // Only once: a second account starts from the defaults.
+    login("C");
+    expect(loadTheme()).not.toBe("pixel-flappy");
   });
 
-  it("old-format (ownerless) intents load without error and count as signed out", () => {
-    storageMap["toneflap.joinIntent.v1"] = JSON.stringify({ score: 9, ts: Date.now() });
-    storageMap["toneflap.checkoutIntent.v1"] = String(Date.now());
-    expect(consumePendingJoin("B")).toBe(9);
-    expect(consumePendingCheckout("B")).toBe(true);
+  it("the history cache moves only to its own owner, with its streak", () => {
+    cacheFromServer(serverStats("A", 11), "A");
+    cacheStreakFromServer({ current: 2, best: 2, lastDay: "2026-11-08" });
+    login("A");
+    expect(loadRunHistory().totalRuns).toBe(11);
+    expect(loadStreakState().current).toBe(2);
   });
 
-  it("expired intents are not consumed", () => {
-    setPendingJoin(1, null);
-    setPendingCheckout(null);
-    vi.advanceTimersByTime(16 * 60 * 1000);
-    expect(consumePendingJoin("A")).toBeNull();
-    expect(consumePendingCheckout("A")).toBe(false);
+  it("another account's history cache is dropped", () => {
+    cacheFromServer(serverStats("A", 11), "A");
+    cacheStreakFromServer({ current: 2, best: 2, lastDay: "2026-11-08" });
+    login("B");
+    expect(loadRunHistory().totalRuns).toBe(0);
+    expect(loadStreakState().current).toBe(0);
+    expect(storageMap["toneflap.history.v1"]).toBeUndefined();
   });
 });

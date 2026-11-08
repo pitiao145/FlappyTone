@@ -12,9 +12,7 @@ import { tierPool, usablePool } from "../toneder/pool.ts";
 import type { TestStyle } from "../toneder/toneTest.ts";
 
 interface Props {
-  /** Guest at the cap: the free-account door. */
-  onCreateAccount: () => void;
-  /** Free at the cap, or a tap on the locked Spoken style: the Pro modal. */
+  /** At the cap, or a tap on the locked Spoken style: the Pro modal. */
   onUpgrade: (from: "cap" | "spoken") => void;
   /** The score card's next step: the flying game. */
   onPlay: () => void;
@@ -25,7 +23,7 @@ interface Props {
  * daily swipe cap per tier and Spoken for an account (free or Pro). Standalone on purpose: no
  * stats, XP, streaks or DB writes, only analytics counts (and arming the note card's next check).
  */
-export function TonederScreen({ onCreateAccount, onUpgrade, onPlay }: Props) {
+export function TonederScreen({ onUpgrade, onPlay }: Props) {
   const tier = useTier();
   const [used, setUsed] = useState(() => swipesUsed());
   const left = swipesLeft(tier, used);
@@ -90,8 +88,7 @@ export function TonederScreen({ onCreateAccount, onUpgrade, onPlay }: Props) {
 
   const upgrade = (from: "cap" | "spoken") => {
     track({ type: "toneder_upgrade_click", tier, from });
-    if (from === "cap" && tier === "guest") onCreateAccount();
-    else onUpgrade(from);
+    onUpgrade(from);
   };
 
   const cap = tierLimits()[tier].tonederSwipesPerDay;

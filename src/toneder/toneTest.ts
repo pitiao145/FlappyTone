@@ -9,6 +9,7 @@
  * does not ship the catalog.
  */
 
+import { accountStorage } from "../lib/accountStorage.ts";
 import type { AnalyticsEvent } from "../analytics/session.ts";
 
 export type Tone = 1 | 2 | 3 | 4;
@@ -113,7 +114,7 @@ const LAST_KEY = "flappytone.tonetest.last.v1";
 /** The last round's word ids on this device (empty if storage is blocked). */
 export function loadLastRound(): Set<string> {
   try {
-    const v = JSON.parse(localStorage.getItem(LAST_KEY) ?? "[]");
+    const v = JSON.parse(accountStorage.getItem(LAST_KEY) ?? "[]");
     return new Set(Array.isArray(v) ? v.filter((x) => typeof x === "string") : []);
   } catch {
     return new Set();
@@ -122,7 +123,7 @@ export function loadLastRound(): Set<string> {
 
 export function saveLastRound(ids: readonly string[]): void {
   try {
-    localStorage.setItem(LAST_KEY, JSON.stringify(ids));
+    accountStorage.setItem(LAST_KEY, JSON.stringify(ids));
   } catch {
     // A convenience only.
   }

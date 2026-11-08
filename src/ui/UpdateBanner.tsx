@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { accountStorage } from "../lib/accountStorage.ts";
 
 interface Props {
   /** Stable id of this update; a dismissal is remembered per id, so the next update shows again. */
+
   id: string;
   /** Short tag on the left, e.g. "New". */
   label: string;
@@ -27,7 +29,7 @@ const KEY = "flappytone.dismissedUpdates";
 
 function readDismissed(): string[] {
   try {
-    const v = JSON.parse(localStorage.getItem(KEY) ?? "[]");
+    const v = JSON.parse(accountStorage.getItem(KEY) ?? "[]");
     return Array.isArray(v) ? v : [];
   } catch {
     return [];
@@ -58,7 +60,7 @@ export function UpdateBanner({
     onEvent?.("dismissed");
     setHidden(true);
     try {
-      localStorage.setItem(KEY, JSON.stringify([...readDismissed(), id]));
+      accountStorage.setItem(KEY, JSON.stringify([...readDismissed(), id]));
     } catch {
       // Private mode: it just comes back next visit.
     }

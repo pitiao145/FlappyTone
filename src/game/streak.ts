@@ -6,14 +6,15 @@
  * consecutive days and `current` climbs; miss a whole day and it falls back
  * to 0.
  *
- * For a guest this localStorage store is the streak, and it is NOT
- * tamper-proof (the `chk` field only deters a casual devtools edit). For an
- * account the server owns it (brief 05: `record_run()` advances
+ * The server owns it (brief 05: `record_run()` advances
  * `profiles.streak_current/streak_last_day`), and this store is only a cache
- * of that (`cacheStreakFromServer`) — `recordPlay` is the optimistic local
- * write until the next refresh. The state (done today / at risk / broken) is
+ * of that (`cacheStreakFromServer`), saved per account (brief 34,
+ * `accountStorage`) — `recordPlay` is the optimistic local write until the
+ * next refresh. The state (done today / at risk / broken) is
  * always read against the local calendar day.
  */
+
+import { accountStorage } from "../lib/accountStorage.ts";
 
 const KEY = "toneflap.streak.v1";
 
@@ -55,7 +56,7 @@ function fresh(): StreakState {
 
 function load(): StreakState {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = accountStorage.getItem(KEY);
     if (!raw) return fresh();
     const parsed = JSON.parse(raw) as {
       lastPlayedDate?: unknown;
@@ -85,7 +86,7 @@ function load(): StreakState {
 
 function save(state: StreakState): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ ...state, chk: checksum(state) }));
+    accountStorage.setItem(KEY, JSON.stringify({ ...state, chk: checksum(state) }));
   } catch {
     // Blocked/full storage — the streak just doesn't persist this session.
   }
@@ -164,7 +165,7 @@ export function cacheStreakFromServer(server: { current: number; best: number; l
 /** Parity with clearRunHistory/clearSettings, for a future "forget my data" flow. */
 export function clearStreak(): void {
   try {
-    localStorage.removeItem(KEY);
+    accountStorage.removeItem(KEY);
   } catch {
     // ignore
   }

@@ -100,7 +100,6 @@ function EndView({ screen, snap, shareUrl }: { screen: EndScreen; snap: RunSnaps
         onRecalibrate={noop}
         mode="drill"
         challengeScore={null}
-        onUpgrade={noop}
         onViewFullLeaderboard={noop}
       />
     </div>

@@ -3,10 +3,8 @@
  * a visitor sees first, and how a challenge link survives the trip through
  * signup. No React and no Supabase here, so it tests without a DOM.
  *
- * Playing needs a permanent account. An anonymous Supabase session (a guest
- * who once joined the board) counts as signed out: it sees the auth screen,
- * and its local progress is adopted on signup (`adoptGuestProgress`, run by
- * `syncAccount`).
+ * Playing needs a permanent account. An old anonymous Supabase session counts
+ * as signed out: it sees the auth screen, and signing in replaces it.
  */
 import type { AccountStatus } from "../data/account.ts";
 
@@ -118,8 +116,6 @@ export interface PendingAuth {
   method: PendingMethod;
   /** Marketing consent ticked on the auth screen. */
   consent: boolean;
-  /** The session was an anonymous guest: any success upgrades it, a new account. */
-  wasAnonymous: boolean;
   /** When the email or redirect was sent (ms). */
   at: number;
 }
@@ -150,13 +146,13 @@ export function consumeAuthPending(storage: Storage | undefined, now = Date.now(
         typeof p.at === "number" &&
         now - p.at < PARKED_TTL_MS
       ) {
-        return { method: p.method, consent: p.consent === true, wasAnonymous: p.wasAnonymous === true, at: p.at };
+        return { method: p.method, consent: p.consent === true, at: p.at };
       }
     }
     if (legacy) {
       const p = JSON.parse(legacy) as { card?: unknown; at?: unknown };
       if (typeof p.at === "number" && now - p.at < PARKED_TTL_MS) {
-        return { method: "magic_link", consent: false, wasAnonymous: false, at: p.at };
+        return { method: "magic_link", consent: false, at: p.at };
       }
     }
   } catch {
@@ -166,19 +162,12 @@ export function consumeAuthPending(storage: Storage | undefined, now = Date.now(
 }
 
 /**
- * New account or login, for `signup_completed.mode`. An anonymous guest that
- * finishes any sign-in became a permanent account: "signup". Otherwise the
- * auth row is new when it was created after the code/redirect was sent
+ * New account or login, for `signup_completed.mode`. The auth row is new when it was created after the code/redirect was sent
  * (`signInWithOtp` creates it at send time, Google at the callback); a few
  * seconds of slack covers clock skew. The analytics report still counts new
  * accounts from Supabase `created_at` (`new_account`).
  */
-export function authMode(
-  createdAt: string | null,
-  sentAt: number,
-  wasAnonymous: boolean,
-): AuthCard {
-  if (wasAnonymous) return "signup";
+export function authMode(createdAt: string | null, sentAt: number): AuthCard {
   const t = createdAt ? Date.parse(createdAt) : NaN;
   return Number.isFinite(t) && t >= sentAt - 10_000 ? "signup" : "login";
 }
@@ -201,8 +190,8 @@ export function codeFailReason(code: string | undefined, reason: string, sentAt:
 
 /**
  * An OAuth error sent back to `/app` in the URL (`#error_code=…` or
- * `?error_code=…`), e.g. `identity_already_exists` when Google already
- * belongs to another account. Null when there is none.
+ * `?error_code=…`), e.g. `access_denied` when the player cancelled at
+ * Google. Null when there is none.
  */
 export function oauthErrorFromUrl(search: string, hash: string): { code: string; description: string } | null {
   for (const part of [hash.replace(/^#/, ""), search.replace(/^\?/, "")]) {
@@ -224,14 +213,10 @@ export function challengeLine(score: number, name: string | null): string {
  */
 export function friendlyAuthError(reason: string, code?: string): { text: string; existing: boolean } {
   const r = reason.toLowerCase();
-  if (code === "identity_already_exists" || r.includes("identity is already linked")) {
-    return { text: "This Google account already has a FlappyTone account.", existing: true };
-  }
   if (code === "otp_expired" || r.includes("token has expired or is invalid")) {
     return { text: "That code didn't work. Check it, or send a new code.", existing: false };
   }
   if (code === "code_too_short") return { text: "Enter the 6-digit code from the email.", existing: false };
-  if (code === "email_exists") return { text: "This email already has an account.", existing: true };
   if (r.includes("already registered") || r.includes("already been registered") || r.includes("already exists")) {
     return { text: "This email already has an account.", existing: true };
   }
