@@ -26,8 +26,14 @@ Decided (Pierre):
   end it. The same person on two accounts is asked once, not twice.
 - **No offer, discount or upgrade wording.** One question about what the
   player did. A note that sells breaks the trust the apology is meant to keep.
-- **A targeted account never gets the generic note** (`note_eligible()`), so
-  no double ask.
+- **Targeted and generic notes are separate** (Pierre, 9 Nov 2026, reversing
+  the first draft's "a targeted account never gets the generic note"). The
+  targeted note is about one event (an apology, one question); the generic
+  one asks an engaged player why they learn. Blocking the generic note forever
+  would lose that answer from exactly the players Pierre already talks to.
+  Only one card per check and per page load, so they never stack.
+- **Creating a note is one SQL call** (`create_targeted_note`, emails or ids),
+  so a new targeted note needs no code change or deploy.
 - **No admin UI.** Pierre adds notes with SQL; the tables are server-only.
 - Copy is plain text. The client never renders it as HTML.
 

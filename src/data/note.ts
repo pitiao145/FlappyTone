@@ -4,7 +4,8 @@
  *
  * The server decides who qualifies (free account, recent counted runs, never
  * sent, "Not now" at most once then 3 days), or hands a targeted note Pierre
- * wrote for this account (migration 0035, shown once across its accounts). The client only decides *when to
+ * wrote for this account (migration 0035, shown once across its accounts).
+ * The two are separate: a targeted note does not use up the generic one. The client only decides *when to
  * ask*: on the Play home, after a finished run or TONEder round in this page
  * load, at most once per finish, and never again in this load once the card
  * was answered.
@@ -94,16 +95,24 @@ export async function checkNote(): Promise<NoteCheck> {
   }
 }
 
-export async function sendNote(message: string, wantsChat: boolean, context: NoteContext): Promise<boolean> {
+/** Which card the player is answering. The server routes on it. */
+export type NoteKind = "targeted" | "generic";
+
+export async function sendNote(
+  kind: NoteKind,
+  message: string,
+  wantsChat: boolean,
+  context: NoteContext,
+): Promise<boolean> {
   const text = message.trim().slice(0, NOTE_MAX_CHARS);
   if (!text) return false;
-  const res = await post({ action: "send", message: text, wantsChat, context });
+  const res = await post({ action: "send", kind, message: text, wantsChat, context });
   if (res && !res.ok) warn("note", `send failed: ${res.status}`);
   return res?.ok === true;
 }
 
-export async function dismissNote(context: NoteContext): Promise<boolean> {
-  const res = await post({ action: "dismiss", context });
+export async function dismissNote(kind: NoteKind, context: NoteContext): Promise<boolean> {
+  const res = await post({ action: "dismiss", kind, context });
   return res?.ok === true;
 }
 

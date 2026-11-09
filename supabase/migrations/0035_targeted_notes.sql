@@ -5,7 +5,13 @@
 -- check on any targeted account claims it (shown_at, shown_to), and no other
 -- account, nor the same one, sees it again. A reply is a `feedback` row
 -- (source 'note', note_id set); a reply, "Not now" or × sets answered_at.
--- An account in any target list never gets the generic note (note_eligible).
+-- Targeted and generic notes are separate: a targeted note never changes
+-- whether the account gets the generic one, and the reverse (Pierre,
+-- 2026-11-09). The client says which card it answers ('kind'); the server
+-- routes on that, never on a note id from the client.
+--
+-- Pierre adds a note with one call (create_targeted_note, below);
+-- ready-made queries: supabase/snippets/targeted-notes.sql.
 --
 -- Sole reader and writer: api/note.ts (service role). Both tables are
 -- server-only: RLS on, no policies, nothing granted to anon/authenticated.
@@ -118,8 +124,9 @@ begin
 end
 $$;
 
--- The generic note: unchanged, plus never for an account in any target list
--- (no double ask).
+-- The generic note: "never sent" now counts only generic replies
+-- (note_id is null), so answering a targeted note does not use up the
+-- generic one. Everything else unchanged from 0033.
 create or replace function public.note_eligible(p_user uuid, p_min_days integer, p_min_runs integer)
 returns boolean language sql stable security invoker set search_path = '' as $$
   with act as (
@@ -132,16 +139,62 @@ returns boolean language sql stable security invoker set search_path = '' as $$
        and p.note_dismissals < 2
        and (p.note_last_dismissed_at is null or p.note_last_dismissed_at <= now() - interval '3 days')
        and not exists (select 1 from public.feedback f
-                       where f.user_id = p_user and f.source = 'note')
+                       where f.user_id = p_user and f.source = 'note' and f.note_id is null)
        and not exists (select 1 from public.entitlements e
                        where e.user_id = p_user and e.has_access)
-       and not exists (select 1 from public.pierre_note_targets t
-                       where t.user_id = p_user)
     from public.profiles p, act
     where p.id = p_user
   ), false)
 $$;
 
+-- Pierre's one call to create a note (SQL editor, runs as postgres):
+--   select public.create_targeted_note('label', 'peek', 'body', 'question?',
+--                                      array['player@example.com']);
+-- p_accounts: emails or user ids, mixed. All must be one person's accounts:
+-- the note is shown once in total across them. For two different people,
+-- call it twice. Fails (and creates nothing) if any account is not found or
+-- a text is too long. Returns the note id.
+create function public.create_targeted_note(
+  p_label text,
+  p_peek text,
+  p_body text,
+  p_question text,
+  p_accounts text[]
+)
+returns uuid language plpgsql security invoker set search_path = '' as $$
+declare
+  v_note uuid;
+  v_item text;
+  v_user uuid;
+begin
+  if p_accounts is null or cardinality(p_accounts) = 0 then
+    raise exception 'create_targeted_note: give at least one email or user id';
+  end if;
+
+  insert into public.pierre_notes (label, peek, body, question)
+  values (p_label, p_peek, p_body, p_question)
+  returning id into v_note;
+
+  foreach v_item in array p_accounts loop
+    v_item := btrim(v_item);
+    if v_item ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
+      select u.id into v_user from auth.users u where u.id = v_item::uuid;
+    else
+      select u.id into v_user from auth.users u where lower(u.email) = lower(v_item);
+    end if;
+    if v_user is null then
+      raise exception 'create_targeted_note: no account for %', v_item;
+    end if;
+    insert into public.pierre_note_targets (note_id, user_id)
+    values (v_note, v_user)
+    on conflict do nothing;
+  end loop;
+
+  return v_note;
+end
+$$;
+
+revoke execute on function public.create_targeted_note(text, text, text, text, text[]) from public, anon, authenticated;
 revoke execute on function public.note_claim_targeted(uuid) from public, anon, authenticated;
 revoke execute on function public.note_answer_targeted(uuid, text, boolean, text, text, jsonb) from public, anon, authenticated;
 revoke execute on function public.note_eligible(uuid, integer, integer) from public, anon, authenticated;

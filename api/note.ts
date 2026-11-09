@@ -18,9 +18,12 @@
  * accounts (`pierre_notes`, `pierre_note_targets`, by hand in SQL). `check`
  * first claims one (`note_claim_targeted()`, once in total across its
  * accounts) and answers `{show: true, note: {peek, body, question}}`.
- * `send`/`dismiss` first try the targeted note this account was shown
- * (`note_answer_targeted()`); the client never sends a note id. Targeted
- * accounts never pass `note_eligible()`, so they never get the generic note.
+ * `send`/`dismiss` carry `kind` ("targeted" | "generic", default generic):
+ * which card the player answered. Targeted → only `note_answer_targeted()`
+ * (the note this account was shown; the client never sends a note id).
+ * Generic → only the 0033 path. The two never fall into each other, so a
+ * stale targeted card cannot be saved as a generic reply. They are separate
+ * notes: a targeted note does not change whether the generic one shows.
  * The note text is plain text; the client renders it as text, never as HTML.
  */
 import { createClient } from "@supabase/supabase-js";
@@ -36,10 +39,12 @@ const KEY_RE = /^[a-zA-Z_]{1,30}$/;
 
 export type TargetedNote = { peek: string; body: string; question: string };
 
+export type NoteKind = "targeted" | "generic";
+
 export type NoteAction =
   | { action: "check" }
-  | { action: "send"; message: string; wantsChat: boolean; context: Record<string, unknown> }
-  | { action: "dismiss"; context: Record<string, unknown> };
+  | { action: "send"; kind: NoteKind; message: string; wantsChat: boolean; context: Record<string, unknown> }
+  | { action: "dismiss"; kind: NoteKind; context: Record<string, unknown> };
 
 /** Flat, small, scalar-only: what `app_context` may hold. Null when it is not. */
 export function parseContext(raw: unknown): Record<string, string | number | boolean | null> | null {
@@ -69,13 +74,16 @@ export function parseNoteBody(raw: unknown): NoteAction | null {
   if (b.action === "check") return { action: "check" };
   const context = parseContext(b.context);
   if (!context) return null;
-  if (b.action === "dismiss") return { action: "dismiss", context };
+  // Missing = generic: what every client sent before 0035.
+  const kind = b.kind === undefined ? "generic" : b.kind;
+  if (kind !== "targeted" && kind !== "generic") return null;
+  if (b.action === "dismiss") return { action: "dismiss", kind, context };
   if (b.action !== "send") return null;
   if (typeof b.message !== "string") return null;
   const message = b.message.trim();
   if (!message || message.length > NOTE_MAX_CHARS) return null;
   if (typeof b.wantsChat !== "boolean") return null;
-  return { action: "send", message, wantsChat: b.wantsChat, context };
+  return { action: "send", kind, message, wantsChat: b.wantsChat, context };
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -117,7 +125,7 @@ export async function POST(request: Request): Promise<Response> {
       const note: TargetedNote = { peek: row.peek, body: row.body, question: row.question };
       return json(200, { show: true, note });
     }
-  } else {
+  } else if (parsed.kind === "targeted") {
     const sending = parsed.action === "send";
     const reply = parsed.action === "send" ? parsed : null;
     const { data: answered, error: answerError } = await supabase.rpc("note_answer_targeted", {
@@ -132,7 +140,7 @@ export async function POST(request: Request): Promise<Response> {
       console.error("[note] note_answer_targeted failed", answerError);
       return json(502, { error: sending ? "Could not save the note." : "Could not save that." });
     }
-    if (answered === true) return json(200, { ok: true });
+    return answered === true ? json(200, { ok: true }) : json(409, { error: "This note is no longer open." });
   }
 
   const { data: eligible, error: eligibleError } = await supabase.rpc("note_eligible", {

@@ -43,9 +43,15 @@ describe("parseNoteBody", () => {
   it("accepts the three actions", async () => {
     const { parseNoteBody } = await load();
     expect(parseNoteBody({ action: "check" })).toEqual({ action: "check" });
-    expect(parseNoteBody({ action: "dismiss" })).toEqual({ action: "dismiss", context: {} });
+    expect(parseNoteBody({ action: "dismiss" })).toEqual({ action: "dismiss", kind: "generic", context: {} });
+    expect(parseNoteBody({ action: "dismiss", kind: "targeted" })).toEqual({
+      action: "dismiss",
+      kind: "targeted",
+      context: {},
+    });
     expect(parseNoteBody({ action: "send", message: " hi ", wantsChat: false, context: { tier: "free" } })).toEqual({
       action: "send",
+      kind: "generic",
       message: "hi",
       wantsChat: false,
       context: { tier: "free" },
@@ -61,6 +67,8 @@ describe("parseNoteBody", () => {
     { action: "send", message: "hi", wantsChat: false, context: { nested: { a: 1 } } },
     { action: "send", message: "hi", wantsChat: false, context: { long: "x".repeat(81) } },
     { action: "dismiss", context: [1] },
+    { action: "dismiss", kind: "other" },
+    { action: "send", kind: 1, message: "hi", wantsChat: false },
   ])("rejects %j", async (body) => {
     const { parseNoteBody } = await load();
     expect(parseNoteBody(body)).toBeNull();
@@ -140,8 +148,8 @@ describe("POST /api/note", () => {
 /**
  * Targeted notes (migration 0035), against a small in-memory model of
  * note_claim_targeted / note_answer_targeted / note_eligible that follows the
- * SQL: claim once across all targets, answer once within 7 days, targeted
- * accounts never pass the generic check.
+ * SQL: claim once across all targets, answer once within 7 days, and only a
+ * generic reply uses up the generic note.
  */
 describe("POST /api/note — targeted notes", () => {
   const A = "user-a";
@@ -193,10 +201,10 @@ describe("POST /api/note — targeted notes", () => {
         return { data: true, error: null };
       }
       if (name === "note_eligible") {
-        // Activity is enough for everyone here; only the 0035 rule decides.
-        const targeted = db.notes.some((x) => x.targets.includes(p));
-        const sent = db.feedback.some((f) => f.user_id === p);
-        return { data: !targeted && !sent, error: null };
+        // Activity is enough for everyone here. Only a generic reply
+        // (no note_id) uses up the generic note (0035).
+        const sentGeneric = db.feedback.some((f) => f.user_id === p && f.note_id == null);
+        return { data: !sentGeneric, error: null };
       }
       if (name === "note_dismiss") {
         db.dismissals[p] = (db.dismissals[p] ?? 0) + 1;
@@ -244,17 +252,19 @@ describe("POST /api/note — targeted notes", () => {
     return (await POST(req({ action: "check" }))).json();
   }
 
-  it("shows once across both accounts, and never the generic note after", async () => {
+  it("shows once across both accounts; after that the generic check decides", async () => {
     const db = freshDb();
     expect(await check(A, db)).toEqual({ show: true, note: COPY });
-    expect(await check(A, db)).toEqual({ show: false });
-    expect(await check(B, db)).toEqual({ show: false });
+    // The targeted note is used up; the generic note is separate (here the
+    // model says both accounts qualify for it).
+    expect(await check(A, db)).toEqual({ show: true });
+    expect(await check(B, db)).toEqual({ show: true });
   });
 
   it("shows on B when B checks first, then never on A", async () => {
     const db = freshDb();
     expect(await check(B, db)).toEqual({ show: true, note: COPY });
-    expect(await check(A, db)).toEqual({ show: false });
+    expect(await check(A, db)).not.toHaveProperty("note");
   });
 
   it("never answers with the note's id", async () => {
@@ -267,12 +277,12 @@ describe("POST /api/note — targeted notes", () => {
     const db = freshDb();
     await check(A, db);
     const { POST, insert } = await loadTargeted(A, db);
-    const first = await POST(req({ action: "send", message: "hi", wantsChat: true }));
+    const first = await POST(req({ action: "send", kind: "targeted", message: "hi", wantsChat: true }));
     expect(first.status).toBe(200);
     expect(db.feedback).toHaveLength(1);
     expect(db.feedback[0]).toMatchObject({ user_id: A, note_id: "note-1", message: "hi", contact_email: `${A}@test.dev` });
     expect(insert).not.toHaveBeenCalled();
-    const second = await POST(req({ action: "send", message: "again", wantsChat: false }));
+    const second = await POST(req({ action: "send", kind: "targeted", message: "again", wantsChat: false }));
     expect(second.status).toBe(409);
     expect(db.feedback).toHaveLength(1);
   });
@@ -281,7 +291,7 @@ describe("POST /api/note — targeted notes", () => {
     const db = freshDb();
     await check(A, db);
     const { POST } = await loadTargeted(B, db);
-    expect((await POST(req({ action: "send", message: "hi", wantsChat: false }))).status).toBe(409);
+    expect((await POST(req({ action: "send", kind: "targeted", message: "hi", wantsChat: false }))).status).toBe(409);
     expect(db.feedback).toHaveLength(0);
     expect(db.notes[0].answered_at).toBeNull();
   });
@@ -290,7 +300,7 @@ describe("POST /api/note — targeted notes", () => {
     const db = freshDb();
     await check(A, db);
     const { POST, rpc } = await loadTargeted(A, db);
-    await POST(req({ action: "send", message: "hi", wantsChat: false, context: { email: "evil@x.co" } }));
+    await POST(req({ action: "send", kind: "targeted", message: "hi", wantsChat: false, context: { email: "evil@x.co" } }));
     const call = rpc.mock.calls.find((c) => c[0] === "note_answer_targeted");
     expect(call?.[1]).toMatchObject({ p_user: A, p_message: "hi", p_wants_chat: false, p_contact_email: null });
   });
@@ -299,14 +309,13 @@ describe("POST /api/note — targeted notes", () => {
     const db = freshDb();
     await check(A, db);
     const { POST, rpc } = await loadTargeted(A, db);
-    expect((await POST(req({ action: "dismiss" }))).status).toBe(200);
+    expect((await POST(req({ action: "dismiss", kind: "targeted" }))).status).toBe(200);
     expect(db.notes[0].answered_at).not.toBeNull();
     expect(db.feedback).toHaveLength(0);
     expect(rpc.mock.calls.some((c) => c[0] === "note_dismiss")).toBe(false);
     expect(db.dismissals[A]).toBeUndefined();
-    // Closed: a later send is refused, and no generic note either.
-    expect((await POST(req({ action: "send", message: "hi", wantsChat: false }))).status).toBe(409);
-    expect(await check(A, db)).toEqual({ show: false });
+    // Closed: a later targeted send is refused.
+    expect((await POST(req({ action: "send", kind: "targeted", message: "hi", wantsChat: false }))).status).toBe(409);
   });
 
   it("an account with no targeted note gets the generic result, unchanged", async () => {
@@ -325,6 +334,39 @@ describe("POST /api/note — targeted notes", () => {
     const { POST } = await loadTargeted(C, db);
     expect((await POST(req({ action: "dismiss" }))).status).toBe(200);
     expect(db.dismissals[C]).toBe(1);
+  });
+
+  it("answering a targeted note does not use up the generic one", async () => {
+    const db = freshDb();
+    await check(A, db);
+    const { POST } = await loadTargeted(A, db);
+    await POST(req({ action: "send", kind: "targeted", message: "hi", wantsChat: false }));
+    expect(await check(A, db)).toEqual({ show: true });
+    expect((await POST(req({ action: "send", message: "generic reply", wantsChat: false }))).status).toBe(200);
+    expect(db.feedback.map((f) => f.note_id ?? null)).toEqual(["note-1", null]);
+    // And the generic one is used up now.
+    expect(await check(A, db)).toEqual({ show: false });
+  });
+
+  it("a stale targeted card is never saved as a generic reply", async () => {
+    const db = freshDb();
+    await check(A, db);
+    const { POST, insert } = await loadTargeted(A, db);
+    await POST(req({ action: "dismiss", kind: "targeted" }));
+    const res = await POST(req({ action: "send", kind: "targeted", message: "late", wantsChat: false }));
+    expect(res.status).toBe(409);
+    expect(insert).not.toHaveBeenCalled();
+    expect(db.feedback).toHaveLength(0);
+  });
+
+  it("a generic answer never touches the targeted note", async () => {
+    const db = freshDb();
+    await check(A, db);
+    const { POST, rpc } = await loadTargeted(A, db);
+    await POST(req({ action: "dismiss" }));
+    expect(rpc.mock.calls.some((c) => c[0] === "note_answer_targeted")).toBe(false);
+    expect(db.notes[0].answered_at).toBeNull();
+    expect(db.dismissals[A]).toBe(1);
   });
 
   it("returns 502 when the claim fails", async () => {

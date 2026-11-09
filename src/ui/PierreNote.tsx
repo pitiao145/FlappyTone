@@ -9,6 +9,7 @@ import {
   sendNote,
   type NoteContext,
   type NoteCopy,
+  type NoteKind,
 } from "../data/note.ts";
 import { currentDisplayMode } from "../lib/displayMode.ts";
 import "./pierreNote.css";
@@ -91,7 +92,7 @@ export function PierreNote({
   const [email, setEmail] = useState<string | null>(preview ? "player@preview.dev" : null);
   const [status, setStatus] = useState<Status>("idle");
   const copy = note ?? GENERIC;
-  const kind = note ? "targeted" : "generic";
+  const kind: NoteKind = note ? "targeted" : "generic";
 
   useEffect(() => {
     if (preview) return;
@@ -112,7 +113,7 @@ export function PierreNote({
     if (!preview) {
       markNoteAnswered();
       track({ type: "note_dismissed", kind, stage: from });
-      void dismissNote(noteContext(tier));
+      void dismissNote(kind, noteContext(tier));
     }
     onDone();
   };
@@ -126,7 +127,7 @@ export function PierreNote({
       setStage("sent");
       return;
     }
-    const ok = await sendNote(message, wantsChat, noteContext(tier));
+    const ok = await sendNote(kind, message, wantsChat, noteContext(tier));
     if (!ok) {
       setStatus("failed");
       return;
