@@ -358,15 +358,22 @@ function flushPending(): void {
 const CALIB_UNSET_KEY = "toneflap.calib.unset.v1";
 const CALIB_PERSON_KEYS = ["f0Center", "rangeSemitones", "rangeDownSemitones", "noiseFloor"];
 
+/** The saved mic calibration (`src/game/settings.ts`, per device). Only a
+ * browser that calibrated ever sent the calibration person properties. */
+const CALIBRATION_KEYS = ["toneflap.settings.v3", "toneflap.settings.v2", "toneflap.settings.v1"];
+
 /**
  * Brief 35: calibration numbers are no longer sent. A person who already has
  * them on their PostHog profile gets one `$unset` (`unsetPersonProperties`,
- * a `$set` event) the next time the SDK runs here, then never again.
+ * a `$set` event) the next time the SDK runs here, then never again. A
+ * browser that never calibrated never sent them, so it sends nothing.
  */
 function forgetCalibrationProperties(client: typeof posthogType): void {
   try {
     if (localStorage.getItem(CALIB_UNSET_KEY)) return;
-    client.unsetPersonProperties(CALIB_PERSON_KEYS);
+    if (CALIBRATION_KEYS.some((k) => localStorage.getItem(k) !== null)) {
+      client.unsetPersonProperties(CALIB_PERSON_KEYS);
+    }
     localStorage.setItem(CALIB_UNSET_KEY, "1");
   } catch {
     // ignore

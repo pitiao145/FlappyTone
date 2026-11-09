@@ -379,14 +379,15 @@ export function loadShareData(): boolean {
 }
 
 /**
- * Saves the switch for the current account, and as this browser's signed-out
- * value too, so a sign-out (or a site page with no account) keeps the last
- * choice made here.
+ * Saves the switch for the current account. An "off" is also saved as this
+ * browser's signed-out value, so a sign-out (or a site page with no account)
+ * keeps it. An account's "on" never overwrites that value: only a choice
+ * made while signed out (no account, so the plain key) turns it back on.
  */
 export function saveShareData(v: boolean): void {
   try {
     accountStorage.setItem(SHARE_DATA_KEY, v ? "on" : "off");
-    localStorage.setItem(SHARE_DATA_KEY, v ? "on" : "off");
+    if (!v) localStorage.setItem(SHARE_DATA_KEY, "off");
   } catch {
     // Blocked storage. The toggle still applies to this session.
   }

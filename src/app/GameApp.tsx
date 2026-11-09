@@ -401,14 +401,15 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
   // Play" guard: a targeted note is used up the moment the server answers, so
   // the answer is always kept; the card renders only on Play (see below), so
   // a player who left Play meanwhile sees it when they come back.
+  // A paid player is asked once per page load (targeted notes only).
   useEffect(() => {
-    if (screen !== "play" || !takeNoteCheck()) return;
+    if (screen !== "play" || !takeNoteCheck(tier === "pro")) return;
     void checkNote().then(({ show, note }) => {
       if (!show) return;
       setNoteCopy(note);
       setNoteOpen(true);
     });
-  }, [screen]);
+  }, [screen, tier]);
   /**
    * Whether the mic session backing the Visualiser screen is actually open.
    * Landing here via `onNavigate("visualiser")` (a real click) only ever

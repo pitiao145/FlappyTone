@@ -42,7 +42,8 @@ async function load(opts: {
 describe("parseNoteBody", () => {
   it("accepts the three actions", async () => {
     const { parseNoteBody } = await load();
-    expect(parseNoteBody({ action: "check" })).toEqual({ action: "check" });
+    expect(parseNoteBody({ action: "check" })).toEqual({ action: "check", targeted: false });
+    expect(parseNoteBody({ action: "check", targeted: true })).toEqual({ action: "check", targeted: true });
     expect(parseNoteBody({ action: "dismiss" })).toEqual({ action: "dismiss", kind: "generic", context: {} });
     expect(parseNoteBody({ action: "dismiss", kind: "targeted" })).toEqual({
       action: "dismiss",
@@ -170,6 +171,17 @@ describe("POST /api/note — targeted notes", () => {
     const rpc = vi.fn(async (name: string, args: Record<string, unknown>) => {
       const p = args.p_user as string;
       if (name === "note_claim_targeted") {
+        const week = 7 * 24 * 3600 * 1000;
+        // 0036: a note this account claimed and has not answered comes back.
+        const open = db.notes.find(
+          (x) =>
+            x.shown_to === p &&
+            x.answered_at === null &&
+            x.shown_at !== null &&
+            x.shown_at > Date.now() - week &&
+            x.targets.includes(p),
+        );
+        if (open) return { data: [{ id: open.id, ...COPY }], error: null };
         const n = db.notes.find((x) => x.shown_at === null && x.targets.includes(p));
         if (!n) return { data: [], error: null };
         n.shown_at = Date.now();
@@ -249,16 +261,40 @@ describe("POST /api/note — targeted notes", () => {
 
   async function check(userId: string, db: ReturnType<typeof freshDb>) {
     const { POST } = await loadTargeted(userId, db);
-    return (await POST(req({ action: "check" }))).json();
+    return (await POST(req({ action: "check", targeted: true }))).json();
+  }
+
+  async function answer(userId: string, db: ReturnType<typeof freshDb>) {
+    const { POST } = await loadTargeted(userId, db);
+    return POST(req({ action: "dismiss", kind: "targeted" }));
   }
 
   it("shows once across both accounts; after that the generic check decides", async () => {
     const db = freshDb();
     expect(await check(A, db)).toEqual({ show: true, note: COPY });
-    // The targeted note is used up; the generic note is separate (here the
-    // model says both accounts qualify for it).
-    expect(await check(A, db)).toEqual({ show: true });
+    // Never on the other account, and gone for A once answered. The generic
+    // note is separate (here the model says both accounts qualify for it).
     expect(await check(B, db)).toEqual({ show: true });
+    expect((await answer(A, db)).status).toBe(200);
+    expect(await check(A, db)).toEqual({ show: true });
+  });
+
+  it("comes back to the same account until it is answered (card lost before render)", async () => {
+    const db = freshDb();
+    expect(await check(A, db)).toEqual({ show: true, note: COPY });
+    expect(await check(A, db)).toEqual({ show: true, note: COPY });
+    await answer(A, db);
+    expect(await check(A, db)).not.toHaveProperty("note");
+  });
+
+  it("an old client (no targeted flag) never claims the note", async () => {
+    const db = freshDb();
+    const { POST, rpc } = await loadTargeted(A, db);
+    expect(await (await POST(req({ action: "check" }))).json()).toEqual({ show: true });
+    expect(rpc.mock.calls.some((c) => c[0] === "note_claim_targeted")).toBe(false);
+    expect(db.notes[0].shown_at).toBeNull();
+    // The note is still there for a current client.
+    expect(await check(A, db)).toEqual({ show: true, note: COPY });
   });
 
   it("shows on B when B checks first, then never on A", async () => {
@@ -372,6 +408,6 @@ describe("POST /api/note — targeted notes", () => {
   it("returns 502 when the claim fails", async () => {
     const { POST, rpc } = await load();
     rpc.mockImplementation(async () => ({ data: null, error: { message: "boom" } }));
-    expect((await POST(req({ action: "check" }))).status).toBe(502);
+    expect((await POST(req({ action: "check", targeted: true }))).status).toBe(502);
   });
 });

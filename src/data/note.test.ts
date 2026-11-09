@@ -21,6 +21,15 @@ describe("note show-once logic", () => {
     expect(takeNoteCheck()).toBe(true);
   });
 
+  it("a paid player is asked once per page load, not after every finish", () => {
+    armNote();
+    expect(takeNoteCheck(true)).toBe(true);
+    armNote();
+    expect(takeNoteCheck(true)).toBe(false);
+    // A free player's finishes still each ask.
+    expect(takeNoteCheck()).toBe(true);
+  });
+
   it("never asks again in this load once answered", () => {
     armNote();
     takeNoteCheck();

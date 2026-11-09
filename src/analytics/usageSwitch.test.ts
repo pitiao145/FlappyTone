@@ -119,7 +119,14 @@ describe("Usage analytics switch", () => {
     expect(fake.capture.mock.calls.map((c) => c[0])).not.toContain("app_open");
   });
 
+  it("a browser that never calibrated sends no $unset", async () => {
+    initPostHog("on");
+    await flush();
+    expect(fake.unsetPersonProperties).not.toHaveBeenCalled();
+  });
+
   it("removes the old calibration person properties once, then never again", async () => {
+    store["toneflap.settings.v3"] = "{}"; // this browser calibrated
     initPostHog("on");
     await flush();
     expect(fake.unsetPersonProperties).toHaveBeenCalledWith([

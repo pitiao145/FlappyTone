@@ -10,7 +10,10 @@
  * The rule (`decideUsageAnalytics`):
  * 1. A choice this browser still owes the account wins if it is off, and is
  *    written. A browser "off" from before this change (never synced) counts
- *    as an owed off, so every old opt-out reaches the account.
+ *    as an owed off, so every old opt-out reaches the account. So does an
+ *    off saved on this browser before keys were per account
+ *    (`LEGACY_OFF_KEY`, set by `accountScope.ts`): its owner is unknown, so
+ *    it reaches every account on its first sync here.
  * 2. An owed "on" is kept only if the account is not off: stricter wins.
  * 3. Otherwise the account's value applies. That is how turning analytics on
  *    or off on one device reaches the others.
@@ -29,6 +32,14 @@ import { getSupabase, warn } from "./supabase.ts";
 export const OWED_KEY = "toneflap.sharedata.owed.v1";
 /** Set once this browser has read the account's value. */
 const SYNCED_KEY = "toneflap.sharedata.synced.v1";
+/** Browser-level (not per account): the pre-brief-34 value was "off". */
+export const LEGACY_OFF_KEY = "toneflap.sharedata.legacyoff.v1";
+
+/**
+ * Bumped by every Settings toggle. A sync that started before a toggle does
+ * not apply its result, so it can never undo the player's newer choice.
+ */
+let localChanges = 0;
 
 type Switch = "on" | "off";
 
@@ -39,6 +50,8 @@ export interface UsageInputs {
   owed: Switch | null;
   /** This browser has read the account's value before. */
   synced: boolean;
+  /** This browser said off before keys were per account (owner unknown). */
+  legacyOff?: boolean;
   /** The account's value (`true` when the row has none yet: the default). */
   account: boolean;
 }
@@ -51,7 +64,7 @@ export interface UsageDecision {
 
 /** The rule above. Pure, for tests. */
 export function decideUsageAnalytics(i: UsageInputs): UsageDecision {
-  const owed = i.owed ?? (i.browser === "off" && !i.synced ? "off" : null);
+  const owed = i.owed ?? ((i.browser === "off" || i.legacyOff === true) && !i.synced ? "off" : null);
   if (owed === "off") return { on: false, write: i.account ? false : null };
   // An owed "on" and no owed choice end the same way: the account decides,
   // so an account that says off wins over an unsaved "on".
@@ -97,28 +110,53 @@ async function writeAccount(userId: string, on: boolean): Promise<boolean> {
   }
 }
 
+function legacyOff(): boolean {
+  try {
+    return localStorage.getItem(LEGACY_OFF_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * When the account cannot be read: this browser's own value decides for
+ * this page (`/app` is never left holding events), and the next sync tries
+ * the account again.
+ */
+function fallBackToBrowser(): void {
+  setSharingEnabled(loadShareData());
+}
+
 /**
  * Reads the account's value, applies the rule, saves the result in this
- * browser and turns analytics on or off. When the account cannot be read the
- * switch stays as it is (off, or held on `/app`) and the next sync tries
- * again. Never throws.
+ * browser and turns analytics on or off. When the account cannot be read,
+ * this browser's own value applies and the next sync tries again. A Settings
+ * toggle made while the read was in flight wins. Never throws.
  */
 export async function syncUsageAnalytics(userId: string): Promise<void> {
+  const startedAt = localChanges;
   try {
     const supabase = getSupabase();
-    if (!supabase) return;
+    if (!supabase) {
+      fallBackToBrowser();
+      return;
+    }
     // Clients cannot select the consent columns (migration 0034): the
     // owner reads their own value through a security-definer function.
     const { data, error } = await supabase.rpc("my_usage_analytics");
+    // The player toggled the switch meanwhile: that newer choice is already
+    // applied and being written; this read is stale.
+    if (startedAt !== localChanges) return;
     if (error) {
       warn("usage", `could not read the analytics switch: ${error.message}`);
-      if (!loadShareData()) setSharingEnabled(false);
+      fallBackToBrowser();
       return;
     }
     const decision = decideUsageAnalytics({
       browser: readSwitch(SHARE_DATA_KEY),
       owed: readSwitch(OWED_KEY),
       synced: accountStorage.getItem(SYNCED_KEY) === "1",
+      legacyOff: legacyOff(),
       account: typeof data === "boolean" ? data : true,
     });
     saveShareData(decision.on);
@@ -132,6 +170,7 @@ export async function syncUsageAnalytics(userId: string): Promise<void> {
     if (await writeAccount(userId, decision.write)) setOwed(null);
   } catch (err) {
     warn("usage", "analytics switch sync failed", err);
+    if (startedAt === localChanges) fallBackToBrowser();
   }
 }
 
@@ -141,6 +180,7 @@ export async function syncUsageAnalytics(userId: string): Promise<void> {
  * by the next `syncUsageAnalytics`, so an "off" is never lost. Never throws.
  */
 export async function setUsageAnalytics(userId: string | null, on: boolean): Promise<void> {
+  localChanges++;
   saveShareData(on);
   setSharingEnabled(on);
   if (!userId) return;

@@ -9,6 +9,8 @@ const db = vi.hoisted(() => ({
   readError: null as { message: string } | null,
   writeFails: false,
   writes: [] as boolean[],
+  /** When set, the read waits for it (a sync in flight). */
+  gate: null as Promise<void> | null,
 }));
 
 vi.mock("./supabase.ts", () => ({
@@ -16,6 +18,7 @@ vi.mock("./supabase.ts", () => ({
   getSupabase: () => ({
     rpc: async (name: string) => {
       if (name !== "my_usage_analytics") throw new Error(`unexpected rpc ${name}`);
+      if (db.gate) await db.gate;
       return { data: db.readError ? null : (db.row?.usage_analytics ?? null), error: db.readError };
     },
     from: () => ({
@@ -38,7 +41,13 @@ vi.mock("../analytics/client.ts", () => ({
   setSharingEnabled: (on: boolean) => switched.calls.push(on),
 }));
 
-import { decideUsageAnalytics, OWED_KEY, setUsageAnalytics, syncUsageAnalytics } from "./usageAnalytics.ts";
+import {
+  decideUsageAnalytics,
+  LEGACY_OFF_KEY,
+  OWED_KEY,
+  setUsageAnalytics,
+  syncUsageAnalytics,
+} from "./usageAnalytics.ts";
 import { noteAccount } from "./accountScope.ts";
 import { resetAccountStorageForTests } from "../lib/accountStorage.ts";
 
@@ -62,6 +71,7 @@ beforeEach(() => {
   db.readError = null;
   db.writeFails = false;
   db.writes = [];
+  db.gate = null;
   switched.calls = [];
 });
 
@@ -92,6 +102,17 @@ describe("decideUsageAnalytics", () => {
 
   it("after a sync, the account decides: turning it on on another device reaches this one", () => {
     expect(decideUsageAnalytics({ browser: "off", owed: null, synced: true, account: true }).on).toBe(true);
+  });
+
+  it("a pre-brief-34 browser off reaches any account on its first sync here", () => {
+    expect(decideUsageAnalytics({ browser: null, owed: null, synced: false, legacyOff: true, account: true })).toEqual({
+      on: false,
+      write: false,
+    });
+    // Once synced, the account decides again.
+    expect(decideUsageAnalytics({ browser: "off", owed: null, synced: true, legacyOff: true, account: true }).on).toBe(
+      true,
+    );
   });
 });
 
@@ -126,10 +147,34 @@ describe("syncUsageAnalytics", () => {
     expect(switched.calls).toEqual([true]);
   });
 
-  it("an unreadable account leaves the switch as it is (held), never on", async () => {
+  it("an unreadable account falls back to this browser's value, never holds", async () => {
     db.readError = { message: "offline" };
+    store["toneflap.sharedata.v1@A"] = "off";
     await syncUsageAnalytics("A");
-    expect(switched.calls).not.toContain(true);
+    expect(switched.calls).toEqual([false]);
+
+    store["toneflap.sharedata.v1@A"] = "on";
+    await syncUsageAnalytics("A");
+    expect(last()).toBe(true);
+  });
+
+  it("an account's on never overwrites this browser's signed-out off", async () => {
+    store["toneflap.sharedata.v1"] = "off";
+    store["toneflap.sharedata.synced.v1@A"] = "1";
+    await syncUsageAnalytics("A");
+    expect(last()).toBe(true);
+    expect(store["toneflap.sharedata.v1@A"]).toBe("on");
+    expect(store["toneflap.sharedata.v1"]).toBe("off");
+  });
+
+  it("a browser-wide legacy off reaches a second account too", async () => {
+    store[LEGACY_OFF_KEY] = "1";
+    await syncUsageAnalytics("A");
+    noteAccount("B");
+    db.row = { usage_analytics: true }; // B's own row
+    await syncUsageAnalytics("B");
+    expect(db.writes).toEqual([false, false]);
+    expect(switched.calls).toEqual([false, false]);
   });
 });
 
@@ -154,6 +199,18 @@ describe("the Settings toggle", () => {
     expect(db.row?.usage_analytics).toBe(false);
     expect(store[`${OWED_KEY}@A`]).toBeUndefined();
     expect(last()).toBe(false);
+  });
+
+  it("a toggle made while a sync is reading is never undone by it", async () => {
+    let release!: () => void;
+    db.gate = new Promise<void>((r) => (release = r));
+    const sync = syncUsageAnalytics("A"); // the account says on
+    await setUsageAnalytics("A", false);
+    release();
+    await sync;
+    expect(switched.calls).toEqual([false]);
+    expect(store["toneflap.sharedata.v1@A"]).toBe("off");
+    expect(db.writes).toEqual([false]);
   });
 
   it("never throws, even with storage blocked", async () => {

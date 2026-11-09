@@ -20,17 +20,23 @@ export const NOTE_MAX_CHARS = 1000;
 export type NoteContext = Record<string, string | number | boolean | null>;
 
 /** Per page load: a finish arms the next Play-home check; an answer ends it. */
-const state = { armed: false, answered: false };
+const state = { armed: false, answered: false, paidChecked: false };
 
 /** A run or TONEder round finished: the next Play home may ask. */
 export function armNote(): void {
   state.armed = true;
 }
 
-/** True once per arming, and never after the card was answered this load. */
-export function takeNoteCheck(): boolean {
+/**
+ * True once per arming, and never after the card was answered this load.
+ * `paid`: a paid player can only ever get a targeted note (the generic one is
+ * free-only), so they are asked once per page load, not after every finish.
+ */
+export function takeNoteCheck(paid = false): boolean {
   if (!state.armed || state.answered) return false;
+  if (paid && state.paidChecked) return false;
   state.armed = false;
+  if (paid) state.paidChecked = true;
   return true;
 }
 
@@ -43,6 +49,7 @@ export function markNoteAnswered(): void {
 export function resetNoteState(): void {
   state.armed = false;
   state.answered = false;
+  state.paidChecked = false;
 }
 
 async function post(body: unknown): Promise<Response | null> {
@@ -86,7 +93,8 @@ export function parseNoteCheck(raw: unknown): NoteCheck {
 }
 
 export async function checkNote(): Promise<NoteCheck> {
-  const res = await post({ action: "check" });
+  // `targeted: true`: this client renders a targeted note and answers it with `kind`.
+  const res = await post({ action: "check", targeted: true });
   if (!res?.ok) return NO_NOTE;
   try {
     return parseNoteCheck(await res.json());

@@ -256,3 +256,19 @@ describe("migration of values saved before keys were per account", () => {
     expect(storageMap["toneflap.history.v1"]).toBeUndefined();
   });
 });
+
+describe("the old Usage analytics value (brief 35 review)", () => {
+  it("stays as the signed-out value and is recorded browser-wide, not given to one account", () => {
+    storageMap["toneflap.sharedata.v1"] = "off";
+    login("A");
+    expect(storageMap["toneflap.sharedata.v1"]).toBe("off");
+    expect(storageMap["toneflap.sharedata.v1@A"]).toBeUndefined();
+    expect(storageMap["toneflap.sharedata.legacyoff.v1"]).toBe("1");
+  });
+
+  it("an old on leaves no legacy marker", () => {
+    storageMap["toneflap.sharedata.v1"] = "on";
+    login("A");
+    expect(storageMap["toneflap.sharedata.legacyoff.v1"]).toBeUndefined();
+  });
+});

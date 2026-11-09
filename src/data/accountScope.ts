@@ -33,7 +33,6 @@ const MOVE_KEYS = [
   "toneflap.demo.v1",
   "toneflap.wordmix.v1",
   "toneflap.motion.v1",
-  "toneflap.sharedata.v1",
   "toneflap.proficiency.v1",
   "toneflap.lastlevel.v1",
   "toneflap.speechstyle.v1",
@@ -46,11 +45,14 @@ const MOVE_KEYS = [
 ];
 
 /**
- * Moved keys that also stay as they are: the "Usage analytics" switch is
- * also this browser's signed-out value (brief 35), so an opt-out made before
- * keys were per account still holds after a sign-out.
+ * The "Usage analytics" switch is not moved: its plain key is also this
+ * browser's signed-out value (brief 35), so it stays. An old "off" cannot be
+ * tied to one account (a shared browser), so it is recorded browser-wide
+ * (`LEGACY_OFF_KEY`) and reaches every account on its first sync here
+ * (`usageAnalytics.ts`), not only the first one to sign in.
  */
-const KEEP_PLAIN = new Set(["toneflap.sharedata.v1"]);
+const SHARE_DATA_KEY = "toneflap.sharedata.v1";
+const LEGACY_OFF_KEY = "toneflap.sharedata.legacyoff.v1";
 
 /** Unscoped keys whose owner cannot be known: dropped. The server restores
  * the name and the daily count on the next sync. */
@@ -84,8 +86,9 @@ function migrateLegacy(userId: string): void {
       if (value === null) continue;
       const target = accountKey(base, userId);
       if (localStorage.getItem(target) === null) localStorage.setItem(target, value);
-      if (!KEEP_PLAIN.has(base)) localStorage.removeItem(base);
+      localStorage.removeItem(base);
     }
+    if (localStorage.getItem(SHARE_DATA_KEY) === "off") localStorage.setItem(LEGACY_OFF_KEY, "1");
     // The run-history cache names its owner; the streak cache goes with it.
     const history = localStorage.getItem(HISTORY_KEY);
     const streak = localStorage.getItem(STREAK_KEY);

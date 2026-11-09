@@ -16,8 +16,11 @@
  *
  * Targeted notes (migration 0035, brief 36): Pierre writes a note for chosen
  * accounts (`pierre_notes`, `pierre_note_targets`, by hand in SQL). `check`
- * first claims one (`note_claim_targeted()`, once in total across its
- * accounts) and answers `{show: true, note: {peek, body, question}}`.
+ * with `targeted: true` (sent by clients that can render one) first claims
+ * one (`note_claim_targeted()`, once in total across its accounts) and
+ * answers `{show: true, note: {peek, body, question}}`. A note already
+ * claimed by this account and not answered yet is answered again (0036), so
+ * a card lost before it rendered comes back on the next check.
  * `send`/`dismiss` carry `kind` ("targeted" | "generic", default generic):
  * which card the player answered. Targeted → only `note_answer_targeted()`
  * (the note this account was shown; the client never sends a note id).
@@ -42,7 +45,7 @@ export type TargetedNote = { peek: string; body: string; question: string };
 export type NoteKind = "targeted" | "generic";
 
 export type NoteAction =
-  | { action: "check" }
+  | { action: "check"; targeted: boolean }
   | { action: "send"; kind: NoteKind; message: string; wantsChat: boolean; context: Record<string, unknown> }
   | { action: "dismiss"; kind: NoteKind; context: Record<string, unknown> };
 
@@ -71,7 +74,10 @@ export function parseContext(raw: unknown): Record<string, string | number | boo
 export function parseNoteBody(raw: unknown): NoteAction | null {
   if (!raw || typeof raw !== "object") return null;
   const b = raw as Record<string, unknown>;
-  if (b.action === "check") return { action: "check" };
+  // `targeted: true`: a client that can render a targeted note's own copy and
+  // answer it with `kind`. Older clients never get one, so a stale tab cannot
+  // use the note up behind the generic card.
+  if (b.action === "check") return { action: "check", targeted: b.targeted === true };
   const context = parseContext(b.context);
   if (!context) return null;
   // Missing = generic: what every client sent before 0035.
@@ -114,7 +120,7 @@ export async function POST(request: Request): Promise<Response> {
   if (userError || !user) return json(401, { error: "Invalid or expired session." });
   if (user.is_anonymous) return json(403, { error: "Notes need an account." });
 
-  if (parsed.action === "check") {
+  if (parsed.action === "check" && parsed.targeted) {
     const { data: claimed, error: claimError } = await supabase.rpc("note_claim_targeted", { p_user: user.id });
     if (claimError) {
       console.error("[note] note_claim_targeted failed", claimError);
@@ -125,7 +131,7 @@ export async function POST(request: Request): Promise<Response> {
       const note: TargetedNote = { peek: row.peek, body: row.body, question: row.question };
       return json(200, { show: true, note });
     }
-  } else if (parsed.kind === "targeted") {
+  } else if (parsed.action !== "check" && parsed.kind === "targeted") {
     const sending = parsed.action === "send";
     const reply = parsed.action === "send" ? parsed : null;
     const { data: answered, error: answerError } = await supabase.rpc("note_answer_targeted", {
