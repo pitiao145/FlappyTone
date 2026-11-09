@@ -273,6 +273,8 @@ export type Database = {
           synced_at: string | null
           total_gates: number
           total_runs: number
+          usage_analytics: boolean
+          usage_analytics_at: string | null
           words_played: string[]
         }
         Insert: {
@@ -291,6 +293,8 @@ export type Database = {
           synced_at?: string | null
           total_gates?: number
           total_runs?: number
+          usage_analytics?: boolean
+          usage_analytics_at?: string | null
           words_played?: string[]
         }
         Update: {
@@ -309,6 +313,8 @@ export type Database = {
           synced_at?: string | null
           total_gates?: number
           total_runs?: number
+          usage_analytics?: boolean
+          usage_analytics_at?: string | null
           words_played?: string[]
         }
         Relationships: []

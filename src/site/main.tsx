@@ -14,7 +14,7 @@ import { setAppLinkSource } from "../ui/appLink.ts";
 const path = window.location.pathname.replace(/\/+$/, "") || "/";
 const route = routeFor(path);
 if (route) setAppLinkSource(route.path);
-initPostHog(loadShareData(), route ? pageViewProps(route) : undefined);
+initPostHog(loadShareData() ? "on" : "off", route ? pageViewProps(route) : undefined);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -1483,6 +1483,37 @@ live).
 Update 24 Oct 2026 (Pierre): Spoken is open to free accounts too in the app's
 TONEder; only guests see it locked. The Pro reason is the daily swipe limit.
 
+## One analytics switch, legitimate interest, no voice profile (8 Nov 2026, brief 35)
+
+A player turned "Share game data" off on the PC. A fresh browser window with
+the same account sent gameplay events again: the choice lived only in the
+browser. While it was off, their `mic` and `run_start` events also stopped, so
+the daily report counted them as "never played"
+(`docs/reports/account-switch-case-2026-11-08.md`). And the privacy policy
+listed gameplay analytics under consent while sharing was on by default,
+which under the GDPR is usually not valid consent.
+
+Pierre chose option 1 of three (8 Nov 2026):
+
+- **One kind of analytics, legal basis legitimate interest.** The
+  gameplay/global tiers are gone (`EVENT_TIERS` → `APP_EVENT_TYPES`).
+- **One switch, "Usage analytics", on by default; off stops every PostHog
+  event**, the SDK's own included. It is saved on the account
+  (`profiles.usage_analytics`, migration 0034), so it applies on every device
+  where the account is signed in. An unsaved browser "off" wins over the
+  account (stricter wins) and is written.
+- **Voice-profile data is no longer collected:** no `calib_numbers` event, no
+  calibration person properties (one `$unset` per browser removes them), no
+  `uttMs`/`voicedFrac`/`seeded`/`excMs` on `gate`. Nothing used them.
+- **Existing opt-outs are kept:** `toneflap.sharedata.v1 = "off"` now means
+  "Usage analytics" off, and code never turns it back on.
+- **The first-run "Still in testing" notice is removed.** It described the old
+  two-tier split. The first scored run now starts from the silent-mode gate's
+  OK, which resumes the AudioContext in its own tap.
+
+Not decided here: deleting the old voice-profile data already in PostHog, and
+whether the PostHog browser id needs its own consent in the EU (ePrivacy).
+
 ## App events keep PostHog's page, device and session properties (29 Oct 2026, brief 26)
 
 `sanitizeGameProperties` used to drop every `$`-prefixed property on app

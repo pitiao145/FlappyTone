@@ -43,12 +43,10 @@ import {
   effectiveSpeechStyle,
   loadCorridorWidth,
   loadCueStyle,
-  loadNoticeSeen,
   loadReduceMotion,
   loadShowPinyin,
   loadShowToneMarks,
   loadShowTranslation,
-  saveNoticeSeen,
   type CalibrationSettings,
 } from "../game/settings.ts";
 import { sessionNoiseMeter, startingNoiseFloor } from "../game/sessionNoise.ts";
@@ -260,21 +258,6 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
   const frozenAccumMsRef = useRef(0);
   /** Real timestamp (`performance.now()`-based) the current freeze began at. */
   const freezeStartedAtRef = useRef(0);
-  /**
-   * The one-time "still in testing" notice, which holds a real run the same way
-   * the tutorial card does. Decided once at mount and kept in a ref as well as
-   * state, because the run effect reads it without wanting it as a dependency —
-   * dismissing the card must start the run, not rebuild it.
-   *
-   * Not shown before the tutorial: that is a first-timer's first screen, and a
-   * disclosure about data is easier to read once they know what the game is.
-   * Not shown for "single" either — that's a Lab tuning flight, not a player
-   * run, and the card would just be in the way of a tight tune loop.
-   */
-  const [notice, setNotice] = useState(
-    () => scored && !loadNoticeSeen(),
-  );
-  const noticeRef = useRef(notice);
   /** Gate log entries already reported, so each gate is sent exactly once. */
   const reportedGatesRef = useRef(0);
   /** Set by the effect so the pause overlay's Resume can restart the loop. */
@@ -825,8 +808,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
      * finished, floored and capped by `tuning().warmupMinMs`/`warmupMaxMs`.
      *
      * Deliberately NOT a gesture boundary: every caller (the Play button's
-     * handler, the notice card, the tutorial's Start) has already opened the
-     * mic and resumed the AudioContext synchronously inside its own click,
+     * handler via the silent-mode gate's OK, the tutorial's Start) has
+     * already opened the mic and resumed the AudioContext synchronously
+     * inside its own click,
      * before anything here is awaited (hard rule 4).
      *
      * `learn` cues synthetically by design (`cuesUseClips`), so there is
@@ -974,12 +958,12 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       beginWhenWarm();
     };
     // A deliberately started tutorial holds behind its walkthrough's "intro"
-    // card — see WalkthroughStep. A first real run holds behind the testing
-    // notice. The calibration flight (autoStart) starts immediately, same
-    // as before the walkthrough existed: it's a range-measuring flight, not
-    // a teaching moment, and its gesture already happened on the
-    // calibration screen's "Let's go".
-    if ((mode !== "tutorial" || autoStart) && !noticeRef.current) beginWhenWarm();
+    // card — see WalkthroughStep. Every other run starts now: its gesture
+    // was the silent-mode gate's OK, which opened the mic and resumed the
+    // AudioContext inside that tap (GameApp's `confirmSilentGate`). The
+    // calibration flight (autoStart) starts immediately too: its gesture
+    // already happened on the calibration screen's "Let's go".
+    if (mode !== "tutorial" || autoStart) beginWhenWarm();
 
     return () => {
       running = false;
@@ -1173,14 +1157,10 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           showTranslation={showTranslation}
           showPinyin={showPinyin}
           showToneMarks={showToneMarks}
-          showPause={walkthroughStep === null && !notice && !paused && !warming}
+          showPause={walkthroughStep === null && !paused && !warming}
           onPause={() => pauseRef.current(false)}
         />
 
-        {/* Shown once, ever. A notice rather than a consent gate: sharing is
-            already on, and the button only makes the card stop coming back.
-            Its click is also a user gesture, which is the iOS-safe place to
-            resume the AudioContext — the same reason the tutorial card works. */}
         {/* The warm-up hold. Honest about what it is waiting for, and short:
             `tuning().warmupMinMs` on a warm cache, `warmupMaxMs` at worst.
             No button — there is nothing for the player to decide, and the
@@ -1195,33 +1175,6 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
               <span />
               <span />
             </div>
-          </div>
-        )}
-
-        {notice && (
-          <div className="overlay tutorial-card">
-            <h3>Still in testing</h3>
-            <p>
-              I'm sending anonymous data about how a run goes: which gates you
-              hit or miss, and how your voice maps to the screen, so I can
-              tune it.
-            </p>
-            <p className="note">
-              Some anonymous usage data, like which screens you visit, is sent
-              regardless. No audio is ever recorded or sent. You can turn off
-              run data in Settings at any time.
-            </p>
-            <button
-              className="primary"
-              onClick={() => {
-                saveNoticeSeen();
-                noticeRef.current = false;
-                setNotice(false);
-                startRef.current();
-              }}
-            >
-              Got it
-            </button>
           </div>
         )}
 

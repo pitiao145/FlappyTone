@@ -65,14 +65,7 @@ import type posthogType from "posthog-js";
 import type { SpeechStyle } from "../game/words.ts";
 import { detectInAppBrowser, type InAppBrowser } from "../lib/inAppBrowser.ts";
 import { currentDisplayMode, type DisplayMode } from "../lib/displayMode.ts";
-import {
-  EVENT_TIERS,
-  eventTier,
-  roundCalibration,
-  type AnalyticsEvent,
-  type SeoPageViewProps,
-  type SessionCalibration,
-} from "./session.ts";
+import { APP_EVENT_TYPES, type AnalyticsEvent, type SeoPageViewProps } from "./session.ts";
 
 let ph: typeof posthogType | null = null;
 
@@ -83,16 +76,25 @@ const KEY = "phc_sSykUkf4P7wAmEdGomRPERvDdmNjBZhv4U4yTa93ymVW";
 const API_HOST = "/relay";
 const UI_HOST = "https://us.posthog.com";
 
-let started = false;
 /**
- * Whether the "gameplay" tier (calibration, mic, run/gate events, Visualiser
- * practice — see `session.ts`'s `eventTier`) may send. Global-tier events
- * (screen views, mode selection, the leaderboard/signup/upgrade funnel) never
- * check this — they always send once the SDK is `enabled()`, by design (see
- * CLAUDE.md's Play analytics rule 3). Default `true`, matching
- * `loadShareData()`'s default.
+ * The "Usage analytics" switch (brief 35), the one gate on everything this
+ * file sends:
+ * - `on`: the SDK runs and every event is sent.
+ * - `off`: nothing is sent. The SDK is never started when the page loads
+ *   with it off (no PostHog id stored, no request made), and `beforeSend`
+ *   drops every event, autocaptured ones included, if it is turned off after
+ *   the SDK started.
+ * - `pending`: `/app` before the account's value is known. Events are held
+ *   in memory (`pending`, bounded) and the SDK is not started. `on` sends
+ *   them, `off` discards them, so nothing is sent unless the result is on.
  */
-let gameplayConsent = true;
+export type UsageConsent = "on" | "off" | "pending";
+
+let consent: UsageConsent = "off";
+/** `initPostHog` ran on this page (an `enabled()` build, in a browser). */
+let armed = false;
+/** The SDK chunk import has been started. */
+let loading = false;
 
 /** Capture calls made before the SDK chunk has loaded, replayed in order once it has. */
 let pending: Array<() => void> = [];
@@ -115,21 +117,19 @@ function enabled(): boolean {
 }
 
 /**
- * Event names `before_send` sanitizes — every event this app itself fires,
- * regardless of consent tier, plus `calib_numbers` (the calibration readout,
- * not part of the union since it isn't a moment-in-time event). This is a
- * property-sanitization allowlist, not a consent gate: it strips PostHog's
- * own `$`-prefixed defaults (except `PH_ALLOW`) from anything named here, whether that event is
- * gameplay- or global-tier. Anything NOT named here (marketing CTA clicks on
+ * Event names `before_send` sanitizes — every event this app itself fires.
+ * This is a property-sanitization allowlist, not a consent gate: it strips
+ * PostHog's own `$`-prefixed defaults (except `PH_ALLOW`) from anything named
+ * here. Anything NOT named here (marketing CTA clicks on
  * the landing site, `$pageview`, newsletter events) keeps PostHog's normal
  * properties, since those were never built from `session.ts`'s closed union
  * in the first place.
  *
- * Built from `EVENT_TIERS`, so every union type is sanitized by construction.
+ * Built from `APP_EVENT_TYPES`, so every union type is sanitized by construction.
  * A hand-kept list here once missed `seo_cta_click`, which then shipped with
  * PostHog's full defaults.
  */
-export const APP_EVENTS = new Set<string>([...Object.keys(EVENT_TIERS), "calib_numbers"]);
+export const APP_EVENTS = new Set<string>(Object.keys(APP_EVENT_TYPES));
 
 /**
  * The only `$`-prefixed properties allowed through on an app event. Each one
@@ -172,8 +172,8 @@ export const PH_ALLOW = new Set([
  * Reduces an app event's properties to what CLAUDE.md's closed-vocabulary
  * rule permits: PostHog's own `$`-prefixed defaults are dropped except
  * `PH_ALLOW`; everything else (our own event fields) passes
- * through, since the `AnalyticsEvent`/`SessionCalibration` type unions are
- * already the guard on those. Pure and exported so it is testable without
+ * through, since the `AnalyticsEvent` type union is already the guard on
+ * those. Pure and exported so it is testable without
  * mocking the SDK.
  *
  * So a field added to the union — `run_end`'s `voice`, the roster speaker id a
@@ -181,7 +181,7 @@ export const PH_ALLOW = new Set([
  * `session.test.ts` asserts that rather than assuming it. Adding a field to
  * the union is therefore the whole decision: there is no second list to
  * update, and equally no second gate to catch a field that should not have
- * been added. Nothing the player typed may enter either union.
+ * been added. Nothing the player typed may enter the union.
  */
 export function sanitizeGameProperties(
   properties: Record<string, unknown>,
@@ -260,8 +260,18 @@ export function scrubNameFromUrls(
   return out;
 }
 
+/**
+ * The switch's last line: with analytics not on, every event the SDK would
+ * send is dropped here — `$pageview`, `$pageleave`, `$web_vitals`, `$set`,
+ * `$identify` and our own alike, since all of them pass through
+ * `before_send`. Pure, for tests.
+ */
+export function dropUnlessOn(cr: CaptureResult | null, state: UsageConsent): CaptureResult | null {
+  return state === "on" ? cr : null;
+}
+
 const beforeSend: BeforeSendFn = (input: CaptureResult | null) => {
-  const raw = input && withPageViewProps(input, pageViewProps);
+  const raw = dropUnlessOn(input, consent) && withPageViewProps(input as CaptureResult, pageViewProps);
   if (!raw) return raw;
   const cr: CaptureResult = { ...raw, properties: scrubNameFromUrls(raw.properties) ?? raw.properties };
   if (raw.$set) cr.$set = scrubNameFromUrls(raw.$set);
@@ -273,27 +283,43 @@ const beforeSend: BeforeSendFn = (input: CaptureResult | null) => {
   return out;
 };
 
-/** Runs now if the SDK is ready, otherwise queues for replay after it loads. */
+/**
+ * Runs now if the SDK is ready and analytics is on; holds it while the SDK
+ * loads or the switch is `pending`; drops it when off (never sent later).
+ */
 function runOrQueue(fn: () => void): void {
-  if (ph) {
+  if (!armed || consent === "off") return;
+  if (ph && consent === "on") {
     fn();
     return;
   }
-  if (started && pending.length < MAX_PENDING) pending.push(fn);
+  if (pending.length < MAX_PENDING) pending.push(fn);
 }
 
 /**
- * Starts PostHog. Call once from app start; later calls are ignored so a
- * strict-mode double-mount cannot initialise twice.
+ * Starts PostHog with the switch's state at page load. Call once from the
+ * entry; later calls are ignored so a strict-mode double-mount cannot
+ * initialise twice. `off` and `pending` do not load the SDK at all; it
+ * starts when `setPostHogConsent(true)` is called.
  *
  * Never throws — an analytics failure must not break a run (CLAUDE.md).
  */
-export function initPostHog(consent: boolean, pageProps?: SeoPageViewProps): void {
+export function initPostHog(state: UsageConsent, pageProps?: SeoPageViewProps): void {
   try {
-    if (started || !enabled() || typeof window === "undefined") return;
-    started = true;
+    if (armed || !enabled() || typeof window === "undefined") return;
+    armed = true;
     pageViewProps = pageProps;
-    gameplayConsent = consent;
+    consent = state;
+    if (state === "on") loadSdk();
+  } catch {
+    // Nothing here is worth a broken page.
+  }
+}
+
+function loadSdk(): void {
+  if (loading) return;
+  loading = true;
+  try {
     void import("posthog-js")
       .then(({ default: posthog }) => {
         ph = posthog;
@@ -310,23 +336,46 @@ export function initPostHog(consent: boolean, pageProps?: SeoPageViewProps): voi
           // instead of accumulating for up to the default 3s.
           request_queue_config: { flush_interval_ms: 250 },
           before_send: beforeSend,
-          // The SDK's own opt-out is never used (see `captureGameEvent`): a
-          // gameplay/global split needs a per-event decision, which
-          // `opt_out_capturing`/`opt_in_capturing` cannot express (they gate
-          // the whole client). Capturing is always on at the SDK level; this
-          // file gates gameplay events itself, before they ever reach `ph`.
+          // The SDK's own opt-out is not used: it is saved per browser, not
+          // per account, so it would fight the account's switch. The switch
+          // is `consent` above, checked in `runOrQueue` and `beforeSend`.
           opt_out_capturing_by_default: false,
         });
         // Registered before the first `$pageview`, which the SDK sends on a
         // 1 ms timer after init, so every event of the visit carries it.
         registerInAppBrowser(posthog);
-        const queued = pending;
-        pending = [];
-        for (const run of queued) run();
+        forgetCalibrationProperties(posthog);
+        flushPending();
       })
       .catch(() => {});
   } catch {
-    // Nothing here is worth a broken page.
+    // ignore
+  }
+}
+
+function flushPending(): void {
+  if (!ph || consent !== "on") return;
+  const queued = pending;
+  pending = [];
+  for (const run of queued) run();
+}
+
+/** Device-level marker: the old calibration person properties were removed. */
+const CALIB_UNSET_KEY = "toneflap.calib.unset.v1";
+const CALIB_PERSON_KEYS = ["f0Center", "rangeSemitones", "rangeDownSemitones", "noiseFloor"];
+
+/**
+ * Brief 35: calibration numbers are no longer sent. A person who already has
+ * them on their PostHog profile gets one `$unset` (`unsetPersonProperties`,
+ * a `$set` event) the next time the SDK runs here, then never again.
+ */
+function forgetCalibrationProperties(client: typeof posthogType): void {
+  try {
+    if (localStorage.getItem(CALIB_UNSET_KEY)) return;
+    client.unsetPersonProperties(CALIB_PERSON_KEYS);
+    localStorage.setItem(CALIB_UNSET_KEY, "1");
+  } catch {
+    // ignore
   }
 }
 
@@ -370,15 +419,10 @@ export function capturePostHogEvent(
  * rather than joining the (already short) batch window, since it is the
  * single most valuable event to not lose to a same-tab navigation.
  *
- * This is the ONE place gameplay consent is checked. A gameplay-tier event
- * (`eventTier(event.type) === "gameplay"`) is dropped, not queued, when
- * `gameplayConsent` is off — nothing is retried later, matching "opting out
- * stops capture immediately." A global-tier event always reaches
- * `capturePostHogEvent`, which itself does no consent check at all — see
- * CLAUDE.md's Play analytics rule 3.
+ * The switch is checked in `runOrQueue` (and again in `beforeSend`): with it
+ * off the event is dropped, never sent later.
  */
 export function captureGameEvent(event: AnalyticsEvent): void {
-  if (eventTier(event.type) === "gameplay" && !gameplayConsent) return;
   const { type, ...rest } = event;
   capturePostHogEvent(type, rest as Record<string, string | number | boolean>, {
     instant: INSTANT_EVENTS.has(type) || (type === "seo_cta_click" && event.target === "signup"),
@@ -404,28 +448,6 @@ const INSTANT_EVENTS = new Set<AnalyticsEvent["type"]>([
 ]);
 
 /**
- * Stamps calibration numbers two ways: as person properties, so any later
- * event from this anonymous id can be filtered/grouped by voice profile
- * (what makes "does calibration work across voice types" answerable), and as
- * a `calib_numbers` event, so a single row also carries them without needing
- * a person-property join.
- */
-export function setCalibrationProperties(cal: SessionCalibration): void {
-  // Gameplay-tier data delivered outside `track()`/`captureGameEvent` — same
-  // gate, checked here since nothing else stands between this and `ph`.
-  if (!gameplayConsent) return;
-  const props = roundCalibration(cal);
-  runOrQueue(() => {
-    try {
-      ph?.setPersonProperties(props);
-    } catch {
-      // ignore
-    }
-  });
-  capturePostHogEvent("calib_numbers", { ...props });
-}
-
-/**
  * Stamps the coarse device bucket as a person property once per session,
  * rather than repeating it on every gameplay event. `deviceBucket`'s closed
  * set, never the raw user-agent — see `session.ts`.
@@ -444,7 +466,7 @@ export function setDeviceProperty(device: string): void {
  * Stamps the player's effective speech style on every later event (a super
  * property) and on the person, so any chart can be split by it — including
  * players who never touched the setting and so never sent `setting_changed`.
- * A closed two-value union; global tier, like `setting_changed`.
+ * A closed two-value union.
  */
 export function setSpeechStyleProperty(style: SpeechStyle): void {
   runOrQueue(() => {
@@ -460,7 +482,7 @@ export function setSpeechStyleProperty(style: SpeechStyle): void {
 /**
  * First-touch SEO attribution: the route-table page whose CTA first brought
  * this person into /app. `$set_once`, so a later visit from another page never
- * overwrites it. Global tier; values come from the route table only.
+ * overwrites it. Values come from the route table only.
  */
 export function setFirstSeoTouch(page: string, angle: string): void {
   runOrQueue(() => {
@@ -516,7 +538,7 @@ export function displayModeProperties(
  * Stamps `in_app_browser`/`in_app_platform`/`display_mode` on every event of
  * the visit (super properties), and the first/last value on the person. Runs
  * at SDK start on every entry (`/`, the site pages, `/app`). Also listens for
- * `appinstalled` (Chromium only) to send `pwa_installed`. Global tier.
+ * `appinstalled` (Chromium only) to send `pwa_installed`.
  */
 function registerInAppBrowser(client: typeof posthogType): void {
   try {
@@ -532,20 +554,44 @@ function registerInAppBrowser(client: typeof posthogType): void {
 }
 
 /**
- * Mirrors the "Share game data" toggle — the gameplay tier only (mic,
- * calibration, run/gate events, Visualiser practice; see `session.ts`'s
- * `eventTier`). Turning it off stops those events immediately, checked at
- * `captureGameEvent`/`setCalibrationProperties`.
+ * The "Usage analytics" switch (brief 35). Off stops every PostHog event from
+ * this page at once: held events are discarded, `runOrQueue` drops new ones,
+ * and `beforeSend` drops what the SDK itself sends (`$pageview`,
+ * `$pageleave`, `$web_vitals`, `$set`, `$identify`). On starts the SDK if
+ * the page loaded with the switch off or pending, and sends from that moment:
+ * nothing captured while off is sent later. Events held while `pending` are
+ * sent, because the switch was never off for them.
  *
- * Deliberately does NOT call `ph.opt_out_capturing()`/`ph.reset()`. The two
- * tiers share one PostHog client instance and one distinct_id by design —
- * resetting the id on a gameplay opt-out would also orphan global-tier
- * history (screen views, the signup funnel) that the player never asked to
- * erase, and would break any funnel spanning both tiers. So this toggle no
- * longer erases the on-device anonymous identity, only gameplay content —
- * see CLAUDE.md's Play analytics rule 3 and the Settings copy for how that's
- * described to the player.
+ * Does not call `ph.opt_out_capturing()` or `ph.reset()`: PostHog saves its
+ * opt-out per browser, not per account, and a reset would orphan the
+ * person's history for no privacy gain (nothing is sent while off).
  */
 export function setPostHogConsent(on: boolean): void {
-  gameplayConsent = on;
+  if (!armed) {
+    consent = on ? "on" : "off";
+    return;
+  }
+  if (!on) {
+    consent = "off";
+    pending = [];
+    return;
+  }
+  consent = "on";
+  if (ph) flushPending();
+  else loadSdk();
+}
+
+/** The switch's current state on this page. */
+export function postHogConsent(): UsageConsent {
+  return consent;
+}
+
+/** Test seam: back to a fresh page. */
+export function resetPostHogForTests(): void {
+  ph = null;
+  consent = "off";
+  armed = false;
+  loading = false;
+  pending = [];
+  pageViewProps = undefined;
 }

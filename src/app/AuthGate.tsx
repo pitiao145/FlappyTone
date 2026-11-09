@@ -8,7 +8,8 @@
  * params are put back here first (`restoreReturn`).
  */
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { track } from "../analytics/client";
+import { setSharingEnabled, track } from "../analytics/client";
+import { loadShareData } from "../game/settings.ts";
 import { getAccount, recordMarketingConsent } from "../data/account.ts";
 import { noteAccount } from "../data/accountScope.ts";
 import { getSupabase } from "../data/supabase.ts";
@@ -97,6 +98,10 @@ export default function AuthGate() {
         // Brief 34: note which account this browser holds before GameApp
         // mounts, so a second account never reads the first one's values.
         noteAccount(play ? account.userId : null);
+        // Brief 35: with no account to read, this browser's own value decides
+        // the "Usage analytics" switch now. A signed-in player waits for
+        // `syncAccount()` (GameApp's mount) instead.
+        if (!play) setSharingEnabled(loadShareData());
         playingRef.current = play;
         // The auth screen was up this page: the game starts from a clean page
         // (URL params intact, none of its CSS). Its own submit reloads once it

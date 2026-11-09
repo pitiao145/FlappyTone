@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EVENT_TIERS, deviceBucket, eventTier, gateEvent, roundCalibration } from "./session.ts";
+import { APP_EVENT_TYPES, deviceBucket, gateEvent } from "./session.ts";
 import type { GateLogEntry } from "../game/run.ts";
 import type {
   AnalyticsEvent,
@@ -57,24 +57,6 @@ const _screenIsTracked: TrackedScreen = null as unknown as Exclude<Screen, "lab"
 void _trackedIsScreen;
 void _screenIsTracked;
 
-describe("roundCalibration", () => {
-  it("rounds away meaningless precision", () => {
-    expect(
-      roundCalibration({
-        f0Center: 198.44444444,
-        rangeSemitones: 4.812345,
-        rangeDownSemitones: 4.812345,
-        noiseFloor: 0.002134567,
-      }),
-    ).toEqual({
-      f0Center: 198.4,
-      rangeSemitones: 4.81,
-      rangeDownSemitones: 4.81,
-      noiseFloor: 0.00213,
-    });
-  });
-});
-
 describe("gateEvent", () => {
   const entry: GateLogEntry = {
     tone: 3,
@@ -102,11 +84,12 @@ describe("gateEvent", () => {
       outcome: "unheard",
       acc: 0,
       toneAcc: null,
-      uttMs: 143,
-      voicedFrac: 0.316,
-      seeded: 0,
-      excMs: 413,
     });
+  });
+
+  it("sends no voice-signal fields (brief 35)", () => {
+    const sent = gateEvent(entry, 7) as unknown as Record<string, unknown>;
+    for (const k of ["uttMs", "voicedFrac", "seeded", "excMs"]) expect(sent).not.toHaveProperty(k);
   });
 
   it("rounds a heard gate's tone accuracy alongside its score accuracy", () => {
@@ -124,16 +107,12 @@ describe("gateEvent", () => {
     const keys = Object.keys(ev).sort();
     expect(keys).toEqual([
       "acc",
-      "excMs",
       "i",
       "outcome",
-      "seeded",
       "tone",
       "toneAcc",
       "tones",
       "type",
-      "uttMs",
-      "voicedFrac",
     ]);
     for (const [key, value] of Object.entries(ev)) {
       if (key === "tones") continue;
@@ -280,11 +259,10 @@ describe("run_end", () => {
   });
 });
 
-describe("eventTier", () => {
-  // Enumerated independently of eventTier's own switch, so this test can
-  // actually catch a miscategorization rather than just re-asserting the
-  // implementation.
-  const GAMEPLAY: AnalyticsEvent["type"][] = [
+describe("APP_EVENT_TYPES", () => {
+  // Enumerated independently, so a type added to or dropped from the union
+  // is noticed here rather than just re-asserting the implementation.
+  const ALL: AnalyticsEvent["type"][] = [
     "mic",
     "mic_unanswered",
     "mic_reacquire",
@@ -299,8 +277,6 @@ describe("eventTier", () => {
     "run_end",
     "cue_fallback",
     "visualiser_session",
-  ];
-  const GLOBAL: AnalyticsEvent["type"][] = [
     "landed",
     "share_clicked",
     "challenge_landed",
@@ -346,36 +322,29 @@ describe("eventTier", () => {
     "note_dismissed",
   ];
 
-  for (const type of GAMEPLAY) {
-    it(`${type} is gameplay tier`, () => {
-      expect(eventTier(type)).toBe("gameplay");
-    });
-  }
-  for (const type of GLOBAL) {
-    it(`${type} is global tier`, () => {
-      expect(eventTier(type)).toBe("global");
-    });
-  }
+  it("lists every AnalyticsEvent type exactly once, one kind only", () => {
+    expect(new Set(ALL).size).toBe(ALL.length);
+    expect([...ALL].sort()).toEqual(Object.keys(APP_EVENT_TYPES).sort());
+  });
 
-  it("covers every AnalyticsEvent type exactly once, split between the two lists above", () => {
-    expect(new Set([...GAMEPLAY, ...GLOBAL]).size).toBe(GAMEPLAY.length + GLOBAL.length);
-    expect([...GAMEPLAY, ...GLOBAL].sort()).toEqual(Object.keys(EVENT_TIERS).sort());
+  it("has no calib_numbers event (brief 35)", () => {
+    expect(Object.keys(APP_EVENT_TYPES)).not.toContain("calib_numbers");
   });
 });
 
 describe("APP_EVENTS", () => {
   it("contains every AnalyticsEvent type, so sanitization can't silently miss one", () => {
-    for (const type of Object.keys(EVENT_TIERS)) {
+    for (const type of Object.keys(APP_EVENT_TYPES)) {
       expect(APP_EVENTS.has(type), `APP_EVENTS is missing "${type}"`).toBe(true);
     }
-    expect(APP_EVENTS.has("calib_numbers")).toBe(true);
+    expect(APP_EVENTS.has("calib_numbers")).toBe(false);
   });
 
   it("sanitizes seo_cta_click (a hand-kept list once missed it)", () => {
     expect(APP_EVENTS.has("seo_cta_click")).toBe(true);
   });
 
-  it("sanitizes a representative global-tier event exactly like a gameplay one, proving sanitization is tier-independent", () => {
+  it("sanitizes a screen event exactly like a run event", () => {
     const sent = sanitizeGameProperties({
       screen: "profile",
       $host: "flappytone.com",
@@ -521,12 +490,5 @@ describe("mic, mic_help and inapp_prompt shapes (brief 27)", () => {
     expect(Object.keys(u)).toHaveLength(4);
     expect(Object.keys(ok)).toHaveLength(4);
     expect(Object.keys(fail)).toHaveLength(7);
-  });
-
-  it("keeps mic gameplay and mic_help global", () => {
-    expect(eventTier("mic")).toBe("gameplay");
-    expect(eventTier("mic_unanswered")).toBe("gameplay");
-    expect(eventTier("mic_reacquire")).toBe("gameplay");
-    expect(eventTier("mic_help")).toBe("global");
   });
 });

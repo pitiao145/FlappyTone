@@ -161,7 +161,7 @@ export interface MicContext {
 }
 
 /**
- * Properties a route-table page adds to its own `$pageview` (global tier).
+ * Properties a route-table page adds to its own `$pageview`.
  * Closed and reviewed like `AnalyticsEvent`: the page's own metadata from
  * `src/site/routes.ts`, never anything typed.
  */
@@ -324,10 +324,6 @@ export type AnalyticsEvent =
        * when the gate has no reference (a combo with a neutral syllable).
        */
       toneAcc: number | null;
-      uttMs: number;
-      voicedFrac: number;
-      seeded: number;
-      excMs: number;
     }
   | {
       type: "run_end";
@@ -656,106 +652,72 @@ export type SettingKey =
   | "sharing";
 
 /**
- * Which consent gate an event answers to. Gameplay events are dropped when
- * the player has turned off "Share game data" (`setPostHogConsent`);
- * global events always send in production, gated only by `posthog.ts`'s
- * `enabled()` check. A new event type must be added to `EVENT_TIERS` below —
- * it is exhaustive by construction (a missing key is a type error), so this
- * is the one place tier is decided, never inferred at a call site.
+ * Every event type this app sends, one kind only (brief 35: no consent tiers
+ * any more; the one "Usage analytics" switch stops all of them, and
+ * everything else PostHog sends, at once). A `Record` over the union, so a
+ * new type missing here, or a name here that is not in the union, is a type
+ * error. `posthog.ts`'s `APP_EVENTS` (the sanitizer's list) is built from
+ * these keys.
  */
-export type AnalyticsTier = "gameplay" | "global";
-
-/**
- * Every event type with its tier. A `Record` over the union, so a new type
- * without a tier, or a tier for a type that does not exist, is a type error.
- * `posthog.ts`'s `APP_EVENTS` (the sanitizer's list) is built from these keys.
- */
-export const EVENT_TIERS: Record<AnalyticsEvent["type"], AnalyticsTier> = {
-  mic: "gameplay",
-  mic_unanswered: "gameplay",
-  mic_reacquire: "gameplay",
-  mic_help: "global",
-  calib_step: "gameplay",
-  calib_done: "gameplay",
-  calib_abandoned: "gameplay",
-  recal_offered: "gameplay",
-  recal_resolved: "gameplay",
-  run_feedback: "gameplay",
-  run_start: "gameplay",
-  gate: "gameplay",
-  run_end: "gameplay",
-  cue_fallback: "gameplay",
-  visualiser_session: "gameplay",
-  landed: "global",
-  share_clicked: "global",
-  challenge_landed: "global",
-  challenge_resolved: "global",
-  leaderboard_viewed: "global",
-  join_board_shown: "global",
-  join_board_submitted: "global",
-  score_submitted: "global",
-  mode_selected: "global",
-  screen_viewed: "global",
-  setting_changed: "global",
-  signup_started: "global",
-  signup_completed: "global",
-  auth_screen_viewed: "global",
-  login_completed: "global",
-  auth_code_sent: "global",
-  auth_code_failed: "global",
-  daily_limit_reached: "global",
-  earlybird_modal_shown: "global",
-  earlybird_create_account_click: "global",
-  earlybird_pay_click: "global",
-  earlybird_checkout_opened: "global",
-  profile_earlybird_cta_click: "global",
-  progress_locked_cta_click: "global",
-  progress_earlybird_pricing_click: "global",
-  feedback_submitted: "global",
-  update_banner: "global",
-  inapp_prompt: "global",
-  tool_used: "global",
-  tool_summary: "global",
-  word_page_action: "global",
-  tool_cta_click: "global",
-  seo_cta_click: "global",
-  app_open: "global",
-  toneder_swipe: "global",
-  toneder_round_done: "global",
-  toneder_cap_hit: "global",
-  toneder_upgrade_click: "global",
-  pwa_installed: "global",
-  note_shown: "global",
-  note_sent: "global",
-  note_dismissed: "global",
+export const APP_EVENT_TYPES: Record<AnalyticsEvent["type"], true> = {
+  mic: true,
+  mic_unanswered: true,
+  mic_reacquire: true,
+  mic_help: true,
+  calib_step: true,
+  calib_done: true,
+  calib_abandoned: true,
+  recal_offered: true,
+  recal_resolved: true,
+  run_feedback: true,
+  run_start: true,
+  gate: true,
+  run_end: true,
+  cue_fallback: true,
+  visualiser_session: true,
+  landed: true,
+  share_clicked: true,
+  challenge_landed: true,
+  challenge_resolved: true,
+  leaderboard_viewed: true,
+  join_board_shown: true,
+  join_board_submitted: true,
+  score_submitted: true,
+  mode_selected: true,
+  screen_viewed: true,
+  setting_changed: true,
+  signup_started: true,
+  signup_completed: true,
+  auth_screen_viewed: true,
+  login_completed: true,
+  auth_code_sent: true,
+  auth_code_failed: true,
+  daily_limit_reached: true,
+  earlybird_modal_shown: true,
+  earlybird_create_account_click: true,
+  earlybird_pay_click: true,
+  earlybird_checkout_opened: true,
+  profile_earlybird_cta_click: true,
+  progress_locked_cta_click: true,
+  progress_earlybird_pricing_click: true,
+  feedback_submitted: true,
+  update_banner: true,
+  inapp_prompt: true,
+  tool_used: true,
+  tool_summary: true,
+  word_page_action: true,
+  tool_cta_click: true,
+  seo_cta_click: true,
+  app_open: true,
+  toneder_swipe: true,
+  toneder_round_done: true,
+  toneder_cap_hit: true,
+  toneder_upgrade_click: true,
+  pwa_installed: true,
+  note_shown: true,
+  note_sent: true,
+  note_dismissed: true,
 };
-
-export function eventTier(type: AnalyticsEvent["type"]): AnalyticsTier {
-  return EVENT_TIERS[type];
-}
-
-export interface SessionCalibration {
-  f0Center: number;
-  /** Semitones from centre up to Chao 5. */
-  rangeSemitones: number;
-  /** Semitones from centre down to Chao 1 — the board is not symmetric. */
-  rangeDownSemitones: number;
-  noiseFloor: number;
-}
-
-/**
- * Rounds away meaningless precision before calibration numbers are sent.
- * The raw floats carry ~15 significant digits from the pitch math; none of
- * that is signal.
- */
-export function roundCalibration(cal: SessionCalibration): SessionCalibration {
-  return {
-    f0Center: round(cal.f0Center, 1),
-    rangeSemitones: round(cal.rangeSemitones, 2),
-    rangeDownSemitones: round(cal.rangeDownSemitones, 2),
-    noiseFloor: round(cal.noiseFloor, 5),
-  };
-}
 
 /**
  * Flattens one gate's diagnostics into an event.
@@ -773,10 +735,6 @@ export function gateEvent(entry: GateLogEntry, index: number): AnalyticsEvent {
     outcome: entry.outcome,
     acc: round(entry.accuracy, 3),
     toneAcc: entry.toneAccuracy === null ? null : round(entry.toneAccuracy, 3),
-    uttMs: Math.round(entry.utteranceMs),
-    voicedFrac: round(entry.voicedFraction, 3),
-    seeded: entry.seeded,
-    excMs: Math.round(entry.worstExcursionMs),
   };
 }
 

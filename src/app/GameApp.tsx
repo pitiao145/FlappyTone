@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { track, trackCalibration, trackFirstSeoTouch, trackSpeechStyle } from "../analytics/client";
+import { track, trackFirstSeoTouch, trackSpeechStyle } from "../analytics/client";
 import { seoSource } from "../site/pageAnalytics.ts";
 import { detectInAppBrowser } from "../lib/inAppBrowser";
 import { InAppBrowserPrompt } from "../ui/InAppBrowserPrompt";
@@ -382,8 +382,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
         return "play";
     }
   });
-  // Global-tier: fires on every screen change, always sent in production
-  // regardless of the gameplay consent toggle (session.ts's eventTier).
+  // Fires on every screen change (sent when "Usage analytics" is on).
   // "lab"/"devlogin" are dev-only and excluded from TrackedScreen, so they
   // are skipped here rather than widening that type for two screens that
   // never reach a production build (CLAUDE.md hard rule 7).
@@ -664,6 +663,12 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     const gen = ++navRef.current;
     try {
       void ensurePlaybackCtx(); // resume cue-playback ctx in-gesture (reference.ts)
+      // A mic already open (the tutorial before a first scored run) may have
+      // a suspended context, and `ensureMic` returns it as it is. Resume it
+      // here, inside this tap: since brief 35 removed the first-run notice,
+      // this OK is the last gesture before the run starts (hard rule 4).
+      const open = getMicSession()?.ctx;
+      if (open && open.state !== "running") void open.resume();
       await ensureMic(micGateSurfaceRef.current);
       if (gen !== navRef.current) return;
       const resume = micGateResumeRef.current;
@@ -889,7 +894,6 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
         if (seeded) {
           saveSettings(seeded);
           setSettings(seeded);
-          trackCalibration(seeded);
         }
         // A brief loading beat so the last gate doesn't snap straight to the
         // Play screen (which read as broken). The seeding is instant; the pause
@@ -1085,11 +1089,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     } catch {
       /* no window (tests) */
     }
-    // Re-report the saved calibration each visit, so a session that skips
-    // calibration (because it already ran) still carries the voice numbers its
-    // gate results have to be read against.
     const saved = loadSettings();
-    if (saved) trackCalibration(saved);
     // The clip inventory, started here so it has landed by the time a run is
     // constructed — the Run needs its words synchronously, at the moment the
     // first gates spawn. A failure resolves to an empty inventory and the game

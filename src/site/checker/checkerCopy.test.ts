@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AnalyticsEvent } from "../../analytics/session.ts";
-import { eventTier } from "../../analytics/session.ts";
+import { APP_EVENT_TYPES } from "../../analytics/session.ts";
 import { attemptView, makeCheckerReporter } from "./checkerCopy.ts";
 
 describe("attemptView", () => {
@@ -57,7 +57,7 @@ describe("tone visualizer analytics", () => {
       { type: "tool_summary", tool: "tone-visualizer", attempts: 3, targets: 2 },
     ]);
     for (const e of sent) {
-      expect(eventTier(e.type)).toBe("global");
+      expect(APP_EVENT_TYPES[e.type]).toBe(true);
       // No accuracy, pitch, word id or text: only the closed keys, and every
       // string value is from the fixed vocabulary.
       for (const [k, v] of Object.entries(e)) {

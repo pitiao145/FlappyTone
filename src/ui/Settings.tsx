@@ -5,7 +5,9 @@ import { ensureMic, MicCancelled } from "../audio/session.ts";
 import { getAccount, signOut, type Account } from "../data/account.ts";
 import { fireAuthToast } from "../data/authToast.ts";
 import { micErrorCopy } from "./micErrors.ts";
-import { setSharingEnabled, track, trackSpeechStyle } from "../analytics/client.ts";
+import { track, trackSpeechStyle } from "../analytics/client.ts";
+import { currentAccountId } from "../data/accountScope.ts";
+import { setUsageAnalytics } from "../data/usageAnalytics.ts";
 import { CORRIDOR_WIDTH_LABEL, CORRIDOR_WIDTHS, type CorridorWidth } from "../game/gates.ts";
 import type { CueStyle } from "../game/run.ts";
 import {
@@ -20,7 +22,6 @@ import {
   saveCorridorWidth,
   saveCueStyle,
   saveSettings,
-  saveShareData,
   saveShowPinyin,
   saveShowToneMarks,
   saveShowTranslation,
@@ -620,27 +621,24 @@ export function Settings({
           <SettingIcon>
             <ChartIcon />
           </SettingIcon>
-          <h3>Share game data</h3>
+          <h3>Usage analytics</h3>
         </div>
         <Choice
           options={SHARING}
           value={sharing}
           onChange={(v) => {
             setSharing(v);
-            saveShareData(v === "on");
-            // Applied now, not next run: turning this off stops gameplay
-            // events immediately rather than after one more game.
-            setSharingEnabled(v === "on");
-            // A meta-setting change, tracked unconditionally regardless of the
-            // new value — this describes using Settings, not gameplay, so it
-            // is global tier (see session.ts's eventTier).
-            track({ type: "setting_changed", key: "sharing", value: v });
+            // Applied at once in this browser, then saved to the account
+            // (brief 35). A failed account write is retried on the next sync.
+            void setUsageAnalytics(currentAccountId(), v === "on");
+            // Sent only when it goes on, from then on: an "off" sends nothing.
+            if (v === "on") track({ type: "setting_changed", key: "sharing", value: v });
           }}
         />
         <p className="param-help">
           {sharing === "on"
-            ? "Sends what happens during a run: which gates you hit or miss, your calibration numbers, and your Tone Visualiser practice, so the game can be tuned against real attempts. Never audio or recordings, and never linked to your account or email. Details are in the privacy policy."
-            : "Run and calibration data stops being sent. General usage data, like which screens you visit or what's tapped, is still sent, to see how the app is used. Details are in the privacy policy."}
+            ? "Sends data about how you use the app and how your runs go (gates, scores, mic and calibration steps), so we can improve it. Never audio, never your voice. Saved with your account. Details are in the privacy policy."
+            : "Nothing is sent. This applies wherever you're signed in. Details are in the privacy policy."}
         </p>
       </section>
 

@@ -34,7 +34,6 @@ const MOVE_KEYS = [
   "toneflap.wordmix.v1",
   "toneflap.motion.v1",
   "toneflap.sharedata.v1",
-  "toneflap.analytics.notice.v1",
   "toneflap.proficiency.v1",
   "toneflap.lastlevel.v1",
   "toneflap.speechstyle.v1",
@@ -45,6 +44,13 @@ const MOVE_KEYS = [
   "flappytone.tonetest.last.v1",
   "flappytone.dismissedUpdates",
 ];
+
+/**
+ * Moved keys that also stay as they are: the "Usage analytics" switch is
+ * also this browser's signed-out value (brief 35), so an opt-out made before
+ * keys were per account still holds after a sign-out.
+ */
+const KEEP_PLAIN = new Set(["toneflap.sharedata.v1"]);
 
 /** Unscoped keys whose owner cannot be known: dropped. The server restores
  * the name and the daily count on the next sync. */
@@ -78,7 +84,7 @@ function migrateLegacy(userId: string): void {
       if (value === null) continue;
       const target = accountKey(base, userId);
       if (localStorage.getItem(target) === null) localStorage.setItem(target, value);
-      localStorage.removeItem(base);
+      if (!KEEP_PLAIN.has(base)) localStorage.removeItem(base);
     }
     // The run-history cache names its owner; the streak cache goes with it.
     const history = localStorage.getItem(HISTORY_KEY);

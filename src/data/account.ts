@@ -20,6 +20,7 @@ import { noteAccount } from "./accountScope.ts";
 import { bumpSessionVersion } from "./sessionVersion.ts";
 import { flushRunOutbox } from "./runlog.ts";
 import { ensureProfile, refreshServerStats } from "./stats.ts";
+import { syncUsageAnalytics } from "./usageAnalytics.ts";
 
 import { currentSession, getSupabase, warn } from "./supabase.ts";
 
@@ -356,8 +357,8 @@ export async function renameAccount(name: string): Promise<AuthResult> {
 
 /**
  * Brings this device up to date with the account. Runs on signup, sign-in and
- * app load: posts any run still in the outbox, then replaces the local cache
- * with the server's numbers.
+ * app load: settles the "Usage analytics" switch, posts any run still in the
+ * outbox, then replaces the local cache with the server's numbers.
  */
 export async function syncAccount(): Promise<AuthResult> {
   const account = await getAccount();
@@ -367,7 +368,12 @@ export async function syncAccount(): Promise<AuthResult> {
   // Scopes this browser's storage to the account first (brief 34), so
   // nothing below reads or writes another account's values.
   noteAccount(account.userId);
-  if (!(await ensureProfile(account.userId))) return { ok: false, reason: "could not create the profile row" };
+  const profiled = await ensureProfile(account.userId);
+  // The "Usage analytics" switch (brief 35): `/app` sends nothing until this
+  // has read the account's value. Runs even without the row (the account
+  // then counts as on, the default) so a page is never left waiting.
+  await syncUsageAnalytics(account.userId);
+  if (!profiled) return { ok: false, reason: "could not create the profile row" };
   await flushRunOutbox();
   const refreshed = await refreshServerStats();
   if (!refreshed.ok) return { ok: false, reason: "could not read account stats" };

@@ -7,24 +7,20 @@
  * moved to PostHog (`./posthog.ts`), which does not offer the same
  * across-reload guarantee; the trade was accepted deliberately (see the
  * migration design doc) in exchange for not maintaining this machinery.
- * `initAnalytics`/`track`/`trackCalibration`/`setSharingEnabled` keep their
- * names and shapes so every call site — `App.tsx`, `Game.tsx`,
- * `Calibration.tsx`, `src/audio/session.ts` — needed no changes.
+ * `initAnalytics`/`track`/`setSharingEnabled` keep their names and shapes so
+ * every call site needed no changes.
  *
- * Consent still gates the gameplay tier: `loadShareData()` is read by
- * `initAnalytics` and threaded through to `initPostHog`. Global-tier events
- * (screen views, mode selection, the leaderboard/signup funnel) are not
- * gated by this at all — see `session.ts`'s `eventTier` and `posthog.ts`'s
- * Play analytics rule 3 in CLAUDE.md.
+ * One switch, "Usage analytics" (brief 35): `loadShareData()` is read by
+ * `initAnalytics` and off stops every event, see `posthog.ts`'s
+ * `setPostHogConsent`.
  */
 
-import { loadShareData, type CalibrationSettings } from "../game/settings.ts";
+import { loadShareData } from "../game/settings.ts";
 import type { SpeechStyle } from "../game/words.ts";
 import { deviceBucket, type AnalyticsEvent, type SeoPageViewProps } from "./session.ts";
 import {
   captureGameEvent,
   initPostHog,
-  setCalibrationProperties,
   setDeviceProperty,
   setFirstSeoTouch,
   setPostHogConsent,
@@ -37,11 +33,16 @@ let initialized = false;
  * Starts the PostHog client. Call once, from the entry module before the first
  * render: an event tracked before this is dropped, not queued. Later calls are
  * ignored, so pass a route-table page's `$pageview` props on this first call.
+ *
+ * `waitForAccount` (`/app`): unless this browser already says off, nothing is
+ * sent until the account's own value is known (`setSharingEnabled`, called by
+ * `src/data/usageAnalytics.ts` or by AuthGate for a signed-out visitor).
  */
-export function initAnalytics(pageProps?: SeoPageViewProps): void {
+export function initAnalytics(pageProps?: SeoPageViewProps, opts?: { waitForAccount?: boolean }): void {
   if (initialized) return;
   initialized = true;
-  initPostHog(loadShareData(), pageProps);
+  const on = loadShareData();
+  initPostHog(!on ? "off" : opts?.waitForAccount ? "pending" : "on", pageProps);
   if (typeof navigator !== "undefined") {
     setDeviceProperty(deviceBucket(navigator.userAgent));
   }
@@ -51,15 +52,6 @@ export function initAnalytics(pageProps?: SeoPageViewProps): void {
 export function track(event: AnalyticsEvent): void {
   try {
     captureGameEvent(event);
-  } catch {
-    // ignore
-  }
-}
-
-/** Stamps the calibration numbers, as person properties and as an event. */
-export function trackCalibration(cal: CalibrationSettings): void {
-  try {
-    setCalibrationProperties(cal);
   } catch {
     // ignore
   }
@@ -84,10 +76,8 @@ export function trackFirstSeoTouch(page: string, angle: string): void {
 }
 
 /**
- * Mirrors the "Share game data" toggle — the gameplay tier only. Off
- * stops gameplay/calibration events immediately; global-tier events (screen
- * views, mode selection, the leaderboard/signup funnel) are unaffected. See
- * `posthog.ts`'s `setPostHogConsent`.
+ * The "Usage analytics" switch. Off stops every event at once; on sends from
+ * that moment. See `posthog.ts`'s `setPostHogConsent`.
  */
 export function setSharingEnabled(enabled: boolean): void {
   try {

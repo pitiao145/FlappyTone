@@ -352,15 +352,23 @@ export function saveReduceMotion(v: boolean | null): void {
 
 // ------------------------------------------------------------ analytics
 
-const SHARE_DATA_KEY = "toneflap.sharedata.v1";
-const NOTICE_KEY = "toneflap.analytics.notice.v1";
+/**
+ * The "Usage analytics" switch (brief 35; "Share game data" before it, same
+ * key, so an old `"off"` is still off). `"off"` means opted out; anything
+ * else is on. Code never turns an `"off"` back on: only the player's own
+ * toggle, here or on another device through the account
+ * (`src/data/usageAnalytics.ts`), does.
+ */
+export const SHARE_DATA_KEY = "toneflap.sharedata.v1";
 
 /**
- * Whether gameplay data is sent home ("Share game data" in Settings). On by default — the game is in
- * testing and the whole point of this round is to find out where it fails.
+ * Whether usage analytics is on. On by default; defaults to true when storage
+ * is unreadable, matching every other read here: an unreadable store means
+ * "no preference recorded", not "opted out".
  *
- * Defaults to true when storage is unreadable, matching every other read here:
- * an unreadable store means "no preference recorded", not "opted out".
+ * Reads the signed-in account's value (`accountStorage`), or this browser's
+ * signed-out value when no account is known. Site pages read it too, before
+ * the SDK starts.
  */
 export function loadShareData(): boolean {
   try {
@@ -370,36 +378,17 @@ export function loadShareData(): boolean {
   }
 }
 
+/**
+ * Saves the switch for the current account, and as this browser's signed-out
+ * value too, so a sign-out (or a site page with no account) keeps the last
+ * choice made here.
+ */
 export function saveShareData(v: boolean): void {
   try {
     accountStorage.setItem(SHARE_DATA_KEY, v ? "on" : "off");
+    localStorage.setItem(SHARE_DATA_KEY, v ? "on" : "off");
   } catch {
     // Blocked storage. The toggle still applies to this session.
-  }
-}
-
-/**
- * Whether the first-run notice has been dismissed.
- *
- * Clearing site data brings it back, which is correct rather than a bug: that
- * is also when the analytics player id is regenerated, so it genuinely is a
- * first run again.
- */
-export function loadNoticeSeen(): boolean {
-  try {
-    return accountStorage.getItem(NOTICE_KEY) === "seen";
-  } catch {
-    // Unreadable storage means we cannot know it was shown. Showing a notice
-    // twice is a small annoyance; never showing it is a broken disclosure.
-    return false;
-  }
-}
-
-export function saveNoticeSeen(): void {
-  try {
-    accountStorage.setItem(NOTICE_KEY, "seen");
-  } catch {
-    // ignore
   }
 }
 
