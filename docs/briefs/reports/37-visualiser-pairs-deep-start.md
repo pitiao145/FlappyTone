@@ -2,7 +2,47 @@
 - Result: done (diagnosis only; no code or tuning changed)
 - Branch: `research/37-visualiser-pairs-deep-start`
 
-## Short answer
+## Update (follow-up with Pierre): shapes, and the room-noise measurement
+Pierre's read: Foorgol meant the drawn shapes, not the Tone card. The bird is the same in the game and the Visualiser. Pierre asked to check the room-noise measurement that runs before a run or a Visualiser visit.
+
+**Finding: the room-noise measurement can explain "the line will not go low unless I go much deeper".** It is the only per-session input that differs between the two screens, and a high value removes exactly the low parts of a contour.
+
+How it works (same code on both screens, `src/game/sessionNoise.ts`, `src/pitch/noiseMeter.ts`):
+- Skip the first 200ms of mic audio, then take the median loudness of the next 400ms. That is the room's noise floor (`noiseSkipMs`/`noiseMeasureMs`, `tuning.ts:753-754`).
+- Any frame quieter than floor × 3 is "not voice" (`src/pitch/math.ts:133`). The bird stops following it and holds its last height.
+- The floor is capped so the gate is at most 40% of the player's voice loudness from calibration (`voiceCapFraction` 0.4, `sessionNoise.ts:20-24`). The cap is marked "NOT YET TUNED" in `tuning.ts`.
+- It is measured once per game run or Visualiser visit, and is not logged anywhere. We cannot see Foorgol's value. PostHog has only the calibration floor (`posthog.ts:359`).
+
+When it is measured (the difference):
+- **Game:** each new run (`Game.tsx:567`, effect deps include `runGen`). The 600ms falls inside the warm-up hold (`warmupMinMs` 650ms, `tuning.ts:752`). The world is still and the player waits, so the room is usually quiet.
+- **Visualiser:** the first 600ms of mic audio after the screen's effect starts (`Visualiser.tsx:536`). There is no hold and no "stay quiet" moment. The effect also restarts, and **measures again**, every time the canvas changes size (deps `[settings, canvasW, canvasH]`, `Visualiser.tsx:685`; size from a ResizeObserver, `Visualiser.tsx:503-511`). That happens once right after mount, and again on rotation, on a window resize, or whenever the stage changes height. If the player is speaking, or the room is louder at that moment, the floor goes up to the cap and stays there for the whole visit.
+
+What a high floor does to the line. Our native speaker's direct-mic captures, run through the real `PitchTracker` with the gate set to a share of her own median voice loudness:
+
+| clip | gate ≈ 0 | gate 10% | gate 20% | gate 30–40% (cap) |
+|---|---|---|---|---|
+| ma4 (T4): lowest point reached | **1.22** | 1.92 | **4.70** (fall gone) | 4.70 |
+| ma4: voiced ms | 418 | 325 | 279 | 209 |
+| ma3 natural (T3): lowest point | 1.00 | 1.05 | 1.36 | 1.36 |
+| ma3 natural: voiced ms | 372 | 279 | 255 | 255 |
+| ma2 (T2): voiced ms | 1068 | 1045 | 859 | 813 |
+| ma1 (T1): voiced ms | 766 | 743 | 697 | 627 |
+| ma3 textbook: lowest point | 1.19 | 1.19 | 1.19 | 1.19 |
+
+- The quiet part of a word is its low end: the bottom of a T4 fall, a T3 dip in fast speech, the tail of any word. A higher gate removes these first. With the gate at 20% of her loudness, her T4 is drawn as a short flat line at the top; the fall never appears.
+- Slow, loud textbook T3 survives. Fast, soft speech does not.
+- **Pairs are hit harder than single tones.** A pair's second syllable is quieter and lower (declination), and many pairs end in a fall or a low half-third tone. With a high floor the learner's line stops before it gets low and the bird holds high. To make the line reach the target, the learner must push lower and louder: "start with a much deeper voice". In the game the same voice is still inside the corridor (±0.7 chao), or that part is not scored, so it feels fine there.
+- Limits of this test: there are no pair WAVs in `fixtures/captures/`, and these are direct-mic captures, not phone audio. The pair claim is reasoning from the single-tone numbers.
+
+Proposed fixes for this part (smallest first):
+1. **Measure once per Visualiser visit, not on every resize.** Create the meter outside the canvas-size effect (a ref), so a resize keeps the floor it has. Small change in `Visualiser.tsx`; no golden snapshots; game untouched.
+2. **Measure only while the player is quiet**: discard the measurement and try again if the frames look like voice (clarity high), or reuse the last game run's floor when it is recent. Small, in `src/game/sessionNoise.ts`; it also helps the game.
+3. **Log the session floor** (and the gate as a share of `voiceRms`) on `visualiser_*` and run-end events, so the next report like this can be checked. This is a room number, not voice audio, but it is new derived data: check the privacy policy wording first (hard rule 12).
+4. Re-tune `voiceCapFraction` (0.4 now, marked not tuned). At 0.2 her T4 fall is already gone, so even 0.4 at the cap is too high to be safe. This changes the game too, so it needs `npm run report` before/after and Lab flying.
+
+Extra question for Foorgol: phone or computer, and did they rotate the phone or resize the window while in the Visualiser? Was there noise (talking, TV, fan) when they opened it?
+
+## Short answer (first pass, before the follow-up above)
 - **A calibration or height offset is not the cause.** The app Visualiser, the public /tools/tone-visualizer and the game use the same calibration, the same voice-to-height mapping and the same target heights. A lower voice does not make pairs read better. On our native speaker's own pairs it makes some read worse.
 - **What is broken is the pair read** (the "T4 · T1" Tone card). It fails on our native speaker's own perfect recordings: 56% right for Standard (textbook) pairs, **0% for Spoken (natural) pairs**. A learner who sees "wrong" or "couldn't detect both tones" again and again tries other things, for example a deeper voice.
 - **Second, smaller cause: the Visualiser draws only a thin target line.** The game draws a corridor about ±0.7 chao wide. A voice 0.5 chao above the target is "inside" in the game, but in the Visualiser it is clearly above the line. This can explain "I would have to start deeper", and it is true for single tones too.
