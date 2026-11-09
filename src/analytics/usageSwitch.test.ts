@@ -18,7 +18,6 @@ vi.mock("posthog-js", () => ({ default: fake }));
 import {
   captureGameEvent,
   initPostHog,
-  postHogConsent,
   resetPostHogForTests,
   setPostHogConsent,
 } from "./posthog.ts";
@@ -118,7 +117,6 @@ describe("Usage analytics switch", () => {
     setPostHogConsent(true);
     await flush();
     expect(fake.capture.mock.calls.map((c) => c[0])).not.toContain("app_open");
-    expect(postHogConsent()).toBe("on");
   });
 
   it("removes the old calibration person properties once, then never again", async () => {

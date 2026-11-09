@@ -693,8 +693,8 @@ export type Database = {
         Returns: boolean
       }
       merge_words: { Args: { p_a: string[]; p_b: string[] }; Returns: string[] }
-      note_dismiss: { Args: { p_user: string }; Returns: undefined }
       my_usage_analytics: { Args: never; Returns: boolean }
+      note_dismiss: { Args: { p_user: string }; Returns: undefined }
       note_eligible: {
         Args: { p_min_days: number; p_min_runs: number; p_user: string }
         Returns: boolean

@@ -8,17 +8,16 @@
  *
  * The transport (`src/analytics/posthog.ts`, `client.ts`) sends each event
  * individually rather than assembling a `SessionRecord` to POST, but this
- * file's `AnalyticsEvent` union and `SessionCalibration` are still the closed
+ * file's `AnalyticsEvent` union is still the closed
  * vocabulary both sides agree on — `posthog.ts`'s `before_send` re-enforces
  * the same allowlist at the transport boundary that `api/analytics.ts` used
  * to enforce server-side.
  *
  * ## What is sent
  *
- * Gameplay outcomes only. Per gate: the tone asked for, what happened, how
- * accurate it was, how long the player voiced, how far outside the corridor
- * they strayed. Per session: which screens they reached, their calibration
- * numbers, and a coarse device bucket.
+ * Usage and gameplay outcomes. Per gate: the tone asked for, what happened,
+ * and how accurate it was (score and tone accuracy). Per session: which
+ * screens they reached and a coarse device bucket.
  *
  * ## What is never sent — this list is load-bearing
  *
@@ -28,6 +27,8 @@
  * - No raw user-agent in our own fields — only `deviceBucket`'s closed set.
  *   PostHog's own `$raw_user_agent` is kept by `posthog.ts`'s `PH_ALLOW`, for
  *   bot filtering (DECISIONS.md, 29 Oct 2026).
+ * - No voice profile: no calibration numbers (`f0Center`, range, noise
+ *   floor) and no per-gate signal measures (brief 35, DECISIONS.md).
  * - No IP, geolocation, timezone, screen size, language, or cookies.
  * - No name, handle, email, or anything the player typed. The game has no
  *   text input; keep it that way.
@@ -36,12 +37,6 @@
  * field is a type error rather than a review comment someone has to catch. If
  * you find yourself widening the union to `Record<string, unknown>`, that is
  * the guardrail breaking, not a nuisance.
- *
- * The calibration numbers are the one judgement call here. `f0Center`, the two
- * range halves and `noiseFloor` are four floats derived from a voice.
- * They are not a recording and cannot be turned back into one, and they are
- * the only way to tell "Tone 3 is hard" from "Tone 3 is broken for low
- * voices" — which is a bug in the mapping, not a fact about the player.
  */
 
 import type { CorridorWidth, Tone } from "../game/gates.ts";

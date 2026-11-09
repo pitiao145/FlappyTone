@@ -28,7 +28,7 @@ import { getSupabase, warn } from "./supabase.ts";
 /** A switch value this browser still owes the account ("on"/"off"). */
 export const OWED_KEY = "toneflap.sharedata.owed.v1";
 /** Set once this browser has read the account's value. */
-export const SYNCED_KEY = "toneflap.sharedata.synced.v1";
+const SYNCED_KEY = "toneflap.sharedata.synced.v1";
 
 type Switch = "on" | "off";
 

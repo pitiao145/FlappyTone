@@ -260,18 +260,12 @@ export function scrubNameFromUrls(
   return out;
 }
 
-/**
- * The switch's last line: with analytics not on, every event the SDK would
- * send is dropped here — `$pageview`, `$pageleave`, `$web_vitals`, `$set`,
- * `$identify` and our own alike, since all of them pass through
- * `before_send`. Pure, for tests.
- */
-export function dropUnlessOn(cr: CaptureResult | null, state: UsageConsent): CaptureResult | null {
-  return state === "on" ? cr : null;
-}
-
 const beforeSend: BeforeSendFn = (input: CaptureResult | null) => {
-  const raw = dropUnlessOn(input, consent) && withPageViewProps(input as CaptureResult, pageViewProps);
+  // The switch's last line: with analytics not on, every event the SDK would
+  // send is dropped here — `$pageview`, `$pageleave`, `$web_vitals`, `$set`,
+  // `$identify` and our own alike, since all of them pass through here.
+  if (consent !== "on") return null;
+  const raw = input && withPageViewProps(input, pageViewProps);
   if (!raw) return raw;
   const cr: CaptureResult = { ...raw, properties: scrubNameFromUrls(raw.properties) ?? raw.properties };
   if (raw.$set) cr.$set = scrubNameFromUrls(raw.$set);
@@ -579,11 +573,6 @@ export function setPostHogConsent(on: boolean): void {
   consent = "on";
   if (ph) flushPending();
   else loadSdk();
-}
-
-/** The switch's current state on this page. */
-export function postHogConsent(): UsageConsent {
-  return consent;
 }
 
 /** Test seam: back to a fresh page. */
