@@ -35,9 +35,9 @@ const GENERIC: NoteCopy = {
 export const PREVIEW_TARGETED: NoteCopy = {
   peek: "A bug hit your second account, sorry! Can I ask you one question?",
   body:
-    "When you made a second account, a bug gave it your first account's name and a used-up run counter. " +
-    "Sorry, it's fixed now! A second account is totally fine, by the way. It made my week that you wanted to keep playing.",
-  question: "When you ran out of runs, what were you practising, and what did you do next?",
+    "When you made a second account, a bug gave it your first account's name and daily run count. " +
+    "Sorry about that, it's fixed now! A second account is totally fine, by the way, I'm happy to see you want to keep playing!",
+  question: "How many runs would you need in a day in order to make progress with your tones?",
 };
 
 function noteContext(tier: string): NoteContext {
