@@ -3,7 +3,8 @@
  * and when the Play home may ask for it.
  *
  * The server decides who qualifies (free account, recent counted runs, never
- * sent, "Not now" at most once then 3 days). The client only decides *when to
+ * sent, "Not now" at most once then 3 days), or hands a targeted note Pierre
+ * wrote for this account (migration 0035, shown once across its accounts). The client only decides *when to
  * ask*: on the Play home, after a finished run or TONEder round in this page
  * load, at most once per finish, and never again in this load once the card
  * was answered.
@@ -61,13 +62,35 @@ async function post(body: unknown): Promise<Response | null> {
   }
 }
 
-export async function checkNote(): Promise<boolean> {
+/** A targeted note's own copy (migration 0035). Plain text, never HTML. */
+export type NoteCopy = { peek: string; body: string; question: string };
+
+/** `note` set = a targeted note for this account; absent = the generic note. */
+export type NoteCheck = { show: boolean; note?: NoteCopy };
+
+const NO_NOTE: NoteCheck = { show: false };
+
+/** The server's answer, or `{show: false}` for anything malformed. Pure. */
+export function parseNoteCheck(raw: unknown): NoteCheck {
+  if (!raw || typeof raw !== "object") return NO_NOTE;
+  const r = raw as Record<string, unknown>;
+  if (r.show !== true) return NO_NOTE;
+  if (r.note === undefined) return { show: true };
+  const n = r.note as Record<string, unknown> | null;
+  if (!n || typeof n !== "object") return NO_NOTE;
+  const { peek, body, question } = n;
+  if (typeof peek !== "string" || typeof body !== "string" || typeof question !== "string") return NO_NOTE;
+  if (!peek.trim() || !body.trim() || !question.trim()) return NO_NOTE;
+  return { show: true, note: { peek, body, question } };
+}
+
+export async function checkNote(): Promise<NoteCheck> {
   const res = await post({ action: "check" });
-  if (!res?.ok) return false;
+  if (!res?.ok) return NO_NOTE;
   try {
-    return (await res.json())?.show === true;
+    return parseNoteCheck(await res.json());
   } catch {
-    return false;
+    return NO_NOTE;
   }
 }
 

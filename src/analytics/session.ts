@@ -592,11 +592,15 @@ export type AnalyticsEvent =
   /**
    * The note-from-Pierre card (`src/ui/PierreNote.tsx`). Never carries the
    * message or the email. `note_dismissed`'s `stage`: the small card or the
-   * opened full card.
+   * opened full card. `kind`: a note Pierre wrote for chosen accounts
+   * (`targeted`) or the activity-based one (`generic`). Never the note's text
+   * or id.
    */
-  | { type: "note_shown" }
-  | { type: "note_sent"; wants_chat: boolean }
-  | { type: "note_dismissed"; stage: "collapsed" | "card" };
+  | { type: "note_shown"; kind: NoteKind }
+  | { type: "note_sent"; kind: NoteKind; wants_chat: boolean }
+  | { type: "note_dismissed"; kind: NoteKind; stage: "collapsed" | "card" };
+
+export type NoteKind = "targeted" | "generic";
 
 /**
  * A closed set mirroring `GameApp.tsx`'s `Screen` type, restated here rather

@@ -57,8 +57,8 @@ import { Loading } from "../ui/Loading";
 import { LevelSelect } from "../ui/LevelSelect.tsx";
 import { ModeSelect } from "../ui/ModeSelect.tsx";
 import { PlayHome, type PlayIntent } from "../ui/PlayHome";
-import { PierreNote } from "../ui/PierreNote.tsx";
-import { armNote, checkNote, takeNoteCheck } from "../data/note.ts";
+import { PierreNote, PREVIEW_TARGETED } from "../ui/PierreNote.tsx";
+import { armNote, checkNote, takeNoteCheck, type NoteCopy } from "../data/note.ts";
 import type { Tone } from "../game/gates.ts";
 import { Profile } from "../ui/Profile.tsx";
 import { Progress } from "../ui/Progress.tsx";
@@ -340,10 +340,16 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     trackSpeechStyle(effectiveSpeechStyle(tier));
   }, [tier]);
   // The note-from-Pierre card: after a finished run or TONEder round, the Play
-  // home asks the server once whether this free player qualifies (api/note.ts).
-  // Dev only: `/app?note` shows the card at once, writing nothing (hard rule 7).
-  const notePreview = import.meta.env.DEV && new URLSearchParams(window.location.search).has("note");
+  // home asks the server once whether this player has a note (api/note.ts):
+  // a targeted note Pierre wrote for this account, or the generic one.
+  // Dev only: `/app?note` shows the generic card at once, `/app?note=targeted`
+  // the targeted one with brief 36's copy; both write nothing (hard rule 7).
+  const noteParam = import.meta.env.DEV ? new URLSearchParams(window.location.search).get("note") : null;
+  const notePreview = import.meta.env.DEV && noteParam !== null;
   const [noteOpen, setNoteOpen] = useState(notePreview);
+  const [noteCopy, setNoteCopy] = useState<NoteCopy | undefined>(
+    import.meta.env.DEV && noteParam === "targeted" ? PREVIEW_TARGETED : undefined,
+  );
   const closeNote = useCallback(() => setNoteOpen(false), []);
   const mainRef = useRef<HTMLDivElement>(null);
   const { w: CANVAS_W, h: CANVAS_H, desktop } = useCanvasSize(mainRef);
@@ -390,17 +396,19 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     if (screen === "lab" || screen === "devlogin") return;
     track({ type: "screen_viewed", screen: screen as TrackedScreen });
   }, [screen]);
-  // Free accounts only; the server re-checks tier, activity and show rules.
+  // Any tier: the server decides (a targeted note may go to Pro; the generic
+  // one is free-only and re-checks activity and show rules). No "still on
+  // Play" guard: a targeted note is used up the moment the server answers, so
+  // the answer is always kept; the card renders only on Play (see below), so
+  // a player who left Play meanwhile sees it when they come back.
   useEffect(() => {
-    if (screen !== "play" || tier !== "free" || !takeNoteCheck()) return;
-    let live = true;
-    void checkNote().then((show) => {
-      if (live && show) setNoteOpen(true);
+    if (screen !== "play" || !takeNoteCheck()) return;
+    void checkNote().then(({ show, note }) => {
+      if (!show) return;
+      setNoteCopy(note);
+      setNoteOpen(true);
     });
-    return () => {
-      live = false;
-    };
-  }, [screen, tier]);
+  }, [screen]);
   /**
    * Whether the mic session backing the Visualiser screen is actually open.
    * Landing here via `onNavigate("visualiser")` (a real click) only ever
@@ -1493,7 +1501,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
 
       {FEEDBACK_SCREENS.has(screen) && <FeedbackWidget screen={screen} />}
 
-      {noteOpen && screen === "play" && <PierreNote onDone={closeNote} preview={notePreview} />}
+      {noteOpen && screen === "play" && <PierreNote onDone={closeNote} note={noteCopy} tier={tier} preview={notePreview} />}
 
       {earlyBird && (
         <EarlyBirdModal

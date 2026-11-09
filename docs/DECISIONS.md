@@ -10,6 +10,27 @@ approach, or where the obvious-looking alternative was tried and failed.
 
 ## Backend, accounts & persistence
 
+### Targeted notes: chosen from Supabase, shown once, no offers (8 Nov 2026, brief 36)
+
+The account-switch case (brief 34) left one player who hit a real bug on a
+second account. Pierre wanted to say sorry and ask one question, to that
+player only, without a generic broadcast tool.
+
+Decided (Pierre):
+
+- **Who gets a note and what it says comes from Supabase data only, never
+  PostHog.** Analytics ids are not a way to pick a person to write to.
+- **One note, shown once in total across all the accounts it targets.** The
+  first time the card is shown on any of them, the note is used up (the claim
+  is atomic in `note_claim_targeted()`). Reply, "Not now", × or ignoring it all
+  end it. The same person on two accounts is asked once, not twice.
+- **No offer, discount or upgrade wording.** One question about what the
+  player did. A note that sells breaks the trust the apology is meant to keep.
+- **A targeted account never gets the generic note** (`note_eligible()`), so
+  no double ask.
+- **No admin UI.** Pierre adds notes with SQL; the tables are server-only.
+- Copy is plain text. The client never renders it as HTML.
+
 ### A new account on a used browser starts fresh (8 Nov 2026, brief 34)
 
 A player used all 10 runs on account A, then logged in with a second Google

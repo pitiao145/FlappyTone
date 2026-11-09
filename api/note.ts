@@ -13,6 +13,15 @@
  * Body `{action: "check"}` answers `{show}`. `{action: "send", message,
  * wantsChat, context}` and `{action: "dismiss"}` write, and only while the
  * player still qualifies, so a stale tab cannot add rows.
+ *
+ * Targeted notes (migration 0035, brief 36): Pierre writes a note for chosen
+ * accounts (`pierre_notes`, `pierre_note_targets`, by hand in SQL). `check`
+ * first claims one (`note_claim_targeted()`, once in total across its
+ * accounts) and answers `{show: true, note: {peek, body, question}}`.
+ * `send`/`dismiss` first try the targeted note this account was shown
+ * (`note_answer_targeted()`); the client never sends a note id. Targeted
+ * accounts never pass `note_eligible()`, so they never get the generic note.
+ * The note text is plain text; the client renders it as text, never as HTML.
  */
 import { createClient } from "@supabase/supabase-js";
 import { json } from "./_json.js";
@@ -24,6 +33,8 @@ export const NOTE_MAX_CHARS = 1000;
 const MAX_CONTEXT_KEYS = 10;
 const MAX_CONTEXT_STRING = 80;
 const KEY_RE = /^[a-zA-Z_]{1,30}$/;
+
+export type TargetedNote = { peek: string; body: string; question: string };
 
 export type NoteAction =
   | { action: "check" }
@@ -94,6 +105,35 @@ export async function POST(request: Request): Promise<Response> {
   const user = userData?.user;
   if (userError || !user) return json(401, { error: "Invalid or expired session." });
   if (user.is_anonymous) return json(403, { error: "Notes need an account." });
+
+  if (parsed.action === "check") {
+    const { data: claimed, error: claimError } = await supabase.rpc("note_claim_targeted", { p_user: user.id });
+    if (claimError) {
+      console.error("[note] note_claim_targeted failed", claimError);
+      return json(502, { error: "Could not check notes." });
+    }
+    const row = Array.isArray(claimed) ? claimed[0] : null;
+    if (row) {
+      const note: TargetedNote = { peek: row.peek, body: row.body, question: row.question };
+      return json(200, { show: true, note });
+    }
+  } else {
+    const sending = parsed.action === "send";
+    const reply = parsed.action === "send" ? parsed : null;
+    const { data: answered, error: answerError } = await supabase.rpc("note_answer_targeted", {
+      p_user: user.id,
+      p_message: reply ? reply.message : null,
+      p_wants_chat: reply ? reply.wantsChat : false,
+      p_contact_email: reply?.wantsChat ? (user.email ?? null) : null,
+      p_user_agent: request.headers.get("user-agent")?.slice(0, 400) ?? null,
+      p_context: parsed.context,
+    });
+    if (answerError) {
+      console.error("[note] note_answer_targeted failed", answerError);
+      return json(502, { error: sending ? "Could not save the note." : "Could not save that." });
+    }
+    if (answered === true) return json(200, { ok: true });
+  }
 
   const { data: eligible, error: eligibleError } = await supabase.rpc("note_eligible", {
     p_user: user.id,
