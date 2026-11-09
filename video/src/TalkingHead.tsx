@@ -30,6 +30,22 @@ export interface Segment {
   to: number;
   /** A held picture (path under video/public) instead of the shot's video, silent, e.g. a freeze frame. Give it its own shot number, not in `shots`. */
   still?: string;
+  /** Playback speed, e.g. 1.5 to hurry a quiet stretch. Default 1. */
+  speed?: number;
+}
+
+/**
+ * A round face bubble over a screen recording, in the landing face-cam style
+ * (ink outline, hard shadow). `src` is the face crop of the same recording,
+ * time-aligned with the shot's file, so it plays in sync with each segment.
+ */
+export interface Bubble {
+  src: string;
+  /** Px from the frame's left / top. */
+  left: number;
+  top: number;
+  /** Diameter, px. */
+  size: number;
 }
 
 /** A moment in a source take. */
@@ -77,7 +93,7 @@ export interface TalkingHeadProps {
   segments: Segment[];
   overlays?: Overlay[];
   captions?: THCaption[];
-  title?: { text: string; sub?: string; seconds: number; /** Where the title starts. Default: frame 0. */ at?: At };
+  title?: { text: string; sub?: string; seconds: number; /** Where the title starts. Default: frame 0. */ at?: At; /** Already on screen at its first frame (no spring in), e.g. so frame 0 shows it. */ instant?: boolean };
   zooms?: THZoom[];
   /** Big caption over a range, e.g. the CTA. */
   cta?: { text: string; from: At; to: At };
@@ -85,6 +101,8 @@ export interface TalkingHeadProps {
   popups?: { text: string; from: At; to: At; top?: number; /** Font size, px. Default 96. */ size?: number }[];
   /** Captions that start inside a zone sit at `top` (% of the frame height) instead of 68%, e.g. above a pitch line. */
   captionZones?: { from: At; to: At; top: number }[];
+  /** shot number → a face bubble drawn over every segment of that shot. */
+  bubbles?: Record<string, Bubble>;
   /** Sound effects (path under video/public) at a source moment. */
   sfx?: { src: string; at: At; volume?: number }[];
   [key: string]: unknown;
@@ -96,7 +114,7 @@ const frames = (s: number) => Math.round(s * FPS);
 export function cutList(p: TalkingHeadProps) {
   let at = 0;
   const cuts = p.segments.map((s) => {
-    const len = frames(s.to - s.from);
+    const len = frames((s.to - s.from) / (s.speed ?? 1));
     const c = { ...s, outFrom: at, len };
     at += len;
     return c;
@@ -106,10 +124,14 @@ export function cutList(p: TalkingHeadProps) {
 
 /** Source moment → output frame. A moment cut out snaps forward to the next kept frame. */
 function toFrame(cuts: ReturnType<typeof cutList>["cuts"], a: At): number {
+  // A cut that holds the moment wins, so a shot used out of order (a later moment first) still maps right.
+  for (const c of cuts) {
+    if (c.shot === a.shot && a.t >= c.from && a.t <= c.to) return c.outFrom + frames((a.t - c.from) / (c.speed ?? 1));
+  }
   for (const c of cuts) {
     if (c.shot !== a.shot) continue;
     if (a.t < c.from) return c.outFrom;
-    if (a.t <= c.to) return c.outFrom + frames(a.t - c.from);
+    if (a.t <= c.to) return c.outFrom + frames((a.t - c.from) / (c.speed ?? 1));
   }
   const last = [...cuts].reverse().find((c) => c.shot === a.shot);
   return last ? last.outFrom + last.len : 0;
@@ -136,12 +158,35 @@ function ARoll({ p, cuts }: { p: TalkingHeadProps; cuts: ReturnType<typeof cutLi
             <OffthreadVideo
               src={staticFile(p.shots[String(c.shot)])}
               startFrom={frames(c.from)}
+              playbackRate={c.speed ?? 1}
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           )}
+          {!c.still && p.bubbles?.[String(c.shot)] && <FaceBubble b={p.bubbles[String(c.shot)]} from={c.from} speed={c.speed ?? 1} />}
         </Sequence>
       ))}
     </AbsoluteFill>
+  );
+}
+
+function FaceBubble({ b, from, speed }: { b: Bubble; from: number; speed: number }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: b.left,
+        top: b.top,
+        width: b.size,
+        height: b.size,
+        borderRadius: "50%",
+        overflow: "hidden",
+        border: `8px solid ${BRAND.ink}`,
+        boxShadow: `8px 8px 0 ${BRAND.ink}`,
+        background: BRAND.surface,
+      }}
+    >
+      <OffthreadVideo src={staticFile(b.src)} startFrom={frames(from)} playbackRate={speed} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+    </div>
   );
 }
 
@@ -175,12 +220,12 @@ function BRoll({ o, len, start }: { o: Overlay; len: number; start: number }) {
   );
 }
 
-function Title({ text, sub, len }: { text: string; sub?: string; len: number }) {
-  const f = useCurrentFrame();
+function Title({ text, sub, len, instant }: { text: string; sub?: string; len: number; instant?: boolean }) {
+  const f = useCurrentFrame() + (instant ? 20 : 0);
   const { fps } = useVideoConfig();
   const a = spring({ frame: f, fps, config: { damping: 14 } });
   const b = spring({ frame: f - 6, fps, config: { damping: 14 } });
-  const out = interpolate(f, [len - 8, len], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const out = interpolate(f - (instant ? 20 : 0), [len - 8, len], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
     <AbsoluteFill style={{ alignItems: "center", paddingTop: 170, opacity: out }}>
       <div
@@ -333,7 +378,7 @@ export function TalkingHead(p: TalkingHeadProps) {
       })}
       {p.title && (
         <Sequence from={p.title.at ? toFrame(cuts, p.title.at) : 0} durationInFrames={frames(p.title.seconds)} name="Title">
-          <Title text={p.title.text} sub={p.title.sub} len={frames(p.title.seconds)} />
+          <Title text={p.title.text} sub={p.title.sub} len={frames(p.title.seconds)} instant={p.title.instant} />
         </Sequence>
       )}
       {(p.sfx ?? []).map((x, i) => (

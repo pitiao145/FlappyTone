@@ -1,0 +1,406 @@
+{
+ "shots": {
+  "1": "aroll/tone3-drill/shot1.mp4",
+  "2": "aroll/tone3-drill/shot2.mp4",
+  "3": "aroll/tone3-drill/shot3.mp4",
+  "5": "aroll/tone3-drill/shot5.mp4"
+ },
+ "bubbles": {
+  "2": {
+   "src": "aroll/tone3-drill/vis_face.mp4",
+   "left": 36,
+   "top": 430,
+   "size": 380
+  },
+  "3": {
+   "src": "aroll/tone3-drill/game_face.mp4",
+   "left": 36,
+   "top": 330,
+   "size": 380
+  }
+ },
+ "segments": [
+  {
+   "shot": 1,
+   "from": 3.7,
+   "to": 4.4
+  },
+  {
+   "shot": 1,
+   "from": 0.0,
+   "to": 2.6,
+   "say": [
+    "Third tone.",
+    "Let's go."
+   ]
+  },
+  {
+   "shot": 1,
+   "from": 2.6,
+   "to": 3.7
+  },
+  {
+   "shot": 2,
+   "from": 3.76,
+   "to": 7.89,
+   "say": [
+    "So, as a beginner,",
+    "what you can do",
+    "is practice the",
+    "textbook"
+   ]
+  },
+  {
+   "shot": 2,
+   "from": 8.44,
+   "to": 10.67,
+   "say": [
+    "third tone,",
+    "so really go down"
+   ]
+  },
+  {
+   "shot": 2,
+   "from": 11.6,
+   "to": 12.58,
+   "say": [
+    "and back up."
+   ]
+  },
+  {
+   "shot": 2,
+   "from": 21.7,
+   "to": 24.2
+  },
+  {
+   "shot": 2,
+   "from": 29.0,
+   "to": 29.72,
+   "say": [
+    "Once more."
+   ]
+  },
+  {
+   "shot": 2,
+   "from": 30.7,
+   "to": 33.6
+  },
+  {
+   "shot": 3,
+   "from": 69.0,
+   "to": 71.5,
+   "speed": 1.5
+  },
+  {
+   "shot": 3,
+   "from": 71.5,
+   "to": 75.0
+  },
+  {
+   "shot": 3,
+   "from": 95.3,
+   "to": 98.6
+  },
+  {
+   "shot": 3,
+   "from": 123.4,
+   "to": 126.6
+  },
+  {
+   "shot": 3,
+   "from": 151.6,
+   "to": 154.8
+  },
+  {
+   "shot": 3,
+   "from": 168.3,
+   "to": 172.8
+  },
+  {
+   "shot": 3,
+   "from": 175.2,
+   "to": 176.8,
+   "say": [
+    "Beat my score!"
+   ]
+  },
+  {
+   "shot": 5,
+   "from": 1.0,
+   "to": 1.95,
+   "say": [
+    "I'll share it."
+   ]
+  },
+  {
+   "shot": 5,
+   "from": 1.95,
+   "to": 4.2
+  },
+  {
+   "shot": 4,
+   "from": 0,
+   "to": 4.2,
+   "still": "broll/tone3-drill/sharecard.png"
+  }
+ ],
+ "title": {
+  "text": "Me vs. tone 3",
+  "seconds": 2.6,
+  "instant": true
+ },
+ "sfx": [
+  {
+   "src": "sfx/bell.wav",
+   "at": {
+    "shot": 1,
+    "t": 3.7
+   },
+   "volume": 0.7
+  },
+  {
+   "src": "sfx/bell.wav",
+   "at": {
+    "shot": 3,
+    "t": 170.05
+   },
+   "volume": 0.7
+  }
+ ],
+ "captionZones": [
+  {
+   "from": {
+    "shot": 2,
+    "t": 0
+   },
+   "to": {
+    "shot": 2,
+    "t": 40
+   },
+   "top": 16
+  }
+ ],
+ "popups": [
+  {
+   "text": "Gate 5",
+   "from": {
+    "shot": 3,
+    "t": 95.3
+   },
+   "to": {
+    "shot": 3,
+    "t": 97.0
+   },
+   "top": 9,
+   "size": 80
+  },
+  {
+   "text": "Gate 10",
+   "from": {
+    "shot": 3,
+    "t": 123.4
+   },
+   "to": {
+    "shot": 3,
+    "t": 125.1
+   },
+   "top": 9,
+   "size": 80
+  },
+  {
+   "text": "Gate 15",
+   "from": {
+    "shot": 3,
+    "t": 151.6
+   },
+   "to": {
+    "shot": 3,
+    "t": 153.3
+   },
+   "top": 9,
+   "size": 80
+  },
+  {
+   "text": "Score: 3,725",
+   "from": {
+    "shot": 3,
+    "t": 170.1
+   },
+   "to": {
+    "shot": 3,
+    "t": 172.8
+   },
+   "top": 46
+  },
+  {
+   "text": "Beat my score.",
+   "from": {
+    "shot": 4,
+    "t": 0
+   },
+   "to": {
+    "shot": 4,
+    "t": 1.7
+   },
+   "top": 19
+  },
+  {
+   "text": "2× a day · 1 week",
+   "from": {
+    "shot": 4,
+    "t": 1.7
+   },
+   "to": {
+    "shot": 4,
+    "t": 4.2
+   },
+   "top": 89,
+   "size": 80
+  }
+ ],
+ "cta": {
+  "text": "Link in bio 👇",
+  "from": {
+   "shot": 4,
+   "t": 1.7
+  },
+  "to": {
+   "shot": 4,
+   "t": 4.2
+  }
+ },
+ "captions": [
+  {
+   "text": "Third tone.",
+   "from": {
+    "shot": 1,
+    "t": 0.06
+   },
+   "to": {
+    "shot": 1,
+    "t": 1.38
+   }
+  },
+  {
+   "text": "Let's go.",
+   "from": {
+    "shot": 1,
+    "t": 1.38
+   },
+   "to": {
+    "shot": 1,
+    "t": 2.6
+   }
+  },
+  {
+   "text": "So, as a beginner,",
+   "from": {
+    "shot": 2,
+    "t": 3.82
+   },
+   "to": {
+    "shot": 2,
+    "t": 5.04
+   }
+  },
+  {
+   "text": "what you can do",
+   "from": {
+    "shot": 2,
+    "t": 5.04
+   },
+   "to": {
+    "shot": 2,
+    "t": 6.09
+   }
+  },
+  {
+   "text": "is practice the",
+   "from": {
+    "shot": 2,
+    "t": 6.09
+   },
+   "to": {
+    "shot": 2,
+    "t": 7.14
+   }
+  },
+  {
+   "text": "textbook",
+   "from": {
+    "shot": 2,
+    "t": 7.14
+   },
+   "to": {
+    "shot": 2,
+    "t": 7.89
+   }
+  },
+  {
+   "text": "third tone,",
+   "from": {
+    "shot": 2,
+    "t": 8.5
+   },
+   "to": {
+    "shot": 2,
+    "t": 9.37
+   }
+  },
+  {
+   "text": "so really go down",
+   "from": {
+    "shot": 2,
+    "t": 9.37
+   },
+   "to": {
+    "shot": 2,
+    "t": 10.67
+   }
+  },
+  {
+   "text": "and back up.",
+   "from": {
+    "shot": 2,
+    "t": 11.66
+   },
+   "to": {
+    "shot": 2,
+    "t": 12.58
+   }
+  },
+  {
+   "text": "Once more.",
+   "from": {
+    "shot": 2,
+    "t": 29.06
+   },
+   "to": {
+    "shot": 2,
+    "t": 29.72
+   }
+  },
+  {
+   "text": "Beat my score!",
+   "from": {
+    "shot": 3,
+    "t": 175.26
+   },
+   "to": {
+    "shot": 3,
+    "t": 176.8
+   }
+  },
+  {
+   "text": "I'll share it.",
+   "from": {
+    "shot": 5,
+    "t": 1.06
+   },
+   "to": {
+    "shot": 5,
+    "t": 1.95
+   }
+  }
+ ]
+}
