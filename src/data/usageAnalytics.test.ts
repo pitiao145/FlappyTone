@@ -14,12 +14,11 @@ const db = vi.hoisted(() => ({
 vi.mock("./supabase.ts", () => ({
   warn: vi.fn(),
   getSupabase: () => ({
+    rpc: async (name: string) => {
+      if (name !== "my_usage_analytics") throw new Error(`unexpected rpc ${name}`);
+      return { data: db.readError ? null : (db.row?.usage_analytics ?? null), error: db.readError };
+    },
     from: () => ({
-      select: () => ({
-        eq: () => ({
-          maybeSingle: async () => ({ data: db.readError ? null : db.row, error: db.readError }),
-        }),
-      }),
       update: (v: { usage_analytics: boolean }) => ({
         eq: () => ({
           select: async () => {

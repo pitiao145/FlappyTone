@@ -107,11 +107,9 @@ export async function syncUsageAnalytics(userId: string): Promise<void> {
   try {
     const supabase = getSupabase();
     if (!supabase) return;
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("usage_analytics")
-      .eq("id", userId)
-      .maybeSingle();
+    // Clients cannot select the consent columns (migration 0034): the
+    // owner reads their own value through a security-definer function.
+    const { data, error } = await supabase.rpc("my_usage_analytics");
     if (error) {
       warn("usage", `could not read the analytics switch: ${error.message}`);
       if (!loadShareData()) setSharingEnabled(false);
@@ -121,7 +119,7 @@ export async function syncUsageAnalytics(userId: string): Promise<void> {
       browser: readSwitch(SHARE_DATA_KEY),
       owed: readSwitch(OWED_KEY),
       synced: accountStorage.getItem(SYNCED_KEY) === "1",
-      account: data?.usage_analytics ?? true,
+      account: typeof data === "boolean" ? data : true,
     });
     saveShareData(decision.on);
     setSharingEnabled(decision.on);

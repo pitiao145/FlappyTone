@@ -637,8 +637,14 @@ export function Settings({
         />
         <p className="param-help">
           {sharing === "on"
-            ? "Sends data about how you use the app and how your runs go (gates, scores, mic and calibration steps), so we can improve it. Never audio, never your voice. Saved with your account. Details are in the privacy policy."
-            : "Nothing is sent. This applies wherever you're signed in. Details are in the privacy policy."}
+            ? "Sends data about how you use the app and how your runs go (gates, scores, mic and calibration steps), so we can improve it. Never audio, never your voice. Saved with your account."
+            : "Nothing is sent. This applies wherever you're signed in."}{" "}
+          {/* A new tab: Settings can be open over a paused run. */}
+          Details are in the{" "}
+          <a href="/privacy-policy" target="_blank" rel="noopener">
+            privacy policy
+          </a>
+          .
         </p>
       </section>
 
