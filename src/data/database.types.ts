@@ -130,6 +130,7 @@ export type Database = {
           created_at: string
           id: number
           message: string
+          note_id: string | null
           rating: number | null
           screen: string | null
           source: string
@@ -144,6 +145,7 @@ export type Database = {
           created_at?: string
           id?: never
           message: string
+          note_id?: string | null
           rating?: number | null
           screen?: string | null
           source?: string
@@ -158,6 +160,7 @@ export type Database = {
           created_at?: string
           id?: never
           message?: string
+          note_id?: string | null
           rating?: number | null
           screen?: string | null
           source?: string
@@ -166,7 +169,15 @@ export type Database = {
           user_id?: string | null
           wants_chat?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "feedback_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "pierre_notes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leaderboard_scores: {
         Row: {
@@ -218,6 +229,65 @@ export type Database = {
           min_tier?: string
           name?: string
           source?: string | null
+        }
+        Relationships: []
+      }
+      pierre_note_targets: {
+        Row: {
+          note_id: string
+          user_id: string
+        }
+        Insert: {
+          note_id: string
+          user_id: string
+        }
+        Update: {
+          note_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pierre_note_targets_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "pierre_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pierre_notes: {
+        Row: {
+          answered_at: string | null
+          body: string
+          created_at: string
+          id: string
+          label: string | null
+          peek: string
+          question: string
+          shown_at: string | null
+          shown_to: string | null
+        }
+        Insert: {
+          answered_at?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          label?: string | null
+          peek: string
+          question: string
+          shown_at?: string | null
+          shown_to?: string | null
+        }
+        Update: {
+          answered_at?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          label?: string | null
+          peek?: string
+          question?: string
+          shown_at?: string | null
+          shown_to?: string | null
         }
         Relationships: []
       }
@@ -692,8 +762,38 @@ export type Database = {
         Args: { p_day: string; p_limit: number; p_user: string }
         Returns: boolean
       }
+      create_targeted_note: {
+        Args: {
+          p_accounts: string[]
+          p_body: string
+          p_label: string
+          p_peek: string
+          p_question: string
+        }
+        Returns: string
+      }
       merge_words: { Args: { p_a: string[]; p_b: string[] }; Returns: string[] }
       my_usage_analytics: { Args: never; Returns: boolean }
+      note_answer_targeted: {
+        Args: {
+          p_contact_email: string
+          p_context: Json
+          p_message: string
+          p_user: string
+          p_user_agent: string
+          p_wants_chat: boolean
+        }
+        Returns: boolean
+      }
+      note_claim_targeted: {
+        Args: { p_user: string }
+        Returns: {
+          body: string
+          id: string
+          peek: string
+          question: string
+        }[]
+      }
       note_dismiss: { Args: { p_user: string }; Returns: undefined }
       note_eligible: {
         Args: { p_min_days: number; p_min_runs: number; p_user: string }

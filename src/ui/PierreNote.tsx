@@ -37,7 +37,7 @@ export const PREVIEW_TARGETED: NoteCopy = {
   body:
     "When you made a second account, a bug gave it your first account's name and daily run count. " +
     "Sorry about that, it's fixed now! A second account is totally fine, by the way, I'm happy to see you want to keep playing!",
-  question: "How many runs would you need in a day in order to make progress with your tones?",
+  question: "When you ran out of runs, what were you practising, and what did you do next?",
 };
 
 function noteContext(tier: string): NoteContext {
