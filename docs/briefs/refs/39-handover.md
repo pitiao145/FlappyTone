@@ -57,3 +57,10 @@ Plan: `docs/briefs/refs/39-phase-b-plan.md`. Phase A report: `docs/briefs/report
 - **Standard grid fits**: Jane's halves around his talk median leave 2.4 st spare at the top and 4.1 at the bottom. His saved calibration (up = 2, the clamp) misses the top by 4.2 st.
 - Surprises: recordings are phone AAC 16 kHz, cut into 42 WAVs in `fixtures/captures/pierre/` (gitignored). Calibration "up" hit the 2 st floor.
 - For the next brief: 42 — low band ~55 Hz would cover his creaky ends; don't trust creak. 44 — "talk middle + standard grid" works for a male learner. 45 — his T2/T3 confusion flips with the grid. Pairs split 5/16, same weakness as Jane's natural pairs.
+
+## 42 Listener: delay, band, ms — 10 Nov 2026 — blocked (step 2)
+- Changed: step 1 only. Time settings are now ms: `hopSize`, `maxSlewSemitonesPerSec` 140.625, `rescueMaxMs` 64, `staleUnvoicedMs` 107, `minVoicedRunMs` (tuning 64, default 0). `tuning().minVoicedRun` is now `minVoicedRunMs`. clipCut T3 rescue 171 ms. Commit: "wip(pitch): brief 42 step 1".
+- Scorecard: step 1 moved **no** number (MEASURED). 1827 tests pass; report same; wall hits 0.
+- Why blocked: step 2. (a) median 3 → delay 20 ms, errors better, but 6 unnamed numbers fail (`live.highEndLost.p90` textbook T1/T4/pairs and natural T4, +0.03–0.09 st; `deep0.5.lowEndLost.med.natural.T2` +0.06; reader voice2stLower textbook −2.2 pp). (b) = (a) in code (octave check already before the median). (c) bypass within 1 st: T4 still 40 ms, 34 FAIL. Decision for Pierre in the report.
+- Surprises: (b) was not a separate option. 44.1 kHz devices had a 9% faster slew, 8% longer waits than 48 kHz before step 1 (now fixed).
+- For the next brief / rerun: `rescueMaxSemitones` is still per hop (rescue rule, out of scope). Bench cache keys changed with the field names, so the first run is ~2.5 min.

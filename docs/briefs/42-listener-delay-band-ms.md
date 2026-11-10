@@ -1,5 +1,5 @@
 ---
-status: blocked  # draft: waits for Pierre's approval of the Phase B plan
+status: blocked  # step 2: no delay option passes the whole scorecard; see reports/42-listener-delay-band-ms.md
 notion_task:
 risk: needs-approval
 ---
