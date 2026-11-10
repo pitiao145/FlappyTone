@@ -1,5 +1,5 @@
 ---
-status: ready
+status: blocked  # waiting for Pierre's review of Phase A
 notion_task:
 risk: needs-approval
 ---
