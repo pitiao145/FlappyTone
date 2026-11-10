@@ -89,3 +89,46 @@ Plan: `docs/briefs/refs/39-phase-b-plan.md`. Phase A report: `docs/briefs/report
 - Pass: Jane unchanged, Pierre unchanged (centre 129.1 → floor 70), deep 0.6 (floor 65) all 10 groups vs itself at 70, deep 0.5 low end lost (≈ 0), CPU 2.4%.
 - Miss: deep 0.5 (floor 55) fake voice vs itself at 70: textbook T4 0.6 → 2.5, textbook pairs 1.5 → 2.5, natural T4 0.3 → 1.8, natural pairs 0.2 → 1.0 (limit +0.5); natural T4 error p90 0.26 → 0.33 (limit +0.05).
 - For brief 44: the calibration talk step is still at 70; a 90 Hz voice is measured 1.4 st too high there.
+
+## 42 review (strong model) — 10 Nov 2026 — steps 1–2 approved; step 3 approved with the fix list below
+Reviewed: brief, report (all four runs), handover, diff `6ce627f..17b9b07`, both step-3 patches. No code changed by this review.
+
+**Checked myself (MEASURED)**
+- `npm run bench`: 209 numbers, 0 FAIL. `npm run test`: 136 files, 1827 passed. `npm run typecheck` clean. `npm run classifier-check`: wall hits 0 (only 4 real clips; weak evidence, as before).
+- Delay 20 ms in every group (bench). Acceptance "≤ 25 ms": pass.
+- The brief asks for "errors over 3 semitones and octave errors not above baseline + 0.2 points". **The scorecard has no such rows and the report did not measure it.** I measured it (scratch script, median 5 vs 3, live settings, Praat, delay removed):
+  - Jane, all 10 groups: errors over 3 st 0.00–0.49% → 0.00–0.49% (never higher). Octave errors: same or +0.04 points (natural pairs). Pass.
+  - Pierre's phone clips: over 3 st 0.06% → 0.12% (1 frame → 2 of 1,700). Error p90 0.30 → 0.21. Pass.
+  - Old iPhone captures: 0% → 0%. Error p90 0.24 → 0.14.
+  - "Spikes" (one frame more than 1.5 st off the line between its two neighbours, i.e. a visible jerk): Jane 0.00–0.66% → 0.00–0.76%; largest rise natural pairs 0.17% → 0.62%. Pierre 0.17% → 0.17%. That is about one small jerk per 8 s of voice at worst. Acceptable.
+  - Real wind at 10 dB (out of scope, for the record): over 3 st 0.35% → 0.65%, spikes 0.22% → 0.65%. Median 3 is a little less robust in loud noise. Revisit when noise is in scope.
+
+**Code read (READ IN CODE)**
+- `src/pitch/` stays pure. New fields are on `PitchTrackerConfig`; `minVoicedRunMs` goes through `tuning()`. Correct.
+- At 48 kHz every derived count equals the old one (test `msSettings.test.ts`). Correct.
+- Wording to fix: the handover says 44.1 kHz devices "had 8% longer waits ... now fixed". Only the slew speed is fixed. The waits round to the same frame counts (3, 5, 3), so they are still about 8% longer in time at 44.1 kHz. Harmless; the sentence is wrong.
+- `medianFrames` must be odd; nothing checks it. Add a one-line guard or a test.
+
+**A real-device risk this brief does not cover (ASSUMED, not measured)**
+- Frame size (2048), hop (1024) and `detectWindow` (1024) are in samples. The app takes the device's own sample rate (`src/audio/mic.ts:244`). If a device gives 16 or 24 kHz (some Bluetooth headsets in call mode) one hop is 43–64 ms and the line is 43–64 ms late again; at 96 kHz the 1024-sample window is 10.7 ms and cannot hold one cycle of a voice under 94 Hz. The ms settings do not help with this. Simplest known fix: ask for a 48 kHz context (`new AudioContext({ sampleRate: 48000 })`; the browser resamples). It is in `src/audio/`, needs a real iPhone test (hard rule 4), and is out of brief 42. **Proposed as its own small brief.** First step there: log which sample rates real devices give.
+
+**Step 3 (deep voices): approve the 0.6 patch. The four "misses" came from a wrong yardstick that I set.**
+- I told the session to compare the 0.5 stand-in with itself at 70 Hz. At 70 Hz that voice loses the whole bottom of its falls, so it also draws no frames there, true or false. It looked clean because it was deaf.
+- The fair comparison is Jane today, because the stand-in is Jane's audio at half pitch: its 55–70 Hz is her 110–140 Hz, which her tracker already hears. Against Jane's own baseline + 0.3 points: textbook T4 2.5 vs 2.3 (pass), natural T4 1.8 vs 2.4 (pass), natural pairs 1.0 vs 1.0 (pass), textbook pairs 2.5 vs 1.6 (**miss by 0.6 points**). Error p90 natural T4 0.33 vs Jane 0.28 + 0.05 (pass, at the limit).
+- The deep voice gets less empty room under its voice (floor = 0.60 × centre) than Jane has today (70 Hz = 0.39 × her centre). So it cannot be looser than what ships.
+- Jane and Pierre do not change at all (floors stay 70). Only voices with a centre under 117 Hz are touched.
+- One miss of 0.6 points on a slowed-down copy is accepted. It is a stand-in; a real deep voice is still needed before anyone claims deep voices "work".
+
+**Fix list to finish brief 42 (same session, same stop rule)**
+1. Apply `docs/briefs/reports/42-step3-speaker-floor-0.6.patch` as is.
+2. Scorecard: for the deep stand-in rows, compare with **Jane's own baseline row of the same group** (+0.3 points fake voice, +0.05 st error p90), not with the stand-in at 70. Record textbook pairs 0.5 (2.5 vs 1.6) as an accepted, named exception in the baseline with this review as the reason.
+3. Scorecard: add three rows per style and group, live settings: errors over 3 st %, octave errors %, spikes over 1.5 st %. Baseline = values after median 3. Tolerance +0.2 points. Without these rows the brief's own acceptance line cannot be checked by later briefs.
+4. Add the odd-number guard or test for `medianFrames`.
+5. Correct the 44.1 kHz sentence in the 42 handover entries.
+6. Full checks, report, handover entry, commit. Then brief 42 is done; no second review needed unless a number outside this list moves.
+
+**For later briefs**
+- 43: targets must be measured with the speaker's floor (Jane → 70, no change). Report the corridor error for xiaoshi / yiqian again (limit 0.47; now 0.37 / 0.43).
+- 44: the calibration talk step still searches from 70 Hz, so a 90 Hz voice is measured 1.4 st too high, and its floor becomes 58.7 instead of 55. Fix in 44 (for example run the talk step with the 55 Hz floor when the first estimate is under 117 Hz).
+- 45: reader with the voice 2 st lower, textbook: 90.1% (was 92.3). `jane_ma2` own-tone score 0.496 (guard loosened to 0.45): bring back above 0.55 or explain.
+- "Voice heard %" is a yardstick, not a target (see the brief 40 entry).
