@@ -9,7 +9,11 @@ Run from the repo root, in this order:
 ```bash
 node src/dev/bench39/inventory.mjs      # what each fixture folder really is
 node src/dev/bench39/ref-test.mjs       # the reference, checked on known glides
-node src/dev/bench39/build-ref.mjs      # reference contour for every clip (~30 s)
+node src/dev/bench39/build-ref.mjs      # built-in reference contour for every clip (~30 s)
+# Praat reference (preferred; used automatically when its cache exists):
+python3 -m venv node_modules/.cache/bench39/venv
+node_modules/.cache/bench39/venv/bin/pip install praat-parselmouth
+node_modules/.cache/bench39/venv/bin/python src/dev/bench39/praat-ref.py
 node src/dev/bench39/eval.mjs --worst   # listener vs reference, 5 gate levels (~5 min)
 node src/dev/bench39/detail.mjs         # error split: delay / creak / rest (~3 min first run, cached after)
 node src/dev/bench39/gate-t4.mjs        # how often a raised gate removes a low end
@@ -27,6 +31,6 @@ node src/dev/bench39/reading.mjs        # classifier v2 and the pair read
 | `lib.mjs` | WAV loading and small statistics helpers. |
 
 Limits, stated once:
-- The reference is two of my own methods agreeing. It is not Praat. See the report for the dependency decision.
+- Two references exist. `praat-ref.py` (Praat 6.1.38 through `praat-parselmouth` 0.4.7, GPL-3, offline, in a local ignored venv) is the answer sheet. `ref.mjs` is the built-in one; the two differ by 0.02 semitone (median) on 829 clips. `BENCH_REF=own|praat` forces one. `eval.mjs` still uses the built-in one.
 - One speaker (Jane). `voices.mjs` only replays her slower or faster.
 - `pink` noise is synthetic. `wind` is about 8 s of real wind from `fixtures/captures/`. `talk` is other Jane clips.

@@ -1,0 +1,29 @@
+# Brief 39 handover log
+
+Every brief in the Phase B plan reads this file first and adds one entry at the end.
+Plan: `docs/briefs/refs/39-phase-b-plan.md`. Phase A report: `docs/briefs/reports/39-pitch-foundation-review.md`.
+
+## Entry template
+```
+## <brief number and name> — <date> — <done | blocked>
+- Changed: files, commit
+- Scorecard: numbers that moved (before → after), also the ones that got worse
+- Surprises: anything that was not as the brief said
+- For the next brief: what it must know or re-check
+```
+
+## Phase A + Praat check — 10 Nov 2026 — done
+- Changed: `src/dev/bench39/` (bench), Phase A report, `praat-ref.py`. No production code.
+- Praat vs the Phase A reference, on its trusted frames (MEASURED, 829 clips): median difference 0.02 semitone, 90th percentile 0.10, over 1 semitone 0.06–0.08%, octave apart 0.04–0.06%. Praat voices about 4% fewer frames. The Phase A numbers hold with Praat.
+- Starting numbers with Praat as reference (`node src/dev/bench39/detail.mjs`, live settings and pipeline settings agree within 0.01):
+  - Pitch error with the 40 ms delay removed, median / 90th percentile, semitones: T1 0.02 / 0.11–0.23, T2 0.05 / 0.23, T3 0.06–0.07 / 0.28–0.32, T4 0.10 / 0.37–0.38, pairs 0.05–0.07 / 0.32–0.42.
+  - Delay: 40 ms for every group.
+- Facts the next briefs need:
+  - All local audio is 48 kHz. One tracker step is 21.3 ms.
+  - Local clips: 357 textbook, 472 natural. 120 older single-tone words have no cut clip under `fixtures/clips/jane`, but all 120 raw takes are in `fixtures/recordings/2026-08-07-xujzgs/` (MEASURED).
+  - `process-clips --dry-run` writes nothing to disk, R2 or the catalog (READ IN CODE: `src/dev/process-clips.ts:825-830`) but it reads the catalog from Supabase and needs the raw takes on disk.
+  - The game's catalog enters through `src/data/words.ts` (fallback at line 104). `wordsFallback.json` is also read by `src/game/toneAverages.ts`, `src/game/run.ts`, `src/toneder/toneTest.ts`, landing and site pages. It holds textbook rows only.
+  - Jane's medians: textbook 196 Hz, natural 181 Hz. Her real heights per tone are in the Phase A report, 5.1.
+  - The branch is 1 commit behind `main` (brief 38, the note prompt; no pitch files). Not merged, by rule.
+- Open: Pierre's voice recording (brief 41). Foorgol's answers.
+- One-ruler preview for Jane (MEASURED with Praat, textbook clips, creak left out, 2nd/98th percentile): middle 195.7 Hz, up 8.8 semitones, down 7.9. On that ruler: first tone 4.06; fourth tone 4.96 → 1.34; second tone 2.33 → 4.41; third tone low 1.20, end 4.11. With 5th/95th percentile: up 7.9, down 7.2, first tone 4.18, fourth-tone start 5.18 (clamped). So the premise of brief 43 holds with 2/98.

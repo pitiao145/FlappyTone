@@ -22,8 +22,12 @@ export function clipList() {
   }
   return out;
 }
+// Reference used: Praat when its cache exists (run praat-ref.py), else the
+// built-in two-method reference. Force one with BENCH_REF=praat|own.
+export const REF_KIND = process.env.BENCH_REF ?? (existsSync(`${CACHE}/ref-praat/textbook`) ? "praat" : "own");
 export function loadRef(set, id) {
-  return JSON.parse(readFileSync(`${CACHE}/ref/${set}/${id}.json`, "utf8"));
+  const dir = REF_KIND === "praat" ? "ref-praat" : "ref";
+  return JSON.parse(readFileSync(`${CACHE}/${dir}/${set}/${id}.json`, "utf8"));
 }
 export function refAt(r, t) {
   const i = Math.min(r.t.length - 1, Math.max(0, Math.round((t - r.t[0]) / 0.01)));
