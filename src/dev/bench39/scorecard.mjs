@@ -23,7 +23,9 @@ if (!existsSync(`${CACHE}/ref-praat/textbook`) || !existsSync(`${CACHE}/ref-praa
 const praatRef = (c) => JSON.parse(readFileSync(`${CACHE}/ref-praat/${c.set}/${c.id}.json`, "utf8"));
 
 const CREAK = F0C * 2 ** (-10 / 12); // under ~102 Hz for Jane = creak, no single true pitch
-const DELAY = 0.04; // the listener's delay (Phase A, 4.1); used where a number is "delay removed"
+// "Delay removed" uses the best-fit delay measured for that group (below), not a
+// fixed number. Voiced on/off is compared at the same time (no shift): the median
+// filter delays the pitch value, not the voiced decision.
 const STYLES = ["textbook", "natural"];
 const GROUPS = ["T1", "T2", "T3", "T4", "pairs"];
 const clips = clipList().filter((c) => GROUPS.includes(groupOf(c.tones)));
@@ -61,7 +63,7 @@ function heard(o, r, k = 1) {
   if (idx.length < 3) return res;
   const a = r.t[idx[0]], b = r.t[idx.at(-1)], span = b - a;
   for (let j = 0; j < o.t.length; j++) {
-    const tr = (o.t[j] - DELAY) / k; // tracker frame j shows what was said DELAY earlier
+    const tr = o.t[j] / k; // voiced flag vs Praat at the same moment
     const x = refAt(r, tr);
     if (!okRef(x)) continue;
     const pos = (r.t[x.i] - a) / Math.max(span, 1e-6);
@@ -81,19 +83,20 @@ for (const style of STYLES) for (const g of GROUPS) {
   const cs = clips.filter((c) => c.set === style && groupOf(c.tones) === g);
   const tag = `${style}.${g}`;
   for (const name of ["live", "pipe"]) {
-    const drawn = [], fixed = [], byShift = SHIFTS.map(() => []);
+    const drawn = [], byShift = SHIFTS.map(() => []);
     const lows = [], highs = []; const H = { all: [0, 0], first: [0, 0], last: [0, 0] };
     let trV = 0, falseV = 0;
     for (const c of cs) {
       const r = R(c), o = cachedTrack(c, name);
-      drawn.push(...errs(o, r, 0)); fixed.push(...errs(o, r, DELAY));
+      drawn.push(...errs(o, r, 0));
+      SHIFTS.forEach((s, k) => byShift[k].push(...errs(o, r, s)));
       if (name === "live") {
-        SHIFTS.forEach((s, k) => byShift[k].push(...errs(o, r, s)));
         const e = ends(o, r); if (e) { lows.push(e.low); highs.push(e.high); }
         const h = heard(o, r); add(H.all, h.all); add(H.first, h.first); add(H.last, h.last);
-        for (let i = 0; i < o.t.length; i++) if (o.v[i]) { trV++; if (refAt(r, o.t[i] - DELAY).clearlyUnvoiced) falseV++; }
+        for (let i = 0; i < o.t.length; i++) if (o.v[i]) { trV++; if (refAt(r, o.t[i]).clearlyUnvoiced) falseV++; }
       }
     }
+    const meds = byShift.map((e) => med(e)), best = meds.indexOf(Math.min(...meds)), fixed = byShift[best];
     if (name === "pipe") {
       put(`pipe.err.delayRemoved.med.${tag}`, med(fixed), "lower", ST_TOL, "st");
       put(`pipe.err.delayRemoved.p90.${tag}`, pct(fixed, 90), "lower", ST_TOL, "st");
@@ -103,8 +106,7 @@ for (const style of STYLES) for (const g of GROUPS) {
     put(`live.err.asDrawn.p90.${tag}`, pct(drawn, 90), "lower", ST_TOL, "st");
     put(`live.err.delayRemoved.med.${tag}`, med(fixed), "lower", ST_TOL, "st");
     put(`live.err.delayRemoved.p90.${tag}`, pct(fixed, 90), "lower", ST_TOL, "st");
-    const meds = byShift.map((e) => med(e));
-    put(`live.delay.ms.${tag}`, 1000 * SHIFTS[meds.indexOf(Math.min(...meds))], "lower", MS_TOL, "ms");
+    put(`live.delay.ms.${tag}`, 1000 * SHIFTS[best], "lower", MS_TOL, "ms");
     put(`live.heard.all.pct.${tag}`, P(H.all), "higher", PP_TOL, "%");
     put(`live.heard.firstThird.pct.${tag}`, P(H.first), "higher", PP_TOL, "%");
     put(`live.heard.lastThird.pct.${tag}`, P(H.last), "higher", PP_TOL, "%");

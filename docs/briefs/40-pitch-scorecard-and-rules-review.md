@@ -1,5 +1,5 @@
 ---
-status: blocked  # live natural T4 p90 0.44 vs handover 0.37–0.38; see reports/40-pitch-scorecard-and-rules-review.md
+status: blocked  # second run: T4 last-third check misses (Praat vs built-in reference); see report
 notion_task:
 risk: low
 ---

@@ -359,3 +359,10 @@ index 16e9ef9..27f646d 100644
 
 ## Follow-ups
 - After Pierre's answer: write `docs/briefs/refs/39-rules-review.md` (step 5), then set done.
+
+## Second run (after Pierre's decisions) — blocked again
+- Done: handover sentence corrected; voice heard / voice-where-Praat-silent compared with no shift; "delay removed" uses the group's best-fit delay (all 40 ms, so those numbers did not move).
+- Against the old baseline: 24 lines moved, all voice heard (mostly first third, now 71–88%) and voice-where-Praat-silent (now 1.6–2.4%). Expected: removing the shift moves on/off frames at the edges.
+- Sanity check from the decisions, live T4 last third: lowest gate textbook 94.2% (ok), natural 83.2% (expected 92–94%); 40% gate 46.5% / 41.3% (expected 51–66%). Far → stopped, as told.
+- Cause (MEASURED, see handover entry): Phase A used the built-in reference. With it, natural T4 last third is 96.6%. With Praat it is 83.1%. Praat hears the quiet ends of natural falls; the tracker does not draw them. The 40% gate also uses a different loudness measure than `eval.mjs`.
+- Baseline not rewritten. Rules review not written. Status: blocked.

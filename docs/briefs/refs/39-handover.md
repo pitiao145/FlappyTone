@@ -15,7 +15,7 @@ Plan: `docs/briefs/refs/39-phase-b-plan.md`. Phase A report: `docs/briefs/report
 ## Phase A + Praat check — 10 Nov 2026 — done
 - Changed: `src/dev/bench39/` (bench), Phase A report, `praat-ref.py`. No production code.
 - Praat vs the Phase A reference, on its trusted frames (MEASURED, 829 clips): median difference 0.02 semitone, 90th percentile 0.10, over 1 semitone 0.06–0.08%, octave apart 0.04–0.06%. Praat voices about 4% fewer frames. The Phase A numbers hold with Praat.
-- Starting numbers with Praat as reference (`node src/dev/bench39/detail.mjs`, live settings and pipeline settings agree within 0.01):
+- Starting numbers with Praat as reference (`node src/dev/bench39/detail.mjs`, live settings and pipeline settings agree within 0.01 on the median; the 90th percentile differs by up to 0.06 (natural T4: live 0.44, pipeline 0.38)):
   - Pitch error with the 40 ms delay removed, median / 90th percentile, semitones: T1 0.02 / 0.11–0.23, T2 0.05 / 0.23, T3 0.06–0.07 / 0.28–0.32, T4 0.10 / 0.37–0.38, pairs 0.05–0.07 / 0.32–0.42.
   - Delay: 40 ms for every group.
 - Facts the next briefs need:
@@ -34,3 +34,10 @@ Plan: `docs/briefs/refs/39-phase-b-plan.md`. Phase A report: `docs/briefs/report
 - Why blocked: live natural T4 pitch error with the delay removed, p90, is 0.44 semitone. This entry's "Phase A + Praat check" says T4 0.37–0.38 and "live and pipeline agree within 0.01". `detail.mjs` prints the same 0.44 for live natural T4 (pipeline: 0.38). The summary was wrong, not the bench. Rules review (`39-rules-review.md`) not written; waits for Pierre.
 - Surprises: no shape-match number for T1 (flat target). Old `trk/` cache is no longer used; the new cache is `node_modules/.cache/bench39/trk2/<pitch hash>/`.
 - For the next brief: run `npm run bench` before and after. A change in `src/pitch/` makes a full re-run (~2 min). The baseline already holds 0.44 for `live.err.delayRemoved.p90.natural.T4`.
+
+## 40 (second run, after Pierre's decisions) — 10 Nov 2026 — blocked again
+- Changed: `scorecard.mjs`: voice heard and "voice where Praat is silent" now compare at the same moment (no 40 ms shift); "delay removed" uses each group's best-fit delay. Handover sentence on live vs pipeline corrected. Baseline NOT rewritten.
+- Delay-removed errors and delays did not move (best fit is 40 ms everywhere). MEASURED.
+- Why blocked: the sanity check misses. Live T4 last third, lowest gate: textbook 94.2% (ok), natural **83.2%** (expected 92–94). Gate at 40%: textbook **46.5%**, natural **41.3%** (expected 51–66).
+- Cause, MEASURED (scratch diagnosis, live cache): the reference. Natural T4 last third with the built-in reference is 96.6% (creak out) / 94.3% (creak in); with Praat 83.1% / 81.2%. Praat hears voice at the quiet end of natural falls that the built-in reference did not trust (it needs two methods to agree). Phase A's 92–94% came from the built-in reference (`eval.mjs`). Gate at 40% also differs in how "voice loudness" is measured: `eval.mjs` uses the raw centre-1024 RMS on reference-trusted frames; the scorecard uses the tracker's RMS on its own voiced frames. Not yet measured separately.
+- Decision needed: accept the Praat numbers as the baseline (they say the tracker loses more of natural T4 endings than Phase A reported), or make the scorecard follow `eval.mjs` definitions.
