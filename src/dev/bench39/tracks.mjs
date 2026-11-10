@@ -1,5 +1,6 @@
 // Cached runs of the REAL PitchTracker over the local clips (numbers only).
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { basename } from "node:path";
 import { PitchTracker } from "../../pitch/PitchTracker.ts";
 import { listWavs, loadWav, WIN, HOP } from "./lib.mjs";
@@ -45,17 +46,35 @@ export function track(samples, sr, cfg) {
   }
   return o;
 }
-/** name: "pipe" (clip pipeline) or "live" (floor 1e-4, minVoicedRun 3). Cached. */
-export function cachedTrack(clip, name) {
-  const dir = `${CACHE}/trk/${name}/${clip.set}`;
+// Cache key part: every non-test source file of src/pitch/. Any change to the
+// listener (a default, a formula) makes a new cache folder, so a stale run is
+// never reused.
+export const PITCH_HASH = (() => {
+  const h = createHash("sha1");
+  for (const n of readdirSync("src/pitch").sort()) if (n.endsWith(".ts") && !n.endsWith(".test.ts")) h.update(n).update(readFileSync(`src/pitch/${n}`));
+  return h.digest("hex").slice(0, 10);
+})();
+export function resample(x, k) { // k < 1: slower and lower (voices.mjs stand-in)
+  const n = Math.floor(x.length / k), out = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const p = i * k, j = Math.floor(p), f = p - j; out[i] = x[j] * (1 - f) + (x[Math.min(j + 1, x.length - 1)] || 0) * f; }
+  return out;
+}
+/** Any tracker run, cached by (pitch source hash, tag, cfg, pitch factor k). */
+export function cachedRun(clip, tag, cfg, k = 1) {
+  const key = createHash("sha1").update(JSON.stringify({ cfg, k })).digest("hex").slice(0, 8);
+  const dir = `${CACHE}/trk2/${PITCH_HASH}/${tag}-${key}/${clip.set}`;
   const f = `${dir}/${clip.id}.json`;
   if (existsSync(f)) return JSON.parse(readFileSync(f, "utf8"));
   const w = loadWav(clip.file);
-  const cfg = name === "pipe"
-    ? { minVoicedRun: 1, ...(clip.tones.length === 1 && clip.tones[0] === 3 ? T3_RESCUE : {}) }
-    : { minVoicedRun: 3, noiseFloor: 1e-4 };
-  const o = track(w.samples, w.sampleRate, cfg);
+  const o = track(k === 1 ? w.samples : resample(w.samples, k), w.sampleRate, { ...cfg, ...(k !== 1 ? { f0Center: F0C * k } : {}) });
   mkdirSync(dir, { recursive: true });
   writeFileSync(f, JSON.stringify(o));
   return o;
+}
+export const cfgFor = (clip, name) => name === "pipe"
+  ? { minVoicedRun: 1, ...(clip.tones.length === 1 && clip.tones[0] === 3 ? T3_RESCUE : {}) }
+  : { minVoicedRun: 3, noiseFloor: 1e-4 };
+/** name: "pipe" (clip pipeline) or "live" (floor 1e-4, minVoicedRun 3). Cached. */
+export function cachedTrack(clip, name) {
+  return cachedRun(clip, name, cfgFor(clip, name));
 }

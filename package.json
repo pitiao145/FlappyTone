@@ -37,7 +37,8 @@
     "check:mic-chunks": "node --experimental-strip-types src/dev/check-mic-chunks.ts",
     "video:studio": "remotion studio",
     "video:render": "remotion render Promo",
-    "seo:check-pinyin": "node --experimental-strip-types src/dev/seo-check-pinyin.ts"
+    "seo:check-pinyin": "node --experimental-strip-types src/dev/seo-check-pinyin.ts",
+    "bench": "node src/dev/bench39/scorecard.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",

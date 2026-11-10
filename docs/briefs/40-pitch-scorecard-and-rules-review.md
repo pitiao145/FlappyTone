@@ -1,5 +1,5 @@
 ---
-status: blocked  # draft: waits for Pierre's approval of the Phase B plan
+status: blocked  # live natural T4 p90 0.44 vs handover 0.37–0.38; see reports/40-pitch-scorecard-and-rules-review.md
 notion_task:
 risk: low
 ---

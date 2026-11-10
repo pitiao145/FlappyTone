@@ -10,7 +10,7 @@ The principle: **`src/pitch/` is a pure function from audio frames to a Chao con
 
 Record these yourself, once, before writing pipeline code. **Use the same microphone you'll actually play the game with** — a laptop mic and a headset produce very different signals, and tuning against the wrong one is wasted work.
 
-**Format:** mono WAV, 44.1 kHz, 16-bit. Quiet room. Normal speaking volume, ~20cm from the mic. Trim to the utterance plus ~200ms of silence either side.
+**Format:** mono WAV, 48 kHz, 16-bit (every real-voice fixture in the repo is 48 kHz; only the synthetic `fixtures/tone*.wav` are 44.1 kHz). Quiet room. Normal speaking volume, ~20cm from the mic. Trim to the utterance plus ~200ms of silence either side.
 
 ### What is actually in the repo
 
@@ -29,6 +29,13 @@ a name that misses the convention is silently scored at the 120Hz default.
 
 The wind in the first ~1s of each `jane_*` file doubles as a noise-rejection
 fixture: every frame of it must come back unvoiced.
+
+**`fixtures/clips/jane/` (local only, gitignored)** — Jane's cut catalog
+clips: 357 textbook and 472 natural (`natural/`), 48 kHz. Not in git, so a
+fresh checkout does not have them. They are the large regression set:
+`npm run bench` scores the listener on them against Praat (brief 40,
+`src/dev/bench39/`). The 120 older single-tone words have no cut clip here;
+their raw takes are in `fixtures/recordings/2026-08-07-xujzgs/`.
 
 **`fixtures/contours/jane-textbook-sample.json`** — 101 of Jane's published
 textbook clips' measured contours (`word_clips.contour`: voiced frames on her

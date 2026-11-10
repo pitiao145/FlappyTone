@@ -27,3 +27,10 @@ Plan: `docs/briefs/refs/39-phase-b-plan.md`. Phase A report: `docs/briefs/report
   - The branch is 1 commit behind `main` (brief 38, the note prompt; no pitch files). Not merged, by rule.
 - Open: Pierre's voice recording (brief 41). Foorgol's answers.
 - One-ruler preview for Jane (MEASURED with Praat, textbook clips, creak left out, 2nd/98th percentile): middle 195.7 Hz, up 8.8 semitones, down 7.9. On that ruler: first tone 4.06; fourth tone 4.96 → 1.34; second tone 2.33 → 4.41; third tone low 1.20, end 4.11. With 5th/95th percentile: up 7.9, down 7.2, first tone 4.18, fourth-tone start 5.18 (clamped). So the premise of brief 43 holds with 2/98.
+
+## 40 Pitch scorecard and rules review — 10 Nov 2026 — blocked
+- Changed: `src/dev/bench39/scorecard.mjs` (new), `src/dev/bench39/tracks.mjs` (cache keyed by a hash of `src/pitch/`), `package.json` (`npm run bench`), `docs/briefs/refs/39-baseline.json` (209 numbers), doc facts in `docs/TESTING.md`, `docs/PRD.md`, `docs/ARCHITECTURE.md`, `CLAUDE.md`. Commit: see `git log` ("brief 40").
+- Scorecard: first baseline, nothing moved. `npm run bench` → 0 FAIL, exit 0; 132 s on an empty cache, under 1 s cached. `clarityThreshold` 0.9 → 51 FAIL (MEASURED).
+- Why blocked: live natural T4 pitch error with the delay removed, p90, is 0.44 semitone. This entry's "Phase A + Praat check" says T4 0.37–0.38 and "live and pipeline agree within 0.01". `detail.mjs` prints the same 0.44 for live natural T4 (pipeline: 0.38). The summary was wrong, not the bench. Rules review (`39-rules-review.md`) not written; waits for Pierre.
+- Surprises: no shape-match number for T1 (flat target). Old `trk/` cache is no longer used; the new cache is `node_modules/.cache/bench39/trk2/<pitch hash>/`.
+- For the next brief: run `npm run bench` before and after. A change in `src/pitch/` makes a full re-run (~2 min). The baseline already holds 0.44 for `live.err.delayRemoved.p90.natural.T4`.

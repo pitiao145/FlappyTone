@@ -67,7 +67,7 @@ y(chao) = 0.80H - ((chao - 1) / 4) * 0.60H
 
 ### 5.2 Pitch detection pipeline
 
-Analysis window 2048 samples, 1024-sample hop (~43Hz update rate, 50% overlap) — see `src/pitch/PitchTracker.ts` for the exact constants below.
+Analysis window 2048 samples, 1024-sample hop (~47 Hz update rate, one step = 21.3 ms at the 48 kHz most devices use; 50% overlap) — see `src/pitch/PitchTracker.ts` for the exact constants below.
 
 1. **Band-limit the search** to reject most octave errors outright.
 2. **Voicing gate:** `clarity >= 0.7` (not a stricter textbook 0.85 — NSDF clarity collapses exactly when pitch slews fastest), **plus a glide rescue**: a loud, pitch-continuous, recent frame counts as voiced even below the clarity threshold (`isFrameVoiced()`). Also requires `rms >= noiseFloor * 3`.
@@ -97,7 +97,7 @@ Persisted to `localStorage` (the one exception to "no persistence" — a setting
 
 ## 6. Tone gate geometry
 
-**A gate is built from a recorded word, not a hand-drawn tone-mark shape.** Corridor centrelines (`DEFAULT_POLYLINES` in `src/game/tuning.ts`) are measured from Jane's own citation-form takes (`fixtures/captures/jane_ma*.wav`), not drawn from the ˉˊˇˋ marks — real tones hold, then move fast, which a constant-rate ramp between the mark's endpoints cannot represent. Every one of the 120 shipped words gets its own polyline via `shapeForWord`, built from the same measurement the four fallback/tutorial shapes use (`templateContour`).
+**A gate is built from a recorded word, not a hand-drawn tone-mark shape.** Corridor centrelines (`DEFAULT_POLYLINES` in `src/game/tuning.ts`) are measured from Jane's own citation-form takes (`fixtures/captures/jane_ma*.wav`), not drawn from the ˉˊˇˋ marks — real tones hold, then move fast, which a constant-rate ramp between the mark's endpoints cannot represent. Every shipped word gets its own polyline via `shapeForWord`, built from the same measurement the four fallback/tutorial shapes use (`templateContour`).
 
 Approximate current fallback shapes (2–4 vertices, monotone-cubic spline between them, not straight segments):
 
