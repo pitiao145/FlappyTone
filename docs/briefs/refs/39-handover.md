@@ -64,3 +64,12 @@ Plan: `docs/briefs/refs/39-phase-b-plan.md`. Phase A report: `docs/briefs/report
 - Why blocked: step 2. (a) median 3 → delay 20 ms, errors better, but 6 unnamed numbers fail (`live.highEndLost.p90` textbook T1/T4/pairs and natural T4, +0.03–0.09 st; `deep0.5.lowEndLost.med.natural.T2` +0.06; reader voice2stLower textbook −2.2 pp). (b) = (a) in code (octave check already before the median). (c) bypass within 1 st: T4 still 40 ms, 34 FAIL. Decision for Pierre in the report.
 - Surprises: (b) was not a separate option. 44.1 kHz devices had a 9% faster slew, 8% longer waits than 48 kHz before step 1 (now fixed).
 - For the next brief / rerun: `rescueMaxSemitones` is still per hop (rescue rule, out of scope). Bench cache keys changed with the field names, so the first run is ~2.5 min.
+
+## 42 (second run, median 3 accepted) — 10 Nov 2026 — blocked (step 3)
+- Changed: step 2 committed ("feat(pitch): brief 42 step 2"). `medianFrames` 3 (in frames, on purpose). Delay 40 → 20 ms everywhere. Baseline: delay, delay-removed errors and Pierre's 6 allowed numbers rewritten (list in the report).
+- **Tolerance change (Pierre's decision):** every `live.lowEndLost.p90.*` and `live.highEndLost.p90.*` now has tol 0.10 st; a worst-10% value on a small group is noisier than 0.02. Medians stay 0.02.
+- **For brief 45:** after median 3 the reader reads **90.1%** of textbook single tones with the voice 2 semitones lower (was 92.3). Brief 45 must recover it.
+- Tests moved: 4 anchor golden polylines (stored values); two guards loosened and flagged for review: clipCutMulti corridor 0.35 → 0.45 chao (xiaoshi 0.37, yiqian 0.43), toneAccuracy own tone 0.55 → 0.45 (jane_ma2 0.593 → 0.496; its lead grew 0.418 → 0.440). Report (fixtures/captures): fit 0.97 → 0.95, wiggle 0.063 → 0.061. Wall hits 0.
+- Why blocked: step 3, fMin 55. Deep 0.5 low end lost 1.25 → −0.01 st (p90 3.30 → 0.16), Pierre −0.01, CPU 2.4% of the hop. But "voice where Praat is silent" rises 0.6–1.2 points (limit +0.3) in T1, T3, T4, pairs, and T4 delay-removed error p90 rises 0.07–0.11 (limit +0.05). Wider low windows (1536, 2048) gave no gain, more CPU (up to 5.1%). Code back at 70 Hz.
+- Step 4 measured: Praat frames above 350 Hz: textbook 0.26%, natural 0.006%. fMax unchanged.
+- For the rerun: the deep-voice fix needs a way to use 55 Hz without fake low frames in a normal voice. Options are in the report; all are outside this brief.
