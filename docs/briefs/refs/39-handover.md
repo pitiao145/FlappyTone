@@ -73,3 +73,13 @@ Plan: `docs/briefs/refs/39-phase-b-plan.md`. Phase A report: `docs/briefs/report
 - Why blocked: step 3, fMin 55. Deep 0.5 low end lost 1.25 → −0.01 st (p90 3.30 → 0.16), Pierre −0.01, CPU 2.4% of the hop. But "voice where Praat is silent" rises 0.6–1.2 points (limit +0.3) in T1, T3, T4, pairs, and T4 delay-removed error p90 rises 0.07–0.11 (limit +0.05). Wider low windows (1536, 2048) gave no gain, more CPU (up to 5.1%). Code back at 70 Hz.
 - Step 4 measured: Praat frames above 350 Hz: textbook 0.26%, natural 0.006%. fMax unchanged.
 - For the rerun: the deep-voice fix needs a way to use 55 Hz without fake low frames in a normal voice. Options are in the report; all are outside this brief.
+
+## 42 (third run, floor follows the speaker) — 10 Nov 2026 — blocked (step 3)
+- Built, not committed: `speakerFloorHz` (clamp(centre/2, 55, 70), no centre → 70), tuning `pitchFloorLowHz`/`pitchFloorHighHz`, wired into game, Visualiser, mini game, checker, Calibration preview, clipCut/clipCutMulti; scorecard rows for deep stand-ins (fake voice, error p90, low-end p90). Diff saved: `docs/briefs/reports/42-step3-speaker-floor.patch`. Code is back at the step 2 commit (bench 0 FAIL).
+- Pass: Jane unchanged (all 209 values). Deep 0.5 low end lost ≈ 0 (was up to 2.63 median, 4.06 p90). Deep 0.6 no worse. Pierre low end ≈ 0. CPU 2.4%.
+- Miss: deep 0.6 fake voice in 7 groups (up to +1.3 points over Jane; at 70 it was under Jane). Deep error p90 vs Jane + 0.05 in 9 groups, but the stand-in already misses that at 70 (resampled audio is less clean): the check may be unfair. Pierre at 64.5 Hz: T3 heard −0.7, T4 p90 +0.03, pairs read 5/16 → 4/16.
+- **Calibration talk step at 70:** a 90 Hz voice is measured 1.42 st too high (97.9 vs 90.2 Hz). Floor rule still gives 55; the grid sits 1.4 st high. For brief 44.
+- **For brief 43:** report the corridor error for xiaoshi and yiqian again after re-measuring (limit 0.47; now 0.37 / 0.43).
+- **For brief 45:** bring jane_ma2's own-tone score back above 0.55, or explain (now 0.496).
+- Note: `npm run report` fit went 0.97 → 0.95 with median 3 (wiggle 0.063 → 0.061).
+- The two loosened test guards are accepted by Pierre for now.

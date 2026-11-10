@@ -153,3 +153,39 @@ Praat trusted voiced frames above 350 Hz (MEASURED, `ref-praat` cache): textbook
 1. Step 3 decision. Options: (a) accept more fake voice at the low edge for deep voices (breaks the "+0.3 points" rule); (b) a smaller step, e.g. fMin 62 (not tried: outside the brief); (c) only lower the floor once a voice has shown it is low (calibration centre under some value; a new rule, outside this brief); (d) keep 70 and leave deep voices open.
 2. The two loosened test guards above (corridor 0.45, ma2 own-tone 0.45).
 3. Strong-model review still needed.
+
+---
+
+# Third run (Pierre's decision: floor follows the speaker) — 10 Nov 2026 — blocked
+
+## What was built (not committed; full diff in `docs/briefs/reports/42-step3-speaker-floor.patch`)
+- `speakerFloorHz(f0Center, low = 55, high = 70)` in `src/pitch/math.ts`: clamp(centre / 2, 55, 70); no centre → 70. Unit test `src/pitch/speakerFloor.test.ts`.
+- `tuning()`: `pitchFloorLowHz` 55, `pitchFloorHighHz` 70, and `speakerFMin(centre)`. Used where a tracker gets a calibrated centre: Game, Visualiser, landing mini game, public checker (play tracker; its calibration tracker stays 70), Calibration preview, clipCut (3 sites, speaker's centre) and clipCutMulti. Calibration "talk" step: 70.
+- Bench: `cachedRun` passes `fMin = speakerFloorHz(centre × factor)` (Jane 70, deep 0.6 and 0.5 → 55, Pierre 64.5). `BENCH_FLOOR=<Hz>` forces one floor for comparison. Scorecard: new rows per group for both stand-ins: `deep{k}.voiceWherePraatSilent.pct`, `deep{k}.err.delayRemoved.p90` (stand-in time t ↔ Jane's t·k, pitch ÷ k), `deep{k}.lowEndLost.p90`.
+- Window 1024. `npm run test` 1827 + 2 passed, typecheck clean.
+
+## Acceptance (MEASURED, `npm run bench`; "70" = same code with `BENCH_FLOOR=70`)
+- Jane: **pass**. All 209 values identical to the step 2 run.
+- Deep 0.5 low end lost: **pass**, every group. Median −0.05…0.00 (at 70: up to 2.63), p90 ≤ 0.33 (at 70: up to 4.06).
+- Deep 0.6 low end lost: **pass** (no worse; p90 better, e.g. natural T4 0.64 → 0.30).
+- CPU: **pass** (2.4% of the hop, step 3 explorer).
+- Deep "voice where Praat is silent" ≤ Jane + 0.3: **miss in 7 groups, all at 0.6**. textbook T1 2.0 (Jane 1.6), T2 1.2 (0.6), T3 1.3 (0.8), T4 3.6 (2.3), pairs 2.4 (2.0); natural T2 1.0 (0.5), T3 0.9 (0.5), pairs 1.6 (1.0). At 70 the same stand-in was at or under Jane everywhere (e.g. textbook T4 2.1), so the floor causes it. Deep 0.5 passes everywhere (textbook T4 2.5 vs 2.3 + 0.3).
+- Deep error delay-removed p90 ≤ Jane + 0.05: **miss in 9 groups**. Example 0.6 textbook T2 0.19 (Jane 0.15), T3 0.24 (0.19), T4 0.32 (0.25). **But the stand-in misses this at 70 too** (0.6 textbook T2 0.19, T3 0.24, T4 0.31): the slowed-down replay is itself less clean than Jane's real audio. So this check compares the stand-in with Jane, not the floor with no floor. The floor itself moves these p90s by −0.05…+0.07 (0.5 natural T4 0.26 → 0.33).
+- Pierre (floor 64.5 from his saved centre 129): low end lost median ≤ 0.4 **pass** (≈ 0). "Other numbers no worse than at 70": **miss**. T3 voice heard 81.7 → 81.0%, T4 error p90 0.30 → 0.33, pairs read right (calibration a/b/c) 5/16 → 4/16. Creak drawn 10% → 14% of his creak frames (drawn an octave high less often: 100% → 67%).
+
+## Calibration "talk" step at 70 (MEASURED, natural clips replayed as talk, centre 120, live settings)
+| Voice | Tracker centre at 70 | Praat | Off by | At 55 |
+|---|---|---|---|---|
+| Jane | 178.2 Hz | 180.4 | −0.22 st | −0.39 |
+| deep 0.6 | 107.8 | 108.2 | −0.07 | −0.21 |
+| deep 0.5 | **97.9** | 90.2 | **+1.42 st** | −0.16 |
+In plain words: a very deep voice (centre ~90 Hz) loses its lowest talk frames at 70 Hz, so calibration measures its middle 1.4 semitones too high. Its floor still comes out at 55 (half of 98 is under 55), so the floor rule works. But the grid is set 1.4 st too high: the player has to go lower than the game thinks to hit the bottom. This belongs to brief 44.
+
+## In plain words
+The floor that follows the speaker does what it should for the low end: a deep voice is no longer cut off, and Jane does not change at all. The cost: a voice around 109 Hz (0.6) draws about twice as many fake bits of line in silence as before, near the quiet edges of syllables. Your own fourth tones get slightly worse at the floor of 64.5 Hz, and one pair word is read wrong.
+
+## Needs Pierre's eyes
+1. Is the deep error p90 check fair? At 70 Hz the stand-in already fails it. Options: compare each stand-in with itself at 70 instead of with Jane.
+2. Fake voice at 0.6 (up to +1.3 points). Accept it, or narrow the rule (for example the floor only goes under 70 for centres under ~100 Hz, so the 0.6 voice keeps 70 and the 0.5 voice gets 55)? Not tried: outside this decision.
+3. Pierre: −0.7 points heard on T3, +0.03 st on T4 p90, one pair word. Accept or not.
+4. Strong-model review still needed.

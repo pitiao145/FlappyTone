@@ -1,5 +1,5 @@
 ---
-status: blocked  # step 3: fMin 55 fails "voice where Praat is silent" and T4 p90 error; see report
+status: blocked  # step 3 (speaker floor): deep 0.6 fake voice and deep error p90 vs Jane miss; see report
 notion_task:
 risk: needs-approval
 ---

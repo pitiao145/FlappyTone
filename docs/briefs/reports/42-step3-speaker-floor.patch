@@ -1,0 +1,324 @@
+diff --git a/docs/briefs/42-listener-delay-band-ms.md b/docs/briefs/42-listener-delay-band-ms.md
+index ca6c9d8..7c7ad44 100644
+--- a/docs/briefs/42-listener-delay-band-ms.md
++++ b/docs/briefs/42-listener-delay-band-ms.md
+@@ -1,5 +1,5 @@
+ ---
+-status: blocked  # step 3: fMin 55 fails "voice where Praat is silent" and T4 p90 error; see report
++status: running
+ notion_task:
+ risk: needs-approval
+ ---
+diff --git a/src/dev/bench39/scorecard.mjs b/src/dev/bench39/scorecard.mjs
+index 42701dd..867ab81 100644
+--- a/src/dev/bench39/scorecard.mjs
++++ b/src/dev/bench39/scorecard.mjs
+@@ -122,16 +122,23 @@ for (const style of STYLES) for (const g of GROUPS) {
+ // ---- 2. deep-voice stand-in (Jane replayed slower: pitch × k) ----------------
+ for (const k of [0.6, 0.5]) for (const style of STYLES) for (const g of GROUPS) {
+   const cs = clips.filter((c) => c.set === style && groupOf(c.tones) === g);
+-  let n = 0, under = 0; const lows = [];
++  let n = 0, under = 0, trV = 0, falseV = 0; const lows = [], byShift = SHIFTS.map(() => []);
+   for (const c of cs) {
+     const r = R(c), o = cachedRun(c, "live", cfgFor(c, "live"), k);
+     for (let i = 0; i < r.t.length; i++) if (r.trusted[i] && r.f0[i] >= CREAK) { n++; if (r.f0[i] * k < 70) under++; }
+     // ends() needs the reference on the stretched clock: compare pitch sets only (time-free).
+     const e = ends(o, r, k); if (e) lows.push(e.low);
++    // Brief 42: the stand-in's frame at time t is Jane's at t·k; its pitch is Jane's × k.
++    for (let i = 0; i < o.t.length; i++) if (o.v[i]) { trV++; if (refAt(r, o.t[i] * k).clearlyUnvoiced) falseV++; }
++    SHIFTS.forEach((s, j) => { for (let i = 0; i < o.t.length; i++) if (o.v[i]) { const a = refAt(r, o.t[i] * k - s); if (okRef(a)) byShift[j].push(Math.abs(12 * Math.log2(o.f0[i] / (k * a.f0)))); } });
+   }
+   const tag = `${style}.${g}`;
++  const meds = byShift.map((e) => med(e)), fixed = byShift[meds.indexOf(Math.min(...meds))];
+   put(`deep${k}.underBand.pct.${tag}`, (100 * under) / Math.max(1, n), "lower", PP_TOL, "%");
+   put(`deep${k}.lowEndLost.med.${tag}`, med(lows), "lower", ST_TOL, "st");
++  put(`deep${k}.lowEndLost.p90.${tag}`, pct(lows, 90), "lower", 0.1, "st");
++  put(`deep${k}.voiceWherePraatSilent.pct.${tag}`, (100 * falseV) / Math.max(1, trV), "lower", PP_TOL, "%");
++  put(`deep${k}.err.delayRemoved.p90.${tag}`, pct(fixed, 90), "lower", ST_TOL, "st");
+ }
+ 
+ // ---- 3. gate at 40% of the voice: T4 last third ------------------------------
+diff --git a/src/dev/bench39/tracks.mjs b/src/dev/bench39/tracks.mjs
+index fdcf179..d4a0eb8 100644
+--- a/src/dev/bench39/tracks.mjs
++++ b/src/dev/bench39/tracks.mjs
+@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from
+ import { createHash } from "node:crypto";
+ import { basename } from "node:path";
+ import { PitchTracker } from "../../pitch/PitchTracker.ts";
++import { speakerFloorHz } from "../../pitch/math.ts";
+ import { listWavs, loadWav, WIN, HOP } from "./lib.mjs";
+ 
+ export const CACHE = "node_modules/.cache/bench39";
+@@ -37,6 +38,7 @@ export function refAt(r, t) {
+ }
+ /** Runs the production tracker on samples. Returns per-frame arrays. */
+ export function track(samples, sr, cfg) {
++  // Floor follows the speaker's centre, as in the game (brief 42): Jane 70 Hz, deep stand-ins 55.
+   const tr = new PitchTracker({ sampleRate: sr, f0Center: F0C, rangeSemitones: 15, ...cfg });
+   const o = { t: [], v: [], f0: [], st: [], cl: [], rms: [] };
+   for (let s = 0; s + WIN <= samples.length; s += HOP) {
+@@ -60,7 +62,11 @@ export function resample(x, k) { // k < 1: slower and lower (voices.mjs stand-in
+   return out;
+ }
+ /** Any tracker run, cached by (pitch source hash, tag, cfg, pitch factor k). */
+-export function cachedRun(clip, tag, cfg, k = 1) {
++export function cachedRun(clip, tag, cfg0, k = 1) {
++  // Floor follows the speaker's centre, as in the game (brief 42): Jane 70 Hz,
++  // deep stand-ins 55. BENCH_FLOOR=<Hz> forces one floor (comparison runs only).
++  const centre = cfg0.f0Center ?? F0C * k;
++  const cfg = { fMin: process.env.BENCH_FLOOR ? +process.env.BENCH_FLOOR : speakerFloorHz(centre), ...cfg0 };
+   const key = createHash("sha1").update(JSON.stringify({ cfg, k })).digest("hex").slice(0, 8);
+   const dir = `${CACHE}/trk2/${PITCH_HASH}/${tag}-${key}/${clip.set}`;
+   const f = `${dir}/${clip.id}.json`;
+diff --git a/src/dev/clipCut.ts b/src/dev/clipCut.ts
+index b67026a..b5d6977 100644
+--- a/src/dev/clipCut.ts
++++ b/src/dev/clipCut.ts
+@@ -16,6 +16,7 @@
+  * through silence. Voicing is what a tone demo is made of.
+  */
+ 
++import { speakerFMin } from "../game/tuning.ts";
+ import { computeF0Center, computeRangeSemitones } from "../pitch/calibration.ts";
+ import { hzToSemitones } from "../pitch/math.ts";
+ import { PitchTracker } from "../pitch/PitchTracker.ts";
+@@ -191,6 +192,7 @@ function longestVoicedRun(
+   const tracker = new PitchTracker({
+     sampleRate,
+     f0Center,
++    fMin: speakerFMin(f0Center),
+     ...(tone === 3 ? TONE_3_RESCUE : {}),
+   });
+   const voiced: number[] = [];
+@@ -280,6 +282,7 @@ export function measureContour(
+   const tracker = new PitchTracker({
+     sampleRate,
+     f0Center,
++    fMin: speakerFMin(f0Center),
+     ...(rangeSemitones ? { rangeSemitones } : {}),
+     ...(tone === 3 ? TONE_3_RESCUE : {}),
+   });
+@@ -428,7 +431,7 @@ export function measurePitchReference(
+ ): PitchReference | null {
+   const f0s: number[] = [];
+   for (const { samples, sampleRate } of recordings) {
+-    const tracker = new PitchTracker({ sampleRate, f0Center: seedF0Center });
++    const tracker = new PitchTracker({ sampleRate, f0Center: seedF0Center, fMin: speakerFMin(seedF0Center) });
+     for (let s = 0; s + WIN <= samples.length; s += HOP) {
+       const state = tracker.push(samples.subarray(s, s + WIN));
+       if (state.voiced && state.f0) f0s.push(state.f0);
+diff --git a/src/dev/clipCutMulti.ts b/src/dev/clipCutMulti.ts
+index d0a6065..50c0287 100644
+--- a/src/dev/clipCutMulti.ts
++++ b/src/dev/clipCutMulti.ts
+@@ -17,6 +17,7 @@
+  * is measured from this recording's own contour.
+  */
+ 
++import { speakerFMin } from "../game/tuning.ts";
+ import { PitchTracker } from "../pitch/PitchTracker.ts";
+ import {
+   EXTREMUM_TRIM_FRAC,
+@@ -73,7 +74,7 @@ function voicedCenters(
+   sampleRate: number,
+   f0Center: number,
+ ): number[] {
+-  const tracker = new PitchTracker({ sampleRate, f0Center });
++  const tracker = new PitchTracker({ sampleRate, f0Center, fMin: speakerFMin(f0Center) });
+   const centers: number[] = [];
+   for (let s = 0; s + WIN <= samples.length; s += HOP) {
+     if (tracker.push(samples.subarray(s, s + WIN)).voiced) centers.push(s + WIN / 2);
+diff --git a/src/game/tuning.ts b/src/game/tuning.ts
+index 49f5011..ec21844 100644
+--- a/src/game/tuning.ts
++++ b/src/game/tuning.ts
+@@ -13,6 +13,7 @@
+  */
+ 
+ import type { Tone } from "./gates.ts";
++import { speakerFloorHz } from "../pitch/math.ts";
+ 
+ /** A corridor centreline: (t, chao) control points, ascending in t over [0,1]. */
+ export type Polyline = Array<[number, number]>;
+@@ -593,6 +594,10 @@ export interface Tuning {
+   voiceCapFraction: number;
+   /** Live-play `PitchTrackerConfig.minVoicedRunMs` — lone-blip rejection (64 ms = 3 hops at 48 kHz). */
+   minVoicedRunMs: number;
++  /** Lowest search floor for a deep voice, Hz (`speakerFloorHz`, brief 42). */
++  pitchFloorLowHz: number;
++  /** Search floor for a normal voice and before calibration, Hz. */
++  pitchFloorHighHz: number;
+ 
+   // ---- calibration
+   /**
+@@ -756,6 +761,8 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
+   noiseFloorMax: 0.0015,
+   voiceCapFraction: 0.4,
+   minVoicedRunMs: 64,
++  pitchFloorLowHz: 55,
++  pitchFloorHighHz: 70,
+   reachToToneSpaceUp: 1,
+   reachToToneSpaceDown: 1,
+   gateDurationS: Object.freeze({ 1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6 }),
+@@ -800,3 +807,8 @@ export function setTuning(patch: Partial<Tuning>): void {
+ export function resetTuning(): void {
+   current = clone(DEFAULT_TUNING);
+ }
++
++/** The tracker's `fMin` for a speaker with this calibrated centre (null: not calibrated). */
++export function speakerFMin(f0Center: number | null | undefined): number {
++  return speakerFloorHz(f0Center, tuning().pitchFloorLowHz, tuning().pitchFloorHighHz);
++}
+diff --git a/src/pitch/math.ts b/src/pitch/math.ts
+index 9f512cf..6b03d6c 100644
+--- a/src/pitch/math.ts
++++ b/src/pitch/math.ts
+@@ -1,5 +1,17 @@
+ export const RANGE_SEMITONES = 5;
+ 
++/**
++ * Lowest pitch the listener searches for, from the speaker's own centre
++ * (brief 42): half the centre, kept between `lowHz` and `highHz`. A normal
++ * voice keeps 70 Hz (Jane: 181 → 70), a deep one goes down to 55 (centre
++ * 91 → 55). A fixed 55 Hz for everyone made the listener find fake low
++ * pitches at the quiet edges of a normal voice. No calibrated centre yet → `highHz`.
++ */
++export function speakerFloorHz(f0Center: number | null | undefined, lowHz = 55, highHz = 70): number {
++  if (f0Center == null || !(f0Center > 0)) return highHz;
++  return Math.min(highHz, Math.max(lowHz, f0Center / 2));
++}
++
+ export function hzToSemitones(f0: number, f0Center: number): number {
+   return 12 * Math.log2(f0 / f0Center);
+ }
+diff --git a/src/pitch/speakerFloor.test.ts b/src/pitch/speakerFloor.test.ts
+new file mode 100644
+index 0000000..556bc4a
+--- /dev/null
++++ b/src/pitch/speakerFloor.test.ts
+@@ -0,0 +1,15 @@
++import { describe, expect, it } from "vitest";
++import { speakerFloorHz } from "./math.ts";
++
++describe("speakerFloorHz (brief 42)", () => {
++  it("half the centre, kept within 55–70 Hz", () => {
++    expect(speakerFloorHz(181.3)).toBe(70); // Jane
++    expect(speakerFloorHz(129)).toBeCloseTo(64.5); // Pierre's calibration
++    expect(speakerFloorHz(90.65)).toBe(55); // deep stand-in 0.5
++    expect(speakerFloorHz(120)).toBe(60);
++  });
++  it("no calibrated centre → the high limit", () => {
++    expect(speakerFloorHz(null)).toBe(70);
++    expect(speakerFloorHz(undefined, 50, 80)).toBe(80);
++  });
++});
+diff --git a/src/site/checker/engine.ts b/src/site/checker/engine.ts
+index 48978fb..2b9fa08 100644
+--- a/src/site/checker/engine.ts
++++ b/src/site/checker/engine.ts
+@@ -20,7 +20,7 @@ import { readAttempt, type FreeAttempt } from "../../game/freeAttempts.ts";
+ import { VisualiserCore } from "../../game/visualiserCore.ts";
+ import { loadSettings } from "../../game/settings.ts";
+ import { sessionNoiseMeter, startingNoiseFloor } from "../../game/sessionNoise.ts";
+-import { tuning } from "../../game/tuning.ts";
++import { speakerFMin, tuning } from "../../game/tuning.ts";
+ import { PitchTracker } from "../../pitch/PitchTracker.ts";
+ import { scaleForDpr } from "../../render/canvas.ts";
+ import { drawVisualiser } from "../../render/visualiser.ts";
+@@ -239,6 +239,7 @@ export function startChecker(
+       tracker = new PitchTracker({
+         sampleRate,
+         f0Center: s.f0Center,
++        fMin: speakerFMin(s.f0Center),
+         noiseFloor: roomFloor ?? startingNoiseFloor(s.noiseFloor, s.voiceRms),
+         minVoicedRunMs: tuning().minVoicedRunMs,
+         rangeSemitones: s.rangeSemitones,
+diff --git a/src/ui/Calibration.tsx b/src/ui/Calibration.tsx
+index 04f2878..b11a9d5 100644
+--- a/src/ui/Calibration.tsx
++++ b/src/ui/Calibration.tsx
+@@ -39,7 +39,7 @@ import {
+   type RangeHalves,
+ } from "../pitch/calibration.ts";
+ import { rmsOf } from "../pitch/math.ts";
+-import { tuning } from "../game/tuning.ts";
++import { speakerFMin, tuning } from "../game/tuning.ts";
+ import { PitchTracker } from "../pitch/PitchTracker.ts";
+ import type { PitchTrackerConfig } from "../pitch/types.ts";
+ import { RANGE_SEMITONES } from "../pitch/math.ts";
+@@ -429,7 +429,10 @@ export function Calibration({
+       rangeDownSemitones: range.down,
+       minVoicedRunMs: tuning().minVoicedRunMs,
+     };
+-    if (f0Center !== null) cfg.f0Center = f0Center;
++    if (f0Center !== null) {
++      cfg.f0Center = f0Center;
++      cfg.fMin = speakerFMin(f0Center);
++    }
+     if (noiseFloor !== null) cfg.noiseFloor = noiseFloor;
+     configureTracker(cfg);
+     // Cleared here, not via setState: the interval below re-derives `fit` from
+diff --git a/src/ui/Game.tsx b/src/ui/Game.tsx
+index 3c9484d..8b29886 100644
+--- a/src/ui/Game.tsx
++++ b/src/ui/Game.tsx
+@@ -37,7 +37,7 @@ import { createAwayWatch, type AwayWatch } from "../game/abandonWatch.ts";
+ import { resolvedPool, type Word } from "../game/words.ts";
+ import type { Proficiency } from "../game/tiers.ts";
+ import type { LevelChoice } from "../game/settings.ts";
+-import { tuning } from "../game/tuning.ts";
++import { speakerFMin, tuning } from "../game/tuning.ts";
+ import { CALIBRATION_TONES, Run, type RunMode, type RunSnapshot, type WordMix } from "../game/run.ts";
+ import {
+   effectiveSpeechStyle,
+@@ -572,6 +572,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
+         tracker = new PitchTracker({
+           sampleRate,
+           f0Center: settings.f0Center,
++          fMin: speakerFMin(settings.f0Center),
+           // The saved calibration floor, capped, until this session's own
+           // measurement of the room lands (`measureNoise` below).
+           noiseFloor: startingNoiseFloor(settings.noiseFloor, settings.voiceRms),
+diff --git a/src/ui/Visualiser.tsx b/src/ui/Visualiser.tsx
+index f06385e..6bfa271 100644
+--- a/src/ui/Visualiser.tsx
++++ b/src/ui/Visualiser.tsx
+@@ -28,7 +28,7 @@ import { type ToneClassification } from "../game/toneClassifier.ts";
+ import { classifyToneV2 } from "../game/toneClassifierV2.ts";
+ import { spokenTones } from "../game/sandhi.ts";
+ import { tierLimits, type TocflLevel } from "../game/tiers.ts";
+-import { tuning } from "../game/tuning.ts";
++import { speakerFMin, tuning } from "../game/tuning.ts";
+ import { referenceFromWord, toneAccuracyDetail } from "../game/toneAccuracy.ts";
+ import type { SpeechStyle, Word } from "../game/words.ts";
+ import {
+@@ -542,6 +542,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
+         tracker = new PitchTracker({
+           sampleRate,
+           f0Center: settings.f0Center,
++          fMin: speakerFMin(settings.f0Center),
+           // The saved calibration floor, capped, until this session's own
+           // measurement of the room lands (`measureNoise` below).
+           noiseFloor: startingNoiseFloor(settings.noiseFloor, settings.voiceRms),
+diff --git a/src/ui/landing/miniGame.ts b/src/ui/landing/miniGame.ts
+index 53b1028..b64033f 100644
+--- a/src/ui/landing/miniGame.ts
++++ b/src/ui/landing/miniGame.ts
+@@ -22,7 +22,7 @@ import type { RunStats } from "../../game/scoring.ts";
+ import type { Tone } from "../../game/gates.ts";
+ import { loadSettings, type CalibrationSettings } from "../../game/settings.ts";
+ import { sessionNoiseMeter, startingNoiseFloor } from "../../game/sessionNoise.ts";
+-import { tuning } from "../../game/tuning.ts";
++import { speakerFMin, tuning } from "../../game/tuning.ts";
+ import type { Word } from "../../game/words.ts";
+ import { PitchTracker } from "../../pitch/PitchTracker.ts";
+ import { scaleForDpr } from "../../render/canvas.ts";
+@@ -148,6 +148,7 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<MiniGame> {
+     tracker ??= new PitchTracker({
+       sampleRate,
+       f0Center: settings.f0Center,
++      fMin: speakerFMin(settings.f0Center),
+       noiseFloor: startingNoiseFloor(settings.noiseFloor, settings.voiceRms),
+       minVoicedRunMs: tuning().minVoicedRunMs,
+       rangeSemitones: settings.rangeSemitones,
