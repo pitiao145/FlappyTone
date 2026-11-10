@@ -1,5 +1,5 @@
 ---
-status: blocked  # second run: T4 last-third check misses (Praat vs built-in reference); see report
+status: done
 notion_task:
 risk: low
 ---

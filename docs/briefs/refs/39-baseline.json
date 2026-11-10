@@ -35,25 +35,25 @@
    "unit": "ms"
   },
   "live.heard.all.pct.textbook.T1": {
-   "value": 96.77,
+   "value": 93.73,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.firstThird.pct.textbook.T1": {
-   "value": 95.72,
+   "value": 81.28,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.lastThird.pct.textbook.T1": {
-   "value": 94.62,
+   "value": 100,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.voiceWherePraatSilent.pct.textbook.T1": {
-   "value": 0.18,
+   "value": 1.65,
    "better": "lower",
    "tol": 1,
    "unit": "%"
@@ -125,25 +125,25 @@
    "unit": "ms"
   },
   "live.heard.all.pct.textbook.T2": {
-   "value": 95.67,
+   "value": 93.93,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.firstThird.pct.textbook.T2": {
-   "value": 95.65,
+   "value": 82.2,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.lastThird.pct.textbook.T2": {
-   "value": 91.34,
+   "value": 100,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.voiceWherePraatSilent.pct.textbook.T2": {
-   "value": 0.15,
+   "value": 0.6,
    "better": "lower",
    "tol": 1,
    "unit": "%"
@@ -215,25 +215,25 @@
    "unit": "ms"
   },
   "live.heard.all.pct.textbook.T3": {
-   "value": 95.6,
+   "value": 93.71,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.firstThird.pct.textbook.T3": {
-   "value": 95.03,
+   "value": 81.46,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.lastThird.pct.textbook.T3": {
-   "value": 91.83,
+   "value": 99.67,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.voiceWherePraatSilent.pct.textbook.T3": {
-   "value": 0,
+   "value": 0.8,
    "better": "lower",
    "tol": 1,
    "unit": "%"
@@ -305,25 +305,25 @@
    "unit": "ms"
   },
   "live.heard.all.pct.textbook.T4": {
-   "value": 93.36,
+   "value": 90.55,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.firstThird.pct.textbook.T4": {
-   "value": 95.88,
+   "value": 78.87,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.lastThird.pct.textbook.T4": {
-   "value": 83.78,
+   "value": 94.22,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.voiceWherePraatSilent.pct.textbook.T4": {
-   "value": 0.76,
+   "value": 2.28,
    "better": "lower",
    "tol": 1,
    "unit": "%"
@@ -395,25 +395,25 @@
    "unit": "ms"
   },
   "live.heard.all.pct.textbook.pairs": {
-   "value": 94.14,
+   "value": 91.35,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.firstThird.pct.textbook.pairs": {
-   "value": 96.26,
+   "value": 88.12,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.lastThird.pct.textbook.pairs": {
-   "value": 93.19,
+   "value": 96.43,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.voiceWherePraatSilent.pct.textbook.pairs": {
-   "value": 0.53,
+   "value": 1.99,
    "better": "lower",
    "tol": 1,
    "unit": "%"
@@ -485,25 +485,25 @@
    "unit": "ms"
   },
   "live.heard.all.pct.natural.T1": {
-   "value": 95.89,
+   "value": 91.85,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.firstThird.pct.natural.T1": {
-   "value": 93.47,
+   "value": 75.76,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.lastThird.pct.natural.T1": {
-   "value": 94.31,
+   "value": 100,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.voiceWherePraatSilent.pct.natural.T1": {
-   "value": 0.36,
+   "value": 1.99,
    "better": "lower",
    "tol": 1,
    "unit": "%"
@@ -575,25 +575,25 @@
    "unit": "ms"
   },
   "live.heard.all.pct.natural.T2": {
-   "value": 93.93,
+   "value": 92.92,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.firstThird.pct.natural.T2": {
-   "value": 94.82,
+   "value": 79.34,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.lastThird.pct.natural.T2": {
-   "value": 87.08,
+   "value": 99.63,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.voiceWherePraatSilent.pct.natural.T2": {
-   "value": 0.2,
+   "value": 0.52,
    "better": "lower",
    "tol": 1,
    "unit": "%"
@@ -665,25 +665,25 @@
    "unit": "ms"
   },
   "live.heard.all.pct.natural.T3": {
-   "value": 92.34,
+   "value": 91.38,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.firstThird.pct.natural.T3": {
-   "value": 93.33,
+   "value": 75.86,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.lastThird.pct.natural.T3": {
-   "value": 84.15,
+   "value": 98.89,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.voiceWherePraatSilent.pct.natural.T3": {
-   "value": 0.33,
+   "value": 0.46,
    "better": "lower",
    "tol": 1,
    "unit": "%"
@@ -755,25 +755,25 @@
    "unit": "ms"
   },
   "live.heard.all.pct.natural.T4": {
-   "value": 90.4,
+   "value": 85.1,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.firstThird.pct.natural.T4": {
-   "value": 94.06,
+   "value": 72,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.lastThird.pct.natural.T4": {
-   "value": 74.42,
+   "value": 83.21,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.voiceWherePraatSilent.pct.natural.T4": {
-   "value": 0.79,
+   "value": 2.37,
    "better": "lower",
    "tol": 1,
    "unit": "%"
@@ -845,25 +845,25 @@
    "unit": "ms"
   },
   "live.heard.all.pct.natural.pairs": {
-   "value": 88.43,
+   "value": 85.86,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.firstThird.pct.natural.pairs": {
-   "value": 82.9,
+   "value": 71.12,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.heard.lastThird.pct.natural.pairs": {
-   "value": 84.73,
+   "value": 94.34,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "live.voiceWherePraatSilent.pct.natural.pairs": {
-   "value": 0.44,
+   "value": 1.02,
    "better": "lower",
    "tol": 1,
    "unit": "%"
@@ -1145,13 +1145,13 @@
    "unit": "st"
   },
   "gate40.T4.lastThirdHeard.pct.textbook": {
-   "value": 28.23,
+   "value": 46.5,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "gate40.T4.lastThirdHeard.pct.natural": {
-   "value": 19.95,
+   "value": 41.25,
    "better": "higher",
    "tol": 1,
    "unit": "%"
