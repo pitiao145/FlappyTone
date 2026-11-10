@@ -189,3 +189,35 @@ The floor that follows the speaker does what it should for the low end: a deep v
 2. Fake voice at 0.6 (up to +1.3 points). Accept it, or narrow the rule (for example the floor only goes under 70 for centres under ~100 Hz, so the 0.6 voice keeps 70 and the 0.5 voice gets 55)? Not tried: outside this decision.
 3. Pierre: −0.7 points heard on T3, +0.03 st on T4 p90, one pair word. Accept or not.
 4. Strong-model review still needed.
+
+---
+
+# Fourth run (floor = clamp(0.6 × centre, 55, 70)) — 10 Nov 2026 — blocked
+
+## What was built (not committed; diff in `docs/briefs/reports/42-step3-speaker-floor-0.6.patch`)
+The third-run patch, with the factor as a parameter: `speakerFloorHz(centre, low 55, high 70, factor 0.6)`, and `tuning().pitchFloorFactor` 0.6. Unit test updated. `npm run test` 1830 passed, typecheck clean. Floors: Jane 181.3 → 70; **Pierre 129.1 (saved calibration centre) → 77.5 → 70**; deep 0.6 (108.8) → 65.3; deep 0.5 (90.65) → 54.4 → 55.
+
+## Acceptance (MEASURED, `npm run bench`; "at 70" = same code with `BENCH_FLOOR=70`)
+- Jane: **pass**, all 209 values identical to step 2.
+- Pierre: **pass**, his whole block identical (floor 70).
+- CPU: **pass** (2.4% of the hop at 55 Hz, step 3 explorer).
+- Deep 0.6 (floor 65): **pass** in all 10 groups. Fake voice at most +0.3 points over itself at 70 (textbook T4 2.1 → 2.4); error p90 at most +0.01; low end lost p90 better (textbook T4 0.79 → 0.39, natural pairs 0.50 → 0.35).
+- Deep 0.5 (floor 55): low end lost **pass** in every group (median ≤ 0.0, p90 ≤ 0.33; at 70 up to 2.63 / 4.06). **Miss in 4 groups:**
+
+| Group | Fake voice at 70 → 55 (limit +0.5) | Error p90 at 70 → 55 (limit +0.05) |
+|---|---|---|
+| textbook T4 | 0.6 → **2.5** | 0.27 → 0.31 |
+| textbook pairs | 1.5 → **2.5** | 0.23 → 0.23 |
+| natural T4 | 0.3 → **1.8** | 0.26 → **0.33** |
+| natural pairs | 0.2 → **1.0** | 0.22 → 0.23 |
+
+Other deep 0.5 groups pass (e.g. textbook T1 1.4 → 1.9, natural T3 errors better 0.25 → 0.19).
+The factor does not change deep 0.5 (54.4 → 55 either way), so these are the same numbers as the third run.
+
+## In plain words
+At 70 Hz the 0.5 voice lost the whole bottom of its fourth tones, so it drew few frames there, real or fake. At 55 Hz the bottom comes back (low end lost 2.6 → 0.0 semitone), and with it some fake line where Praat hears silence, right after the fall ends. The rise is 1–2 points of all drawn frames. Some of it may be the voice trailing off into creak that Praat calls silent. Not measured.
+
+## Needs Pierre's eyes
+- Accept the 4 deep-0.5 misses (the fourth-tone bottom comes back, at the cost of 1–2 points of fake line at the end of falls), or keep 70 for now.
+- Not tried, as instructed: another factor or limit.
+- Calibration talk step stays at 70 (a 90 Hz voice is measured 1.4 st too high, note for brief 44).

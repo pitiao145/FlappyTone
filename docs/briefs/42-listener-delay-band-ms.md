@@ -1,5 +1,5 @@
 ---
-status: blocked  # step 3 (speaker floor): deep 0.6 fake voice and deep error p90 vs Jane miss; see report
+status: blocked  # step 3 (factor 0.6): deep 0.5 fake voice and T4 error vs itself at 70 miss in 4 groups; see report
 notion_task:
 risk: needs-approval
 ---

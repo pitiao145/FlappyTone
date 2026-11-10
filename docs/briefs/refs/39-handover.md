@@ -83,3 +83,9 @@ Plan: `docs/briefs/refs/39-phase-b-plan.md`. Phase A report: `docs/briefs/report
 - **For brief 45:** bring jane_ma2's own-tone score back above 0.55, or explain (now 0.496).
 - Note: `npm run report` fit went 0.97 → 0.95 with median 3 (wiggle 0.063 → 0.061).
 - The two loosened test guards are accepted by Pierre for now.
+
+## 42 (fourth run, floor 0.6 × centre) — 10 Nov 2026 — blocked (step 3)
+- Built, not committed: factor 0.6 version (`docs/briefs/reports/42-step3-speaker-floor-0.6.patch`). Code back at step 2 (bench 0 FAIL).
+- Pass: Jane unchanged, Pierre unchanged (centre 129.1 → floor 70), deep 0.6 (floor 65) all 10 groups vs itself at 70, deep 0.5 low end lost (≈ 0), CPU 2.4%.
+- Miss: deep 0.5 (floor 55) fake voice vs itself at 70: textbook T4 0.6 → 2.5, textbook pairs 1.5 → 2.5, natural T4 0.3 → 1.8, natural pairs 0.2 → 1.0 (limit +0.5); natural T4 error p90 0.26 → 0.33 (limit +0.05).
+- For brief 44: the calibration talk step is still at 70; a 90 Hz voice is measured 1.4 st too high there.
