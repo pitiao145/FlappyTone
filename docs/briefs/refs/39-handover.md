@@ -62,7 +62,7 @@ Plan: `docs/briefs/refs/39-phase-b-plan.md`. Phase A report: `docs/briefs/report
 - Changed: step 1 only. Time settings are now ms: `hopSize`, `maxSlewSemitonesPerSec` 140.625, `rescueMaxMs` 64, `staleUnvoicedMs` 107, `minVoicedRunMs` (tuning 64, default 0). `tuning().minVoicedRun` is now `minVoicedRunMs`. clipCut T3 rescue 171 ms. Commit: "wip(pitch): brief 42 step 1".
 - Scorecard: step 1 moved **no** number (MEASURED). 1827 tests pass; report same; wall hits 0.
 - Why blocked: step 2. (a) median 3 → delay 20 ms, errors better, but 6 unnamed numbers fail (`live.highEndLost.p90` textbook T1/T4/pairs and natural T4, +0.03–0.09 st; `deep0.5.lowEndLost.med.natural.T2` +0.06; reader voice2stLower textbook −2.2 pp). (b) = (a) in code (octave check already before the median). (c) bypass within 1 st: T4 still 40 ms, 34 FAIL. Decision for Pierre in the report.
-- Surprises: (b) was not a separate option. 44.1 kHz devices had a 9% faster slew, 8% longer waits than 48 kHz before step 1 (now fixed).
+- Surprises: (b) was not a separate option. Before step 1, a 44.1 kHz device's slew limit was about 9% slower in st/s than at 48 kHz (3.0 st per 23.2 ms hop); step 1 fixed that. Its waits (rescue, stale reset, minVoicedRun) still round to the same frame counts (3, 5, 3), so they stay about 8% longer in time at 44.1 kHz; step 1 did not change that. (Corrected after the 42 review.)
 - For the next brief / rerun: `rescueMaxSemitones` is still per hop (rescue rule, out of scope). Bench cache keys changed with the field names, so the first run is ~2.5 min.
 
 ## 42 (second run, median 3 accepted) — 10 Nov 2026 — blocked (step 3)
@@ -132,3 +132,8 @@ Reviewed: brief, report (all four runs), handover, diff `6ce627f..17b9b07`, both
 - 44: the calibration talk step still searches from 70 Hz, so a 90 Hz voice is measured 1.4 st too high, and its floor becomes 58.7 instead of 55. Fix in 44 (for example run the talk step with the 55 Hz floor when the first estimate is under 117 Hz).
 - 45: reader with the voice 2 st lower, textbook: 90.1% (was 92.3). `jane_ma2` own-tone score 0.496 (guard loosened to 0.45): bring back above 0.55 or explain.
 - "Voice heard %" is a yardstick, not a target (see the brief 40 entry).
+
+## 42 fix list — 10 Nov 2026 — items 3–5 done, items 1–2 blocked
+- Done: 30 scorecard rows (over 3 st, octave 11–13 st, spikes > 1.5 st; values after median 3; tol +0.2) added to the baseline; `medianFrames` must be odd (throws, tested); 44.1 kHz sentence corrected. Bench 239 numbers, 0 FAIL; 1828 tests pass; report and wall hits unchanged.
+- Blocked: against Jane's baseline rows, 4 deep rows miss, not 1. Named exception: deep0.5 fake voice textbook pairs 2.5 vs Jane **1.99** (the review said 1.6). Not named: error p90 deep0.6 textbook T4 0.32 (limit 0.30), deep0.6 natural T4 0.35 (limit 0.33), deep0.5 textbook T4 0.31 (limit 0.30). The 0.6 rows miss at 70 too (0.31, 0.34). Patch not applied.
+- Next: if Pierre names rows 2–4 as exceptions, apply the 0.6 patch, store the 4 exceptions, run checks, set done.

@@ -221,3 +221,33 @@ At 70 Hz the 0.5 voice lost the whole bottom of its fourth tones, so it drew few
 - Accept the 4 deep-0.5 misses (the fourth-tone bottom comes back, at the cost of 1–2 points of fake line at the end of falls), or keep 70 for now.
 - Not tried, as instructed: another factor or limit.
 - Calibration talk step stays at 70 (a 90 Hz voice is measured 1.4 st too high, note for brief 44).
+
+---
+
+# Review fix list (after "42 review") — 10 Nov 2026 — items 3–5 done, items 1–2 blocked
+
+## Items 3–5: done
+- **3.** Scorecard rows per style and group, live settings, delay removed: `live.err.over3st.pct`, `live.err.octave.pct` (11–13 st off), `live.spikes.over1_5st.pct` (a frame more than 1.5 st off the line between its two voiced neighbours). Values after median 3, tolerance +0.2 points. Only these 30 rows were added to the baseline. MEASURED values: over 3 st 0.0–0.5% (highest textbook T4 0.5); octave 0.0–0.4% (textbook T4 0.4); spikes 0.0–0.8% (textbook T4 0.8, natural pairs 0.6). `npm run bench`: 239 numbers, 0 FAIL.
+- **4.** `PitchTracker` throws if `medianFrames` is even; test in `src/pitch/msSettings.test.ts`.
+- **5.** The 44.1 kHz sentence in the 42 handover entry is corrected: the slew was ~9% *slower* in st/s before step 1 (fixed); the waits still round to 3/5/3 frames and stay ~8% longer in time (not changed).
+
+## Items 1–2: blocked (stop rule)
+Pre-check with the 0.6 patch numbers (fourth run, `npm run bench`, MEASURED) against Jane's baseline row of the same group (+0.3 points fake voice, +0.05 st error p90):
+
+| Row | Stand-in | Jane's baseline | Limit | Stand-in at 70 |
+|---|---|---|---|---|
+| deep0.5 fake voice, textbook pairs | 2.5 | **1.99** | 2.29 | 1.5 |
+| deep0.6 error p90, textbook T4 | **0.32** | 0.25 | 0.30 | 0.31 |
+| deep0.6 error p90, natural T4 | **0.35** | 0.28 | 0.33 | 0.34 |
+| deep0.5 error p90, textbook T4 | **0.31** | 0.25 | 0.30 | 0.27 |
+
+All other 36 group checks pass.
+- Row 1 is the exception the review names. The review says Jane is 1.6 there; the baseline says 1.99, so the real gap is +0.51 points, not +0.9.
+- Rows 2–4 are **not** in the review's list. The review checked T4 error only for natural T4 at 0.5. The two 0.6 rows already miss at 70 (0.31, 0.34): the slowed copy is less clean than Jane's audio, and the floor adds only 0.01. The deep 0.5 textbook T4 row is caused by the floor (0.27 → 0.31).
+- The patch is not applied; the code stays at step 2 + items 3–4.
+
+## Needs Pierre's eyes
+Accept rows 2–4 as named exceptions too (same reason as row 1: a stand-in, not a real voice), then items 1–2 and "done" take one short run.
+
+## Checks (committed state)
+`npm run bench` 239 numbers, 0 FAIL. `npm run test` 1828 passed. `npm run typecheck` clean. `npm run report` fit 0.95, lag 0, wiggle 0.061, voiced 97% (same as after step 2). `npm run classifier-check` wall hits 0. Build + grep clean. No number outside the fix list moved.

@@ -1257,9 +1257,190 @@
    "better": "higher",
    "tol": 0.02,
    "unit": "r"
+  },
+  "live.err.over3st.pct.textbook.T1": {
+   "value": 0.19,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.octave.pct.textbook.T1": {
+   "value": 0.19,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.spikes.over1_5st.pct.textbook.T1": {
+   "value": 0.39,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.over3st.pct.textbook.T2": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.octave.pct.textbook.T2": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.spikes.over1_5st.pct.textbook.T2": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.over3st.pct.textbook.T3": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.octave.pct.textbook.T3": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.spikes.over1_5st.pct.textbook.T3": {
+   "value": 0.12,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.over3st.pct.textbook.T4": {
+   "value": 0.49,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.octave.pct.textbook.T4": {
+   "value": 0.39,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.spikes.over1_5st.pct.textbook.T4": {
+   "value": 0.84,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.over3st.pct.textbook.pairs": {
+   "value": 0.14,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.octave.pct.textbook.pairs": {
+   "value": 0.11,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.spikes.over1_5st.pct.textbook.pairs": {
+   "value": 0.35,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.over3st.pct.natural.T1": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.octave.pct.natural.T1": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.spikes.over1_5st.pct.natural.T1": {
+   "value": 0.15,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.over3st.pct.natural.T2": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.octave.pct.natural.T2": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.spikes.over1_5st.pct.natural.T2": {
+   "value": 0.14,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.over3st.pct.natural.T3": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.octave.pct.natural.T3": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.spikes.over1_5st.pct.natural.T3": {
+   "value": 0.07,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.over3st.pct.natural.T4": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.octave.pct.natural.T4": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.spikes.over1_5st.pct.natural.T4": {
+   "value": 0.25,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.over3st.pct.natural.pairs": {
+   "value": 0.1,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.err.octave.pct.natural.pairs": {
+   "value": 0.03,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
+  },
+  "live.spikes.over1_5st.pct.natural.pairs": {
+   "value": 0.6,
+   "better": "lower",
+   "tol": 0.2,
+   "unit": "%"
   }
  },
  "changes": [
-  "brief 42 (10 Nov 2026): median 3. Rewrote delay, delay-removed errors and Pierre's 6 allowed numbers; tolerance 0.10 st on every live low/high-end-lost p90."
+  "brief 42 (10 Nov 2026): median 3. Rewrote delay, delay-removed errors and Pierre's 6 allowed numbers; tolerance 0.10 st on every live low/high-end-lost p90.",
+  "brief 42 review fix 3 (10 Nov 2026): added live.err.over3st.pct, live.err.octave.pct (11–13 st), live.spikes.over1_5st.pct per style and group; values after median 3; tolerance +0.2 points."
  ]
 }

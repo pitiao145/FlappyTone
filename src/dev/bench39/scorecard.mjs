@@ -86,7 +86,7 @@ for (const style of STYLES) for (const g of GROUPS) {
   for (const name of ["live", "pipe"]) {
     const drawn = [], byShift = SHIFTS.map(() => []);
     const lows = [], highs = []; const H = { all: [0, 0], first: [0, 0], last: [0, 0] };
-    let trV = 0, falseV = 0;
+    let trV = 0, falseV = 0, spN = 0, spK = 0;
     for (const c of cs) {
       const r = R(c), o = cachedTrack(c, name);
       drawn.push(...errs(o, r, 0));
@@ -95,6 +95,11 @@ for (const style of STYLES) for (const g of GROUPS) {
         const e = ends(o, r); if (e) { lows.push(e.low); highs.push(e.high); }
         const h = heard(o, r); add(H.all, h.all); add(H.first, h.first); add(H.last, h.last);
         for (let i = 0; i < o.t.length; i++) if (o.v[i]) { trV++; if (refAt(r, o.t[i]).clearlyUnvoiced) falseV++; }
+        // Spike: a frame more than 1.5 st off the straight line between its two voiced neighbours (a visible jerk).
+        for (let i = 1; i + 1 < o.t.length; i++) if (o.v[i - 1] && o.v[i] && o.v[i + 1]) {
+          spN++; const s = (f) => 12 * Math.log2(f);
+          if (Math.abs(s(o.f0[i]) - (s(o.f0[i - 1]) + s(o.f0[i + 1])) / 2) > 1.5) spK++;
+        }
       }
     }
     const meds = byShift.map((e) => med(e)), best = meds.indexOf(Math.min(...meds)), fixed = byShift[best];
@@ -108,6 +113,10 @@ for (const style of STYLES) for (const g of GROUPS) {
     put(`live.err.delayRemoved.med.${tag}`, med(fixed), "lower", ST_TOL, "st");
     put(`live.err.delayRemoved.p90.${tag}`, pct(fixed, 90), "lower", ST_TOL, "st");
     put(`live.delay.ms.${tag}`, 1000 * SHIFTS[best], "lower", MS_TOL, "ms");
+    // Brief 42 review: gross errors, delay removed. Octave = 11–13 st off.
+    put(`live.err.over3st.pct.${tag}`, (100 * fixed.filter((e) => e > 3).length) / Math.max(1, fixed.length), "lower", 0.2, "%");
+    put(`live.err.octave.pct.${tag}`, (100 * fixed.filter((e) => e >= 11 && e <= 13).length) / Math.max(1, fixed.length), "lower", 0.2, "%");
+    put(`live.spikes.over1_5st.pct.${tag}`, (100 * spK) / Math.max(1, spN), "lower", 0.2, "%");
     put(`live.heard.all.pct.${tag}`, P(H.all), "higher", PP_TOL, "%");
     put(`live.heard.firstThird.pct.${tag}`, P(H.first), "higher", PP_TOL, "%");
     put(`live.heard.lastThird.pct.${tag}`, P(H.last), "higher", PP_TOL, "%");

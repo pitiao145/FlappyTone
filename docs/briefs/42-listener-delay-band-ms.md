@@ -1,5 +1,5 @@
 ---
-status: blocked  # step 3 (factor 0.6): deep 0.5 fake voice and T4 error vs itself at 70 miss in 4 groups; see report
+status: blocked  # review fix list: items 3-5 done; items 1-2 stop: 3 deep T4 error p90 rows miss vs Jane, outside the named exception
 notion_task:
 risk: needs-approval
 ---

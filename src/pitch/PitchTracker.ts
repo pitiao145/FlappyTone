@@ -99,6 +99,8 @@ export class PitchTracker {
         : {};
     this.config = { ...DEFAULT_CONFIG, ...config, ...mirrored };
     this.frames = derivedFrames(this.config);
+    // An even length has no middle value: it averages two and smears jumps.
+    if (!(this.config.medianFrames % 2 === 1)) throw new Error(`medianFrames must be odd, got ${this.config.medianFrames}`);
     this.median = new MedianFilter(this.config.medianFrames);
   }
 

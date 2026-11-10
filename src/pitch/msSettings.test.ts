@@ -4,6 +4,13 @@ import { DEFAULT_CONFIG, PitchTracker, derivedFrames, framesFor } from "./PitchT
 // Brief 42: time settings are in ms and become frame counts from the real hop.
 const at = (sampleRate: number, extra = {}) => derivedFrames({ ...DEFAULT_CONFIG, sampleRate, ...extra });
 
+describe("medianFrames", () => {
+  it("must be odd", () => {
+    expect(() => new PitchTracker({ sampleRate: 48000, medianFrames: 4 })).toThrow(/odd/);
+    expect(() => new PitchTracker({ sampleRate: 48000, medianFrames: 3 })).not.toThrow();
+  });
+});
+
 describe("ms settings → frames", () => {
   it("48 kHz gives exactly the old frame values", () => {
     expect(at(48000)).toEqual({ maxSlewSemitones: 3, rescueMaxFrames: 3, staleUnvoicedFrames: 5, minVoicedRun: 1 });
