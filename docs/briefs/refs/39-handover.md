@@ -49,3 +49,11 @@ Plan: `docs/briefs/refs/39-phase-b-plan.md`. Phase A report: `docs/briefs/report
 - Shape of the new "voice heard" numbers: first third 71–88% (the tracker needs 3 voiced frames in a row before it draws, ~64 ms), last third 83–100%.
 - **Note for brief 42:** "voice heard %" is a yardstick, not a target. Some faint endings that Praat marks as voice may not be audible. Do not raise it by loosening the voicing test; the "voice where Praat is silent" number must hold.
 - For the next brief: rules owned by 42 are listed in `39-rules-review.md` (hop-based comments in `PitchTracker.ts`, `mpm.ts`; band; clarity; alpha; slew). Brief 40 could not edit `src/pitch/` comments.
+
+## 41 Pierre's voice intake — 10 Nov 2026 — done
+- Changed: `src/dev/bench39/pierre.mjs` (new), `scorecard.mjs` (prints Pierre's block, info only), `praat-ref.py` (set `pierre`, floor 40 Hz for it, set filter). Report `docs/briefs/reports/41-pierre-voice-intake.md`. Commit: see `git log` ("brief 41").
+- Scorecard: Jane's 209 numbers unchanged, 0 FAIL. MEASURED.
+- Pierre (MEASURED): talk median 127.5 Hz; real range (tone syllables, 5–95 pct, creak out) 102.5–185.1 Hz; under 70 Hz 0.9–1.9% of tone frames, under 55 Hz 0.5–1.1%; delay 40 ms; T3 error p90 0.57 st (worse than Jane), rest in Jane's range; creak 1% of frames, drawn an octave high when drawn.
+- **Standard grid fits**: Jane's halves around his talk median leave 2.4 st spare at the top and 4.1 at the bottom. His saved calibration (up = 2, the clamp) misses the top by 4.2 st.
+- Surprises: recordings are phone AAC 16 kHz, cut into 42 WAVs in `fixtures/captures/pierre/` (gitignored). Calibration "up" hit the 2 st floor.
+- For the next brief: 42 — low band ~55 Hz would cover his creaky ends; don't trust creak. 44 — "talk middle + standard grid" works for a male learner. 45 — his T2/T3 confusion flips with the grid. Pairs split 5/16, same weakness as Jane's natural pairs.

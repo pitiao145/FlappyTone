@@ -10,6 +10,7 @@ import { corridorChaoAt } from "../../game/gates.ts";
 import { semitonesToChao } from "../../pitch/math.ts";
 import { CACHE, F0C, clipList, groupOf, refAt, cachedRun, cachedTrack, cfgFor, PITCH_HASH } from "./tracks.mjs";
 import { pct, med, mean, fmt } from "./lib.mjs";
+import { pierreReady, pierreBlock } from "./pierre.mjs";
 
 const t0 = Date.now();
 const BASELINE = "docs/briefs/refs/39-baseline.json";
@@ -234,5 +235,8 @@ if (write) {
   }, null, 1) + "\n");
   console.log(`\nwrote ${BASELINE} (${rows.length} numbers)`);
 }
+// Brief 41: Pierre's block. Information only: no baseline, no PASS/FAIL, never changes the exit code.
+if (pierreReady()) console.log(`\n${pierreBlock().join("\n")}`);
+else console.log("\npierre block skipped: fixtures/captures/pierre/ or its Praat cache is missing (praat-ref.py pierre).");
 console.log(`\n${rows.length} numbers, ${fails} FAIL. Time ${((Date.now() - t0) / 1000).toFixed(1)} s.`);
 process.exit(fails ? 1 : 0);

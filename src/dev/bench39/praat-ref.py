@@ -11,7 +11,7 @@ Setup (once):
 Run:
   node_modules/.cache/bench39/venv/bin/python src/dev/bench39/praat-ref.py
 """
-import json, os, glob
+import json, os, glob, sys
 import numpy as np
 import parselmouth
 
@@ -20,14 +20,22 @@ SETS = {
     "natural": "fixtures/clips/jane/natural",
     "captures": "fixtures/captures",
     "tonepairs": "fixtures/tonepairs/wav",
+    # Brief 41: Pierre (male learner). Own block, never part of Jane's baseline.
+    "pierre": "fixtures/captures/pierre",
 }
+# Search floor per set. Pierre's floor is 40 Hz so the share of his frames under
+# 55 Hz can be measured at all (at 55 Hz Praat cannot report anything lower).
+FLOOR = {"pierre": 40.0}
+ONLY = sys.argv[1:]  # optional: set names to (re)make, e.g. `praat-ref.py pierre`
 OUT = "node_modules/.cache/bench39/ref-praat"
 for name, d in SETS.items():
+    if ONLY and name not in ONLY:
+        continue
     os.makedirs(f"{OUT}/{name}", exist_ok=True)
     n = 0
     for f in sorted(glob.glob(f"{d}/*.wav")):
         snd = parselmouth.Sound(f)
-        pitch = snd.to_pitch_ac(time_step=0.01, pitch_floor=55.0, pitch_ceiling=600.0)
+        pitch = snd.to_pitch_ac(time_step=0.01, pitch_floor=FLOOR.get(name, 55.0), pitch_ceiling=600.0)
         t = pitch.xs()
         f0 = pitch.selected_array["frequency"]
         f0 = np.nan_to_num(f0)
