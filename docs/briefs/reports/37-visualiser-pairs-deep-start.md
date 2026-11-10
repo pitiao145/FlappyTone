@@ -32,7 +32,7 @@ What a high floor does to the line. Our native speaker's direct-mic captures, ru
 - The quiet part of a word is its low end: the bottom of a T4 fall, a T3 dip in fast speech, the tail of any word. A higher gate removes these first. With the gate at 20% of her loudness, her T4 is drawn as a short flat line at the top; the fall never appears.
 - Slow, loud textbook T3 survives. Fast, soft speech does not.
 - **Pairs are hit harder than single tones.** A pair's second syllable is quieter and lower (declination), and many pairs end in a fall or a low half-third tone. With a high floor the learner's line stops before it gets low and the bird holds high. To make the line reach the target, the learner must push lower and louder: "start with a much deeper voice". In the game the same voice is still inside the corridor (±0.7 chao), or that part is not scored, so it feels fine there.
-- Limits of this test: there are no pair WAVs in `fixtures/captures/`, and these are direct-mic captures, not phone audio. The pair claim is reasoning from the single-tone numbers.
+- Limits of this test: these are direct-mic single-tone captures, not phone audio. The pair claim is reasoning from the single-tone numbers. Correction: 4 pair WAVs exist in `fixtures/tonepairs/wav/` (hao_wan, mei_guo, xiao_shi, yi_qian); they were not used here and are the next thing to run through this test.
 
 Proposed fixes for this part (smallest first):
 1. **Measure once per Visualiser visit, not on every resize.** Create the meter outside the canvas-size effect (a ref), so a resize keeps the floor it has. Small change in `Visualiser.tsx`; no golden snapshots; game untouched.
@@ -114,7 +114,7 @@ What the numbers say:
 - `npm run test`: 135 files, 1824 tests passed.
 - `npm run typecheck`: clean.
 - Measurement scripts were throwaway, kept out of the repo (scratchpad): one reads the catalog targets, one runs `fixtures/contours/jane-*-sample.json` through `readContourSyllables`, `toneAccuracyDetail(referenceFromWord)` and the corridor check at shifts −1…+1 chao.
-- `npm run analyze` was not used: there are no pair WAVs in `fixtures/captures/` (singles only). The measured contour fixtures are the real pair data we have.
+- `npm run analyze` was not used. Correction: 4 pair WAVs exist in `fixtures/tonepairs/wav/` (missed in the first pass, which only looked in `fixtures/captures/`); the measured contour fixtures were used instead.
 - Nothing in `src/pitch/`, the classifier, scoring, tuning or golden snapshots changed.
 
 ## Needs Pierre's eyes
@@ -122,5 +122,5 @@ What the numbers say:
 - Foorgol's answers to the questions above.
 
 ## Follow-ups
-- Pair WAV captures in `fixtures/captures/` (a few per combo, both styles), so the pair read can be checked against audio, not only stored contours.
+- More pair WAV captures (only 4 words exist, in `fixtures/tonepairs/wav/`; a few per combo, both styles), so the pair read can be checked against audio, not only stored contours.
 - 3+3 is said as 2+3; any "right/wrong" colour for pairs must compare against `spokenTones`, not written tones.
