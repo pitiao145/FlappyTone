@@ -5,7 +5,7 @@ Branch `research/39-pitch-foundation`, worktree `.claude/worktrees/research-37`.
 
 ## Decisions Pierre made
 1. Praat is allowed as an offline dev-only tool. Installed: `praat-parselmouth` 0.4.7 (Praat 6.1.38, GPL-3, 30 MB + numpy 36 MB) in `node_modules/.cache/bench39/venv` (ignored by git, not a `package.json` dependency).
-2. **One ruler.** Jane and the player are put on the grid by the same rule. The first tone may sit near 4.
+2. **One ruler, textbook anchors** (revised 11 Nov 2026, brief 43). Jane and the player are put on the grid by the same rule. The first tone stays near 5: chao 5 = first-tone height, chao 1 = third-tone low, chao 3 = middle. (The earlier "first tone may sit near 4" is withdrawn.)
 3. Noise (fan, café, TV, people) is **out of scope** for now. First get quiet-room play right.
 4. Deep male voices are **in scope**. Children are not, for now.
 5. Recordings come later. Pierre's own voice (learner, male) comes first.
@@ -103,9 +103,15 @@ Why these models: 40, 41, 46, 47 are well-specified building work with numbers t
 | Foorgol's case (7) | Open until they answer. 46 and 47 remove causes 1, 2 and 5. 44 removes cause 3. |
 
 ## What "one ruler" means, exactly
-- One map per speaker, used for every tone and both styles: `chao = 3 + 2 × (semitones from the speaker's middle) / half`, with one `half` up and one `half` down. This is the existing `semitonesToChao` (`src/pitch/math.ts:24`). No per-tone stretch.
-- Jane's map is measured once from all her textbook clips: middle = median pitch, top = high percentile, bottom = low percentile (creak left out). Brief 43 fixes the percentiles with numbers.
-- The player's map uses the same rule: middle measured, standard halves at first, then learned from their own play (brief 44).
+(Revised 11 Nov 2026 by Pierre's decision for brief 43. Replaces the "highest note = 5" version.)
+- One map per speaker, used for every tone and both styles: `chao = 3 + 2 × (semitones from the speaker's middle) / half`, with one `half` up and one `half` down. This is the existing `semitonesToChao` (`src/pitch/math.ts`), which clamps at 1 and 5. No per-tone stretch.
+- **chao 3 = the middle**: median pitch of all the speaker's voiced frames (creak left out).
+- **chao 5 = first-tone height**: 90th percentile of the semitones of the speaker's first-tone syllables.
+- **chao 1 = third-tone low**: minus the 10th percentile of the semitones of the speaker's third-tone syllables.
+- This is the rule the player's calibration already uses (`run.ts` `voicedByTone` → `computeRangeHalvesFromExtremes`: T1 p90, T3 p10). **Same rule for Jane and the player.**
+- Jane's map comes from her 357 newer textbook clips. Her natural clips and her 120 older takes use the same map.
+- Tones that go past the anchors (fourth-tone start, second-tone end) sit on the top line; that is expected.
+- The player (brief 44) keeps the T1 / T3 anchors. Brief 44 adds the middle from tone syllables and slow learning of top and bottom from the player's own first tones and low tones. "Standard halves" are only a starting guess before any T1 / T3 data exists.
 - Single-syllable targets keep the 2–4 point templates (familiar shapes). Only the heights change, and they are real.
 
 ## Going live later (brief 48, needs Pierre's yes)

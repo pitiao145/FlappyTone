@@ -1,5 +1,5 @@
 ---
-status: blocked  # step 1: first tone 3.44 on the one ruler (needs 3.8–4.4); older 2026-08-07 takes say T1 lower. See reports/43-one-ruler-targets.md
+status: blocked  # second run (textbook anchors): step 4, older vs newer T3 end 0.56, T2 low 0.30 (limit 0.3). See reports/43-one-ruler-targets.md
 notion_task:
 risk: needs-approval
 ---

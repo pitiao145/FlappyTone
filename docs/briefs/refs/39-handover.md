@@ -153,3 +153,14 @@ Reviewed: brief, report (all four runs), handover, diff `6ce627f..17b9b07`, both
 - **Surprise (MEASURED):** the 120 older takes (session 2026-08-07) have the same middle as the newer clips (198.7 vs 196.7 Hz) but a much lower first tone: older 3.32 (30 words), newer 4.05 (14 words; Praat 4.06). The Phase A preview used the 357 newer clips only, so its 4.06 did not cover the older words. No percentile choice fixes this.
 - Decision for Pierre (options in the report): accept a lower first tone for the older words (change the check), ruler from the newer clips only, or re-record the 120 older single words.
 - For the rerun: `make-shapes.mjs` already holds steps 3 and 5; they run after the ruler check. On an ±8 st ruler, a pitch error in semitones is about 1.8× larger in chao than on the ±15 st measuring board; re-check xiaoshi / yiqian (limit 0.47) on the new ruler.
+
+## 43 second run (textbook anchors, Pierre's decision) — 11 Nov 2026 — blocked (decision step 4)
+- **Decision:** the ruler uses textbook anchors, same rule as the player: chao 3 = middle, chao 5 = p90 of first-tone frames, chao 1 = p10 of third-tone frames (`computeRangeHalvesFromExtremes`), from the 357 newer textbook clips. **The "first tone near 4" preview (Phase A + Praat entry) is withdrawn.** Plan doc Decision 2 and "What one ruler means" rewritten.
+- Changed: `make-shapes.mjs` rewritten to the decision (ruler, checks 2–4, T1 offset, per-clip gate count, older-take timing, coverage, tables). `39-phase-b-plan.md`. Nothing else; no shapes file yet.
+- Jane's ruler (MEASURED): middle 196.7 Hz, up 5.75 st, down 7.25 st. Check: first-tone level 4.58, third-tone low 1.00 (both pass).
+- Top / bottom line share (newer textbook): T4 31% / 13%, T1 11% / 0%, T3 3% / 11%, pairs 18% / 5%.
+- Why blocked (MEASURED): older 2026-08-07 vs newer, T3 end 4.44 vs 5.00 (0.56), T2 low 1.86 vs 1.56 (0.30, over by < 0.005). T4 0.18. The older session differs in more than the first tone.
+- Scorecard: nothing moved (no production or `src/pitch/` change).
+- **For brief 44:** the player keeps the T1 / T3 anchors. Brief 44 adds the middle from tone syllables and slow learning of top and bottom from the player's own first tones and low tones. "Standard halves" are only a starting guess before any T1 / T3 data.
+- **For brief 45:** the reader works on the same anchors. Expect many fourth-tone frames on the top line (31% for Jane), so the reader must not rely on height above 5.
+- **For brief 48:** the older first-tone words get a shared lift in the dev file (when 43 runs) and must be re-recorded before go-live; the list is printed by `make-shapes.mjs`.

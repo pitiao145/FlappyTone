@@ -52,3 +52,51 @@ My view: 1 or 2 is honest and cheap, and the player's ruler (brief 44) is measur
 ## Follow-ups
 - When rerun: step 5 (older takes cut from raw vs published `onset_s` / `duration_s`) and the step 3 count are already in `make-shapes.mjs`; they run after the ruler check.
 - xiaoshi / yiqian corridor error on the new ruler: not measured (blocked before). Note for the rerun: on a ruler of ±8 st instead of ±15 st, the same pitch error in semitones is about 1.8 times larger in chao, so the 0.37 / 0.43 of today may not hold under 0.47.
+
+---
+
+# Second run (11 Nov 2026): textbook anchors — blocked at decision step 4
+
+Pierre's decision replaced the "highest note = 5" ruler with the player's rule: chao 3 = middle, chao 5 = p90 of single first-tone frames, chao 1 = p10 of single third-tone frames, from the 357 newer textbook clips. `make-shapes.mjs` rewritten to it. Command: `node src/dev/bench39/make-shapes.mjs --no-write`.
+
+- **Result: blocked at decision step 4.** Steps 1–3 pass. Step 4 (older session vs newer clips, any tone other than T1 more than 0.3 chao apart): **third tone 0.56, second tone just over 0.30**. No shapes file, no dev switch, no acceptance run.
+
+## Step 1: Jane's ruler (MEASURED)
+- Middle (chao 3) **196.7 Hz**; up (chao 5) **5.75 st** (p90 of first-tone frames 5.748, 561 frames); down (chao 1) **7.25 st** (p10 of third-tone frames −7.307, 917 frames). Quarter-semitone rounding as in `computeRangeHalvesFromExtremes`. 18,001 frames, 101 creak frames left out.
+
+## Step 2: ruler check, newer clips (MEASURED)
+- First-tone level 4.58 (needs 4.4–5.0): pass. Third-tone low 1.00 (needs 1.0–1.6): pass, at the edge (the low node is on the bottom line).
+
+## Step 3: frames on the top line (5) / bottom line (1) (MEASURED)
+| set | T1 | T2 | T3 | T4 | pairs | 3+ syllables |
+|---|---|---|---|---|---|---|
+| textbook newer | 10.7% / 0.4% | 7.3% / 1.4% | 2.9% / 11.2% | 31.3% / 13.3% | 17.9% / 5.2% | 16.1% / 5.8% |
+| textbook older | 0.0% / 0.2% | 4.4% / 1.0% | 0.8% / 5.4% | 38.9% / 0.9% | — | — |
+| natural | 0.0% / 0.2% | 0.0% / 1.8% | 0.0% / 20.2% | 3.6% / 10.9% | 0.1% / 3.0% | 0.0% / 4.5% |
+
+In plain words: about a third of the fourth-tone frames sit flat on the top line, and an eighth on the bottom line. The fall goes past both anchors.
+
+## Step 4: older session vs newer clips, single tones, polyline nodes (MEASURED, medians, chao)
+| tone | n older / newer | start | low | high | end | largest gap |
+|---|---|---|---|---|---|---|
+| T1 | 30 / 14 | 3.50 vs 4.58 | 3.50 vs 4.58 | 3.50 vs 4.58 | 3.50 vs 4.58 | 1.09 (expected; the offset step handles it) |
+| T2 | 30 / 17 | 2.58 vs 2.31 | **1.86 vs 1.56** | 5.00 vs 5.00 | 5.00 vs 5.00 | **0.30** (over the limit by under 0.005) |
+| T3 | 30 / 22 | 2.80 vs 2.71 | 1.16 vs 1.00 | **4.44 vs 5.00** | **4.44 vs 5.00** | **0.56** |
+| T4 | 30 / 38 | 5.00 vs 5.00 | 1.18 vs 1.00 | 5.00 vs 5.00 | 1.18 vs 1.00 | 0.18 |
+
+What it means, in plain words:
+- **Third tone:** in the newer clips the rise at the end goes past the first-tone height, so it sits on the top line (5.00). In the older takes it ends at 4.44. Part of the 0.56 is the clamp: the newer ends are cut off at 5, so the real gap in pitch is at least this big.
+- **Second tone:** the dip is a little deeper in the newer clips (1.56) than in the older (1.86). This sits right at the limit.
+- So the older session differs from the newer one for more than the first tone. A first-tone offset alone would not make the two sessions match.
+
+## Not done (blocked before them)
+Decision step 5 (T1 offset; code is ready in `make-shapes.mjs`), the shapes file, the dev switch, heights.mjs on the new ruler, xiaoshi / yiqian, the build grep.
+
+## Done from the decision anyway (they record the decision, not a fix)
+- `docs/briefs/refs/39-phase-b-plan.md`: Decision 2 and "What one ruler means, exactly" rewritten to the textbook anchors, with the note for briefs 44/45.
+- Handover entry (below in the handover file): the "first tone near 4" preview is withdrawn.
+
+## Needs Pierre's eyes
+1. Accept the older session's T2 and T3 differences (raise the step-4 limit for T2/T3, or check only T4), and run on.
+2. Lift only T1 as decided, and add the older T3 words (and maybe T2) to the "re-record before go-live" list.
+3. Re-record all 120 older single words before brief 43 runs; keep their old shapes in the dev file until then.
