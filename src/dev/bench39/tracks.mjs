@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
 import { PitchTracker } from "../../pitch/PitchTracker.ts";
+import { speakerFloorHz } from "../../pitch/math.ts";
 import { listWavs, loadWav, WIN, HOP } from "./lib.mjs";
 
 export const CACHE = "node_modules/.cache/bench39";
@@ -60,7 +61,11 @@ export function resample(x, k) { // k < 1: slower and lower (voices.mjs stand-in
   return out;
 }
 /** Any tracker run, cached by (pitch source hash, tag, cfg, pitch factor k). */
-export function cachedRun(clip, tag, cfg, k = 1) {
+export function cachedRun(clip, tag, cfg0, k = 1) {
+  // Floor follows the speaker's centre, as in the game (brief 42): Jane 70 Hz,
+  // deep stand-ins 65 (0.6) and 55 (0.5). BENCH_FLOOR=<Hz> forces one floor (comparison runs only).
+  const centre = cfg0.f0Center ?? F0C * k;
+  const cfg = { fMin: process.env.BENCH_FLOOR ? +process.env.BENCH_FLOOR : speakerFloorHz(centre), ...cfg0 };
   const key = createHash("sha1").update(JSON.stringify({ cfg, k })).digest("hex").slice(0, 8);
   const dir = `${CACHE}/trk2/${PITCH_HASH}/${tag}-${key}/${clip.set}`;
   const f = `${dir}/${clip.id}.json`;

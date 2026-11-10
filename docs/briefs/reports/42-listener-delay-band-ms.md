@@ -251,3 +251,11 @@ Accept rows 2–4 as named exceptions too (same reason as row 1: a stand-in, not
 
 ## Checks (committed state)
 `npm run bench` 239 numbers, 0 FAIL. `npm run test` 1828 passed. `npm run typecheck` clean. `npm run report` fit 0.95, lag 0, wiggle 0.061, voiced 97% (same as after step 2). `npm run classifier-check` wall hits 0. Build + grep clean. No number outside the fix list moved.
+
+---
+
+# Finish run (Pierre: rows 2–4 accepted) — 10 Nov 2026 — blocked on one more row
+- Done: 0.6 patch applied. Scorecard rows with `ref` are judged against Jane's baseline row; `exception.limit` holds a named limit. Baseline: 60 deep rows added (lowEndLost.p90 tol 0.1; fake voice ref Jane +0.3; error p90 ref Jane +0.05); deep0.5 lowEndLost.med rewritten (e.g. natural T4 3.283 → −0.049, textbook T3 2.201 → 0.001). The 4 exceptions use the exact measured values as limits (2.47, 0.315, 0.348, 0.311; my pre-check had rounded to 2 decimals). `npm run test` 1831 passed; typecheck clean.
+- **One more miss, MEASURED (exact, 3 decimals):** `deep0.6.err.delayRemoved.p90.textbook.T3` = **0.244**, Jane 0.19 + 0.05 = 0.240. Over by 0.004 st. My earlier pre-check missed it because it compared 2-decimal values (0.24 vs 0.24). The floor does not cause it: the same row is 0.244 at 70 Hz too (`BENCH_FLOOR=70`). It is the slowed copy, like rows 2–3.
+- Bench now: 299 numbers, 1 FAIL (this row). Committed in this state with status blocked.
+- To finish: name it as a 5th exception (limit 0.244), set done. Nothing else is open.

@@ -20,7 +20,7 @@ import { readAttempt, type FreeAttempt } from "../../game/freeAttempts.ts";
 import { VisualiserCore } from "../../game/visualiserCore.ts";
 import { loadSettings } from "../../game/settings.ts";
 import { sessionNoiseMeter, startingNoiseFloor } from "../../game/sessionNoise.ts";
-import { tuning } from "../../game/tuning.ts";
+import { speakerFMin, tuning } from "../../game/tuning.ts";
 import { PitchTracker } from "../../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../../render/canvas.ts";
 import { drawVisualiser } from "../../render/visualiser.ts";
@@ -239,6 +239,7 @@ export function startChecker(
       tracker = new PitchTracker({
         sampleRate,
         f0Center: s.f0Center,
+        fMin: speakerFMin(s.f0Center),
         noiseFloor: roomFloor ?? startingNoiseFloor(s.noiseFloor, s.voiceRms),
         minVoicedRunMs: tuning().minVoicedRunMs,
         rangeSemitones: s.rangeSemitones,

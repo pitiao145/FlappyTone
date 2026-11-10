@@ -22,7 +22,7 @@ import type { RunStats } from "../../game/scoring.ts";
 import type { Tone } from "../../game/gates.ts";
 import { loadSettings, type CalibrationSettings } from "../../game/settings.ts";
 import { sessionNoiseMeter, startingNoiseFloor } from "../../game/sessionNoise.ts";
-import { tuning } from "../../game/tuning.ts";
+import { speakerFMin, tuning } from "../../game/tuning.ts";
 import type { Word } from "../../game/words.ts";
 import { PitchTracker } from "../../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../../render/canvas.ts";
@@ -148,6 +148,7 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<MiniGame> {
     tracker ??= new PitchTracker({
       sampleRate,
       f0Center: settings.f0Center,
+      fMin: speakerFMin(settings.f0Center),
       noiseFloor: startingNoiseFloor(settings.noiseFloor, settings.voiceRms),
       minVoicedRunMs: tuning().minVoicedRunMs,
       rangeSemitones: settings.rangeSemitones,

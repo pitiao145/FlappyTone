@@ -28,7 +28,7 @@ import { type ToneClassification } from "../game/toneClassifier.ts";
 import { classifyToneV2 } from "../game/toneClassifierV2.ts";
 import { spokenTones } from "../game/sandhi.ts";
 import { tierLimits, type TocflLevel } from "../game/tiers.ts";
-import { tuning } from "../game/tuning.ts";
+import { speakerFMin, tuning } from "../game/tuning.ts";
 import { referenceFromWord, toneAccuracyDetail } from "../game/toneAccuracy.ts";
 import type { SpeechStyle, Word } from "../game/words.ts";
 import {
@@ -542,6 +542,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         tracker = new PitchTracker({
           sampleRate,
           f0Center: settings.f0Center,
+          fMin: speakerFMin(settings.f0Center),
           // The saved calibration floor, capped, until this session's own
           // measurement of the room lands (`measureNoise` below).
           noiseFloor: startingNoiseFloor(settings.noiseFloor, settings.voiceRms),

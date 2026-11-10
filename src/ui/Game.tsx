@@ -37,7 +37,7 @@ import { createAwayWatch, type AwayWatch } from "../game/abandonWatch.ts";
 import { resolvedPool, type Word } from "../game/words.ts";
 import type { Proficiency } from "../game/tiers.ts";
 import type { LevelChoice } from "../game/settings.ts";
-import { tuning } from "../game/tuning.ts";
+import { speakerFMin, tuning } from "../game/tuning.ts";
 import { CALIBRATION_TONES, Run, type RunMode, type RunSnapshot, type WordMix } from "../game/run.ts";
 import {
   effectiveSpeechStyle,
@@ -572,6 +572,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         tracker = new PitchTracker({
           sampleRate,
           f0Center: settings.f0Center,
+          fMin: speakerFMin(settings.f0Center),
           // The saved calibration floor, capped, until this session's own
           // measurement of the room lands (`measureNoise` below).
           noiseFloor: startingNoiseFloor(settings.noiseFloor, settings.voiceRms),

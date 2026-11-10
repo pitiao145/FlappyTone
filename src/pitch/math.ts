@@ -1,5 +1,24 @@
 export const RANGE_SEMITONES = 5;
 
+/**
+ * Lowest pitch the listener searches for, from the speaker's own centre
+ * (brief 42): `factor` × centre, kept between `lowHz` and `highHz`. 0.6
+ * because the lowest real tone sits about 8 semitones under the centre
+ * (0.63); half the centre (an octave) left empty room where the listener
+ * found fake low pitch. Jane 181 → 70, Pierre 129 → 70, a 109 Hz voice → 65,
+ * a 91 Hz voice → 55. A fixed 55 Hz for everyone made fake low pitch at the
+ * quiet edges of a normal voice. No calibrated centre yet → `highHz`.
+ */
+export function speakerFloorHz(
+  f0Center: number | null | undefined,
+  lowHz = 55,
+  highHz = 70,
+  factor = 0.6,
+): number {
+  if (f0Center == null || !(f0Center > 0)) return highHz;
+  return Math.min(highHz, Math.max(lowHz, factor * f0Center));
+}
+
 export function hzToSemitones(f0: number, f0Center: number): number {
   return 12 * Math.log2(f0 / f0Center);
 }

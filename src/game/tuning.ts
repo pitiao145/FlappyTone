@@ -13,6 +13,7 @@
  */
 
 import type { Tone } from "./gates.ts";
+import { speakerFloorHz } from "../pitch/math.ts";
 
 /** A corridor centreline: (t, chao) control points, ascending in t over [0,1]. */
 export type Polyline = Array<[number, number]>;
@@ -593,6 +594,12 @@ export interface Tuning {
   voiceCapFraction: number;
   /** Live-play `PitchTrackerConfig.minVoicedRunMs` — lone-blip rejection (64 ms = 3 hops at 48 kHz). */
   minVoicedRunMs: number;
+  /** Lowest search floor for a deep voice, Hz (`speakerFloorHz`, brief 42). */
+  pitchFloorLowHz: number;
+  /** Search floor for a normal voice and before calibration, Hz. */
+  pitchFloorHighHz: number;
+  /** Floor = this × the speaker's centre, then clamped (`speakerFloorHz`). */
+  pitchFloorFactor: number;
 
   // ---- calibration
   /**
@@ -756,6 +763,9 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   noiseFloorMax: 0.0015,
   voiceCapFraction: 0.4,
   minVoicedRunMs: 64,
+  pitchFloorLowHz: 55,
+  pitchFloorHighHz: 70,
+  pitchFloorFactor: 0.6,
   reachToToneSpaceUp: 1,
   reachToToneSpaceDown: 1,
   gateDurationS: Object.freeze({ 1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6 }),
@@ -799,4 +809,9 @@ export function setTuning(patch: Partial<Tuning>): void {
 
 export function resetTuning(): void {
   current = clone(DEFAULT_TUNING);
+}
+
+/** The tracker's `fMin` for a speaker with this calibrated centre (null: not calibrated). */
+export function speakerFMin(f0Center: number | null | undefined): number {
+  return speakerFloorHz(f0Center, tuning().pitchFloorLowHz, tuning().pitchFloorHighHz, tuning().pitchFloorFactor);
 }

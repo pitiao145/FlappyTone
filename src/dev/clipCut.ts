@@ -16,6 +16,7 @@
  * through silence. Voicing is what a tone demo is made of.
  */
 
+import { speakerFMin } from "../game/tuning.ts";
 import { computeF0Center, computeRangeSemitones } from "../pitch/calibration.ts";
 import { hzToSemitones } from "../pitch/math.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
@@ -191,6 +192,7 @@ function longestVoicedRun(
   const tracker = new PitchTracker({
     sampleRate,
     f0Center,
+    fMin: speakerFMin(f0Center),
     ...(tone === 3 ? TONE_3_RESCUE : {}),
   });
   const voiced: number[] = [];
@@ -280,6 +282,7 @@ export function measureContour(
   const tracker = new PitchTracker({
     sampleRate,
     f0Center,
+    fMin: speakerFMin(f0Center),
     ...(rangeSemitones ? { rangeSemitones } : {}),
     ...(tone === 3 ? TONE_3_RESCUE : {}),
   });
@@ -428,7 +431,7 @@ export function measurePitchReference(
 ): PitchReference | null {
   const f0s: number[] = [];
   for (const { samples, sampleRate } of recordings) {
-    const tracker = new PitchTracker({ sampleRate, f0Center: seedF0Center });
+    const tracker = new PitchTracker({ sampleRate, f0Center: seedF0Center, fMin: speakerFMin(seedF0Center) });
     for (let s = 0; s + WIN <= samples.length; s += HOP) {
       const state = tracker.push(samples.subarray(s, s + WIN));
       if (state.voiced && state.f0) f0s.push(state.f0);

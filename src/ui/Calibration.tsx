@@ -39,7 +39,7 @@ import {
   type RangeHalves,
 } from "../pitch/calibration.ts";
 import { rmsOf } from "../pitch/math.ts";
-import { tuning } from "../game/tuning.ts";
+import { speakerFMin, tuning } from "../game/tuning.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import type { PitchTrackerConfig } from "../pitch/types.ts";
 import { RANGE_SEMITONES } from "../pitch/math.ts";
@@ -429,7 +429,10 @@ export function Calibration({
       rangeDownSemitones: range.down,
       minVoicedRunMs: tuning().minVoicedRunMs,
     };
-    if (f0Center !== null) cfg.f0Center = f0Center;
+    if (f0Center !== null) {
+      cfg.f0Center = f0Center;
+      cfg.fMin = speakerFMin(f0Center);
+    }
     if (noiseFloor !== null) cfg.noiseFloor = noiseFloor;
     configureTracker(cfg);
     // Cleared here, not via setState: the interval below re-derives `fit` from

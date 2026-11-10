@@ -131,16 +131,23 @@ for (const style of STYLES) for (const g of GROUPS) {
 // ---- 2. deep-voice stand-in (Jane replayed slower: pitch × k) ----------------
 for (const k of [0.6, 0.5]) for (const style of STYLES) for (const g of GROUPS) {
   const cs = clips.filter((c) => c.set === style && groupOf(c.tones) === g);
-  let n = 0, under = 0; const lows = [];
+  let n = 0, under = 0, trV = 0, falseV = 0; const lows = [], byShift = SHIFTS.map(() => []);
   for (const c of cs) {
     const r = R(c), o = cachedRun(c, "live", cfgFor(c, "live"), k);
     for (let i = 0; i < r.t.length; i++) if (r.trusted[i] && r.f0[i] >= CREAK) { n++; if (r.f0[i] * k < 70) under++; }
     // ends() needs the reference on the stretched clock: compare pitch sets only (time-free).
     const e = ends(o, r, k); if (e) lows.push(e.low);
+    // Brief 42: the stand-in's frame at time t is Jane's at t·k; its pitch is Jane's × k.
+    for (let i = 0; i < o.t.length; i++) if (o.v[i]) { trV++; if (refAt(r, o.t[i] * k).clearlyUnvoiced) falseV++; }
+    SHIFTS.forEach((s, j) => { for (let i = 0; i < o.t.length; i++) if (o.v[i]) { const a = refAt(r, o.t[i] * k - s); if (okRef(a)) byShift[j].push(Math.abs(12 * Math.log2(o.f0[i] / (k * a.f0)))); } });
   }
   const tag = `${style}.${g}`;
+  const meds = byShift.map((e) => med(e)), fixed = byShift[meds.indexOf(Math.min(...meds))];
   put(`deep${k}.underBand.pct.${tag}`, (100 * under) / Math.max(1, n), "lower", PP_TOL, "%");
   put(`deep${k}.lowEndLost.med.${tag}`, med(lows), "lower", ST_TOL, "st");
+  put(`deep${k}.lowEndLost.p90.${tag}`, pct(lows, 90), "lower", 0.1, "st");
+  put(`deep${k}.voiceWherePraatSilent.pct.${tag}`, (100 * falseV) / Math.max(1, trV), "lower", PP_TOL, "%");
+  put(`deep${k}.err.delayRemoved.p90.${tag}`, pct(fixed, 90), "lower", ST_TOL, "st");
 }
 
 // ---- 3. gate at 40% of the voice: T4 last third ------------------------------
@@ -227,8 +234,11 @@ for (const r of rows) {
   const b = base?.metrics?.[r.key];
   let res = "NEW";
   if (b) {
-    const worse = r.value === null ? Infinity : r.better === "lower" ? r.value - b.value : b.value - r.value;
-    const ok = worse <= b.tol + 1e-9;
+    // Brief 42 review: a row with `ref` is judged against another baseline row
+    // (deep stand-ins vs Jane's same group); `exception.limit` is a named, accepted limit.
+    const anchor = b.ref ? base.metrics[b.ref].value : b.value;
+    const worse = r.value === null ? Infinity : r.better === "lower" ? r.value - anchor : anchor - r.value;
+    const ok = b.exception ? (r.better === "lower" ? r.value <= b.exception.limit + 1e-9 : r.value >= b.exception.limit - 1e-9) : worse <= b.tol + 1e-9;
     res = ok ? "PASS" : "FAIL";
     if (!ok) fails++;
   } else if (base) { res = "FAIL (not in baseline)"; fails++; }

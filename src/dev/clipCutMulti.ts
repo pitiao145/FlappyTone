@@ -17,6 +17,7 @@
  * is measured from this recording's own contour.
  */
 
+import { speakerFMin } from "../game/tuning.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import {
   EXTREMUM_TRIM_FRAC,
@@ -73,7 +74,7 @@ function voicedCenters(
   sampleRate: number,
   f0Center: number,
 ): number[] {
-  const tracker = new PitchTracker({ sampleRate, f0Center });
+  const tracker = new PitchTracker({ sampleRate, f0Center, fMin: speakerFMin(f0Center) });
   const centers: number[] = [];
   for (let s = 0; s + WIN <= samples.length; s += HOP) {
     if (tracker.push(samples.subarray(s, s + WIN)).voiced) centers.push(s + WIN / 2);

@@ -2,7 +2,7 @@
  "about": "Pitch scorecard baseline (brief 40). Made by `node src/dev/bench39/scorecard.mjs --write-baseline`. Reference: Praat (praat-ref.py). A brief may only change a number its own acceptance section names.",
  "tolerance": "Each metric has `better` (lower|higher) and `tol`: how far it may move the wrong way and still PASS. Defaults: pitch error, delay-free error, loss, chao gap and shape match ±0.02 (st, chao or correlation); percentages 1 percentage point; delay 0 ms (any later best-fit step fails).",
  "madeOn": "2026-11-10",
- "pitchHash": "bbee979ef9",
+ "pitchHash": "db39df6bc2",
  "metrics": {
   "live.err.asDrawn.med.textbook.T1": {
    "value": 0.088,
@@ -1031,7 +1031,7 @@
    "unit": "%"
   },
   "deep0.5.lowEndLost.med.textbook.T1": {
-   "value": 0.004,
+   "value": -0.001,
    "better": "lower",
    "tol": 0.02,
    "unit": "st"
@@ -1043,7 +1043,7 @@
    "unit": "%"
   },
   "deep0.5.lowEndLost.med.textbook.T2": {
-   "value": 0.012,
+   "value": 0.004,
    "better": "lower",
    "tol": 0.02,
    "unit": "st"
@@ -1055,7 +1055,7 @@
    "unit": "%"
   },
   "deep0.5.lowEndLost.med.textbook.T3": {
-   "value": 2.201,
+   "value": 0.001,
    "better": "lower",
    "tol": 0.02,
    "unit": "st"
@@ -1067,7 +1067,7 @@
    "unit": "%"
   },
   "deep0.5.lowEndLost.med.textbook.T4": {
-   "value": 2.96,
+   "value": -0.008,
    "better": "lower",
    "tol": 0.02,
    "unit": "st"
@@ -1079,7 +1079,7 @@
    "unit": "%"
   },
   "deep0.5.lowEndLost.med.textbook.pairs": {
-   "value": 1.582,
+   "value": -0.017,
    "better": "lower",
    "tol": 0.02,
    "unit": "st"
@@ -1091,7 +1091,7 @@
    "unit": "%"
   },
   "deep0.5.lowEndLost.med.natural.T1": {
-   "value": 0.003,
+   "value": -0.004,
    "better": "lower",
    "tol": 0.02,
    "unit": "st"
@@ -1103,7 +1103,7 @@
    "unit": "%"
   },
   "deep0.5.lowEndLost.med.natural.T2": {
-   "value": 0.54,
+   "value": -0.008,
    "better": "lower",
    "tol": 0.02,
    "unit": "st"
@@ -1115,7 +1115,7 @@
    "unit": "%"
   },
   "deep0.5.lowEndLost.med.natural.T3": {
-   "value": 2.298,
+   "value": -0.003,
    "better": "lower",
    "tol": 0.02,
    "unit": "st"
@@ -1127,7 +1127,7 @@
    "unit": "%"
   },
   "deep0.5.lowEndLost.med.natural.T4": {
-   "value": 3.283,
+   "value": -0.049,
    "better": "lower",
    "tol": 0.02,
    "unit": "st"
@@ -1139,7 +1139,7 @@
    "unit": "%"
   },
   "deep0.5.lowEndLost.med.natural.pairs": {
-   "value": 1.103,
+   "value": -0.015,
    "better": "lower",
    "tol": 0.02,
    "unit": "st"
@@ -1437,10 +1437,427 @@
    "better": "lower",
    "tol": 0.2,
    "unit": "%"
+  },
+  "deep0.6.lowEndLost.p90.textbook.T1": {
+   "value": 0.018,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.6.voiceWherePraatSilent.pct.textbook.T1": {
+   "value": 1.63,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.textbook.T1"
+  },
+  "deep0.6.err.delayRemoved.p90.textbook.T1": {
+   "value": 0.088,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.textbook.T1"
+  },
+  "deep0.6.lowEndLost.p90.textbook.T2": {
+   "value": 0.024,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.6.voiceWherePraatSilent.pct.textbook.T2": {
+   "value": 0.44,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.textbook.T2"
+  },
+  "deep0.6.err.delayRemoved.p90.textbook.T2": {
+   "value": 0.19,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.textbook.T2"
+  },
+  "deep0.6.lowEndLost.p90.textbook.T3": {
+   "value": 0.061,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.6.voiceWherePraatSilent.pct.textbook.T3": {
+   "value": 0.95,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.textbook.T3"
+  },
+  "deep0.6.err.delayRemoved.p90.textbook.T3": {
+   "value": 0.244,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.textbook.T3"
+  },
+  "deep0.6.lowEndLost.p90.textbook.T4": {
+   "value": 0.393,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.6.voiceWherePraatSilent.pct.textbook.T4": {
+   "value": 2.44,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.textbook.T4"
+  },
+  "deep0.6.err.delayRemoved.p90.textbook.T4": {
+   "value": 0.315,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.textbook.T4",
+   "exception": {
+    "limit": 0.315,
+    "reason": "Accepted exception, brief 42 review + Pierre (10 Nov 2026): stand-in (Jane slowed), not a real voice."
+   }
+  },
+  "deep0.6.lowEndLost.p90.textbook.pairs": {
+   "value": 0.197,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.6.voiceWherePraatSilent.pct.textbook.pairs": {
+   "value": 1.8,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.textbook.pairs"
+  },
+  "deep0.6.err.delayRemoved.p90.textbook.pairs": {
+   "value": 0.247,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.textbook.pairs"
+  },
+  "deep0.6.lowEndLost.p90.natural.T1": {
+   "value": 0.019,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.6.voiceWherePraatSilent.pct.natural.T1": {
+   "value": 1.38,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.natural.T1"
+  },
+  "deep0.6.err.delayRemoved.p90.natural.T1": {
+   "value": 0.073,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.natural.T1"
+  },
+  "deep0.6.lowEndLost.p90.natural.T2": {
+   "value": 0.032,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.6.voiceWherePraatSilent.pct.natural.T2": {
+   "value": 0.34,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.natural.T2"
+  },
+  "deep0.6.err.delayRemoved.p90.natural.T2": {
+   "value": 0.18,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.natural.T2"
+  },
+  "deep0.6.lowEndLost.p90.natural.T3": {
+   "value": 0.02,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.6.voiceWherePraatSilent.pct.natural.T3": {
+   "value": 0.23,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.natural.T3"
+  },
+  "deep0.6.err.delayRemoved.p90.natural.T3": {
+   "value": 0.21,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.natural.T3"
+  },
+  "deep0.6.lowEndLost.p90.natural.T4": {
+   "value": 0.451,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.6.voiceWherePraatSilent.pct.natural.T4": {
+   "value": 0.96,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.natural.T4"
+  },
+  "deep0.6.err.delayRemoved.p90.natural.T4": {
+   "value": 0.348,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.natural.T4",
+   "exception": {
+    "limit": 0.348,
+    "reason": "Accepted exception, brief 42 review + Pierre (10 Nov 2026): stand-in (Jane slowed), not a real voice."
+   }
+  },
+  "deep0.6.lowEndLost.p90.natural.pairs": {
+   "value": 0.346,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.6.voiceWherePraatSilent.pct.natural.pairs": {
+   "value": 0.57,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.natural.pairs"
+  },
+  "deep0.6.err.delayRemoved.p90.natural.pairs": {
+   "value": 0.249,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.natural.pairs"
+  },
+  "deep0.5.lowEndLost.p90.textbook.T1": {
+   "value": 0.011,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.5.voiceWherePraatSilent.pct.textbook.T1": {
+   "value": 1.88,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.textbook.T1"
+  },
+  "deep0.5.err.delayRemoved.p90.textbook.T1": {
+   "value": 0.072,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.textbook.T1"
+  },
+  "deep0.5.lowEndLost.p90.textbook.T2": {
+   "value": 0.016,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.5.voiceWherePraatSilent.pct.textbook.T2": {
+   "value": 0.44,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.textbook.T2"
+  },
+  "deep0.5.err.delayRemoved.p90.textbook.T2": {
+   "value": 0.159,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.textbook.T2"
+  },
+  "deep0.5.lowEndLost.p90.textbook.T3": {
+   "value": 0.077,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.5.voiceWherePraatSilent.pct.textbook.T3": {
+   "value": 1,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.textbook.T3"
+  },
+  "deep0.5.err.delayRemoved.p90.textbook.T3": {
+   "value": 0.214,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.textbook.T3"
+  },
+  "deep0.5.lowEndLost.p90.textbook.T4": {
+   "value": 0.244,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.5.voiceWherePraatSilent.pct.textbook.T4": {
+   "value": 2.54,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.textbook.T4"
+  },
+  "deep0.5.err.delayRemoved.p90.textbook.T4": {
+   "value": 0.311,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.textbook.T4",
+   "exception": {
+    "limit": 0.311,
+    "reason": "Accepted exception, brief 42 review + Pierre (10 Nov 2026): stand-in (Jane slowed), not a real voice."
+   }
+  },
+  "deep0.5.lowEndLost.p90.textbook.pairs": {
+   "value": 0.188,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.5.voiceWherePraatSilent.pct.textbook.pairs": {
+   "value": 2.47,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.textbook.pairs",
+   "exception": {
+    "limit": 2.47,
+    "reason": "Accepted exception, brief 42 review + Pierre (10 Nov 2026): stand-in (Jane slowed), not a real voice."
+   }
+  },
+  "deep0.5.err.delayRemoved.p90.textbook.pairs": {
+   "value": 0.23,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.textbook.pairs"
+  },
+  "deep0.5.lowEndLost.p90.natural.T1": {
+   "value": 0.019,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.5.voiceWherePraatSilent.pct.natural.T1": {
+   "value": 1.42,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.natural.T1"
+  },
+  "deep0.5.err.delayRemoved.p90.natural.T1": {
+   "value": 0.069,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.natural.T1"
+  },
+  "deep0.5.lowEndLost.p90.natural.T2": {
+   "value": 0.02,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.5.voiceWherePraatSilent.pct.natural.T2": {
+   "value": 0.28,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.natural.T2"
+  },
+  "deep0.5.err.delayRemoved.p90.natural.T2": {
+   "value": 0.158,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.natural.T2"
+  },
+  "deep0.5.lowEndLost.p90.natural.T3": {
+   "value": 0.068,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.5.voiceWherePraatSilent.pct.natural.T3": {
+   "value": 0.6,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.natural.T3"
+  },
+  "deep0.5.err.delayRemoved.p90.natural.T3": {
+   "value": 0.192,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.natural.T3"
+  },
+  "deep0.5.lowEndLost.p90.natural.T4": {
+   "value": 0.325,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.5.voiceWherePraatSilent.pct.natural.T4": {
+   "value": 1.82,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.natural.T4"
+  },
+  "deep0.5.err.delayRemoved.p90.natural.T4": {
+   "value": 0.325,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.natural.T4"
+  },
+  "deep0.5.lowEndLost.p90.natural.pairs": {
+   "value": 0.221,
+   "better": "lower",
+   "tol": 0.1,
+   "unit": "st"
+  },
+  "deep0.5.voiceWherePraatSilent.pct.natural.pairs": {
+   "value": 0.99,
+   "better": "lower",
+   "tol": 0.3,
+   "unit": "%",
+   "ref": "live.voiceWherePraatSilent.pct.natural.pairs"
+  },
+  "deep0.5.err.delayRemoved.p90.natural.pairs": {
+   "value": 0.231,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "ref": "live.err.delayRemoved.p90.natural.pairs"
   }
  },
  "changes": [
   "brief 42 (10 Nov 2026): median 3. Rewrote delay, delay-removed errors and Pierre's 6 allowed numbers; tolerance 0.10 st on every live low/high-end-lost p90.",
-  "brief 42 review fix 3 (10 Nov 2026): added live.err.over3st.pct, live.err.octave.pct (11–13 st), live.spikes.over1_5st.pct per style and group; values after median 3; tolerance +0.2 points."
+  "brief 42 review fix 3 (10 Nov 2026): added live.err.over3st.pct, live.err.octave.pct (11–13 st), live.spikes.over1_5st.pct per style and group; values after median 3; tolerance +0.2 points.",
+  "brief 42 step 3 (10 Nov 2026): floor = clamp(0.6 × centre, 55, 70). Added deep{0.5,0.6} rows: lowEndLost.p90 (tol 0.1), voiceWherePraatSilent.pct (ref Jane's live row, +0.3), err.delayRemoved.p90 (ref Jane's live row, +0.05); 4 named exceptions. deep0.5 lowEndLost.med rewritten."
  ]
 }

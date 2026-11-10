@@ -137,3 +137,6 @@ Reviewed: brief, report (all four runs), handover, diff `6ce627f..17b9b07`, both
 - Done: 30 scorecard rows (over 3 st, octave 11–13 st, spikes > 1.5 st; values after median 3; tol +0.2) added to the baseline; `medianFrames` must be odd (throws, tested); 44.1 kHz sentence corrected. Bench 239 numbers, 0 FAIL; 1828 tests pass; report and wall hits unchanged.
 - Blocked: against Jane's baseline rows, 4 deep rows miss, not 1. Named exception: deep0.5 fake voice textbook pairs 2.5 vs Jane **1.99** (the review said 1.6). Not named: error p90 deep0.6 textbook T4 0.32 (limit 0.30), deep0.6 natural T4 0.35 (limit 0.33), deep0.5 textbook T4 0.31 (limit 0.30). The 0.6 rows miss at 70 too (0.31, 0.34). Patch not applied.
 - Next: if Pierre names rows 2–4 as exceptions, apply the 0.6 patch, store the 4 exceptions, run checks, set done.
+
+## 42 finish run — 10 Nov 2026 — blocked on one row
+- 0.6 floor applied and committed with the 60 deep rows (Jane-referenced) and 4 exceptions at exact limits. Bench 299 numbers, 1 FAIL: deep0.6 textbook T3 error p90 0.244 vs limit 0.240 (same at 70 Hz: stand-in, not floor). Earlier pre-check rounded to 2 decimals and missed it. Waits for Pierre: 5th exception, then done.

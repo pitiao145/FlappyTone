@@ -1,5 +1,5 @@
 ---
-status: blocked  # review fix list: items 3-5 done; items 1-2 stop: 3 deep T4 error p90 rows miss vs Jane, outside the named exception
+status: blocked  # finish run: one more deep row misses by 0.004 st (deep0.6 textbook T3 error p90); see report
 notion_task:
 risk: needs-approval
 ---
