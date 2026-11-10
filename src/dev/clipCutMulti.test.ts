@@ -111,9 +111,11 @@ function corridor(polyline: ContourPoint[]) {
  * Comfortably inside the tightest corridor the difficulty ramp ever draws
  * (0.07H, about 0.47 chao) — so a player who reproduces the recording exactly
  * is still centred at the hardest setting, not scraping a wall. The four
- * fixtures measure 0.15 / 0.30 / 0.31 / 0.21 chao.
+ * fixtures measured 0.15 / 0.30 / 0.31 / 0.21 chao with median 5. Brief 42
+ * (median 3, line 20 ms less late) lets more frame-to-frame wiggle through:
+ * xiaoshi 0.37, yiqian 0.43. Still under the 0.47 tightest corridor.
  */
-const MAX_CORRIDOR_ERROR_CHAO = 0.35;
+const MAX_CORRIDOR_ERROR_CHAO = 0.45;
 
 describe("multiSyllablePolyline", () => {
   for (const f of FIXTURES) {

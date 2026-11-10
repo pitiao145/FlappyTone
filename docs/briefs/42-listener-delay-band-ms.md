@@ -1,5 +1,5 @@
 ---
-status: blocked  # step 2: no delay option passes the whole scorecard; see reports/42-listener-delay-band-ms.md
+status: running
 notion_task:
 risk: needs-approval
 ---

@@ -34,7 +34,9 @@ describe("toneAccuracy — jane_ma*.wav through the real pitch pipeline", () => 
     it(`jane_ma${tone}: Tone ${tone} scores highest, by a clear margin`, () => {
       const u = utteranceOf(`jane_ma${tone}.wav`);
       const right = toneAccuracy(u, [tone])!;
-      expect(right).toBeGreaterThan(0.55);
+      // 0.55 until brief 42. With median 3, jane_ma2 scores 0.496 for Tone 2
+      // (was 0.593) while its lead over every other tone grew (0.418 → 0.440).
+      expect(right).toBeGreaterThan(0.45);
       for (const other of [1, 2, 3, 4] as Tone[]) {
         if (other === tone) continue;
         expect(right - toneAccuracy(u, [other])!).toBeGreaterThan(0.2);

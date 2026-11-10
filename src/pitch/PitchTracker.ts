@@ -20,9 +20,10 @@ export const DEFAULT_CONFIG: Omit<PitchTrackerConfig, "sampleRate"> = {
   f0Center: 120,
   rangeSemitones: 5,
   rangeDownSemitones: 5,
-  // Tuned via `npm run tune` — median-5 does the de-jitter work, so the
+  // Tuned via `npm run tune` (with median-5; median-3 since brief 42) — the median does the de-jitter work, so the
   // exponential smoother can be fast; 0.85 clarity missed too many frames.
   alpha: 0.85,
+  medianFrames: 3,
   // 140.625 st/s = exactly 3.0 st per 21.3 ms hop at 48 kHz (the value tuned
   // as "3.0 st/hop"; brief 42 made it per second so 44.1 kHz gets the same
   // speed, 3.27 st/hop). The old 1.5 st/hop was set against an assumed
@@ -78,7 +79,7 @@ export function derivedFrames(c: Pick<PitchTrackerConfig, "sampleRate" | "hopSiz
 export class PitchTracker {
   private config: PitchTrackerConfig;
   private frames: ReturnType<typeof derivedFrames>;
-  private median = new MedianFilter(5);
+  private median: MedianFilter;
   private prevVoicedF0: number | null = null;
   private prevSemitones: number | null = null;
   /** Consecutive unvoiced frames; bounds how long the glide rescue trusts prevVoicedF0. */
@@ -98,6 +99,7 @@ export class PitchTracker {
         : {};
     this.config = { ...DEFAULT_CONFIG, ...config, ...mirrored };
     this.frames = derivedFrames(this.config);
+    this.median = new MedianFilter(this.config.medianFrames);
   }
 
   /** The ms settings as frame counts at this tracker's rate (read-only). */

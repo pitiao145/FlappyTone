@@ -93,11 +93,12 @@ describe("MIN_REFERENCE_FRAMES", () => {
  * `ma2`, `ma3` and `ma4` all have `clipMs > onsetMs + durationMs`, which is
  * the distinction itself, asserted below.
  */
+// Polylines re-cut with median 3 (brief 42): turn points earlier, ends a little further.
 const GOLDEN = {
-  1: { durationMs: 879.3542, onsetMs: 0, clipMs: 879.3542, frames: 37, poly: [[0, 3.528], [1, 3.528]] },
-  2: { durationMs: 1069.0208, onsetMs: 0, clipMs: 1071.3542, frames: 46, poly: [[0, 2.996], [0.2794, 2.611], [1, 3.896]] },
-  3: { durationMs: 1306.0208, onsetMs: 19, clipMs: 1327.3542, frames: 58, poly: [[0, 2.74], [0.5554, 2.394], [0.7841, 2.95], [1, 4.516]] },
-  4: { durationMs: 599.6875, onsetMs: 0, clipMs: 602.0208, frames: 24, poly: [[0, 3.88], [0.3913, 4.847], [1, 2.404]] },
+  1: { durationMs: 879.3542, onsetMs: 0, clipMs: 879.3542, frames: 37, poly: [[0, 3.527], [1, 3.527]] },
+  2: { durationMs: 1069.0208, onsetMs: 0, clipMs: 1071.3542, frames: 46, poly: [[0, 2.996], [0.2395, 2.609], [1, 3.919]] },
+  3: { durationMs: 1306.0208, onsetMs: 19, clipMs: 1327.3542, frames: 58, poly: [[0, 2.74], [0.5227, 2.389], [0.7677, 2.95], [1, 4.531]] },
+  4: { durationMs: 599.6875, onsetMs: 0, clipMs: 602.0208, frames: 24, poly: [[0, 3.88], [0.3557, 4.857], [1, 2.385]] },
 } as const;
 
 describe("the anchors, cut at the seed", () => {

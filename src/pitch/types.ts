@@ -26,6 +26,13 @@ export interface PitchTrackerConfig {
   rangeDownSemitones: number;
   alpha: number;
   /**
+   * Frames in the running median that removes single-frame jumps (odd). Kept
+   * in frames, not ms: it removes a lone wrong *frame*, whatever the hop. Each
+   * extra pair adds one hop of delay to the line (5 → 2 hops ≈ 43 ms at
+   * 48 kHz; 3 → 1 hop ≈ 21 ms). 3 since brief 42 (Pierre's decision).
+   */
+  medianFrames: number;
+  /**
    * Samples between two pushed frames (the mic worklet's HOP_SIZE). With
    * `sampleRate` it gives the real time step, from which every time-based
    * setting below is turned into a frame count, so 44.1 kHz and 48 kHz
