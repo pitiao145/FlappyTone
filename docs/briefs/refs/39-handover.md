@@ -140,3 +140,7 @@ Reviewed: brief, report (all four runs), handover, diff `6ce627f..17b9b07`, both
 
 ## 42 finish run — 10 Nov 2026 — blocked on one row
 - 0.6 floor applied and committed with the 60 deep rows (Jane-referenced) and 4 exceptions at exact limits. Bench 299 numbers, 1 FAIL: deep0.6 textbook T3 error p90 0.244 vs limit 0.240 (same at 70 Hz: stand-in, not floor). Earlier pre-check rounded to 2 decimals and missed it. Waits for Pierre: 5th exception, then done.
+
+## 42 — 10 Nov 2026 — done
+- 5th exception added (deep0.6 textbook T3 error p90, limit 0.244). Bench 299 numbers, 0 FAIL. Shipped in 42: ms settings, median 3 (20 ms delay), floor clamp(0.6 × centre, 55, 70), gross-error and deep rows on the scorecard.
+- Open for later briefs: 43 (xiaoshi/yiqian corridor error, measure targets with the speaker's floor), 44 (talk step at 70 measures a 90 Hz voice 1.4 st high), 45 (reader 90.1% voice 2 st lower; jane_ma2 0.496), a small brief on device sample rates (review entry).

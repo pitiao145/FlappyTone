@@ -1496,7 +1496,11 @@
    "better": "lower",
    "tol": 0.05,
    "unit": "st",
-   "ref": "live.err.delayRemoved.p90.textbook.T3"
+   "ref": "live.err.delayRemoved.p90.textbook.T3",
+   "exception": {
+    "limit": 0.244,
+    "reason": "Accepted exception, Pierre (10 Nov 2026): stand-in (Jane slowed), same value at 70 Hz, not caused by the floor."
+   }
   },
   "deep0.6.lowEndLost.p90.textbook.T4": {
    "value": 0.393,

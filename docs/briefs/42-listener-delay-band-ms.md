@@ -1,5 +1,5 @@
 ---
-status: blocked  # finish run: one more deep row misses by 0.004 st (deep0.6 textbook T3 error p90); see report
+status: done  # waits for strong-model review only if a number outside the fix list moved (none did)
 notion_task:
 risk: needs-approval
 ---
