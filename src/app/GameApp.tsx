@@ -339,9 +339,11 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
   useEffect(() => {
     trackSpeechStyle(effectiveSpeechStyle(tier));
   }, [tier]);
-  // The note-from-Pierre card: after a finished run or TONEder round, the Play
-  // home asks the server once whether this player has a note (api/note.ts):
-  // a targeted note Pierre wrote for this account, or the generic one.
+  // The note-from-Pierre card: the Play home asks the server whether this
+  // player has a note (api/note.ts): a targeted note Pierre wrote for this
+  // account, or the generic one. It asks once when a signed-in player first
+  // reaches it in this page load (brief 38), and after each finished run or
+  // TONEder round.
   // Dev only: `/app?note` shows the generic card at once, `/app?note=targeted`
   // the targeted one with brief 36's copy; both write nothing (hard rule 7).
   const noteParam = import.meta.env.DEV ? new URLSearchParams(window.location.search).get("note") : null;
@@ -402,14 +404,23 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
   // the answer is always kept; the card renders only on Play (see below), so
   // a player who left Play meanwhile sees it when they come back.
   // A paid player is asked once per page load (targeted notes only).
+  // The open check waits for a signed-in tier: `tier` starts as "guest" and
+  // only becomes free/pro once `refreshTier()` has read the restored session,
+  // and this effect re-runs on that change, so a too-early Play home keeps the
+  // check pending instead of losing it. Guests are never asked on open (the
+  // server refuses anonymous sessions anyway). `settings !== null` keeps it
+  // off an uncalibrated device: there Play leads into the mic, calibration
+  // and tutorial first-run flow, and the check waits for a later Play home.
+  // The dev previews skip it, so they never claim a real note or swap copy.
+  const noteOpenReady = tier !== "guest" && settings !== null && !notePreview;
   useEffect(() => {
-    if (screen !== "play" || !takeNoteCheck(tier === "pro")) return;
+    if (screen !== "play" || !takeNoteCheck(tier === "pro", noteOpenReady)) return;
     void checkNote().then(({ show, note }) => {
       if (!show) return;
       setNoteCopy(note);
       setNoteOpen(true);
     });
-  }, [screen, tier]);
+  }, [screen, tier, noteOpenReady]);
   /**
    * Whether the mic session backing the Visualiser screen is actually open.
    * Landing here via `onNavigate("visualiser")` (a real click) only ever

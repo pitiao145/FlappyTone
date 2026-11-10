@@ -6,9 +6,10 @@
  * sent, "Not now" at most once then 3 days), or hands a targeted note Pierre
  * wrote for this account (migration 0035, shown once across its accounts).
  * The two are separate: a targeted note does not use up the generic one. The client only decides *when to
- * ask*: on the Play home, after a finished run or TONEder round in this page
- * load, at most once per finish, and never again in this load once the card
- * was answered.
+ * ask*: on the Play home, once when a signed-in player first reaches it in
+ * this page load (the open check, brief 38), and after each finished run or
+ * TONEder round, at most once per finish; never again in this load once the
+ * card was answered.
  *
  * Same contract as the rest of `src/data/`: never throws. A failure answers
  * "don't show" or `false`.
@@ -19,8 +20,11 @@ export const NOTE_MAX_CHARS = 1000;
 
 export type NoteContext = Record<string, string | number | boolean | null>;
 
-/** Per page load: a finish arms the next Play-home check; an answer ends it. */
-const state = { armed: false, answered: false, paidChecked: false };
+/**
+ * Per page load: `openPending` is the one open check, a finish arms the next
+ * Play-home check, an answer ends both.
+ */
+const state = { openPending: true, armed: false, answered: false, paidChecked: false };
 
 /** A run or TONEder round finished: the next Play home may ask. */
 export function armNote(): void {
@@ -31,11 +35,18 @@ export function armNote(): void {
  * True once per arming, and never after the card was answered this load.
  * `paid`: a paid player can only ever get a targeted note (the generic one is
  * free-only), so they are asked once per page load, not after every finish.
+ * `openReady`: the caller knows a signed-in account is on a Play home it may
+ * draw over (account resolved, past first-run flows). The first such call in
+ * a load asks with no finish; until then the open check stays pending, so a
+ * too-early call never loses it. Any check taken while `openReady` uses it up.
  */
-export function takeNoteCheck(paid = false): boolean {
-  if (!state.armed || state.answered) return false;
+export function takeNoteCheck(paid = false, openReady = false): boolean {
+  if (state.answered) return false;
+  const open = openReady && state.openPending;
+  if (!state.armed && !open) return false;
   if (paid && state.paidChecked) return false;
   state.armed = false;
+  if (openReady) state.openPending = false;
   if (paid) state.paidChecked = true;
   return true;
 }
@@ -47,6 +58,7 @@ export function markNoteAnswered(): void {
 
 /** Tests only. */
 export function resetNoteState(): void {
+  state.openPending = true;
   state.armed = false;
   state.answered = false;
   state.paidChecked = false;
