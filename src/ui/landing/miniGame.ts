@@ -149,7 +149,7 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<MiniGame> {
       sampleRate,
       f0Center: settings.f0Center,
       noiseFloor: startingNoiseFloor(settings.noiseFloor, settings.voiceRms),
-      minVoicedRun: tuning().minVoicedRun,
+      minVoicedRunMs: tuning().minVoicedRunMs,
       rangeSemitones: settings.rangeSemitones,
       rangeDownSemitones: settings.rangeDownSemitones,
     });

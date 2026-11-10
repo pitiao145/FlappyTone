@@ -591,8 +591,8 @@ export interface Tuning {
    * (quiet room, fan); retune from more environments.
    */
   voiceCapFraction: number;
-  /** Live-play `PitchTrackerConfig.minVoicedRun` — lone-blip rejection. */
-  minVoicedRun: number;
+  /** Live-play `PitchTrackerConfig.minVoicedRunMs` — lone-blip rejection (64 ms = 3 hops at 48 kHz). */
+  minVoicedRunMs: number;
 
   // ---- calibration
   /**
@@ -755,7 +755,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   noiseFloorMin: 1e-4,
   noiseFloorMax: 0.0015,
   voiceCapFraction: 0.4,
-  minVoicedRun: 3,
+  minVoicedRunMs: 64,
   reachToToneSpaceUp: 1,
   reachToToneSpaceDown: 1,
   gateDurationS: Object.freeze({ 1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6 }),

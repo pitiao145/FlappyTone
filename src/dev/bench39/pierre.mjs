@@ -28,7 +28,7 @@ export function pierreBlock() {
   const cal = JSON.parse(readFileSync(`${DIR}/calibration.json`, "utf8"));
   const clips = listWavs(DIR).map((file) => ({ set: "pierre", file, ...parse(basename(file, ".wav")) }));
   const R = (c) => JSON.parse(readFileSync(`${CACHE}/ref-praat/pierre/${c.id}.json`, "utf8"));
-  const LIVE = { minVoicedRun: 3, noiseFloor: 1e-4, f0Center: cal.f0Center }; // same live settings as Jane's bench
+  const LIVE = { minVoicedRunMs: 64, noiseFloor: 1e-4, f0Center: cal.f0Center }; // same live settings as Jane's bench
   const T = (c) => cachedRun(c, "live-pierre", LIVE);
   const voicedF0 = (cs) => cs.flatMap((c) => { const r = R(c); return r.f0.filter((f, i) => r.trusted[i] && f > 0); });
   const L = [];

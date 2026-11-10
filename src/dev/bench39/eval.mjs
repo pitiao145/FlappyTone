@@ -10,7 +10,7 @@ import { listWavs, loadWav, rms, WIN, HOP, pct, med, mean, fmt } from "./lib.mjs
 
 export const CACHE = "node_modules/.cache/bench39/ref";
 export const F0C = 181.3; // Jane's catalog reference centre (wordsFallback meta)
-export const T3_RESCUE = { rescueClarity: 0.3, rescueRmsMult: 4, rescueMaxFrames: 8 }; // copy of clipCut.ts TONE_3_RESCUE
+export const T3_RESCUE = { rescueClarity: 0.3, rescueRmsMult: 4, rescueMaxMs: 171 }; // copy of clipCut.ts TONE_3_RESCUE
 
 export function tonesOf(id) {
   const m = id.match(/(\d+)[a-z]?$/);
@@ -52,11 +52,11 @@ function evalClip(set, file) {
   const quietRms = pct(raw.map((x) => x.rms), 10);
   const t3 = tones.length === 1 && tones[0] === 3 ? T3_RESCUE : {};
   const cfgs = {
-    pipe: { minVoicedRun: 1, ...t3 },
-    live_min: { minVoicedRun: 3, noiseFloor: 1e-4 },
-    live_g10: { minVoicedRun: 3, noiseFloor: (voicedRms * 0.1) / 3 },
-    live_g20: { minVoicedRun: 3, noiseFloor: (voicedRms * 0.2) / 3 },
-    live_g40: { minVoicedRun: 3, noiseFloor: (voicedRms * 0.4) / 3 },
+    pipe: { minVoicedRunMs: 0, ...t3 },
+    live_min: { minVoicedRunMs: 64, noiseFloor: 1e-4 },
+    live_g10: { minVoicedRunMs: 64, noiseFloor: (voicedRms * 0.1) / 3 },
+    live_g20: { minVoicedRunMs: 64, noiseFloor: (voicedRms * 0.2) / 3 },
+    live_g40: { minVoicedRunMs: 64, noiseFloor: (voicedRms * 0.4) / 3 },
   };
   // reference voiced span (trusted frames) for thirds
   const tv = r.t.filter((_, i) => r.trusted[i]);

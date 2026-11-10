@@ -25,8 +25,15 @@ export interface PitchTrackerConfig {
    */
   rangeDownSemitones: number;
   alpha: number;
-  /** Max semitone change per analysis frame; faster jumps are detector errors */
-  maxSlewSemitones: number;
+  /**
+   * Samples between two pushed frames (the mic worklet's HOP_SIZE). With
+   * `sampleRate` it gives the real time step, from which every time-based
+   * setting below is turned into a frame count, so 44.1 kHz and 48 kHz
+   * devices behave the same.
+   */
+  hopSize: number;
+  /** Max pitch speed, semitones per second; faster jumps are detector errors */
+  maxSlewSemitonesPerSec: number;
   clarityThreshold: number;
   /** Primary gate requires rms >= noiseFloor * this (vs default 3). */
   rmsMult: number;
@@ -36,10 +43,10 @@ export interface PitchTrackerConfig {
   rescueRmsMult: number;
   /** Semitones of pitch travel allowed per elapsed hop when rescuing */
   rescueMaxSemitones: number;
-  /** Give up rescuing after this many consecutive unvoiced frames */
-  rescueMaxFrames: number;
-  /** Consecutive unvoiced frames after which median/octave history is discarded */
-  staleUnvoicedFrames: number;
+  /** Give up rescuing after this long unvoiced (ms; rounded to whole hops) */
+  rescueMaxMs: number;
+  /** Unvoiced time after which median/octave history is discarded (ms; rounded to whole hops) */
+  staleUnvoicedMs: number;
   /**
    * Samples of the frame's centre actually searched for pitch. Shorter than
    * frameSize: a fast Tone-4 fall sweeps ~7% in pitch across a full 2048
@@ -49,14 +56,15 @@ export interface PitchTrackerConfig {
   /** Calibrated silence RMS; voiced requires rms >= noiseFloor * 3 */
   noiseFloor: number;
   /**
-   * Consecutive voiced frames required before any of them is reported voiced.
-   * 1 (the default) reports every voiced frame — what every offline
-   * measurement (clipCut, report, analyze) uses, so corridors never move.
-   * Live play passes `tuning().minVoicedRun` (3): a fan or a breath on the mic
-   * throws up lone, unrelated "voiced" frames that jerk the dot; real speech
-   * is dozens in a row. Costs (n-1) hops of onset latency.
+   * Voiced time required before any frame of the run is reported voiced (ms;
+   * rounded to whole hops, at least 1 frame). 0 (the default) reports every
+   * voiced frame — what every offline measurement (clipCut, report, analyze)
+   * uses, so corridors never move. Live play passes `tuning().minVoicedRunMs`
+   * (64 ms = 3 hops at 48 kHz): a fan or a breath on the mic throws up lone,
+   * unrelated "voiced" frames that jerk the dot; real speech is dozens in a
+   * row. Costs (n-1) hops of onset latency.
    */
-  minVoicedRun: number;
+  minVoicedRunMs: number;
   fMin: number;
   fMax: number;
 }

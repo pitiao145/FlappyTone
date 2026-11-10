@@ -7,12 +7,12 @@ const CREAK = F0C * 2 ** (-10 / 12);
 console.log("tone | set | clips | gate % of voice | low end lost st: median | p90 | clips losing > 2 st % | clips losing > 4 st % | fall/dip depth kept % (median) | rescue active on % of voiced frames");
 for (const tone of [4, 3, 2]) for (const set of ["textbook", "natural"]) {
   const cs = clipList().filter((c) => c.set === set && c.tones.length === 1 && c.tones[0] === tone);
-  const data = cs.map((c) => { const w = loadWav(c.file), r = loadRef(c.set, c.id); const base = track(w.samples, w.sampleRate, { minVoicedRun: 3, noiseFloor: 1e-4 }); return { w, r, v: med(base.rms.filter((_, i) => base.v[i])) }; });
+  const data = cs.map((c) => { const w = loadWav(c.file), r = loadRef(c.set, c.id); const base = track(w.samples, w.sampleRate, { minVoicedRunMs: 64, noiseFloor: 1e-4 }); return { w, r, v: med(base.rms.filter((_, i) => base.v[i])) }; });
   for (const frac of [0.02, 0.1, 0.2, 0.3, 0.4]) {
     const lost = [], kept = []; let resc = 0, vo = 0;
     for (const d of data) {
       const floor = (d.v * frac) / 3;
-      const o = track(d.w.samples, d.w.sampleRate, { minVoicedRun: 3, noiseFloor: floor });
+      const o = track(d.w.samples, d.w.sampleRate, { minVoicedRunMs: 64, noiseFloor: floor });
       const refSt = [], trSt = [];
       for (let i = 0; i < o.t.length; i++) {
         const a = refAt(d.r, o.t[i]);

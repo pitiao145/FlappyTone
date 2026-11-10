@@ -158,7 +158,7 @@ export interface CutClip {
 const TONE_3_RESCUE = {
   rescueClarity: 0.3,
   rescueRmsMult: 4,
-  rescueMaxFrames: 8,
+  rescueMaxMs: 171, // 8 hops at 48 kHz
 };
 
 /**

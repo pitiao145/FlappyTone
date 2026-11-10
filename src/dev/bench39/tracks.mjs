@@ -7,7 +7,7 @@ import { listWavs, loadWav, WIN, HOP } from "./lib.mjs";
 
 export const CACHE = "node_modules/.cache/bench39";
 export const F0C = 181.3; // Jane's catalog reference centre (wordsFallback meta)
-export const T3_RESCUE = { rescueClarity: 0.3, rescueRmsMult: 4, rescueMaxFrames: 8 }; // = clipCut.ts TONE_3_RESCUE
+export const T3_RESCUE = { rescueClarity: 0.3, rescueRmsMult: 4, rescueMaxMs: 171 }; // = clipCut.ts TONE_3_RESCUE
 export const SETS = { textbook: "fixtures/clips/jane", natural: "fixtures/clips/jane/natural" };
 
 export function tonesOf(id) {
@@ -72,9 +72,9 @@ export function cachedRun(clip, tag, cfg, k = 1) {
   return o;
 }
 export const cfgFor = (clip, name) => name === "pipe"
-  ? { minVoicedRun: 1, ...(clip.tones.length === 1 && clip.tones[0] === 3 ? T3_RESCUE : {}) }
-  : { minVoicedRun: 3, noiseFloor: 1e-4 };
-/** name: "pipe" (clip pipeline) or "live" (floor 1e-4, minVoicedRun 3). Cached. */
+  ? { minVoicedRunMs: 0, ...(clip.tones.length === 1 && clip.tones[0] === 3 ? T3_RESCUE : {}) }
+  : { minVoicedRunMs: 64, noiseFloor: 1e-4 };
+/** name: "pipe" (clip pipeline) or "live" (floor 1e-4, minVoicedRunMs 64). Cached. */
 export function cachedTrack(clip, name) {
   return cachedRun(clip, name, cfgFor(clip, name));
 }

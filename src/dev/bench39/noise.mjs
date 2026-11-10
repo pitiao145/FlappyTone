@@ -61,7 +61,7 @@ for (const c of subset) {
   const w = loadWav(c.file);
   if (w.sampleRate !== SR) continue;
   const r = loadRef(c.set, c.id);
-  const clean = track(w.samples, SR, { minVoicedRun: 3, noiseFloor: 1e-4 });
+  const clean = track(w.samples, SR, { minVoicedRunMs: 64, noiseFloor: 1e-4 });
   const voiceRms = med(clean.rms.filter((_, i) => clean.v[i]));
   const lead = Math.round(LEAD_S * SR);
   for (const [nz, src] of Object.entries(NOISES)) for (const snr of [30, 20, 10, 5]) {
@@ -70,7 +70,7 @@ for (const c of subset) {
     offset = (offset + 7919) % src.length;
     for (let i = 0; i < mixed.length; i++) mixed[i] = g * src[(offset + i) % src.length] + (i >= lead ? w.samples[i - lead] : 0);
     const floor = appFloor(mixed, voiceRms);
-    for (const [cfgName, cfg] of Object.entries({ app: { minVoicedRun: 3, noiseFloor: floor }, nogate: { minVoicedRun: 3, noiseFloor: 1e-4 } })) {
+    for (const [cfgName, cfg] of Object.entries({ app: { minVoicedRunMs: 64, noiseFloor: floor }, nogate: { minVoicedRunMs: 64, noiseFloor: 1e-4 } })) {
       const o = track(mixed, SR, cfg);
       const key = `${nz}|${snr}|${cfgName}`;
       const R = (results[key] ??= { refV: 0, hit: 0, endV: 0, endHit: 0, leadN: 0, leadV: 0, errs: [], low: [], high: [], gate: [], n: 0, t4end: [0, 0] });

@@ -12,9 +12,9 @@ for (const [frac, label] of [[0.4, "cap, same loudness as calibration"], [0.57, 
     let refV = 0, hit = 0, half = 0, none = 0, n = 0; const lows = [];
     for (const c of subset.filter((c) => groupOf(c.tones) === g)) {
       const w = loadWav(c.file), r = loadRef(c.set, c.id);
-      const base = track(w.samples, w.sampleRate, { minVoicedRun: 3, noiseFloor: 1e-4 });
+      const base = track(w.samples, w.sampleRate, { minVoicedRunMs: 64, noiseFloor: 1e-4 });
       const v = med(base.rms.filter((_, i) => base.v[i]));
-      const o = track(w.samples, w.sampleRate, { minVoicedRun: 3, noiseFloor: (v * frac) / 3 });
+      const o = track(w.samples, w.sampleRate, { minVoicedRunMs: 64, noiseFloor: (v * frac) / 3 });
       let rv = 0, h = 0; const refSt = [], trSt = [];
       for (let i = 0; i < o.t.length; i++) {
         const a = refAt(r, o.t[i]);

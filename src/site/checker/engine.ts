@@ -218,7 +218,7 @@ export function startChecker(
         sampleRate,
         f0Center: SEED_F0,
         noiseFloor: roomFloor ?? DEFAULT_NOISE,
-        minVoicedRun: tuning().minVoicedRun,
+        minVoicedRunMs: tuning().minVoicedRunMs,
       });
       const p = calTracker.push(frame);
       if (p.voiced && p.f0 !== null) {
@@ -240,7 +240,7 @@ export function startChecker(
         sampleRate,
         f0Center: s.f0Center,
         noiseFloor: roomFloor ?? startingNoiseFloor(s.noiseFloor, s.voiceRms),
-        minVoicedRun: tuning().minVoicedRun,
+        minVoicedRunMs: tuning().minVoicedRunMs,
         rangeSemitones: s.rangeSemitones,
         rangeDownSemitones: s.rangeDownSemitones,
       });

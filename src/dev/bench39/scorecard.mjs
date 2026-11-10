@@ -141,7 +141,7 @@ for (const style of STYLES) {
     const base = cachedTrack(c, "live");
     const v = med(base.rms.filter((_, i) => base.v[i]));
     if (!Number.isFinite(v)) continue;
-    const o = cachedRun(c, "gate40", { minVoicedRun: 3, noiseFloor: +((v * 0.4) / 3).toPrecision(6) });
+    const o = cachedRun(c, "gate40", { minVoicedRunMs: 64, noiseFloor: +((v * 0.4) / 3).toPrecision(6) });
     add(H, heard(o, R(c)).last);
   }
   put(`gate40.T4.lastThirdHeard.pct.${style}`, P(H), "higher", PP_TOL, "%");

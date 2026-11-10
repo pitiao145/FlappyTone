@@ -19,7 +19,7 @@ for (const [k, like] of [[1, "Jane"], [0.75, "low female / high male"], [0.6, "t
   for (const c of subset) {
     const w = loadWav(c.file), r = loadRef(c.set, c.id);
     const x = k === 1 ? w.samples : resample(w.samples, k);
-    const o = track(x, w.sampleRate, { minVoicedRun: 3, noiseFloor: 1e-4, f0Center: F0C * k });
+    const o = track(x, w.sampleRate, { minVoicedRunMs: 64, noiseFloor: 1e-4, f0Center: F0C * k });
     const creak = F0C * 2 ** (-10 / 12);
     const refSt = [], trSt = [];
     for (let i = 0; i < o.t.length; i++) {

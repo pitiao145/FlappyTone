@@ -357,8 +357,8 @@ export function Calibration({
       setFrameSink((frame, sampleRate) => {
         tracker ??= new PitchTracker(
           noiseFloor === null
-            ? { sampleRate, rmsMult: TALK_RMS_MULT, minVoicedRun: tuning().minVoicedRun }
-            : { sampleRate, noiseFloor, rmsMult: TALK_RMS_MULT, minVoicedRun: tuning().minVoicedRun },
+            ? { sampleRate, rmsMult: TALK_RMS_MULT, minVoicedRunMs: tuning().minVoicedRunMs }
+            : { sampleRate, noiseFloor, rmsMult: TALK_RMS_MULT, minVoicedRunMs: tuning().minVoicedRunMs },
         );
         const p = tracker.push(frame);
         if (p.voiced && p.f0 !== null) {
@@ -427,7 +427,7 @@ export function Calibration({
     const cfg: Partial<PitchTrackerConfig> = {
       rangeSemitones: range.up,
       rangeDownSemitones: range.down,
-      minVoicedRun: tuning().minVoicedRun,
+      minVoicedRunMs: tuning().minVoicedRunMs,
     };
     if (f0Center !== null) cfg.f0Center = f0Center;
     if (noiseFloor !== null) cfg.noiseFloor = noiseFloor;

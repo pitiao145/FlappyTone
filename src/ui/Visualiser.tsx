@@ -545,7 +545,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
           // The saved calibration floor, capped, until this session's own
           // measurement of the room lands (`measureNoise` below).
           noiseFloor: startingNoiseFloor(settings.noiseFloor, settings.voiceRms),
-          minVoicedRun: tuning().minVoicedRun,
+          minVoicedRunMs: tuning().minVoicedRunMs,
           rangeSemitones: settings.rangeSemitones,
           rangeDownSemitones: settings.rangeDownSemitones,
         });
