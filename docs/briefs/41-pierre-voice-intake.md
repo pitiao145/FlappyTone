@@ -13,12 +13,16 @@ Put Pierre's own recordings on the bench. Answer two questions with numbers: doe
 - `src/dev/bench39/README.md`.
 
 ## Needs from Pierre (before this brief can run)
-Recorded in the booth (`/record`) or as WAV, quiet room, saved under `fixtures/captures/pierre/` (gitignored):
-- 10 s of normal talk; 5 s of silence;
-- the four tones on `ma`, `yi`, `shu`, two times each;
-- 你好, 好玩, 可能, 幫忙, 工人, 牛奶, 對面, 媽媽, two times each, said naturally;
-- one normal run of the app's calibration, and the saved numbers (centre, both range values, noise floor, voice loudness) copied into `fixtures/captures/pierre/calibration.json`.
-File names: `pierre_<pinyin><tones>_<take>.wav`. If the files are missing, set `blocked` and stop.
+A phone recording is fine. Put the files in `fixtures/captures/pierre/` (gitignored). Any of m4a, wav, mp3; the brief converts them with `ffmpeg` (already on this machine).
+- Quiet room, phone about 20 cm from the mouth. iPhone Voice Memos: turn "Enhance Recording" off; set Audio Quality to Lossless if possible.
+- **Three long files are enough. No cutting, no file per word.** Leave about 1 second of silence between items and keep the order:
+  1. `talk.m4a`: 5 s of silence, then 10 s of normal talk.
+  2. `singles.m4a`: mā má mǎ mà, yī yí yǐ yì, shū shú shǔ shù, then the same 12 again.
+  3. `pairs.m4a`: 你好, 好玩, 可能, 幫忙, 工人, 牛奶, 對面, 媽媽, said naturally, then the same 8 again.
+- One normal run of the app's calibration on the same phone, and the saved numbers (centre, both range values, noise floor, voice loudness) in `fixtures/captures/pierre/calibration.json`. If Settings does not show them, the brief adds a dev-only read-out first.
+If the files are missing, set `blocked` and stop.
+
+Note for the agent: a phone app is not the game's raw mic path. Say so in the report. Cut the long files into items by silence, check the item count (12+12 and 8+8), and name the cuts `pierre_<pinyin><tones>_<take>.wav` (48 kHz, 16-bit mono). If a count is wrong, list what was found and stop.
 
 ## Do
 1. Add the set `pierre` to `praat-ref.py` and to the scorecard as its own block (not part of Jane's baseline).

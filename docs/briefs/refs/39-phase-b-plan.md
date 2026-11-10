@@ -40,6 +40,45 @@ Branch `research/39-pitch-foundation`, worktree `.claude/worktrees/research-37`.
 
 Why this order: the listener must be final before the targets are measured again (one re-measure, not two). The reader is tuned last because it is fitted to whatever the listener and the ruler give it (Phase A, 6.1).
 
+## How to run each brief
+
+One brief per session. Start each session in this worktree (`.claude/worktrees/research-37`, branch `research/39-pitch-foundation`). Before a brief runs, set its `status` to `ready`. Run them in number order, except 41 (when the recording exists) and 47 (any time after 43).
+
+Paste this prompt, with the number filled in:
+
+```
+Work only in the worktree .claude/worktrees/research-37 on branch research/39-pitch-foundation.
+Do not touch main. Never push, deploy or merge. No writes to Supabase, R2, the Worker or PostHog.
+Run brief NN: docs/briefs/NN-<name>.md.
+First read docs/briefs/refs/39-handover.md and docs/briefs/refs/39-phase-b-plan.md ("Rules for every brief").
+Do exactly what the brief says. If an acceptance number misses or a premise is false: set status blocked, write why, stop.
+When done: write the report, add your entry to the handover file, commit on this branch (docs/ needs git add -f), stop.
+Talk to me in short, simple sentences. Explain audio ideas in plain words.
+```
+
+For a review session (after 42, 44, 45), paste:
+
+```
+Work only in the worktree .claude/worktrees/research-37 on branch research/39-pitch-foundation. Change no code.
+Review brief NN: read the brief, its report, the handover entry and the commit diff. Run npm run bench.
+Check each acceptance number yourself. Look for a result that passes the numbers but is wrong for a real voice.
+Answer: approve, or the exact list of what to fix. Add a "review" entry to the handover file and commit it.
+```
+
+| # | Brief | Build with | Then |
+|---|---|---|---|
+| 40 | Scorecard, baseline, rules review | Sonnet 5.5 | Pierre reads the rules table |
+| 41 | Pierre's voice | Sonnet 5.5 | — |
+| 42 | Listener: delay, band, ms | Opus 5.5 | Review session on Fable 5 |
+| 43 | One ruler for targets | Opus 5.5 | Pierre turns the switch on and looks |
+| 44 | Player ruler and calibration | Opus 5.5 | Review session on Fable 5; Pierre flies it in the Lab |
+| 45 | Reader on the new ruler | Opus 5.5 | Review session on Fable 5 |
+| 46 | Pairs | Sonnet 5.5 | — |
+| 47 | Visualiser band | Sonnet 5.5 | Pierre looks at it |
+| 48 | Compare and go-live plan | Opus 5.5 | Pierre decides |
+
+Why these models: 40, 41, 46, 47 are well-specified building work with numbers to hit. 42–45 change how the game hears and judges a voice; a wrong but plausible answer is easy there, so they get a stronger builder and a second reader. If a Sonnet session blocks twice on the same brief, rerun it on Opus.
+
 ## Every Phase A finding, and where it goes
 
 | Finding (Phase A section) | Goes to |
