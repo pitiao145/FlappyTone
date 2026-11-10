@@ -20,6 +20,7 @@ import { speakerFMin } from "../game/tuning.ts";
 import { computeF0Center, computeRangeSemitones } from "../pitch/calibration.ts";
 import { hzToSemitones } from "../pitch/math.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
+import type { PitchTrackerConfig } from "../pitch/types.ts";
 import type { Tone } from "../game/gates.ts";
 import {
   multiSyllablePolyline,
@@ -67,6 +68,26 @@ export const MEASURE_RANGE_SEMITONES = 15;
 
 /** A point on the clip's own normalised timeline: [t in 0..1, chao 1..5]. */
 export type ContourPoint = [number, number];
+
+/**
+ * Extra tracker settings for one cut, on top of the defaults below. Empty for
+ * every shipped caller. Brief 43 passes `{ noiseFloor }` measured from the
+ * clip itself (`clipNoiseFloor`) instead of the fixed default.
+ */
+export type TrackerOverrides = Partial<Omit<PitchTrackerConfig, "sampleRate">>;
+
+/**
+ * A loudness floor set from the clip itself: the 10th percentile of its frame
+ * loudness (RMS), at least 1e-4. In a take that holds room tone before and
+ * after the word, this is the room. Brief 43.
+ */
+export function clipNoiseFloor(samples: Float32Array): number {
+  const rms: number[] = [];
+  for (let s = 0; s + WIN <= samples.length; s += HOP) rms.push(frameRms(samples, s, WIN));
+  if (rms.length === 0) return 1e-4;
+  rms.sort((x, y) => x - y);
+  return Math.max(1e-4, rms[Math.floor(rms.length * 0.1)]);
+}
 
 export interface CutClip {
   samples: Float32Array;
@@ -188,12 +209,14 @@ function longestVoicedRun(
   sampleRate: number,
   f0Center: number,
   tone?: Tone,
+  overrides: TrackerOverrides = {},
 ): { start: number; end: number } | null {
   const tracker = new PitchTracker({
     sampleRate,
     f0Center,
     fMin: speakerFMin(f0Center),
     ...(tone === 3 ? TONE_3_RESCUE : {}),
+    ...overrides,
   });
   const voiced: number[] = [];
   for (let s = 0; s + WIN <= samples.length; s += HOP) {
@@ -278,6 +301,7 @@ export function measureContour(
   f0Center: number,
   rangeSemitones?: number,
   tone?: Tone,
+  overrides: TrackerOverrides = {},
 ): { contour: ContourPoint[]; pinnedFraction: number } {
   const tracker = new PitchTracker({
     sampleRate,
@@ -285,6 +309,7 @@ export function measureContour(
     fMin: speakerFMin(f0Center),
     ...(rangeSemitones ? { rangeSemitones } : {}),
     ...(tone === 3 ? TONE_3_RESCUE : {}),
+    ...overrides,
   });
   const contour: ContourPoint[] = [];
   let pinned = 0;
@@ -311,6 +336,7 @@ export function cutClip(
   rangeSemitones?: number,
   tone?: Tone,
   syllables = 1,
+  overrides: TrackerOverrides = {},
 ): CutClip {
   // A word of more than one syllable is measured by `clipCutMulti.ts`, whose
   // span keeps every voiced run instead of the longest. Everything downstream
@@ -319,8 +345,8 @@ export function cutClip(
   // together. `syllables === 1` reaches none of this.
   const run =
     syllables > 1
-      ? multiSyllableSpan(samples, sampleRate, f0Center, syllables)
-      : longestVoicedRun(samples, sampleRate, f0Center, tone);
+      ? multiSyllableSpan(samples, sampleRate, f0Center, syllables, overrides)
+      : longestVoicedRun(samples, sampleRate, f0Center, tone, overrides);
   if (!run) throw new Error("no voiced frames");
 
   const pad = (PAD_MS / 1000) * sampleRate;
@@ -361,6 +387,7 @@ export function cutClip(
     f0Center,
     rangeSemitones,
     syllables > 1 ? undefined : tone,
+    overrides,
   );
 
   const span = syllables > 1 ? (run as MultiSpan) : null;

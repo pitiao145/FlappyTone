@@ -25,6 +25,7 @@ import {
   MERGE_GAP_MS,
   WIN,
   type ContourPoint,
+  type TrackerOverrides,
 } from "./clipCut.ts";
 
 /**
@@ -73,8 +74,9 @@ function voicedCenters(
   samples: Float32Array,
   sampleRate: number,
   f0Center: number,
+  overrides: TrackerOverrides = {},
 ): number[] {
-  const tracker = new PitchTracker({ sampleRate, f0Center, fMin: speakerFMin(f0Center) });
+  const tracker = new PitchTracker({ sampleRate, f0Center, fMin: speakerFMin(f0Center), ...overrides });
   const centers: number[] = [];
   for (let s = 0; s + WIN <= samples.length; s += HOP) {
     if (tracker.push(samples.subarray(s, s + WIN)).voiced) centers.push(s + WIN / 2);
@@ -171,8 +173,9 @@ export function multiSyllableSpan(
   sampleRate: number,
   f0Center: number,
   syllables: number,
+  overrides: TrackerOverrides = {},
 ): MultiSpan | null {
-  const centers = voicedCenters(samples, sampleRate, f0Center);
+  const centers = voicedCenters(samples, sampleRate, f0Center, overrides);
   if (centers.length === 0) return null;
 
   const intraGap = (MERGE_GAP_MS / 1000) * sampleRate;

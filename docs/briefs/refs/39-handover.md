@@ -144,3 +144,12 @@ Reviewed: brief, report (all four runs), handover, diff `6ce627f..17b9b07`, both
 ## 42 — 10 Nov 2026 — done
 - 5th exception added (deep0.6 textbook T3 error p90, limit 0.244). Bench 299 numbers, 0 FAIL. Shipped in 42: ms settings, median 3 (20 ms delay), floor clamp(0.6 × centre, 55, 70), gross-error and deep rows on the scorecard.
 - Open for later briefs: 43 (xiaoshi/yiqian corridor error, measure targets with the speaker's floor), 44 (talk step at 70 measures a 90 Hz voice 1.4 st high), 45 (reader 90.1% voice 2 st lower; jane_ma2 0.496), a small brief on device sample rates (review entry).
+
+## 43 One ruler for the targets — 11 Nov 2026 — blocked (step 1)
+- Changed: `cutClip` / `measureContour` / `multiSyllableSpan` take optional tracker `overrides` (default empty, callers unchanged); `clipNoiseFloor()` (p10 frame RMS, ≥ 1e-4); `src/dev/bench39/make-shapes.mjs` (steps 1–6, stops at the ruler check). No shapes file, no dev switch yet. Commit: see `git log` ("brief 43").
+- Scorecard: nothing moved. `npm run bench` 299 numbers, 0 FAIL; 1831 tests pass; typecheck clean.
+- Jane's ruler, all 477 textbook words (final listener, per-clip gate, tone window, creak > 10 st under left out, 2/98): middle 197.6 Hz, up 8.49 st, down 8.00 st. MEASURED.
+- Why blocked: first tone on that ruler **3.44** (needs 3.8–4.4). Fourth-tone start 4.87 (pass).
+- **Surprise (MEASURED):** the 120 older takes (session 2026-08-07) have the same middle as the newer clips (198.7 vs 196.7 Hz) but a much lower first tone: older 3.32 (30 words), newer 4.05 (14 words; Praat 4.06). The Phase A preview used the 357 newer clips only, so its 4.06 did not cover the older words. No percentile choice fixes this.
+- Decision for Pierre (options in the report): accept a lower first tone for the older words (change the check), ruler from the newer clips only, or re-record the 120 older single words.
+- For the rerun: `make-shapes.mjs` already holds steps 3 and 5; they run after the ruler check. On an ±8 st ruler, a pitch error in semitones is about 1.8× larger in chao than on the ±15 st measuring board; re-check xiaoshi / yiqian (limit 0.47) on the new ruler.
