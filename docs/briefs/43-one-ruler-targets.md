@@ -1,5 +1,5 @@
 ---
-status: blocked  # fourth run (knees + gate floor): T2 gap 0.248, T3 0.206 (limit 0.20); all else passes. See reports/43-one-ruler-targets.md
+status: blocked  # fifth run (T2 mid-rise): only T3 gap misses, 0.206 (limit 0.20). See reports/43-one-ruler-targets.md
 notion_task:
 risk: needs-approval
 ---

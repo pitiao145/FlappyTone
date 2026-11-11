@@ -181,3 +181,10 @@ Reviewed: brief, report (all four runs), handover, diff `6ce627f..17b9b07`, both
 - Ruler now 197.4 Hz / up 5.75 / down 7.25 (the gate floor moved the middle 0.7 Hz).
 - Why: T2 leaves its low too early (no node between low and knee); T3 drops from its start too early. T4 now fits.
 - Decision for Pierre: a T2 mid-rise node (and maybe a T3 early-hold node), or name T2 ≤ 0.25 / T3 ≤ 0.21 as allowances.
+
+## 43 fifth run (T2 mid-rise node) — 11 Nov 2026 — blocked (acceptance: T3 gap 0.206)
+- Changed: `templateContourKnee` T2 = start, low, mid-rise, KNEE, end. Dev-only; published templates unchanged. `shapes-v2.json` not committed.
+- Scorecard: nothing moved (bench 299, 0 FAIL; 1831 tests).
+- Acceptance (MEASURED): gap T1 0.127, T2 0.118 (was 0.248), T3 **0.206**, T4 0.276 (allowance), pairs 0.198. Inside and shape match pass everywhere.
+- Why: T3 target falls from its start at once; she holds near 2.3–2.5 for the first fifth.
+- Decision for Pierre: a T3 early-hold node, or a T3 ≤ 0.21 allowance.

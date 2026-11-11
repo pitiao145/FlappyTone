@@ -577,9 +577,12 @@ export const KNEE_CHAO = 0.3;
  * | Tone | Nodes |
  * |---|---|
  * | 1 | start, end (flat, unchanged) |
- * | 2 | start, low, KNEE, end |
+ * | 2 | start, low, mid-rise, KNEE, end |
  * | 3 | start, low, mid-rise, KNEE, end |
  * | 4 | start, peak, KNEE, end |
+ *
+ * T2's mid-rise is the real sample nearest halfway between its low and t = 1,
+ * as for T3 (left out if it is not between them).
  *
  * KNEE = the first measured point after the previous node that is within
  * `KNEE_CHAO` of the end hold value: where the fall (or rise) has arrived, so
@@ -591,8 +594,16 @@ export function templateContourKnee(
   tone: Tone,
   contour: ContourPoint[],
 ): { polyline: ContourPoint[]; knee: boolean | null } {
-  const base = templateContour(tone, contour);
+  let base = templateContour(tone, contour);
   if (tone === 1 || base.length === 0) return { polyline: base, knee: null };
+  // T2 gets the same mid-rise node as T3 (brief 43, fifth run): the real
+  // sample nearest halfway in time between the low and the end, so the
+  // corridor stays low as long as she does before the late, fast rise.
+  if (tone === 2) {
+    const [start, low, end] = base;
+    const midRise = round2(nearestSample(contour, (low[0] + 1) / 2));
+    if (midRise[0] > low[0] && midRise[0] < 1) base = [start, low, midRise, end];
+  }
   // The node the knee follows: the low (T2), the peak (T4), the mid-rise (T3).
   const prev = base[base.length - 2];
   const end = base[base.length - 1][1];

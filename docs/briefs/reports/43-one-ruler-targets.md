@@ -218,3 +218,38 @@ dadianhua344 2.92, lishi43 2.86, mai4 2.50, wanshang30 2.41, duibuqi403 2.40, ji
 ## Needs Pierre's eyes
 1. Give T2 a mid-rise node like T3 (start, low, mid-rise, KNEE, end), and maybe a T3 "early hold" node after the start. Same idea as the knee.
 2. Or accept T2 ≤ 0.25 and T3 ≤ 0.21 as named allowances (inside and shape pass for both), and run on.
+
+---
+
+# Fifth run (11 Nov 2026): T2 mid-rise node (Pierre's decision) — blocked at acceptance (T3 gap 0.206)
+
+Change: `templateContourKnee` gives T2 the same mid-rise node as T3 (real sample nearest halfway in time between the low and t = 1): T2 = start, low, mid-rise, KNEE, end. Nothing else changed. Commands as in the fourth run.
+
+- **Result: blocked.** Only the third-tone gap misses: **0.206** (limit 0.20). It did not change (this run touched T2 only). Everything else passes. `shapes-v2.json` not committed; dev switch, xiaoshi / yiqian and build grep not run.
+
+## Acceptance (MEASURED, heights.mjs --v2)
+| group | gap med | limit | inside med / p10 | shape match med | verdict |
+|---|---|---|---|---|---|
+| T1 | 0.127 | 0.20 | 100 / 94 | — | pass |
+| T2 | **0.118** (was 0.248) | 0.20 | 100 / 100 | 0.994 | pass |
+| T3 | **0.206** | 0.20 | 100 / 100 | 0.983 | **miss (gap)** |
+| T4 | 0.276 | 0.30 allowance | 100 / 91 | 0.982 | pass |
+| pairs | 0.198 | 0.20 | 100 / 96 | 0.977 | pass |
+
+Knees lost: 0. Ruler unchanged (197.4 Hz, up 5.75, down 7.25).
+
+```
+T2 said:   2.24 2.09 1.77 1.64 1.72 2.01 2.46 3.19 4.50 5.00
+T2 target: 2.16 1.96 1.75 1.61 1.67 1.86 2.29 3.13 4.39 4.94
+T3 said:   2.54 2.29 1.54 1.14 1.01 1.18 1.72 2.50 3.90 4.94
+T3 target: 2.25 1.80 1.38 1.09 1.03 1.15 1.53 2.39 3.83 4.75
+```
+
+The third tone's gap sits at the start: she stays near 2.3–2.5 for the first fifth, and the target goes down from the start straight away (1.80 at 20% where she is at 2.29).
+
+## Checks
+`npm run test` 1831 passed; `npm run typecheck` clean; `npm run bench` 299 numbers, 0 FAIL.
+
+## Needs Pierre's eyes
+1. A T3 "early hold" node after the start (same idea as the knee: where she starts to fall).
+2. Or accept T3 ≤ 0.21 as a named allowance (inside 100 / 100 and shape 0.983 pass), and run on.

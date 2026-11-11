@@ -94,7 +94,7 @@ const ruler = {
   rule: "chao 3 = median of all frames; chao 5 = p90 of single first-tone frames; chao 1 = p10 of single third-tone frames (computeRangeHalvesFromExtremes, quarter-semitone rounding); semitonesToChao clamps at 1 and 5",
   source: "357 newer textbook clips, final listener (brief 42), per-clip gate, tone window frames, creak (> 10 st under the middle) left out",
   measuredAtHz: F,
-  templates: `templateContourKnee: T2 start-low-KNEE-end, T3 start-low-midrise-KNEE-end, T4 start-peak-KNEE-end, T1 flat; KNEE_CHAO ${KNEE_CHAO}`,
+  templates: `templateContourKnee: T2 start-low-midrise-KNEE-end, T3 start-low-midrise-KNEE-end, T4 start-peak-KNEE-end, T1 flat; KNEE_CHAO ${KNEE_CHAO}`,
   gate: `per clip: noiseFloor = max(p10 frame RMS, 1e-4, ${CLIP_GATE_VOICE_SHARE} x median voiced RMS / rmsMult)`,
 };
 const midShift = 12 * Math.log2(ruler.middleHz / F);
