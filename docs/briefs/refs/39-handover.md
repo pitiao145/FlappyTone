@@ -203,3 +203,14 @@ Reviewed: brief, report (all four runs), handover, diff `6ce627f..17b9b07`, both
 - All pairs (MEASURED): textbook over 0.47 66.3% → 41.5% (limit 5%); natural 39.6% → 15.0%. Median nodes 8 → 9.
 - Why: of 103 textbook pairs still over, the worst frame is outside both syllables in 53 (the join, or before/after) and in a syllable's 5% edge in 41; only 9 used their budget.
 - Decision for Pierre: measure the pair check inside syllables without the edges, let the refinement search the join and edges, or keep the guard on the four fixtures only.
+
+## 43 One ruler for the targets (final) — 11 Nov 2026 — done
+- Changed: `src/dev/local/shapes-v2.json` (committed, numbers only); dev switch `src/dev/shapesV2.ts` + three DEV-gated call sites in `src/data/words.ts`; `make-shapes.mjs`, `heights.mjs --v2`, `pairs-fixtures.mjs`; dev-only `templateContourKnee`, `refinedMultiSyllablePolyline`, `clipNoiseFloor`, tracker `overrides` in `src/dev/clipCut*.ts`. Published shapes, `DEFAULT_POLYLINES`, `toneAverages` unchanged. Commit: see `git log` ("brief 43 done").
+- Scorecard: nothing moved (299 / 0 FAIL; 1831 tests). Build grep clean.
+- Ruler (MEASURED): middle 197.4 Hz, up 5.75 st (T1 p90), down 7.25 st (T3 p10), from the 357 newer textbook clips; natural and older takes on the same ruler.
+- Heights (MEASURED): T1 0.127, T2 0.118, T3 0.206, T4 0.276, pairs 0.178; inside ≥ 100 / 91; shape ≥ 0.967.
+- **Named allowances:** T3 gap ≤ 0.21; T4 gap ≤ 0.30 (with inside passing). Pair worst-frame guard 0.47 applies to the four fixtures only; all pairs are judged by heights.
+- **Re-record before go-live (brief 48):** the 30 older first-tone words lifted by one shared +1.08 chao (`"adjusted": "t1-session-offset"`): ma1b, ba1, san1, qi1, tian1, hua1, shu1, dong1, jia1, che1, shuo1, chi1, he1, shan1, xin1, kai1, mao1, chun1, gao1, zhong1, duo1, jie1, tang1, bao1, bei1, fei1, xing1, xiang1, bing1, ting1. The older T3 rises also end lower (4.42 vs 4.92), accepted.
+- **For brief 46 (Pierre judges both in the dev build):** 53 textbook pairs have their worst frame in the join between syllables, where the fit puts no node. And the gate could end soon after the knee (tail trim): many targets now reach their end value well before t = 1.
+- For brief 44/45: the player keeps T1 / T3 anchors (see plan doc). About a third of Jane's T4 frames sit on the top line.
+- Per-clip gate: noiseFloor = max(p10 frame RMS, 1e-4, 0.1 × median voiced RMS / 3). It moves 190 / 477 textbook corridors by > 0.25 chao vs the fixed gate.

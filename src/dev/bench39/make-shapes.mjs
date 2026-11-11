@@ -124,7 +124,6 @@ for (const style of ["textbook", "natural"]) console.log(`${style}: ` + [2, 3, 4
 
 // Pair-fit refinement (brief 43 decision): worst frame vs its own corridor, before → after.
 const worstGap = (poly, contour) => { const sh = { polyline: poly, durationS: 1 }; return Math.max(...contour.map(([t, c]) => Math.abs(corridorChaoAt(sh, t) - c))); };
-let pairFail = null;
 console.log(`\n### Multi-syllable fit refinement (PAIR_FIT_MAX_GAP ${PAIR_FIT_MAX_GAP}, PAIR_FIT_MAX_EXTRA ${PAIR_FIT_MAX_EXTRA}/syllable): worst frame vs its own corridor`);
 for (const style of ["textbook", "natural"]) for (const [label, n] of [["pairs", 2], ["3+ syllables", 3]]) {
   const ws = rows.filter((r) => (n === 2 ? r.syllables === 2 : r.syllables >= 3) && out[style][r.id]);
@@ -133,10 +132,9 @@ for (const style of ["textbook", "natural"]) for (const [label, n] of [["pairs",
   const over = (a) => (100 * a.filter((g) => g > 0.47).length) / a.length;
   console.log(`${style} ${label}: ${ws.length} words | over 0.47: ${fmt(over(before), 1)}% → ${fmt(over(after), 1)}% | worst gap median ${fmt(med(before))} → ${fmt(med(after))} | nodes per word median ${med(ws.map((r) => out[style][r.id]._plain.length))} → ${med(ws.map((r) => out[style][r.id].polyline.length))} | words with nodes added ${ws.filter((r) => out[style][r.id].fitNodesAdded).length}`);
   console.log(`  10 worst after: ` + ws.map((r, i) => ({ id: r.id, g: after[i], b: before[i], a: out[style][r.id].fitNodesAdded ?? 0 })).sort((a, b) => b.g - a.g).slice(0, 10).map((o) => `${o.id} ${fmt(o.b)}→${fmt(o.g)} (+${o.a})`).join(", "));
-  if (style === "textbook" && n === 2 && over(after) > 5) pairFail = `${fmt(over(after), 1)}% of textbook pairs still over 0.47 (limit 5%)`;
+  // Info only (Pierre, 11 Nov 2026): pairs are judged by heights.mjs; the 0.47 worst-frame guard is for the four fixtures (pairs-fixtures.mjs).
 }
 for (const style of ["textbook", "natural"]) for (const id of Object.keys(out[style])) delete out[style][id]._plain;
-if (pairFail) stop(6, pairFail);
 
 // ---- Step 2: ruler check on the newer clips ---------------------------------
 const singlesOf = (tone, kind) => rows.filter((r) => isSingle(tone)(r) && out.textbook[r.id] && (!kind || kindOf(r) === kind));

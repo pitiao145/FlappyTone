@@ -1,5 +1,5 @@
 ---
-status: blocked  # seventh run (refined pair fit): fixtures pass; 41.5% of textbook pairs still over 0.47 (limit 5%), mostly frames between syllables or at their edges. See reports/43-one-ruler-targets.md
+status: done
 notion_task:
 risk: needs-approval
 ---

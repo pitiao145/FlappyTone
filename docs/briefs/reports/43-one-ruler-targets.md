@@ -339,3 +339,18 @@ In plain words: most of the remaining misses are in places where the corridor is
 1. Measure the pair check only inside the syllables, without their 5% edges (the same frames the refinement looks at). The 5% rule then means the same thing in both places.
 2. Or let the refinement also search the edges and the join between syllables. This goes against the fit's "no node in the gap" rule.
 3. Or keep the 0.47 guard on the four fixtures only (all pass now), and judge the 246 pairs by the heights numbers.
+
+---
+
+# Final (11 Nov 2026) — done
+- Result: **done**. 0.47 guard on the four fixtures only (all pass: 0.370 / 0.334 / 0.222 / 0.318); pairs judged by heights. MEASURED: gap T1 0.127, T2 0.118, T3 0.206 (allowance 0.21), T4 0.276 (allowance 0.30), pairs 0.178; inside ≥ 100 / 91 everywhere; shape ≥ 0.967. No new allowance needed.
+- Ruler: middle 197.4 Hz, up 5.75 st (T1 p90), down 7.25 st (T3 p10). Shapes: 477 textbook, 471 natural (no local natural clip: yixia24, yigong24, yizhi42, yiban41, yibian41, zhangfu40).
+- Checks: `npm run build` + grep (11 strings incl. `shapes-v2`, `ft.shapesV2`, `bench39`, hard rule 7 list): 0 files each. Tests 1831 passed, typecheck clean, bench 299 / 0 FAIL.
+- **Turn it on:** `npm run dev`, open the app, browser console: `localStorage["ft.shapesV2"] = "1"`, reload. Off: `localStorage.removeItem("ft.shapesV2")`. Rebuild the file: `node src/dev/bench39/make-shapes.mjs`.
+- **Fly these first** (old session = 2026-08-07 takes):
+  - T1: 媽 ma1b (old, lifted +1.08), 他 ta1 (new)
+  - T2: 人 ren2 (old), 回 hui2 (new; mid-rise + knee)
+  - T3: 我 wo3 (old, lower end accepted), 很 hen3 (new)
+  - T4: 是 shi4 (old), 外 wai4 (new; moved most)
+  - Pairs: 小時 xiaoshi32 (refined fit), 晚會 wanhui34 (worst join between syllables)
+- Re-record before go-live: the 30 lifted first-tone words (list in the handover).

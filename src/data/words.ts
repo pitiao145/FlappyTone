@@ -26,6 +26,9 @@ import { wordsFromCatalog, type Word } from "../game/words.ts";
 import { CATALOG_SELECT, DEFAULT_SPEAKER_ID, flattenCatalogRows } from "./catalogRows.ts";
 import fallback from "./wordsFallback.json";
 import { getSupabase, warn } from "./supabase.ts";
+// Brief 43 dev switch. Every call site is behind `import.meta.env.DEV`, so the
+// build drops the call, then this import and the JSON behind it (hard rule 7).
+import { applyShapesV2 } from "../dev/shapesV2.ts";
 
 /**
  * v2 because the row shape changed (the measurements moved to `word_clips`),
@@ -66,7 +69,8 @@ export function catalogFromCache(speaker: string): Word[] | null {
     // every row — a silent fall-through to the bundled snapshot on every cold
     // start.
     const words = wordsFromCatalog(parsed.rows);
-    return words.length > 0 ? words : null;
+    if (words.length === 0) return null;
+    return import.meta.env.DEV ? applyShapesV2(words) : words;
   } catch {
     // Corrupt value, blocked storage, or no `localStorage` at all (a Node
     // test, a prerender). All of them mean the same thing to a caller.
@@ -101,7 +105,8 @@ function writeCache(speaker: string, rows: unknown[]): void {
  * must still be dropped, not silently attributed to Jane.
  */
 export function catalogFromFallback(): Word[] {
-  return wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID })));
+  const words = wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID })));
+  return import.meta.env.DEV ? applyShapesV2(words) : words;
 }
 
 /**
@@ -146,7 +151,7 @@ export async function fetchCatalog(opts: { speaker: string; listId?: string }): 
         const words = wordsFromCatalog(rows);
         if (words.length > 0) {
           writeCache(opts.speaker, rows);
-          return words;
+          return import.meta.env.DEV ? applyShapesV2(words) : words;
         }
         // A live read that parses to nothing is a misconfiguration, not an
         // empty catalog — publishing every word away is not a thing anyone
