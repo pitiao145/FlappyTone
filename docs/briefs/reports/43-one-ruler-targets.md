@@ -297,3 +297,45 @@ Why (MEASURED, diagnosis only):
 1. Let the pair fit follow her more closely on the new ruler (for example, an extra node where the corridor misses a bend by more than a set amount). Same family as the knee.
 2. Or judge pairs by the heights numbers only (pairs pass: gap 0.198, inside 100 / 96), and move the "≤ 0.47 worst frame" guard to the old ±15 st board, where it was written (xiaoshi 0.37 there).
 3. haowan misses by 0.001 on its last frame; any fix for 1 likely covers it.
+
+---
+
+# Seventh run (11 Nov 2026): refined pair fit — blocked (41.5% of textbook pairs over 0.47)
+
+Decision: `refinedMultiSyllablePolyline` (new, `src/dev/clipCutMulti.ts`; published fit and tests unchanged): after the plain fit, add a node at the frame furthest from the corridor spline while that gap is over `PAIR_FIT_MAX_GAP` = 0.35, at most `PAIR_FIT_MAX_EXTRA` = 2 per syllable, not searching the first and last 5% of each syllable's span. Used for every multi-syllable word in `make-shapes.mjs`.
+
+- **Result: blocked.** 41.5% of textbook pairs still have a frame more than 0.47 from their corridor (limit 5%). No other constants tried. Shapes file not written (the script stops first); heights not rerun; dev switch still a patch.
+
+## The four fixtures (MEASURED, worst frame vs corridor, chao on Jane's ruler; limit 0.47)
+| fixture | before → after | nodes added | |
+|---|---|---|---|
+| haowan 好玩 | 0.471 → 0.370 | 1 | pass |
+| meiguo 美國 | 0.393 → 0.334 | 1 | pass |
+| xiaoshi 小時 | 0.877 → **0.222** | 1 | pass |
+| yiqian 以前 | 0.455 → 0.318 | 1 | pass |
+
+## All pairs (MEASURED, `make-shapes.mjs`; worst frame over the whole measured contour)
+| set | words | over 0.47 before → after | worst gap median | nodes per word median | words with nodes added |
+|---|---|---|---|---|---|
+| textbook pairs | 246 | 66.3% → **41.5%** | 0.56 → 0.43 | 8 → 9 | 168 |
+| textbook 3+ syllables | 17 | 76.5% → 58.8% | 0.70 → 0.62 | 12 → 13 | 12 |
+| natural pairs | 240 | 39.6% → 15.0% | 0.42 → 0.31 | 7 → 8 | 122 |
+| natural 3+ syllables | 17 | 35.3% → 17.6% | 0.41 → 0.33 | 9 → 11 | 9 |
+
+10 worst textbook pairs after (before → after, nodes added): wanhui34 2.34 → 2.35 (+2), wanshang30 2.13 → 2.13 (+1), chuqu14 1.83 → 1.83 (+2), xiake44 1.72 → 1.75 (+2), xiaxue43 1.65 → 1.65 (+2), lishi43 2.03 → 1.54 (+4), qunian42 2.23 → 1.52 (+4), xiaojie33 1.43 → 1.43 (+1), paobu34 1.34 → 1.34 (+2), lvguan33 1.21 → 1.21 (+1). Natural: mingtian21 2.61, hushi44 0.99, huida22 0.95, jinlai42 0.93, keshi34 0.88, taiyang42 0.87, haokan34 0.78, duzi40 0.74, chengshi24 0.74, youju22 0.73.
+
+## Why (MEASURED, diagnosis only; scratch script with the same cut, gate and ruler)
+Where the worst frame sits in the 103 textbook pairs still over 0.47:
+- **53: outside both syllables.** Voiced frames the cutter keeps but gives to no syllable: the stretch between the two syllables, or before the first or after the last. The pair fit puts no node there on purpose (`multiSyllablePolyline`: "nothing in the gap between them"), so the corridor there is the spline bridging the gap.
+- **41: in the first or last 5% of a syllable**, which the refinement does not search (as decided). 23 of these 94 sit after t = 0.95, 9 before t = 0.05.
+- **9: inside a syllable, with both extra nodes used.**
+
+In plain words: most of the remaining misses are in places where the corridor is not meant to follow her: the join between two syllables and their very edges. The 0.47 test counts every voiced frame, including those. For the four fixtures this did not matter; for the 246 words it does. The game's own pair scoring may treat those frames differently (not checked here).
+
+## Checks
+`npm run test` 1831 passed; `npm run typecheck` clean; `npm run bench` 299 numbers, 0 FAIL.
+
+## Needs Pierre's eyes
+1. Measure the pair check only inside the syllables, without their 5% edges (the same frames the refinement looks at). The 5% rule then means the same thing in both places.
+2. Or let the refinement also search the edges and the join between syllables. This goes against the fit's "no node in the gap" rule.
+3. Or keep the 0.47 guard on the four fixtures only (all pass now), and judge the 246 pairs by the heights numbers.

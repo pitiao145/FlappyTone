@@ -195,3 +195,11 @@ Reviewed: brief, report (all four runs), handover, diff `6ce627f..17b9b07`, both
 - Dev switch built, build grep clean (0 files for every string), then reverted and saved as `docs/briefs/reports/43-dev-switch.patch` (it needs the uncommitted shapes file).
 - Scorecard: nothing moved (bench 299, 0 FAIL; 1831 tests).
 - Decision for Pierre: a closer pair fit on the new ruler, or judge pairs by the heights numbers and keep the 0.47 guard on the ±15 st board.
+
+## 43 seventh run (refined pair fit) — 11 Nov 2026 — blocked (pairs over 0.47: 41.5%)
+- Changed: `refinedMultiSyllablePolyline` + `PAIR_FIT_MAX_GAP` 0.35, `PAIR_FIT_MAX_EXTRA` 2 in `src/dev/clipCutMulti.ts` (dev-only); `make-shapes.mjs` uses it for multi-syllable words and prints before/after pair stats; `pairs-fixtures.mjs` prints before → after.
+- Scorecard: nothing moved (bench 299, 0 FAIL; 1831 tests).
+- Fixtures (MEASURED): haowan 0.471 → 0.370, meiguo 0.393 → 0.334, xiaoshi 0.877 → 0.222, yiqian 0.455 → 0.318. All pass.
+- All pairs (MEASURED): textbook over 0.47 66.3% → 41.5% (limit 5%); natural 39.6% → 15.0%. Median nodes 8 → 9.
+- Why: of 103 textbook pairs still over, the worst frame is outside both syllables in 53 (the join, or before/after) and in a syllable's 5% edge in 41; only 9 used their budget.
+- Decision for Pierre: measure the pair check inside syllables without the edges, let the refinement search the join and edges, or keep the guard on the four fixtures only.

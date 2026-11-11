@@ -1,5 +1,5 @@
 ---
-status: blocked  # sixth run: heights pass with T3 ≤ 0.21 and T4 ≤ 0.30 allowances; xiaoshi corridor error 0.877, haowan 0.471 (limit 0.47). See reports/43-one-ruler-targets.md
+status: blocked  # seventh run (refined pair fit): fixtures pass; 41.5% of textbook pairs still over 0.47 (limit 5%), mostly frames between syllables or at their edges. See reports/43-one-ruler-targets.md
 notion_task:
 risk: needs-approval
 ---

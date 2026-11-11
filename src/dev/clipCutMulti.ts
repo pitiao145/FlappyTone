@@ -18,6 +18,7 @@
  */
 
 import { speakerFMin } from "../game/tuning.ts";
+import { corridorChaoAt } from "../game/gates.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 import {
   EXTREMUM_TRIM_FRAC,
@@ -380,4 +381,61 @@ export function multiSyllablePolyline(
   return ordered
     .filter((p, i) => i === 0 || p[0] > ordered[i - 1][0])
     .map((p) => [Number(p[0].toFixed(4)), Number(p[1].toFixed(3))] as ContourPoint);
+}
+
+/** Brief 43 decision: a frame further than this from the corridor spline gets its own node. */
+export const PAIR_FIT_MAX_GAP = 0.35;
+/** Brief 43 decision: at most this many refinement nodes per syllable. */
+export const PAIR_FIT_MAX_EXTRA = 2;
+/** Brief 43 decision: the first and last share of each syllable's span not searched for the worst frame. */
+const PAIR_FIT_EDGE_FRAC = 0.05;
+
+/**
+ * `multiSyllablePolyline`, then refined (brief 43, Pierre's decision; dev-only,
+ * used by the one-ruler shapes file — published shapes and their tests keep
+ * the plain fit until brief 48).
+ *
+ * On a finer ruler the plain fit's two bends per syllable can miss a late,
+ * fast rise (小時: 時 rises slowly, then fast; the spline climbs early). So:
+ * find the measured frame furthest from the corridor spline (the game's own
+ * `corridorChaoAt`); if it is more than `PAIR_FIT_MAX_GAP` away, add a node at
+ * that frame (its own time and value) and look again. Stops when no frame is
+ * over the limit, or each syllable has `PAIR_FIT_MAX_EXTRA` extra nodes. The
+ * first and last `PAIR_FIT_EDGE_FRAC` of each syllable's span are not searched.
+ */
+export function refinedMultiSyllablePolyline(
+  contour: ContourPoint[],
+  spans: Array<[number, number]>,
+): { polyline: ContourPoint[]; added: number } {
+  let polyline = multiSyllablePolyline(contour, spans);
+  if (polyline.length < 2) return { polyline, added: 0 };
+  const extra = spans.map(() => 0);
+  const skip = new Set<number>();
+  for (;;) {
+    const shape = { polyline, durationS: 1 };
+    let worst = -1;
+    let worstGap = 0;
+    let worstSyl = -1;
+    contour.forEach(([t, c], i) => {
+      if (skip.has(i)) return;
+      const s = spans.findIndex(([t0, t1]) => t >= t0 && t <= t1);
+      if (s < 0 || extra[s] >= PAIR_FIT_MAX_EXTRA) return;
+      const [t0, t1] = spans[s];
+      const edge = (t1 - t0) * PAIR_FIT_EDGE_FRAC;
+      if (t < t0 + edge || t > t1 - edge) return;
+      const gap = Math.abs(corridorChaoAt(shape, t) - c);
+      if (gap > worstGap) {
+        worstGap = gap;
+        worst = i;
+        worstSyl = s;
+      }
+    });
+    if (worst < 0 || worstGap <= PAIR_FIT_MAX_GAP) break;
+    const node: ContourPoint = [Number(contour[worst][0].toFixed(4)), Number(contour[worst][1].toFixed(3))];
+    skip.add(worst);
+    if (polyline.some((p) => p[0] === node[0])) continue;
+    polyline = [...polyline, node].sort((a, b) => a[0] - b[0]);
+    extra[worstSyl]++;
+  }
+  return { polyline, added: extra.reduce((a, b) => a + b, 0) };
 }
