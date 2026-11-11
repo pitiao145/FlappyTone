@@ -14,6 +14,7 @@
 
 import type { Tone } from "./gates.ts";
 import { speakerFloorHz } from "../pitch/math.ts";
+import type { GridLearnParams } from "../pitch/calibration.ts";
 
 /** A corridor centreline: (t, chao) control points, ascending in t over [0,1]. */
 export type Polyline = Array<[number, number]>;
@@ -621,6 +622,44 @@ export interface Tuning {
    */
   reachToToneSpaceDown: number;
 
+  // ---- player ruler (brief 44)
+  /**
+   * Brief 44: the player's grid follows the one-ruler rule and learns slowly in
+   * play (`learnGridFromGate`, `src/game/playerRuler.ts`); calibration measures
+   * the middle on tone words instead of free talk. Off in production until
+   * brief 48; on in dev with the brief 43 shapes switch (`ft.shapesV2`).
+   */
+  playerRulerV2: boolean;
+  /**
+   * Standard halves (st): only a start guess, used when the calibration flight
+   * heard too little first or third tone. Pierre's decision (11 Nov 2026): the
+   * quarter-rounded average of Jane's ruler (5.75 / 7.25, brief 43) and
+   * Pierre's (4.5 / 4.0, brief 44 step 1).
+   */
+  gridUpSemitones: number;
+  gridDownSemitones: number;
+  /** Share of the gap to the estimate closed after each heard gate. */
+  gridLearnRate: number;
+  /** Most the middle or either half may move in one run (st, each). */
+  gridLearnMaxStepPerRun: number;
+  /** Hard limits for each half while learning (st). */
+  gridHalfMin: number;
+  gridHalfMax: number;
+  /** Frames a pool (all / first tone / third tone) needs before it moves the grid. */
+  gridLearnMinFrames: number;
+  /** Memory length in gates: older gates fade by (1 - 1/this) per new gate in their pool. */
+  gridLearnMemoryGates: number;
+  /** Frames this many st under the grid middle are creak, left out (the ruler rule). */
+  gridCreakSt: number;
+  /** Ruler percentiles: top = this pct of first-tone frames, bottom = this pct of third-tone frames. */
+  gridTopPct: number;
+  gridBottomPct: number;
+  /** Frames this close (st) to the tracker's band edge are clamped and left out. */
+  gridBandEdgeSt: number;
+  /** Calibration middle step: voiced time needed per take (ms), and takes per word. */
+  middleTakeVoicedMs: number;
+  middleTakesPerWord: number;
+
   /**
    * Per-tone gate length in seconds.
    *
@@ -768,6 +807,21 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   pitchFloorFactor: 0.6,
   reachToToneSpaceUp: 1,
   reachToToneSpaceDown: 1,
+  playerRulerV2: false,
+  gridUpSemitones: 5.25,
+  gridDownSemitones: 5.75,
+  gridLearnRate: 0.1,
+  gridLearnMaxStepPerRun: 1.5,
+  gridHalfMin: 3,
+  gridHalfMax: 10,
+  gridLearnMinFrames: 20,
+  gridLearnMemoryGates: 40,
+  gridCreakSt: 10,
+  gridTopPct: 90,
+  gridBottomPct: 10,
+  gridBandEdgeSt: 0.25,
+  middleTakeVoicedMs: 600,
+  middleTakesPerWord: 2,
   gateDurationS: Object.freeze({ 1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6 }),
   polylines: DEFAULT_POLYLINES,
   voiceMatchF0Hz: 160,
@@ -814,4 +868,21 @@ export function resetTuning(): void {
 /** The tracker's `fMin` for a speaker with this calibrated centre (null: not calibrated). */
 export function speakerFMin(f0Center: number | null | undefined): number {
   return speakerFloorHz(f0Center, tuning().pitchFloorLowHz, tuning().pitchFloorHighHz, tuning().pitchFloorFactor);
+}
+
+/** `GridLearnParams` from the live tuning. */
+export function gridLearnParams(): GridLearnParams {
+  const t = tuning();
+  return {
+    rate: t.gridLearnRate,
+    maxStepPerRun: t.gridLearnMaxStepPerRun,
+    halfMin: t.gridHalfMin,
+    halfMax: t.gridHalfMax,
+    minFrames: t.gridLearnMinFrames,
+    memoryGates: t.gridLearnMemoryGates,
+    creakSt: t.gridCreakSt,
+    topPct: t.gridTopPct,
+    bottomPct: t.gridBottomPct,
+    bandEdgeSt: t.gridBandEdgeSt,
+  };
 }

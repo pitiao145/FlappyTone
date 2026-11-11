@@ -248,3 +248,210 @@ export function computeRangeHalves(
     down: clampHalf(-percentile(sorted, trimPercent), RANGE_DOWN_SEMITONES_MIN),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Brief 44: the player's grid learns slowly in play (one ruler).
+//
+// The grid is the same rule as Jane's ruler (brief 43): chao 3 = the middle
+// (median of the player's voiced tone-syllable frames, creak left out), chao 5
+// = p90 of their first-tone frames, chao 1 = p10 of their third-tone frames.
+// Calibration gives a first grid; after every *heard* gate the estimate is
+// updated and the grid moves a small share of the way toward it.
+//
+// Pure: semitones in, grid out. All semitones here are relative to one fixed
+// reference pitch (`refHz`, the calibrated middle), never to the grid's own
+// moving middle, so the histograms do not shift when the grid does.
+// ---------------------------------------------------------------------------
+
+/** The player's grid: middle (st from refHz) and the two halves (st). */
+export interface PlayerGrid {
+  midSt: number;
+  up: number;
+  down: number;
+}
+
+/** How the grid learns. Every number comes from `tuning()` in the game. */
+export interface GridLearnParams {
+  /** Share of the gap between grid and estimate closed after each heard gate. */
+  rate: number;
+  /** Most the middle, the up half or the down half may move in one run (st, each). */
+  maxStepPerRun: number;
+  /** Hard limits for each half (st). */
+  halfMin: number;
+  halfMax: number;
+  /** Frames a pool must have seen before its estimate may move the grid. */
+  minFrames: number;
+  /** Memory: each older gate fades by (1 - 1/memoryGates) when a new one is added to its pool. */
+  memoryGates: number;
+  /** Frames this many st under the grid middle are creak and left out. */
+  creakSt: number;
+  /** Percentiles of the first-tone and third-tone pools (90 and 10: the ruler rule). */
+  topPct: number;
+  bottomPct: number;
+  /** Frames within this many st of the tracker's band edge are clamped and left out. */
+  bandEdgeSt: number;
+}
+
+/** Histogram bins: GRID_BIN_ST wide, from -GRID_SPAN_ST to +GRID_SPAN_ST around refHz. */
+export const GRID_BIN_ST = 0.25;
+export const GRID_SPAN_ST = 36;
+const GRID_BINS = Math.round((2 * GRID_SPAN_ST) / GRID_BIN_ST) + 1;
+
+/** A weighted histogram of semitones. `frames` counts every frame ever added (no fading). */
+export interface GridHist {
+  w: number[];
+  frames: number;
+}
+
+export interface GridLearnState {
+  grid: PlayerGrid;
+  /** All voiced frames of heard gates (middle). */
+  all: GridHist;
+  /** Frames of heard single-syllable first-tone gates (top). */
+  t1: GridHist;
+  /** Frames of heard single-syllable third-tone gates (bottom). */
+  t3: GridHist;
+  /** How far each value has moved in the current run (absolute st). */
+  runMoved: { mid: number; up: number; down: number };
+  /** Heard gates learned from, in total. */
+  gates: number;
+}
+
+/** One resolved gate, as the learner sees it. */
+export interface LearnGate {
+  /** Voiced frames of the gate, st relative to refHz. */
+  semitones: number[];
+  /** The gate's tone if it is a single syllable, else null (pairs feed the middle only). */
+  tone: 1 | 2 | 3 | 4 | null;
+  /** False when the gate was "couldn't hear that" (hard rule 8): it teaches nothing. */
+  heard: boolean;
+  /** The tracker's band edges (st from refHz); frames at an edge are clamped. Optional. */
+  bandLowSt?: number;
+  bandHighSt?: number;
+}
+
+const emptyHist = (): GridHist => ({ w: new Array<number>(GRID_BINS).fill(0), frames: 0 });
+
+export function newGridLearnState(grid: PlayerGrid): GridLearnState {
+  return {
+    grid: { ...grid },
+    all: emptyHist(),
+    t1: emptyHist(),
+    t3: emptyHist(),
+    runMoved: { mid: 0, up: 0, down: 0 },
+    gates: 0,
+  };
+}
+
+/** A new run starts: the per-run step budget is full again. */
+export function startGridRun(s: GridLearnState): GridLearnState {
+  return { ...s, runMoved: { mid: 0, up: 0, down: 0 } };
+}
+
+function binOf(st: number): number {
+  return Math.min(GRID_BINS - 1, Math.max(0, Math.round((st + GRID_SPAN_ST) / GRID_BIN_ST)));
+}
+
+/**
+ * Fades the old gates, then adds this gate's frames, one weight each. Frames,
+ * not gates, are counted: the ruler is the median of frames (brief 43), and a
+ * longer word (a pair) holds more of the voice than a short one.
+ */
+function addGate(h: GridHist, frames: number[], memoryGates: number): GridHist {
+  const keep = memoryGates > 1 ? 1 - 1 / memoryGates : 0;
+  const w = h.w.map((x) => x * keep);
+  for (const s of frames) w[binOf(s)] += 1;
+  return { w, frames: h.frames + frames.length };
+}
+
+/** Percentile of a histogram, linear inside the bin. Null when empty. */
+export function histPercentile(h: GridHist, p: number): number | null {
+  let total = 0;
+  for (const x of h.w) total += x;
+  if (!(total > 0)) return null;
+  const target = (p / 100) * total;
+  let cum = 0;
+  for (let i = 0; i < h.w.length; i++) {
+    const next = cum + h.w[i];
+    if (h.w[i] > 0 && next >= target) {
+      const within = (target - cum) / h.w[i]; // 0..1 across the bin
+      return -GRID_SPAN_ST + (i - 0.5 + within) * GRID_BIN_ST;
+    }
+    cum = next;
+  }
+  return -GRID_SPAN_ST + (h.w.length - 1) * GRID_BIN_ST;
+}
+
+/** What the pools say the ruler is, or null per value while a pool is too small. */
+export function gridEstimate(
+  s: GridLearnState,
+  p: Pick<GridLearnParams, "minFrames" | "topPct" | "bottomPct">,
+): { midSt: number | null; topSt: number | null; bottomSt: number | null } {
+  return {
+    midSt: s.all.frames >= p.minFrames ? histPercentile(s.all, 50) : null,
+    topSt: s.t1.frames >= p.minFrames ? histPercentile(s.t1, p.topPct) : null,
+    bottomSt: s.t3.frames >= p.minFrames ? histPercentile(s.t3, p.bottomPct) : null,
+  };
+}
+
+/** Moves `cur` a share of the way to `target`, inside what is left of this run's budget. */
+function stepToward(cur: number, target: number, rate: number, used: number, budget: number): [number, number] {
+  const want = rate * (target - cur);
+  const left = Math.max(0, budget - used);
+  const d = Math.sign(want) * Math.min(Math.abs(want), left);
+  return [cur + d, used + Math.abs(d)];
+}
+
+/**
+ * Learn from one resolved gate. An unheard gate returns the state unchanged.
+ * A gate that hit a wall is still voice data and is learned from.
+ */
+export function learnGridFromGate(
+  s: GridLearnState,
+  gate: LearnGate,
+  p: GridLearnParams,
+): GridLearnState {
+  if (!gate.heard) return s;
+  const lo = gate.bandLowSt, hi = gate.bandHighSt;
+  const frames = gate.semitones.filter(
+    (x) =>
+      Number.isFinite(x) &&
+      x >= s.grid.midSt - p.creakSt &&
+      (lo === undefined || x > lo + p.bandEdgeSt) &&
+      (hi === undefined || x < hi - p.bandEdgeSt),
+  );
+  if (frames.length === 0) return s;
+
+  const all = addGate(s.all, frames, p.memoryGates);
+  const t1 = gate.tone === 1 ? addGate(s.t1, frames, p.memoryGates) : s.t1;
+  const t3 = gate.tone === 3 ? addGate(s.t3, frames, p.memoryGates) : s.t3;
+  const next: GridLearnState = { ...s, all, t1, t3, gates: s.gates + 1 };
+  const est = gridEstimate(next, p);
+
+  // The grid is three lines: middle, top (first-tone p90) and bottom
+  // (third-tone p10). Top and bottom are anchors of their own: each moves only
+  // toward its own pool's estimate, and holds still (in pitch) while its pool
+  // is too small, even when the middle moves. The halves follow from the lines.
+  const g0 = s.grid;
+  let midSt = g0.midSt;
+  let topSt = g0.midSt + g0.up;
+  let bottomSt = g0.midSt - g0.down;
+  let { mid: usedMid, up: usedUp, down: usedDown } = s.runMoved;
+  if (est.midSt !== null) [midSt, usedMid] = stepToward(midSt, est.midSt, p.rate, usedMid, p.maxStepPerRun);
+  if (est.topSt !== null) [topSt, usedUp] = stepToward(topSt, est.topSt, p.rate, usedUp, p.maxStepPerRun);
+  if (est.bottomSt !== null) [bottomSt, usedDown] = stepToward(bottomSt, est.bottomSt, p.rate, usedDown, p.maxStepPerRun);
+  const clampHalfTo = (x: number) => Math.min(p.halfMax, Math.max(p.halfMin, x));
+  const up = clampHalfTo(topSt - midSt);
+  const down = clampHalfTo(midSt - bottomSt);
+
+  return {
+    ...next,
+    grid: { midSt, up, down },
+    runMoved: { mid: usedMid, up: usedUp, down: usedDown },
+  };
+}
+
+/** True once both anchor pools have enough frames to steer the halves. */
+export function gridLearned(s: GridLearnState, minFrames: number): boolean {
+  return s.t1.frames >= minFrames && s.t3.frames >= minFrames;
+}

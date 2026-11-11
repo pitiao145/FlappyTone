@@ -1,5 +1,5 @@
 ---
-status: blocked  # second run: a perfect learner still fails the reader acceptance (natural 91.0 → 78.2, limit 3 points); see report
+status: blocked  # third run: the middle cannot be learned within 1 st in 20 gates for Jane (sampling noise 2.3 st p90); see report
 notion_task:
 risk: needs-approval
 ---

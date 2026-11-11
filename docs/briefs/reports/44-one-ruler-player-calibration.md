@@ -68,3 +68,65 @@ So acceptance 2 checks the tone reader, not the learning. The plan gives the rea
 
 ### What changed in the second run
 - `src/dev/bench39/reader-on-ruler.mjs` (new, dev-only). Brief status line. This report section and a handover entry. No production code.
+
+---
+
+## Third run (Pierre's decisions 1–5) — blocked at step 7 (offline proof)
+
+### Decisions applied
+1. Acceptance 2 = learned from −2 vs learned from a correct start. Not reached (blocked first).
+2. Reader on the true ruler, brief 45's starting numbers: textbook 93.4%, natural 78.2%; target back to 98.9 / 91.0. In the handover.
+3. Learning rule = the plan: top = p90 of first-tone frames, bottom = p10 of third-tone frames.
+4. Standard halves 5.25 / 5.75 in `tuning()`.
+5. Stop only for a clear failure. This is one (below).
+
+### What is built (flag off, not wired into the game)
+- `src/pitch/calibration.ts`: `learnGridFromGate` and helpers (pure). Per heard gate: frames go into weighted histograms (all frames → middle; single first-tone gates → top; single third-tone gates → bottom), older gates fade (memory in gates). Creak (> 10 st under the grid middle) and band-edge frames are left out. An unheard gate teaches nothing; a wall hit counts. Middle, top and bottom are three lines; each moves a share of the way to its own estimate after each gate, inside a per-run budget; top and bottom hold still while their pool is too small; halves follow and stay in 3–10 st.
+- `src/game/tuning.ts`: `playerRulerV2` (false) and 14 numbers (`gridUpSemitones` 5.25, `gridDownSemitones` 5.75, `gridLearnRate` 0.1, `gridLearnMaxStepPerRun` 1.5, halves 3–10, min frames 20, memory 40 gates, creak 10, p90/p10, band edge 0.25, middle-step take 600 ms × 2 per word), `gridLearnParams()`.
+- `src/dev/bench39/gridsim.mjs` + `grid-learn.mjs` (step 7 proof), `middle-words.mjs` (step 2 word choice).
+- Not built: calibration middle step UI, run/Game wiring, settings record, dev switch, scorecard rows. Stopped before them.
+
+### Step 2 finding (MEASURED, `node src/dev/bench39/middle-words.mjs`)
+Middle from a few words vs the full middle (live tracker, st):
+
+| words | Jane (her newer single words of those tones) | Pierre (all his words of those tones) | Pierre (ma words) |
+|---|---|---|---|
+| T1 + T3 | −0.09 | +1.15 | +0.66 |
+| T1 + T3 + T4 | −0.21 | +1.88 | +0.71 |
+| T2 + T4 | −2.13 | −1.48 | −1.48 |
+| all four tones | −1.51 | +0.45 | +0.35 |
+
+Best: one first-tone and one third-tone word (媽 ma1b, 馬 ma3b, already loaded for the calibration flight). Today's talk step is about −1.5 st for Jane.
+
+### Why blocked (MEASURED)
+`node src/dev/bench39/grid-learn.mjs`: Jane's clips as gates in a fixed shuffled order, run = 10 gates (ASSUMED):
+
+| speaker / start | gate 20: mid / top / bottom error (st) | worst, gates 20–120 | within 1 st for good from gate |
+|---|---|---|---|
+| Jane textbook, middle −2 | −1.85 / −2.00 / −0.28 | 2.00 | 104 |
+| Jane textbook, middle +2 | −0.88 / +2.00 / +0.64 | 2.00 | 103 |
+| Jane textbook, halves −30% | −1.60 / −1.72 / +0.68 | 1.84 | 104 |
+| Jane natural, middle −2 | +0.94 / +0.35 / −2.00 | 2.00 | 40 |
+| Jane natural, middle +2 | +2.38 / +1.61 / +2.00 | 2.38 | 40 |
+| Jane natural, halves −30% | +1.90 / +1.13 / +1.82 | 1.93 | 39 |
+| Pierre, all three starts | ≤ 0.80 | ≤ 0.82 | 10–16 (PASS) |
+
+Deterministic: yes, every case.
+
+The cause is the middle itself, not the rate. Jane's words sit at very different heights (the median of each word, compared with her middle: 10th percentile −4.4 st, 90th +5.1 st). So the median of the first 20 words depends on which words came. I measured that noise directly (300 random sets of words, 90th percentile of the error vs her full middle):
+
+| words heard | Jane textbook | Jane natural | Pierre |
+|---|---|---|---|
+| 10 | 3.48 | 2.31 | 1.67 |
+| 20 | **2.61** (2.29 weighted by tone class) | 1.80 (1.69) | 1.38 (1.09) |
+| 40 | 2.03 (1.73) | 1.48 (1.17) | 1.07 (0.82) |
+
+No learning rate or memory fixes this (sweep of memory 40–400 gates, rate 0.1–0.2, step 1.5–2.5: Jane textbook passes 0–6 of 30 starts). Top and bottom also wait for first-tone and third-tone words: Jane's textbook mix has few single words (91 of 357 clips), so the top can wait 30+ gates.
+
+In plain words: the "middle of your voice" is the median of everything you said. After 20 words that number still depends a lot on which 20 words the game gave you. For a voice and word list like Jane's, it can be 2 semitones off by luck alone. The grid cannot be closer to the truth than the estimate it follows.
+
+### Decision for Pierre
+- (a) **Measure the middle against the word's own target.** Each gate knows where the word sits (its shape on Jane's ruler). Take, per frame, "how far above or below the target line the player is", and learn the middle from the median of that. The word mix then no longer matters. Needs the v2 shapes (on in dev). Jane cannot honestly test it (the targets are made from her), so the proof would rest on Pierre's clips and stand-in voices.
+- (b) **Relax the acceptance**: middle within 1 st after ~100 gates (textbook mix) / ~40 (natural), with a longer memory; top and bottom checked only after N first-tone / third-tone gates.
+- (c) **Do not learn the middle in play.** Keep the middle from calibration (T1 + T3 words, measured above) and learn only top and bottom. A wrong calibration middle is then fixed by recalibrating, not by play.
+- My recommendation: (a), because it also stops a T3 drill from pulling the middle down. It is a bigger change and should be its own decision.
