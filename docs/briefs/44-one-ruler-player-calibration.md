@@ -1,5 +1,5 @@
 ---
-status: blocked  # draft: waits for Pierre's approval of the Phase B plan
+status: blocked  # step 1: Jane and Pierre differ by 3.25 st in the down half (limit 2); see reports/44-one-ruler-player-calibration.md
 notion_task:
 risk: needs-approval
 ---

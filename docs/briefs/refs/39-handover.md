@@ -215,3 +215,11 @@ Reviewed: brief, report (all four runs), handover, diff `6ce627f..17b9b07`, both
 - For brief 44/45: the player keeps T1 / T3 anchors (see plan doc). About a third of Jane's T4 frames sit on the top line.
 - Per-clip gate: noiseFloor = max(p10 frame RMS, 1e-4, 0.1 × median voiced RMS / 3). It moves 190 / 477 textbook corridors by > 0.25 chao vs the fixed gate.
 - **Pierre's check (11 Nov 2026):** flew the new shapes in the dev build (switch on). Verdict: looks good; the first tone is easier to get right. Note: the switch only exists on this branch; run `npm run dev` from the worktree and set `ft.shapesV2` on that exact address (each port keeps its own storage).
+
+## 44 One ruler for the player — 11 Nov 2026 — blocked (step 1)
+- Changed: `src/dev/bench39/player-halves.mjs` (new, dev-only), report `docs/briefs/reports/44-one-ruler-player-calibration.md`, brief status. No production code, no `tuning()` change. Commit: see `git log` ("brief 44").
+- Scorecard: not run; nothing outside `src/dev/bench39/` and docs changed.
+- Why blocked (MEASURED, `node src/dev/bench39/player-halves.mjs [--clean]`): same rule as Jane's ruler (middle = median, up = T1 p90, down = −T3 p10, creak out). Jane up 5.75 / down 7.25 (brief 43). Pierre up 4.5 / down 4.0 (Praat and live tracker agree; middle 132.4–132.7 Hz). Without his two off-shape T3 clips: up 4.25–4.5 / down 4.25. **Down-half gap 3.0–3.25 st** (limit 2). Up-half gap 1.25–1.5 (ok).
+- Surprises: brief 41 said Jane's halves "fit" Pierre with 2–4 st spare. That used the old 2/98 preview (8.8 / 7.9) and his 5/95 range. On the brief 43 rule the down half is still 3 st too deep for him: the standard grid puts chao 1 about 3 st under his lowest third tone.
+- Decision for Pierre (options in the report): top/bottom step from the start (brief's rule), standard = smaller voice, standard = average of the two, or record more voices first.
+- For the rerun: talk step at 70 Hz still measures a 90 Hz voice 1.4 st high (42 review); the middle step must use the speaker's floor.
