@@ -20,7 +20,10 @@ import { semitonesToChao } from "../../pitch/math.ts";
 import { computeRangeHalvesFromExtremes } from "../../pitch/calibration.ts";
 import { loadWav, pct, med, fmt } from "./lib.mjs";
 
-const OUT = "src/dev/local/shapes-v2.json";
+// --out <path>: write elsewhere (diagnostics). --gate fixed: shapes from the fixed 0.0033 gate (diagnostic only).
+const argOf = (k) => (process.argv.includes(k) ? process.argv[process.argv.indexOf(k) + 1] : null);
+const OUT = argOf("--out") ?? "src/dev/local/shapes-v2.json";
+const SHAPE_GATE = argOf("--gate") ?? "clip";
 const OLD_SESSION = "fixtures/recordings/2026-08-07-xujzgs";
 const SEED = 181.3; // catalog centre (wordsFallback meta), pass 1 only
 const CREAK_ST = -10; // frames more than 10 st under the middle are creak (heights.mjs rule)
@@ -107,7 +110,8 @@ const nodes = (p) => ({ start: p[0][1], low: Math.min(...p.map((q) => q[1])), hi
 
 // ---- Shapes --------------------------------------------------------------
 const out = { textbook: {}, natural: {} };
-for (const style of ["textbook", "natural"]) for (const r of rows) { const x = cuts[style].get(r.id); if (x) out[style][r.id] = shapeOf(r, x); }
+const shapeCuts = SHAPE_GATE === "fixed" ? fixed : cuts;
+for (const style of ["textbook", "natural"]) for (const r of rows) { const x = shapeCuts[style].get(r.id); if (x) out[style][r.id] = shapeOf(r, x); }
 const kindOf = (r) => cuts.textbook.get(r.id)?.src.kind;
 
 // ---- Step 2: ruler check on the newer clips ---------------------------------
@@ -143,7 +147,12 @@ for (const tone of [1, 2, 3, 4]) {
   if (tone !== 1 && worst > 0.3) step4Fail.push(`T${tone} ${fmt(worst)}`);
   console.log(`T${tone} | ${o.length} / ${n.length} | ` + keys.map((k) => `${fmt(med(o.map((x) => x[k])))} vs ${fmt(med(n.map((x) => x[k])))}`).join(" | ") + ` | ${fmt(worst)}`);
 }
-if (step4Fail.length) stop(4, `older vs newer differ by more than 0.3 chao outside T1: ${step4Fail.join(", ")}.`);
+// Pierre accepted the T2 / T3 session differences on 11 Nov 2026 (second run:
+// T3 end 0.56, T2 low 0.30). Any OTHER tone over 0.3 still stops.
+const ACCEPTED_STEP4 = new Set(["T2", "T3"]);
+const unaccepted = step4Fail.filter((f) => !ACCEPTED_STEP4.has(f.split(" ")[0]));
+if (step4Fail.length) console.log(`older vs newer over 0.3 chao: ${step4Fail.join(", ")}${unaccepted.length ? "" : " (accepted by Pierre, 11 Nov 2026)"}`);
+if (unaccepted.length && SHAPE_GATE !== "fixed") stop(4, `older vs newer differ by more than 0.3 chao outside T1: ${unaccepted.join(", ")}.`);
 
 // ---- Step 5 (decision): older first-tone words lifted by one shared offset ----
 const olderT1 = singlesOf(1, "older");
@@ -201,7 +210,7 @@ for (const tone of [1, 2, 3, 4]) {
   const m = (a, k) => fmt(med(a.map((x) => x[k])));
   console.log(`T${tone} | ${ws.length} | ${m(o, "start")} → ${m(n, "start")} | ${m(o, "low")} → ${m(n, "low")} | ${m(o, "high")} → ${m(n, "high")} | ${m(o, "end")} → ${m(n, "end")}`);
 }
-console.log("\n### Natural single tones on the same ruler (old → new, medians, chao)");
+console.log("\n### Natural single tones on the same ruler (new, medians, chao)");
 for (const tone of [1, 2, 3, 4]) {
   const ws = rows.filter((r) => isSingle(tone)(r) && out.natural[r.id]);
   const n = ws.map((r) => nodes(out.natural[r.id].polyline));

@@ -1,5 +1,5 @@
 ---
-status: blocked  # second run (textbook anchors): step 4, older vs newer T3 end 0.56, T2 low 0.30 (limit 0.3). See reports/43-one-ruler-targets.md
+status: blocked  # third run: acceptance (heights) misses T2 0.26, T3 0.31, T4 0.70 (limit 0.20); templates too slow. See reports/43-one-ruler-targets.md
 notion_task:
 risk: needs-approval
 ---

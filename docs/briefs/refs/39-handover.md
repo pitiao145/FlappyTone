@@ -164,3 +164,12 @@ Reviewed: brief, report (all four runs), handover, diff `6ce627f..17b9b07`, both
 - **For brief 44:** the player keeps the T1 / T3 anchors. Brief 44 adds the middle from tone syllables and slow learning of top and bottom from the player's own first tones and low tones. "Standard halves" are only a starting guess before any T1 / T3 data.
 - **For brief 45:** the reader works on the same anchors. Expect many fourth-tone frames on the top line (31% for Jane), so the reader must not rely on height above 5.
 - **For brief 48:** the older first-tone words get a shared lift in the dev file (when 43 runs) and must be re-recorded before go-live; the list is printed by `make-shapes.mjs`.
+
+## 43 third run (T2 / T3 session gaps accepted) — 11 Nov 2026 — blocked (acceptance: heights)
+- Changed: `make-shapes.mjs` (step 4 T2/T3 accepted; `--gate fixed` and `--out` for diagnostics); `heights.mjs --v2 [--style natural]` (targets and ruler from the shapes file, Jane clamped; `SHAPES=<path>` to point elsewhere). `shapes-v2.json` made but not committed; dev switch not built.
+- Scorecard: nothing moved (bench 299, 0 FAIL; 1831 tests).
+- Facts (MEASURED): older T1 lift +1.085 chao (30 words, list in report). Older raw takes reproduce published timing within 0.3 ms (120/120). Per-clip gate moves 247/477 textbook corridors by > 0.25 chao.
+- Why blocked: heights gap T2 0.26, T3 0.31, T4 0.70 (limit 0.20); T4 inside p10 49, shape 0.95. Pairs pass (0.41 → 0.20).
+- **Surprise:** the misses are about speed, not height. Her T4 falls 5.0 → 1.4 between 40% and 70% of the word and then holds; the 3-point template falls slowly over the whole second half. T2/T3 reach the top in the last fifth; the templates do not. Same issue in today's shapes (T4 0.59). With the old fixed gate on the new ruler: T2 0.19, T3 0.29, T4 0.49.
+- Second cause: the per-clip gate keeps quiet, very low frames at the edges; template end points snap to the bottom line (yisheng11, yuyan32, wai4, lao3).
+- Decision for Pierre: let targets follow the voice's speed (extra knee point), or loosen the T2–T4 limit; and how to treat quiet edge frames.

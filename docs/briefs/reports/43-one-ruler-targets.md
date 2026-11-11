@@ -100,3 +100,65 @@ Decision step 5 (T1 offset; code is ready in `make-shapes.mjs`), the shapes file
 1. Accept the older session's T2 and T3 differences (raise the step-4 limit for T2/T3, or check only T4), and run on.
 2. Lift only T1 as decided, and add the older T3 words (and maybe T2) to the "re-record before go-live" list.
 3. Re-record all 120 older single words before brief 43 runs; keep their old shapes in the dev file until then.
+
+---
+
+# Third run (11 Nov 2026): Pierre accepted the T2 / T3 session gaps — blocked at acceptance (heights)
+
+Pierre: "accept and continue". `make-shapes.mjs` now records T2 / T3 at step 4 as accepted (any other tone over 0.3 still stops). Command: `node src/dev/bench39/make-shapes.mjs`, then `node src/dev/bench39/heights.mjs --v2 --worst`.
+
+- **Result: blocked.** The shapes file was made, but the first acceptance check misses for T2, T3 and T4. Cause: the 2–4 point templates cannot follow how fast she moves, at any ruler (details below). The brief asks for both "keep the templates" and "gap ≤ 0.20", and those two do not fit together. Not committed: `shapes-v2.json` (rebuild with the command above, 2 min) and the dev switch (not built).
+
+## Steps that ran (MEASURED)
+- Older first-tone words lifted by **+1.085 chao** (30 words), median level 3.50 → 4.58. To re-record before go-live: ma1b, ba1, san1, qi1, tian1, hua1, shu1, dong1, jia1, che1, shuo1, chi1, he1, shan1, xin1, kai1, mao1, chun1, gao1, zhong1, duo1, jie1, tang1, bao1, bei1, fei1, xing1, xiang1, bing1, ting1.
+- Per-clip gate (floor median 0.00058 textbook, 0.00025 natural; fixed was 0.0033): changes 426 / 477 textbook shapes and 435 / 471 natural; corridor moved > 0.25 chao in 247 / 277; onset or duration moved > 25 ms in 281 / 345.
+- Older takes cut from the raw files vs published timing: 120 / 120 within 25 ms, worst 0.3 ms (first five: ma1b, ba1, san1, qi1, tian1, all 0.3 ms). Newer clips: 357 / 357, worst 0.3 ms.
+- Coverage: textbook 477 / 477. Natural 471; no local natural clip for yixia24, yigong24, yizhi42, yiban41, yibian41, zhangfu40 (the published natural list was not read: no Supabase).
+
+Old vs new targets, textbook single tones (medians of polyline nodes, chao):
+
+| tone | words | start | low | high | end |
+|---|---|---|---|---|---|
+| T1 | 44 | 4.54 → 4.58 | 4.54 → 4.58 | 4.54 → 4.58 | 4.54 → 4.58 |
+| T2 | 47 | 2.89 → 2.37 | 2.13 → 1.70 | 5.00 → 5.00 | 5.00 → 5.00 |
+| T3 | 52 | 3.40 → 2.78 | 1.42 → 1.09 | 5.00 → 4.52 | 5.00 → 4.52 |
+| T4 | 68 | 4.27 → 5.00 | 1.29 → 1.13 | 4.78 → 5.00 | 1.32 → 1.13 |
+
+Natural single tones, same ruler: T1 3.39 flat; T2 2.36 → 1.26 → 4.16; T3 2.43 → 1.00 → 3.32; T4 4.10 → 4.68 → 1.00.
+
+20 textbook words that moved most (largest corridor gap, chao): yuyan32 4.00, yisheng11 3.86, nianqing21 3.70, gongke14 3.04, dadianhua344 2.90, lishi43 2.88, ganmao34 2.84, wai4 2.78, bukeqi444 2.69, jiejie30 2.65, lengqi34 2.57, zhidao14 2.53, mama10 2.43, wanshang30 2.41, shangke44 2.37, lao3 2.36, xuexiao24 2.34, paobu34 2.21, jintian11 2.20, yixie11 2.19. Median move 0.73. The biggest moves are words where the per-clip gate now keeps a quiet, very low frame at the start or end, and the target's first or last point drops to the bottom line there (yisheng11 ends at 1, yuyan32 ends at 1, wai4 and lao3 start at 1).
+
+## Acceptance: heights.mjs on the new ruler, Jane clamped (MEASURED)
+| group | gap med (≤ 0.20) | inside med / p10 (≥ 99 / ≥ 90) | shape match med (≥ 0.96) | today (same script, old shapes) gap / inside p10 |
+|---|---|---|---|---|
+| T1 | 0.12 pass | 100 / 94 pass | — | 0.18 / 100 |
+| T2 | **0.26** | 100 / **83** | 0.99 | 0.24 / 100 |
+| T3 | **0.31** | 100 / 95 | 0.98 | 0.36 / 100 |
+| T4 | **0.70** | **71 / 49** | **0.95** | 0.59 / 71 |
+| pairs | 0.20 pass | 100 / 95 | 0.98 | 0.41 / 89 |
+| 3+ syllables | 0.21 (info) | 100 / 92 | 0.96 | 0.47 / 86 |
+
+Natural (info, same ruler): T1 0.10, T2 0.21, T3 0.20, T4 0.78 (inside 69 / 56), pairs 0.21.
+
+## Why (MEASURED, diagnosis only)
+1. **Same ruler, old fixed gate** (`--gate fixed`, scratch file): T2 0.19 (pass), T3 0.29, T4 0.49 (inside p10 62). So the per-clip gate makes T2 and T4 worse (the low edge frames above), but even without it, T3 and T4 miss.
+2. **The template is too slow.** Median of what she said vs the target, by tenth of the word (newer textbook clips):
+
+```
+T4 said:   5.00 5.00 5.00 4.66 3.29 2.17 1.42 1.13 1.11 1.10
+T4 target: 5.00 4.97 4.82 4.51 4.08 3.57 3.00 2.41 1.86 1.43
+T3 said:   2.55 2.29 1.52 1.15 1.04 1.23 1.81 2.71 4.29 5.00
+T3 target: 2.26 1.80 1.38 1.10 1.06 1.23 1.68 2.37 3.29 4.08
+T2 said:   2.25 2.07 1.77 1.66 1.76 2.08 2.61 3.59 4.89 5.00
+T2 target: 2.16 1.95 1.72 1.61 1.76 2.13 2.68 3.38 4.05 4.57
+```
+
+In plain words: her fourth tone falls fast in the middle of the word and then stays low. The target has only three points (start, peak, end), so it draws one slow slope over the whole second half. It is still at 3.0 where she is already at 1.4. The second and third tones end the same way: she reaches the top in the last fifth, and the target is still climbing. The heights are right; the speed is not.
+
+## Not done
+Dev switch in `words.ts`, xiaoshi / yiqian check, build grep, committing `shapes-v2.json`.
+
+## Needs Pierre's eyes
+1. **Let the targets follow the speed of the voice.** For example, add a "knee" point to T4 (where the fall ends) and to the T2/T3 rise, or use the multi-syllable polyline fit for single syllables too. This changes the "familiar 2–4 point templates" rule, so it is your call.
+2. **Keep the templates and loosen the gap limit** for T2–T4 (for example ≤ 0.35, T4 ≤ 0.75). The targets would stay as slow as today.
+3. **Per-clip gate:** keep it (pairs gain a lot) but leave out the quiet edge frames for the end points (for example, the first and last 5% of the tone window). Or go back to the fixed gate for single syllables. Either way it is a new rule, so it is your call.

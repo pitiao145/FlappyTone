@@ -2,6 +2,9 @@
 // Compares each catalog polyline (src/data/wordsFallback.json, textbook) with
 // the independent reference contour of the same clip.
 //   node src/dev/bench39/heights.mjs [--worst]
+//   node src/dev/bench39/heights.mjs --v2 [--style natural] [--worst]
+//     brief 43: targets from src/dev/local/shapes-v2.json, and Jane on the
+//     file's own ruler (middle, up, down), clamped at 1 and 5 for every number.
 import { readFileSync, existsSync } from "node:fs";
 import { corridorChaoAt, corridorToleranceAt, toleranceChao } from "../../game/gates.ts";
 import { semitonesToChao } from "../../pitch/math.ts";
@@ -43,21 +46,25 @@ for (const set of ["textbook", "natural"]) {
 // (run.ts voicedByTone -> computeRangeHalvesFromExtremes), quarter-st rounding.
 // ASSUMED: her natural clips stand in for the talk step; her textbook single
 // T1/T3 clips stand in for the calibration flight.
-const C = centreNatural;
+const V2 = process.argv.includes("--v2") ? JSON.parse(readFileSync(process.env.SHAPES ?? "src/dev/local/shapes-v2.json", "utf8")) : null;
+const STYLE = process.argv.includes("--style") ? process.argv[process.argv.indexOf("--style") + 1] : "textbook";
+const C = V2 ? V2.ruler.middleHz : centreNatural;
 const stPool = (tone) => clips.filter((c) => c.set === "textbook" && c.tones.length === 1 && c.tones[0] === tone).flatMap((c) => { const r = loadRef(c.set, c.id); return r.f0.filter((f, i) => r.trusted[i] && f >= 70).map((f) => 12 * Math.log2(f / C)); });
-const up = Math.round(pct(stPool(1), 90) * 4) / 4, down = Math.round(-pct(stPool(3), 10) * 4) / 4;
+const up = V2 ? V2.ruler.upSemitones : Math.round(pct(stPool(1), 90) * 4) / 4, down = V2 ? V2.ruler.downSemitones : Math.round(-pct(stPool(3), 10) * 4) / 4;
+if (V2) console.log(`\n### brief 43: targets and ruler from shapes-v2.json, style ${STYLE} (raw = clamped)`);
 console.log(`\n### Jane-as-player board (calibration rule applied to her own clips): centre ${fmt(C, 1)} Hz, up ${up} st (= chao 5), down ${down} st (= chao 1)`);
 const toChao = (f) => semitonesToChao(12 * Math.log2(f / C), up, down);
-const toChaoRaw = (f) => { const s = 12 * Math.log2(f / C); return 3 + (s / (s >= 0 ? up : down)) * 2; };
+const toChaoRaw = V2 ? toChao : (f) => { const s = 12 * Math.log2(f / C); return 3 + (s / (s >= 0 ? up : down)) * 2; };
 
 // --- target vs what she said -----------------------------------------------
-const rows = JSON.parse(readFileSync("src/data/wordsFallback.json", "utf8")).rows;
+const rows = JSON.parse(readFileSync("src/data/wordsFallback.json", "utf8")).rows
+  .map((w) => (V2 ? (V2[STYLE][w.id] ? { ...w, ...V2[STYLE][w.id] } : null) : w)).filter(Boolean);
 const out = [];
 for (const w of rows) {
-  const file = `fixtures/clips/jane/${w.id}.wav`;
+  const file = STYLE === "natural" ? `fixtures/clips/jane/natural/${w.id}.wav` : `fixtures/clips/jane/${w.id}.wav`;
   if (!existsSync(file) || !w.polyline?.length) continue;
   const tones = w.syllables === 1 ? [w.tone] : w.tones;
-  const r = loadRef("textbook", w.id);
+  const r = loadRef(STYLE, w.id);
   const shape = { polyline: w.polyline, durationS: w.duration_s };
   const tol = toleranceChao(tones, 0.11);
   const pts = [];
