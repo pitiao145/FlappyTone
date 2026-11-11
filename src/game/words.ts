@@ -366,6 +366,33 @@ export function wordsForTier(words: Word[], tier: Tier): Word[] {
 }
 
 /**
+ * Words whose clip this tier's play ticket can fetch, by TOCFL level — the
+ * client's copy of the clips Worker's `levelAllowed` (`TIER_LEVEL_UNION` in
+ * `workers/clips/src/routes/clip.ts`). A word passes when it is in a sampler
+ * list, has no `tocfl*` tag at all, or has a level the tier reaches under
+ * EITHER proficiency (free: 1–2, pro: 1–3, guest: none).
+ *
+ * For pools that have no level picker of their own (Tone Pairs mode). Without
+ * it, free Pairs drew TOCFL 3 pair words the Worker refuses with a 403, and
+ * those gates cued the synthetic sweep (real incident, 11 Nov 2026).
+ */
+/** The Worker's `SAMPLER_LIST_IDS`, exactly: a new sampler list needs a Worker deploy first. */
+const WORKER_SAMPLER_LISTS = new Set(["sampler-beginner", "sampler-intermediate", "sampler-seo"]);
+
+export function wordsForTierLevels(words: Word[], tier: Tier): Word[] {
+  const limits = tierLimits()[tier];
+  const allowed = new Set([...(limits.beginner.levels ?? []), ...(limits.intermediate.levels ?? [])]);
+  return words.filter((w) => {
+    if (w.listIds.some((id) => WORKER_SAMPLER_LISTS.has(id))) return true;
+    const levels = w.listIds
+      .map((id) => /^tocfl([123])$/.exec(id)?.[1])
+      .filter((l): l is string => l !== undefined)
+      .map(Number);
+    return levels.length === 0 || levels.some((l) => allowed.has(l as TocflLevel));
+  });
+}
+
+/**
  * Narrows a (tier-filtered) pool to one or more TOCFL levels, or to the
  * fixed guest sampler — AND to the proficiency's own syllable range.
  *
@@ -447,9 +474,9 @@ export function resolveLevels(
  * and `"tutorial"` pick by tone/fixed set already and are unaffected by the
  * level picker (there is no picker screen for them yet). `"game"` gets the
  * level filter because that's the mode the pre-game screen gates; `"pairs"`
- * skips it (no picker for pure Tone Pairs yet) but still gets the per-combo
- * cap, since that's a content-quantity rule independent of which screen led
- * there. `"drill"` is single-tone, single-syllable by nature, so it always
+ * has no picker, so it takes every level the tier's ticket can fetch
+ * (`wordsForTierLevels`) and then the per-combo cap, a content-quantity rule
+ * independent of which screen led there. `"drill"` is single-tone, single-syllable by nature, so it always
  * reads as Beginner proficiency at "mix" (every TOCFL level the tier's
  * Beginner access allows — sampler for guest, docs/Tiers.csv's own table).
  */
@@ -492,7 +519,9 @@ function tierLevelPool(
     return wordsForList(tiered, levels, proficiency);
   }
   if (mode === "pairs") {
-    return capWordsPerCombo(tiered, tierLimits()[tier].pairWordsPerCombo);
+    // Level-filter BEFORE the cap, so the per-combo slots go to words this
+    // tier can actually hear.
+    return capWordsPerCombo(wordsForTierLevels(tiered, tier), tierLimits()[tier].pairWordsPerCombo);
   }
   return tiered;
 }

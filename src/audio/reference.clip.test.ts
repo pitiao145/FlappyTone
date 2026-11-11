@@ -132,6 +132,25 @@ describe("loadClip", () => {
     await loadClip(word("ma1"));
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("retries a word whose ticket mint failed, once a ticket is available", async () => {
+    getPlayTicket.mockResolvedValueOnce(null).mockResolvedValue("tok-2");
+    fetchMock.mockResolvedValue({ ok: false, status: 404 } as unknown as Response);
+    const { loadClip } = await load();
+    await loadClip(word("ma1"));
+    expect(fetchMock).not.toHaveBeenCalled();
+    // Not cached as a failure: the next gate's request goes out.
+    await loadClip(word("ma1"));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("still caches a missing clips source (a build without the env var stays synthetic)", async () => {
+    baseUrl = null;
+    const { loadClip } = await load();
+    await loadClip(word("ma1"));
+    await loadClip(word("ma1"));
+    expect(getPlayTicket).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("clipFallbackInfo — why a cue fell back", () => {

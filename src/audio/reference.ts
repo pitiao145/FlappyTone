@@ -244,8 +244,13 @@ export function loadClip(
         : null;
 
     const ticket = fixture ? null : await getPlayTicket();
-    if (!fixture && (!CLIPS_BASE_URL || !ticket)) {
-      throw failed(key, CLIPS_BASE_URL ? "no_ticket" : "no_source", new Error("no clips source"));
+    if (!fixture && !CLIPS_BASE_URL) throw failed(key, "no_source", new Error("no clips source"));
+    if (!fixture && !ticket) {
+      // `/token` failed (a dropped connection, a Worker blip). Retryable, like
+      // a 401: caching it marked every word queued during the drop as failed
+      // for the rest of the page, so those gates cued the sweep every time
+      // they came round and were never fetched again (11 Nov 2026 incident).
+      throw failed(key, "no_ticket", new RetryableError("no ticket"));
     }
     const url = fixture
       ? `/dev-fixtures/tonepairs/${fixture}.wav`

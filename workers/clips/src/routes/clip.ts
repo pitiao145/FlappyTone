@@ -70,7 +70,9 @@ const WORDS_TTL_MS = 5 * 60 * 1000;
  * "does this tier EVER reach this level, under either proficiency" — never
  * "did they pick this level just now". That finer choice is a client-side
  * pool filter, same trust level `wordMix` already had. Keep this in sync by
- * hand if `tiers.ts`'s access table changes.
+ * hand if `tiers.ts`'s access table changes — and with `wordsForTierLevels`
+ * in `src/game/words.ts`, the client's copy of this gate (Tone Pairs mode's
+ * pool), including `SAMPLER_LIST_IDS` below.
  */
 const TIER_LEVEL_UNION: Record<string, ReadonlySet<number>> = {
   guest: new Set(),

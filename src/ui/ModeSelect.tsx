@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { track } from "../analytics/client.ts";
 import type { Tone } from "../game/gates.ts";
-import { availableTones, availableToneCombos, resolvedPool, wordsForTier } from "../game/words.ts";
+import { availableTones, availableToneCombos, resolvedPool, wordsForTier, wordsForTierLevels } from "../game/words.ts";
 import { effectiveSpeechStyle, loadLastLevel, loadProficiency } from "../game/settings.ts";
 import {
   classicCount,
@@ -90,7 +90,7 @@ export function ModeSelect({ error, onStart, onBack, canvasWidth, canvasHeight }
   // always gets an empty list regardless of combos — docs/Tiers.csv's
   // "Available modes" row: guest gets Tone drill/Learn only, Tone pairs
   // starts at free.
-  const combos = tier !== "guest" && tierWords ? availableToneCombos(tierWords) : [];
+  const combos = tier !== "guest" && tierWords ? availableToneCombos(wordsForTierLevels(tierWords, tier)) : [];
 
   // Counts come from poolCounts (the pools a Run really draws); null renders nothing.
   const badge = (n: number | null) => <CountBadge n={n} />;

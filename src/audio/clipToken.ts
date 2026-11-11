@@ -64,13 +64,26 @@ let pending: Promise<string | null> | null = null;
 let gen = 0;
 
 /**
+ * After a failed mint, answer `null` without a request until this time. A
+ * failed mint is retried (see `reference.ts`: `no_ticket` is retryable), and
+ * the Run asks for its queued gates' clips 4 times a second — without a
+ * cooldown a dead `/token` would be asked 4 times a second too.
+ */
+const MINT_RETRY_MS = 3000;
+let mintFailedUntilMs = 0;
+
+/**
  * A valid play ticket, minting one if needed. Never throws; `null` means "no
  * clips this time" and the caller falls back to the synthetic sweep.
  */
 export function getPlayTicket(): Promise<string | null> {
   if (!CLIPS_BASE_URL) return Promise.resolve(null);
   if (cached && Date.now() < cached.goodUntilMs) return Promise.resolve(cached.token);
-  pending ??= mint().finally(() => {
+  if (!pending && Date.now() < mintFailedUntilMs) return Promise.resolve(null);
+  pending ??= mint().then((token) => {
+    if (token === null) mintFailedUntilMs = Date.now() + MINT_RETRY_MS;
+    return token;
+  }).finally(() => {
     pending = null;
   });
   return pending;
@@ -86,6 +99,8 @@ export function getPlayTicket(): Promise<string | null> {
  */
 export function invalidatePlayTicket(): void {
   cached = null;
+  // An auth change is a reason to try again now, not after the cooldown.
+  mintFailedUntilMs = 0;
   gen++;
 }
 
