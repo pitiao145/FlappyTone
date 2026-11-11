@@ -173,3 +173,11 @@ Reviewed: brief, report (all four runs), handover, diff `6ce627f..17b9b07`, both
 - **Surprise:** the misses are about speed, not height. Her T4 falls 5.0 → 1.4 between 40% and 70% of the word and then holds; the 3-point template falls slowly over the whole second half. T2/T3 reach the top in the last fifth; the templates do not. Same issue in today's shapes (T4 0.59). With the old fixed gate on the new ruler: T2 0.19, T3 0.29, T4 0.49.
 - Second cause: the per-clip gate keeps quiet, very low frames at the edges; template end points snap to the bottom line (yisheng11, yuyan32, wai4, lao3).
 - Decision for Pierre: let targets follow the voice's speed (extra knee point), or loosen the T2–T4 limit; and how to treat quiet edge frames.
+
+## 43 fourth run (knee nodes + gate floor) — 11 Nov 2026 — blocked (acceptance: T2, T3 gap)
+- Changed: `templateContourKnee` + `KNEE_CHAO` 0.3 in `src/dev/clipCut.ts` (dev-only; `templateContour` and published shapes unchanged); `clipNoiseFloor(samples, sampleRate, f0Center)` now also ≥ 0.1 × median voiced RMS / rmsMult (`CLIP_GATE_VOICE_SHARE`); `heights.mjs --v2` prints by-tenth tables and edge-point counts. `shapes-v2.json` not committed.
+- Scorecard: nothing moved (bench 299, 0 FAIL; 1831 tests).
+- Acceptance (MEASURED): gap T1 0.127, T2 **0.248**, T3 **0.206**, T4 0.276 (allowance 0.30, inside 100/91 passes), pairs 0.198. Inside and shape match pass everywhere. Knees lost: 0.
+- Ruler now 197.4 Hz / up 5.75 / down 7.25 (the gate floor moved the middle 0.7 Hz).
+- Why: T2 leaves its low too early (no node between low and knee); T3 drops from its start too early. T4 now fits.
+- Decision for Pierre: a T2 mid-rise node (and maybe a T3 early-hold node), or name T2 ≤ 0.25 / T3 ≤ 0.21 as allowances.

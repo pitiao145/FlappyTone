@@ -76,17 +76,36 @@ export type ContourPoint = [number, number];
  */
 export type TrackerOverrides = Partial<Omit<PitchTrackerConfig, "sampleRate">>;
 
+/** Brief 43 decision: the per-clip gate sits at least at this share of the clip's median voice loudness. */
+export const CLIP_GATE_VOICE_SHARE = 0.1;
+
 /**
- * A loudness floor set from the clip itself: the 10th percentile of its frame
- * loudness (RMS), at least 1e-4. In a take that holds room tone before and
- * after the word, this is the room. Brief 43.
+ * A loudness floor set from the clip itself (brief 43, Pierre's decision):
+ * the largest of
+ *   - the 10th percentile of its frame loudness (RMS): in a take with room
+ *     tone around the word, this is the room;
+ *   - 1e-4;
+ *   - the value that puts the gate (floor × rmsMult) at `CLIP_GATE_VOICE_SHARE`
+ *     of the clip's own median voice loudness, so a very quiet room cannot
+ *     let in near-silent edge frames.
+ * "Voice loudness" = RMS of the frames a first tracker pass with the first two
+ * floors calls voiced. One rule for single and multi-syllable words.
  */
-export function clipNoiseFloor(samples: Float32Array): number {
+export function clipNoiseFloor(samples: Float32Array, sampleRate: number, f0Center: number): number {
   const rms: number[] = [];
   for (let s = 0; s + WIN <= samples.length; s += HOP) rms.push(frameRms(samples, s, WIN));
   if (rms.length === 0) return 1e-4;
-  rms.sort((x, y) => x - y);
-  return Math.max(1e-4, rms[Math.floor(rms.length * 0.1)]);
+  const sorted = [...rms].sort((x, y) => x - y);
+  const base = Math.max(1e-4, sorted[Math.floor(sorted.length * 0.1)]);
+  const tracker = new PitchTracker({ sampleRate, f0Center, fMin: speakerFMin(f0Center), noiseFloor: base });
+  const voiced: number[] = [];
+  for (let s = 0, i = 0; s + WIN <= samples.length; s += HOP, i++) {
+    if (tracker.push(samples.subarray(s, s + WIN)).voiced) voiced.push(rms[i]);
+  }
+  if (voiced.length === 0) return base;
+  voiced.sort((x, y) => x - y);
+  const voiceMedian = voiced[Math.floor(voiced.length / 2)];
+  return Math.max(base, (CLIP_GATE_VOICE_SHARE * voiceMedian) / tracker.getConfig().rmsMult);
 }
 
 export interface CutClip {
@@ -544,6 +563,44 @@ export function templateContour(tone: Tone, contour: ContourPoint[]): ContourPoi
   const midRise = nearestSample(contour, midT);
   const end = holdValue(contour, midRise[0], "max");
   return [start, min, midRise, end].map(round2);
+}
+
+/** Brief 43 decision: a knee is the first point after the move within this many chao of the end hold value. */
+export const KNEE_CHAO = 0.3;
+
+/**
+ * `templateContour` plus one fixed KNEE node per moving tone (brief 43,
+ * Pierre's decision). Dev-only for now: published shapes still use
+ * `templateContour` until brief 48, so its tests and today's corridors do not
+ * move.
+ *
+ * | Tone | Nodes |
+ * |---|---|
+ * | 1 | start, end (flat, unchanged) |
+ * | 2 | start, low, KNEE, end |
+ * | 3 | start, low, mid-rise, KNEE, end |
+ * | 4 | start, peak, KNEE, end |
+ *
+ * KNEE = the first measured point after the previous node that is within
+ * `KNEE_CHAO` of the end hold value: where the fall (or rise) has arrived, so
+ * the corridor stops sloping there instead of over the whole tail. Left out
+ * (`knee: false`) when it would sit on or after t = 1 or not after the
+ * previous node.
+ */
+export function templateContourKnee(
+  tone: Tone,
+  contour: ContourPoint[],
+): { polyline: ContourPoint[]; knee: boolean | null } {
+  const base = templateContour(tone, contour);
+  if (tone === 1 || base.length === 0) return { polyline: base, knee: null };
+  // The node the knee follows: the low (T2), the peak (T4), the mid-rise (T3).
+  const prev = base[base.length - 2];
+  const end = base[base.length - 1][1];
+  const kneePoint = contour.find((p) => p[0] > prev[0] && Math.abs(p[1] - end) <= KNEE_CHAO);
+  if (!kneePoint || kneePoint[0] >= 1 || kneePoint[0] <= prev[0]) return { polyline: base, knee: false };
+  const knee = round2(kneePoint);
+  if (knee[0] >= 1 || knee[0] <= prev[0]) return { polyline: base, knee: false };
+  return { polyline: [...base.slice(0, -1), knee, base[base.length - 1]], knee: true };
 }
 
 /**

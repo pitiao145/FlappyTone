@@ -111,3 +111,42 @@ if (process.argv.includes("--worst")) {
   console.log("\n### 20 words where the target is furthest from what she said (after best stretch)");
   [...out].sort((a, b) => b.shapeResid - a.shapeResid).slice(0, 20).forEach((o) => console.log(o.id, "shape gap", fmt(o.shapeResid), "corr", fmt(o.corr), "inside", fmt(100 * o.inside, 0) + "%"));
 }
+
+// ---- brief 43 extras (--v2): said vs target by tenth, and edge points on the lines ----
+if (V2) {
+  console.log("\n### Said vs target by tenth of the word, single tones (medians, chao)");
+  const byTenth = { 2: [], 3: [], 4: [] };
+  const edge = {}; // group -> { n, start, end }
+  for (const w of rows) {
+    const file = STYLE === "natural" ? `fixtures/clips/jane/natural/${w.id}.wav` : `fixtures/clips/jane/${w.id}.wav`;
+    if (!existsSync(file) || !w.polyline?.length) continue;
+    const tones = w.syllables === 1 ? [w.tone] : w.tones;
+    const r = loadRef(STYLE, w.id), shape = { polyline: w.polyline, durationS: w.duration_s };
+    const pts = [];
+    for (let i = 0; i < r.t.length; i++) {
+      if (!r.trusted[i] || r.f0[i] < 70) continue;
+      const tn = (r.t[i] - w.onset_s) / w.duration_s;
+      if (tn >= 0 && tn <= 1) pts.push({ tn, said: toChao(r.f0[i]), target: corridorChaoAt(shape, tn) });
+    }
+    if (pts.length < 5) continue;
+    if (w.syllables === 1 && byTenth[w.tone]) byTenth[w.tone].push(pts);
+    // Target start/end within 0.1 of chao 1 or 5 while what she said there (median of the first/last 15% of her frames) is not.
+    const k = Math.max(2, Math.round(pts.length * 0.15));
+    const onLine = (c) => c <= 1.1 || c >= 4.9;
+    const g = groupOf(tones), e = (edge[g] ??= { n: 0, start: 0, end: 0, ids: [] });
+    e.n++;
+    const s0 = w.polyline[0][1], s1 = w.polyline.at(-1)[1];
+    const saidS = med(pts.slice(0, k).map((p) => p.said)), saidE = med(pts.slice(-k).map((p) => p.said));
+    const lineMatch = (t, s) => (t <= 1.1 ? s <= 1.1 : s >= 4.9);
+    if (onLine(s0) && !lineMatch(s0, saidS)) { e.start++; e.ids.push(`${w.id}:start`); }
+    if (onLine(s1) && !lineMatch(s1, saidE)) { e.end++; e.ids.push(`${w.id}:end`); }
+  }
+  for (const tone of [2, 3, 4]) {
+    const said = Array.from({ length: 10 }, () => []), tgt = Array.from({ length: 10 }, () => []);
+    for (const pts of byTenth[tone]) for (const p of pts) { const b = Math.min(9, Math.floor(p.tn * 10)); said[b].push(p.said); tgt[b].push(p.target); }
+    console.log(`T${tone} said:   ` + said.map((a) => fmt(med(a))).join(" "));
+    console.log(`T${tone} target: ` + tgt.map((a) => fmt(med(a))).join(" "));
+  }
+  console.log("\n### Targets that start or end within 0.1 of chao 1 or 5 where what she said does not");
+  for (const [g, e] of Object.entries(edge)) console.log(`${g}: ${e.start} starts, ${e.end} ends, of ${e.n} words${e.ids.length ? " — " + e.ids.join(", ") : ""}`);
+}

@@ -14,7 +14,7 @@
 //   node src/dev/bench39/make-shapes.mjs            # measure, check, print, write the file
 //   node src/dev/bench39/make-shapes.mjs --no-write # measure, check and print only
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { cutClip, clipNoiseFloor, templateContour, MEASURE_RANGE_SEMITONES } from "../clipCut.ts";
+import { cutClip, clipNoiseFloor, templateContourKnee, CLIP_GATE_VOICE_SHARE, KNEE_CHAO, MEASURE_RANGE_SEMITONES } from "../clipCut.ts";
 import { multiSyllablePolyline } from "../clipCutMulti.ts";
 import { semitonesToChao } from "../../pitch/math.ts";
 import { computeRangeHalvesFromExtremes } from "../../pitch/calibration.ts";
@@ -48,7 +48,7 @@ function cut(row, style, f0Center, gate) {
   const src = sourceOf(style, row.id);
   if (!src) return null;
   const { samples, sampleRate } = wav(src.file);
-  const floor = clipNoiseFloor(samples);
+  const floor = clipNoiseFloor(samples, sampleRate, f0Center);
   const c = cutClip(samples, sampleRate, f0Center, R, row.tone, row.syllables, gate === "clip" ? { noiseFloor: floor } : {});
   // Wide-board chao back to semitones from f0Center (linear inside ±15 st).
   const st = c.contour.map(([t, chao]) => [t, (chao - 3) * (R / 2)]);
@@ -94,6 +94,8 @@ const ruler = {
   rule: "chao 3 = median of all frames; chao 5 = p90 of single first-tone frames; chao 1 = p10 of single third-tone frames (computeRangeHalvesFromExtremes, quarter-semitone rounding); semitonesToChao clamps at 1 and 5",
   source: "357 newer textbook clips, final listener (brief 42), per-clip gate, tone window frames, creak (> 10 st under the middle) left out",
   measuredAtHz: F,
+  templates: `templateContourKnee: T2 start-low-KNEE-end, T3 start-low-midrise-KNEE-end, T4 start-peak-KNEE-end, T1 flat; KNEE_CHAO ${KNEE_CHAO}`,
+  gate: `per clip: noiseFloor = max(p10 frame RMS, 1e-4, ${CLIP_GATE_VOICE_SHARE} x median voiced RMS / rmsMult)`,
 };
 const midShift = 12 * Math.log2(ruler.middleHz / F);
 console.log("\n### Jane's ruler (pass 2)");
@@ -103,8 +105,8 @@ const toChao = (s) => semitonesToChao(s - midShift, ruler.upSemitones, ruler.dow
 const onRuler = (x) => x.st.map(([t, s]) => [+t.toFixed(4), +toChao(s).toFixed(3)]);
 function shapeOf(row, x) {
   const contour = onRuler(x);
-  const polyline = row.syllables > 1 ? multiSyllablePolyline(contour, x.c.syllableSpans ?? [[0, 1]]) : templateContour(row.tone, contour);
-  return { polyline, contour, onset_s: +(x.c.toneStartMs / 1000).toFixed(3), duration_s: +(x.c.durationMs / 1000).toFixed(4) };
+  const k = row.syllables > 1 ? { polyline: multiSyllablePolyline(contour, x.c.syllableSpans ?? [[0, 1]]), knee: null } : templateContourKnee(row.tone, contour);
+  return { polyline: k.polyline, ...(k.knee === false ? { knee: "dropped" } : {}), contour, onset_s: +(x.c.toneStartMs / 1000).toFixed(3), duration_s: +(x.c.durationMs / 1000).toFixed(4) };
 }
 const nodes = (p) => ({ start: p[0][1], low: Math.min(...p.map((q) => q[1])), high: Math.max(...p.map((q) => q[1])), end: p.at(-1)[1] });
 
@@ -113,6 +115,10 @@ const out = { textbook: {}, natural: {} };
 const shapeCuts = SHAPE_GATE === "fixed" ? fixed : cuts;
 for (const style of ["textbook", "natural"]) for (const r of rows) { const x = shapeCuts[style].get(r.id); if (x) out[style][r.id] = shapeOf(r, x); }
 const kindOf = (r) => cuts.textbook.get(r.id)?.src.kind;
+
+// Knee nodes (brief 43 decision): how many single-syllable words lost theirs.
+console.log(`\n### Knee nodes (KNEE_CHAO ${KNEE_CHAO}): words that lost their knee / words`);
+for (const style of ["textbook", "natural"]) console.log(`${style}: ` + [2, 3, 4].map((tone) => { const ws = rows.filter((r) => r.syllables === 1 && r.tone === tone && out[style][r.id]); return `T${tone} ${ws.filter((r) => out[style][r.id].knee === "dropped").length} / ${ws.length}`; }).join(" | "));
 
 // ---- Step 2: ruler check on the newer clips ---------------------------------
 const singlesOf = (tone, kind) => rows.filter((r) => isSingle(tone)(r) && out.textbook[r.id] && (!kind || kindOf(r) === kind));

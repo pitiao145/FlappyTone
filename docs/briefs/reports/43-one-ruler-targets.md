@@ -162,3 +162,59 @@ Dev switch in `words.ts`, xiaoshi / yiqian check, build grep, committing `shapes
 1. **Let the targets follow the speed of the voice.** For example, add a "knee" point to T4 (where the fall ends) and to the T2/T3 rise, or use the multi-syllable polyline fit for single syllables too. This changes the "familiar 2–4 point templates" rule, so it is your call.
 2. **Keep the templates and loosen the gap limit** for T2–T4 (for example ≤ 0.35, T4 ≤ 0.75). The targets would stay as slow as today.
 3. **Per-clip gate:** keep it (pairs gain a lot) but leave out the quiet edge frames for the end points (for example, the first and last 5% of the tone window). Or go back to the fixed gate for single syllables. Either way it is a new rule, so it is your call.
+
+---
+
+# Fourth run (11 Nov 2026): knee nodes + gate floor (Pierre's decision) — blocked at acceptance (T2, T3 gap)
+
+Decision: `templateContourKnee` (new, in `src/dev/clipCut.ts`; `templateContour` and published shapes unchanged) adds one KNEE node to T2, T3, T4: the first measured point after the previous node within `KNEE_CHAO` = 0.3 of the end hold value. Per-clip gate: `noiseFloor = max(p10 frame RMS, 1e-4, CLIP_GATE_VOICE_SHARE (0.1) × median voiced RMS / rmsMult)`; "voiced" from a first tracker pass with the first two floors. One rule for all words. Commands: `node src/dev/bench39/make-shapes.mjs`, then `node src/dev/bench39/heights.mjs --v2 --worst`.
+
+- **Result: blocked.** Second-tone gap **0.248** and third-tone gap **0.206** (limit 0.20). Everything else passes. No other constants were tried. `shapes-v2.json` not committed (rebuild: 2 min); dev switch, xiaoshi / yiqian and build grep not run.
+
+## Acceptance (MEASURED, heights.mjs --v2, textbook, Jane clamped on her ruler)
+| group | gap med | limit | inside med / p10 (≥ 99 / ≥ 90) | shape match med (≥ 0.96) | verdict |
+|---|---|---|---|---|---|
+| T1 | 0.127 | 0.20 | 100 / 94 | — | pass |
+| T2 | **0.248** | 0.20 | 100 / 94 | 0.963 | **miss (gap)** |
+| T3 | **0.206** | 0.20 | 100 / 100 | 0.983 | **miss (gap)** |
+| T4 | 0.276 | 0.30 (allowance; inside passes) | 100 / 91 | 0.982 | pass |
+| pairs | 0.198 | 0.20 | 100 / 96 | 0.977 | pass |
+| 3+ syllables (info) | 0.208 | — | 100 / 96 | 0.967 | — |
+
+Before → after this run: T2 0.26 → 0.248, T3 0.31 → 0.206, T4 0.70 → 0.276, T4 inside p10 49 → 91, T2 inside p10 83 → 94.
+
+## Ruler (MEASURED; moved slightly with the new gate)
+Middle 197.4 Hz, up 5.75 st (T1 p90 5.689), down 7.25 st (T3 p10 7.373). Check: first-tone level 4.55, third-tone low 1.00 (pass). Older vs newer: T2 0.26, T3 0.50 (accepted), T4 0.17. Older T1 lift +1.08 chao (same 30 words).
+
+## Knees (MEASURED)
+Words that lost their knee: **0** (textbook T2 0/47, T3 0/52, T4 0/68; natural the same).
+
+## Said vs target by tenth of the word (MEASURED, newer textbook single tones, medians, chao)
+```
+T2 said:   2.24 2.09 1.77 1.64 1.72 2.01 2.46 3.19 4.50 5.00
+T2 target: 2.16 1.96 1.75 1.64 1.77 2.28 3.05 3.89 4.59 4.93
+T3 said:   2.54 2.29 1.54 1.14 1.01 1.18 1.72 2.50 3.90 4.94
+T3 target: 2.25 1.80 1.38 1.09 1.03 1.15 1.53 2.39 3.83 4.75
+T4 said:   5.00 5.00 5.00 4.92 3.83 2.62 1.84 1.36 1.09 1.00
+T4 target: 5.00 4.94 4.63 4.06 3.34 2.63 1.89 1.43 1.16 1.05
+```
+In plain words:
+- **Fourth tone** now follows her fall well. The knee fixed it.
+- **Second tone:** she stays low for longer and then rises fast at the end. The target leaves the low point too early (at 70% of the word: target 3.05, she is at 2.46). Between the low and the knee there is no point to hold it down. The third tone has a "mid-rise" point for this; the second tone does not.
+- **Third tone:** the remaining gap is mostly at the start (target 1.80 where she is at 2.29, 20% into the word). The target goes straight from the start down to the low point, but she stays higher for longer.
+
+## Edge points (MEASURED): target starts or ends within 0.1 of chao 1 or 5 where what she said there does not
+Single tones: T1 0 starts / 1 end (dou1); T2 1 / 2 (ying2 start; lou2, shei2 end); T3 2 / 5 (bi3, bi3b start; wang3, zhao3, wan3b, bi3b, deng3 end); T4 2 / 3 (kuai4b, huan4 start; huan4, xiao4, pang4 end); neutral le0 start. Pairs: 12 starts, 31 ends of 246. 3+ syllables: 2 / 1 of 17. Full list: `heights.mjs --v2` prints it.
+
+## Per-clip gate (MEASURED)
+Floor median 0.00173 textbook (p10 0.00095, p90 0.00316), 0.00123 natural; was 0.00058 / 0.00025 without the voice-share floor. Changes 190 / 477 textbook corridors by > 0.25 chao (was 247), 212 / 471 natural; onset or duration moved > 25 ms: 125 textbook, 159 natural.
+
+## 20 textbook words that moved most (largest corridor gap old vs new, chao)
+dadianhua344 2.92, lishi43 2.86, mai4 2.50, wanshang30 2.41, duibuqi403 2.40, jiejie30 2.38, lao3 2.36, xuexiao24 2.34, paobu34 2.32, ganmao34 2.26, tamen10 2.19, keyi33 2.17, shufu10 2.11, ditie43 2.11, yifu10 2.09, yixie11 2.03, wan2 2.01, jintian11 1.99, kuaile44 1.99, dongtian11 1.98. Median move 0.71.
+
+## Checks
+`npm run test` 1831 passed; `npm run typecheck` clean; `npm run bench` 299 numbers, 0 FAIL.
+
+## Needs Pierre's eyes
+1. Give T2 a mid-rise node like T3 (start, low, mid-rise, KNEE, end), and maybe a T3 "early hold" node after the start. Same idea as the knee.
+2. Or accept T2 ≤ 0.25 and T3 ≤ 0.21 as named allowances (inside and shape pass for both), and run on.
