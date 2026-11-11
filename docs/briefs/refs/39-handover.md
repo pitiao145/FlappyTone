@@ -214,3 +214,4 @@ Reviewed: brief, report (all four runs), handover, diff `6ce627f..17b9b07`, both
 - **For brief 46 (Pierre judges both in the dev build):** 53 textbook pairs have their worst frame in the join between syllables, where the fit puts no node. And the gate could end soon after the knee (tail trim): many targets now reach their end value well before t = 1.
 - For brief 44/45: the player keeps T1 / T3 anchors (see plan doc). About a third of Jane's T4 frames sit on the top line.
 - Per-clip gate: noiseFloor = max(p10 frame RMS, 1e-4, 0.1 × median voiced RMS / 3). It moves 190 / 477 textbook corridors by > 0.25 chao vs the fixed gate.
+- **Pierre's check (11 Nov 2026):** flew the new shapes in the dev build (switch on). Verdict: looks good; the first tone is easier to get right. Note: the switch only exists on this branch; run `npm run dev` from the worktree and set `ft.shapesV2` on that exact address (each port keeps its own storage).
