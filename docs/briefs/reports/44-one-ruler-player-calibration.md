@@ -38,3 +38,33 @@ The brief says the top/bottom fallback (point 5) is "needed from the start". Opt
 
 ## Follow-ups (from earlier briefs, still open for 44)
 - The calibration talk step still searches from 70 Hz; a 90 Hz voice is measured 1.4 st too high (42 review). Step 2 of this brief (middle from tone syllables) must run with the speaker's floor.
+
+---
+
+## Second run (Pierre chose option 1: top/bottom step from the start) — blocked before building
+
+### Why blocked: acceptance 2 cannot pass, even with a perfect learner
+Acceptance 2: after learning from a "2 semitones lower" start, single tones right within 3 points of "as calibrated". Acceptance 1 makes the learner land within 1 st of the true ruler. So I measured the reader on the true ruler itself, the best any learner can do (MEASURED, `node src/dev/bench39/reader-on-ruler.mjs`, same clips, tracker cache and contour rule as `scorecard.mjs` section 4):
+
+| style | as calibrated (scorecard today) | ruler halves, old centre | old halves, ruler middle | full ruler = perfect learner |
+|---|---|---|---|---|
+| textbook | 98.9% | 97.8% | 93.4% | **93.4%** (−5.5) |
+| natural | 91.0% | 91.0% | 71.1% | **78.2%** (−12.8) |
+
+(The baseline file holds 97.8 / 89.1; today's scorecard prints 98.9 / 91.0, both PASS.)
+
+In plain words: the halves are not the problem. The **middle** is. The scorecard's "as calibrated" grid sits at 181.3 Hz (the catalog centre, close to how Jane talks). The one ruler puts the middle at 197.4 Hz, her median on tone syllables (step 2 of this brief asks for exactly that). That is 1.47 st higher, so every contour draws 1.47 st lower on the screen. The tone reader was fitted to the old centre, so it now reads fewer tones right. Natural speech suffers most, because Jane talks lower in natural speech than in textbook words.
+
+So acceptance 2 checks the tone reader, not the learning. The plan gives the reader to brief 45 ("the reader is tuned last because it is fitted to whatever the listener and the ruler give it").
+
+### Two more things the rerun needs decided
+1. **Learning rule, brief vs plan.** Brief step 3 says top = p95 and bottom = p5 of all voiced frames. The plan's "What one ruler means" (revised 11 Nov, after the brief) says top from the player's first tones (p90) and bottom from their third tones (p10). These give different tops: about a third of Jane's fourth-tone frames sit above her first tone. Acceptance 1 ("within 1 st of the true ruler") only makes sense with the plan's rule. I would follow the plan.
+2. **Standard halves under option 1.** With the top/bottom step from the start, the standard halves are only used when the calibration flight hears too little first or third tone. Today that fallback is ±5. Average of the two voices: up 5.25, down 5.75 (quarter-rounded).
+
+### Decision for Pierre
+- **Acceptance 2:** (a) compare the reader after learning from the −2 start with the reader after learning from a correct start (both on the learned ruler); this checks the learning only, and the reader's level goes to 45; or (b) run brief 45 first; or (c) keep the middle at the talk median (no step 2), which keeps the reader at today's level but leaves Jane's ruler and the player's ruler on different middles.
+- Confirm the plan's T1 p90 / T3 p10 rule for learning (point 1 above).
+- Confirm standard halves 5.25 / 5.75 (point 2 above).
+
+### What changed in the second run
+- `src/dev/bench39/reader-on-ruler.mjs` (new, dev-only). Brief status line. This report section and a handover entry. No production code.

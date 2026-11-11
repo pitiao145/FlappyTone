@@ -1,5 +1,5 @@
 ---
-status: blocked  # step 1: Jane and Pierre differ by 3.25 st in the down half (limit 2); see reports/44-one-ruler-player-calibration.md
+status: blocked  # second run: a perfect learner still fails the reader acceptance (natural 91.0 → 78.2, limit 3 points); see report
 notion_task:
 risk: needs-approval
 ---

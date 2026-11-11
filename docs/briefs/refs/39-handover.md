@@ -223,3 +223,10 @@ Reviewed: brief, report (all four runs), handover, diff `6ce627f..17b9b07`, both
 - Surprises: brief 41 said Jane's halves "fit" Pierre with 2–4 st spare. That used the old 2/98 preview (8.8 / 7.9) and his 5/95 range. On the brief 43 rule the down half is still 3 st too deep for him: the standard grid puts chao 1 about 3 st under his lowest third tone.
 - Decision for Pierre (options in the report): top/bottom step from the start (brief's rule), standard = smaller voice, standard = average of the two, or record more voices first.
 - For the rerun: talk step at 70 Hz still measures a 90 Hz voice 1.4 st high (42 review); the middle step must use the speaker's floor.
+
+## 44 second run (option 1: top/bottom step) — 11 Nov 2026 — blocked (acceptance 2 cannot pass)
+- Changed: `src/dev/bench39/reader-on-ruler.mjs` (new, dev-only), report section, brief status. No production code.
+- Scorecard: 299 / 0 FAIL, unchanged. Reader today: calibrated textbook 98.9, natural 91.0 (baseline 97.8 / 89.1).
+- Why blocked (MEASURED, `node src/dev/bench39/reader-on-ruler.mjs`): on the true ruler (what acceptance 1 makes the learner reach) the reader gets textbook 93.4 (−5.5), natural 78.2 (−12.8). Limit 3 points. The cause is the middle (181.3 → 197.4 Hz, +1.47 st), not the halves (ruler halves at the old centre: 97.8 / 91.0). The reader is fitted to the old centre; that is brief 45's job.
+- Also open: brief step 3 says learn p95/p5 of all frames; the plan says T1 p90 / T3 p10. Follow the plan? Standard halves under option 1: average 5.25 / 5.75?
+- Decision for Pierre: acceptance 2 as (a) learned-from-−2 vs learned-from-correct, (b) run 45 first, or (c) keep the talk middle.
