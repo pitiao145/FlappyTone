@@ -253,3 +253,47 @@ The third tone's gap sits at the start: she stays near 2.3–2.5 for the first f
 ## Needs Pierre's eyes
 1. A T3 "early hold" node after the start (same idea as the knee: where she starts to fall).
 2. Or accept T3 ≤ 0.21 as a named allowance (inside 100 / 100 and shape 0.983 pass), and run on.
+
+---
+
+# Sixth run (11 Nov 2026): T3 ≤ 0.21 accepted — blocked at xiaoshi / yiqian (xiaoshi 0.877, haowan 0.471)
+
+Pierre accepted the third-tone gap as a named allowance: **T3 gap ≤ 0.21** (measured 0.206; inside 100 / 100, shape match 0.983 pass). With T4 ≤ 0.30 (measured 0.276) this makes every heights check pass:
+
+| group | gap | limit | inside med / p10 | shape match | verdict |
+|---|---|---|---|---|---|
+| T1 | 0.127 | 0.20 | 100 / 94 | — | pass |
+| T2 | 0.118 | 0.20 | 100 / 100 | 0.994 | pass |
+| T3 | 0.206 | **0.21 (allowance)** | 100 / 100 | 0.983 | pass |
+| T4 | 0.276 | **0.30 (allowance)** | 100 / 91 | 0.982 | pass |
+| pairs | 0.198 | 0.20 | 100 / 96 | 0.977 | pass |
+
+Then the next check missed.
+
+- **Result: blocked.** xiaoshi / yiqian corridor error on Jane's ruler (decision: "if over 0.47, do not loosen the test; report and stop"). Command: `node src/dev/bench39/pairs-fixtures.mjs` (new; needs `shapes-v2.json`).
+
+## xiaoshi / yiqian (MEASURED; worst gap between the fitted corridor and its own contour, chao on Jane's ruler)
+| fixture | worst | limit 0.47 | frames over 0.47 |
+|---|---|---|---|
+| haowan 好玩 | 0.471 | **miss (by 0.001)** | 1 / 67 |
+| meiguo 美國 | 0.393 | pass | — |
+| xiaoshi 小時 | **0.877** | **miss** | 6 / 59 |
+| yiqian 以前 | 0.455 | pass | — |
+
+Why (MEASURED, diagnosis only):
+- xiaoshi: the worst frame is at t = 0.83, inside the rise of 時: she is at 3.23, the corridor at 4.11. The multi-syllable fit (`multiSyllablePolyline`) misses a bend in that rise. The same with the old fixed gate (0.877), so the gate is not the cause.
+- haowan: the worst frame is the very last one (t = 0.97: she is at 5.00, the corridor at 4.53). With the fixed gate it would be 0.654.
+- In plain words: on the old ±15 st measuring board, one chao was 7.5 semitones; on Jane's ruler, one chao up is about 2.9 semitones. The same miss in pitch now counts about 2.5 times more. xiaoshi's 0.37 on the old board is 0.877 here.
+
+## Built and checked, then set aside (not committed, by the stop rule)
+- Dev switch: `src/dev/shapesV2.ts` + three call sites in `src/data/words.ts` (`catalogFromCache`, `catalogFromFallback`, the live read), each behind `import.meta.env.DEV`. Saved as `docs/briefs/reports/43-dev-switch.patch`. It imports the shapes file, so it cannot be committed without it.
+- With the switch and the shapes file in place: `npm run build` OK; grep of `dist/assets/*.js` for `shapes-v2`, `ft.shapesV2`, `bench39`, `applyShapesV2`, `t1-session-offset`, `templateContourKnee`, `TuningPanel`, `copy gate log`, `soundboard`, `flappytone.gatelog`: **0 files each** (MEASURED). `npm run test` 1831 passed; typecheck clean.
+- Turning it on (after the patch is applied and `node src/dev/bench39/make-shapes.mjs` has written the file): `npm run dev`, then in the browser console `localStorage["ft.shapesV2"] = "1"` and reload. Off: `localStorage.removeItem("ft.shapesV2")`.
+
+## Checks
+`npm run test` 1831 passed; `npm run typecheck` clean (switch reverted); `npm run bench` 299 numbers, 0 FAIL.
+
+## Needs Pierre's eyes
+1. Let the pair fit follow her more closely on the new ruler (for example, an extra node where the corridor misses a bend by more than a set amount). Same family as the knee.
+2. Or judge pairs by the heights numbers only (pairs pass: gap 0.198, inside 100 / 96), and move the "≤ 0.47 worst frame" guard to the old ±15 st board, where it was written (xiaoshi 0.37 there).
+3. haowan misses by 0.001 on its last frame; any fix for 1 likely covers it.

@@ -1,0 +1,119 @@
+diff --git a/src/data/words.ts b/src/data/words.ts
+index 0d139c6..b7c1266 100644
+--- a/src/data/words.ts
++++ b/src/data/words.ts
+@@ -26,6 +26,9 @@ import { wordsFromCatalog, type Word } from "../game/words.ts";
+ import { CATALOG_SELECT, DEFAULT_SPEAKER_ID, flattenCatalogRows } from "./catalogRows.ts";
+ import fallback from "./wordsFallback.json";
+ import { getSupabase, warn } from "./supabase.ts";
++// Brief 43 dev switch. Every call site is behind `import.meta.env.DEV`, so the
++// build drops the call, then this import and the JSON behind it (hard rule 7).
++import { applyShapesV2 } from "../dev/shapesV2.ts";
+ 
+ /**
+  * v2 because the row shape changed (the measurements moved to `word_clips`),
+@@ -66,7 +69,8 @@ export function catalogFromCache(speaker: string): Word[] | null {
+     // every row — a silent fall-through to the bundled snapshot on every cold
+     // start.
+     const words = wordsFromCatalog(parsed.rows);
+-    return words.length > 0 ? words : null;
++    if (words.length === 0) return null;
++    return import.meta.env.DEV ? applyShapesV2(words) : words;
+   } catch {
+     // Corrupt value, blocked storage, or no `localStorage` at all (a Node
+     // test, a prerender). All of them mean the same thing to a caller.
+@@ -101,7 +105,8 @@ function writeCache(speaker: string, rows: unknown[]): void {
+  * must still be dropped, not silently attributed to Jane.
+  */
+ export function catalogFromFallback(): Word[] {
+-  return wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID })));
++  const words = wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID })));
++  return import.meta.env.DEV ? applyShapesV2(words) : words;
+ }
+ 
+ /**
+@@ -146,7 +151,7 @@ export async function fetchCatalog(opts: { speaker: string; listId?: string }):
+         const words = wordsFromCatalog(rows);
+         if (words.length > 0) {
+           writeCache(opts.speaker, rows);
+-          return words;
++          return import.meta.env.DEV ? applyShapesV2(words) : words;
+         }
+         // A live read that parses to nothing is a misconfiguration, not an
+         // empty catalog — publishing every word away is not a thing anyone
+diff --git a/src/dev/shapesV2.ts b/src/dev/shapesV2.ts
+new file mode 100644
+index 0000000..1797d66
+--- /dev/null
++++ b/src/dev/shapesV2.ts
+@@ -0,0 +1,70 @@
++/**
++ * Brief 43 dev switch: fly the one-ruler target shapes from
++ * `src/dev/local/shapes-v2.json` instead of the catalog's.
++ *
++ * On only when `localStorage["ft.shapesV2"] === "1"`, and only in a dev
++ * build: `src/data/words.ts` calls this behind `import.meta.env.DEV` at the
++ * call site, so neither this module nor the JSON reaches `dist/` (hard rule 7).
++ *
++ * Replaces the shape fields only — `polyline`, `durationS`, `onsetS` — for the
++ * textbook take (top level) and the natural take (`natural`). The audio, its
++ * length (`clipS`) and everything else stay as the catalog has them; the
++ * re-measured onset and duration sit inside the same file.
++ *
++ * Never throws (hard rule 10): any failure returns the words unchanged.
++ */
++import file from "./local/shapes-v2.json";
++import type { ClipMeasurements, Word } from "../game/words.ts";
++import type { Polyline } from "../game/tuning.ts";
++
++export const SHAPES_V2_KEY = "ft.shapesV2";
++
++interface Shape {
++  polyline: Polyline;
++  onset_s: number;
++  duration_s: number;
++}
++
++const shapes = file as unknown as { textbook: Record<string, Shape>; natural: Record<string, Shape> };
++
++function on(): boolean {
++  try {
++    return typeof localStorage !== "undefined" && localStorage.getItem(SHAPES_V2_KEY) === "1";
++  } catch {
++    return false;
++  }
++}
++
++function fits(s: Shape | undefined, clipS: number): s is Shape {
++  return (
++    !!s &&
++    Array.isArray(s.polyline) &&
++    s.polyline.length >= 2 &&
++    s.duration_s > 0 &&
++    s.onset_s >= 0 &&
++    s.onset_s + s.duration_s <= clipS + 0.05
++  );
++}
++
++function swap<T extends { polyline: Polyline; durationS: number; onsetS: number; clipS: number }>(
++  take: T,
++  s: Shape | undefined,
++): T {
++  return fits(s, take.clipS) ? { ...take, polyline: s.polyline, durationS: s.duration_s, onsetS: s.onset_s } : take;
++}
++
++export function applyShapesV2(words: Word[]): Word[];
++export function applyShapesV2(words: Word[] | null): Word[] | null;
++export function applyShapesV2(words: Word[] | null): Word[] | null {
++  if (!words || !on()) return words;
++  try {
++    return words.map((w) => {
++      // A word re-pointed at its natural take carries natural at the top level.
++      const top = w.clipStyle === "natural" ? shapes.natural[w.id] : shapes.textbook[w.id];
++      const out = swap(w, top);
++      return w.natural ? { ...out, natural: swap<ClipMeasurements>(w.natural, shapes.natural[w.id]) } : out;
++    });
++  } catch {
++    return words;
++  }
++}

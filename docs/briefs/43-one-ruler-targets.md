@@ -1,5 +1,5 @@
 ---
-status: blocked  # fifth run (T2 mid-rise): only T3 gap misses, 0.206 (limit 0.20). See reports/43-one-ruler-targets.md
+status: blocked  # sixth run: heights pass with T3 ≤ 0.21 and T4 ≤ 0.30 allowances; xiaoshi corridor error 0.877, haowan 0.471 (limit 0.47). See reports/43-one-ruler-targets.md
 notion_task:
 risk: needs-approval
 ---

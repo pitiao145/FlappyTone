@@ -188,3 +188,10 @@ Reviewed: brief, report (all four runs), handover, diff `6ce627f..17b9b07`, both
 - Acceptance (MEASURED): gap T1 0.127, T2 0.118 (was 0.248), T3 **0.206**, T4 0.276 (allowance), pairs 0.198. Inside and shape match pass everywhere.
 - Why: T3 target falls from its start at once; she holds near 2.3–2.5 for the first fifth.
 - Decision for Pierre: a T3 early-hold node, or a T3 ≤ 0.21 allowance.
+
+## 43 sixth run (T3 ≤ 0.21 accepted) — 11 Nov 2026 — blocked (xiaoshi / yiqian)
+- Allowances now named by Pierre: T4 gap ≤ 0.30 (if inside passes), T3 gap ≤ 0.21. With them every heights check passes (T1 0.127, T2 0.118, T3 0.206, T4 0.276, pairs 0.198).
+- Why blocked (MEASURED, `node src/dev/bench39/pairs-fixtures.mjs`): worst corridor error on Jane's ruler xiaoshi **0.877**, haowan **0.471** (limit 0.47); meiguo 0.393, yiqian 0.455. xiaoshi misses a bend in the rise of 時 (gate is not the cause). On this ruler one chao up is ~2.9 st vs 7.5 on the old board, so the same miss counts ~2.5× more.
+- Dev switch built, build grep clean (0 files for every string), then reverted and saved as `docs/briefs/reports/43-dev-switch.patch` (it needs the uncommitted shapes file).
+- Scorecard: nothing moved (bench 299, 0 FAIL; 1831 tests).
+- Decision for Pierre: a closer pair fit on the new ruler, or judge pairs by the heights numbers and keep the 0.47 guard on the ±15 st board.
