@@ -44,7 +44,7 @@
  *    in the edge cache stay valid; natural gets `/clip/{speaker}/natural/{id}`.
  */
 import { serviceDb } from "../db.ts";
-import { verifyTicket } from "../tickets.ts";
+import { checkTicket, type IpDrift } from "../tickets.ts";
 import { callerIp } from "./token.ts";
 import type { Env } from "../index.ts";
 
@@ -182,6 +182,27 @@ function privateCopy(res: Response): Response {
   return new Response(res.body, { status: res.status, headers });
 }
 
+/**
+ * One JSON line per refused clip request, for Workers Logs
+ * (`[observability]` in wrangler.toml, invocation logs off). It carries the
+ * path (speaker + word id, never a player id), the reason and the country —
+ * never the IP, the ticket or any header — so the log answers "why do this
+ * player's cues fall back?" without becoming a store of who asked.
+ */
+function logReject(req: Request, status: number, reason: string, drift?: IpDrift): void {
+  const country = (req as Request & { cf?: { country?: unknown } }).cf?.country;
+  console.log(
+    JSON.stringify({
+      evt: "clip_reject",
+      status,
+      reason,
+      ...(drift ? { drift } : {}),
+      path: new URL(req.url).pathname,
+      ...(typeof country === "string" ? { country } : {}),
+    }),
+  );
+}
+
 export async function handleClip(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(req.url);
   // Deliberately NOT decoded: the id alphabet is [a-z0-9], so nothing
@@ -195,8 +216,12 @@ export async function handleClip(req: Request, env: Env, ctx: ExecutionContext):
   // Ticket first, then the slug regexes: an unauthenticated probe with a bad
   // speaker or id must get 401, not 400 (and never a 500 — see above).
   const match = /^Bearer (.+)$/.exec(req.headers.get("authorization") ?? "");
-  const ticket = match ? await verifyTicket(match[1], env.CLIP_TOKEN_SECRET, callerIp(req)) : null;
-  if (!ticket) return Response.json({ error: "Missing or invalid token." }, { status: 401 });
+  const check = await checkTicket(match ? match[1] : null, env.CLIP_TOKEN_SECRET, callerIp(req));
+  if (!check.ok) {
+    logReject(req, 401, check.reason, check.drift);
+    return Response.json({ error: "Missing or invalid token." }, { status: 401 });
+  }
+  const ticket = check.ticket;
 
   if (slash === -1) {
     return Response.json({ error: "Bad clip id." }, { status: 400 });
@@ -206,6 +231,7 @@ export async function handleClip(req: Request, env: Env, ctx: ExecutionContext):
   try {
     inventory = await words(env, Date.now());
   } catch {
+    logReject(req, 503, "words_query");
     return Response.json({ error: "Clips are temporarily unavailable." }, { status: 503 });
   }
 
@@ -219,16 +245,21 @@ export async function handleClip(req: Request, env: Env, ctx: ExecutionContext):
   if (!STYLES.has(style)) return Response.json({ error: "Bad style." }, { status: 400 });
 
   const word = inventory.words.get(`${speaker}:${style}:${id}`);
-  if (!word || !word.clipKey) return Response.json({ error: "Not found." }, { status: 404 });
+  if (!word || !word.clipKey) {
+    logReject(req, 404, "no_row");
+    return Response.json({ error: "Not found." }, { status: 404 });
+  }
   // Default-deny: anything that is not exactly "free" needs a pro ticket, so
   // a third tier added to `words.min_tier` later fails closed rather than open.
   if (word.minTier !== "free" && ticket.tier !== "pro") {
+    logReject(req, 403, "pro");
     return Response.json({ error: "This clip needs Pro." }, { status: 403 });
   }
   // TOCFL level gate — coarse (see TIER_LEVEL_UNION's comment): only checks
   // whether this tier could EVER reach this word's level, not which level
   // was chosen this run.
   if (!levelAllowed(word.listIds, ticket.tier)) {
+    logReject(req, 403, "level");
     return Response.json({ error: "This clip needs a higher TOCFL level." }, { status: 403 });
   }
 
@@ -243,7 +274,10 @@ export async function handleClip(req: Request, env: Env, ctx: ExecutionContext):
   if (hit) return privateCopy(hit);
 
   const obj = await env.CLIPS.get(word.clipKey);
-  if (!obj) return Response.json({ error: "Not found." }, { status: 404 });
+  if (!obj) {
+    logReject(req, 404, "no_object");
+    return Response.json({ error: "Not found." }, { status: 404 });
+  }
 
   const shared = new Response(obj.body, {
     headers: {

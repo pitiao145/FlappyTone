@@ -3,6 +3,19 @@ main = "src/index.ts"
 compatibility_date = "2026-09-01"
 routes = [{ pattern = "clips.flappytone.com", custom_domain = true }]
 
+# Workers Logs: keeps our own console lines (the clip route's one-line
+# `clip_reject` records, which carry no IP) for the plan's retention window.
+# Invocation logs stay OFF on purpose: they record every request's URL, headers
+# and client IP, which would make this a per-player access log the privacy
+# policy does not describe. Query in the dashboard: Workers -> this Worker -> Logs.
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+invocation_logs = false
+head_sampling_rate = 1
+
 [[r2_buckets]]
 binding = "RAW"
 bucket_name = "flappytone-raw"

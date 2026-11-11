@@ -11,6 +11,7 @@ import { gateEvent, type RunEndReason } from "../analytics/session.ts";
 import {
   cueDurationMsFor,
   isCueAudible,
+  clipFallbackInfo,
   loadClip,
   playToneCue,
 } from "../audio/reference.ts";
@@ -698,7 +699,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           // Classic/Drill falling back to it is a real clip-load failure
           // worth tracking.
           if (!playedClip && mode !== "learn") {
-            track({ type: "cue_fallback", tone: cue.tone });
+            track({ type: "cue_fallback", tone: cue.tone, ...clipFallbackInfo(cue.word) });
           }
         };
         if (releaseMicForCue) {

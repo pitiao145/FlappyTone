@@ -45,6 +45,28 @@ import type { SpeechStyle } from "../game/words.ts";
 import type { GateOutcome } from "../game/scoring.ts";
 
 /**
+ * Why one clip download failed (`src/audio/reference.ts` records it per word).
+ * Declared here, not in `src/audio/`, so this payload module stays free of the
+ * audio graph. `other` = a failure nothing more specific tagged.
+ */
+export type ClipFailure =
+  | "no_source"
+  | "no_ticket"
+  | "unauthorized"
+  | "forbidden"
+  | "not_found"
+  | "rate_limited"
+  | "server"
+  | "network"
+  | "aborted"
+  | "decode"
+  | "http_other"
+  | "other";
+
+/** `cue_fallback.reason`: a failure, or why there is none to report. */
+export type CueFallbackReason = ClipFailure | "loading" | "not_requested" | "no_word";
+
+/**
  * Why a run stopped. `quit` and `restart` both come from the pause menu, which
  * otherwise leaves no trace. `abandoned`: the run sat out of sight (another
  * nav tab, or the page hidden) past `ABANDON_AFTER_MS`, or the page closed
@@ -364,8 +386,11 @@ export type AnalyticsEvent =
    * The native clip wasn't loaded yet when its cue was due, so the synthetic
    * sweep played instead (see src/audio/reference.ts's `playToneCue`). Should
    * be rare to nonexistent in production; this exists to confirm that.
+   * `reason`/`retrying`/`waitMs` come from `clipFallbackInfo` — why the clip
+   * was not ready (e.g. `unauthorized` = the IP-bound ticket was refused,
+   * `loading` = still downloading after `waitMs`). Closed values and a number.
    */
-  | { type: "cue_fallback"; tone: Tone }
+  | { type: "cue_fallback"; tone: Tone; reason: CueFallbackReason; retrying: boolean; waitMs?: number }
   /** Share button tapped on GameOver, before the share sheet opens — see docs/flappytone-SPEC-share.md. */
   | { type: "share_clicked"; mode: RunMode; score: number; is_best: boolean }
   /** A `?c=<score>` challenge link landed on a cold or returning session. */

@@ -25,6 +25,7 @@ import {
   type ClipPriority,
 } from "./clipQueue.ts";
 import { isChromeIOS } from "./platform.ts";
+import type { ClipFailure, CueFallbackReason } from "../analytics/session.ts";
 import { getMicSession } from "./session.ts";
 
 /**
@@ -155,6 +156,23 @@ const clips = new Map<string, RefClip>();
 /** In-flight or finished loads, so a word is fetched at most once. */
 const loads = new Map<string, Promise<void>>();
 
+/**
+ * Why a word's clip is not playable yet — read only when a cue falls back to
+ * the synthetic sweep, so the `cue_fallback` event can say why (VPN 401s,
+ * a missing clip, a slow network and a dead `/token` all looked the same
+ * before). `failures` holds the latest failed attempt's reason (cleared on
+ * success); `pending`/`startedAt` describe the attempt in flight, if any.
+ */
+const failures = new Map<string, ClipFailure>();
+const pending = new Set<string>();
+const startedAt = new Map<string, number>();
+
+/** Records why this attempt failed, then hands back the error to throw. */
+function failed<E extends Error>(key: string, reason: ClipFailure, err: E): E {
+  failures.set(key, reason);
+  return err;
+}
+
 /** A 401 from the Worker: the ticket is stale, the clip itself may be fine. */
 class TicketError extends Error {
   constructor() {
@@ -206,6 +224,8 @@ export function loadClip(
   // warm-up hold, a tapped word) wants this clip within seconds. Only the
   // speculative warmers pass "soon".
   const priority = opts.priority ?? "now";
+  pending.add(key);
+  startedAt.set(key, performance.now());
   const load = (async () => {
     // The clips live in R2 behind the Worker, which serves nothing without a
     // short-lived play ticket. No base URL or no ticket is not an error worth
@@ -224,7 +244,9 @@ export function loadClip(
         : null;
 
     const ticket = fixture ? null : await getPlayTicket();
-    if (!fixture && (!CLIPS_BASE_URL || !ticket)) throw new Error("no clips source");
+    if (!fixture && (!CLIPS_BASE_URL || !ticket)) {
+      throw failed(key, CLIPS_BASE_URL ? "no_ticket" : "no_source", new Error("no clips source"));
+    }
     const url = fixture
       ? `/dev-fixtures/tonepairs/${fixture}.wav`
       : `${CLIPS_BASE_URL}/clip/${word.speakerId}/${word.id}?${
@@ -236,22 +258,26 @@ export function loadClip(
     ).catch((err: unknown) => {
       // A queue abort (the player left the screen) and a dead network are both
       // "try again later", never "this clip does not exist".
-      if (err instanceof ClipAborted) throw err;
-      throw new RetryableError(String(err));
+      if (err instanceof ClipAborted) throw failed(key, "aborted", err);
+      throw failed(key, "network", new RetryableError(String(err)));
     });
     if (res.status === 429) {
       noteRateLimited(res.headers.get("Retry-After"));
-      throw new RetryableError("429");
+      throw failed(key, "rate_limited", new RetryableError("429"));
     }
     if (res.status === 401) {
       // The ticket expired, or the player's IP moved. Drop it so the next
       // gate mints a fresh one — and drop this load from `loads` below, or
       // this word would be stuck on the cached failure for the whole session.
       invalidatePlayTicket();
-      throw new TicketError();
+      throw failed(key, "unauthorized", new TicketError());
     }
-    if (res.status >= 500) throw new RetryableError(`${url}: ${res.status}`);
-    if (!res.ok) throw new Error(`${url}: ${res.status}`);
+    if (res.status >= 500) throw failed(key, "server", new RetryableError(`${url}: ${res.status}`));
+    if (!res.ok) {
+      const reason: ClipFailure =
+        res.status === 404 ? "not_found" : res.status === 403 ? "forbidden" : "http_other";
+      throw failed(key, reason, new Error(`${url}: ${res.status}`));
+    }
     // Decode on the playback context (AudioBuffers are context-independent and
     // playable on any context, but decoding on the one we play on keeps the
     // sample rate matched). On the Chrome-iOS legacy path this is the mic
@@ -263,7 +289,15 @@ export function loadClip(
     // existence (hard rule 4). By the time a clip has actually arrived, the
     // gesture that started the run has long since happened.
     const audio = getPlaybackCtx();
-    const buffer = await audio.decodeAudioData(await res.arrayBuffer());
+    let buffer: AudioBuffer;
+    try {
+      buffer = await audio.decodeAudioData(await res.arrayBuffer());
+    } catch (err) {
+      // The body read can fail mid-stream too (a connection cut after the
+      // headers arrived) — that is the network, not the file.
+      throw failed(key, err instanceof DOMException && err.name === "EncodingError" ? "decode" : "network", err as Error);
+    }
+    failures.delete(key);
     clips.set(key, {
       buffer,
       onsetS: word.onsetS,
@@ -278,10 +312,44 @@ export function loadClip(
     const retryable =
       err instanceof TicketError || err instanceof RetryableError || err instanceof ClipAborted;
     if (retryable && loads.get(key) === load) loads.delete(key);
+    // An error thrown before `failed` could tag it (e.g. inside the ticket
+    // mint) still needs a reason, or the fallback would read "loading".
+    if (!failures.has(key)) failures.set(key, "other");
     return undefined;
+  }).finally(() => {
+    if (loads.get(key) === load || !loads.has(key)) pending.delete(key);
   });
   loads.set(key, load);
   return load;
+}
+
+/**
+ * Why `word`'s clip was not ready when its cue was due. Read by the caller of
+ * `playToneCue` after it returned false, for the `cue_fallback` event.
+ *
+ * `reason` is the latest failed attempt's cause when there is one — even if a
+ * retry is now in flight (`retrying`), because "401, retrying" says more than
+ * "loading". With no failure it is `loading` (fetch still running: a slow or
+ * throttled connection) or `not_requested` (nothing ever asked for it).
+ * `waitMs` is the time since the latest attempt started (a settled failure
+ * keeps counting, so read it together with `reason`).
+ */
+export function clipFallbackInfo(word: Word | null): {
+  reason: CueFallbackReason;
+  retrying: boolean;
+  waitMs?: number;
+} {
+  if (!word) return { reason: "no_word", retrying: false };
+  const key = clipKeyFor(word);
+  const inFlight = pending.has(key);
+  const failure = failures.get(key);
+  const t0 = startedAt.get(key);
+  const waitMs = t0 === undefined ? undefined : Math.round(performance.now() - t0);
+  return {
+    reason: failure ?? (inFlight ? "loading" : "not_requested"),
+    retrying: failure !== undefined && inFlight,
+    ...(waitMs !== undefined ? { waitMs } : {}),
+  };
 }
 
 /**
