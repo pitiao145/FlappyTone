@@ -656,6 +656,8 @@ export interface Tuning {
   gridBottomPct: number;
   /** Frames this close (st) to the tracker's band edge are clamped and left out. */
   gridBandEdgeSt: number;
+  /** Middle votes skip frames whose target is this close (chao) to line 1 or 5 (clamped targets). */
+  gridTargetEdgeChao: number;
   /** Calibration middle step: voiced time needed per take (ms), and takes per word. */
   middleTakeVoicedMs: number;
   middleTakesPerWord: number;
@@ -820,6 +822,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   gridTopPct: 90,
   gridBottomPct: 10,
   gridBandEdgeSt: 0.25,
+  gridTargetEdgeChao: 0.05,
   middleTakeVoicedMs: 600,
   middleTakesPerWord: 2,
   gateDurationS: Object.freeze({ 1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6 }),
@@ -884,5 +887,6 @@ export function gridLearnParams(): GridLearnParams {
     topPct: t.gridTopPct,
     bottomPct: t.gridBottomPct,
     bandEdgeSt: t.gridBandEdgeSt,
+    targetEdgeChao: t.gridTargetEdgeChao,
   };
 }

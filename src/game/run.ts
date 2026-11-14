@@ -172,6 +172,24 @@ export interface RunConfig {
    * `game`.
    */
   wordMix?: WordMix;
+  /**
+   * Brief 44: called once per resolved gate with the player's voiced pitch in
+   * it, for the player-ruler learning (`playerRuler.ts`). Only passed when
+   * `tuning().playerRulerV2` is on; absent, nothing is collected.
+   */
+  onGateVoice?: (g: GateVoice) => void;
+}
+
+/** One resolved gate's voice, for the player-ruler learning (brief 44). */
+export interface GateVoice {
+  /** Voiced frames' semitones, relative to the tracker's centre at capture. */
+  semitones: number[];
+  /** The gate's target line at each frame (chao), on the player's own clock (first to last voiced frame). */
+  targetChao: number[];
+  /** The gate's tone when it is one syllable, else null. */
+  tone: Tone | null;
+  /** False when the gate went "couldn't hear that" (hard rule 8). */
+  heard: boolean;
 }
 
 export type CueStyle = "pause" | "off";
@@ -413,6 +431,14 @@ export const CALIBRATION_TONES: Tone[] = [1, 1, 3, 3];
 export const CALIBRATION_WORD_IDS: string[] = ["ma1b", "mao1", "ma3b", "wo3"];
 
 /**
+ * Brief 44: the calibration middle step's words (player ruler on). One first
+ * tone and one third tone: offline, that pair lands closest to the full middle
+ * of the voice (`src/dev/bench39/middle-words.mjs`). Both are calibration-flight
+ * words already, so their clips are warmed for the flight anyway.
+ */
+export const MIDDLE_WORD_IDS: string[] = ["ma1b", "ma3b"];
+
+/**
  * Is `tones` the calibration flight's own tone script — by content, not
  * reference. `Game.tsx` today always passes the exact `CALIBRATION_TONES`
  * constant, so identity would work, but a future `[...CALIBRATION_TONES]` or
@@ -520,6 +546,8 @@ interface ActiveGateState {
   seeded: number;
   /** Longest sustained excursion this gate, in ms. Instrumentation. */
   worstExcursionMs: number;
+  /** Voiced frames heard while this gate was active (brief 44 learning only; empty without the hook). */
+  voice: Array<{ atMs: number; st: number }>;
 }
 
 /** `LastOutcome` as stored — path in world space, projected on snapshot. */
@@ -625,6 +653,7 @@ export class Run {
   private readonly pairCombo: Tone[] | null;
   /** Classic `game` mode's word pool setting. Unused outside `game`. */
   private readonly wordMix: WordMix;
+  private readonly onGateVoice: ((g: GateVoice) => void) | null;
   private active: ActiveGateState | null = null;
 
   /** Gates resolved, whatever the outcome. Ends the tutorial. */
@@ -707,6 +736,7 @@ export class Run {
     this.pairCombo = cfg.pairCombo ?? null;
     this.wordMix = cfg.wordMix ?? "single";
     this.captureShapes = cfg.captureShapes ?? null;
+    this.onGateVoice = cfg.onGateVoice ?? null;
     this.difficulty = this.difficultyFor(0);
     this.stats = newRunStats(3);
     if (!cfg.deferFill) this.fillQueue();
@@ -745,6 +775,7 @@ export class Run {
         // Bucket by the active gate's tone so the grid anchors off the tone the
         // player was actually asked to produce (T1 → up, T3 → down).
         if (this.active) this.voicedByTone[this.active.gate.tone].push(p.semitones);
+        if (this.active && this.onGateVoice) this.active.voice.push({ atMs: nowMs, st: p.semitones });
       }
       this.pinned =
         p.chao !== null && p.chao >= 5 - PIN_EPSILON
@@ -1202,6 +1233,7 @@ export class Run {
           outsideSinceMs: null,
           seeded: samples.length,
           worstExcursionMs: 0,
+          voice: [],
         };
         this.preGate = [];
         this.idleRunStartMs = null;
@@ -1245,6 +1277,7 @@ export class Run {
     // heart. This is why the collision flag is dropped here, not in scoreGate.
     const heard = heardUtterance(state.samples, mergeGapMs);
     const collided = heard ? state.collided : false;
+    this.reportGateVoice(state, heard);
 
     // Only the stretch flown inside the gate — see `lastOutcome.path` below
     // for why the whole trail isn't used.
@@ -1413,6 +1446,24 @@ export class Run {
     // struggling with it.
     this.difficulty = this.difficultyFor(this.gatesCleared);
     this.fillQueue();
+  }
+
+  /** Brief 44: hands the gate's voice to the player-ruler learning. Never breaks the run. */
+  private reportGateVoice(state: ActiveGateState, heard: boolean): void {
+    if (!this.onGateVoice) return;
+    try {
+      const v = state.voice;
+      const t0 = v.length > 0 ? v[0].atMs : 0;
+      const span = v.length > 1 ? v[v.length - 1].atMs - t0 : 0;
+      this.onGateVoice({
+        semitones: v.map((x) => x.st),
+        targetChao: v.map((x) => (span > 0 ? corridorChaoAt(state.gate.shape, (x.atMs - t0) / span) : NaN)),
+        tone: state.gate.syllables === 1 ? state.gate.tone : null,
+        heard,
+      });
+    } catch {
+      // learning is optional; a run never fails because of it
+    }
   }
 
   private difficultyFor(gatesCleared: number): Difficulty {

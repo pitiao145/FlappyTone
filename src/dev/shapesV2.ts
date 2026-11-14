@@ -15,7 +15,7 @@
  */
 import file from "./local/shapes-v2.json";
 import type { ClipMeasurements, Word } from "../game/words.ts";
-import type { Polyline } from "../game/tuning.ts";
+import { setTuning, type Polyline } from "../game/tuning.ts";
 
 export const SHAPES_V2_KEY = "ft.shapesV2";
 
@@ -67,4 +67,14 @@ export function applyShapesV2(words: Word[] | null): Word[] | null {
   } catch {
     return words;
   }
+}
+
+/**
+ * Brief 44: the same switch turns on the player's one ruler
+ * (`tuning().playerRulerV2`): the middle step in calibration and the grid
+ * that learns in play. Dev builds only — GameApp calls this behind
+ * `import.meta.env.DEV`. Production keeps the flag off until brief 48.
+ */
+export function applyPlayerRulerSwitch(): void {
+  if (on()) setTuning({ playerRulerV2: true });
 }

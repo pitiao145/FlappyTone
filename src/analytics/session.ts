@@ -53,7 +53,8 @@ import type { GateOutcome } from "../game/scoring.ts";
 export type RunEndReason = "out_of_hearts" | "finished" | "quit" | "restart" | "abandoned";
 
 /** The calibration steps, mirrored from Calibration.tsx's `Step`. */
-export type CalibStep = "quiet" | "talk" | "low" | "high" | "done" | "preview";
+// "middle": brief 44 middle step, only with the player ruler on (dev until brief 48).
+export type CalibStep = "quiet" | "talk" | "middle" | "low" | "high" | "done" | "preview";
 
 /**
  * Restated rather than imported from `audio/mic.ts`.

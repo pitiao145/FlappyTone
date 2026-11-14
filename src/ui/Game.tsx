@@ -38,7 +38,16 @@ import { resolvedPool, type Word } from "../game/words.ts";
 import type { Proficiency } from "../game/tiers.ts";
 import type { LevelChoice } from "../game/settings.ts";
 import { speakerFMin, tuning } from "../game/tuning.ts";
-import { CALIBRATION_TONES, Run, type RunMode, type RunSnapshot, type WordMix } from "../game/run.ts";
+import {
+  learnRuler,
+  loadRuler,
+  rulerGrid,
+  saveRuler,
+  startRulerRun,
+  stFromRef,
+  type PlayerRulerRecord,
+} from "../game/playerRuler.ts";
+import { CALIBRATION_TONES, Run, type GateVoice, type RunMode, type RunSnapshot, type WordMix } from "../game/run.ts";
 import {
   effectiveSpeechStyle,
   loadCorridorWidth,
@@ -50,7 +59,7 @@ import {
   type CalibrationSettings,
 } from "../game/settings.ts";
 import { sessionNoiseMeter, startingNoiseFloor } from "../game/sessionNoise.ts";
-import { PitchTracker } from "../pitch/PitchTracker.ts";
+import { DEFAULT_CONFIG, PitchTracker } from "../pitch/PitchTracker.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawWorld, refreshMotionPreference, refreshThemePreference } from "../render/world.ts";
 import { JumpingPip } from "./bird/index.ts";
@@ -456,8 +465,34 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // off on Chrome/Firefox iOS, where the per-cue re-acquire toasts and
     // degrades the mic (isChromeIOS); those fall back to the earpiece route.
     const releaseMicForCue = isIOS() && !isChromeIOS();
+    // Brief 44 (off in production): the grid is the player's one ruler and
+    // learns a little after every heard gate. Mutable, outside React (hard
+    // rule 1); the tracker moves to the new grid between gates.
+    let ruler: PlayerRulerRecord | null = tuning().playerRulerV2
+      ? startRulerRun(loadRuler(settings))
+      : null;
+    const onGateVoice = ruler
+      ? (g: GateVoice) => {
+          if (!ruler) return;
+          // Frames are relative to the centre in force while the gate was flown.
+          const mid = ruler.state.grid.midSt;
+          ruler = learnRuler(ruler, {
+            semitones: g.semitones.map((x) => x + mid),
+            targetChao: g.targetChao,
+            tone: g.tone,
+            heard: g.heard,
+            bandLowSt: stFromRef(ruler, speakerFMin(settings.f0Center)),
+            bandHighSt: stFromRef(ruler, DEFAULT_CONFIG.fMax),
+          });
+          saveRuler(ruler);
+          const grid = rulerGrid(ruler);
+          tracker?.setF0Center(grid.f0Center);
+          tracker?.setRangeSemitones(grid.up, grid.down);
+        }
+      : undefined;
     const run = new Run({
       mode,
+      onGateVoice,
       width: canvasWidth,
       corridor,
       cueStyle,
@@ -569,16 +604,17 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
       // Deaf while the game itself is talking — the cue would drive the dot.
       if (isCueAudible()) return;
       if (!tracker) {
+        const grid = ruler ? rulerGrid(ruler) : null;
         tracker = new PitchTracker({
           sampleRate,
-          f0Center: settings.f0Center,
+          f0Center: grid ? grid.f0Center : settings.f0Center,
           fMin: speakerFMin(settings.f0Center),
           // The saved calibration floor, capped, until this session's own
           // measurement of the room lands (`measureNoise` below).
           noiseFloor: startingNoiseFloor(settings.noiseFloor, settings.voiceRms),
           minVoicedRunMs: tuning().minVoicedRunMs,
-          rangeSemitones: settings.rangeSemitones,
-          rangeDownSemitones: settings.rangeDownSemitones,
+          rangeSemitones: grid ? grid.up : settings.rangeSemitones,
+          rangeDownSemitones: grid ? grid.down : settings.rangeDownSemitones,
         });
       }
       const measured = measureNoise(frame, sampleRate);

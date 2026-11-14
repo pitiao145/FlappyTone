@@ -7,7 +7,7 @@ import {
   loadInventory,
 } from "../audio/inventory.ts";
 import { prefetchPool } from "../audio/prefetch.ts";
-import { ensurePlaybackCtx } from "../audio/reference.ts";
+import { ensurePlaybackCtx, isCueAudible, playToneCue } from "../audio/reference.ts";
 import { getMicSession, setFrameSink } from "../audio/session.ts";
 import {
   configureTracker,
@@ -16,7 +16,7 @@ import {
   handleFrame,
   startLoop,
 } from "../game/loop.ts";
-import { CALIBRATION_WORD_IDS } from "../game/run.ts";
+import { CALIBRATION_WORD_IDS, MIDDLE_WORD_IDS } from "../game/run.ts";
 import {
   loadSettings,
   resetRecalTracking,
@@ -33,6 +33,7 @@ import {
   RANGE_SEMITONES_MAX,
   RANGE_UP_SEMITONES_MIN,
   computeF0Center,
+  computeMiddleHz,
   computeNoiseFloor,
   computeRangeHalves,
   median,
@@ -126,7 +127,7 @@ const CONFIRM_MS = 900;
  */
 const NUMBER_FLASH_MS = 1700;
 
-type Step = "quiet" | "talk" | "done" | "preview";
+type Step = "quiet" | "talk" | "middle" | "done" | "preview";
 
 interface Props {
   canvasWidth: number;
@@ -262,6 +263,15 @@ export function Calibration({
   const [confirm, setConfirm] = useState<{ word: string; next: Step } | null>(
     null,
   );
+  /**
+   * Brief 44 middle step (player ruler on): the words to repeat, in order
+   * (each word `middleTakesPerWord` times), and which take is up. Null words
+   * until the inventory has them; missing words fall back to the talk step.
+   */
+  const [middleWords, setMiddleWords] = useState<Word[] | null>(null);
+  const [middleTake, setMiddleTake] = useState(0);
+  /** Voiced f0s of every middle take so far, per tracker floor. A ref: fills at frame rate. */
+  const middleF0Ref = useRef<{ normal: number[]; low: number[]; rms: number[] }>({ normal: [], low: [], rms: [] });
   /** Range the preview thinks fits this voice, or null until enough is heard. */
   const [fit, setFit] = useState<RangeHalves | null>(null);
   /** Every voiced semitone seen during preview. A ref: this fills at frame rate. */
@@ -340,10 +350,79 @@ export function Calibration({
       const timer = setTimeout(() => {
         setNoiseFloor(computeNoiseFloor(rms));
         setProgress(0);
-        advance("Thanks.", "talk");
+        advance("Thanks.", tuning().playerRulerV2 ? "middle" : "talk");
       }, QUIET_MS);
       return () => {
         clearTimeout(timer);
+        clearInterval(ticker);
+        setFrameSink(null);
+      };
+    }
+
+    if (step === "middle") {
+      // Brief 44 step 2: the middle from tone words, not free talk. No grid,
+      // no target on screen: the player hears the word and says it back.
+      // Two trackers: the normal floor, and the low floor for a deep voice
+      // (the talk step searched from 70 Hz and measured a 90 Hz voice 1.4 st
+      // high, brief 42 review); which one counts is decided at the end.
+      if (!middleWords) return;
+      const take = middleTake;
+      if (take === 0) middleF0Ref.current = { normal: [], low: [], rms: [] };
+      const heard = makeVoicedClock();
+      let normal: PitchTracker | null = null;
+      let low: PitchTracker | null = null;
+      setFrameSink((frame, sampleRate) => {
+        // Deaf while the example plays: the speaker would be measured, not the player.
+        if (isCueAudible()) return;
+        const base = noiseFloor === null
+          ? { sampleRate, rmsMult: TALK_RMS_MULT, minVoicedRunMs: tuning().minVoicedRunMs }
+          : { sampleRate, noiseFloor, rmsMult: TALK_RMS_MULT, minVoicedRunMs: tuning().minVoicedRunMs };
+        normal ??= new PitchTracker(base);
+        low ??= new PitchTracker({ ...base, fMin: tuning().pitchFloorLowHz });
+        const p = normal.push(frame);
+        const q = low.push(frame);
+        if (p.voiced && p.f0 !== null) {
+          middleF0Ref.current.normal.push(p.f0);
+          middleF0Ref.current.rms.push(p.rms);
+          heard.tick(performance.now());
+        }
+        if (q.voiced && q.f0 !== null) middleF0Ref.current.low.push(q.f0);
+      });
+      const started = performance.now();
+      const ticker = setInterval(() => {
+        const need = tuning().middleTakeVoicedMs;
+        setProgress(Math.min(1, heard.ms / need));
+        if (heard.ms === 0 && performance.now() - started > NUDGE_AFTER_MS) {
+          setHint("Take your time, I'm still listening.");
+        }
+        if (heard.ms < need) return;
+        clearInterval(ticker);
+        setFrameSink(null);
+        setProgress(0);
+        setHint(null);
+        if (take + 1 < middleWords.length) {
+          setMiddleTake(take + 1);
+          return;
+        }
+        const f = middleF0Ref.current;
+        const first = computeMiddleHz(f.normal);
+        // A deep voice: its floor would sit under the normal one, so the low
+        // tracker's frames are the fair measurement.
+        const centre =
+          first !== null && speakerFMin(first) < tuning().pitchFloorHighHz
+            ? (computeMiddleHz(f.low) ?? first)
+            : first;
+        if (centre === null) {
+          setHint("Couldn't hear that, let's try again.");
+          setMiddleTake(0);
+          return;
+        }
+        setF0Center(centre);
+        setVoiceRms(median(f.rms));
+        setVoice((cur) => cur ?? { gender: guessGender(centre) });
+        advance("Got it.", "done");
+      }, 50);
+      return () => {
         clearInterval(ticker);
         setFrameSink(null);
       };
@@ -482,6 +561,8 @@ export function Calibration({
   }, [
     step,
     attempt,
+    middleWords,
+    middleTake,
     paused,
     confirm,
     noiseFloor,
@@ -606,6 +687,45 @@ export function Calibration({
    * second slider would ask the player to reason about a board shape they were
    * never told they had, and the ratio is the part the measurement is for.
    */
+  // Brief 44: the middle step's words, from the inventory the flight will use.
+  // Missing words (or no inventory) fall back to the talk step: calibration
+  // never stops on a fetch.
+  useEffect(() => {
+    if (step !== "middle" || middleWords) return;
+    let live = true;
+    void (async () => {
+      let words: Word[] = [];
+      try {
+        words = inventoryNow() ?? (await loadInventory());
+      } catch {
+        words = [];
+      }
+      if (!live) return;
+      const byId = new Map(words.map((w) => [w.id, w]));
+      const found = MIDDLE_WORD_IDS.map((id) => byId.get(id)).filter((w): w is Word => !!w);
+      if (found.length < MIDDLE_WORD_IDS.length) {
+        setStep("talk");
+        return;
+      }
+      prefetchPool(found);
+      const takes: Word[] = [];
+      for (let i = 0; i < tuning().middleTakesPerWord; i++) takes.push(...found);
+      setMiddleTake(0);
+      setMiddleWords(takes);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [step, middleWords]);
+
+  /** Plays the example for the current middle take. A click: the playback context resumes inside the gesture. */
+  const playMiddleExample = () => {
+    const w = middleWords?.[middleTake];
+    if (!w) return;
+    void ensurePlaybackCtx();
+    playToneCue(w.tone, f0Center ?? 180, range.up, w, range.down);
+  };
+
   const applyRange = (next: RangeHalves) => {
     setRange(next);
     getTracker()?.setRangeSemitones(next.up, next.down);
@@ -645,6 +765,23 @@ export function Calibration({
             </>
           ) : (
             <Meter value={progress} />
+          )}
+        </>
+      )}
+
+      {step === "middle" && !confirm && (
+        <>
+          {middleWords ? (
+            <>
+              <p className="note big">Listen, then say the word back in your normal voice.</p>
+              <p className="big readout" lang="zh-Hant">{middleWords[middleTake]?.hanzi}</p>
+              <p className="note">{middleWords[middleTake]?.pinyin}</p>
+              <button onClick={playMiddleExample}>Hear it</button>
+              {hint ? <p className="prompt">{hint}</p> : null}
+              <Meter value={progress} />
+            </>
+          ) : (
+            <p className="note big">One moment…</p>
           )}
         </>
       )}

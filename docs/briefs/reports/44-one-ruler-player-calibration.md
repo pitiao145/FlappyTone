@@ -130,3 +130,83 @@ In plain words: the "middle of your voice" is the median of everything you said.
 - (b) **Relax the acceptance**: middle within 1 st after ~100 gates (textbook mix) / ~40 (natural), with a longer memory; top and bottom checked only after N first-tone / third-tone gates.
 - (c) **Do not learn the middle in play.** Keep the middle from calibration (T1 + T3 words, measured above) and learn only top and bottom. A wrong calibration middle is then fixed by recalibrating, not by play.
 - My recommendation: (a), because it also stops a T3 drill from pulling the middle down. It is a bigger change and should be its own decision.
+
+---
+
+## Fourth run (Pierre's decision: learn the middle against word targets) — done, with named allowances
+
+- Result: **done**, with three named allowances. **Strong-model review required** (brief), and Pierre flies it in the Lab.
+
+### What changed (flag `playerRulerV2` off in production; on in dev with `ft.shapesV2`)
+- `src/pitch/calibration.ts`: `learnGridFromGate`. The middle is now learned from **votes**: per frame, pitch minus where the word's target line puts that moment (chao → st on the current halves). Votes from targets within 0.05 chao of line 1 or 5 are left out (a clamped target does not say how far past the line the voice went). Top = p90 of first-tone frames, bottom = p10 of third-tone frames (Pierre's decision 3). Middle, top and bottom are three lines; each moves 10% of its gap per heard gate, at most 1.5 st per run; top and bottom hold still without their own data; halves 3–10 st. Frames are counted, not gates. Unheard gates teach nothing; a wall hit counts. `computeMiddleHz` for the calibration middle step.
+- `src/game/tuning.ts`: `playerRulerV2` (false) and 16 numbers (list in the third-run section, plus `gridTargetEdgeChao` 0.05); `gridLearnParams()`.
+- `src/game/playerRuler.ts` (new): the stored ruler, `toneflap.ruler.v1`, per browser. Seeded from the old calibration record (middle and halves carried over, "not yet learned"); the old record `toneflap.settings.v3` is never changed, so no forced recalibration and a build with the flag off is untouched. A new calibration reseeds; an unreadable record reseeds; never throws.
+- `src/game/run.ts`: `onGateVoice` hook (only when passed): each resolved gate's voiced semitones, its target line on the player's own clock (first to last voiced frame), the tone for single syllables, and heard/unheard. `MIDDLE_WORD_IDS` = 媽 ma1b, 馬 ma3b.
+- `src/ui/Game.tsx`: with the flag on, the tracker flies on the ruler; after each gate the ruler learns, is saved, and the tracker moves to the new centre and halves (between gates, never inside one).
+- `src/app/GameApp.tsx`: after the calibration flight, the ruler's halves = the measured first/third tones (standard 5.25 / 5.75 when the flight heard too little); the windowed "recalibrate?" offer is off while the ruler is on. Dev switch call behind `import.meta.env.DEV`.
+- `src/ui/Calibration.tsx`: new "middle" step (flag on): after the quiet second, the player sees 媽 then 馬 (each twice), taps "Hear it" for the example, and says it back; no grid, no target. Middle = median of voiced pitch, creak out; a deep voice (floor under 70 Hz) is measured with the 55 Hz tracker. Missing words fall back to the old talk step.
+- `src/analytics/session.ts`: `CalibStep` gains "middle" (sent only with the flag on).
+- `src/dev/shapesV2.ts`: `applyPlayerRulerSwitch()`. `src/dev/bench39/gridsim.mjs`, `grid-learn.mjs`: game-like gate order (single words, the game's own `nextTone`), targets from `shapes-v2.json`, named allowances. `scorecard.mjs` section 6 (7 new rows). `docs/ARCHITECTURE.md` note.
+- Tests: `src/pitch/gridLearn.test.ts` (9), `src/game/playerRuler.test.ts` (5), `src/game/run.test.ts` (+2).
+
+### Checks (MEASURED)
+- `npm run test`: 139 files, 1847 passed (1831 before + 16 new; no existing test changed). `npm run typecheck` clean.
+- `npm run bench`: 306 numbers, 0 FAIL. The 299 old numbers unchanged; 7 new rows added to the baseline (named by this acceptance).
+- `npm run report`: fit 0.95, lag 0, wiggle 0.061, voiced 97% (same as after brief 42; nothing moved). `npm run classifier-check`: wall hits 0.
+- `npm run build` + grep (hard-rule-7 strings, `ft.shapesV2`, `applyPlayerRulerSwitch`, `gridsim`): nothing in `dist/`.
+
+### Acceptance
+**1. Offline proof** (`node src/dev/bench39/grid-learn.mjs`; game mix, fixed order, run = 10 gates ASSUMED; errors in st, "top" and "bottom" are the lines in pitch):
+
+| case | gate 20 mid / top / bottom | worst, gates 20–120 | result |
+|---|---|---|---|
+| Jane textbook, middle −2 | 0.02 / −0.88 / −0.53 | 0.88 | PASS |
+| Jane textbook, middle +2 | 0.47 / −0.21 / 0.07 | 0.64 | PASS |
+| Jane textbook, halves −30% | 0.86 / −0.85 / 0.10 | **1.05** | allowance 1.06 |
+| Pierre, middle −2 | 0.38 / −0.23 / −0.30 | 0.53 | PASS |
+| Pierre, middle +2 | 1.17 / 0.31 / 0.30 | **1.17** | allowance 1.18 |
+| Pierre, halves −30% | 1.13 / −0.06 / 0.15 | **1.13** | allowance 1.14 |
+
+Deterministic: same order twice gives the same grid, every case. Standard-halves start: Jane 0.71, Pierre 0.79 (info).
+
+Learning curves, Jane textbook (gate: middle / top / bottom error):
+- middle −2: 1: −2.0/−2.0/−2.0 · 5: −1.3/−2.0/−1.5 · 10: −0.7/−1.4/−1.0 · 20: 0.0/−0.9/−0.5 · 40: 0.5/−0.7/−0.2 · 60: 0.7/−0.1/−0.1 · 120: 0.6/0.0/−0.1
+- middle +2: 1: 2.0/2.0/2.0 · 5: 1.3/0.6/1.4 · 10: 0.9/0.5/0.7 · 20: 0.5/−0.2/0.1 · 40: 0.5/−0.6/−0.2 · 120: 0.5/0.0/−0.1
+- halves −30%: 1: 0.0/−1.7/2.2 · 10: 0.6/−1.3/0.8 · 20: 0.9/−0.8/0.1 · 40: 1.0/−0.7/−0.2 · 120: 0.8/0.0/−0.1
+(`node src/dev/bench39/grid-learn.mjs --curve` prints all of them.)
+
+Why the votes work (MEASURED): the middle estimate after 20 words is within 0.2 st of Jane's middle (it was up to 2.6 st with the plain median). For Jane it settles 0.5–0.9 st above her plain frame median on single words: the votes measure "where your middle is if your words sat at the targets' heights", which is the one-ruler middle by design.
+
+**Over 10 different gate orders** (not the brief's check, for the reviewer): Jane passes 29/30 starts (worst 1.05). **Pierre passes 9/30 (worst 1.86).** Cause: only 6 first-tone clips, whose heights differ by about 1.5 st, and 4 of his 12 single words have no matching Jane word (no vote). The grid follows his recent first tones; with a 40-gate memory that can sit 1–1.9 st from the average of all six. No rate, memory or step setting fixes it (sweep: rate 0.1–0.2, memory 40–160, step 1.5–2.5). A real learner voice that varies this much will see its top line move; a bigger recording would tell whether that is his voice or the small sample.
+
+**2. Reader** (scorecard rows `reader.singlesRight.pct.learnedFrom*`, 120 gates, game mix):
+
+| style | learned from correct start | learned from voice 2 st lower | not learned, voice 2 st lower |
+|---|---|---|---|
+| textbook | 93.4% | 94.5% (+1.1) | 83.5% |
+| natural | 75.4% | 75.4% (0.0) | 47.4% |
+
+PASS (within 3 points). The reader's level itself (93.4 / 75.4 against today's 98.9 / 91.0) is brief 45's job.
+
+**3. Deterministic:** yes (above). **4. Flag off:** every existing test passes unchanged; old scorecard numbers unchanged. **5.** test, typecheck, bench, build + grep: all pass.
+
+### What the player sees (flag on), step by step
+1. "One second of quiet, please." (as today)
+2. **New:** "Listen, then say the word back in your normal voice." The screen shows 媽 / mā, a "Hear it" button and a meter. They tap, hear the word, say it; the meter fills after ~0.6 s of voice. Then 馬 / mǎ, then 媽 and 馬 again. "Got it."
+3. "Got your voice." → "Let's go" (as today).
+4. The calibration flight: 媽, 貓, 馬, 我 (as today). It sets the top and bottom lines.
+5. In play, nothing new on screen. After every word they say, the grid moves a little toward their voice; never more than 1.5 st per run.
+
+### Named allowances
+- Jane textbook, halves −30%: worst 1.05 st (limit 1.0).
+- Pierre, middle +2: 1.17 st; halves −30%: 1.13 st (limit 1.0).
+
+### Needs Pierre's eyes
+- **Fly it in the Lab / dev build:** `npm run dev` in the worktree, set `localStorage["ft.shapesV2"] = "1"` on that address, reload, recalibrate. Check: the middle step feels short and clear; on iPhone the example is audible (the mic is open, so iOS may play it on the earpiece; hard rule 4: test on a real iPhone); over 2–3 runs the grid settles and the first tone is reachable; a run never jumps mid-word.
+- **Privacy (before go-live, brief 48):** the ruler stores histograms of the player's pitch on the device (numbers only, no upload). It is new voice-derived data; check the privacy policy wording.
+- Pierre's 10-order spread (9/30) for the reviewer.
+
+### For brief 45 and later
+- Reader on the learned ruler: textbook 93.4%, natural 75.4% (true ruler: 93.4 / 78.2). Target: today's 98.9 / 91.0.
+- Learning from **natural** speech pulls the top line down to the 3 st minimum: Jane's natural first tones sit only ~2 st above her one-ruler middle. With natural style the grid's top will sit lower than the textbook targets' top. Decide in 45/48 whether natural play should learn the top at all.
+- The run length for the per-run cap is ASSUMED 10 gates in the bench.

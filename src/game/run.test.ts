@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { BIRD_X_FRAC, CALIBRATION_TONES, Run, type RunSnapshot } from "./run.ts";
+import { BIRD_X_FRAC, CALIBRATION_TONES, Run, type GateVoice, type RunSnapshot } from "./run.ts";
 import { DEFAULT_TUNING, resetTuning, setTuning, tuning } from "./tuning.ts";
 import {
   corridorChaoAt,
@@ -1967,5 +1967,27 @@ describe("player tone shapes (spec B)", () => {
     const silent = shapeRun(() => true);
     simulate(silent, 900, () => pitch(null));
     expect(silent.drainShapes()).toEqual([]);
+  });
+});
+
+describe("onGateVoice (brief 44 player ruler)", () => {
+  it("reports each resolved gate's voice with its target line; silence is reported unheard", () => {
+    const seen: GateVoice[] = [];
+    const run = new Run({ mode: "game", width: W, rand: seqRand([0, 0, 0.5, 0.75]), onGateVoice: (g) => seen.push(g) });
+    // Flies the first gates on the corridor, then goes silent.
+    simulate(run, 1500, (s, i) => (i < 700 ? trackCorridor(s) : pitch(null)));
+    const heard = seen.filter((g) => g.heard);
+    expect(heard.length).toBeGreaterThan(0);
+    for (const g of heard) {
+      expect(g.semitones.length).toBeGreaterThan(0);
+      expect(g.targetChao.length).toBe(g.semitones.length);
+      expect(g.tone).not.toBeNull();
+    }
+    expect(seen.some((g) => !g.heard)).toBe(true);
+  });
+
+  it("collects nothing without the hook", () => {
+    const run = newGameRun();
+    expect(() => simulate(run, 300, trackCorridor)).not.toThrow();
   });
 });

@@ -29,7 +29,7 @@
    "unit": "st"
   },
   "live.delay.ms.textbook.T1": {
-   "value": 20.0,
+   "value": 20,
    "better": "lower",
    "tol": 0,
    "unit": "ms"
@@ -119,7 +119,7 @@
    "unit": "st"
   },
   "live.delay.ms.textbook.T2": {
-   "value": 20.0,
+   "value": 20,
    "better": "lower",
    "tol": 0,
    "unit": "ms"
@@ -209,7 +209,7 @@
    "unit": "st"
   },
   "live.delay.ms.textbook.T3": {
-   "value": 20.0,
+   "value": 20,
    "better": "lower",
    "tol": 0,
    "unit": "ms"
@@ -299,7 +299,7 @@
    "unit": "st"
   },
   "live.delay.ms.textbook.T4": {
-   "value": 20.0,
+   "value": 20,
    "better": "lower",
    "tol": 0,
    "unit": "ms"
@@ -389,7 +389,7 @@
    "unit": "st"
   },
   "live.delay.ms.textbook.pairs": {
-   "value": 20.0,
+   "value": 20,
    "better": "lower",
    "tol": 0,
    "unit": "ms"
@@ -479,7 +479,7 @@
    "unit": "st"
   },
   "live.delay.ms.natural.T1": {
-   "value": 20.0,
+   "value": 20,
    "better": "lower",
    "tol": 0,
    "unit": "ms"
@@ -569,7 +569,7 @@
    "unit": "st"
   },
   "live.delay.ms.natural.T2": {
-   "value": 20.0,
+   "value": 20,
    "better": "lower",
    "tol": 0,
    "unit": "ms"
@@ -659,7 +659,7 @@
    "unit": "st"
   },
   "live.delay.ms.natural.T3": {
-   "value": 20.0,
+   "value": 20,
    "better": "lower",
    "tol": 0,
    "unit": "ms"
@@ -749,7 +749,7 @@
    "unit": "st"
   },
   "live.delay.ms.natural.T4": {
-   "value": 20.0,
+   "value": 20,
    "better": "lower",
    "tol": 0,
    "unit": "ms"
@@ -839,7 +839,7 @@
    "unit": "st"
   },
   "live.delay.ms.natural.pairs": {
-   "value": 20.0,
+   "value": 20,
    "better": "lower",
    "tol": 0,
    "unit": "ms"
@@ -1857,6 +1857,49 @@
    "tol": 0.05,
    "unit": "st",
    "ref": "live.err.delayRemoved.p90.natural.pairs"
+  },
+  "grid.worstErrFromGate20.st.textbook.low2": {
+   "value": 0.88,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st"
+  },
+  "grid.worstErrFromGate20.st.textbook.high2": {
+   "value": 0.64,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st"
+  },
+  "grid.worstErrFromGate20.st.textbook.halves70": {
+   "value": 1.05,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "note": "brief 44 named allowance: acceptance limit 1.0 st, measured 1.05 (Pierre: small misses are recorded as allowances)"
+  },
+  "reader.singlesRight.pct.learnedFromCorrect.textbook": {
+   "value": 93.4,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%"
+  },
+  "reader.singlesRight.pct.learnedFrom2stLower.textbook": {
+   "value": 94.5,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%"
+  },
+  "reader.singlesRight.pct.learnedFromCorrect.natural": {
+   "value": 75.4,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%"
+  },
+  "reader.singlesRight.pct.learnedFrom2stLower.natural": {
+   "value": 75.4,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%"
   }
  },
  "changes": [

@@ -290,6 +290,12 @@ export interface GridLearnParams {
   bottomPct: number;
   /** Frames within this many st of the tracker's band edge are clamped and left out. */
   bandEdgeSt: number;
+  /**
+   * Middle votes skip frames whose target sits within this many chao of the
+   * top or bottom line: a target clamped at chao 5 or 1 does not say how far
+   * past the line the voice really was.
+   */
+  targetEdgeChao: number;
 }
 
 /** Histogram bins: GRID_BIN_ST wide, from -GRID_SPAN_ST to +GRID_SPAN_ST around refHz. */
@@ -305,7 +311,14 @@ export interface GridHist {
 
 export interface GridLearnState {
   grid: PlayerGrid;
-  /** All voiced frames of heard gates (middle). */
+  /**
+   * Middle votes of heard gates: per frame, its pitch minus where the word's
+   * target line puts that moment (in st from the middle, on the current
+   * halves). The median vote is where the middle is if the player matched the
+   * targets' heights. Unlike the plain median of frames, this does not depend
+   * on which words the run happened to draw (brief 44 third run: the plain
+   * median of 20 of Jane's words missed her middle by 2.6 st, p90).
+   */
   all: GridHist;
   /** Frames of heard single-syllable first-tone gates (top). */
   t1: GridHist;
@@ -325,6 +338,11 @@ export interface LearnGate {
   tone: 1 | 2 | 3 | 4 | null;
   /** False when the gate was "couldn't hear that" (hard rule 8): it teaches nothing. */
   heard: boolean;
+  /**
+   * The word's target line at each frame (chao, same length as `semitones`;
+   * NaN where there is none). Without it the gate does not vote on the middle.
+   */
+  targetChao?: number[];
   /** The tracker's band edges (st from refHz); frames at an edge are clamped. Optional. */
   bandLowSt?: number;
   bandHighSt?: number;
@@ -413,16 +431,28 @@ export function learnGridFromGate(
 ): GridLearnState {
   if (!gate.heard) return s;
   const lo = gate.bandLowSt, hi = gate.bandHighSt;
-  const frames = gate.semitones.filter(
-    (x) =>
-      Number.isFinite(x) &&
-      x >= s.grid.midSt - p.creakSt &&
-      (lo === undefined || x > lo + p.bandEdgeSt) &&
-      (hi === undefined || x < hi - p.bandEdgeSt),
-  );
+  const keep = (x: number) =>
+    Number.isFinite(x) &&
+    x >= s.grid.midSt - p.creakSt &&
+    (lo === undefined || x > lo + p.bandEdgeSt) &&
+    (hi === undefined || x < hi - p.bandEdgeSt);
+  const frames = gate.semitones.filter(keep);
   if (frames.length === 0) return s;
 
-  const all = addGate(s.all, frames, p.memoryGates);
+  // Middle votes: the frame's pitch minus the target's offset from the middle.
+  const votes: number[] = [];
+  const tc = gate.targetChao;
+  if (tc && tc.length === gate.semitones.length) {
+    for (let i = 0; i < tc.length; i++) {
+      const x = gate.semitones[i], c = tc[i];
+      if (!keep(x) || !Number.isFinite(c)) continue;
+      if (c >= 5 - p.targetEdgeChao || c <= 1 + p.targetEdgeChao) continue;
+      const offset = ((c - 3) / 2) * (c >= 3 ? s.grid.up : s.grid.down);
+      votes.push(x - offset);
+    }
+  }
+
+  const all = votes.length > 0 ? addGate(s.all, votes, p.memoryGates) : s.all;
   const t1 = gate.tone === 1 ? addGate(s.t1, frames, p.memoryGates) : s.t1;
   const t3 = gate.tone === 3 ? addGate(s.t3, frames, p.memoryGates) : s.t3;
   const next: GridLearnState = { ...s, all, t1, t3, gates: s.gates + 1 };
@@ -454,4 +484,20 @@ export function learnGridFromGate(
 /** True once both anchor pools have enough frames to steer the halves. */
 export function gridLearned(s: GridLearnState, minFrames: number): boolean {
   return s.t1.frames >= minFrames && s.t3.frames >= minFrames;
+}
+
+/**
+ * Brief 44 step 2: the middle of the voice from a few tone words (Hz).
+ * Median of the voiced f0s with creak (more than `creakSt` under the first
+ * median) left out, the same rule as the ruler. Null when fewer than 10 frames.
+ *
+ * Measured offline (`src/dev/bench39/middle-words.mjs`): one first-tone and one
+ * third-tone word land closest to the full middle (Jane -0.09 st, Pierre +0.66
+ * to +1.15 st); free talk was about -1.5 st for Jane.
+ */
+export function computeMiddleHz(voicedF0s: number[], creakSt = 10): number | null {
+  if (voicedF0s.length < 10) return null;
+  const floor = median(voicedF0s) * 2 ** (-creakSt / 12);
+  const kept = voicedF0s.filter((f) => f >= floor);
+  return kept.length >= 10 ? median(kept) : null;
 }

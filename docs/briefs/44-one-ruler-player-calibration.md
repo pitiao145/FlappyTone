@@ -1,5 +1,5 @@
 ---
-status: blocked  # third run: the middle cannot be learned within 1 st in 20 gates for Jane (sampling noise 2.3 st p90); see report
+status: done  # fourth run, with named allowances; strong-model review required (see report)
 notion_task:
 risk: needs-approval
 ---

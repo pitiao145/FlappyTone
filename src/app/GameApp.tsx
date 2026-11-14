@@ -1,3 +1,6 @@
+import { tuning } from "../game/tuning.ts";
+import { loadRuler, saveRuler, withHalves } from "../game/playerRuler.ts";
+import { applyPlayerRulerSwitch } from "../dev/shapesV2.ts";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { track, trackFirstSeoTouch, trackSpeechStyle } from "../analytics/client";
 import { seoSource } from "../site/pageAnalytics.ts";
@@ -73,6 +76,10 @@ import { GameNav, type NavTab } from "./GameNav.tsx";
 import { TonederScreen } from "./TonederScreen.tsx";
 import { parsePairKey } from "../toneder/cta.ts";
 import "../App.css";
+
+// Brief 44: dev-only switch (ft.shapesV2) for the player ruler. Gated here so
+// neither the call nor the module reaches dist/ (hard rule 7).
+if (import.meta.env.DEV) applyPlayerRulerSwitch();
 
 export type Screen =
   | "play"
@@ -892,17 +899,26 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
         // from the T3 gates (run.ts `measuredRange`). A null range (the player
         // stayed silent through the run) keeps the provisional ±5 board — the
         // in-game backstop corrects it over real runs.
+        // Brief 44 (off in production): a flight that heard too little first
+        // or third tone starts from the standard halves, not the ±5 board.
+        const ruler = tuning().playerRulerV2;
+        const halves =
+          snap.measuredRange ??
+          (ruler ? { up: tuning().gridUpSemitones, down: tuning().gridDownSemitones } : null);
         const seeded =
-          snap.measuredRange && settings
+          halves && settings
             ? {
                 ...settings,
-                rangeSemitones: snap.measuredRange.up,
-                rangeDownSemitones: snap.measuredRange.down,
+                rangeSemitones: halves.up,
+                rangeDownSemitones: halves.down,
               }
             : settings;
         if (seeded) {
           saveSettings(seeded);
           setSettings(seeded);
+          // The flight's own gates are already in the ruler's pools (Game.tsx);
+          // its halves are set from the measured tones, as before.
+          if (ruler && halves) saveRuler(withHalves(loadRuler(seeded), halves.up, halves.down));
         }
         // A brief loading beat so the last gate doesn't snap straight to the
         // Play screen (which read as broken). The seeding is instant; the pause
@@ -965,7 +981,11 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     // non-tutorial run reaches here, so tutorial runs never pollute the
     // window (the early return above already routed those away).
     const tracking = recordTrackedRun(loadRecalTracking(), snap.measuredRange);
-    if (tracking.samples.length >= tracking.windowSize) {
+    if (tuning().playerRulerV2) {
+      // Brief 44: the grid learns in play, so the windowed "recalibrate?"
+      // offer would fight it. Off while the player ruler is on.
+      setRecalSuggestion(null);
+    } else if (tracking.samples.length >= tracking.windowSize) {
       // The first offer is the one closed off the initial window (1 game after
       // calibration); every later window is a cooldown. Drives friendlier copy.
       const isFirst = tracking.windowSize === INITIAL_TRACKING_WINDOW;

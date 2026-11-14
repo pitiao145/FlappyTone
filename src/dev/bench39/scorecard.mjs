@@ -224,6 +224,24 @@ for (const [label, shift] of [["calibrated", 0], ["voice2stLower", -2]]) for (co
   }
 }
 
+// ---- 6. the player's grid learns (brief 44, gridsim.mjs) ---------------------
+{
+  const { speakerGates, trueRuler, simulate, worst, readerAfterLearning } = await import("./gridsim.mjs");
+  const tb = speakerGates("jane", "textbook"), nat = speakerGates("jane", "natural");
+  const ruler = trueRuler(tb);
+  const up = ruler.top - ruler.mid, down = ruler.mid - ruler.bottom;
+  const starts = { low2: { mid: ruler.mid - 2, up, down }, high2: { mid: ruler.mid + 2, up, down }, halves70: { mid: ruler.mid, up: 0.7 * up, down: 0.7 * down } };
+  for (const [k, start] of Object.entries(starts)) {
+    const c = simulate(tb, start, { truth: ruler }).curve;
+    put(`grid.worstErrFromGate20.st.textbook.${k}`, Math.max(worst(c[19]), ...c.slice(19).map(worst)), "lower", 0.05, "st");
+  }
+  for (const [style, g] of [["textbook", tb], ["natural", nat]]) {
+    const r = readerAfterLearning(g, ruler);
+    put(`reader.singlesRight.pct.learnedFromCorrect.${style}`, r.correct, "higher", PP_TOL, "%");
+    put(`reader.singlesRight.pct.learnedFrom2stLower.${style}`, r.lower, "higher", PP_TOL, "%");
+  }
+}
+
 // ---- report -----------------------------------------------------------------
 const write = process.argv.includes("--write-baseline");
 const base = !write && existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, "utf8")) : null;
