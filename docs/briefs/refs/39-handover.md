@@ -249,3 +249,31 @@ Reviewed: brief, report (all four runs), handover, diff `6ce627f..17b9b07`, both
 - For the reviewer: Pierre's 10-order spread; per-run cap with run = 10 gates ASSUMED; target line on the player's own clock (first to last voiced frame).
 - For brief 45: reader starts at textbook 93.4%, natural 75.4% on the learned ruler (78.2% on the true ruler); target 98.9 / 91.0.
 - For brief 48: privacy-policy check (pitch histograms on device); real iPhone test of the middle step (example audio with the mic open).
+
+## 44 review (strong model) — 14 Nov 2026 — NOT approved: 2 fixes, then done
+
+Reviewed commits `6ccf24e`, `54909c4`. No code changed by this review.
+
+**Reproduced (MEASURED):** `npm run bench` 306 numbers, 0 FAIL. `grid-learn.mjs` gives the report's table exactly (Jane 0.88 / 0.64 / 1.05, Pierre 0.53 / 1.17 / 1.13, deterministic). Reader after learning 93.4 / 94.5 textbook, 75.4 / 75.4 natural. `npm run test` 1847 pass, typecheck clean, build + grep clean (`toneflap.ruler.v1` is in the app bundle, as expected: the code ships with the flag off). Flag off = no behaviour change (READ IN CODE: every new path sits behind `playerRulerV2` or the optional `onGateVoice`). The three named allowances are fine.
+
+**Passes the numbers, wrong for a real voice (MEASURED, 400 gates, Jane's clips through `simulate`, start = her correct ruler):**
+
+| case | result | verdict |
+|---|---|---|
+| Pairs only, voice 0 st off | stable (mid −0.1) | ok |
+| **Pairs only, voice 1 st lower** | middle ends 1.9 st too low; halves 8.6 up / 4.4 down (true 5.7 / 7.3) | **FIX 1** |
+| **Pairs only, voice 2 st lower / higher** | middle 2.8 too low / 1.5 too high; halves 9.9 / 3.1 and 3.2 / 9.8 (at the clamps) | **FIX 1** |
+| **Natural style, single words** | up half 5.73 → 3.00 (the clamp) and stays; reader on natural 77.7% → 72.0% | **FIX 2** |
+| Says the third tone as a second tone | bottom line rises 2.2 st (down half 7.33 → 4.75); middle ok | for Pierre, below |
+| Flat learner (range ×0.3) | grid shrinks to 3 / 3 | same as today's limits; ok |
+| Another voice 7 st lower on 1 gate in 4 | all three lines within 0.7 st | ok |
+| Another player 7 st lower, every gate | follows in ~120 gates (1.5 st per run) | ok, as designed |
+| Middle step, live rule (first 600 ms of voice per take), Pierre | +0.24 to +0.81 st | ok |
+
+**FIX 1 — pairs-only play runs away.** Cause (READ IN CODE, `learnGridFromGate`): pairs feed only the middle; top and bottom hold still in pitch. So when the middle moves, one half grows and the other shrinks. The middle votes use those halves (`offset = (c − 3) / 2 × half`), so the changed halves push the votes further the same way. A loop, until a half hits 3 or 10. The acceptance did not see it because it ran on single words only. Direction: a middle move carries top and bottom with it (halves kept); first-tone and third-tone data then correct their own line. The votes then do not depend on how far the middle has moved. Check with a new scorecard row: pairs only, voice ±2 st, 400 gates, all three lines within 1 st and halves within 1 st of the start.
+
+**FIX 2 — natural style collapses the top.** Cause: the top learns from every single first-tone gate, but a natural first-tone target does not sit at line 5 (Jane's natural first tones are ~2 st above her middle). The player's top then moves down to their natural first tone, and the grid is no longer the one ruler. Direction: a gate feeds the first-tone pool only when its own target reaches the top line (target max ≥ about 4.8 chao), and the third-tone pool only when its target reaches the bottom (min ≤ about 1.2). One rule, no style flag. Check with a new scorecard row: Jane natural, game mix, 400 gates: up and down halves within 1 st of her ruler.
+
+**For Pierre (a product choice, not a fix now).** The bottom line is "what you do on third-tone gates", wall hits included. A learner whose third tone is not low gets a higher floor (measured: +2.2 st), so the game asks less of them. Today's calibration flight has the same property once; the learning now repeats it every gate. Option for later: top and bottom learn only from gates that did not hit a wall. Judge it when flying.
+
+**Notes for 46 / 48.** Once the pair syllable finder exists (46), first-tone and third-tone syllables inside pairs can feed the pools. Other screens (Visualiser, TONEder, demos) still read the old settings record, not the ruler: decide in 48. Privacy wording for the stored pitch histograms: 48.
