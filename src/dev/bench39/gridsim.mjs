@@ -30,6 +30,11 @@ function rng(seed) {
  */
 export function gateOrder(gates, n, seed, mix = "game") {
   const rnd = rng(seed);
+  if (mix === "pairs") {
+    // The game's pairs mode: multi-syllable words only, drawn at random.
+    const multi = gates.filter((g) => g.tones.length >= 2);
+    return Array.from({ length: n }, () => multi[Math.floor(rnd() * multi.length)]);
+  }
   if (mix === "all") {
     const out = [...gates];
     for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
@@ -149,4 +154,17 @@ export function readerAfterLearning(gates, truth, { n = 120, seed = 44 } = {}) {
     notLearned: singlesRight(gates, start.mid !== undefined ? start : start, -2),
     grids: { correct: correct.grid, lower: lower.grid },
   };
+}
+
+/**
+ * 44 review checks. Worst error (st) over the last 100 of `n` gates.
+ * lines: middle, top and bottom vs the (shifted) truth; halves: vs the start halves.
+ */
+export function longRun(gates, truth, { mix = "game", voiceShift = 0, n = 400, seed = 44 } = {}) {
+  const start = { mid: truth.mid, up: truth.top - truth.mid, down: truth.mid - truth.bottom };
+  const r = simulate(gates, start, { n, seed, mix, voiceShift, truth });
+  const tail = r.curve.slice(-100);
+  const lines = Math.max(...tail.map(worst));
+  const halves = Math.max(...tail.map((c) => Math.max(Math.abs(c.top - c.mid), Math.abs(c.mid - c.bottom))));
+  return { lines, halves, grid: r.grid, start };
 }

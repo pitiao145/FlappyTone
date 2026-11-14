@@ -1,5 +1,5 @@
 ---
-status: done  # fourth run, with named allowances; strong-model review required (see report)
+status: done  # review fixes 1-2 applied (fifth run); named allowances in the report
 notion_task:
 risk: needs-approval
 ---

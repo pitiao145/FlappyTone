@@ -658,6 +658,16 @@ export interface Tuning {
   gridBandEdgeSt: number;
   /** Middle votes skip frames whose target is this close (chao) to line 1 or 5 (clamped targets). */
   gridTargetEdgeChao: number;
+  /**
+   * Anchor gates (44 review, fix 2): a first-tone gate feeds the top pool only
+   * if its target peaks at or above this chao, a third-tone gate feeds the
+   * bottom pool only if its target dips to or below `gridAnchorBottomChao`.
+   * Measured on the one-ruler shapes: textbook first-tone peaks p10 4.18,
+   * natural p90 3.71, so 4.0 keeps ~95% of textbook and no natural first
+   * tones; textbook third-tone lows <= 1.5 for 92% (1.2 would keep 71%).
+   */
+  gridAnchorTopChao: number;
+  gridAnchorBottomChao: number;
   /** Calibration middle step: voiced time needed per take (ms), and takes per word. */
   middleTakeVoicedMs: number;
   middleTakesPerWord: number;
@@ -823,6 +833,8 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   gridBottomPct: 10,
   gridBandEdgeSt: 0.25,
   gridTargetEdgeChao: 0.05,
+  gridAnchorTopChao: 4.0,
+  gridAnchorBottomChao: 1.5,
   middleTakeVoicedMs: 600,
   middleTakesPerWord: 2,
   gateDurationS: Object.freeze({ 1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6 }),
@@ -888,5 +900,7 @@ export function gridLearnParams(): GridLearnParams {
     bottomPct: t.gridBottomPct,
     bandEdgeSt: t.gridBandEdgeSt,
     targetEdgeChao: t.gridTargetEdgeChao,
+    anchorTopChao: t.gridAnchorTopChao,
+    anchorBottomChao: t.gridAnchorBottomChao,
   };
 }

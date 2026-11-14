@@ -27,7 +27,7 @@ if (existsSync("fixtures/captures/pierre/calibration.json")) {
 // Named allowances (brief 44, Pierre's rule: small misses are recorded, not blocked).
 // Limit in st for the worst error at gate 20 and after, this fixed gate order only.
 const ALLOWANCES = {
-  "jane textbook, game mix (single words)|halves 30% too small": 1.06,
+  "pierre, game mix (his single words)|middle 2 st too low": 1.10, // after the 44 review fixes (was 0.53)
   "pierre, game mix (his single words)|middle 2 st too high": 1.18,
   "pierre, game mix (his single words)|halves 30% too small": 1.14,
 };
@@ -52,10 +52,25 @@ for (const { name, gates, truth: tr, mix, gated } of cases) {
     const ok = worst(at20) <= limit && worstLater <= limit && same;
     const counts = gated && label !== "standard halves";
     if (!ok && counts) fail++;
-    const tag = ok ? (limit > 1 ? `PASS (allowance ${limit} st)` : "PASS") : counts ? "FAIL" : "info";
+    const tag = ok ? (Math.max(worst(at20), worstLater) > 1 ? `PASS (allowance ${limit} st)` : "PASS") : counts ? "FAIL" : "info";
     console.log(`  ${label.padEnd(22)} gate 20: mid ${at20.mid.toFixed(2)} top ${at20.top.toFixed(2)} bottom ${at20.bottom.toFixed(2)} | worst gates 20-120 ${worstLater.toFixed(2)} | within 1 st for good from gate ${firstIn < 0 ? "never" : firstIn + 1} | deterministic ${same ? "yes" : "NO"} | ${tag}`);
     if (CURVE) console.log("    curve (gate: mid/top/bottom): " + a.curve.filter((c) => c.gate <= 30 || c.gate % 10 === 0).map((c) => `${c.gate}:${c.mid.toFixed(1)}/${c.top.toFixed(1)}/${c.bottom.toFixed(1)}`).join(" "));
   }
+}
+// 44 review checks (400 gates, start = the true ruler, worst over the last 100 gates).
+{
+  const { longRun } = await import("./gridsim.mjs");
+  console.log("\n44 review checks (400 gates, worst over gates 301-400):");
+  for (const [label, opts] of [["jane pairs only, voice 2 st lower", { mix: "pairs", voiceShift: -2 }], ["jane pairs only, voice 2 st higher", { mix: "pairs", voiceShift: 2 }]]) {
+    const r = longRun(janeTb, janeRuler, opts);
+    const ok = r.lines <= 1 && r.halves <= 1;
+    if (!ok) fail++;
+    console.log(`  ${label.padEnd(36)} lines ${r.lines.toFixed(2)} | halves vs start ${r.halves.toFixed(2)} | up ${r.grid.up.toFixed(2)} down ${r.grid.down.toFixed(2)} | ${ok ? "PASS" : "FAIL"}`);
+  }
+  const nat = longRun(janeNat, janeRuler, { mix: "game" });
+  const okN = nat.halves <= 1;
+  if (!okN) fail++;
+  console.log(`  ${"jane natural, game mix".padEnd(36)} halves vs her ruler ${nat.halves.toFixed(2)} | up ${nat.grid.up.toFixed(2)} down ${nat.grid.down.toFixed(2)} (ruler ${nat.start.up.toFixed(2)} / ${nat.start.down.toFixed(2)}) | ${okN ? "PASS" : "FAIL"}`);
 }
 console.log(`\n${fail} FAIL`);
 process.exit(fail ? 1 : 0);

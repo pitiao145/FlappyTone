@@ -226,7 +226,7 @@ for (const [label, shift] of [["calibrated", 0], ["voice2stLower", -2]]) for (co
 
 // ---- 6. the player's grid learns (brief 44, gridsim.mjs) ---------------------
 {
-  const { speakerGates, trueRuler, simulate, worst, readerAfterLearning } = await import("./gridsim.mjs");
+  const { speakerGates, trueRuler, simulate, worst, readerAfterLearning, longRun } = await import("./gridsim.mjs");
   const tb = speakerGates("jane", "textbook"), nat = speakerGates("jane", "natural");
   const ruler = trueRuler(tb);
   const up = ruler.top - ruler.mid, down = ruler.mid - ruler.bottom;
@@ -235,6 +235,12 @@ for (const [label, shift] of [["calibrated", 0], ["voice2stLower", -2]]) for (co
     const c = simulate(tb, start, { truth: ruler }).curve;
     put(`grid.worstErrFromGate20.st.textbook.${k}`, Math.max(worst(c[19]), ...c.slice(19).map(worst)), "lower", 0.05, "st");
   }
+  // 44 review: pairs-only play must not run away; natural play must keep the ruler's halves.
+  for (const [k, shift] of [["lower2", -2], ["higher2", 2]]) {
+    const r = longRun(tb, ruler, { mix: "pairs", voiceShift: shift });
+    put(`grid.pairsOnly400.worstErr.st.textbook.${k}`, Math.max(r.lines, r.halves), "lower", 0.05, "st");
+  }
+  put("grid.natural400.halvesErr.st", longRun(nat, ruler, { mix: "game" }).halves, "lower", 0.05, "st");
   for (const [style, g] of [["textbook", tb], ["natural", nat]]) {
     const r = readerAfterLearning(g, ruler);
     put(`reader.singlesRight.pct.learnedFromCorrect.${style}`, r.correct, "higher", PP_TOL, "%");

@@ -21,6 +21,8 @@ const P: GridLearnParams = {
   bottomPct: 10,
   bandEdgeSt: 0.25,
   targetEdgeChao: 0.05,
+  anchorTopChao: 4,
+  anchorBottomChao: 1.5,
 };
 
 /** A gate whose frames sit exactly on a flat target at `chao`, for a voice with this ruler. */
@@ -64,9 +66,10 @@ describe("learnGridFromGate (brief 44)", () => {
   it("learns top from first tones and bottom from third tones, and holds them without data", () => {
     let s = newGridLearnState({ midSt: 0, up: 4, down: 5 });
     for (let i = 0; i < 10; i++) s = learnGridFromGate(s, onTarget(2, 3.5, TRUE), P);
-    // No first tone heard yet: the top line holds still in pitch while the middle moves.
+    // No first tone heard yet: the middle moved and carried the lines with it (halves kept).
     expect(s.grid.midSt).not.toBe(0);
-    expect(s.grid.midSt + s.grid.up).toBeCloseTo(4, 5);
+    expect(s.grid.up).toBeCloseTo(4, 9);
+    expect(s.grid.down).toBeCloseTo(5, 9);
     for (let r = 0; r < 10; r++) {
       s = startGridRun(s);
       for (let i = 0; i < 10; i++) {
@@ -86,7 +89,7 @@ describe("learnGridFromGate (brief 44)", () => {
     let s = newGridLearnState({ midSt: 0, up: 6, down: 7 });
     for (let r = 0; r < 20; r++) {
       s = startGridRun(s);
-      for (let i = 0; i < 10; i++) s = learnGridFromGate(s, { semitones: Array(30).fill(0.5), tone: 1, heard: true }, P);
+      for (let i = 0; i < 10; i++) s = learnGridFromGate(s, { semitones: Array(30).fill(0.5), targetChao: Array(30).fill(4.5), tone: 1, heard: true }, P);
     }
     expect(s.grid.up).toBe(P.halfMin);
   });
@@ -118,5 +121,30 @@ describe("computeMiddleHz (brief 44 step 2)", () => {
     expect(computeMiddleHz([200, 210])).toBeNull();
     const f = [...Array(20).fill(200), ...Array(20).fill(220), ...Array(15).fill(90)];
     expect(computeMiddleHz(f)).toBe(210);
+  });
+});
+
+describe("44 review fixes", () => {
+  it("fix 1: pairs only (middle votes, no anchors) never run away; halves stay put", () => {
+    // Voice 2 st lower than the grid, two-syllable gates only: targets in the middle band.
+    let s = newGridLearnState({ midSt: 0, up: 6, down: 7 });
+    const lower = { mid: -2, up: 6, down: 7 };
+    for (let r = 0; r < 40; r++) {
+      s = startGridRun(s);
+      for (let i = 0; i < 10; i++) s = learnGridFromGate(s, onTarget(null, 2 + (i % 5) * 0.5, lower), P);
+    }
+    expect(Math.abs(s.grid.midSt + 2)).toBeLessThan(0.3);
+    expect(s.grid.up).toBeCloseTo(6, 9);
+    expect(s.grid.down).toBeCloseTo(7, 9);
+  });
+
+  it("fix 2: a first tone whose target does not reach the top line does not feed the top", () => {
+    const s = newGridLearnState({ midSt: 0, up: 6, down: 7 });
+    const natural = learnGridFromGate(s, onTarget(1, 3.4, TRUE), P);
+    expect(natural.t1.frames).toBe(0);
+    const textbook = learnGridFromGate(s, onTarget(1, 4.5, TRUE), P);
+    expect(textbook.t1.frames).toBe(30);
+    const highT3 = learnGridFromGate(s, onTarget(3, 2, TRUE), P);
+    expect(highT3.t3.frames).toBe(0);
   });
 });

@@ -277,3 +277,12 @@ Reviewed commits `6ccf24e`, `54909c4`. No code changed by this review.
 **For Pierre (a product choice, not a fix now).** The bottom line is "what you do on third-tone gates", wall hits included. A learner whose third tone is not low gets a higher floor (measured: +2.2 st), so the game asks less of them. Today's calibration flight has the same property once; the learning now repeats it every gate. Option for later: top and bottom learn only from gates that did not hit a wall. Judge it when flying.
 
 **Notes for 46 / 48.** Once the pair syllable finder exists (46), first-tone and third-tone syllables inside pairs can feed the pools. Other screens (Visualiser, TONEder, demos) still read the old settings record, not the ruler: decide in 48. Privacy wording for the stored pitch histograms: 48.
+
+## 44 review fixes (fifth run) — 14 Nov 2026 — done
+- Fix 1: a middle move carries top and bottom (halves kept). Pairs only ±2 st, 400 gates: lines 0.07 st, halves unchanged (was a runaway to the 3 / 10 clamps).
+- Fix 2: anchor gates by target reach, `gridAnchorTopChao` **4.0** / `gridAnchorBottomChao` **1.5** (not the review's ~4.8 / 1.2: MEASURED, only 23% of textbook first-tone targets reach 4.8; natural first tones peak at most 3.71, textbook p10 4.18). Jane natural, 400 gates: halves within 0.43 st of her ruler (top untouched at 5.73).
+- Moved (MEASURED): Jane −2 / +2 / halves −30%: 0.88 → 0.54, 0.64 → 0.95, 1.05 → 0.86 (Jane allowance dropped). Pierre −2: 0.53 → 1.09 (new allowance 1.10). Reader after learning, textbook correct / −2: 93.4 → 94.5 / 94.5 → 92.3; natural 75.4 → 80.6 / 80.1.
+- Scorecard 309 numbers, 0 FAIL (3 new rows; 7 brief-44 rows updated). Tests 1849. Report unchanged, wall hits 0, build grep clean. Commit: see `git log` ("44 review fixes").
+- For brief 45: the reader on the learned ruler now starts at textbook 94.5%, natural 80.6% (from a correct start).
+- Open (reviewer's product note, not done): the bottom learns from third-tone gates even when they hit a wall, so a learner whose third tone is not low gets a higher floor. Judge when flying.
+- Open (Pierre, 14 Nov): the calibration "middle" step repeats the flight's words (媽, 馬); revisit the calibration flow later.

@@ -296,6 +296,14 @@ export interface GridLearnParams {
    * past the line the voice really was.
    */
   targetEdgeChao: number;
+  /**
+   * A first-tone gate feeds the top pool only when its own target reaches at
+   * least this chao; a third-tone gate feeds the bottom pool only when its
+   * target reaches at most `anchorBottomChao`. One rule for every style: a
+   * natural first tone (target peak ~3.4) is not a top-line word (44 review).
+   */
+  anchorTopChao: number;
+  anchorBottomChao: number;
 }
 
 /** Histogram bins: GRID_BIN_ST wide, from -GRID_SPAN_ST to +GRID_SPAN_ST around refHz. */
@@ -453,21 +461,31 @@ export function learnGridFromGate(
   }
 
   const all = votes.length > 0 ? addGate(s.all, votes, p.memoryGates) : s.all;
-  const t1 = gate.tone === 1 ? addGate(s.t1, frames, p.memoryGates) : s.t1;
-  const t3 = gate.tone === 3 ? addGate(s.t3, frames, p.memoryGates) : s.t3;
+  // Anchor pools: only gates whose own target reaches the line they anchor.
+  let tMax = -Infinity, tMin = Infinity;
+  if (tc) for (const c of tc) if (Number.isFinite(c)) { if (c > tMax) tMax = c; if (c < tMin) tMin = c; }
+  const t1 = gate.tone === 1 && tMax >= p.anchorTopChao ? addGate(s.t1, frames, p.memoryGates) : s.t1;
+  const t3 = gate.tone === 3 && tMin <= p.anchorBottomChao ? addGate(s.t3, frames, p.memoryGates) : s.t3;
   const next: GridLearnState = { ...s, all, t1, t3, gates: s.gates + 1 };
   const est = gridEstimate(next, p);
 
   // The grid is three lines: middle, top (first-tone p90) and bottom
-  // (third-tone p10). Top and bottom are anchors of their own: each moves only
-  // toward its own pool's estimate, and holds still (in pitch) while its pool
-  // is too small, even when the middle moves. The halves follow from the lines.
+  // (third-tone p10). The middle moves toward its votes and carries the other
+  // two lines with it; top and bottom then move toward their own pools'
+  // estimates (and only ride along while their pool is too small).
   const g0 = s.grid;
   let midSt = g0.midSt;
   let topSt = g0.midSt + g0.up;
   let bottomSt = g0.midSt - g0.down;
   let { mid: usedMid, up: usedUp, down: usedDown } = s.runMoved;
   if (est.midSt !== null) [midSt, usedMid] = stepToward(midSt, est.midSt, p.rate, usedMid, p.maxStepPerRun);
+  // A middle move carries the top and bottom lines with it (halves kept), so
+  // the middle votes, which use the halves, never feed back on themselves
+  // (44 review: pairs-only play ran away to the clamps). First-tone and
+  // third-tone data then correct their own line.
+  const carried = midSt - g0.midSt;
+  topSt += carried;
+  bottomSt += carried;
   if (est.topSt !== null) [topSt, usedUp] = stepToward(topSt, est.topSt, p.rate, usedUp, p.maxStepPerRun);
   if (est.bottomSt !== null) [bottomSt, usedDown] = stepToward(bottomSt, est.bottomSt, p.rate, usedDown, p.maxStepPerRun);
   const clampHalfTo = (x: number) => Math.min(p.halfMax, Math.max(p.halfMin, x));

@@ -1859,47 +1859,65 @@
    "ref": "live.err.delayRemoved.p90.natural.pairs"
   },
   "grid.worstErrFromGate20.st.textbook.low2": {
-   "value": 0.88,
+   "value": 0.54,
    "better": "lower",
    "tol": 0.05,
    "unit": "st"
   },
   "grid.worstErrFromGate20.st.textbook.high2": {
-   "value": 0.64,
+   "value": 0.95,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st",
+   "note": "44 review fixes moved it 0.64 -> 0.95 (acceptance limit 1.0 st)"
+  },
+  "grid.worstErrFromGate20.st.textbook.halves70": {
+   "value": 0.86,
    "better": "lower",
    "tol": 0.05,
    "unit": "st"
   },
-  "grid.worstErrFromGate20.st.textbook.halves70": {
-   "value": 1.05,
-   "better": "lower",
-   "tol": 0.05,
-   "unit": "st",
-   "note": "brief 44 named allowance: acceptance limit 1.0 st, measured 1.05 (Pierre: small misses are recorded as allowances)"
-  },
   "reader.singlesRight.pct.learnedFromCorrect.textbook": {
-   "value": 93.4,
-   "better": "higher",
-   "tol": 1,
-   "unit": "%"
-  },
-  "reader.singlesRight.pct.learnedFrom2stLower.textbook": {
    "value": 94.5,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
+  "reader.singlesRight.pct.learnedFrom2stLower.textbook": {
+   "value": 92.3,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%"
+  },
   "reader.singlesRight.pct.learnedFromCorrect.natural": {
-   "value": 75.4,
+   "value": 80.6,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "reader.singlesRight.pct.learnedFrom2stLower.natural": {
-   "value": 75.4,
+   "value": 80.1,
    "better": "higher",
    "tol": 1,
    "unit": "%"
+  },
+  "grid.pairsOnly400.worstErr.st.textbook.lower2": {
+   "value": 0.07,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st"
+  },
+  "grid.pairsOnly400.worstErr.st.textbook.higher2": {
+   "value": 0.07,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st"
+  },
+  "grid.natural400.halvesErr.st": {
+   "value": 0.43,
+   "better": "lower",
+   "tol": 0.05,
+   "unit": "st"
   }
  },
  "changes": [
