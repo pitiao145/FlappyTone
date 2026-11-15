@@ -4,7 +4,8 @@
  */
 
 import { brand } from "../brand.ts";
-import { DEFAULT_TUNING, tuning, type Polyline } from "./tuning.ts";
+import { DEFAULT_POLYLINES, DEFAULT_TUNING, tuning, type Polyline } from "./tuning.ts";
+import { DEFAULT_POLYLINES_V2 } from "./toneAveragesV2.ts";
 import { spokenTones } from "./sandhi.ts";
 import type { Word } from "./words.ts";
 
@@ -59,10 +60,20 @@ export interface GateShape {
   durationS: number;
 }
 
-/** The tone's own default corridor, from tuning. The Lab edits these. */
+/**
+ * The tone's own default corridor, from tuning. The Lab edits these. With the
+ * one ruler on (`playerRulerV2`, brief 45) an unedited default is swapped for
+ * its one-ruler shape (`DEFAULT_POLYLINES_V2`); a Lab edit still wins.
+ */
 export function shapeForTone(tone: Tone): GateShape {
   const t = tuning();
-  return { polyline: t.polylines[tone], durationS: t.gateDurationS[tone] };
+  const own = t.polylines[tone];
+  const polyline = t.playerRulerV2 && samePolyline(own, DEFAULT_POLYLINES[tone]) ? DEFAULT_POLYLINES_V2[tone] : own;
+  return { polyline, durationS: t.gateDurationS[tone] };
+}
+
+function samePolyline(a: Polyline, b: Polyline): boolean {
+  return a.length === b.length && a.every((p, i) => p[0] === b[i][0] && p[1] === b[i][1]);
 }
 
 /**

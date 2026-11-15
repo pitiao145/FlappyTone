@@ -15,6 +15,7 @@
 import type { Tone } from "./gates.ts";
 import { speakerFloorHz } from "../pitch/math.ts";
 import type { GridLearnParams } from "../pitch/calibration.ts";
+import type { ToneReaderSettings } from "./toneClassifierV2.ts";
 
 /** A corridor centreline: (t, chao) control points, ascending in t over [0,1]. */
 export type Polyline = Array<[number, number]>;
@@ -436,6 +437,13 @@ export interface Tuning {
     low: [number, number];
   };
   /**
+   * Brief 45: the reader's thresholds on the one ruler, used instead of the
+   * `toneV2*` fields above when `playerRulerV2` is on (`readerSettings`).
+   * Fitted on half of Jane's clips, checked on the other half
+   * (`src/dev/bench39/reader45.mjs`).
+   */
+  toneReaderRuler: ToneReaderSettings;
+  /**
    * Confidence floor before `applyClassifierBoost` does anything — a reward
    * for being *sure*, not a general softening. 0.9 per the player call this
    * was tuned from: "if a player does a tone 100% accurately according to
@@ -755,6 +763,36 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
     drop: [0.7, 1.9],
     dropShare: [0.22, 0.4],
     low: [2.2, 1.6],
+  },
+  // Brief 45, fitted on the fit half of Jane's single clips on her one ruler
+  // (src/dev/bench39/fit45.mjs for the T1/T4/dip-rise sizes, the T2/T3
+  // anchors at the fit half's T2 and T3 medians); checked on the other half.
+  toneReaderRuler: {
+    t1MinChao: 2,
+    t1MinMs: 350,
+    t1DecisiveMinChao: 3,
+    flatnessScaleChao: 1.9,
+    t1StillChao: 1.4,
+    maxWiggle: 8,
+    minT23Cue: 0.6,
+    maxT23Dissent: 1,
+    t23Stability: { shiftChao: 0.6, scales: [0.7, 1.4] },
+    t2FloorChao: 1.05,
+    t23ScoopNotDecisive: true,
+    t4MinPeakChao: 2.6,
+    t4MinFallChao: 1.6,
+    t4DecisiveMinPeakChao: 3.5,
+    dipRiseMinChao: 0.2,
+    anchors: {
+      turnTime: [0.333, 0.462],
+      riseShare: [0.59, 0.487],
+      riseRate: [5.988, 6.236],
+      drop: [0.794, 1.172],
+      dropShare: [0.199, 0.316],
+      low: [1.26, 1],
+    },
+    votes: ["turnTime", "riseShare", "dropShare", "drop"],
+    floorRule: true,
   },
   toneClassifierBoostMinConfidence: 0.9,
   toneClassifierBoostFloorAccuracy: 0.6,

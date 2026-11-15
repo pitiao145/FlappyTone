@@ -1,5 +1,5 @@
 // CLI: npm run classifier-check -- [contours.json] [--anchors textbook|natural]
-//        [--votes lowTime,dwell] [--loo] [--v1] [--verbose]
+//        [--votes lowTime,dwell] [--loo] [--v1] [--ruler] [--verbose]
 //
 // Runs the live classifier (v2) by default; `--v1` runs the old
 // correlation classifier (`classifyToneV1`), which `--anchors`/`--loo`/
@@ -80,7 +80,17 @@ for (const v of extraVotes) {
     process.exit(1);
   }
 }
+// `--ruler` (brief 45): the one-ruler reader (`playerRulerV2` on) and Jane's
+// captures drawn on her one ruler (`src/dev/local/shapes-v2.json`) instead of
+// the default board around her speakers.json centre.
+const onRuler = args.includes("--ruler");
+const rulerBoard = onRuler
+  ? (JSON.parse(readFileSync(`${root}src/dev/local/shapes-v2.json`, "utf8")) as {
+      ruler: { middleHz: number; upSemitones: number; downSemitones: number };
+    }).ruler
+  : null;
 setTuning({
+  playerRulerV2: onRuler,
   toneClassifierV2: !args.includes("--v1"),
   toneClassifierLowTimeVote: extraVotes.includes("lowTime"),
   toneClassifierDwellVote: extraVotes.includes("dwell"),
@@ -166,7 +176,11 @@ function captureCases(): Case[] {
     const path = `${root}fixtures/captures/jane_ma${t}.wav`;
     if (!existsSync(path)) continue;
     const { samples, sampleRate } = decodeWav(readFileSync(path));
-    const tracker = new PitchTracker({ sampleRate, f0Center });
+    const tracker = new PitchTracker(
+      rulerBoard
+        ? { sampleRate, f0Center: rulerBoard.middleHz, rangeSemitones: rulerBoard.upSemitones, rangeDownSemitones: rulerBoard.downSemitones }
+        : { sampleRate, f0Center },
+    );
     const frames: { tMs: number; chao: number | null }[] = [];
     for (let s = 0; s + 2048 <= samples.length; s += 1024) {
       const st = tracker.push(samples.subarray(s, s + 2048));

@@ -43,6 +43,7 @@ import {
   trimOnset,
 } from "./toneClassifier.ts";
 import { AVERAGED_PAIR_SHAPE, AVERAGED_TONE_SHAPE } from "./toneAverages.ts";
+import { AVERAGED_PAIR_SHAPE_V2, AVERAGED_TONE_SHAPE_V2 } from "./toneAveragesV2.ts";
 import { toneComboKey, type SpeechStyle } from "./words.ts";
 import { tuning } from "./tuning.ts";
 
@@ -81,11 +82,25 @@ function spanOf(points: ContourPoint[]): number {
  * (speech style spec, decision 4).
  */
 export function referenceFor(tones: Tone[], style: SpeechStyle = "textbook"): number[] | null {
-  if (tones.length === 1) return AVERAGED_TONE_SHAPE[style][tones[0]] ?? null;
+  const { tone, pair } = averagedShapes();
+  if (tones.length === 1) return tone[style][tones[0]] ?? null;
   if (tones.length !== 2) return null;
   // A neutral syllable has no averaged combo (left out of the generator on
   // purpose), so this also covers "neutral combos are not measured".
-  return AVERAGED_PAIR_SHAPE[style][toneComboKey(tones)] ?? null;
+  return pair[style][toneComboKey(tones)] ?? null;
+}
+
+/**
+ * The baked averages in force: the one-ruler set (brief 45,
+ * `toneAveragesV2.ts`) when `playerRulerV2` is on, else today's.
+ */
+export function averagedShapes(): {
+  tone: Record<SpeechStyle, Record<Tone, number[]>>;
+  pair: Record<SpeechStyle, Record<string, number[]>>;
+} {
+  return tuning().playerRulerV2
+    ? { tone: AVERAGED_TONE_SHAPE_V2, pair: AVERAGED_PAIR_SHAPE_V2 }
+    : { tone: AVERAGED_TONE_SHAPE, pair: AVERAGED_PAIR_SHAPE };
 }
 
 /**
@@ -216,7 +231,7 @@ export function toneAccuracyDetail(
 
   let t23: number | null = null;
   if (t23Cue && tones.length === 1 && (tones[0] === 2 || tones[0] === 3)) {
-    const cue = t2t3CueOf({ points: utterance, startedAtMs: 0, endedAtMs: null }, AVERAGED_TONE_SHAPE[style]);
+    const cue = t2t3CueOf({ points: utterance, startedAtMs: 0, endedAtMs: null }, averagedShapes().tone[style]);
     if (cue !== null) {
       // The cue is -1 at the T2 average and +1 at the T3 average; pointed at
       // the target, that is 0 at the wrong tone's average and 1 at the right

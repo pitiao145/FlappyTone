@@ -248,6 +248,39 @@ for (const [label, shift] of [["calibrated", 0], ["voice2stLower", -2]]) for (co
   }
 }
 
+// ---- 7. the reader and tone accuracy on the one ruler (brief 45, reader45.mjs) --
+// Flag on (`playerRulerV2`): ruler reader settings and one-ruler averages.
+// Held-out half only: the ruler settings were fitted on the other half.
+{
+  const { TRUE_GRID, CASES, singleClips, readSingles, framesOf, contourOn, janeAccuracy, readerWithLearning } = await import("./reader45.mjs");
+  const { setTuning } = await import("../../game/tuning.ts");
+  const { isDrasticToneMismatch } = await import("../../game/scoring.ts");
+  setTuning({ playerRulerV2: true });
+  for (const style of STYLES) {
+    const held = singleClips(style, "held");
+    for (const [name, mk] of Object.entries(CASES)) {
+      const { grid, shift } = mk(TRUE_GRID);
+      const r = readSingles(held, grid, shift);
+      put(`ruler.reader.singlesRight.pct.${name}.${style}`, r.all, "higher", PP_TOL, "%");
+      for (const t of [1, 2, 3, 4]) put(`ruler.reader.T${t}Right.pct.${name}.${style}`, r[`T${t}`], "higher", PP_TOL, "%");
+      // A wall hit: a wrong, decisive, confident read (would cost a heart on a textbook gate).
+      if (style === "textbook") {
+        let walls = 0;
+        for (const c of singleClips(style, "all")) { const k = contourOn(framesOf(c), grid, shift); if (k && isDrasticToneMismatch(c.tones[0], classifyToneV2(k))) walls++; }
+        put(`ruler.reader.wallHits.allClips.${name}.textbook`, walls, "lower", 0, "n");
+      }
+    }
+  }
+  setTuning({ playerRulerV2: false });
+  for (const style of STYLES) {
+    const l = await readerWithLearning(style);
+    put(`ruler.reader.singlesRight.pct.learnedFrom2stLower.${style}`, l.learnedFrom2stLower, "higher", PP_TOL, "%");
+    for (const [system, w] of [["old", 0.15], ["new", 0.15], ["new", 0]]) {
+      put(`toneAcc.jane.med.held.${style}.${system}.height${w}`, janeAccuracy(style, "held", system, w).all.med, "higher", ST_TOL, "r");
+    }
+  }
+}
+
 // ---- report -----------------------------------------------------------------
 const write = process.argv.includes("--write-baseline");
 const base = !write && existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, "utf8")) : null;

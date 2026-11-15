@@ -11,7 +11,7 @@ import {
   monthsAgo,
   type ShapeRow,
 } from "../game/playerShape.ts";
-import { AVERAGED_PAIR_SHAPE, AVERAGED_TONE_SHAPE } from "../game/toneAverages.ts";
+import { averagedShapes } from "../game/toneAccuracy.ts";
 import { SAMPLE_TONE_SHAPES } from "./sampleToneShapes.ts";
 import { drawPlayerShapeChart, TONE_AVERAGE_COLOR } from "./toneAverageChart.ts";
 
@@ -141,7 +141,8 @@ function ShapeCard({
   const single = !shapeKey.includes("-");
   // Jane's average for the player's current effective style (spec decision 6).
   const style = effectiveSpeechStyle(useTier());
-  const jane = single ? AVERAGED_TONE_SHAPE[style][Number(shapeKey) as Tone] : (AVERAGED_PAIR_SHAPE[style][shapeKey] ?? null);
+  const avg = averagedShapes();
+  const jane = single ? avg.tone[style][Number(shapeKey) as Tone] : (avg.pair[style][shapeKey] ?? null);
   const tint = single ? TONE_AVERAGE_COLOR[Number(shapeKey) as Tone] : COMBO_TINT;
   const label = single ? `Tone ${shapeKey}` : `Tones ${shapeKey.replace("-", " + ")}`;
 

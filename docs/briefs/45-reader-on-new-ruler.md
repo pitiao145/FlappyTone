@@ -1,5 +1,5 @@
 ---
-status: blocked  # draft: waits for Pierre's approval of the Phase B plan
+status: done  # strong-model review required; flag off in production
 notion_task:
 risk: needs-approval
 ---

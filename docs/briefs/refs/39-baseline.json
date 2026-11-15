@@ -1918,6 +1918,447 @@
    "better": "lower",
    "tol": 0.05,
    "unit": "st"
+  },
+  "ruler.reader.singlesRight.pct.calibrated.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T1Right.pct.calibrated.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T2Right.pct.calibrated.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T3Right.pct.calibrated.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T4Right.pct.calibrated.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.wallHits.allClips.calibrated.textbook": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0,
+   "unit": "n",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.singlesRight.pct.lower2.textbook": {
+   "value": 89.29,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T1Right.pct.lower2.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T2Right.pct.lower2.textbook": {
+   "value": 83.33,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T3Right.pct.lower2.textbook": {
+   "value": 69.23,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T4Right.pct.lower2.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.wallHits.allClips.lower2.textbook": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0,
+   "unit": "n",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.singlesRight.pct.higher2.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T1Right.pct.higher2.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T2Right.pct.higher2.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T3Right.pct.higher2.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T4Right.pct.higher2.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.wallHits.allClips.higher2.textbook": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0,
+   "unit": "n",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.singlesRight.pct.narrow70.textbook": {
+   "value": 92.86,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T1Right.pct.narrow70.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T2Right.pct.narrow70.textbook": {
+   "value": 75,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T3Right.pct.narrow70.textbook": {
+   "value": 92.31,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T4Right.pct.narrow70.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.wallHits.allClips.narrow70.textbook": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0,
+   "unit": "n",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.singlesRight.pct.wide140.textbook": {
+   "value": 92.86,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T1Right.pct.wide140.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T2Right.pct.wide140.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T3Right.pct.wide140.textbook": {
+   "value": 69.23,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T4Right.pct.wide140.textbook": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.wallHits.allClips.wide140.textbook": {
+   "value": 0,
+   "better": "lower",
+   "tol": 0,
+   "unit": "n",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.singlesRight.pct.calibrated.natural": {
+   "value": 91.23,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T1Right.pct.calibrated.natural": {
+   "value": 86.96,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T2Right.pct.calibrated.natural": {
+   "value": 96.43,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T3Right.pct.calibrated.natural": {
+   "value": 80.77,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T4Right.pct.calibrated.natural": {
+   "value": 97.3,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.singlesRight.pct.lower2.natural": {
+   "value": 80.7,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T1Right.pct.lower2.natural": {
+   "value": 86.96,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T2Right.pct.lower2.natural": {
+   "value": 67.86,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T3Right.pct.lower2.natural": {
+   "value": 61.54,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T4Right.pct.lower2.natural": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.singlesRight.pct.higher2.natural": {
+   "value": 87.72,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T1Right.pct.higher2.natural": {
+   "value": 86.96,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T2Right.pct.higher2.natural": {
+   "value": 96.43,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T3Right.pct.higher2.natural": {
+   "value": 69.23,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T4Right.pct.higher2.natural": {
+   "value": 94.59,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.singlesRight.pct.narrow70.natural": {
+   "value": 82.46,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T1Right.pct.narrow70.natural": {
+   "value": 86.96,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T2Right.pct.narrow70.natural": {
+   "value": 75,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T3Right.pct.narrow70.natural": {
+   "value": 61.54,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T4Right.pct.narrow70.natural": {
+   "value": 100,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.singlesRight.pct.wide140.natural": {
+   "value": 80.7,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T1Right.pct.wide140.natural": {
+   "value": 91.3,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T2Right.pct.wide140.natural": {
+   "value": 96.43,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T3Right.pct.wide140.natural": {
+   "value": 42.31,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.T4Right.pct.wide140.natural": {
+   "value": 89.19,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.singlesRight.pct.learnedFrom2stLower.textbook": {
+   "value": 98.21,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "toneAcc.jane.med.held.textbook.old.height0.15": {
+   "value": 0.767,
+   "better": "higher",
+   "tol": 0.02,
+   "unit": "r",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "toneAcc.jane.med.held.textbook.new.height0.15": {
+   "value": 0.84,
+   "better": "higher",
+   "tol": 0.02,
+   "unit": "r",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "toneAcc.jane.med.held.textbook.new.height0": {
+   "value": 0.866,
+   "better": "higher",
+   "tol": 0.02,
+   "unit": "r",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "ruler.reader.singlesRight.pct.learnedFrom2stLower.natural": {
+   "value": 91.23,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "toneAcc.jane.med.held.natural.old.height0.15": {
+   "value": 0.698,
+   "better": "higher",
+   "tol": 0.02,
+   "unit": "r",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "toneAcc.jane.med.held.natural.new.height0.15": {
+   "value": 0.79,
+   "better": "higher",
+   "tol": 0.02,
+   "unit": "r",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "toneAcc.jane.med.held.natural.new.height0": {
+   "value": 0.804,
+   "better": "higher",
+   "tol": 0.02,
+   "unit": "r",
+   "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
   }
  },
  "changes": [

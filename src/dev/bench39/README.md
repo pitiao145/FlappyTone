@@ -22,6 +22,9 @@ node src/dev/bench39/noise.mjs          # rooms: wind (real), pink (synthetic), 
 node src/dev/bench39/voices.mjs         # lower / higher voice STAND-IN (~3 min)
 node src/dev/bench39/heights.mjs --worst # target polylines vs what Jane said
 node src/dev/bench39/reading.mjs        # classifier v2 and the pair read
+node src/dev/bench39/reader45.mjs [--half fit|held|all] [--confusion] [--accuracy] [--learning] [--pierre]
+                                        # brief 45: reader + tone accuracy on Jane's one ruler
+node src/dev/bench39/fit45.mjs          # brief 45: coordinate-descent fit of toneReaderRuler on the FIT half
 ```
 
 | File | What it is |
