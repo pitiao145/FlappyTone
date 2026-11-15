@@ -1,5 +1,5 @@
 ---
-status: blocked  # draft: waits for Pierre's approval of the Phase B plan
+status: blocked  # step 1: natural reference boundaries are not true boundaries; see reports/46-pairs-one-syllable-finder.md
 notion_task:
 risk: needs-approval
 ---

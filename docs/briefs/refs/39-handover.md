@@ -322,3 +322,12 @@ Reviewed commit `11484df`. No code changed by this review.
 **Note 3 — not covered by any number here.** (a) The live gate path with the flag on (the bench reads whole clean clips, not gates): Pierre's flying is the test. (b) Pairs on the ruler: brief 46. (c) Pierre's `shu2_1` decisive third-tone read: same in the old reader, still open. (d) Very fast first tones (under 350 ms) read as "none".
 
 **Process:** the builder looked at held-out numbers once and said so. The method it then chose (anchors = medians of the fit half) has no free search, and the fit half scores higher than the held half, so I accept the split as honest.
+
+## 46 Pairs: one syllable finder — 15 Nov 2026 — blocked (step 1: premise false)
+- Changed: `src/dev/bench39/split46.mjs` (new, dev-only), report `docs/briefs/reports/46-pairs-one-syllable-finder.md`, brief status. No production code. Scorecard not run (nothing it reads changed).
+- Why blocked (MEASURED, `node src/dev/bench39/split46.mjs`): the brief's "true boundary" = the pipeline's `syllableSpans`. `shapes-v2.json` does not store them (re-measured with `multiSyllableSpan`, 197 Hz, per-clip gate). For natural pairs they are mostly not true: 156 / 215 natural words are cut by the loudness-dip fallback, and 79 / 203 natural pairs (39%) have a cut at the 20% search edge (52) or with no real dip (55). Textbook is sound (2 doubtful of 208).
+- Also: splitters (b) and (c) always cut until the count fits, so "right count" is 100.0% for all of them and "wrong reads on mis-split pairs = 0" is true by construction. Neither tests the splitter.
+- Numbers (old board, flag off; ruler 1–5 points lower on textbook): today (a) count 67.3 / 3.9 %, both right 57.7 / 3.4. Splitter b (silence 150, then dip): textbook within 50 ms of reference 86.5%, p90 53 ms, both right **74.0** (oracle cut 76.0). Natural both right 8.4 (oracle 9.4). Pitch reset (c) no better than b.
+- Reader is the limit: per-syllable with the oracle cut, textbook 85.8% right, natural 39.2% right / 44.8% "?" (130 of 406 natural syllables are under 160 ms → "?" by rule 8; 44 read "none").
+- Decisions for Pierre (report): what counts as truth for natural boundaries; must a cut need a real dip (else "?"); the stretch numbers (textbook 75, natural 60) vs the reader cap.
+- For later: the pipeline's dip fallback has the same edge artefact on 39% of natural pairs, so natural pair corridors in `shapes-v2.json` may join at the wrong place. Check before brief 48.
