@@ -1,5 +1,5 @@
 ---
-status: blocked  # step 1: natural reference boundaries are not true boundaries; see reports/46-pairs-one-syllable-finder.md
+status: done
 notion_task:
 risk: needs-approval
 ---

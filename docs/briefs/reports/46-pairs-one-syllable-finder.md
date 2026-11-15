@@ -1,5 +1,58 @@
 # Report: 46 Pairs: one shared way to find the syllables
-- Result: **blocked** at step 1 (measure). A premise is false. No production code changed.
+- Result: **done** (second run, 15 Nov 2026, with Pierre's decisions). The first run (below the line) was blocked at step 1.
+
+## Second run — done
+
+### Pierre's decisions (15 Nov 2026)
+1. Truth = textbook reference only. Natural is reported (both right %, "?" %), no target.
+2. Splitter b (silence 150 ms, then loudness dip) with a real-dip rule: trough under 0.7 × the quieter side's peak, else "?". Same rule for both styles. 0.7 in `tuning()`.
+3. "Count right %" = count found AND every cut within 50 ms of the textbook reference.
+4. Acceptance: textbook both right within 3 points of the oracle cut, old board and ruler. Wrong-tone reads on pairs with a cut > 80 ms off: below today's 51.
+5. Natural pair reader (short syllables): not in this brief; open item.
+6. Handover note for brief 48 on the pipeline's natural pair cuts.
+7. Small misses → named allowances.
+
+### What changed
+- New: `src/game/syllables.ts` (pure: `findSyllables`, `splitAtSilences`, `realDipAt`) + `syllables.test.ts` (10 tests).
+- `tuning().syllableDipRatio` 0.7 (+ Lab knob in `TuningPanel.tsx`).
+- `rms` carried on `ContourPoint` and `TrailPoint` (optional); `ContourRecorder.push`, `PitchTrail.push`, `VisualiserCore.push` take it; `Visualiser.tsx` and `site/checker/engine.ts` pass `p.rms`; `trailContour` keeps it.
+- `freeAttempts.ts`: `readAttempt(id, points, expected?)`, `readContourSyllables(contour, expected?)` use `findSyllables`. With a count: not found → one "?" per syllable; a found syllable under `minUtteranceMs` → "?". Without a count (Free mode): unchanged (silences only, short fragments dropped).
+- Callers pass the count: Visualiser tone pairs (`word.syllables`), public checker (`board.ts`, `word.syllables`).
+- Clip pipeline: **kept on its own code** (step 3's fallback). MEASURED, `node src/dev/bench39/pipe46.mjs`: on the pipeline's own frames the shared finder finds no cut for 7 / 263 textbook and 130 / 257 natural multi-syllable clips (no real dip), and gives different runs for 46 and 65 more. Shapes would move far more than 0.05 chao (137 would have none).
+- Bench: `split46.mjs` (splitter comparison, now with the real-dip row and the new count definition), `pairs46.mjs` (production path, used by the scorecard), `pipe46.mjs`; scorecard section 8 (15 rows) and section 4's two pair rows now go through the finder.
+- Docs: `ARCHITECTURE.md` pair-read paragraph.
+
+### Acceptance (MEASURED, `npm run bench`, 387 numbers, 0 FAIL)
+| check | old board (flag off) | ruler (flag on) | limit | result |
+|---|---|---|---|---|
+| Textbook both right | 74.0 | 69.7 | oracle − 3 | |
+| Textbook oracle cut both right | 76.0 | 72.1 | | |
+| Gap to oracle | −2.0 | −2.4 | ≤ 3 | PASS |
+| Wrong-tone reads, cut > 80 ms off (textbook) | 6 | 7 | < 51 | PASS |
+| Textbook count right (found, every cut ≤ 50 ms) | 85.6% | — | brief: ≥ 95 | **named allowance** (decision 7) |
+| Textbook found | 99.0% | | | |
+
+The count-right miss: of 208 textbook pairs, 2 are not found and 28 have a cut more than 50 ms from the pipeline's cut; the both-right gap to the oracle is only 2 points, so most of those cuts still read right. Allowance: textbook count right ≥ 85% (baseline 85.58, tol 1 pp).
+
+Natural (no target, report only): found 49.3%, both right 7.9 (old) / 6.4 (ruler); oracle 9.4 / 7.9; "?" syllables 66.3%. Today natural was 3.9% split, 3.5% both right, with 116 wrong-tone reads on mis-split pairs; with the finder, a not-found natural pair reads "? · ?".
+
+Rows that moved (named by this brief's acceptance): `reader.pairsSplitInTwo.pct` textbook 67.3 → 99.0, natural 3.9 → 49.3; `reader.pairsBothRight.pct` textbook 55.3 → 74.0, natural 2.5 → 7.9 (both now mean "through the finder with the count"). 15 new `pairs46.*` rows. No other row moved.
+
+Longer words (information, `split46.mjs`, old board, 12 each): textbook found 100%, all right 58.3%; natural found 16.7%, all right 0%.
+
+### Other checks
+- `npm run test`: 141 files, 1870 passed. `npm run typecheck` clean. `npm run build` + grep: no file for any of the four strings. `syllableDipRatio` is in the app bundle (production tuning, expected).
+- `src/pitch/` not touched: no `npm run report` needed; tracker cache unchanged.
+- Not checked: real-mic behaviour in the browser (Pierre checks UI). `p.rms` is the tracker's frame loudness, the same number the bench used.
+
+### For Pierre to look at
+- Visualiser → Tone pairs, and the public checker with a pair: a pair said with no audible break may now show "? · ?" instead of one tone. That is the rule-8 choice from decision 2.
+- The Lab knob "syllable dip" moves the 0.7.
+
+---
+
+## First run — blocked at step 1 (kept for the record)
+
 
 ## What changed
 - New: `src/dev/bench39/split46.mjs` (dev-only, offline, numbers only). Brief status → blocked. This report, handover entry.

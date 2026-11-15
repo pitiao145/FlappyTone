@@ -331,3 +331,17 @@ Reviewed commit `11484df`. No code changed by this review.
 - Reader is the limit: per-syllable with the oracle cut, textbook 85.8% right, natural 39.2% right / 44.8% "?" (130 of 406 natural syllables are under 160 ms → "?" by rule 8; 44 read "none").
 - Decisions for Pierre (report): what counts as truth for natural boundaries; must a cut need a real dip (else "?"); the stretch numbers (textbook 75, natural 60) vs the reader cap.
 - For later: the pipeline's dip fallback has the same edge artefact on 39% of natural pairs, so natural pair corridors in `shapes-v2.json` may join at the wrong place. Check before brief 48.
+
+## 46 Pairs: one syllable finder (second run, Pierre's decisions) — 15 Nov 2026 — done
+- Decisions: truth = textbook reference only; splitter b (silence 150 ms, then loudness dip) with a real-dip rule (trough < `tuning().syllableDipRatio` 0.7 × quieter side's peak, else "?"); count right = found AND every cut ≤ 50 ms of the textbook reference; acceptance = textbook both right within 3 points of the oracle cut (old board and ruler), wrong reads with a cut > 80 ms off below 51; small misses → named allowances.
+- Changed: `src/game/syllables.ts` (pure `findSyllables`) + tests; `syllableDipRatio` (tuning + Lab knob); `rms` on `ContourPoint` / `TrailPoint`, passed by `Visualiser.tsx` and `site/checker/engine.ts`; `readAttempt` / `readContourSyllables` take the expected count (Visualiser pairs, `board.ts`); Free mode unchanged. Bench `pairs46.mjs`, `pipe46.mjs`, `split46.mjs`; scorecard section 8. `ARCHITECTURE.md`. Commit: see `git log` ("brief 46").
+- Scorecard: 387 numbers, 0 FAIL. Moved (named): `reader.pairsSplitInTwo` textbook 67.3 → 99.0, natural 3.9 → 49.3; `reader.pairsBothRight` textbook 55.3 → 74.0, natural 2.5 → 7.9. 15 new `pairs46.*` rows. 1870 tests, typecheck, build grep clean.
+- Acceptance (MEASURED): textbook both right 74.0 / 69.7 (old / ruler) vs oracle 76.0 / 72.1 → gap 2.0 / 2.4 (pass). Wrong reads with a cut > 80 ms off: 6 / 7 (pass, < 51). **Named allowance:** textbook count right 85.6% (brief said ≥ 95): 2 not found, 28 with a cut > 50 ms off.
+- Natural (report only): found 49.3%, both right 7.9 / 6.4, "?" syllables 66.3%. A not-found pair reads "? · ?".
+- Clip pipeline kept on its own code: the shared finder finds no cut for 7 textbook + 130 natural multi-syllable clips on the pipeline's frames, different runs for 111 more (`pipe46.mjs`).
+- **Open (not in 46):** the natural pair reader. Even with the oracle cut only 9.4% of natural pairs are both right; 130 of 406 natural syllables are under `minUtteranceMs` 160 ms → "?", 44 read "none". Needs its own brief.
+- For brief 44 follow-up (review note): first-tone and third-tone syllables inside found pairs could now feed the grid pools.
+
+## Note for brief 48 — pipeline cuts on natural pairs (from brief 46)
+- The clip pipeline's dip fallback (`multiSyllableSpan` → `splitAtTrough`) puts **79 of 203 natural pair cuts (39%)** on an artefact: 52 at the 20% search edge (the voice only fades, so the "quietest frame" is where the search stops), 55 with no real dip. Textbook: 2 of 208. MEASURED, `node src/dev/bench39/split46.mjs` (first lines).
+- Effect: the natural pair shapes in `src/dev/local/shapes-v2.json` (corridor join between the two syllables, `refinedMultiSyllablePolyline` spans) may join at the wrong place for those words. Check before any go-live of natural pair shapes.

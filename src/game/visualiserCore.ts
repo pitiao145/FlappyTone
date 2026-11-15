@@ -58,10 +58,10 @@ export class VisualiserCore {
     this.trail = new PitchTrail(spanMs, BRIDGE_MS);
   }
 
-  /** One pitch-tracker frame, on the host clock. */
-  push(chao: number, voiced: boolean, nowMs: number): void {
-    this.recorder.push(chao, voiced, nowMs);
-    this.trail.push(chao, voiced, nowMs);
+  /** One pitch-tracker frame, on the host clock. `rms` lets pairs find their syllables. */
+  push(chao: number, voiced: boolean, nowMs: number, rms?: number): void {
+    this.recorder.push(chao, voiced, nowMs, rms);
+    this.trail.push(chao, voiced, nowMs, rms);
     this.voiced = voiced;
     if (voiced) this.lastVoicedAt = nowMs;
   }

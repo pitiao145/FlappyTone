@@ -1163,13 +1163,13 @@
    "unit": "%"
   },
   "reader.pairsSplitInTwo.pct.textbook": {
-   "value": 67.31,
+   "value": 99.04,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "reader.pairsBothRight.pct.textbook": {
-   "value": 55.29,
+   "value": 74.04,
    "better": "higher",
    "tol": 1,
    "unit": "%"
@@ -1181,13 +1181,13 @@
    "unit": "%"
   },
   "reader.pairsSplitInTwo.pct.natural": {
-   "value": 3.94,
+   "value": 49.26,
    "better": "higher",
    "tol": 1,
    "unit": "%"
   },
   "reader.pairsBothRight.pct.natural": {
-   "value": 2.46,
+   "value": 7.88,
    "better": "higher",
    "tol": 1,
    "unit": "%"
@@ -2359,6 +2359,96 @@
    "tol": 0.02,
    "unit": "r",
    "note": "brief 45: new row (held-out half; ruler reader and one-ruler averages, flag on)"
+  },
+  "pairs46.countRight.pct.textbook": {
+   "value": 85.58,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%"
+  },
+  "pairs46.bothRight.pct.old.textbook": {
+   "value": 74.04,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%"
+  },
+  "pairs46.oracleBothRight.pct.old.textbook": {
+   "value": 75.96,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%"
+  },
+  "pairs46.questionSyllables.pct.old.textbook": {
+   "value": 3.61,
+   "better": "lower",
+   "tol": 1,
+   "unit": "%"
+  },
+  "pairs46.wrongReadsCutOver80ms.n.old.textbook": {
+   "value": 6,
+   "better": "lower",
+   "tol": 0,
+   "unit": "n"
+  },
+  "pairs46.bothRight.pct.ruler.textbook": {
+   "value": 69.71,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%"
+  },
+  "pairs46.oracleBothRight.pct.ruler.textbook": {
+   "value": 72.12,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%"
+  },
+  "pairs46.questionSyllables.pct.ruler.textbook": {
+   "value": 3.61,
+   "better": "lower",
+   "tol": 1,
+   "unit": "%"
+  },
+  "pairs46.wrongReadsCutOver80ms.n.ruler.textbook": {
+   "value": 7,
+   "better": "lower",
+   "tol": 0,
+   "unit": "n"
+  },
+  "pairs46.bothRight.pct.old.natural": {
+   "value": 7.88,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%"
+  },
+  "pairs46.oracleBothRight.pct.old.natural": {
+   "value": 9.36,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%"
+  },
+  "pairs46.questionSyllables.pct.old.natural": {
+   "value": 66.26,
+   "better": "lower",
+   "tol": 1,
+   "unit": "%"
+  },
+  "pairs46.bothRight.pct.ruler.natural": {
+   "value": 6.4,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%"
+  },
+  "pairs46.oracleBothRight.pct.ruler.natural": {
+   "value": 7.88,
+   "better": "higher",
+   "tol": 1,
+   "unit": "%"
+  },
+  "pairs46.questionSyllables.pct.ruler.natural": {
+   "value": 66.26,
+   "better": "lower",
+   "tol": 1,
+   "unit": "%"
   }
  },
  "changes": [

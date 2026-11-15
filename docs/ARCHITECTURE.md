@@ -142,9 +142,15 @@ an attempt ends (silence over `SINGLE_TONE_GAP_MS` 400ms for one tone,
 `mergeGapMs`/`multiMergeGapMs`), the dashed bridge over shorter silences, the
 bird's hold and easing, and Free mode's scrolling line. Change line
 behaviour there, never in one page. A pair is read one syllable at a time
-(`readContourSyllables`, split at silences over `mergeGapMs`); if it does not
-find every syllable it says so ("couldn't detect both tones") rather than
-show one tone, and the read is never judged against the target yet. Textbook scoring passes `t23Cue = false` to
+(`readContourSyllables` with the word's count → `findSyllables`,
+`src/game/syllables.ts`, brief 46): split at silences over `mergeGapMs`, then,
+if a syllable is still missing, at a real loudness dip (quieter than
+`tuning().syllableDipRatio` 0.7 × the quieter side's peak; frames carry `rms`
+from `PitchState`). No real dip → every syllable reads "?" (hard rule 8), never
+a guessed cut. Free mode (no target) still splits at silences only. The clip
+pipeline keeps its own splitter (`multiSyllableSpan`): the shared one finds no
+cut for 137 of its 520 multi-syllable clips (`src/dev/bench39/pipe46.mjs`).
+The read is never judged against the target yet. Textbook scoring passes `t23Cue = false` to
 `toneAccuracyDetail` (the cue measures likeness to real speech). Calibration:
 the game's own (`loadSettings()`) if the device has one, else a ~10 s quick
 one (one mā, one mǎ, `quickCal.ts`) under **`flappytone.quickcal.v1`** — never

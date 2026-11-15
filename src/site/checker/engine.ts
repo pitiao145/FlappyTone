@@ -61,7 +61,7 @@ function durationOf(points: readonly TrailPoint[]): number {
 function trailContour(points: readonly TrailPoint[]): Contour {
   const t0 = points[0]?.atMs ?? 0;
   return {
-    points: points.map((p) => ({ tMs: p.atMs - t0, chao: p.chao })),
+    points: points.map((p) => ({ tMs: p.atMs - t0, chao: p.chao, ...(p.rms === undefined ? {} : { rms: p.rms }) })),
     startedAtMs: t0,
     endedAtMs: points.at(-1)?.atMs ?? t0,
   };
@@ -247,7 +247,7 @@ export function startChecker(
       });
     }
     const p = tracker.push(frame);
-    core.push(p.smoothedChao, p.voiced, now);
+    core.push(p.smoothedChao, p.voiced, now, p.rms);
   };
   setFrameSink(onFrame);
 

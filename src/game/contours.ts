@@ -18,6 +18,8 @@ export interface ContourPoint {
   /** Milliseconds since this utterance began. */
   tMs: number;
   chao: number;
+  /** Frame loudness (`PitchState.rms`), when the caller has it. Used to find syllables. */
+  rms?: number;
 }
 
 export interface Contour {
@@ -62,13 +64,15 @@ export class ContourRecorder {
   }
 
   /** One analysis frame. Unvoiced frames are what close an utterance. */
-  push(chao: number, voiced: boolean, nowMs: number): void {
+  push(chao: number, voiced: boolean, nowMs: number, rms?: number): void {
     if (voiced) {
       if (this.open === null || nowMs - this.lastVoicedAtMs > this.mergeGapMs) {
         this.closeOpen();
         this.open = { points: [], startedAtMs: nowMs, endedAtMs: null };
       }
-      this.open.points.push({ tMs: nowMs - this.open.startedAtMs, chao });
+      this.open.points.push(
+        rms === undefined ? { tMs: nowMs - this.open.startedAtMs, chao } : { tMs: nowMs - this.open.startedAtMs, chao, rms },
+      );
       this.lastVoicedAtMs = nowMs;
       return;
     }
@@ -112,6 +116,8 @@ export interface TrailPoint {
   /** The trail's own clock (see `PitchTrail`), not the host clock. */
   atMs: number;
   chao: number;
+  /** Frame loudness (`PitchState.rms`), when the caller has it. Used to find syllables. */
+  rms?: number;
 }
 
 /**
@@ -148,14 +154,14 @@ export class PitchTrail {
     this.bridgeMs = bridgeMs;
   }
 
-  push(chao: number, voiced: boolean, nowMs: number): void {
+  push(chao: number, voiced: boolean, nowMs: number, rms?: number): void {
     const dt = this.lastFrameAt === null ? 0 : nowMs - this.lastFrameAt;
     this.lastFrameAt = nowMs;
     const inBridge = nowMs - this.lastVoicedAt <= this.bridgeMs;
     if (voiced) {
       this.clock += inBridge || this.pts.length === 0 ? dt : this.bridgeMs + RESUME_GAP_EXTRA_MS;
       this.origin ??= this.clock;
-      const p = { atMs: this.clock, chao };
+      const p: TrailPoint = rms === undefined ? { atMs: this.clock, chao } : { atMs: this.clock, chao, rms };
       this.pts.push(p);
       this.attempt.push(p);
       this.lastVoicedAt = nowMs;

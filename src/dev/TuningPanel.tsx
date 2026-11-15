@@ -150,6 +150,8 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
     knobs: [
       { key: "multiMergeGapMs", label: "multi merge gap", min: 100, max: 800, step: 10,
         help: "Silence between two syllables that still counts as one utterance. Too low splits a real pause-between-syllables attempt into two; too high risks merging a genuinely unheard second syllable into the first." },
+      { key: "syllableDipRatio", label: "syllable dip", min: 0.3, max: 1, step: 0.05,
+        help: "Visualiser / tone checker pairs: a loudness dip splits two syllables only if it is quieter than this share of the quieter syllable's peak. Lower = stricter, more \"?\" reads; higher = more forced cuts." },
       { key: "multiGateChance", label: "mix roll", min: 0, max: 1, step: 0.05,
         help: "Classic game, wordMix \"all\" only: chance a given gate draws a pair instead of a single syllable." },
     ],

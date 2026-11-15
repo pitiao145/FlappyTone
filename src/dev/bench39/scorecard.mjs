@@ -5,7 +5,6 @@
 // Exits 1 on any FAIL. Tracker runs are cached by a hash of src/pitch/ (tracks.mjs).
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { classifyToneV2 } from "../../game/toneClassifierV2.ts";
-import { readContourSyllables } from "../../game/freeAttempts.ts";
 import { corridorChaoAt } from "../../game/gates.ts";
 import { semitonesToChao } from "../../pitch/math.ts";
 import { CACHE, F0C, clipList, groupOf, refAt, cachedRun, cachedTrack, cfgFor, PITCH_HASH } from "./tracks.mjs";
@@ -172,6 +171,7 @@ function contour(c, shift) {
   const t0 = pts[0].tMs;
   return { points: pts.map((p) => ({ tMs: p.tMs - t0, chao: p.chao })), startedAtMs: 0, endedAtMs: pts.at(-1).tMs - t0 };
 }
+let pairs46 = null;
 for (const [label, shift] of [["calibrated", 0], ["voice2stLower", -2]]) for (const style of STYLES) {
   let n = 0, ok = 0;
   for (const c of clips.filter((c) => c.set === style && c.tones.length === 1 && c.tones[0] >= 1)) {
@@ -180,14 +180,11 @@ for (const [label, shift] of [["calibrated", 0], ["voice2stLower", -2]]) for (co
   }
   put(`reader.singlesRight.pct.${label}.${style}`, (100 * ok) / n, "higher", PP_TOL, "%");
   if (label !== "calibrated") continue;
-  let pn = 0, two = 0, both = 0;
-  for (const c of clips.filter((c) => c.set === style && c.tones.length === 2 && c.tones.every((t) => t >= 1))) {
-    const k = contour(c, 0); if (!k) continue;
-    pn++; const syl = readContourSyllables(k);
-    if (syl && syl.length === 2) { two++; if (syl.every((s, i) => s && s.tone === c.tones[i])) both++; }
-  }
-  put(`reader.pairsSplitInTwo.pct.${style}`, (100 * two) / pn, "higher", PP_TOL, "%");
-  put(`reader.pairsBothRight.pct.${style}`, (100 * both) / pn, "higher", PP_TOL, "%");
+  // Brief 46: pairs go through the shared syllable finder with the word's count
+  // (pairs46.mjs). "Split in two" = the finder found both syllables.
+  const p46 = (pairs46 ??= (await import("./pairs46.mjs")).measurePairs46())[style];
+  put(`reader.pairsSplitInTwo.pct.${style}`, p46.found, "higher", PP_TOL, "%");
+  put(`reader.pairsBothRight.pct.${style}`, p46.old.both, "higher", PP_TOL, "%");
 }
 
 // ---- 5. targets vs what Jane said (heights.mjs method, Praat reference) ------
@@ -278,6 +275,20 @@ for (const [label, shift] of [["calibrated", 0], ["voice2stLower", -2]]) for (co
     for (const [system, w] of [["old", 0.15], ["new", 0.15], ["new", 0]]) {
       put(`toneAcc.jane.med.held.${style}.${system}.height${w}`, janeAccuracy(style, "held", system, w).all.med, "higher", ST_TOL, "r");
     }
+  }
+}
+
+// ---- 8. pairs: one syllable finder (brief 46, pairs46.mjs) ------------------
+// Reference cut trusted on textbook only. Old board (flag off) and the ruler (flag on).
+{
+  pairs46 ??= (await import("./pairs46.mjs")).measurePairs46();
+  put("pairs46.countRight.pct.textbook", pairs46.textbook.countRight, "higher", PP_TOL, "%");
+  for (const style of STYLES) for (const g of ["old", "ruler"]) {
+    const r = pairs46[style][g];
+    put(`pairs46.bothRight.pct.${g}.${style}`, r.both, "higher", PP_TOL, "%");
+    put(`pairs46.oracleBothRight.pct.${g}.${style}`, r.oracle, "higher", PP_TOL, "%");
+    put(`pairs46.questionSyllables.pct.${g}.${style}`, r.question, "lower", PP_TOL, "%");
+    if (style === "textbook") put(`pairs46.wrongReadsCutOver80ms.n.${g}.textbook`, r.wrongBadCut, "lower", 0, "n");
   }
 }
 

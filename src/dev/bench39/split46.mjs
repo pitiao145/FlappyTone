@@ -103,6 +103,11 @@ function splitN(frames, n, o) {
     const longest = pieces.reduce((a, p) => (dur(p) > dur(a) ? p : a));
     let at = o.useReset ? resetAt(longest, o.trim, o.resetSt) : -1, skip = 0;
     if (at < 0 && o.useDip) { at = troughAt(longest, o.trim); skip = 1; }
+    // Real-dip rule (brief 46 rerun): the trough must be under dipRatio x the quieter side's peak.
+    if (skip && at > 0 && o.dipRatio) {
+      const side = (a) => Math.max(...a.map((f) => f.rms));
+      if (!(longest[at].rms < o.dipRatio * Math.min(side(longest.slice(0, at)), side(longest.slice(at + 1))))) break;
+    }
     if (at <= 0 || at >= longest.length - 1) break;
     const k = pieces.indexOf(longest);
     pieces = [...pieces.slice(0, k), longest.slice(0, at), longest.slice(at + skip), ...pieces.slice(k + 1)];
@@ -115,6 +120,7 @@ const boundariesOf = (pieces) => pieces.slice(0, -1).map((p, k) => (p.at(-1).tMs
 const SPLITTERS = {
   "a silence only (today)": null, // uses readContourSyllables itself
   "b silence 150 + dip": { gapMs: 150, dropMs: 0, useDip: true, trim: 0.2, minPieceMs: 0 },
+  "b silence 150 + real dip 0.7": { gapMs: 150, dropMs: 0, useDip: true, trim: 0.2, minPieceMs: 0, dipRatio: 0.7 },
   "b silence 60 + dip": { gapMs: 60, dropMs: 0, useDip: true, trim: 0.2, minPieceMs: 0 },
   "c silence 60 + reset 2 st + dip": { gapMs: 60, dropMs: 0, useDip: true, useReset: true, resetSt: 2, trim: 0.2, minPieceMs: 0 },
   "c silence 60 + reset 1 st + dip": { gapMs: 60, dropMs: 0, useDip: true, useReset: true, resetSt: 1, trim: 0.2, minPieceMs: 0 },
@@ -162,10 +168,10 @@ for (const gridName of Object.keys(GRIDS)) {
   const grid = GRIDS[gridName];
   setTuning({ playerRulerV2: grid.flag });
   console.log(`\n### Grid: ${gridName} (${grid.flag ? "Jane's one ruler, reader flag on" : "Phase A board, flag off"})`);
-  console.log("splitter | style | group | n | right count % | boundary err med ms | p90 ms | within 50 ms % | both right % (of all) | wrong-tone reads on wrong-count | wrong reads on bad boundary (>80 ms)");
+  console.log("splitter | style | group | n | count found % | count right % (found AND every cut <= 50 ms of reference; textbook only) | boundary err med ms | p90 ms | both right % (of all) | '?' syllables % | wrong-tone reads on wrong-count | wrong reads with a cut > 80 ms off");
   for (const [name, o] of Object.entries(SPLITTERS)) for (const style of STYLES) for (const [gname, gf] of Object.entries(groups)) {
     const ks = clips.filter((c) => c.set === style && gf(c));
-    let n = 0, countOk = 0, both = 0, wrongOnMis = 0, wrongOnBad = 0; const errs = []; const fails = [];
+    let n = 0, countOk = 0, countRight = 0, both = 0, wrongOnMis = 0, wrongOnBad = 0, syl = 0, qs = 0; const errs = []; const fails = [];
     for (const c of ks) {
       const fr = liveFrames(c); if (fr.length < 3) continue;
       const r = ref.get(c.set + c.id);
@@ -180,15 +186,16 @@ for (const gridName of Object.keys(GRIDS)) {
       if (okCount && r) {
         const e = boundariesOf(pieces).map((b, k) => Math.abs(b - r.b[k]));
         errs.push(...e); bad = e.some((x) => x > 80);
+        if (e.every((x) => x <= 50)) countRight++;
       }
+      syl += c.tones.length; qs += read && read.length === c.tones.length ? read.filter((t) => t === null || t === "none").length : c.tones.length;
       if (okCount && bad && hasWrong) wrongOnBad++;
       const allRight = okCount && read.every((t, i) => t === c.tones[i]);
       if (allRight) both++;
       else fails.push(`${c.id}${okCount ? (bad ? " (bad boundary)" : " (reader)") : " (count)"} read ${JSON.stringify(read)}`);
     }
-    const within = errs.length ? (100 * errs.filter((e) => e <= 50).length) / errs.length : NaN;
     results[`${gridName}|${name}|${style}|${gname}`] = { n, count: (100 * countOk) / n, both: (100 * both) / n, wrongOnMis, fails };
-    console.log([name, style, gname, n, f1((100 * countOk) / n), f1(med(errs)), f1(pct(errs, 90)), f1(within), f1((100 * both) / n), wrongOnMis, wrongOnBad].join(" | "));
+    console.log([name, style, gname, n, f1((100 * countOk) / n), style === "textbook" ? f1((100 * countRight) / n) : "—", f1(med(errs)), f1(pct(errs, 90)), f1((100 * both) / n), f1((100 * qs) / syl), wrongOnMis, wrongOnBad].join(" | "));
     if (SHOW_FAILS && name === argOf("--fails", "")) console.log("   fails: " + fails.join("; "));
   }
 }

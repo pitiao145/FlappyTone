@@ -209,6 +209,13 @@ export interface Tuning {
    */
   multiMergeGapMs: number;
   /**
+   * Brief 46 syllable finder (`syllables.ts`): when a word's syllables are
+   * not separated by a silence, a loudness dip may split them only if it is
+   * quieter than this share of the quieter side's loudest frame. Otherwise
+   * the read is "?" (hard rule 8). Pierre's decision, 15 Nov 2026.
+   */
+  syllableDipRatio: number;
+  /**
    * Classic `game` mode's `wordMix: "all"` setting: the chance, per gate,
    * that the queue draws a multi-syllable word instead of a single one. Only
    * consulted when `wordMix === "all"` — `"single"`/`"multi"` bypass the
@@ -727,6 +734,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   minUtteranceMs: 160,
   mergeGapMs: 150,
   multiMergeGapMs: 400,
+  syllableDipRatio: 0.7,
   multiGateChance: 0.5,
   pairScoreMultiplier: 5.0,
   toneAccShapeWeight: 0.6,

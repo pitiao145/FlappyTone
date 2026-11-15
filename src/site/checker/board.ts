@@ -76,7 +76,7 @@ export function scoreAttempt(contour: Contour, word: Word, mode: RefMode): Attem
   const r = word.syllables === 1 && accuracy !== null ? classifyToneV2(contour) : null;
   const syllables =
     word.syllables > 1 && accuracy !== null
-      ? (readContourSyllables(contour)?.map((s) => s?.tone ?? null) ?? [])
+      ? (readContourSyllables(contour, word.syllables)?.map((s) => s?.tone ?? null) ?? [])
       : null;
   return { accuracy, read: r ? { tone: r.tone, confidence: r.confidence } : null, syllables };
 }

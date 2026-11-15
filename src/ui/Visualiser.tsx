@@ -554,7 +554,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       const measured = measureNoise(frame, sampleRate);
       if (measured !== null) tracker.setNoiseFloor(measured);
       const p = tracker.push(frame);
-      core.push(p.smoothedChao, p.voiced, performance.now());
+      core.push(p.smoothedChao, p.voiced, performance.now(), p.rms);
     };
     frameSinkRef.current = onFrame;
     setFrameSink(onFrame);
@@ -600,7 +600,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       // way Free mode does (`readAttempt`) — the classifier only ever sees
       // one syllable, never the two-syllable contour it misreads.
       if (latest && (word?.syllables ?? 1) > 1) {
-        setPairSyllables(readContourSyllables(latest));
+        setPairSyllables(readContourSyllables(latest, word?.syllables));
       }
 
       // Standalone recognition — runs off the same `finished()` array as the
