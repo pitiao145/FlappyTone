@@ -297,3 +297,28 @@ Reviewed commits `6ccf24e`, `54909c4`. No code changed by this review.
 - For the reviewer: the five guards are product rules; check them. Natural −2 st passes by one clip. Pierre's `shu2_1` reads a decisive T3 on his own ruler with both readers.
 - For brief 46: pairs still go through `readContourSyllables` → `classifyToneV2`; with the flag on they get the ruler set. Pair numbers on the ruler are not measured yet.
 - For brief 48: site pages (checker, tone chart) still read `toneAverages.ts`. The V2 averages ship in the bundle behind the flag.
+
+## 45 review (strong model) — 15 Nov 2026 — APPROVED (no fix required; 3 notes)
+
+Reviewed commit `11484df`. No code changed by this review.
+
+**Reproduced (MEASURED):** `npm run bench` 372 numbers, 0 FAIL; the baseline diff is additions only (441 lines added, 0 removed), so no old row moved. Held-out: singles textbook 100.0, natural 91.2; voice −2 st without learning, natural 80.7; with learning 98.2 / 91.2; narrow grid second tone 75.0 / 75.0; tone accuracy median 0.767 → 0.840 and 0.698 → 0.790; textbook wall hits 0 in all five grid cases. Pierre 21/24 and 22/24 on his own ruler. `npm run test` 1860 pass, typecheck clean, `classifier-check` (and `--ruler`) 0 wall hits, build + grep clean. Flag off = the old `toneV2*` values exactly (READ IN CODE, `readerSettings()`).
+
+**Extra checks, not in the brief (MEASURED, flag on, Jane's ruler):**
+
+| check | result | verdict |
+|---|---|---|
+| Held-out half vs fit half vs all clips | held is the harder half in every case (natural calibrated: held 91, fit 97, all 94) | no sign of overfitting |
+| Does a WRONG tone still cost a heart? (textbook clip of tone X at a gate of tone Y) | old reader 75% flagged, new 78%. Said T2 at another gate: 18% → 47%. Said T3: 59% → 50%. T1 and T4: 100% both | the guards did not make the reader blind |
+| Same, on a wrong grid | 66–80% flagged; T2↔T3 only: 21–54% | ok: unsure reads take no heart (rule 8) |
+| Faster or slower speech (time ×0.6 to ×1.4), textbook | 100% right, 0 wall hits at every speed | ok |
+| Same, natural | 88–94%; first tone falls to 66% at ×0.6 (the 350 ms minimum, unchanged rule) | note 3 |
+| Natural clips, decisive wrong reads | 1 of 211 calibrated, 3 of 211 on a wrong grid | note 2 |
+
+**Note 1 — third tone on a grid that is too wide.** All clips, grid ×1.4: third tone right 73% textbook, 56% natural (read as second tone). Cause (MEASURED): the "judged on depth alone" rule (`floorRule`) still reads absolute height, with anchors only 0.26 chao apart (`low: [1.26, 1]`). With the rule off: 86% / 83%, and natural +2 st 81 → 90. Cost: second tone, textbook calibrated 100 → 94, +2 st 100 → 88. A grid that is too wide is the likely case for a learner (Pierre's range is 4.5 / 4.0 against standard halves 5.25 / 5.75). It takes no heart, but stats and feedback then say "second tone" for a correct third tone. Not required now: decide after Pierre flies; a small follow-up (rule off, or its limit as a share of the dip).
+
+**Note 2 — natural gates.** 1 to 3 decisive wrong reads in 211 natural clips. Fine while natural and pair gates take no heart (today's rule). Check again before that rule ever changes.
+
+**Note 3 — not covered by any number here.** (a) The live gate path with the flag on (the bench reads whole clean clips, not gates): Pierre's flying is the test. (b) Pairs on the ruler: brief 46. (c) Pierre's `shu2_1` decisive third-tone read: same in the old reader, still open. (d) Very fast first tones (under 350 ms) read as "none".
+
+**Process:** the builder looked at held-out numbers once and said so. The method it then chose (anchors = medians of the fit half) has no free search, and the fit half scores higher than the held half, so I accept the split as honest.
