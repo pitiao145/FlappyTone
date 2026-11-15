@@ -1,5 +1,5 @@
 ---
-status: blocked  # draft: waits for Pierre's approval of the Phase B plan
+status: done  # step 3 numbers wait for Pierre (__frameGaps.report()); step 4 waits for his look
 notion_task:
 risk: low
 ---

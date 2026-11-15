@@ -12,8 +12,18 @@
  * not overlaid on top of it, so it has no place in this draw path.
  */
 
-import { corridorChaoAt,
-  shapeForTone, shapeForWord, type Tone } from "../game/gates.ts";
+import {
+  applyCorridorWidth,
+  corridorChaoAt,
+  corridorToleranceAt,
+  newDifficulty,
+  shapeForTone,
+  shapeForWord,
+  toleranceChao,
+  type CorridorWidth,
+  type GateShape,
+  type Tone,
+} from "../game/gates.ts";
 import type { Contour, TrailPoint } from "../game/contours.ts";
 import { BRIDGE_MS } from "../game/visualiserCore.ts";
 import { birdXFrac } from "../game/run.ts";
@@ -53,6 +63,17 @@ export interface VisualiserScene {
    * app's Free tab does not.
    */
   scrollGuide?: boolean;
+  /**
+   * The player's corridor width setting, so the target band is as wide as
+   * the corridor a run's first gate would be. Absent = "normal".
+   */
+  corridor?: CorridorWidth;
+  /**
+   * Dev only (brief 47, `ft.stretchPairs`): draw each finished attempt
+   * stretched in time so it ends where the target ends. Drawing only; the
+   * scoring never sees it. Set by Visualiser.tsx behind `import.meta.env.DEV`.
+   */
+  stretchToTarget?: boolean;
 }
 
 /** Samples used to trace the target contour. */
@@ -113,9 +134,12 @@ export function drawVisualiser(
   if (scene.tone !== null) drawTarget(ctx, height, scene, (tMs) => xFor(tMs, scene.spanMs, width));
 
   // Older attempts recede; the newest finished one is the one worth comparing.
+  const stretchMs =
+    scene.stretchToTarget && scene.tone !== null ? targetShape(scene).durationS * 1000 : null;
   scene.finished.forEach((c, i) => {
     const age = scene.finished.length - i;
-    drawContour(ctx, width, height, c, scene.spanMs, 0.42 / age, 2);
+    const drawn = stretchMs !== null ? stretchContour(c, stretchMs) : c;
+    drawContour(ctx, width, height, drawn, scene.spanMs, 0.42 / age, 2);
   });
 
   if (scene.live) {
@@ -131,7 +155,8 @@ export function drawVisualiser(
 }
 
 /**
- * The target contour, dashed — guidance, not an obstacle. Drawn on the same
+ * The target: a soft band as wide as the game's corridor (brief 47), with the
+ * contour dashed inside it — guidance, not an obstacle. Drawn on the same
  * time axis as the player's own trace (real milliseconds, not a 0-1 fraction
  * of the panel), so it moves at the recording's actual pace instead of being
  * stretched across the whole `spanMs` window.
@@ -155,22 +180,100 @@ function drawTarget(
 ): void {
   const tone = scene.tone;
   if (tone === null) return;
-  const shape = scene.word ? shapeForWord(scene.word) : shapeForTone(tone);
+  const shape = targetShape(scene);
+  const { tolChao, widenScale } = visualiserTolerance(scene.word ? scene.word.tones : [tone], scene.corridor);
+  const band = targetBand(shape, tolChao, widenScale);
   const durationMs = shape.durationS * 1000;
   ctx.save();
+  // The band: the corridor a run would fly for this word, same width and the
+  // same widening on the slopes (`corridorToleranceAt`). "Inside" here means
+  // what it means in the game.
+  ctx.fillStyle = rgba("demo", 0.16);
+  ctx.beginPath();
+  band.forEach((b, i) => {
+    const x = xAt(b.t * durationMs);
+    const y = chaoToY(b.centre + b.half, height);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  for (let i = band.length - 1; i >= 0; i--) {
+    const b = band[i];
+    ctx.lineTo(xAt(b.t * durationMs), chaoToY(b.centre - b.half, height));
+  }
+  ctx.closePath();
+  ctx.fill();
+  // The centre line inside it, dashed — guidance, not an obstacle.
   ctx.setLineDash([6, 8]);
   ctx.strokeStyle = rgba("demo", 0.55);
   ctx.lineWidth = 2;
   ctx.beginPath();
-  for (let i = 0; i <= TARGET_STEPS; i++) {
-    const shapeT = i / TARGET_STEPS;
-    const x = xAt(shapeT * durationMs);
-    const y = chaoToY(corridorChaoAt(shape, shapeT), height);
+  band.forEach((b, i) => {
+    const x = xAt(b.t * durationMs);
+    const y = chaoToY(b.centre, height);
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
-  }
+  });
   ctx.stroke();
   ctx.restore();
+}
+
+function targetShape(scene: VisualiserScene): GateShape {
+  return scene.word ? shapeForWord(scene.word) : shapeForTone(scene.tone ?? 1);
+}
+
+/**
+ * The tolerance a run's first gate gets for these tones: base difficulty (no
+ * ramp yet), the player's corridor width, the per-tone factor. The same three
+ * steps `Run` takes (`newDifficulty` → `applyCorridorWidth` → `makeGate`'s
+ * `toleranceChao`), so the band cannot drift from the game's corridor.
+ */
+export function visualiserTolerance(
+  tones: (Tone | 0)[],
+  corridor: CorridorWidth = "normal",
+): { tolChao: number; widenScale: number } {
+  const d = applyCorridorWidth(newDifficulty(), corridor);
+  return { tolChao: toleranceChao(tones, d.toleranceH), widenScale: d.widenScale ?? 1 };
+}
+
+export interface BandSample {
+  /** 0–1 on the shape's own clock. */
+  t: number;
+  centre: number;
+  /** Half-width in chao: `corridorToleranceAt` at this t. */
+  half: number;
+}
+
+/** The target band, sampled: centre line and half-width, as the game draws its corridor. */
+export function targetBand(
+  shape: GateShape,
+  tolChao: number,
+  widenScale = 1,
+  steps = TARGET_STEPS,
+): BandSample[] {
+  const out: BandSample[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    out.push({
+      t,
+      centre: corridorChaoAt(shape, t),
+      half: corridorToleranceAt(shape, t, tolChao, widenScale),
+    });
+  }
+  return out;
+}
+
+/**
+ * Dev only: the attempt rescaled in time so its last point lands at
+ * `targetMs`. Returns the contour unchanged when it has under two points.
+ */
+export function stretchContour(contour: Contour, targetMs: number): Contour {
+  const pts = contour.points;
+  if (pts.length < 2) return contour;
+  const t0 = pts[0].tMs;
+  const len = pts[pts.length - 1].tMs - t0;
+  if (len <= 0) return contour;
+  const k = targetMs / len;
+  return { ...contour, points: pts.map((p) => ({ ...p, tMs: (p.tMs - t0) * k })) };
 }
 
 /** One contour, stroked as-measured. Never smoothed into a shape it wasn't. */

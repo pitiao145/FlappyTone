@@ -345,3 +345,13 @@ Reviewed commit `11484df`. No code changed by this review.
 ## Note for brief 48 — pipeline cuts on natural pairs (from brief 46)
 - The clip pipeline's dip fallback (`multiSyllableSpan` → `splitAtTrough`) puts **79 of 203 natural pair cuts (39%)** on an artefact: 52 at the 20% search edge (the voice only fades, so the "quietest frame" is where the search stops), 55 with no real dip. Textbook: 2 of 208. MEASURED, `node src/dev/bench39/split46.mjs` (first lines).
 - Effect: the natural pair shapes in `src/dev/local/shapes-v2.json` (corridor join between the two syllables, `refinedMultiSyllablePolyline` spans) may join at the wrong place for those words. Check before any go-live of natural pair shapes.
+
+## 47 Visualiser: honest target band, no re-measure on resize — 15 Nov 2026 — done (steps 3–4 wait for Pierre)
+- Changed: `src/render/visualiser.ts` (band + `visualiserTolerance`, `targetBand`, `stretchContour`), `src/game/sessionNoise.ts` (`sessionNoiseFor`), `src/game/visualiserSink.ts` (new), `src/ui/Visualiser.tsx`, dev-only `src/dev/frameGaps.ts` and `src/dev/stretchPairs.ts`, 2 test files, ARCHITECTURE note. Commit: see `git log` ("brief 47").
+- Scorecard: 387 numbers, 0 FAIL, nothing moved (no `src/pitch/` change). Tests 1878 (8 new). Typecheck, build grep clean.
+- Acceptance (MEASURED): band half-width = `corridorToleranceAt` at t 0 / 0.5 / 1 for T1, T3, T4, and `tolChao` = the first gate's (all four width settings). Two effect runs on one mic session make 1 `NoiseMeter`; a new session makes 2.
+- Surprise: a resize also rebuilt the pitch tracker from the *saved* calibration floor, so the room floor was lost twice over. The new sink starts a later tracker from the measured floor.
+- Step 3 (time axis): no numbers. Needs a real mic; I did not drive the UI. Nothing changed. Pierre runs `__frameGaps.report()` (dev build, Visualiser open ~30 s) on desktop and phone; `useCountedTime: true` on any device → a small follow-up stamps frames by counted audio time.
+- Step 4: dev switch `ft.stretchPairs` = "1" (pairs tab, finished attempts only). Not judged, not shipped.
+- The public tone visualizer draws the band too ("normal" width). Its own engine and `Game.tsx` still build the noise meter inside their effects (not checked for resize).
+- For brief 48: other screens still read the old settings record, not the ruler (from the 44 review); the band uses that same record's corridor width.

@@ -44,3 +44,39 @@ export function sessionNoiseMeter(
   });
   return (frame, sampleRate) => meter.push(rmsOf(frame), (HOP_SAMPLES / sampleRate) * 1000);
 }
+
+/** One room measurement for one mic session, shared by every effect run that uses it. */
+export interface SessionNoise {
+  /** Feed a frame; returns the measured floor once, else null. */
+  feed(frame: Float32Array, sampleRate: number): number | null;
+  /** The floor once measured, else null. A tracker made later starts from it. */
+  readonly floor: number | null;
+}
+
+const perOwner = new WeakMap<object, SessionNoise>();
+
+/**
+ * The room measurement for `owner` (the open mic session), made on first use
+ * and reused after. The Visualiser's frame effect re-runs on every canvas size
+ * change (resize, phone rotation); keyed by the mic session, that re-run no
+ * longer starts a second measurement — which could land mid-speech and set
+ * the floor from the player's own voice (brief 47).
+ */
+export function sessionNoiseFor(owner: object, voiceRms?: number): SessionNoise {
+  const existing = perOwner.get(owner);
+  if (existing) return existing;
+  const measure = sessionNoiseMeter(voiceRms);
+  let floor: number | null = null;
+  const noise: SessionNoise = {
+    feed(frame, sampleRate) {
+      const m = measure(frame, sampleRate);
+      if (m !== null) floor = m;
+      return m;
+    },
+    get floor() {
+      return floor;
+    },
+  };
+  perOwner.set(owner, noise);
+  return noise;
+}

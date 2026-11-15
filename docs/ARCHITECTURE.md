@@ -147,7 +147,13 @@ behaviour there, never in one page. A pair is read one syllable at a time
 if a syllable is still missing, at a real loudness dip (quieter than
 `tuning().syllableDipRatio` 0.7 × the quieter side's peak; frames carry `rms`
 from `PitchState`). No real dip → every syllable reads "?" (hard rule 8), never
-a guessed cut. Free mode (no target) still splits at silences only. The clip
+a guessed cut. Free mode (no target) still splits at silences only. The target
+(and the site's guide) is drawn as a soft band as wide as the corridor a run's
+first gate gets (`visualiserTolerance` → `corridorToleranceAt`, the player's
+corridor width setting; brief 47), with the dashed centre line inside, so
+"inside" means the same on both screens. The app Visualiser measures the room
+once per mic session (`sessionNoiseFor`, keyed by the mic session): a resize
+or rotation re-runs its frame effect but not the measurement. The clip
 pipeline keeps its own splitter (`multiSyllableSpan`): the shared one finds no
 cut for 137 of its 520 multi-syllable clips (`src/dev/bench39/pipe46.mjs`).
 The read is never judged against the target yet. Textbook scoring passes `t23Cue = false` to

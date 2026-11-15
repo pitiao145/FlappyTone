@@ -23,12 +23,12 @@ import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { useTier } from "../data/tier.ts";
 import { VisualiserCore } from "../game/visualiserCore.ts";
 import type { Tone } from "../game/gates.ts";
-import { effectiveSpeechStyle, type CalibrationSettings } from "../game/settings.ts";
+import { effectiveSpeechStyle, loadCorridorWidth, type CalibrationSettings } from "../game/settings.ts";
 import { type ToneClassification } from "../game/toneClassifier.ts";
 import { classifyToneV2 } from "../game/toneClassifierV2.ts";
 import { spokenTones } from "../game/sandhi.ts";
 import { tierLimits, type TocflLevel } from "../game/tiers.ts";
-import { speakerFMin, tuning } from "../game/tuning.ts";
+import { tuning } from "../game/tuning.ts";
 import { referenceFromWord, toneAccuracyDetail } from "../game/toneAccuracy.ts";
 import type { SpeechStyle, Word } from "../game/words.ts";
 import {
@@ -37,8 +37,10 @@ import {
   wordsOfCombo,
   wordsOfTone,
 } from "../game/words.ts";
-import { sessionNoiseMeter, startingNoiseFloor } from "../game/sessionNoise.ts";
-import { PitchTracker } from "../pitch/PitchTracker.ts";
+import { sessionNoiseFor } from "../game/sessionNoise.ts";
+import { makeVisualiserSink } from "../game/visualiserSink.ts";
+import { logFrameGap } from "../dev/frameGaps.ts";
+import { stretchPairsOn } from "../dev/stretchPairs.ts";
 import { scaleForDpr } from "../render/canvas.ts";
 import { drawVisualiser } from "../render/visualiser.ts";
 import { readAttempt, readContourSyllables, type FreeAttempt } from "../game/freeAttempts.ts";
@@ -255,6 +257,8 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   wordRef.current = selectedWord;
   /** The per-frame core shared with the public tone checker. */
   const coreRef = useRef<VisualiserCore | null>(null);
+  /** Keys the room measurement when no mic session object exists (tests, odd paths). */
+  const noiseOwnerRef = useRef<object>({});
   /** Free tab's last few attempts, shown as thumbnails on desktop. */
   const [freeAttempts, setFreeAttempts] = useState<FreeAttempt[]>([]);
   /** Which thumbnail drives the Tone card; a new attempt selects itself. */
@@ -520,9 +524,11 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
 
     const core = new VisualiserCore(SPAN_MS);
     coreRef.current = core;
+    // The band is as wide as a run's first gate on the player's width setting.
+    const corridor = loadCorridorWidth();
+    const stretchPairs = import.meta.env.DEV ? stretchPairsOn() : false;
     // The player's tone lines this session (spec B, Pro only), sent in one
     // batch when the session ends or the tab is hidden — whichever is first.
-    let tracker: PitchTracker | null = null;
     let rafId = 0;
     let running = true;
 
@@ -533,31 +539,25 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     // Measures the room in the first quiet moments after the mic opens (the
     // warm-up hold in a run, before the first tap in the Visualiser) instead
     // of trusting the floor saved at calibration — src/pitch/noiseMeter.ts.
-    const measureNoise = sessionNoiseMeter(settings.voiceRms);
-    const onFrame = (frame: Float32Array, sampleRate: number) => {
+    // One measurement per mic session (brief 47): this effect re-runs on every
+    // canvas size change, and a resize or rotation must not measure again.
+    const noise = sessionNoiseFor(getMicSession() ?? noiseOwnerRef.current, settings.voiceRms);
+    const onFrame = makeVisualiserSink({
+      settings,
+      noise,
       // Deaf while the example plays — otherwise the game's own voice is drawn
       // as the player's contour.
-      if (isCueAudible()) return;
-      if (!tracker) {
-        tracker = new PitchTracker({
-          sampleRate,
-          f0Center: settings.f0Center,
-          fMin: speakerFMin(settings.f0Center),
-          // The saved calibration floor, capped, until this session's own
-          // measurement of the room lands (`measureNoise` below).
-          noiseFloor: startingNoiseFloor(settings.noiseFloor, settings.voiceRms),
-          minVoicedRunMs: tuning().minVoicedRunMs,
-          rangeSemitones: settings.rangeSemitones,
-          rangeDownSemitones: settings.rangeDownSemitones,
-        });
-      }
-      const measured = measureNoise(frame, sampleRate);
-      if (measured !== null) tracker.setNoiseFloor(measured);
-      const p = tracker.push(frame);
-      core.push(p.smoothedChao, p.voiced, performance.now(), p.rms);
-    };
-    frameSinkRef.current = onFrame;
-    setFrameSink(onFrame);
+      muted: isCueAudible,
+      onPitch: (chao, voiced, rms) => core.push(chao, voiced, performance.now(), rms),
+    });
+    const sink = import.meta.env.DEV
+      ? (frame: Float32Array, sampleRate: number) => {
+          logFrameGap(performance.now(), sampleRate);
+          onFrame(frame, sampleRate);
+        }
+      : onFrame;
+    frameSinkRef.current = sink;
+    setFrameSink(sink);
 
     const tick = (now: number) => {
       const word = wordRef.current;
@@ -645,6 +645,9 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         chao: frame.chao,
         voiced: frame.dotVoiced,
         scroll: frame.scroll,
+        corridor,
+        // Dev only (brief 47 step 4): pairs drawn stretched to the target's length.
+        stretchToTarget: import.meta.env.DEV && (word?.syllables ?? 1) > 1 && stretchPairs,
       });
       if (running) rafId = requestAnimationFrame(tick);
     };
