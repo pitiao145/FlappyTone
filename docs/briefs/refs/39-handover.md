@@ -358,6 +358,7 @@ Reviewed commit `11484df`. No code changed by this review.
 - Follow-up (16 Nov 2026, Pierre): the band is now an option. Button next to mute, saved per account (`toneflap.visBand.v1`), on by default. Site page: no toggle, always shown. Tests 1879.
 - Step 3 measured (16 Nov 2026, Pierre's desktop): 1456 frames, hop 23.2 ms (44.1 kHz), median gap 23.2, p95 23.5, max 28.4 ms, 0.1% of gaps off by over 10 ms, drift −7.1 ms. Under the 5% rule: no change, frames keep `performance.now()`. Phone not measured.
 - Step 4: not judged yet (Pierre was not sure what to look for). The switch only changes finished pair attempts whose length differs from the target's.
+- **Open question (Pierre, 16 Nov 2026):** stretch pairs could become a Visualiser option (off by default, labelled, real lengths shown). Not decided; dev switch stays as it is. Details in the brief 47 report.
 
 ## Note for brief 48 — pair reading: first tone read as fourth tone at voiced joins (16 Nov 2026) — BLOCKER for go-live
 Found by Pierre in the dev Visualiser (gōngyuán read "T4 · T2"). Analysed, not fixed. Scripts in the session scratchpad only, not in the repo.

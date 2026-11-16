@@ -53,3 +53,9 @@
 ## Step 4 status (16 Nov 2026)
 - Not judged yet. Pierre was not sure what to look for. The difference shows only in the pairs tab, only on a finished attempt (the faded line), and only when the attempt is clearly shorter or longer than the target. Then the faded line ends where the dashed target ends.
 
+## Open question for Pierre: stretch pairs as a Visualiser option (16 Nov 2026)
+- Status: left as a dev switch (`ft.stretchPairs`), not shipped. Pierre thinks it could be a good Visualiser option; not decided.
+- For: it compares the shape only, like the tone accuracy score already does (time-normalised, on the player's own clock). The stretch is even, so the two syllables keep their sizes relative to each other.
+- Against: stretched, the picture no longer shows how fast the player spoke.
+- Proposal if it becomes an option: off by default (real time stays the normal view), and when on, say so and show the real lengths, e.g. "matched to target length · you 0.8 s, target 1.4 s". Cost: one button like the band toggle, plus a label.
+
