@@ -356,3 +356,16 @@ Reviewed commit `11484df`. No code changed by this review.
 - The public tone visualizer draws the band too ("normal" width). Its own engine and `Game.tsx` still build the noise meter inside their effects (not checked for resize).
 - For brief 48: other screens still read the old settings record, not the ruler (from the 44 review); the band uses that same record's corridor width.
 - Follow-up (16 Nov 2026, Pierre): the band is now an option. Button next to mute, saved per account (`toneflap.visBand.v1`), on by default. Site page: no toggle, always shown. Tests 1879.
+- Step 3 measured (16 Nov 2026, Pierre's desktop): 1456 frames, hop 23.2 ms (44.1 kHz), median gap 23.2, p95 23.5, max 28.4 ms, 0.1% of gaps off by over 10 ms, drift −7.1 ms. Under the 5% rule: no change, frames keep `performance.now()`. Phone not measured.
+- Step 4: not judged yet (Pierre was not sure what to look for). The switch only changes finished pair attempts whose length differs from the target's.
+
+## Note for brief 48 — pair reading: first tone read as fourth tone at voiced joins (16 Nov 2026) — BLOCKER for go-live
+Found by Pierre in the dev Visualiser (gōngyuán read "T4 · T2"). Analysed, not fixed. Scripts in the session scratchpad only, not in the repo.
+- Cause 1 (MEASURED, frame dump): at a voiced join (ng-y, n-r, ng-m) there is no silence, and loudness does not dip where the pitch moves. Pierre's gōngrén (take 2): the pitch falls at ~470 ms, the loudness dip (the cut) comes ~360 ms later at the bottom of the dip, so syllable 1 = "flat 5, then fall" → read T4.
+- Cause 2 (MEASURED): near-silent frames (1% loudness) with junk pitch at chao 1 stick to the end of a syllable (Pierre's bāngmáng, take 1) → a fake fall → T4.
+- Cause 3 (MEASURED): when the cut lands at the start of the fall, syllable 2 begins with the fall plus a long low stretch and reads T3 instead of T2. Jane's own textbook gōngyuán reads "T1+T3" today; Pierre's gōngrén "T1+T3" / "T4+T3". Reader problem, not cut problem.
+- Today's numbers (found cut): Jane textbook, first tones read as fourth tones: 11 of 109 (old board), 9 of 109 (ruler); with the clip pipeline's true cut, about the same (12 / 9), so for Jane the cut is mostly fine. Pierre: 1 of 4 first tones right in his pairs (3 read T4).
+- Fixes tested offline: (A) at a voiced join cut at a fast pitch jump (≥ 1.5 chao over 3 frames, middle 60% of the word), the jump frames going to neither syllable; (B) drop edge frames under 6% of the syllable's loudest frame. A + B: Pierre's first tones 4 of 4; Jane textbook both right 70.4 → 73.4% (ruler), 74.8 → 77.3% (old); first tone read as fourth 9 → 6 (ruler). Cost of A: it can cut inside a real fourth tone (Pierre's duìmiàn 4+4 → 3+?); needs a guard (only a fall after a level part). B alone showed no harm. Natural pairs barely move. Cause 3 is not fixed by either.
+- Why it shows now: before brief 46 production split pairs at silences only, so many voiced-join pairs were not split ("?"). Brief 46's finder splits them, and the slide sticks to one syllable. Production players do not see it.
+- For go-live: do not ship brief 46's pair finder until a pair-reading brief fixes this (Pierre: separate session, after 48). It needs more of Pierre's pair takes, especially first tone + second tone (gōngyuán, jīnnián, zhōngguó).
+

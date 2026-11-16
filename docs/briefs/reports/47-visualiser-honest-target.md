@@ -45,3 +45,11 @@
 - Checks (MEASURED): `npm run test` 1879 pass (1 new render test: hiding the band removes exactly one fill, the dashed line stays); typecheck clean; build + grep clean.
 - Needs Pierre's eyes: the new button and its icon, on phone and desktop.
 
+## Step 3 result (16 Nov 2026, Pierre's desktop, dev build)
+- MEASURED by Pierre, `__frameGaps.report()`: 1456 frames, hop 23.2 ms (so the mic ran at 44.1 kHz, not 48 kHz), median gap 23.2 ms, p95 23.5 ms, max 28.4 ms, gaps more than 10 ms off the hop **0.1%**, drift between the two clocks −7.1 ms over about 34 s.
+- Decision: under the 5% limit, so **change nothing**. Frames keep the `performance.now()` stamp. Phone not measured.
+- Note: this desktop runs at 44.1 kHz. The bench assumes 48 kHz (handover: "All local audio is 48 kHz"); brief 42 made the settings time-based, so this is expected to be fine.
+
+## Step 4 status (16 Nov 2026)
+- Not judged yet. Pierre was not sure what to look for. The difference shows only in the pairs tab, only on a finished attempt (the faded line), and only when the attempt is clearly shorter or longer than the target. Then the faded line ends where the dashed target ends.
+

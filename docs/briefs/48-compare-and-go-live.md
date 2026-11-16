@@ -1,5 +1,5 @@
 ---
-status: blocked  # draft: waits for Pierre's approval of the Phase B plan
+status: ready
 notion_task:
 risk: needs-approval
 ---
