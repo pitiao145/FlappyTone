@@ -1607,3 +1607,12 @@ plus a country-only GeoIP transformation would let the policy go back to
 - `run_start.corridor` and `setting_changed` (`tunnel_width`) can now carry `extraNarrow`.
 
 **Rejected.** Changing Narrow's own factor: it would make the game harder for every current Narrow player without warning. A free slider: more UI and storage, and a player who sets it too tight loses hearts and blames the game.
+
+## One ruler: compare first, go live as one switch (16 Nov 2026, brief 48)
+
+Briefs 42–47 built a new pitch foundation on branch `research/39-pitch-foundation`: a faster listener (line 20 ms late, not 40), target shapes measured on Jane's one ruler, a player grid that keeps learning in play, and a tone reader fitted to that ruler. Everything after the listener sits behind one flag (`tuning().playerRulerV2`) plus the dev shapes switch, so production does not change until a go-live.
+
+- **One switch, not three.** The shapes, the grid and the reader were fitted together; a mix (new shapes, old reader) was never measured. The Lab flips all three at once.
+- **Go live is one database write with a backup and a restore** (`npm run golive-shapes`), then `export-fallback` and a build with the flag on. Clip audio does not change.
+- **The first tone is not lower.** The release note says "first tone: no change" (Pierre, 16 Nov 2026). Measured: median first-tone target 4.54 → 4.55 chao. The "first tone near 4" idea was withdrawn on 11 Nov (brief 43).
+- **Not yet:** the 30 older first-tone words carry a shared lift and must be re-recorded; brief 46's pair finder must not ship before a pair-reading fix (first tone read as fourth at voiced joins); `process-clips` must move to the one-ruler path before any new word is published.

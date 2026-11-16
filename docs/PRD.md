@@ -49,8 +49,20 @@ semitones = 12 * log2(f0 / f0Center)
 ```
 
 The tone space is **asymmetric**: an upward half and a downward half,
-measured independently, because `f0Center` (median of conversational speech)
-sits near the bottom of a speaker's range, not its middle.
+measured independently. (The old reason, "the talk median sits near the bottom
+of the range", is false for Jane: her talk median is near the middle of her
+range, brief 40. The halves differ because the top and bottom anchors are two
+different tones, below.)
+
+**Two foundations exist; production runs the old one** (`tuning().playerRulerV2`
+false; the Lab's "Old / New foundation" switch, brief 48, flips it in dev):
+- *Old:* `f0Center` = the talk median; halves from the calibration flight (§5.4).
+- *New, "one ruler" (briefs 43–45):* one rule for Jane and the player. Chao 3 =
+  the middle (median of voiced tone frames, creak left out), chao 5 = the
+  first-tone height (p90 of first-tone frames), chao 1 = the third-tone low
+  (p10 of third-tone frames). Same `semitonesToChao`, no per-tone stretch.
+  Jane: middle 197.4 Hz, up 5.75 st, down 7.25 st. The player's grid starts
+  from calibration and keeps learning in play (§5.4).
 
 ```
 half = semitones >= 0 ? rangeUp : rangeDown
@@ -67,14 +79,16 @@ y(chao) = 0.80H - ((chao - 1) / 4) * 0.60H
 
 ### 5.2 Pitch detection pipeline
 
-Analysis window 2048 samples, 1024-sample hop (~47 Hz update rate, one step = 21.3 ms at the 48 kHz most devices use; 50% overlap) — see `src/pitch/PitchTracker.ts` for the exact constants below.
+Analysis window 2048 samples, 1024-sample hop (~47 Hz update rate, one step = 21.3 ms at the 48 kHz most devices use; 50% overlap) — see `src/pitch/PitchTracker.ts` for the exact constants below. Time-based settings (slew, rescue, stale reset, minimum voiced run) are stored in ms or st/s and converted per device (brief 42); frame size, hop and the detection window are still in samples, so a 16–24 kHz device (some Bluetooth headsets) gets a later line (open, see DECISIONS.md).
 
-1. **Band-limit the search** to reject most octave errors outright.
+The line is about **20 ms** behind the voice (median 3; was 40 ms with median 5). MEASURED against Praat on 788 of Jane's clips (`npm run bench`).
+
+1. **Band-limit the search** (`fMax` 400 Hz; the floor follows the speaker: `speakerFloorHz` = clamp(0.6 × centre, 55, 70) Hz, so only voices with a centre under 117 Hz go below 70) to reject most octave errors outright. Octave errors stay rare (0–0.4% of frames).
 2. **Voicing gate:** `clarity >= 0.7` (not a stricter textbook 0.85 — NSDF clarity collapses exactly when pitch slews fastest), **plus a glide rescue**: a loud, pitch-continuous, recent frame counts as voiced even below the clarity threshold (`isFrameVoiced()`). Also requires `rms >= noiseFloor * 3`.
 3. **Octave-jump correction** against the previous voiced f0.
-4. **Median filter**, window of 5 frames.
-5. **Slew clamp** on frame-to-frame semitone movement (~3.0 st/hop, tuned from a native speaker's fastest measured Tone 4 fall).
-6. **Exponential smoothing**, `alpha = 0.85` on the scoring-relevant Y — high, not low, because median-5 and the slew clamp already de-jitter upstream; alpha is monotonic across the tuning range on lag, contour survival, and jitter, and 0.85 is strictly better than a conservative value on all three.
+4. **Median filter**, window of **3** frames (brief 42; must be odd).
+5. **Slew clamp** on frame-to-frame movement: 140.6 st/s (3.0 st per hop at 48 kHz), first tuned from a native speaker's fastest measured Tone 4 fall.
+6. **Exponential smoothing**, `alpha = 0.85` on the scoring-relevant Y. Chosen on `fixtures/captures` with `npm run tune`; not re-tuned against Praat (UNPROVEN as "best", kept because the scorecard passes with it).
 
 **Visual-only easing is a separate stage**: `tuning().easeTauMs` (default 35ms) eases the *drawn* dot in `run.ts`/`loop.ts`/`Visualiser.tsx` and never touches scoring data.
 
@@ -86,7 +100,7 @@ Analysis window 2048 samples, 1024-sample hop (~47 Hz update rate, one step = 21
 
 ### 5.4 Calibration
 
-Current flow (redesigned 29 Aug 2026 — see DECISIONS.md for the two prior flows this replaced):
+Current flow in production (redesigned 29 Aug 2026 — see DECISIONS.md for the two prior flows this replaced):
 
 1. Quiet capture → `noiseFloor`.
 2. A short calibration tutorial flies real Tone 1 and Tone 3 gates.
@@ -95,9 +109,13 @@ Current flow (redesigned 29 Aug 2026 — see DECISIONS.md for the two prior flow
 
 Persisted to `localStorage` (the one exception to "no persistence" — a settings value, not game data).
 
+Known flaw of this flow (Phase A §3): the first tone becomes chao 5 by definition, so the board's top is never checked, and the talk middle sits about 1.5 st under the middle of the player's tones.
+
+**New foundation (flag on):** a short "middle" step (媽, 馬 ×2) sets the middle from tone words, with the low floor for deep voices. Halves start at the standard 5.25 / 5.75 st until the player's own first-tone and third-tone data exist. In play the grid keeps learning (`learnGridFromGate`, `src/game/playerRuler.ts`, record `toneflap.ruler.v1` on the device): the middle from "pitch minus target line" votes; top from first-tone gates whose target reaches chao 4; bottom from third-tone gates whose target reaches chao 1.5. A middle move carries top and bottom with it. MEASURED (`grid-learn.mjs`): from a start 2 st off, the middle is within ~1 st after 20 gates. Open product note: the bottom also learns from third-tone gates that hit a wall, so a learner whose third tone is not low gets a higher floor.
+
 ## 6. Tone gate geometry
 
-**A gate is built from a recorded word, not a hand-drawn tone-mark shape.** Corridor centrelines (`DEFAULT_POLYLINES` in `src/game/tuning.ts`) are measured from Jane's own citation-form takes (`fixtures/captures/jane_ma*.wav`), not drawn from the ˉˊˇˋ marks — real tones hold, then move fast, which a constant-rate ramp between the mark's endpoints cannot represent. Every shipped word gets its own polyline via `shapeForWord`, built from the same measurement the four fallback/tutorial shapes use (`templateContour`).
+**A gate is built from a recorded word, not a hand-drawn tone-mark shape.** Corridor centrelines (`DEFAULT_POLYLINES` in `src/game/tuning.ts`) were measured from Jane's own citation-form takes (`fixtures/captures/jane_ma*.wav`; not re-measured since), not drawn from the ˉˊˇˋ marks — real tones hold, then move fast, which a constant-rate ramp between the mark's endpoints cannot represent. Every shipped word gets its own polyline via `shapeForWord`, built from the same measurement the four fallback/tutorial shapes use (`templateContour`).
 
 Approximate current fallback shapes (2–4 vertices, monotone-cubic spline between them, not straight segments):
 
@@ -107,6 +125,10 @@ Approximate current fallback shapes (2–4 vertices, monotone-cubic spline betwe
 | 2 | dips below its start (~3.0→~1.8), then climbs to 5 and holds |
 | 3 | falls to the floor (~2.2→~1.2), a real sample partway up the rise, then holds the peak at 5 |
 | 4 | reaches a peak early, falls to the floor (~1.2), holds |
+
+Production per-word shapes are her measured line **moved and stretched onto textbook levels per tone** (`clipNormalize.ts`): the shapes are right (match r 0.96–0.99) but the heights are not where she said them (median gap T4 0.59 chao, `heights.*` on the scorecard).
+
+**New foundation (flag on, `src/dev/local/shapes-v2.json`, brief 43):** every word measured on Jane's one ruler, no per-tone stretch, with a gate set per clip and knee nodes so the target follows her timing. Heights gap T1 0.13, T2 0.12, T3 0.21, T4 0.28, pairs 0.18 chao. Medians over single words: first tone 4.55 (no change), fourth tone starts at 5.00 (was 4.27), second and third tones start lower, third tone ends at 4.50 (was 5). 30 older first-tone words carry one shared +1.08 chao lift and must be re-recorded before go-live.
 
 Every contour completes before the gate ends and then holds its final chao — a speaker who finishes and sustains the note must not fly above a corridor still climbing underneath them.
 
@@ -120,7 +142,7 @@ Every contour completes before the gate ends and then holds its final chao — a
 
 ### Tone 3
 
-Creaky voice destroys f0 tracking, and creak concentrates on Tone 3. Mitigations:
+Creaky voice destroys f0 tracking. That creak concentrates on Tone 3 is FALSE for Jane (she creaks most on T4 and pairs, 0–2.8% of frames; T3 0.0–0.4%, brief 40) and for Pierre (1% of frames, brief 41). The mitigations below stay because a learner's low third tone is where creak is most likely; that is ASSUMED, not measured. Mitigations:
 
 - Extended unvoiced grace inside a T3 gate (250ms vs. 120ms).
 - 1.3× wider tolerance for T3.
@@ -148,7 +170,7 @@ accuracy = clamp(1 - mean(err_t), 0, 1)   // over voiced frames only
 
 **Hearts:** 3 per run.
 
-**Tone classifier (v2, `src/game/toneClassifierV2.ts`), layered on top of corridor scoring, not replacing it.** It measures the shape directly, on real time, with fixed thresholds — no comparison with the averaged shapes. Family first: level T1 (a flat, high, held tail), fall T4 (a fall from a high peak), dip-rise T2–T3 otherwise. Inside dip-rise, T2 vs T3 is a vote of six cues: when the turn comes, how much of the syllable is spent rising, how fast it rises, how far the voice drops, the drop's share of the movement, and how low the dip goes. The percentage shown is how strong the evidence is; a close call names the nearer tone at a lower percentage.
+**Tone classifier (v2, `src/game/toneClassifierV2.ts`), layered on top of corridor scoring, not replacing it.** It measures the shape directly, on real time, with fixed thresholds — no comparison with the averaged shapes. Its thresholds are in chao, so a grid off by 2 st changes the read (production, natural singles: 89.1% → 55.0%). With the new foundation it uses its own set (`readerSettings()` → `toneReaderRuler`): T2/T3 from turn time and rise/drop shares, no absolute "low" vote, five rule-8 guards; held-out half: textbook 100.0%, natural 91.2%, voice 2 st low 80.7% (91.2% after the grid learns), 0 textbook wall hits in every grid case. Family first: level T1 (a flat, high, held tail), fall T4 (a fall from a high peak), dip-rise T2–T3 otherwise. Inside dip-rise, T2 vs T3 is a vote of six cues: when the turn comes, how much of the syllable is spent rising, how fast it rises, how far the voice drops, the drop's share of the movement, and how low the dip goes. The percentage shown is how strong the evidence is; a close call names the nearer tone at a lower percentage.
 
 - `isDrasticToneMismatch` — a confident classifier read of a drastically wrong tone (T1/T4 confused with anything, or a confident T2↔T3 mixup) forces a wall-style collision even if the pitch trace happened to sit inside the wrong corridor. On by default. A T2↔T3 read must also be *decisive* — a strong vote, no single cue arguing hard for the other tone, and no voicing gap in the dip (creak) — so a close call can name a tone but never cost a heart.
 - `applyClassifierBoost` — a confident (≥0.9) read of the *correct* tone can raise a gate's accuracy past what corridor tracking alone earned, floored at the "good" threshold. On by default. Never resurrects a collision or an unheard gate.
@@ -169,7 +191,9 @@ Every gate also gets a **tone accuracy** (`src/game/toneAccuracy.ts`), 0–100%:
 
 Reference: the speaker's averaged shape for that tone, or for that exact pair combo (e.g. every 3+2 word). Parts: shape correlation, movement size (too big penalised like too small) and height; T2 and T3 targets also use the classifier's T2/T3 cue; movement and cue only count as far as the shape matches. Tone 1 (and a 1+1 pair) is judged on flatness and height. A near-flat attempt on a tone that moves scores near 0. Pair combos with a neutral syllable are not measured. Perfect/Good/OK stay score-only; tone accuracy shows as a plain percentage, labelled as such, apart from the score.
 
-Measured on the speaker's own published clips, each against an average built without it: the right tone scores a median 0.85–0.95; a tone from another family ~0; a T2 said for a T3 ~0.5, a T3 for a T2 ~0.4; pairs 0.85 against their own combo.
+Measured on the speaker's own published clips with the same listener that made them (so it shows agreement, not truth), each against an average built without it: the right tone scores a median 0.85–0.95; a tone from another family ~0; a T2 said for a T3 ~0.5, a T3 for a T2 ~0.4; pairs 0.85 against their own combo.
+
+With Praat-checked clips (brief 45, held-out half, median): production 0.77 textbook / 0.70 natural; new foundation 0.84 / 0.79. The two are not on the same ruler, so do not compare a player's numbers across the switch.
 
 **Game-over takeaway:** picks the worst-tone-accuracy tone with enough scored gates, and prefers a mismatch-based phrasing ("Tone 3 gates are landing like Tone 2") when the classifier's misses on that tone are dominated by one specific wrong read.
 

@@ -1,8 +1,8 @@
 # Report: 48 Compare with production, go-live steps, and the docs
-- Result: **blocked at step 4** (16 Nov 2026). Steps 1–3 done. Steps 4–8 not started.
-- Why: a premise of step 4 is false. The brief says the release note must say "first tone lower". MEASURED: the first-tone targets do not get lower (below). This phrase comes from the withdrawn "first tone near 4" plan (handover, "43 second run"; plan doc decision 2, revised 11 Nov 2026).
+- Result: **done** (16 Nov 2026). First run blocked at step 4 (premise false); Pierre decided the same day, and the second run did steps 4–8.
 
-## Why blocked (MEASURED)
+## Pierre's decision (16 Nov 2026)
+The release note says **"first tone: no change"**. Reason (MEASURED in the first run): the brief said "first tone lower", but the first-tone targets do not move.
 
 Command: a one-off `node -e` over `src/data/wordsFallback.json` (production textbook shapes) and `src/dev/local/shapes-v2.json` (new), single-syllable words, median over words, chao.
 
@@ -13,11 +13,7 @@ Command: a one-off `node -e` over `src/data/wordsFallback.json` (production text
 | third | 52 | 2.55 → 2.32 | 3.40 → 2.76 | 5.00 → 4.50 | 1.42 → 1.08 | 5.00 → 4.50 |
 | fourth | 68 | 3.36 → 3.07 | 4.27 → **5.00** | 4.78 → 5.00 (at t 0.19 → 0.00) | 1.29 → 1.15 | 1.32 → 1.15 |
 
-- First tone: no change in chao. In Hz on Jane's two grids it is about 0.4 semitone *higher* (old board 181.3 Hz middle, top 7.1 st up: 4.55 ≈ 249 Hz; ruler 197.4 Hz, top 5.75 st up: 4.55 ≈ 255 Hz). ASSUMED arithmetic from the stored ruler numbers.
-- The player's top line is their own first-tone height (p90) in both foundations (plan doc, "What one ruler means"; READ IN CODE `computeRangeHalvesFromExtremes`). So for a player the first-tone target does not drop either.
-- What does change, in plain words: the fourth tone starts at the top at once (true, as the brief says); the second and third tones start lower and dip deeper; the third tone ends lower (4.5, not 5).
-
-Decision for Pierre: what the release note says about the first tone. Options: (a) drop "first tone lower" and say "first tone: no change"; (b) keep it only if you mean something I did not measure (for example how it feels in flight); (c) something else. Step 6 (the "5-5" copy list) also leans on this: if the first tone stays near 5, "55" copy stays true.
+In Hz on Jane's two grids the first tone is about 0.4 st *higher* (ASSUMED arithmetic from the stored ruler numbers). The player's top line is their own first-tone height in both foundations (plan doc; `computeRangeHalvesFromExtremes`).
 
 ## Step 1 — Compare: Lab toggle and checklist (done)
 
@@ -118,10 +114,86 @@ DRY RUN: nothing was written.
 
 `meta.reference` fix: textbook words get `{ session: "one-ruler-brief-43", f0Center: 197.4, rangeSemitones: 6.5, upSemitones: 5.75, downSemitones: 7.25, style: "textbook" }`. `rangeSemitones` 6.5 is the mean of the two halves, so `process-clips`' borrow fallback (READ IN CODE `process-clips.ts:405-432`, the only reader) still gets a valid number. Note: `meta` is per word, shared by both styles, so it cannot name the natural session and the textbook ruler at once.
 
-## Steps 4–8 — not started
+## Step 4 — What players will notice (release note draft)
 
-Facts found on the way, for the rerun (not a finished step):
-- Public copy that says "55" for the first tone (READ IN CODE): `src/site/pages/ChineseTones.tsx:57` ("Chao numbers write it 55") and `:252` ("first tone = 55, …"); `src/site/pages/ToneVisualizer.tsx:691` ("Tone charts teach 55, 35, 214 and 51"). Drawn first-tone lines come from data, not hard-coded 5-5: `ToneChart.tsx` and the visualizer's textbook line (`toneRefs.ts`) draw `AVERAGED_TONE_SHAPE.textbook` (T1 4.60 now, V2 4.55); `/say` and `/chinese-tones` corridors draw `sayClips.ts` / `exampleClips.ts` (copies of the fallback). Landing `GateDemo` draws fallback words. "High and level" wording: `ChineseTones.tsx:55`, `ToneMarks.tsx:280`, `ToneTest.tsx:100`, `ToneVisualizer.tsx:122/675`, `Toneder.tsx:65`, `sayWords.ts:439/455`.
+> **FlappyTone now hears you a new way**
+> - **The line follows your voice faster.** It now trails your voice by half as much as before.
+> - **Targets follow how our native speaker really says each word**, on one scale for every tone.
+>   - First tone: no change.
+>   - Fourth tone: starts at the very top.
+>   - Second and third tones: start a little lower and dip a little deeper. The third tone ends a little lower.
+> - **A new short calibration step.** You say 媽 and 馬, and the game finds the middle of your voice. After that, the game keeps adjusting to your voice while you play.
+> - **Low voices:** the game now listens further down.
+> - **Your stats:** tone accuracy is now measured on the new scale. Numbers from before and after <date> are not directly comparable. Most players will see their accuracy go up a little; that is the new scale, not a sudden improvement.
+
+Notes for Pierre: "half as much" = line delay 40 → 20 ms (MEASURED, bench). "Most players will see it go up" is ASSUMED from Jane's own clips (0.77 → 0.84 textbook, 0.70 → 0.79 natural); no learner was measured. Drop that sentence if you prefer only measured claims. "Low voices" is code (floor 55–70 Hz), proven only on a slowed copy of Jane.
+
+## Step 5 — Stats and the leaderboard (proposal; no server data changed)
+
+READ IN CODE / docs (`ARCHITECTURE.md` "Accounts, tiers and the leaderboard"):
+
+| stored where | what it holds | effect of the switch |
+|---|---|---|
+| `leaderboard_scores` (weekly, ISO week from server time) | the score: corridor error on the gate's clock | Shapes and the player's grid change, so a score before and after is not the same test. The board resets every week, so the mix lasts at most one week. |
+| `tone_accuracy_stats` (profile, all time) | lifetime tone accuracy per tone and combo | Sums old and new numbers forever. "All time" becomes a blend. |
+| `run_log.per_key` | last 5 / last 50 runs, Pro daily trend | Mixed for 5–50 runs; the Pro trend shows a step on the change day. |
+| `player_tone_shapes` (Pro) | per-day sum of the player's lines in chao | Lines are drawn on the player's grid; the grid changes, so the shape chart shows a jump on the change day. |
+| local stats copy, `toneflap.ruler.v1` | per browser | Ruler record is new; the old calibration record is not touched (roll-back safe). |
+
+**Proposal (one option): go live on a Monday, and draw one marker.**
+- Deploy at the start of an ISO week (Monday, Taiwan time is fine; the week id comes from server UTC), so no weekly board mixes the two foundations. No server change.
+- One constant in the client, `FOUNDATION_CHANGE_DATE`. Progress draws a thin vertical line labelled "new tone scale" on the Pro trend and the tone-shape chart at that date, and one line under "All time": "Includes runs from before <date>, measured on the old scale."
+- Do not reset or rewrite any stored number. If Pierre later wants a clean "all time", that is a server change (new column or a dated split) and needs its own approval.
+
+## Step 6 — Public copy that says or draws "55" for the first tone
+
+| where | what it says or draws | proposal |
+|---|---|---|
+| `src/site/pages/ChineseTones.tsx:57` | "Chao numbers write it 55: it starts at 5 and stays at 5." | **Keep.** The first tone stays at the top (decision above). |
+| `src/site/pages/ChineseTones.tsx:252` | "Textbooks give each tone a fixed number (first tone = 55, …" | **Keep.** It is about textbooks. |
+| `src/site/pages/ToneVisualizer.tsx:691` | "Tone charts teach 55, 35, 214 and 51." | **Keep.** Same. |
+| `src/site/ToneChart.tsx` (on `/chinese-tones`) | draws `AVERAGED_TONE_SHAPE.textbook` (first tone at 4.60) | **Change by data at go-live** (regenerate `toneAverages.ts` from the new shapes: first tone 4.55, fourth tone starts at 5). No copy change; the aria-label stays true. |
+| Tone visualizer textbook line (`src/site/checker/toneRefs.ts`) | same averages | **Change by data**, same regeneration. Then the site and the game agree. |
+| `/say/*` and `/chinese-tones` example corridors (`sayClips.ts`, `exampleClips.ts`) | copies of the fallback | **Change by data**: regenerate after `export-fallback` (tests pin them). |
+| Landing (`SkyLanding.tsx`, `shared.tsx`, `TryItNow.tsx`, `GateDemo.tsx`) | fallback words and averages built from them at run time | **Change by data**: follows `export-fallback`. |
+| "high and level" wording: `ChineseTones.tsx:55`, `ToneMarks.tsx:280`, `ToneTest.tsx:100`, `ToneVisualizer.tsx:122` and `:675`, `Toneder.tsx:65`, `sayWords.ts:439` and `:455` | words, not numbers | **Keep.** |
+
+No hard-coded 5-5 first-tone line exists in public code (READ IN CODE: every drawn first-tone line comes from catalog or averages data).
+
+## Step 7 — Logging proposal (not built)
+
+Three numbers per run, added to the existing `run_end` PostHog event (so the "Usage analytics" switch turns them off too):
+
+| number | what it is in plain words | voice profile? |
+|---|---|---|
+| `noiseDb` | how loud the room was during the run (the session noise floor, dB) | No: it describes the room. |
+| `heardPct` | share of the frames inside gates where the game could hear a voice | No: a quality number. |
+| learned grid | how far the learned middle moved from calibration, and the two halves, in semitones | **Yes.** It describes the player's voice range. |
+
+**Conflict to decide:** brief 35 (`DECISIONS.md`, 8 Nov 2026) removed every voice-profile number from analytics, and the privacy policy says "we do not collect a voice profile (such as your calibration numbers)". The learned grid is such a number.
+- Option A (recommended): log only `noiseDb` and `heardPct`. No policy change of meaning; add one clause to the usage-analytics paragraph: "how loud the room was during a run and what share of your voice the game could hear (two numbers, not audio and not a voice profile)."
+- Option B: also log the grid, in semitones only, never Hz. Needs a new decision that reverses part of brief 35, and this policy line: "Since <date> we also collect three numbers about how the game's pitch scale adapted to your voice during a run (in semitones, never your pitch in Hz). They are not audio and cannot be turned back into your voice."
+
+**Needed at go-live in any case (no logging):** the device now keeps pitch histograms (`toneflap.ruler.v1`). Proposed line for the local-storage paragraph: "The game also keeps, in your browser only, a summary of the pitch range of your voice (counts of numbers, not audio) so its scale can adapt to you. It is never sent to us." (Hard rule 12: new voice-derived data needs a policy update.)
+
+## Step 8 — Docs
+
+Every row of `docs/briefs/refs/39-rules-review.md` now has a final state (new last column, 54 rows): FIXED, TRUE, or STILL UNPROVEN with the reason. Doc edits:
+- `docs/PRD.md` §5–§7: old and new foundation both described; median 3 and 20 ms; speaker floor; slew in st/s; alpha marked not re-tuned; calibration flaw and the new middle step + learning; production shapes "stretched onto textbook levels" and the new heights; creak claim corrected; reader board-dependence and the ruler set; tone accuracy numbers with Praat.
+- `docs/ARCHITECTURE.md`: the foundation switch and `golive-shapes`; "until brief 48" → "until go-live"; `multiMergeGapMs` note.
+- `docs/TESTING.md`: what the 4 captures are the truth for; deep-voice gap.
+- `docs/DECISIONS.md`: "One ruler: compare first, go live as one switch".
+- `CLAUDE.md`: one sentence — captured contours show agreement, `npm run bench` checks against Praat.
+
+Still open (Pierre's call, not docs): whether the 4 `jane_ma*` captures stay "the" ground truth (CLAUDE.md:92).
+
+## Open decisions for Pierre
+1. Release note wording (step 4), especially the unmeasured "accuracy may go up" sentence.
+2. Stats: Monday go-live + marker (step 5), or something else.
+3. Logging: option A or B (step 7).
+4. Public copy: regenerate site averages at go-live (step 6), so site and game agree.
+5. Other screens (Visualiser, public checker, TONEder) still read the old calibration record, not the learned ruler (brief 44 review). Decide before go-live whether they should read the ruler.
+6. Go-live order and the four blockers in step 3.
 
 ## Checks run
 - `npm run test`: 144 files, 1882 tests pass (3 new). Flag off is the default in every test.
@@ -132,8 +204,11 @@ Facts found on the way, for the rerun (not a finished step):
 - Acceptance "with it off, all tests pass as on `main`": the branch suite passes with the toggle off. `main`'s suite is a smaller, older set (not run here: no merge, by rule).
 
 ## Needs Pierre's eyes
-- The release-note decision above (first tone).
 - Fly the checklist in both modes (I did not drive the UI).
+- The open decisions above.
 
 ## Follow-ups
-- Rerun brief 48 from step 4 after the decision.
+- Go-live session (needs Pierre's yes): step 3 list.
+- Pair-reading brief (blocker for shipping brief 46's finder).
+- Re-record the 30 older first-tone words.
+- `process-clips` on the one-ruler path.

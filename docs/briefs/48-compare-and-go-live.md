@@ -1,5 +1,5 @@
 ---
-status: blocked
+status: done
 notion_task:
 risk: needs-approval
 ---

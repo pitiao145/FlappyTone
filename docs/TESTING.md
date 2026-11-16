@@ -22,7 +22,7 @@ a name that misses the convention is silently scored at the 120Hz default.
 
 | File | Content | Why |
 |---|---|---|
-| `jane_ma1..4.wav` | The four tones, native Taiwanese speaker, direct to iPhone mic | **Ground truth.** If the pipeline fails these, the pipeline is wrong, not the speaker (PRD §13). |
+| `jane_ma1..4.wav` | The four tones, native Taiwanese speaker, direct to iPhone mic, with wind | **Ground truth for the fixture tests.** If the pipeline fails these, the pipeline is wrong, not the speaker (PRD §13). They are 4 old iPhone takes; for listener changes the larger reference is `npm run bench` (788 catalog clips vs Praat). Whether these 4 should stay "the" truth is Pierre's open decision (brief 40 rules review). |
 | `jane_ma3.wav` vs `jane_ma3_natural.wav` | Citation T3 vs conversational T3 | A controlled creak experiment: same speaker, same tone, one careful and one relaxed. The natural one collapses to ~13 voiced frames — that is the creak problem, isolated. |
 | `jane_ma0_neutral.wav` | Neutral tone (轻声) | Out of v1 scope; reference only. Has no tone digit, so `report` skips it. |
 | `jane_chang2.wav` / `jane_ba1.wav` | A raw take from `2026-08-07-xujzgs`, committed because no other capture covers it | `clipCut.test.ts`'s onset backoff pin. `chang2` is an aspirated affricate the cutter used to discard, leaving "hang"; `ba1` is the control — genuine silence before the vowel — that must gain nothing. Every `jane_ma*` take is a nasal onset and exercises none of the backoff. |
@@ -59,7 +59,7 @@ Worth recording when convenient — each closes a hole the current set cannot:
 |---|---|
 | `<speaker>_silence.wav` (5s room tone) | Zero voiced frames |
 | `<speaker>_hum.wav` (3s flat hum) | The known v1 hole registers rather than being quietly hidden |
-| A low male voice near the 70Hz band floor | The band limit is not clipping real speakers |
+| A low male voice near the 70Hz band floor (centre under ~117 Hz) | The speaker floor (`speakerFloorHz`, 55–70 Hz) works on a real deep voice. Today only a slowed copy of Jane (`deep0.5`/`deep0.6` on the scorecard) and Pierre (centre ~128 Hz, floor stays 70; phone AAC clips, `fixtures/captures/pierre/`, gitignored) cover it. |
 
 Commit fixtures. They're small and they're the most valuable artifact in the repo.
 
