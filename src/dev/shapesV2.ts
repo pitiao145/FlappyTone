@@ -78,3 +78,27 @@ export function applyShapesV2(words: Word[] | null): Word[] | null {
 export function applyPlayerRulerSwitch(): void {
   if (on()) setTuning({ playerRulerV2: true });
 }
+
+/**
+ * Brief 48: the Lab's "old foundation / new foundation" toggle. One call
+ * flips everything the one-ruler work added, together:
+ *  - the target shapes (brief 43, `ft.shapesV2` → `applyShapesV2`),
+ *  - the player's grid: middle step + learning in play (brief 44),
+ *  - the tone reader and tone accuracy on the ruler (brief 45).
+ * The grid and the reader both read `tuning().playerRulerV2`, so they are set
+ * here directly. The shapes are swapped when the catalog loads, so the caller
+ * reloads the page after this. Never throws (hard rule 10).
+ */
+export function foundationOn(): boolean {
+  return on();
+}
+
+export function setFoundation(next: boolean): void {
+  try {
+    if (next) localStorage.setItem(SHAPES_V2_KEY, "1");
+    else localStorage.removeItem(SHAPES_V2_KEY);
+  } catch {
+    // Storage blocked: the tuning flag below still flips for this page.
+  }
+  setTuning({ playerRulerV2: next });
+}

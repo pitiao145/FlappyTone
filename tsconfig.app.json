@@ -64,6 +64,7 @@
     "src/dev/simplified.ts",
     "src/dev/simplified.test.ts",
     "src/dev/process-clips.ts",
+    "src/dev/golive-shapes.ts",
     "src/dev/clipPipeline.ts",
     "src/dev/clipPipeline.test.ts",
     "src/dev/generate-tonepair-polylines.ts"

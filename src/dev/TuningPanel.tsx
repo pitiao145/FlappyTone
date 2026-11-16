@@ -16,6 +16,7 @@ import {
   tuningDiff,
   type Preset,
 } from "./presets.ts";
+import { foundationOn, setFoundation } from "./shapesV2.ts";
 
 /** A numeric field of Tuning — everything except the per-tone gate durations. */
 type NumericKey = {
@@ -192,6 +193,10 @@ export function TuningPanel() {
     bump((n) => n + 1);
   };
 
+  // The foundation toggle owns `playerRulerV2`: a reset or a preset must not
+  // leave the shapes on the new foundation and the grid/reader on the old.
+  const keepFoundation = () => setTuning({ playerRulerV2: foundationOn() });
+
   const copyDiff = async () => {
     try {
       await navigator.clipboard.writeText(formatTuningDiff(diff));
@@ -278,6 +283,7 @@ export function TuningPanel() {
             disabled={!movedCount}
             onClick={() => {
               resetTuning();
+              keepFoundation();
               bump((n) => n + 1);
             }}
           >
@@ -285,6 +291,37 @@ export function TuningPanel() {
           </button>
         </div>
       </header>
+
+      <div className="knob">
+        <span className="param-name">Foundation (brief 48)</span>
+        <div className="row">
+          <button
+            type="button"
+            disabled={!foundationOn()}
+            onClick={() => {
+              setFoundation(false);
+              location.reload();
+            }}
+          >
+            Old foundation
+          </button>
+          <button
+            type="button"
+            disabled={foundationOn()}
+            onClick={() => {
+              setFoundation(true);
+              location.reload();
+            }}
+          >
+            New foundation
+          </button>
+        </div>
+        <p className="param-help">
+          Now: {foundationOn() ? "new" : "old"}. New = one-ruler target shapes, the player's grid
+          (middle step, learns in play) and the tone reader on the ruler, all together. Reloads the
+          page. Your saved calibration carries over; calibrate once in each mode for the fairest comparison.
+        </p>
+      </div>
 
       {GROUPS.map((group, gi) => {
         const n = movedIn(group);
@@ -390,6 +427,7 @@ export function TuningPanel() {
               onClick={() => {
                 resetTuning();
                 applyPreset(p);
+                keepFoundation();
                 bump((n) => n + 1);
               }}
             >
