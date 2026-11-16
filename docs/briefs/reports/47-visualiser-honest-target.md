@@ -37,3 +37,11 @@
 ## Follow-ups
 - The public tone visualizer (`src/site/checker/engine.ts`) and the game (`Game.tsx`) still make their noise meter inside their own effects. Not in this brief. The site one may have the same resize re-measure; not checked.
 - The Visualiser's frame effect still makes a new `VisualiserCore` on resize (the attempts on screen are lost). Not in this brief.
+
+## Follow-up (16 Nov 2026, Pierre's decision): the band is an option
+- A round button next to mute in the app Visualiser (both layouts) shows or hides the band. The dashed line always stays. The choice is saved per account (`toneflap.visBand.v1`, `loadShowVisBand` / `saveShowVisBand` in `src/game/settings.ts`). Default: on.
+- The button changes a ref the draw loop reads, so toggling does not restart the mic effect.
+- The public tone visualizer has no toggle and always shows the band.
+- Checks (MEASURED): `npm run test` 1879 pass (1 new render test: hiding the band removes exactly one fill, the dashed line stays); typecheck clean; build + grep clean.
+- Needs Pierre's eyes: the new button and its icon, on phone and desktop.
+

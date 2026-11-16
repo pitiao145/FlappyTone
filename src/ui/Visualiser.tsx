@@ -23,7 +23,13 @@ import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
 import { useTier } from "../data/tier.ts";
 import { VisualiserCore } from "../game/visualiserCore.ts";
 import type { Tone } from "../game/gates.ts";
-import { effectiveSpeechStyle, loadCorridorWidth, type CalibrationSettings } from "../game/settings.ts";
+import {
+  effectiveSpeechStyle,
+  loadCorridorWidth,
+  loadShowVisBand,
+  saveShowVisBand,
+  type CalibrationSettings,
+} from "../game/settings.ts";
 import { type ToneClassification } from "../game/toneClassifier.ts";
 import { classifyToneV2 } from "../game/toneClassifierV2.ts";
 import { spokenTones } from "../game/sandhi.ts";
@@ -59,6 +65,7 @@ import {
   ChevronIcon,
   MicrophoneIcon,
   MicrophoneSlashIcon,
+  TargetBandIcon,
   ToneMarkIcon,
   TonesGridIcon,
   TONE_SHORT_LABEL,
@@ -257,6 +264,18 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   wordRef.current = selectedWord;
   /** The per-frame core shared with the public tone checker. */
   const coreRef = useRef<VisualiserCore | null>(null);
+  /**
+   * The target band (brief 47), on unless the player hid it. A ref for the
+   * tick loop (toggling must not re-run the frame effect), state for the button.
+   */
+  const [showBand, setShowBand] = useState(loadShowVisBand);
+  const showBandRef = useRef(showBand);
+  const toggleBand = () => {
+    const next = !showBandRef.current;
+    showBandRef.current = next;
+    setShowBand(next);
+    saveShowVisBand(next);
+  };
   /** Keys the room measurement when no mic session object exists (tests, odd paths). */
   const noiseOwnerRef = useRef<object>({});
   /** Free tab's last few attempts, shown as thumbnails on desktop. */
@@ -646,6 +665,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         voiced: frame.dotVoiced,
         scroll: frame.scroll,
         corridor,
+        band: showBandRef.current,
         // Dev only (brief 47 step 4): pairs drawn stretched to the target's length.
         stretchToTarget: import.meta.env.DEV && (word?.syllables ?? 1) > 1 && stretchPairs,
       });
@@ -843,6 +863,25 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         )}
       </button>
       {muteError && <p className="error vis-mute-error">{muteError}</p>}
+    </div>
+  );
+
+  /** Shows or hides the target band; the choice is saved. Next to mute in both layouts. */
+  const bandButton = (
+    <button
+      className={showBand ? "vis-band on" : "vis-band"}
+      onClick={toggleBand}
+      aria-pressed={showBand}
+      aria-label={showBand ? "Hide target band" : "Show target band"}
+      title={showBand ? "Hide target band" : "Show target band"}
+    >
+      <TargetBandIcon className="vis-mute-icon" />
+    </button>
+  );
+  const toolButtons = (
+    <div className="vis-tools">
+      {muteButton}
+      {bandButton}
     </div>
   );
 
@@ -1382,7 +1421,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
           what picks one. */}
       <div className="visualiser-body">
         <div className="vis-top-bar">
-          {muteButton}
+          {toolButtons}
           <div className="vis-readouts">
             {accuracyReadout}
             {recognizedReadout}
@@ -1412,7 +1451,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
           </div>
 
           <div className="vis-canvas-clear">
-            {muteButton}
+            {toolButtons}
             <button onClick={resetAttempts}>Clear</button>
           </div>
         </div>

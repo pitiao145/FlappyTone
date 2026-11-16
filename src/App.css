@@ -3190,9 +3190,17 @@
 /* Mirrors Clear's slot (column 3) on the opposite side — the empty 1fr
    column 1 already existed to keep the centered readouts balanced, so the
    mute toggle fills a slot that was previously just spacing. */
-.vis-top-bar .vis-mute-group {
+.vis-top-bar .vis-tools {
   grid-column: 1;
   justify-self: start;
+}
+
+/* Mute and the target-band toggle, side by side (column 1 on mobile, the
+   button row under the canvas on desktop). */
+.vis-tools {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
 }
 
 .vis-mute-group {
@@ -3215,6 +3223,24 @@
   height: 40px;
   padding: 0;
   border-radius: var(--radius-pill);
+}
+
+/* Same round icon button as mute (two classes, same specificity reason). */
+.vis-tools .vis-band {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  color: var(--ink-soft);
+}
+
+/* On: the band's own warm demo colour, so the button reads like the canvas. */
+.vis-tools .vis-band.on {
+  border-color: rgba(var(--demo-rgb), 0.5);
+  color: rgb(var(--demo-rgb));
 }
 
 .vis-mute-icon {

@@ -148,4 +148,12 @@ describe("drawVisualiser", () => {
     });
     expect(count(one, "stroke")).toBe(count(none, "stroke"));
   });
+
+  it("draws the target band by default, and not when the player hides it", () => {
+    const shown = draw({ tone: 3 });
+    const hidden = draw({ tone: 3, band: false });
+    // The band is the only fill the target adds; the dashed line stays.
+    expect(count(shown, "fill")).toBe(count(hidden, "fill") + 1);
+    expect(count(hidden, "setLineDash")).toBe(count(shown, "setLineDash"));
+  });
 });

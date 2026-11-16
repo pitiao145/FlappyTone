@@ -151,7 +151,9 @@ a guessed cut. Free mode (no target) still splits at silences only. The target
 (and the site's guide) is drawn as a soft band as wide as the corridor a run's
 first gate gets (`visualiserTolerance` → `corridorToleranceAt`, the player's
 corridor width setting; brief 47), with the dashed centre line inside, so
-"inside" means the same on both screens. The app Visualiser measures the room
+"inside" means the same on both screens. In the app the player can hide the
+band with a button next to mute (`loadShowVisBand`, `toneflap.visBand.v1`,
+on by default); the site page has no toggle and always shows it. The app Visualiser measures the room
 once per mic session (`sessionNoiseFor`, keyed by the mic session): a resize
 or rotation re-runs its frame effect but not the measurement. The clip
 pipeline keeps its own splitter (`multiSyllableSpan`): the shared one finds no

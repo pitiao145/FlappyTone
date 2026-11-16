@@ -355,3 +355,4 @@ Reviewed commit `11484df`. No code changed by this review.
 - Step 4: dev switch `ft.stretchPairs` = "1" (pairs tab, finished attempts only). Not judged, not shipped.
 - The public tone visualizer draws the band too ("normal" width). Its own engine and `Game.tsx` still build the noise meter inside their effects (not checked for resize).
 - For brief 48: other screens still read the old settings record, not the ruler (from the 44 review); the band uses that same record's corridor width.
+- Follow-up (16 Nov 2026, Pierre): the band is now an option. Button next to mute, saved per account (`toneflap.visBand.v1`), on by default. Site page: no toggle, always shown. Tests 1879.

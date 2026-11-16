@@ -74,6 +74,19 @@ export function FilterIcon({ className }: { className?: string }) {
   );
 }
 
+/**
+ * Visualiser's target-band toggle: a soft band with a dashed line inside,
+ * the same picture the canvas draws. Drawn, not traced from a file.
+ */
+export function TargetBandIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 256 256" className={className} aria-hidden="true">
+      <path d="M24,92 C88,60 168,60 232,124 L232,188 C168,124 88,124 24,156 Z" fill="currentColor" fillOpacity="0.28" stroke="none" />
+      <path d="M24,124 C88,92 168,92 232,156" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="16" strokeDasharray="24 28" />
+    </svg>
+  );
+}
+
 /** Visualiser's mute toggle, live state — traced from `src/ui/icons/microphone.svg`. */
 export function MicrophoneIcon({ className }: { className?: string }) {
   return (

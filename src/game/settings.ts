@@ -259,6 +259,24 @@ export function saveShowPinyin(show: boolean): void {
   accountStorage.setItem(PINYIN_KEY, show ? "on" : "off");
 }
 
+// ------------------------------------------------- visualiser target band
+
+const VIS_BAND_KEY = "toneflap.visBand.v1";
+
+/**
+ * Show the Visualiser's target band (the game's corridor width, brief 47)
+ * behind the dashed target line. On by default (Pierre, 16 Nov 2026), same
+ * fail-open rule as `loadShowTranslation`. The public tone visualizer has no
+ * toggle and always shows it.
+ */
+export function loadShowVisBand(): boolean {
+  return accountStorage.getItem(VIS_BAND_KEY) !== "off";
+}
+
+export function saveShowVisBand(show: boolean): void {
+  accountStorage.setItem(VIS_BAND_KEY, show ? "on" : "off");
+}
+
 // ----------------------------------------------------------- tone marks
 
 const TONE_MARKS_KEY = "toneflap.tonemarks.v1";

@@ -69,6 +69,11 @@ export interface VisualiserScene {
    */
   corridor?: CorridorWidth;
   /**
+   * Draw the band behind the target line. Absent = shown (the public tone
+   * visualizer has no toggle); the app's Visualiser passes the player's choice.
+   */
+  band?: boolean;
+  /**
    * Dev only (brief 47, `ft.stretchPairs`): draw each finished attempt
    * stretched in time so it ends where the target ends. Drawing only; the
    * scoring never sees it. Set by Visualiser.tsx behind `import.meta.env.DEV`.
@@ -185,9 +190,34 @@ function drawTarget(
   const band = targetBand(shape, tolChao, widenScale);
   const durationMs = shape.durationS * 1000;
   ctx.save();
-  // The band: the corridor a run would fly for this word, same width and the
-  // same widening on the slopes (`corridorToleranceAt`). "Inside" here means
-  // what it means in the game.
+  if (scene.band !== false) drawBand(ctx, height, band, durationMs, xAt);
+  // The centre line, dashed — guidance, not an obstacle.
+  ctx.setLineDash([6, 8]);
+  ctx.strokeStyle = rgba("demo", 0.55);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  band.forEach((b, i) => {
+    const x = xAt(b.t * durationMs);
+    const y = chaoToY(b.centre, height);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * The band: the corridor a run would fly for this word, same width and the
+ * same widening on the slopes (`corridorToleranceAt`). "Inside" here means
+ * what it means in the game.
+ */
+function drawBand(
+  ctx: CanvasRenderingContext2D,
+  height: number,
+  band: readonly BandSample[],
+  durationMs: number,
+  xAt: (tMs: number) => number,
+): void {
   ctx.fillStyle = rgba("demo", 0.16);
   ctx.beginPath();
   band.forEach((b, i) => {
@@ -202,19 +232,6 @@ function drawTarget(
   }
   ctx.closePath();
   ctx.fill();
-  // The centre line inside it, dashed — guidance, not an obstacle.
-  ctx.setLineDash([6, 8]);
-  ctx.strokeStyle = rgba("demo", 0.55);
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  band.forEach((b, i) => {
-    const x = xAt(b.t * durationMs);
-    const y = chaoToY(b.centre, height);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-  ctx.restore();
 }
 
 function targetShape(scene: VisualiserScene): GateShape {
