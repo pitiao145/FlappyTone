@@ -32,7 +32,7 @@ import { toneBreakdown, type RunStats } from "../../game/scoring.ts";
 import { appHref } from "../appLink.ts";
 import { playableSeed, seededRound } from "./demoSeed.ts";
 import { InAppMicNotice, MicAllowNote, MicHelpPanel, continueInApp } from "../MicHelp.tsx";
-import { MAX_DEMO_RUNS, parkDemoRun } from "../../lib/demoRuns.ts";
+import { parkDemoRun } from "../../lib/demoRuns.ts";
 import "./tryItNow.css";
 
 type MiniModule = typeof import("./miniGame.ts");
@@ -67,6 +67,14 @@ function shuffle<T>(items: T[]): T[] {
  * are parked in storage, `parkDemoRun`: brief 50.)
  */
 const played = new Set<string>();
+
+/**
+ * This page load's finished rounds, oldest first. Module-wide like `played`,
+ * so closing and reopening the overlay does not reset the free rounds
+ * (`brand.demoGameOver.freeRounds`); a reload does.
+ */
+const finished: { stats: RunStats; quote: number }[] = [];
+const FREE_ROUNDS = brand.demoGameOver.freeRounds;
 
 /** "single": one-syllable words. "pairs": two-syllable words (the Tone Pairs mode). */
 type Level = "single" | "pairs";
@@ -105,7 +113,7 @@ type Step =
   | { kind: "choose"; mini: MiniModule; calibrated: boolean }
   | { kind: "preparing" }
   | { kind: "playing" }
-  | { kind: "done"; stats: RunStats; quote: number; round: number; best: number }
+  | { kind: "done"; stats: RunStats; quote: number; rounds: RunStats[] }
   | { kind: "error"; message: string; micKind?: string };
 
 /**
@@ -166,8 +174,6 @@ export function TryItNow({
   const [confettiDone, setConfettiDone] = useState(false);
   /** The live run's mode, for the game's HUD. */
   const [runMode, setRunMode] = useState<"game" | "drill" | "pairs">("game");
-  /** This page load's finished rounds' scores, oldest first (brief 50). */
-  const scoresRef = useRef<number[]>([]);
   /** The last round's module and voice, so a mic retry starts straight away. */
   const lastRef = useRef<{ mini: MiniModule; voice: "lower" | "higher" } | null>(null);
 
@@ -223,8 +229,15 @@ export function TryItNow({
     }
   };
 
-  // The overlay opens on the CTA's tap: load the mic chunk and show the voice choice.
+  // The overlay opens on the CTA's tap: load the mic chunk and show the voice
+  // choice. With the free rounds used up it opens on the last end screen.
   useEffect(() => {
+    const last = finished[finished.length - 1];
+    if (last && finished.length >= FREE_ROUNDS) {
+      setConfettiDone(true);
+      setStep({ kind: "done", stats: last.stats, quote: last.quote, rounds: finished.map((f) => f.stats) });
+      return;
+    }
     trackTry("opened");
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -324,11 +337,10 @@ export function TryItNow({
             perCombo: r.stats.perCombo,
             wordIds: r.wordIds,
           });
-          scoresRef.current.push(Math.round(r.stats.score));
-          const round = scoresRef.current.length;
-          const best = Math.max(...scoresRef.current.slice(-MAX_DEMO_RUNS));
+          const quote = nextQuoteIndex();
+          finished.push({ stats: r.stats, quote });
           setConfettiDone(false);
-          setStep({ kind: "done", stats: r.stats, quote: nextQuoteIndex(), round, best });
+          setStep({ kind: "done", stats: r.stats, quote, rounds: finished.map((f) => f.stats) });
         },
       })
       .then((game) => {
@@ -469,16 +481,14 @@ export function TryItNow({
             <DemoGameOver
               stats={step.stats}
               quote={step.quote}
-              round={step.round}
-              best={step.best}
-              onClose={onClose}
+              rounds={step.rounds}
               onSignup={() => {
-                captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_signup", round: step.round, ...where });
+                captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_signup", round: step.rounds.length, ...where });
                 if (onSignup) onSignup();
                 else window.location.assign(appHref(undefined, page));
               }}
               onRetry={() => {
-                captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_retry", round: step.round, ...where });
+                captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_retry", round: step.rounds.length, ...where });
                 void open();
               }}
             />

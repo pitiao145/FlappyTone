@@ -13,7 +13,7 @@ const html = (stats = newRunStats()) =>
   );
 
 describe("DemoGameOver", () => {
-  it("score, then the card (title, perks, button), the quote, then One more round", () => {
+  it("score, then the card (title, perks, button), the quote, then Play round 2", () => {
     let stats = newRunStats();
     stats = applyGate(stats, [1], "good", 0.9);
     stats = applyGate(stats, [4], "collision", 0.4);
@@ -21,7 +21,7 @@ describe("DemoGameOver", () => {
     const out = html(stats);
     expect(out).toContain("Fourth tone: 40% accuracy. Keep it climbing.");
     expect(out).toContain(`Free, ${DEFAULT_TIER_LIMITS.free.runsPerDay} runs a day, no card`);
-    const order = ["go-score", "Keep it climbing", "go-demo-perks", "Save my progress, improve my tones", "go-demo-quote", "One more round"].map(
+    const order = ["go-score", "Keep it climbing", "go-demo-perks", "Save my progress, improve my tones", "go-demo-quote", "Play round 2"].map(
       (s) => out.indexOf(s),
     );
     expect(order.every((i) => i >= 0)).toBe(true);
@@ -67,53 +67,55 @@ describe("DemoGameOver", () => {
     expect(html(stats)).toContain("Strong start! Your lowest is the third tone, at 89% accuracy.");
   });
 
-  it("round 1: the weakest-tone title and One more round", () => {
-    let stats = newRunStats();
-    stats = applyGate(stats, [2], "ok", 0.6);
-    const out = html(stats);
+  const round = (score: number, ...gates: [number, number][]) => {
+    let st = { ...newRunStats() };
+    for (const [tone, acc] of gates) st = applyGate(st, [tone as 1 | 2 | 3 | 4], "ok", acc);
+    return { ...st, score };
+  };
+  const render = (rounds: ReturnType<typeof round>[]) =>
+    renderToStaticMarkup(
+      <DemoGameOver stats={rounds[rounds.length - 1]} rounds={rounds} onSignup={() => {}} onRetry={() => {}} />,
+    ).replaceAll("</span><span>", " ");
+
+  it("round 1: weakest-tone title, 1 of 3 free rounds, a Play round 2 button", () => {
+    const out = render([round(725, [2, 0.6])]);
     expect(out).toContain("Second tone: 60% accuracy.");
-    expect(out).toContain("One more round");
-    expect(out).toContain("Save my progress, improve my tones");
+    expect(out).toContain("Free round 1 of 3");
+    expect(out).toContain("Round 1: 725");
+    expect(out).toContain("Round 2: not played yet");
+    expect(out).toContain("Play round 2");
+    expect(out).toContain("go-demo-retry-icon");
+    expect(out).toContain("Tone accuracy this run");
+    expect(out).not.toContain("this round");
   });
 
-  it("round 3: the player's rounds and best, signup first, One last round", () => {
-    let stats = newRunStats();
-    stats = applyGate(stats, [2], "ok", 0.6);
-    const out = renderToStaticMarkup(
-      <DemoGameOver stats={stats} round={3} best={1240} onSignup={() => {}} onRetry={() => {}} onClose={() => {}} />,
-    ).replaceAll("</span><span>", " ");
-    expect(out).toContain("3 rounds, best 1,240. Keep them: sign up free.");
-    expect(out).not.toContain("Second tone: 60% accuracy.");
-    expect(out).toContain("One last round");
-    expect(out).not.toContain("One more round");
-    expect(out).not.toContain(">Close<");
-    expect(out.indexOf("Save my progress")).toBeLessThan(out.indexOf("One last round"));
+  it("round 2: the rounds and best, total tone accuracy with this round under it, last-round button", () => {
+    const out = render([round(725, [3, 0.9]), round(1650, [3, 0.3], [1, 0.8])]);
+    expect(out).toContain("2 rounds, best 1,650. Sign up to keep them.");
+    expect(out).toContain("Free round 2 of 3");
+    expect(out).toContain("Round 2: 1,650, your best");
+    expect(out).toContain("Tone accuracy, all 2 rounds");
+    // Third tone: (0.9 + 0.3) / 2 = 60% over both rounds, 30% this round.
+    expect(out).toContain("Third tone: 60% tone accuracy, 30% this round");
+    expect(out).toContain("this\u00a0round 30%");
+    expect(out).toContain("Play your last round");
+    expect(out.indexOf("Save my progress")).toBeLessThan(out.indexOf("Play your last round"));
   });
 
-  it("round 5: no retry, Sign up to keep playing, and Close", () => {
-    const out = renderToStaticMarkup(
-      <DemoGameOver stats={newRunStats()} round={5} best={900} onSignup={() => {}} onRetry={() => {}} onClose={() => {}} />,
-    ).replaceAll("</span><span>", " ");
-    expect(out).toContain("5 rounds, best 900. Keep them: sign up free.");
+  it("round 3, the last: signup only, no retry, the loss line", () => {
+    const out = render([round(725, [1, 0.9]), round(1650, [1, 0.9]), round(0, [1, 0.96])]);
+    expect(out).toContain("That was your last free round. Sign up free to keep all 3.");
     expect(out).toContain("Sign up to keep playing");
-    expect(out).not.toContain("round</button>");
-    expect(out).not.toContain("One last round");
-    expect(out).not.toContain("One more round");
-    expect(out).toContain(">Close<");
+    expect(out).toContain("Without an account, these rounds are gone in 24 hours.");
+    expect(out).not.toContain("go-demo-retry");
+    expect(out).not.toContain("Play round");
+    expect(out).not.toContain("Play your last round");
   });
 
-  it("with nothing scored, the title skips the best score", () => {
-    const out = renderToStaticMarkup(
-      <DemoGameOver stats={newRunStats()} round={3} best={0} onSignup={() => {}} onRetry={() => {}} />,
-    ).replaceAll("</span><span>", " ");
-    expect(out).toContain("3 rounds. Keep them: sign up free.");
-  });
-
-  it("past round 5 the title speaks of the last 5 rounds", () => {
-    const out = renderToStaticMarkup(
-      <DemoGameOver stats={newRunStats()} round={7} best={900} onSignup={() => {}} onRetry={() => {}} />,
-    ).replaceAll("</span><span>", " ");
-    expect(out).toContain("Your last 5 rounds, best 900.");
+  it("with nothing scored, the title skips the best score and no round is starred", () => {
+    const out = render([round(0), round(0)]);
+    expect(out).toContain("2 rounds. Sign up to keep them.");
+    expect(out).not.toContain("your best");
   });
 
   it("has no share, leaderboard, recalibration, XP, personal best or tone breakdown", () => {

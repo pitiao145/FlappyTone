@@ -60,23 +60,29 @@ export const brand = {
       `Free, ${runs} runs a day, no card`,
     ],
     signup: "Save my progress, improve my tones",
-    /** Over the score card's tone tiles. */
+    /** Over the score card's tone tiles: round 1, then the total from round 2. */
     tonesLabel: "Tone accuracy this run",
-    retry: "One more round",
+    tonesTotalLabel: (rounds: number) => `Tone accuracy, all ${rounds} rounds`,
+    /** Under a total tile: this round's own accuracy for that tone. */
+    toneThisRound: (pct: number) => `this\u00a0round ${pct}%`,
     /**
-     * From the 3rd round on this page (brief 50): the title sells keeping the
-     * player's own rounds. `rounds` past 5 reads as the last 5, the most a
-     * new account imports (`MAX_DEMO_RUNS`).
+     * The demo's free rounds per page load (brief 50 follow-up, Pierre
+     * 17 Nov 2026). The last round has no retry, only the signup.
      */
-    keepFrom: 3,
+    freeRounds: 3,
+    /** Over the round slots on the score card. */
+    roundsLabel: (played: number, of: number) => `Free round ${played} of ${of}`,
+    /** The retry button: before the last round, then into it. */
+    retry: "Play round 2",
+    lastRetry: "Play your last round",
+    /** From round 2: the title sells keeping the player's own rounds. */
     keepTitle: (rounds: number, best: number) =>
-      `${rounds > 5 ? "Your last 5 rounds" : `${rounds} rounds`}${best > 0 ? `, best ${best.toLocaleString("en-US")}` : ""}. Keep them: sign up free.`,
-    /** The retry link on rounds 3 and 4. */
-    lastRetry: "One last round",
-    /** From this round on there is no retry, only the signup (and Close). */
-    stopAt: 5,
+      `${rounds} rounds${best > 0 ? `, best ${best.toLocaleString("en-US")}` : ""}. Sign up to keep them.`,
+    /** The last free round. */
+    lastTitle: (rounds: number) => `That was your last free round. Sign up free to keep all ${rounds}.`,
     signupMore: "Sign up to keep playing",
-    close: "Close",
+    /** Under the button on the last round. True: parked rounds expire after 24 h (`demoRuns.ts`). */
+    lossLine: "Without an account, these rounds are gone in 24 hours.",
   },
   /** Play home's one-time line after a new account imported its demo rounds (brief 50). */
   demoSaved: {

@@ -1621,3 +1621,11 @@ plus a country-only GeoIP transformation would let the policy go back to
 **Rejected.** Posting through `postRunLog`: it stamps today's date and flushes once per run, and a second flush that starts while the first drain runs can leave a round in the outbox until the next load. Per-account parking: the visitor has no account yet. Importing into an existing account: a returning player's history should not change because someone tried the demo signed out on their browser.
 
 **Check in 2 weeks.** Sign-up rate by demo `round` (`tool_cta_click` `demo_gameover_signup`), and `demo_runs_imported` count.
+
+### Follow-up: three free rounds, a round tracker and running totals (17 Nov 2026)
+
+**Decided (Pierre).** The demo stops at 3 rounds per page load, not 5: three is enough to make a player want more, and the last round's only action is the signup. The score card shows the three rounds as slots (scores, best starred, rounds left empty), so the limit is visible from round 1 and the progress is visible as it fills. From round 2 the tone tiles show the total over all rounds with this round under it, as the real game sums runs. The retry is a real button with a replay icon. The last round adds a true loss line (parked rounds expire after 24 h).
+
+**Why.** Marc Lou's "free credits" pattern: enough to understand the product, a visible limit, then a signup that keeps what was made (his Visualize Habit free tool imports the habits into the paid app, the same shape as the demo import). Alex West's warning applies to measuring it: at our traffic, read the 2-week PostHog numbers as direction only.
+
+**Not done (open).** A browser-wide 3-round cap (stored with the parked rounds). Today a reload resets the count. Claude's view: low cost, and a cap that greets a returning visitor with "no rounds left" is a worse first touch. Pierre to decide.

@@ -92,6 +92,13 @@
   .sky-try-overlay .go-demo-tones-label { font-size: 0.82rem; }
   .sky-try-overlay .go-demo-tones { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
   .sky-try-overlay .go-demo-tones li { gap: 3px; padding: 5px 4px; font-size: 0.88rem; }
+  .sky-try-overlay .go-demo-tones small { font-size: 0.64rem; }
+  .sky-try-overlay .go-demo-rounds-block { gap: 6px; padding-top: 10px; }
+  .sky-try-overlay .go-demo-rounds-label { font-size: 0.82rem; }
+  .sky-try-overlay .go-demo-rounds { gap: 8px; }
+  .sky-try-overlay .go-demo-round { min-height: 40px; gap: 5px; padding: 4px 6px; font-size: 0.95rem; }
+  .sky-try-overlay .go-demo-round-n { width: 18px; height: 18px; font-size: 0.68rem; }
+  .sky-try-overlay .sky-try-over .screen button.go-demo-retry { min-height: 46px; }
   .sky-try-overlay .go-demo-tone-icon { width: 22px; height: 16px; }
   .sky-try-overlay .go-demo-tones b { min-width: 0; }
   .sky-try-overlay .go-demo-pitch { gap: 12px; padding: 18px 16px 18px; }
