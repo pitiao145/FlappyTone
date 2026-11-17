@@ -19,26 +19,44 @@ const COPY = brand.demoGameOver;
  * only, like the game's own tiles). Phones stack it in that order; wider
  * screens put the quote on the right. `quote` rotates the landing page's
  * quotes, one per end screen.
- * Nothing here reads or writes storage or the server.
+ *
+ * `round` is this round's number on this page load (brief 50). From
+ * `keepFrom` (3) the title is the player's own rounds and best score, and
+ * the retry reads "One last round"; from `stopAt` (5) there is no retry,
+ * only "Sign up to keep playing" and Close. Nothing here reads or writes
+ * storage or the server: `TryItNow` parks each round before showing this.
  */
 export function DemoGameOver({
   stats,
   onSignup,
   onRetry,
+  onClose,
   quote = 0,
+  round = 1,
+  best = stats.score,
 }: {
   stats: RunStats;
   /** Index into `TESTIMONIALS`. */
   quote?: number;
   onSignup: () => void;
   onRetry: () => void;
+  /** Closes the overlay; shown in place of the retry from round `stopAt`. */
+  onClose?: () => void;
+  /** This round's number on this page load, 1-based. */
+  round?: number;
+  /** The best score of this page load's kept rounds. */
+  best?: number;
 }) {
+  const keep = round >= COPY.keepFrom;
+  const stop = round >= COPY.stopAt;
   const breakdown = toneBreakdown(stats);
   // Any heard tone counts: a 5-word run flies most tones once (hard rule 8:
   // an unheard gate has no accuracy, so it is never the weakest).
   const weakest = useMemo(() => weakestTone(breakdown, 1), [breakdown]);
   const pct = weakest ? Math.round(weakest.pct) : 0;
-  const title = !weakest
+  const title = keep
+    ? COPY.keepTitle(round, Math.round(best))
+    : !weakest
     ? COPY.titleAny
     : pct >= COPY.strongPct
       ? COPY.titleStrong(toneName(weakest.tone), pct)
@@ -83,16 +101,24 @@ export function DemoGameOver({
           ))}
         </ul>
         <button type="button" className="go-btn-primary go-demo-pitch-btn" onClick={onSignup}>
-          {COPY.signup}
+          {stop ? COPY.signupMore : COPY.signup}
         </button>
       </section>
 
       <Testimonial className="go-demo-quote" quote={TESTIMONIALS[quote % TESTIMONIALS.length]} />
 
       <div className="go-demo-actions">
-        <button type="button" className="go-subtle-link" onClick={onRetry}>
-          {COPY.retry}
-        </button>
+        {!stop ? (
+          <button type="button" className="go-subtle-link" onClick={onRetry}>
+            {keep ? COPY.lastRetry : COPY.retry}
+          </button>
+        ) : (
+          onClose && (
+            <button type="button" className="go-subtle-link" onClick={onClose}>
+              {COPY.close}
+            </button>
+          )
+        )}
       </div>
     </div>
   );

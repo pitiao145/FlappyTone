@@ -31,6 +31,10 @@ interface Props {
   challengeScore: number | null;
   /** Who set it (`?n=` on the share link); null falls back to "Someone". */
   challengeName?: string | null;
+  /** Demo rounds this account just imported (brief 50); 0 hides the line. */
+  demoSaved?: number;
+  /** Opens the Progress tab, from the "saved" line. */
+  onProgress?: () => void;
 }
 
 /**
@@ -50,6 +54,8 @@ export function PlayHome({
   canvasHeight,
   challengeScore,
   challengeName,
+  demoSaved = 0,
+  onProgress,
 }: Props) {
   const error = externalError;
 
@@ -75,6 +81,14 @@ export function PlayHome({
             </p>
           )}
           <h1>{brand.name}</h1>
+          {demoSaved > 0 && (
+            <p className="prompt playhome-demo-saved" role="status">
+              {brand.demoSaved.line(demoSaved)}{" "}
+              <button type="button" className="link" onClick={onProgress}>
+                {brand.demoSaved.link}
+              </button>
+            </p>
+          )}
           {tutorialDone && <p className="prompt">Nice, ready to play?</p>}
           {!calibrated && (
             <p className="note">

@@ -12,6 +12,7 @@ import { ensurePlaybackCtx } from "../audio/reference";
 import { ensureMic, getMicSession, MicCancelled, stopMic } from "../audio/session";
 import { incrementDailyRuns, loadDailyRuns, refreshServerDailyRuns } from "../game/dailyLimit.ts";
 import { getAccount, syncAccount } from "../data/account.ts";
+import { dismissDemoNotice, importDemoRuns, pendingDemoNotice } from "../data/demoImport.ts";
 import { noteAccount } from "../data/accountScope.ts";
 import { loadRoster } from "../data/speakers.ts";
 import { fetchCatalog } from "../data/words.ts";
@@ -522,6 +523,22 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
    * is up replaces it and restarts the 5s clock (no queue).
    */
   const [authToast, setAuthToast] = useState<AuthToastKind | null>(null);
+  /**
+   * Brief 50: how many demo rounds this account imported, for Play home's
+   * one-time "saved" line (0 = none). Shown on the next Play home, then
+   * gone for good once the player leaves it.
+   */
+  const [demoSaved, setDemoSaved] = useState(0);
+  const demoSavedShownRef = useRef(false);
+  useEffect(() => {
+    if (demoSaved <= 0) return;
+    if (screen === "play") {
+      demoSavedShownRef.current = true;
+      dismissDemoNotice();
+    } else if (demoSavedShownRef.current) {
+      setDemoSaved(0);
+    }
+  }, [screen, demoSaved]);
   useEffect(() => subscribeAuthToast(setAuthToast), []);
   useEffect(() => {
     if (!authToast) return;
@@ -1142,6 +1159,11 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
       // last time runs the account-change steps before anything reads them.
       noteAccount(account.status === "permanent" ? account.userId : null);
       if (account.status !== "permanent") return;
+      // Brief 50: a new account's parked demo rounds go into the run outbox
+      // first, so the `syncAccount()` below posts them and reads them back.
+      const imported = importDemoRuns(account);
+      if (imported > 0) track({ type: "demo_runs_imported", count: imported });
+      setDemoSaved(pendingDemoNotice(account.userId));
       void refreshServerDailyRuns();
       void syncAccount();
     });
@@ -1243,6 +1265,8 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
               canvasHeight={GAME_CANVAS_H}
               challengeScore={challengeScoreState}
               challengeName={challengeNameState}
+              demoSaved={demoSaved}
+              onProgress={() => setScreen("progress")}
             />
           )}
 

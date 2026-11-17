@@ -50,9 +50,9 @@ export const brand = {
     titleStrong: (name: string, pct: number) => `Strong start! Your lowest is the ${name}, at ${pct}% accuracy.`,
     titleAny: "Keep your tones climbing.",
     /**
-     * What a free account gives. The demo itself saves nothing, so the perks
-     * speak of runs from now on. (The button says "Save my progress", not "score": the demo run is not kept; Pierre's
-     * call, 7 Nov 2026.) `runs` is the free tier's daily runs.
+     * What a free account gives. `runs` is the free tier's daily runs. Since
+     * brief 50 the demo's rounds are parked in the browser and a new account
+     * imports them (`src/lib/demoRuns.ts`, `src/data/demoImport.ts`).
      */
     perks: (runs: number) => [
       "Save every run from now on",
@@ -63,6 +63,25 @@ export const brand = {
     /** Over the score card's tone tiles. */
     tonesLabel: "Tone accuracy this run",
     retry: "One more round",
+    /**
+     * From the 3rd round on this page (brief 50): the title sells keeping the
+     * player's own rounds. `rounds` past 5 reads as the last 5, the most a
+     * new account imports (`MAX_DEMO_RUNS`).
+     */
+    keepFrom: 3,
+    keepTitle: (rounds: number, best: number) =>
+      `${rounds > 5 ? "Your last 5 rounds" : `${rounds} rounds`}${best > 0 ? `, best ${best.toLocaleString("en-US")}` : ""}. Keep them: sign up free.`,
+    /** The retry link on rounds 3 and 4. */
+    lastRetry: "One last round",
+    /** From this round on there is no retry, only the signup (and Close). */
+    stopAt: 5,
+    signupMore: "Sign up to keep playing",
+    close: "Close",
+  },
+  /** Play home's one-time line after a new account imported its demo rounds (brief 50). */
+  demoSaved: {
+    line: (n: number) => `Your ${n} demo ${n === 1 ? "round is" : "rounds are"} saved.`,
+    link: "See Progress",
   },
 
   /** The site nav's button: the no-signup demo overlay (signed-in players see "Play"). */

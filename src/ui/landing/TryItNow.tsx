@@ -32,6 +32,7 @@ import { toneBreakdown, type RunStats } from "../../game/scoring.ts";
 import { appHref } from "../appLink.ts";
 import { playableSeed, seededRound } from "./demoSeed.ts";
 import { InAppMicNotice, MicAllowNote, MicHelpPanel, continueInApp } from "../MicHelp.tsx";
+import { MAX_DEMO_RUNS, parkDemoRun } from "../../lib/demoRuns.ts";
 import "./tryItNow.css";
 
 type MiniModule = typeof import("./miniGame.ts");
@@ -61,8 +62,9 @@ function shuffle<T>(items: T[]): T[] {
 }
 
 /**
- * Words already flown on this page load. In memory only (the demo writes
- * nothing), so "One more round" brings new words until the pool runs out.
+ * Words already flown on this page load, in memory, so "One more round"
+ * brings new words until the pool runs out. (The finished rounds themselves
+ * are parked in storage, `parkDemoRun`: brief 50.)
  */
 const played = new Set<string>();
 
@@ -103,7 +105,7 @@ type Step =
   | { kind: "choose"; mini: MiniModule; calibrated: boolean }
   | { kind: "preparing" }
   | { kind: "playing" }
-  | { kind: "done"; stats: RunStats; quote: number }
+  | { kind: "done"; stats: RunStats; quote: number; round: number; best: number }
   | { kind: "error"; message: string; micKind?: string };
 
 /**
@@ -119,6 +121,10 @@ type Step =
  * Pairs") runs the game's own Tone Drill or Tone Pairs: first the game's
  * tone or combo picker (`ModePickers.tsx`), then the voice choice, then that
  * run mode on the guest pool.
+ *
+ * Every finished round is parked in this browser (`src/lib/demoRuns.ts`,
+ * brief 50) so a new account imports it; the end screen counts this page
+ * load's rounds and, from the 3rd, sells keeping them.
  */
 export function TryItNow({
   page,
@@ -160,6 +166,8 @@ export function TryItNow({
   const [confettiDone, setConfettiDone] = useState(false);
   /** The live run's mode, for the game's HUD. */
   const [runMode, setRunMode] = useState<"game" | "drill" | "pairs">("game");
+  /** This page load's finished rounds' scores, oldest first (brief 50). */
+  const scoresRef = useRef<number[]>([]);
   /** The last round's module and voice, so a mic retry starts straight away. */
   const lastRef = useRef<{ mini: MiniModule; voice: "lower" | "higher" } | null>(null);
 
@@ -308,8 +316,19 @@ export function TryItNow({
             t4Acc: acc[4] ?? null,
             ...where,
           });
+          // Parked before the end screen shows, so a signup tap carries it.
+          parkDemoRun({
+            mode: picked?.run.mode ?? "game",
+            score: r.stats.score,
+            perTone: r.stats.perTone,
+            perCombo: r.stats.perCombo,
+            wordIds: r.wordIds,
+          });
+          scoresRef.current.push(Math.round(r.stats.score));
+          const round = scoresRef.current.length;
+          const best = Math.max(...scoresRef.current.slice(-MAX_DEMO_RUNS));
           setConfettiDone(false);
-          setStep({ kind: "done", stats: r.stats, quote: nextQuoteIndex() });
+          setStep({ kind: "done", stats: r.stats, quote: nextQuoteIndex(), round, best });
         },
       })
       .then((game) => {
@@ -450,13 +469,16 @@ export function TryItNow({
             <DemoGameOver
               stats={step.stats}
               quote={step.quote}
+              round={step.round}
+              best={step.best}
+              onClose={onClose}
               onSignup={() => {
-                captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_signup", ...where });
+                captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_signup", round: step.round, ...where });
                 if (onSignup) onSignup();
                 else window.location.assign(appHref(undefined, page));
               }}
               onRetry={() => {
-                captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_retry", ...where });
+                captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_retry", round: step.round, ...where });
                 void open();
               }}
             />

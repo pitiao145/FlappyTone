@@ -67,8 +67,53 @@ describe("DemoGameOver", () => {
     expect(html(stats)).toContain("Strong start! Your lowest is the third tone, at 89% accuracy.");
   });
 
-  it("the perks never promise to keep this run (the demo writes nothing)", () => {
-    expect(html().toLowerCase()).not.toContain("save this run");
+  it("round 1: the weakest-tone title and One more round", () => {
+    let stats = newRunStats();
+    stats = applyGate(stats, [2], "ok", 0.6);
+    const out = html(stats);
+    expect(out).toContain("Second tone: 60% accuracy.");
+    expect(out).toContain("One more round");
+    expect(out).toContain("Save my progress, improve my tones");
+  });
+
+  it("round 3: the player's rounds and best, signup first, One last round", () => {
+    let stats = newRunStats();
+    stats = applyGate(stats, [2], "ok", 0.6);
+    const out = renderToStaticMarkup(
+      <DemoGameOver stats={stats} round={3} best={1240} onSignup={() => {}} onRetry={() => {}} onClose={() => {}} />,
+    ).replaceAll("</span><span>", " ");
+    expect(out).toContain("3 rounds, best 1,240. Keep them: sign up free.");
+    expect(out).not.toContain("Second tone: 60% accuracy.");
+    expect(out).toContain("One last round");
+    expect(out).not.toContain("One more round");
+    expect(out).not.toContain(">Close<");
+    expect(out.indexOf("Save my progress")).toBeLessThan(out.indexOf("One last round"));
+  });
+
+  it("round 5: no retry, Sign up to keep playing, and Close", () => {
+    const out = renderToStaticMarkup(
+      <DemoGameOver stats={newRunStats()} round={5} best={900} onSignup={() => {}} onRetry={() => {}} onClose={() => {}} />,
+    ).replaceAll("</span><span>", " ");
+    expect(out).toContain("5 rounds, best 900. Keep them: sign up free.");
+    expect(out).toContain("Sign up to keep playing");
+    expect(out).not.toContain("round</button>");
+    expect(out).not.toContain("One last round");
+    expect(out).not.toContain("One more round");
+    expect(out).toContain(">Close<");
+  });
+
+  it("with nothing scored, the title skips the best score", () => {
+    const out = renderToStaticMarkup(
+      <DemoGameOver stats={newRunStats()} round={3} best={0} onSignup={() => {}} onRetry={() => {}} />,
+    ).replaceAll("</span><span>", " ");
+    expect(out).toContain("3 rounds. Keep them: sign up free.");
+  });
+
+  it("past round 5 the title speaks of the last 5 rounds", () => {
+    const out = renderToStaticMarkup(
+      <DemoGameOver stats={newRunStats()} round={7} best={900} onSignup={() => {}} onRetry={() => {}} />,
+    ).replaceAll("</span><span>", " ");
+    expect(out).toContain("Your last 5 rounds, best 900.");
   });
 
   it("has no share, leaderboard, recalibration, XP, personal best or tone breakdown", () => {

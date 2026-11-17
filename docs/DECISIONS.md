@@ -1607,3 +1607,17 @@ plus a country-only GeoIP transformation would let the policy go back to
 - `run_start.corridor` and `setting_changed` (`tunnel_width`) can now carry `extraNarrow`.
 
 **Rejected.** Changing Narrow's own factor: it would make the game harder for every current Narrow player without warning. A free slider: more UI and storage, and a player who sets it too tight loses hearts and blames the game.
+
+## The demo parks its rounds for a new account (17 Nov 2026, brief 50)
+
+**Evidence.** PostHog 3–16 Nov (small numbers, direction only): 21 opened the demo, 17 finished, some replayed up to 15 times. On the end screen 9 tapped retry (most then left), 4 tapped sign up, and all 4 signed up. The replays prove the fun; the end screen is where sign-ups happen. A new account then opened on an empty Progress screen, so the rounds that made them sign up were lost.
+
+**Decided.**
+- Every demo round is parked in the browser (`toneflap.demoRuns.v1`, latest 5, 24 h). A new account (created after the first parked round, 10 s slack as `authMode`) imports them on its first /app load as finished runs, through the run outbox and `api/runlog.ts` only. Never the leaderboard or the daily run count. An existing account imports nothing; the key is cleared either way.
+- The end screen counts this page load's rounds: rounds 1–2 as before; 3–4 sell "N rounds, best X. Keep them: sign up free." with "One last round"; from 5, no retry, "Sign up to keep playing" and Close.
+- The imported rounds keep the day they were played (the outbox entry's `day`), not the signup day.
+- This reverses the 7 Nov call that the demo run is not kept. The privacy policy now describes the parked rounds and the import (Pierre approved the wording, 17 Nov 2026).
+
+**Rejected.** Posting through `postRunLog`: it stamps today's date and flushes once per run, and a second flush that starts while the first drain runs can leave a round in the outbox until the next load. Per-account parking: the visitor has no account yet. Importing into an existing account: a returning player's history should not change because someone tried the demo signed out on their browser.
+
+**Check in 2 weeks.** Sign-up rate by demo `round` (`tool_cta_click` `demo_gameover_signup`), and `demo_runs_imported` count.
