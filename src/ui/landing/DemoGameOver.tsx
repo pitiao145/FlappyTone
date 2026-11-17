@@ -55,20 +55,6 @@ function ReplayIcon() {
   );
 }
 
-/** Two tone marks side by side: a two-syllable word. */
-function PairsIcon() {
-  return (
-    <span className="go-demo-retry-icon go-demo-pairs-icon" aria-hidden="true">
-      <span style={{ color: TONE_LINE_COLOR[3] }}>
-        <ToneMarkIcon tone={3} />
-      </span>
-      <span style={{ color: TONE_LINE_COLOR[2] }}>
-        <ToneMarkIcon tone={2} />
-      </span>
-    </span>
-  );
-}
-
 /**
  * Try it now's end screen. It has one job: the signup.
  *
@@ -258,22 +244,26 @@ export function DemoGameOver({
         {last && <p className="go-demo-loss">{COPY.lossLine}</p>}
       </section>
 
-      <Testimonial className="go-demo-quote" quote={TESTIMONIALS[quote % TESTIMONIALS.length]} />
+      {/* The quote and the next-round buttons: below the card on phones,
+          the right column on wider screens. */}
+      <div className="go-demo-side">
+        <Testimonial className="go-demo-quote" quote={TESTIMONIALS[quote % TESTIMONIALS.length]} />
 
-      {!last && (
-        <div className="go-demo-actions">
-          <button type="button" className="go-demo-retry" onClick={onRetry}>
-            <ReplayIcon />
-            {played >= free - 1 ? COPY.lastRetry : COPY.retry}
-          </button>
-          {onPairs && (
-            <button type="button" className="go-demo-retry go-demo-pairs" onClick={onPairs}>
-              <PairsIcon />
-              {COPY.pairs}
+        {!last && (
+          <div className="go-demo-actions">
+            <button type="button" className="go-demo-retry" onClick={onRetry}>
+              <ReplayIcon />
+              {played >= free - 1 ? COPY.lastRetry : COPY.retry}
             </button>
-          )}
-        </div>
-      )}
+            {onPairs && (
+              <button type="button" className="go-demo-retry go-demo-pairs" onClick={onPairs}>
+                <ReplayIcon />
+                {COPY.pairs}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

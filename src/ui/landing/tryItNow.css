@@ -317,9 +317,8 @@
 .sky-try-over .go-demo-retry-icon { width: 20px; height: 20px; flex: none; margin-top: -3px; }
 /* More air between cards than the in-app screen, which has a full page. */
 .sky-try-over .screen.gameover-screen { gap: 22px; }
-/* "Too easy? Try tone pairs": the retry's twin, its icon two tone marks. */
-.sky-try-over .go-demo-pairs-icon { display: inline-flex; gap: 1px; width: auto; height: auto; }
-.sky-try-over .go-demo-pairs-icon svg { display: block; width: 16px; height: 13px; }
+/* The quote and the next-round buttons, one stack. */
+.sky-try-over .go-demo-side { display: flex; flex-direction: column; gap: inherit; }
 /* A pair tile: two small marks where a tone tile has one. */
 .sky-try-over .go-demo-pair-marks { display: inline-flex; gap: 1px; }
 .sky-try-over .go-demo-pair-icon { display: block; width: 17px; height: 14px; }
