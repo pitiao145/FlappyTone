@@ -70,8 +70,8 @@ export const brand = {
      * 17 Nov 2026). The last round has no retry, only the signup.
      */
     freeRounds: 3,
-    /** Over the round slots on the score card. */
-    roundsLabel: (played: number, of: number) => `Free round ${played} of ${of}`,
+    /** Over the round slots on the score card. "Demo", not "free": the account is free too. */
+    roundsLabel: (played: number, of: number) => `Demo round ${played} of ${of}`,
     /** The retry button: before the last round, then into it. */
     retry: "Play round 2",
     lastRetry: "Play your last round",
@@ -79,7 +79,7 @@ export const brand = {
     keepTitle: (rounds: number, best: number) =>
       `${rounds} rounds${best > 0 ? `, best ${best.toLocaleString("en-US")}` : ""}. Sign up to keep them.`,
     /** The last free round. */
-    lastTitle: (rounds: number) => `That was your last free round. Sign up free to keep all ${rounds}.`,
+    lastTitle: (rounds: number) => `That was your last demo round. Sign up free to keep all ${rounds}.`,
     signupMore: "Sign up to keep playing",
     /** Under the button on the last round. True: parked rounds expire after 24 h (`demoRuns.ts`). */
     lossLine: "Without an account, these rounds are gone in 24 hours.",

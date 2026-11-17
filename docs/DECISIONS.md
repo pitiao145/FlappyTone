@@ -1629,3 +1629,5 @@ plus a country-only GeoIP transformation would let the policy go back to
 **Why.** Marc Lou's "free credits" pattern: enough to understand the product, a visible limit, then a signup that keeps what was made (his Visualize Habit free tool imports the habits into the paid app, the same shape as the demo import). Alex West's warning applies to measuring it: at our traffic, read the 2-week PostHog numbers as direction only.
 
 **Not done (open).** A browser-wide 3-round cap (stored with the parked rounds). Today a reload resets the count. Claude's view: low cost, and a cap that greets a returning visitor with "no rounds left" is a worse first touch. Pierre to decide.
+
+**Copy and the auth card (17 Nov 2026, Pierre).** The slots read "Demo round N of 3", not "free": the account is free too, so "free round" undersold it. The /app signup card shows its demo thumbnail and "Try a round first" only for a `direct` visitor; one who arrives from a site signup button (`lp_cta`, including the demo's end screen) already chose to sign up and sees the signup alone.

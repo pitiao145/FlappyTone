@@ -77,10 +77,10 @@ describe("DemoGameOver", () => {
       <DemoGameOver stats={rounds[rounds.length - 1]} rounds={rounds} onSignup={() => {}} onRetry={() => {}} />,
     ).replaceAll("</span><span>", " ");
 
-  it("round 1: weakest-tone title, 1 of 3 free rounds, a Play round 2 button", () => {
+  it("round 1: weakest-tone title, demo round 1 of 3, a Play round 2 button", () => {
     const out = render([round(725, [2, 0.6])]);
     expect(out).toContain("Second tone: 60% accuracy.");
-    expect(out).toContain("Free round 1 of 3");
+    expect(out).toContain("Demo round 1 of 3");
     expect(out).toContain("Round 1: 725");
     expect(out).toContain("Round 2: not played yet");
     expect(out).toContain("Play round 2");
@@ -92,7 +92,7 @@ describe("DemoGameOver", () => {
   it("round 2: the rounds and best, total tone accuracy with this round under it, last-round button", () => {
     const out = render([round(725, [3, 0.9]), round(1650, [3, 0.3], [1, 0.8])]);
     expect(out).toContain("2 rounds, best 1,650. Sign up to keep them.");
-    expect(out).toContain("Free round 2 of 3");
+    expect(out).toContain("Demo round 2 of 3");
     expect(out).toContain("Round 2: 1,650, your best");
     expect(out).toContain("Tone accuracy, all 2 rounds");
     // Third tone: (0.9 + 0.3) / 2 = 60% over both rounds, 30% this round.
@@ -104,7 +104,7 @@ describe("DemoGameOver", () => {
 
   it("round 3, the last: signup only, no retry, the loss line", () => {
     const out = render([round(725, [1, 0.9]), round(1650, [1, 0.9]), round(0, [1, 0.96])]);
-    expect(out).toContain("That was your last free round. Sign up free to keep all 3.");
+    expect(out).toContain("That was your last demo round. Sign up free to keep all 3.");
     expect(out).toContain("Sign up to keep playing");
     expect(out).toContain("Without an account, these rounds are gone in 24 hours.");
     expect(out).not.toContain("go-demo-retry");

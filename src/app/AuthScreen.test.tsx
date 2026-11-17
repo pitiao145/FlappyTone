@@ -30,11 +30,17 @@ function render(source: AuthSource, search = ""): string {
 }
 
 describe("AuthScreen try link (brief 49)", () => {
-  it.each<AuthSource>(["direct", "lp_cta"])("%s: shows the demo thumbnail and the nav button", (source) => {
-    const out = render(source);
+  it("direct: shows the demo thumbnail and the nav button", () => {
+    const out = render("direct");
     expect(out).toContain('data-testid="auth-try"');
     expect(out).toContain("Try the demo");
     expect(out).toContain("Try a round first</button>");
+  });
+
+  it("lp_cta (a site signup button, often after the demo): hides it", () => {
+    const out = render("lp_cta");
+    expect(out).not.toContain('data-testid="auth-try"');
+    expect(out).not.toContain("Try a round first");
   });
 
   it("challenge: hides it", () => {

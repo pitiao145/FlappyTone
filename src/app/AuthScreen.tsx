@@ -107,10 +107,13 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
   /** The no-signup demo, loaded on the tap only (hard rules 4 and 13). */
   const [demoMod, setDemoMod] = useState<DemoOverlayModule | null>(null);
   const [demoOpen, setDemoOpen] = useState(false);
-  const canTry = source !== "challenge" && view === "signup";
+  // Only a visitor who typed /app or came from outside: one who tapped a
+  // site signup button (often right after the demo) already chose to sign
+  // up, so the card shows no demo (Pierre, 17 Nov 2026).
+  const canTry = source === "direct" && view === "signup";
 
   function tryDemo() {
-    if (source !== "challenge") track({ type: "auth_try_demo", source });
+    if (source === "direct") track({ type: "auth_try_demo", source });
     import("../site/DemoOverlay.tsx")
       .then((m) => {
         setDemoMod(m);
