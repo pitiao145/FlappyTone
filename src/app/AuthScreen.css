@@ -342,3 +342,47 @@
     animation: none;
   }
 }
+
+/* Brief 49: signup card + demo thumbnail. Phones: demo on top (markup order). */
+.auth-main-split {
+  display: grid;
+  gap: var(--space-6);
+  justify-items: center;
+}
+.auth-main-split .auth-panel { width: 100%; }
+.auth-demo {
+  position: relative;
+  margin: 0;
+  width: fit-content;
+  max-width: 100%;
+}
+.auth-demo video { display: block; max-width: 100%; height: auto; border-radius: 20px; }
+.auth-demo-btn {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: 0 var(--space-3) var(--space-5);
+  border: 0;
+  border-radius: 20px;
+  background: linear-gradient(to top, rgb(20 16 10 / 0.55), rgb(20 16 10 / 0) 55%);
+  cursor: pointer;
+}
+.auth-demo-note { color: #fff; font-size: 0.9rem; font-weight: 600; text-shadow: 0 1px 3px rgb(0 0 0 / 0.6); }
+@media (min-width: 880px) {
+  .auth-main-split {
+    grid-template-columns: minmax(0, 480px) auto;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-8);
+  }
+  .auth-main-split .auth-demo { order: 2; }
+  .auth-main-split .auth-panel { order: 1; margin-inline: 0; }
+  .auth-demo video { width: 300px; }
+}
+@media (max-width: 879px) {
+  .auth-demo video { width: min(100%, 220px); }
+}

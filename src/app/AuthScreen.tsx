@@ -37,6 +37,7 @@ import {
 import { redirectToCheckoutForCurrentAccount } from "../data/checkout.ts";
 import { canUseGoogleSignIn } from "../lib/inAppBrowser.ts";
 import { InAppBrowserPrompt } from "../ui/InAppBrowserPrompt.tsx";
+import { DemoLoop } from "../ui/DemoLoop.tsx";
 import { Nav } from "../ui/Nav.tsx";
 import "../site/site.css";
 import "./AuthScreen.css";
@@ -547,7 +548,24 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
       />
       {/* Google is hidden in this in-app browser: offer the real browser. */}
       {!googleOk && <InAppBrowserPrompt />}
-      <main className="auth-main">
+      <main className={canTry ? "auth-main auth-main-split" : "auth-main"}>
+        {/* The demo comes first in the markup, so phones show it on top. */}
+        {canTry && (
+          <figure className="auth-demo">
+            <DemoLoop width={240} />
+            <button
+              type="button"
+              className="auth-demo-btn"
+              data-testid="auth-try"
+              aria-haspopup="dialog"
+              aria-label="Try a round first, no signup"
+              onClick={tryDemo}
+            >
+              <span className="sky-btn">Try the demo</span>
+              <span className="auth-demo-note">No signup. Say the word to fly the bird.</span>
+            </button>
+          </figure>
+        )}
         <div className="auth-panel">
           <img className="auth-bird" src="/Bird-hor-no-halo.png" alt="" width={96} height={96} />
           <h1 className="auth-title">{head.title}</h1>
@@ -565,14 +583,6 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
               </p>
             )}
           </section>
-
-          {canTry && (
-            <p className="auth-switch">
-              <button type="button" className="auth-link auth-try" data-testid="auth-try" onClick={tryDemo}>
-                Try a round first, no signup
-              </button>
-            </p>
-          )}
 
           {view !== "code" && (
             <p className="auth-switch">
