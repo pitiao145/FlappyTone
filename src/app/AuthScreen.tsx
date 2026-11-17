@@ -548,11 +548,12 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
       />
       {/* Google is hidden in this in-app browser: offer the real browser. */}
       {!googleOk && <InAppBrowserPrompt />}
-      <main className={canTry ? "auth-main auth-main-split" : "auth-main"}>
-        {/* The demo comes first in the markup, so phones show it on top. */}
+      <main className="auth-main">
+        <div className="auth-panel">
+          {/* A muted clip where the bird sits; the tap opens the demo. */}
         {canTry && (
           <figure className="auth-demo">
-            <DemoLoop width={240} />
+            <DemoLoop width={300} />
             <button
               type="button"
               className="auth-demo-btn"
@@ -566,8 +567,9 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
             </button>
           </figure>
         )}
-        <div className="auth-panel">
-          <img className="auth-bird" src="/Bird-hor-no-halo.png" alt="" width={96} height={96} />
+          {!canTry && (
+  <img className="auth-bird" src="/Bird-hor-no-halo.png" alt="" width={96} height={96} />
+          )}
           <h1 className="auth-title">{head.title}</h1>
           <p className="auth-sub">{head.sub}</p>
 

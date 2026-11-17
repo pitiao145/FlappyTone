@@ -343,26 +343,26 @@
   }
 }
 
-/* Brief 49: signup card + demo thumbnail. Phones: demo on top (markup order). */
-.auth-main-split {
-  display: grid;
-  gap: var(--space-6);
-  justify-items: center;
-}
-.auth-main-split .auth-panel { width: 100%; }
+/* Brief 49: a muted demo clip at the top of the signup card, in the bird's
+   place. A wide, cropped window on the portrait clip; the button opens the demo. */
 .auth-demo {
-  --demo-w: 180px;
   position: relative;
-  margin: 0;
-  width: var(--demo-w);
-  max-width: 100%;
+  margin: 0 auto var(--space-4);
+  width: min(100%, 320px);
+  height: 150px;
+  overflow: hidden;
+  border: var(--outline) solid var(--color-ink);
+  border-radius: 16px;
 }
 .auth-demo video {
   display: block;
   width: 100%;
   max-width: none;
-  height: auto;
-  border-radius: 20px;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 45%;
+  border: 0;
+  border-radius: 0;
 }
 .auth-demo-btn {
   position: absolute;
@@ -370,26 +370,16 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: var(--space-2);
-  padding: 0 var(--space-3) var(--space-5);
+  padding: var(--space-2);
   border: 0;
-  border-radius: 20px;
-  background: linear-gradient(to top, rgb(20 16 10 / 0.55), rgb(20 16 10 / 0) 55%);
+  background: rgb(20 16 10 / 0.3);
   cursor: pointer;
 }
-.auth-demo-note { color: #fff; font-size: 0.9rem; font-weight: 600; text-shadow: 0 1px 3px rgb(0 0 0 / 0.6); }
-@media (min-width: 1000px) {
-  .auth-main-split {
-    grid-template-columns: minmax(0, 480px) auto;
-    justify-content: center;
-    align-items: center;
-    gap: var(--space-8);
-  }
-  .auth-main-split .auth-demo { order: 2; --demo-w: 300px; }
-  .auth-main-split .auth-panel { order: 1; margin-inline: 0; }
-}
-/* The thumbnail is on top below 1000px: the nav button would only repeat it. */
-@media (max-width: 999px) {
+.auth-demo-btn:is(:hover, :focus-visible) { background: rgb(20 16 10 / 0.45); }
+.auth-demo-note { color: #fff; font-size: 0.85rem; font-weight: 600; text-shadow: 0 1px 3px rgb(0 0 0 / 0.6); }
+/* Phones: the card's own demo button is right there, and the brand needs the room. */
+@media (max-width: 599px) {
   .auth .auth-nav-try { display: none; }
 }
