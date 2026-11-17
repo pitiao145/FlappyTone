@@ -562,8 +562,8 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
               aria-label="Try a round first, no signup"
               onClick={tryDemo}
             >
+              <span className="auth-demo-note">New here? Try it out first:</span>
               <span className="sky-btn">Try the demo</span>
-              <span className="auth-demo-note">No signup. Say the word to fly the bird.</span>
             </button>
           </figure>
         )}
