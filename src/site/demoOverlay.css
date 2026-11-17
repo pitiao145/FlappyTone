@@ -99,6 +99,8 @@
   .sky-try-overlay .go-demo-round { min-height: 40px; gap: 5px; padding: 4px 6px; font-size: 0.95rem; }
   .sky-try-overlay .go-demo-round-n { width: 18px; height: 18px; font-size: 0.68rem; }
   .sky-try-overlay .sky-try-over .screen button.go-demo-retry { min-height: 46px; }
+  .sky-try-overlay .sky-try-over .screen button.go-demo-retry { padding-inline: 14px; font-size: 0.95rem; }
+  .sky-try-overlay .go-demo-pair-icon { width: 13px; height: 11px; }
   .sky-try-overlay .go-demo-tone-icon { width: 22px; height: 16px; }
   .sky-try-overlay .go-demo-tones b { min-width: 0; }
   .sky-try-overlay .go-demo-pitch { gap: 12px; padding: 18px 16px 18px; }

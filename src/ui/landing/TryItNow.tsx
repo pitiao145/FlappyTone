@@ -137,7 +137,7 @@ type Step =
 export function TryItNow({
   page,
   seedId = null,
-  mode = "game",
+  mode: startMode = "game",
   onClose,
   onSignup,
 }: {
@@ -152,6 +152,12 @@ export function TryItNow({
   onSignup?: () => void;
 } = {}) {
   const [step, setStep] = useState<Step>({ kind: "loading" });
+  /**
+   * The mode the next round flies: the overlay's own, until "Too easy? Try
+   * tone pairs" on a classic round's end screen switches it to Tone Pairs
+   * (Shuffle) for the rest of the overlay.
+   */
+  const [mode, setMode] = useState(startMode);
   /** For the unmount cleanup, which only sees the first render's `step`. */
   const stepRef = useRef(step.kind);
   useEffect(() => {
@@ -491,6 +497,16 @@ export function TryItNow({
                 captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_retry", round: step.rounds.length, ...where });
                 void open();
               }}
+              onPairs={
+                mode === "game"
+                  ? () => {
+                      captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_pairs", round: step.rounds.length, ...where });
+                      setMode("pairs");
+                      setPick({ pairCombo: null });
+                      void open();
+                    }
+                  : undefined
+              }
             />
           </div>
         )}

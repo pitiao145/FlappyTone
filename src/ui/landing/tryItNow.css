@@ -80,7 +80,7 @@
 }
 .sky-try-over * { min-width: 0; max-width: 100%; box-sizing: border-box; }
 .sky-try-over .screen.gameover-screen { margin-top: 0; text-align: left; }
-.go-demo-actions { display: grid; gap: 8px; justify-items: center; }
+.go-demo-actions { display: flex; flex-wrap: wrap; gap: 10px 12px; justify-content: center; }
 /* The signup pitch: the one jade card, right under the score, so it reads
    as the next step. Cream text on jade for contrast; the button is the
    site's gold "Play the game" button, so it reads as the main action. */
@@ -317,3 +317,10 @@
 .sky-try-over .go-demo-retry-icon { width: 20px; height: 20px; flex: none; margin-top: -3px; }
 /* More air between cards than the in-app screen, which has a full page. */
 .sky-try-over .screen.gameover-screen { gap: 22px; }
+/* "Too easy? Try tone pairs": the retry's twin, its icon two tone marks. */
+.sky-try-over .go-demo-pairs-icon { display: inline-flex; gap: 1px; width: auto; height: auto; }
+.sky-try-over .go-demo-pairs-icon svg { display: block; width: 16px; height: 13px; }
+/* A pair tile: two small marks where a tone tile has one. */
+.sky-try-over .go-demo-pair-marks { display: inline-flex; gap: 1px; }
+.sky-try-over .go-demo-pair-icon { display: block; width: 17px; height: 14px; }
+

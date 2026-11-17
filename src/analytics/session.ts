@@ -600,7 +600,7 @@ export type AnalyticsEvent =
       t4Acc: number | null;
     } & DemoWhere)
   /** Try it now's way into /app or a new round, from its end screen. `round`: this page load's round number (brief 50). */
-  | ({ type: "tool_cta_click"; tool: "try-now"; placement: "demo_gameover_signup" | "demo_gameover_retry"; round: number } & DemoWhere)
+  | ({ type: "tool_cta_click"; tool: "try-now"; placement: "demo_gameover_signup" | "demo_gameover_retry" | "demo_gameover_pairs"; round: number } & DemoWhere)
   /**
    * A routed CTA on a route-table page (brief 25): `overlay` opens the Try it
    * now demo on the page, `signup` leaves for /app. `page` is the route path,

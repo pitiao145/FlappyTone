@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { brand } from "../../brand.ts";
-import { newRunStats, toneBreakdown, type RunStats } from "../../game/scoring.ts";
+import { comboBreakdown, newRunStats, toneBreakdown, type RunStats } from "../../game/scoring.ts";
 import type { Tone } from "../../game/gates.ts";
 import { DEFAULT_TIER_LIMITS } from "../../game/tiers.ts";
 import { GameOverHeader, weakestTone } from "../GameOverParts.tsx";
@@ -11,6 +11,8 @@ import { TESTIMONIALS } from "../testimonials.ts";
 import { toneName } from "../../site/toneNames.ts";
 
 const COPY = brand.demoGameOver;
+/** Pair tiles at most, weakest first: one row of four on the score card. */
+const PAIRS_SHOWN = 4;
 
 /** Every round's per-tone numbers added up: the "all rounds" tone accuracy. */
 export function sumRounds(rounds: readonly RunStats[]): RunStats {
@@ -24,6 +26,13 @@ export function sumRounds(rounds: readonly RunStats[]): RunStats {
       a.accSum += b.accSum;
       a.unheard += b.unheard;
       a.best = Math.max(a.best, b.best);
+    }
+    for (const [key, c] of Object.entries(r.perCombo)) {
+      const a = (total.perCombo[key] ??= { gates: 0, accSum: 0, best: 0, unheard: 0 });
+      a.gates += c.gates;
+      a.accSum += c.accSum;
+      a.unheard += c.unheard;
+      a.best = Math.max(a.best, c.best);
     }
   }
   return total;
@@ -46,6 +55,20 @@ function ReplayIcon() {
   );
 }
 
+/** Two tone marks side by side: a two-syllable word. */
+function PairsIcon() {
+  return (
+    <span className="go-demo-retry-icon go-demo-pairs-icon" aria-hidden="true">
+      <span style={{ color: TONE_LINE_COLOR[3] }}>
+        <ToneMarkIcon tone={3} />
+      </span>
+      <span style={{ color: TONE_LINE_COLOR[2] }}>
+        <ToneMarkIcon tone={2} />
+      </span>
+    </span>
+  );
+}
+
 /**
  * Try it now's end screen. It has one job: the signup.
  *
@@ -55,7 +78,9 @@ function ReplayIcon() {
  * total of every round with this round's own figure under it. Then the
  * signup card (title from the weakest heard tone on round 1, from round 2
  * the player's rounds and best; three perks; the button), a real player's
- * quote, and a "Play round 2" / "Play your last round" button. The last of
+ * quote, and a "Play round 2" / "Play your last round" button (after a
+ * classic round, with "Too easy? Try tone pairs" beside it). Tone Pairs
+ * rounds add their weakest pairs to the tiles. The last of
  * `freeRounds` (3) has no retry: "Sign up to keep playing" and a true line
  * that the rounds expire. Phones stack it; wider screens put the quote on
  * the right.
@@ -68,6 +93,7 @@ export function DemoGameOver({
   stats,
   onSignup,
   onRetry,
+  onPairs,
   quote = 0,
   rounds = [stats],
 }: {
@@ -76,6 +102,8 @@ export function DemoGameOver({
   quote?: number;
   onSignup: () => void;
   onRetry: () => void;
+  /** Classic rounds only: "Too easy? Try tone pairs", the next round flies Tone Pairs. */
+  onPairs?: () => void;
   /** This page load's finished rounds, oldest first, ending with `stats`. */
   rounds?: readonly RunStats[];
 }) {
@@ -88,7 +116,8 @@ export function DemoGameOver({
   const bestIndex = best > 0 ? scores.lastIndexOf(best) : -1;
 
   const breakdown = toneBreakdown(stats);
-  const totals = useMemo(() => toneBreakdown(sumRounds(rounds)), [rounds]);
+  const summed = useMemo(() => sumRounds(rounds), [rounds]);
+  const totals = toneBreakdown(summed);
   // Any heard tone counts: a 5-word run flies most tones once (hard rule 8:
   // an unheard gate has no accuracy, so it is never the weakest).
   const weakest = useMemo(() => weakestTone(breakdown, 1), [breakdown]);
@@ -107,6 +136,9 @@ export function DemoGameOver({
     (b): b is typeof b & { pct: number } => b.pct !== null && b.gates > 0,
   );
   const thisRound = new Map(breakdown.map((b) => [b.tone, b.pct]));
+  // Tone Pairs rounds fill per-pair stats: their weakest pairs, as tiles too.
+  const pairsShown = comboBreakdown((multi ? summed : stats).perCombo).slice(0, PAIRS_SHOWN);
+  const pairThisRound = new Map(comboBreakdown(stats.perCombo).map((p) => [p.key, p.pct]));
 
   return (
     <div className="screen gameover-screen go-demo">
@@ -146,7 +178,7 @@ export function DemoGameOver({
                 })}
               </ol>
             </div>
-            {shown.length > 0 && (
+            {(shown.length > 0 || pairsShown.length > 0) && (
               <div className="go-demo-tones-block">
                 <p className="go-demo-tones-label">{multi ? COPY.tonesTotalLabel(played) : COPY.tonesLabel}</p>
                 <ul className="go-demo-tones">
@@ -168,6 +200,34 @@ export function DemoGameOver({
                         {multi && (
                           <small aria-hidden="true">
                             {mine != null ? COPY.toneThisRound(Math.round(mine)) : " "}
+                          </small>
+                        )}
+                      </li>
+                    );
+                  })}
+                  {pairsShown.map((p) => {
+                    const mine = pairThisRound.get(p.key);
+                    return (
+                      <li
+                        key={p.key}
+                        className="go-demo-pair"
+                        aria-label={`${toneName(p.tones[0], true)} then ${toneName(p.tones[1])}: ${Math.round(p.pct)}% tone accuracy${
+                          multi && mine != null ? `, ${Math.round(mine)}% this round` : ""
+                        }`}
+                      >
+                        <span className="go-demo-tone-main">
+                          <span className="go-demo-pair-marks">
+                            {p.tones.map((t, i) => (
+                              <span key={i} style={{ color: TONE_LINE_COLOR[t] }}>
+                                <ToneMarkIcon tone={t} className="go-demo-pair-icon" />
+                              </span>
+                            ))}
+                          </span>
+                          <b>{Math.round(p.pct)}%</b>
+                        </span>
+                        {multi && (
+                          <small aria-hidden="true">
+                            {mine != null ? COPY.toneThisRound(Math.round(mine)) : "\u00a0"}
                           </small>
                         )}
                       </li>
@@ -206,6 +266,12 @@ export function DemoGameOver({
             <ReplayIcon />
             {played >= free - 1 ? COPY.lastRetry : COPY.retry}
           </button>
+          {onPairs && (
+            <button type="button" className="go-demo-retry go-demo-pairs" onClick={onPairs}>
+              <PairsIcon />
+              {COPY.pairs}
+            </button>
+          )}
         </div>
       )}
     </div>

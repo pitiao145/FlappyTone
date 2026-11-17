@@ -1,6 +1,7 @@
 import { SITE_HREF } from "./appLink.ts";
 import { brand } from "../brand.ts";
 import { ThemeGateLoop } from "./ThemeGateLoop.tsx";
+import { UpdateBanner } from "./UpdateBanner.tsx";
 
 /** "drill", "learn" and "pairs" are only ever started from ModeSelect, never
  * from a button here — kept in this union anyway since GameApp's
@@ -80,15 +81,18 @@ export function PlayHome({
               Practice your Mandarin tones and try to beat them!
             </p>
           )}
-          <h1>{brand.name}</h1>
+          {/* Brief 50: a new account's imported demo rounds, as the Play home's
+              pinned notification card (once per account, GameApp). */}
           {demoSaved > 0 && (
-            <p className="prompt playhome-demo-saved" role="status">
-              {brand.demoSaved.line(demoSaved)}{" "}
-              <button type="button" className="link" onClick={onProgress}>
-                {brand.demoSaved.link}
-              </button>
-            </p>
+            <UpdateBanner
+              id="demo-rounds-saved"
+              label={brand.demoSaved.label}
+              title={brand.demoSaved.line(demoSaved)}
+              actionLabel={onProgress ? brand.demoSaved.link : undefined}
+              onAction={onProgress}
+            />
           )}
+          <h1>{brand.name}</h1>
           {tutorialDone && <p className="prompt">Nice, ready to play?</p>}
           {!calibrated && (
             <p className="note">

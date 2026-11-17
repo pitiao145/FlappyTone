@@ -112,6 +112,33 @@ describe("DemoGameOver", () => {
     expect(out).not.toContain("Play your last round");
   });
 
+  it("after a classic round, Too easy? Try tone pairs sits beside the retry; never on the last round", () => {
+    const withPairs = (rounds: ReturnType<typeof round>[]) =>
+      renderToStaticMarkup(
+        <DemoGameOver stats={rounds[rounds.length - 1]} rounds={rounds} onSignup={() => {}} onRetry={() => {}} onPairs={() => {}} />,
+      );
+    const one = withPairs([round(725, [1, 0.9])]);
+    expect(one).toContain("Too easy? Try tone pairs");
+    expect(one.indexOf("Play round 2")).toBeLessThan(one.indexOf("Too easy? Try tone pairs"));
+    expect(withPairs([round(1), round(2), round(3)])).not.toContain("Too easy");
+    expect(render([round(725, [1, 0.9])])).not.toContain("Too easy");
+  });
+
+  it("a Tone Pairs round shows its pairs, summed over rounds", () => {
+    let pairs = newRunStats();
+    pairs = applyGate(pairs, [3, 2], "ok", 0.5);
+    pairs = { ...pairs, score: 400 };
+    let pairs2 = newRunStats();
+    pairs2 = applyGate(pairs2, [3, 2], "ok", 0.9);
+    pairs2 = { ...pairs2, score: 900 };
+    const one = renderToStaticMarkup(<DemoGameOver stats={pairs} onSignup={() => {}} onRetry={() => {}} />);
+    expect(one).toContain("Third tone then second tone: 50% tone accuracy");
+    const two = renderToStaticMarkup(
+      <DemoGameOver stats={pairs2} rounds={[pairs, pairs2]} onSignup={() => {}} onRetry={() => {}} />,
+    );
+    expect(two).toContain("Third tone then second tone: 70% tone accuracy, 90% this round");
+  });
+
   it("with nothing scored, the title skips the best score and no round is starred", () => {
     const out = render([round(0), round(0)]);
     expect(out).toContain("2 rounds. Sign up to keep them.");

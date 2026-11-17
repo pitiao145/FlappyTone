@@ -75,6 +75,8 @@ export const brand = {
     /** The retry button: before the last round, then into it. */
     retry: "Play round 2",
     lastRetry: "Play your last round",
+    /** Beside the retry after a classic round: the next round flies Tone Pairs (brief 50 follow-up). */
+    pairs: "Too easy? Try tone pairs",
     /** From round 2: the title sells keeping the player's own rounds. */
     keepTitle: (rounds: number, best: number) =>
       `${rounds} rounds${best > 0 ? `, best ${best.toLocaleString("en-US")}` : ""}. Sign up to keep them.`,
@@ -86,6 +88,7 @@ export const brand = {
   },
   /** Play home's one-time line after a new account imported its demo rounds (brief 50). */
   demoSaved: {
+    label: "Saved",
     line: (n: number) => `Your ${n} demo ${n === 1 ? "round is" : "rounds are"} saved.`,
     link: "See Progress",
   },
