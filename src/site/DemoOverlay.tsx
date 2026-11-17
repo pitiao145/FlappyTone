@@ -60,8 +60,20 @@ export function DemoOverlay({
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
         </button>
-        <TryItNow page={page} seedId={seedId} mode={mode} onClose={close}
-          onSignup={onSignup ? () => { close(); onSignup(); } : undefined} />
+        <TryItNow
+          page={page}
+          seedId={seedId}
+          mode={mode}
+          onClose={close}
+          onSignup={
+            onSignup
+              ? () => {
+                  close();
+                  onSignup();
+                }
+              : undefined
+          }
+        />
       </div>
     </dialog>
   );

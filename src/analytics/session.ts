@@ -446,7 +446,7 @@ export type AnalyticsEvent =
    * commit and its follow-up (never deployed) "email" replaced signup/login.
    */
   | { type: "auth_screen_viewed"; screen: AuthScreenStep; source: "challenge" | "direct" | "lp_cta" }
-  /** AuthScreen.tsx: a cold visitor tapped "Try a round first, no signup" (brief 49). */
+  /** AuthScreen.tsx: a cold visitor tapped the demo on the signup card or nav (brief 49). */
   | { type: "auth_try_demo"; source: "direct" | "lp_cta" }
   /** A returning player signed in to an existing account (`signup_completed` with mode "login"). */
   | { type: "login_completed"; method: AuthMethod }

@@ -24,7 +24,6 @@ interface Props {
   onStart: (intent: PlayIntent) => void;
   /** Opens the Modes picker. No mic needed — only starting a run there does. */
   onModes: () => void;
-  /** Opens Settings scrolled to the Themes section (the current update banner's link). */
   /** Matches the size Game/Calibration will actually open at — see GameApp's computeCanvasSize. */
   canvasWidth: number;
   canvasHeight: number;

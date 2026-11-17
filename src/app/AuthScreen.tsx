@@ -551,24 +551,23 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
       <main className="auth-main">
         <div className="auth-panel">
           {/* A muted clip where the bird sits; the tap opens the demo. */}
-        {canTry && (
-          <figure className="auth-demo">
-            <DemoLoop width={300} />
-            <button
-              type="button"
-              className="auth-demo-btn"
-              data-testid="auth-try"
-              aria-haspopup="dialog"
-              aria-label="Try a round first, no signup"
-              onClick={tryDemo}
-            >
-              <span className="auth-demo-note">New here? Try it out first:</span>
-              <span className="sky-btn">Try the demo</span>
-            </button>
-          </figure>
-        )}
-          {!canTry && (
-  <img className="auth-bird" src="/Bird-hor-no-halo.png" alt="" width={96} height={96} />
+          {canTry ? (
+            <figure className="auth-demo">
+              <DemoLoop width={300} />
+              <button
+                type="button"
+                className="auth-demo-btn"
+                data-testid="auth-try"
+                aria-haspopup="dialog"
+                aria-label="Try a round first, no signup"
+                onClick={tryDemo}
+              >
+                <span className="auth-demo-note">New here? Try it out first:</span>
+                <span className="sky-btn">Try the demo</span>
+              </button>
+            </figure>
+          ) : (
+            <img className="auth-bird" src="/Bird-hor-no-halo.png" alt="" width={96} height={96} />
           )}
           <h1 className="auth-title">{head.title}</h1>
           <p className="auth-sub">{head.sub}</p>
