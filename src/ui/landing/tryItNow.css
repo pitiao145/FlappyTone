@@ -245,9 +245,10 @@
   font: 400 1.05rem/1 var(--font-display);
 }
 .sky-try-over .go-demo-round b { font-weight: 400; }
+/* A played round: a pale jade fill on the tan score card (the best is gold). */
 .sky-try-over .go-demo-round.is-done {
   border: 2px solid var(--ink);
-  background: #fff;
+  background: color-mix(in srgb, var(--accent) 20%, var(--accent-ink));
   color: var(--ink);
   box-shadow: 0 3px 0 var(--ink);
 }
@@ -262,7 +263,8 @@
   background: color-mix(in srgb, var(--ink) 12%, transparent);
   font: 700 0.75rem/1 var(--font-body);
 }
-.sky-try-over .go-demo-round.is-done .go-demo-round-n { background: var(--ink); color: #fff; }
+.sky-try-over .go-demo-round.is-done .go-demo-round-n { background: var(--accent); color: var(--accent-ink); }
+.sky-try-over .go-demo-round.is-best .go-demo-round-n { background: var(--ink); }
 .sky-try-over .go-demo-round-star {
   position: absolute;
   top: -11px;
@@ -273,7 +275,7 @@
   height: 24px;
   border: 2px solid var(--ink);
   border-radius: 50%;
-  background: #fff;
+  background: var(--accent-ink);
   color: var(--beak);
   font-size: 0.8rem;
   line-height: 1;
@@ -305,7 +307,8 @@
   padding: 4px 22px 0;
   border: var(--outline, 3px) solid var(--ink);
   border-radius: var(--radius, 14px);
-  background: #fff;
+  /* The score card's tan, a step deeper: a sibling of the card, quieter than the gold signup. */
+  background: color-mix(in srgb, var(--beak) 34%, var(--accent-ink));
   color: var(--ink);
   font: 400 1.02rem/1.1 var(--font-display);
   box-shadow: 0 4px 0 var(--ink);
