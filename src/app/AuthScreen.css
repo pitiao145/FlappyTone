@@ -351,12 +351,19 @@
 }
 .auth-main-split .auth-panel { width: 100%; }
 .auth-demo {
+  --demo-w: 180px;
   position: relative;
   margin: 0;
-  width: fit-content;
+  width: var(--demo-w);
   max-width: 100%;
 }
-.auth-demo video { display: block; max-width: 100%; height: auto; border-radius: 20px; }
+.auth-demo video {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  border-radius: 20px;
+}
 .auth-demo-btn {
   position: absolute;
   inset: 0;
@@ -372,17 +379,17 @@
   cursor: pointer;
 }
 .auth-demo-note { color: #fff; font-size: 0.9rem; font-weight: 600; text-shadow: 0 1px 3px rgb(0 0 0 / 0.6); }
-@media (min-width: 880px) {
+@media (min-width: 1000px) {
   .auth-main-split {
     grid-template-columns: minmax(0, 480px) auto;
     justify-content: center;
     align-items: center;
     gap: var(--space-8);
   }
-  .auth-main-split .auth-demo { order: 2; }
+  .auth-main-split .auth-demo { order: 2; --demo-w: 300px; }
   .auth-main-split .auth-panel { order: 1; margin-inline: 0; }
-  .auth-demo video { width: 300px; }
 }
-@media (max-width: 879px) {
-  .auth-demo video { width: min(100%, 220px); }
+/* The thumbnail is on top below 1000px: the nav button would only repeat it. */
+@media (max-width: 999px) {
+  .auth .auth-nav-try { display: none; }
 }

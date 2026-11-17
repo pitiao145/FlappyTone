@@ -540,7 +540,7 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
         linkBase="/"
         trySlot={
           canTry ? (
-            <button type="button" className="sky-btn sky-btn-small" aria-haspopup="dialog" onClick={tryDemo}>
+            <button type="button" className="sky-btn sky-btn-small auth-nav-try" aria-haspopup="dialog" onClick={tryDemo}>
               Try a round first
             </button>
           ) : undefined
