@@ -20,6 +20,7 @@ export function DemoOverlay({
   seedId,
   mode = "game",
   onClose,
+  onSignup,
 }: {
   /** The route-table page it opened on; unset on the landing page. */
   page?: string;
@@ -27,6 +28,8 @@ export function DemoOverlay({
   /** Classic, or the game's Tone Drill / Tone Pairs (picker first). */
   mode?: "game" | "drill" | "pairs";
   onClose: () => void;
+  /** Replaces the demo's "sign up" navigation; the overlay closes first. */
+  onSignup?: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   // Read on the first render, before showModal moves focus into the dialog.
@@ -57,7 +60,8 @@ export function DemoOverlay({
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
         </button>
-        <TryItNow page={page} seedId={seedId} mode={mode} onClose={close} />
+        <TryItNow page={page} seedId={seedId} mode={mode} onClose={close}
+          onSignup={onSignup ? () => { close(); onSignup(); } : undefined} />
       </div>
     </dialog>
   );

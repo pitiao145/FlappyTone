@@ -1,7 +1,5 @@
 import { SITE_HREF } from "./appLink.ts";
 import { brand } from "../brand.ts";
-import { track } from "../analytics/client.ts";
-import { UpdateBanner } from "./UpdateBanner.tsx";
 import { ThemeGateLoop } from "./ThemeGateLoop.tsx";
 
 /** "drill", "learn" and "pairs" are only ever started from ModeSelect, never
@@ -27,7 +25,6 @@ interface Props {
   /** Opens the Modes picker. No mic needed — only starting a run there does. */
   onModes: () => void;
   /** Opens Settings scrolled to the Themes section (the current update banner's link). */
-  onOpenThemes: () => void;
   /** Matches the size Game/Calibration will actually open at — see GameApp's computeCanvasSize. */
   canvasWidth: number;
   canvasHeight: number;
@@ -50,7 +47,6 @@ export function PlayHome({
   error: externalError,
   onStart,
   onModes,
-  onOpenThemes,
   canvasWidth,
   canvasHeight,
   challengeScore,
@@ -70,17 +66,6 @@ export function PlayHome({
           <img src="/favicon.svg" alt="" width={60} height={60} />
         </a>
         <div className="screen playhome-overlay">
-          {/* What's new. One banner at a time: swap the props when the next
-              update ships. */}
-          <UpdateBanner
-            id="themes"
-            onEvent={(action) => track({ type: "update_banner", id: "themes", surface: "play_home", action })}
-            label="New"
-            title="New themes available!"
-            actionLabel="See themes"
-            onAction={onOpenThemes}
-          />
-
           {/* The bird flying one gate per tone, a different theme each. */}
           <ThemeGateLoop />
           {challengeScore != null && (

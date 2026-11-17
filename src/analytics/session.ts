@@ -233,7 +233,11 @@ export type SeoCta =
   /** No longer shown (removed 2 Nov 2026); kept so old events still type. */
   | "visualizer_result_retry"
   /** "Hear it first" in the tone visualizer's reference card. */
-  | "visualizer_hear_example";
+  | "visualizer_hear_example"
+  /** /say word page: "Fly {hanzi} with your voice" in the practise section (brief 49). */
+  | "say_practise"
+  /** /say word page: small "Fly this word" beside the top card (brief 49). */
+  | "say_top";
 
 /** How a player signed in (brief 30). */
 export type AuthMethod = "otp" | "google" | "password" | "magic_link";
@@ -442,6 +446,8 @@ export type AnalyticsEvent =
    * commit and its follow-up (never deployed) "email" replaced signup/login.
    */
   | { type: "auth_screen_viewed"; screen: AuthScreenStep; source: "challenge" | "direct" | "lp_cta" }
+  /** AuthScreen.tsx: a cold visitor tapped "Try a round first, no signup" (brief 49). */
+  | { type: "auth_try_demo"; source: "direct" | "lp_cta" }
   /** A returning player signed in to an existing account (`signup_completed` with mode "login"). */
   | { type: "login_completed"; method: AuthMethod }
   /** AuthScreen.tsx: the sign-in code email was sent (also first-time sends; `resend` for the button). */
@@ -713,6 +719,7 @@ export const APP_EVENT_TYPES: Record<AnalyticsEvent["type"], true> = {
   signup_started: true,
   signup_completed: true,
   auth_screen_viewed: true,
+  auth_try_demo: true,
   login_completed: true,
   auth_code_sent: true,
   auth_code_failed: true,

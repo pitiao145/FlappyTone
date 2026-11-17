@@ -125,6 +125,7 @@ export function TryItNow({
   seedId = null,
   mode = "game",
   onClose,
+  onSignup,
 }: {
   /** The site page the overlay opened on (route path), for `?src=` and tracking; unset on the landing page. */
   page?: string;
@@ -133,6 +134,8 @@ export function TryItNow({
   /** Classic ("game"), or the game's Tone Drill / Tone Pairs. */
   mode?: "game" | "drill" | "pairs";
   onClose?: () => void;
+  /** Replaces the default "go to /app" after the demo (the /app signup screen closes the overlay instead). */
+  onSignup?: () => void;
 } = {}) {
   const [step, setStep] = useState<Step>({ kind: "loading" });
   /** For the unmount cleanup, which only sees the first render's `step`. */
@@ -449,7 +452,8 @@ export function TryItNow({
               quote={step.quote}
               onSignup={() => {
                 captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_signup", ...where });
-                window.location.assign(appHref(undefined, page));
+                if (onSignup) onSignup();
+                else window.location.assign(appHref(undefined, page));
               }}
               onRetry={() => {
                 captureGameEvent({ type: "tool_cta_click", tool: "try-now", placement: "demo_gameover_retry", ...where });

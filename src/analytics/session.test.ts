@@ -320,6 +320,7 @@ describe("APP_EVENT_TYPES", () => {
     "note_shown",
     "note_sent",
     "note_dismissed",
+    "auth_try_demo",
   ];
 
   it("lists every AnalyticsEvent type exactly once, one kind only", () => {

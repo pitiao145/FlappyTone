@@ -10,6 +10,7 @@
  * session and swaps in the game.
  */
 import { useEffect, useId, useState } from "react";
+import { createPortal } from "react-dom";
 import { track } from "../analytics/client";
 import type { AuthMethod, AuthScreenStep } from "../analytics/session.ts";
 import {
@@ -43,6 +44,11 @@ import "./AuthScreen.css";
 /** The site's faces (Lilita One, Figtree): /app's HTML only loads the game's. */
 const SKY_FONTS =
   "https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Lilita+One&display=swap";
+
+type DemoOverlayModule = typeof import("../site/DemoOverlay.tsx");
+
+/** Where a failed demo load goes: the landing page's own demo (hard rule 10). */
+const DEMO_FALLBACK = "/#demo";
 
 /** Seconds before "Resend code" works again (Supabase also rate-limits sends). */
 export const RESEND_COOLDOWN_S = 60;
@@ -97,6 +103,20 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     }
   });
   const ids = useId();
+  /** The no-signup demo, loaded on the tap only (hard rules 4 and 13). */
+  const [demoMod, setDemoMod] = useState<DemoOverlayModule | null>(null);
+  const [demoOpen, setDemoOpen] = useState(false);
+  const canTry = source !== "challenge" && view === "signup";
+
+  function tryDemo() {
+    if (source !== "challenge") track({ type: "auth_try_demo", source });
+    import("../site/DemoOverlay.tsx")
+      .then((m) => {
+        setDemoMod(m);
+        setDemoOpen(true);
+      })
+      .catch(() => window.location.assign(DEMO_FALLBACK));
+  }
 
   useEffect(() => {
     if (document.querySelector(`link[href="${SKY_FONTS}"]`)) return;
@@ -515,7 +535,16 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
 
   return (
     <div id="top" className="sky sky-site auth">
-      <Nav linkBase="/" />
+      <Nav
+        linkBase="/"
+        trySlot={
+          canTry ? (
+            <button type="button" className="sky-btn sky-btn-small" aria-haspopup="dialog" onClick={tryDemo}>
+              Try a round first
+            </button>
+          ) : undefined
+        }
+      />
       {/* Google is hidden in this in-app browser: offer the real browser. */}
       {!googleOk && <InAppBrowserPrompt />}
       <main className="auth-main">
@@ -537,6 +566,14 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
             )}
           </section>
 
+          {canTry && (
+            <p className="auth-switch">
+              <button type="button" className="auth-link auth-try" data-testid="auth-try" onClick={tryDemo}>
+                Try a round first, no signup
+              </button>
+            </p>
+          )}
+
           {view !== "code" && (
             <p className="auth-switch">
               {onLoginSide ? "Don't have an account? " : "Already have an account? "}
@@ -547,6 +584,20 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
           )}
         </div>
       </main>
+      {/* On <body>, like DemoTrigger: the card's CSS must not restyle the demo. */}
+      {demoOpen &&
+        demoMod &&
+        createPortal(
+          <demoMod.DemoOverlay
+            seedId={null}
+            onClose={() => setDemoOpen(false)}
+            onSignup={() => {
+              setDemoOpen(false);
+              go("signup");
+            }}
+          />,
+          document.body,
+        )}
     </div>
   );
 }

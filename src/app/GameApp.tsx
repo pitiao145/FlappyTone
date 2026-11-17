@@ -373,7 +373,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
   // share link has to work on a session that has never opened the mic yet.
   // `leaderboard`/`pairs`/`pricing` need no such handoff (see `initialIntent`'s
   // doc comment) — they just pick a different initial screen.
-  const [settingsFocus, setSettingsFocus] = useState<"speechStyle" | "theme" | null>(null);
+  const [settingsFocus] = useState<"speechStyle" | "theme" | null>(null);
   const [screen, setScreen] = useState<Screen>(() => {
     // A reset-password link: AuthGate caught PASSWORD_RECOVERY before this mounted.
     if (recovery) return "resetPassword";
@@ -1239,10 +1239,6 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
               error={error}
               onStart={startPlay}
               onModes={() => setScreen("modes")}
-              onOpenThemes={() => {
-                setSettingsFocus("theme");
-                setScreen("settings");
-              }}
               canvasWidth={CANVAS_W}
               canvasHeight={GAME_CANVAS_H}
               challengeScore={challengeScoreState}

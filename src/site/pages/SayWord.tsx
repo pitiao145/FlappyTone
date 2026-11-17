@@ -6,6 +6,7 @@
 
 import { useRef, type ReactElement } from "react";
 import { PipCta } from "../Pip.tsx";
+import { DemoTrigger } from "../DemoCta.tsx";
 import { TONE_LINE_COLOR } from "../../ui/toneColors.ts";
 import { captureGameEvent } from "../../analytics/posthog.ts";
 import type {
@@ -253,6 +254,16 @@ function SayWordPage({ word }: { word: SayWord }) {
               </li>
             ))}
           </ul>
+          <div className="say-card-fly">
+            <DemoTrigger
+              page={path}
+              cta="say_top"
+              seedId={word.cards[0].id}
+              className="say-fly-small"
+            >
+              Fly this word
+            </DemoTrigger>
+          </div>
           {word.cardNote && <p className="say-card-note">{word.cardNote}</p>}
         </div>
 
@@ -327,16 +338,24 @@ function SayWordPage({ word }: { word: SayWord }) {
           <h2>Practise it out loud</h2>
           <p>Say it and see your pitch drawn over the recording.</p>
           <div className="say-practise-actions">
-            <a
+            <DemoTrigger
+              page={path}
+              cta="say_practise"
+              seedId={word.cards[0].id}
               className="sticker-button"
+            >
+              Fly <span lang="zh-Hant-TW">{word.hanzi}</span> with your voice
+            </DemoTrigger>
+            <a
+              className="say-secondary-link"
               href={`${VISUALIZER}?tone=${word.toneTarget}`}
               onClick={() => track("practise_tone")}
             >
-              Practise {word.toneTargetLabel}, free
+              See your pitch
             </a>
           </div>
           <p className="say-practise-note">
-            The tone visualizer is free and needs no account.
+            Both are free and need no account.
           </p>
         </section>
 
