@@ -112,7 +112,8 @@
     .progress-screen,
     .profile-screen,
     .gameover-screen,
-    .calibrate-screen
+    .calibrate-screen,
+    .tuner-screen
   ) {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -132,18 +133,18 @@
      `align-items: flex-start`, which leaves `.app-main` content-sized —
      scoped to `:has(.calibrate-screen)` so scrolling tabs (settings,
      progress, …) keep growing with their content. */
-  .app-game:has(.calibrate-screen) {
+  .app-game:has(.calibrate-screen, .tuner-screen) {
     align-items: stretch;
   }
 
-  .app-game:has(.calibrate-screen) .app-main {
+  .app-game:has(.calibrate-screen, .tuner-screen) .app-main {
     flex: 1 1 auto;
     min-height: calc(
       100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)
     );
   }
 
-  .app-game:has(.calibrate-screen) .frame {
+  .app-game:has(.calibrate-screen, .tuner-screen) .frame {
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
@@ -573,6 +574,104 @@
 .calibrate-screen h2 {
   font-size: var(--text-2xl);
 }
+/* ------------------------------------------------- voice tuner (brief 50)
+   Settings → Calibrate. The paper tuner: step bar, one instruction, five
+   lines with the word's corridor, voice bars and a hold bar. App tokens only. */
+
+.tuner-screen,
+.voice-choice {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 460px;
+  margin-inline: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) max(var(--space-4), env(safe-area-inset-bottom));
+  text-align: left;
+}
+.voice-choice { justify-content: center; text-align: center; }
+.voice-choice-buttons { display: flex; flex-direction: column; gap: var(--space-2); }
+.tuner-screen h2 { font-size: var(--text-2xl); margin: 0; }
+.tuner-top { display: flex; align-items: center; justify-content: space-between; }
+.tuner-cancel { background: none; border: none; box-shadow: none; padding: 10px 0; color: var(--ink-muted); min-height: 44px; }
+.tuner-count { font-size: 13px; color: var(--ink-muted); }
+.tuner-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.tuner-step { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--ink-muted); }
+.tuner-step-bar { height: 4px; border-radius: 2px; background: var(--surface-deep); }
+.tuner-step.is-done, .tuner-step.is-now { color: var(--ink); font-weight: 600; }
+.tuner-step.is-done { color: var(--accent); }
+.tuner-step.is-done .tuner-step-bar, .tuner-step.is-now .tuner-step-bar { background: var(--accent); }
+.tuner-head { display: flex; flex-direction: column; gap: 6px; }
+.tuner-head .note { margin: 0; line-height: 1.4; }
+.tuner-head-center { align-items: center; text-align: center; }
+.tuner-take { margin: 0; font-size: 13px; color: var(--ink-muted); }
+.tuner-panel { background: var(--surface-panel); border-radius: var(--radius-lg); padding: var(--space-3); }
+.tuner-stage { flex: 1 1 auto; min-height: 200px; display: flex; padding: 8px; }
+.tuner-stage canvas { width: 100%; height: 100%; aspect-ratio: auto; }
+.tuner-meter { display: flex; align-items: center; gap: 14px; border-radius: var(--radius-md); padding: 12px 14px; }
+.tuner-meter-text { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; }
+.tuner-meter-text .note { margin: 0; font-size: 13px; }
+.tuner-voice-bars, .tuner-room-bars { display: flex; align-items: flex-end; gap: 3px; height: 28px; }
+.tuner-voice-bars span { width: 5px; border-radius: 2px; background: var(--surface-deep); }
+.tuner-voice-bars span[data-on="1"] { background: var(--good); }
+.tuner-hold { height: 6px; border-radius: 3px; background: var(--surface-deep); overflow: hidden; }
+.tuner-hold div { height: 100%; width: 0; background: var(--accent); }
+.tuner-room { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.tuner-room-bars { gap: 6px; height: 72px; }
+.tuner-room-bars span { width: 12px; border-radius: 4px; background: var(--surface-deep); }
+.tuner-room-bars span[data-on="1"]:nth-child(-n + 3) { background: var(--good); }
+.tuner-room-bars span[data-on="1"]:nth-child(n + 4):nth-child(-n + 5) { background: var(--warn); }
+.tuner-room-bars span[data-on="1"]:nth-child(n + 6) { background: var(--danger); }
+.tuner-scale { align-self: stretch; display: flex; flex-direction: column; gap: 6px; }
+.tuner-scale-bar { height: 10px; border-radius: 5px; position: relative;
+  background: linear-gradient(90deg, var(--good) 0 40%, var(--warn) 40% 72%, var(--danger) 72% 100%); }
+.tuner-scale-mark { position: absolute; top: -5px; width: 4px; height: 20px; margin-left: -2px; border-radius: 2px; background: var(--ink); }
+.tuner-scale-labels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); font-size: 12px; color: var(--ink-muted); }
+.tuner-scale-labels span:nth-child(2) { text-align: center; }
+.tuner-scale-labels span:nth-child(3) { text-align: right; }
+.tuner-verdict { border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--radius-md);
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.45; }
+.tuner-verdict strong { font-size: 16px; }
+.tuner-verdict.is-quiet { border-color: var(--good); }
+.tuner-verdict.is-quiet strong { color: var(--good-dim); }
+.tuner-verdict.is-noisy { border-color: var(--warn); }
+.tuner-verdict.is-noisy strong { color: var(--warn-strong); }
+.tuner-verdict.is-tooNoisy { border-color: var(--danger); }
+.tuner-verdict.is-tooNoisy strong { color: var(--danger-strong); }
+.tuner-tip { color: var(--ink-muted); }
+.tuner-grow { flex: 1 1 auto; }
+.tuner-actions { display: flex; gap: 10px; }
+.tuner-actions button { flex: 1 1 0; min-height: 48px; }
+.tuner-done { align-items: stretch; }
+.tuner-check { align-self: center; color: var(--accent); }
+.tuner-rows { display: flex; flex-direction: column; gap: 10px; }
+.tuner-row { display: flex; align-items: center; gap: 12px; background: var(--surface-panel); border-radius: var(--radius-md); padding: 10px 10px 10px 16px; }
+.tuner-row-text { display: flex; flex-direction: column; flex: 1 1 auto; }
+.tuner-row-text .note { margin: 0; font-size: 13px; }
+.tuner-row button { min-height: 44px; }
+.tuner-row-room { background: none; padding: 4px 16px; }
+.tuner-row-room .note { margin: 0; flex: 1 1 auto; font-size: 13px; }
+.tuner-link { background: none; border: none; box-shadow: none; color: var(--accent); text-decoration: underline; }
+.tuner-dot { width: 10px; height: 10px; border-radius: 5px; flex-shrink: 0; background: var(--ink-muted); }
+.tuner-dot.is-top { background: var(--accent-bright); }
+.tuner-dot.is-middle { background: var(--accent); }
+.tuner-dot.is-bottom { background: var(--beak); }
+.tuner-dot.is-room-quiet { background: var(--good); }
+.tuner-dot.is-room-noisy { background: var(--warn); }
+.tuner-dot.is-room-tooNoisy { background: var(--danger); }
+.tuner-wide { width: 100%; min-height: 52px; }
+
+/* Settings card "Your voice" (brief 50): calibration and learned, side by side. */
+.voice-table { display: flex; flex-direction: column; background: var(--surface); border-radius: var(--radius-md); }
+.voice-table-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; padding: 10px 12px; font-size: 14px; border-bottom: 1px solid var(--line); }
+.voice-table-row:last-child { border-bottom: none; }
+.voice-table-head { font-size: 12px; color: var(--ink-muted); border-bottom: none; padding-bottom: 0; background: none; }
+.voice-table-row .is-old { color: var(--ink-muted); }
+.voice-table-row .is-now { font-weight: 600; }
+.voice-parts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+
 .meter {
   height: 8px;
   border-radius: var(--radius-pill);
@@ -3230,11 +3329,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
+  gap: 6px;
   height: 40px;
-  padding: 0;
+  padding: 0 12px;
   border-radius: var(--radius-pill);
   color: var(--ink-soft);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.vis-band-label { color: var(--ink); }
+.vis-band-state {
+  font-weight: 600;
+  min-width: 2.2em;
+  text-align: left;
 }
 
 /* On: the band's own warm demo colour, so the button reads like the canvas. */

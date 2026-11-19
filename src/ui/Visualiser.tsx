@@ -866,16 +866,21 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
     </div>
   );
 
-  /** Shows or hides the target band; the choice is saved. Next to mute in both layouts. */
+  /**
+   * Shows or hides the target band; the choice is saved. Next to mute in both
+   * layouts. Brief 50 (test 11): a visible label, "Target zone on/off", since
+   * the icon alone said nothing to a first-time user.
+   */
   const bandButton = (
     <button
       className={showBand ? "vis-band on" : "vis-band"}
       onClick={toggleBand}
       aria-pressed={showBand}
-      aria-label={showBand ? "Hide target band" : "Show target band"}
-      title={showBand ? "Hide target band" : "Show target band"}
+      title={showBand ? "Hide the target zone" : "Show the target zone"}
     >
       <TargetBandIcon className="vis-mute-icon" />
+      <span className="vis-band-label">Target zone</span>
+      <span className="vis-band-state">{showBand ? "on" : "off"}</span>
     </button>
   );
   const toolButtons = (

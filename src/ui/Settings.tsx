@@ -5,6 +5,8 @@ import { ensureMic, MicCancelled } from "../audio/session.ts";
 import { getAccount, signOut, type Account } from "../data/account.ts";
 import { fireAuthToast } from "../data/authToast.ts";
 import { micErrorCopy } from "./micErrors.ts";
+import { VoiceCard } from "./VoiceCard.tsx";
+import { tuning } from "../game/tuning.ts";
 import { track, trackSpeechStyle } from "../analytics/client.ts";
 import { currentAccountId } from "../data/accountScope.ts";
 import { setUsageAnalytics } from "../data/usageAnalytics.ts";
@@ -178,6 +180,8 @@ interface Props {
   onRecalibrate: () => void;
   /** Opens the live preview + sensitivity slider, seeded from `settings`. */
   onFineTune: () => void;
+  /** Brief 50 (new foundation): opens the tuner to redo one part. */
+  onAdjust?: () => void;
   /** Called after the calibration is deleted, so the router can re-check it. */
   onForget: () => void;
   /** Opens the mic and starts a tutorial run — same gate as the Play tab's own button. */
@@ -209,6 +213,7 @@ export function Settings({
   settings,
   onRecalibrate,
   onFineTune,
+  onAdjust,
   onForget,
   onTutorial,
   onHowTo,
@@ -378,8 +383,17 @@ export function Settings({
           <SettingIcon>
             <MicrophoneIcon />
           </SettingIcon>
-          <h3>Your voice (calibration)</h3>
+          <h3>{tuning().playerRulerV2 ? "Your voice" : "Your voice (calibration)"}</h3>
         </div>
+        {tuning().playerRulerV2 ? (
+          <VoiceCard
+            settings={settings}
+            busy={busy}
+            onCalibrate={() => void goListening(onRecalibrate)()}
+            onAdjust={() => void goListening(onAdjust ?? onRecalibrate)()}
+          />
+        ) : (
+        <>
         {settings ? (
           <div className="setting-callout">
             Centred on <strong>{Math.round(settings.f0Center)} Hz</strong>, your
@@ -425,6 +439,8 @@ export function Settings({
               </button>
             ))}
         </div>
+        </>
+        )}
         {settings && flying && (roster?.filter((s) => s.active).length ?? 0) > 1 && (
           <>
             <Choice
@@ -447,11 +463,13 @@ export function Settings({
             </p>
           </>
         )}
-        <p className="param-help">
-          Re-calibrate if you've changed microphone or room. Fine-tune opens the
-          live dot and a sensitivity slider, if the board feels too big or too
-          small for your voice.
-        </p>
+        {!tuning().playerRulerV2 && (
+          <p className="param-help">
+            Re-calibrate if you've changed microphone or room. Fine-tune opens the
+            live dot and a sensitivity slider, if the board feels too big or too
+            small for your voice.
+          </p>
+        )}
       </section>
 
       <ThemeSection

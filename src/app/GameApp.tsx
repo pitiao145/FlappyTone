@@ -1,7 +1,9 @@
 import { tuning } from "../game/tuning.ts";
-import { loadRuler, saveRuler, withHalves } from "../game/playerRuler.ts";
+import { loadRuler, saveRuler, seedRuler, withHalves, withLearnedScale } from "../game/playerRuler.ts";
+import { loadVoiceStart, quickStartSettings, saveVoiceStart, type VoicePreset } from "../game/voiceStart.ts";
+import { saveRoom, type RoomVerdict } from "../game/tuner.ts";
 import { applyPlayerRulerSwitch } from "../dev/shapesV2.ts";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { track, trackFirstSeoTouch, trackSpeechStyle } from "../analytics/client";
 import { seoSource } from "../site/pageAnalytics.ts";
 import { detectInAppBrowser } from "../lib/inAppBrowser";
@@ -38,6 +40,7 @@ import {
   loadProficiency,
   loadRecalTracking,
   loadSettings,
+  resetRecalTracking,
   loadWordMix,
   saveLastLevel,
   saveProficiency,
@@ -51,6 +54,8 @@ import type { RangeHalves } from "../pitch/calibration.ts";
 import type { RunStats } from "../game/scoring";
 import { BrowserHint } from "../ui/BrowserHint";
 import { Calibration } from "../ui/Calibration";
+import { VoiceChoice } from "../ui/VoiceChoice.tsx";
+import { VoiceTuner } from "../ui/VoiceTuner.tsx";
 import { Game, type GameHandle } from "../ui/Game";
 import { GameOver } from "../ui/GameOver";
 import { EarlyBirdModal, type EarlyBirdSurface } from "../ui/EarlyBirdModal.tsx";
@@ -87,6 +92,8 @@ export type Screen =
   | "howto"
   | "calibrate"
   | "finetune"
+  | "voiceChoice"
+  | "tuner"
   | "levelSelect"
   | "silentGate"
   | "tutorial"
@@ -395,6 +402,15 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
         return "play";
     }
   });
+  /**
+   * Brief 50: the Visualiser draws on the learned scale (new foundation),
+   * read from storage when it opens; it never teaches it. Keyed on the screen,
+   * so a scale a run just learned shows on the next visit.
+   */
+  const visualiserSettings = useMemo(
+    () => (screen === "visualiser" && settings && tuning().playerRulerV2 ? withLearnedScale(settings) : null),
+    [screen, settings],
+  );
   // Fires on every screen change (sent when "Usage analytics" is on).
   // "lab"/"devlogin" are dev-only and excluded from TrackedScreen, so they
   // are skipped here rather than widening that type for two screens that
@@ -764,6 +780,35 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
    * only meaningful (and required) for `intent === "drill"`; `opts.pairCombo`
    * only for `intent === "pairs"` — both set by ModeSelect before this fires.
    */
+  /** Brief 50: which tuner view Settings opened ("full" calibration or "adjust" one part). */
+  const [tunerStart, setTunerStart] = useState<"full" | "adjust">("full");
+  /** The options of the start that the voice choice interrupted (Drill tone, Pairs combo). */
+  const pendingOptsRef = useRef<{ drillTone?: Tone; pairCombo?: Tone[] | null } | undefined>(undefined);
+
+  /**
+   * Brief 50 quick start: settings from a voice preset, saved on this device,
+   * and a fresh learned scale that starts fast. Returns the new settings.
+   */
+  const applyQuickStart = useCallback((p: VoicePreset): CalibrationSettings => {
+    const s = quickStartSettings(p);
+    saveSettings(s);
+    saveRuler(seedRuler(s));
+    setSettings(s);
+    return s;
+  }, []);
+
+  /**
+   * The settings to fly on: the saved ones, else (new foundation on) a quick
+   * start from a voice the landing demo already chose on this device. Null
+   * when the player must still choose (or calibrate, on the old foundation).
+   */
+  const settingsOrQuickStart = useCallback((): CalibrationSettings | null => {
+    if (settings) return settings;
+    if (!tuning().playerRulerV2) return null;
+    const saved = loadVoiceStart();
+    return saved ? applyQuickStart(saved) : null;
+  }, [settings, applyQuickStart]);
+
   const startPlay = useCallback(
     (intent: StartIntent, opts?: { drillTone?: Tone; pairCombo?: Tone[] | null }) => {
       // Drill and Pairs are real, scored practice like Classic, so they're
@@ -797,8 +842,15 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
       // Playing without calibration would map the player's voice through a
       // stranger's f0 centre. Calibrate first, then continue to the run —
       // and calibration needs the mic too, so it goes through the gate.
-      if (!settings) {
+      if (!settingsOrQuickStart()) {
         pendingRef.current = intent;
+        // Brief 50: on the new foundation a new player picks a voice once
+        // (one tap) instead of calibrating; calibration lives in Settings.
+        if (tuning().playerRulerV2) {
+          pendingOptsRef.current = opts;
+          setScreen("voiceChoice");
+          return;
+        }
         requestMicAndThen(() => setScreen("calibrate"));
         return;
       }
@@ -819,7 +871,39 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
         setScreen(intent);
       });
     },
-    [settings, dailyLimitReached, openEarlyBird, requestMicAndThen],
+    [settingsOrQuickStart, dailyLimitReached, openEarlyBird, requestMicAndThen],
+  );
+
+  /** The voice choice's tap: save it, start from the preset, and carry on to what the player asked for. */
+  const onVoiceChosen = useCallback(
+    (p: VoicePreset) => {
+      saveVoiceStart(p);
+      applyQuickStart(p);
+      track({ type: "setting_changed", key: "voice_start", value: p });
+      const intent = pendingRef.current;
+      const opts = pendingOptsRef.current;
+      pendingRef.current = null;
+      pendingOptsRef.current = undefined;
+      if (intent === "visualiser") {
+        requestMicAndThen(async () => {
+          const audio = getMicSession()?.ctx;
+          if (audio && audio.state === "suspended") await audio.resume();
+          setVisualiserMicReady(true);
+          setScreen("visualiser");
+        }, "app-visualiser");
+        return;
+      }
+      if (!intent) {
+        setScreen("play");
+        return;
+      }
+      // Undo startPlay's own bookkeeping for the interrupted start; it runs again now.
+      if (intent === "game" || intent === "drill" || intent === "learn" || intent === "pairs") {
+        gameRunNumberRef.current -= 1;
+      }
+      startPlay(intent, opts);
+    },
+    [applyQuickStart, requestMicAndThen, startPlay],
   );
 
   /**
@@ -1193,14 +1277,20 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
    */
   const openVisualiser = useCallback(() => {
     if (gameAlive) gameRef.current?.pause();
-    if (!settings) pendingRef.current = "visualiser";
+    const s = settingsOrQuickStart();
+    if (!s) pendingRef.current = "visualiser";
+    if (!s && tuning().playerRulerV2) {
+      // Brief 50: the voice choice first; its tap continues to the Visualiser.
+      setScreen("voiceChoice");
+      return;
+    }
     requestMicAndThen(async () => {
       const audio = getMicSession()?.ctx;
       if (audio && audio.state === "suspended") await audio.resume();
       setVisualiserMicReady(true);
-      setScreen(settings ? "visualiser" : "calibrate");
+      setScreen(s ? "visualiser" : "calibrate");
     }, "app-visualiser");
-  }, [settings, gameAlive, requestMicAndThen]);
+  }, [settingsOrQuickStart, gameAlive, requestMicAndThen]);
 
   /**
    * `TutorialDone`'s "calibrationVisualiser" variant — a `?intent=visualiser`
@@ -1342,7 +1432,13 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
             settings={settings}
             onRecalibrate={() => {
               pendingRef.current = null;
-              setScreen("calibrate");
+              setTunerStart("full");
+              setScreen(tuning().playerRulerV2 ? "tuner" : "calibrate");
+            }}
+            onAdjust={() => {
+              pendingRef.current = null;
+              setTunerStart("adjust");
+              setScreen("tuner");
             }}
             onFineTune={() => setScreen("finetune")}
             onForget={() => setSettings(null)}
@@ -1372,7 +1468,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
           // separate constants, no separate CSS formula. See the
           // `.visualiser-screen.game-stage` rule in App.css.
           <Visualiser
-            settings={settings}
+            settings={visualiserSettings ?? settings}
             canvasWidth={CANVAS_W}
             canvasHeight={GAME_CANVAS_H}
             onLocked={(feature) => openEarlyBird("visualiser", feature)}
@@ -1412,6 +1508,35 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
           <Suspense fallback={<p className="note">loading login…</p>}>
             <DevLogin onBack={goHome} />
           </Suspense>
+        )}
+
+        {screen === "voiceChoice" && (
+          <VoiceChoice
+            onChoose={onVoiceChosen}
+            onBack={() => {
+              pendingRef.current = null;
+              pendingOptsRef.current = undefined;
+              setScreen("play");
+            }}
+          />
+        )}
+
+        {/* Brief 50: calibration as a tuner, from Settings only. A new
+            calibration (full or one part) re-seeds the learned scale. */}
+        {screen === "tuner" && (
+          <VoiceTuner
+            settings={settings}
+            start={tunerStart}
+            onDone={(s: CalibrationSettings, room: RoomVerdict | null) => {
+              saveSettings(s);
+              saveRuler(seedRuler(s));
+              resetRecalTracking();
+              if (room) saveRoom({ verdict: room, atMs: Date.now() });
+              setSettings(s);
+              setScreen("settings");
+            }}
+            onCancel={() => setScreen("settings")}
+          />
         )}
 
         {screen === "calibrate" && (

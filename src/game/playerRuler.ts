@@ -103,6 +103,34 @@ function valid(r: unknown): r is PlayerRulerRecord {
 }
 
 /**
+ * The stored ruler for this calibration, or null (none, unreadable, or seeded
+ * from another calibration). Reads only: never writes. Never throws.
+ */
+export function peekRuler(s: CalibrationSettings): PlayerRulerRecord | null {
+  try {
+    const raw = localStorage.getItem(RULER_KEY);
+    if (!raw) return null;
+    const r = JSON.parse(raw) as unknown;
+    return valid(r) && r.calibratedF0 === s.f0Center && !!r.quickStart === !!s.quickStart ? r : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Brief 50: the scale every tool draws on. The learned one when this device
+ * has one for this calibration, else the calibration itself. The Visualiser
+ * and the public tone checker use it; they never teach it (only game gates
+ * do). Returns a copy; nothing is saved.
+ */
+export function withLearnedScale(s: CalibrationSettings): CalibrationSettings {
+  const r = peekRuler(s);
+  if (!r) return s;
+  const g = rulerGrid(r);
+  return { ...s, f0Center: g.f0Center, rangeSemitones: g.up, rangeDownSemitones: g.down };
+}
+
+/**
  * The ruler for this calibration: the stored one when it is readable and was
  * seeded from this same calibration, else a fresh seed. Never throws.
  */

@@ -19,6 +19,7 @@ import type { Contour, TrailPoint } from "../../game/contours.ts";
 import { readAttempt, type FreeAttempt } from "../../game/freeAttempts.ts";
 import { VisualiserCore } from "../../game/visualiserCore.ts";
 import { loadSettings } from "../../game/settings.ts";
+import { withLearnedScale } from "../../game/playerRuler.ts";
 import { sessionNoiseMeter, startingNoiseFloor } from "../../game/sessionNoise.ts";
 import { speakerFMin, tuning } from "../../game/tuning.ts";
 import { PitchTracker } from "../../pitch/PitchTracker.ts";
@@ -113,10 +114,14 @@ export function micErrorMessage(err: unknown): string {
   return micErrorCopy(micErrorKind(err));
 }
 
-/** The game's own calibration if this device has one, else the quick one. */
-function savedBoard(): { cal: QuickCal; fromApp: boolean } | null {
+/**
+ * The game's own scale if this device has one (brief 50: the learned scale
+ * when the game has learned one, else the calibration), else the quick one.
+ * Reads storage only; the checker never teaches the learned scale.
+ */
+export function savedBoard(): { cal: QuickCal; fromApp: boolean } | null {
   const app = loadSettings();
-  if (app) return { cal: app, fromApp: true };
+  if (app) return { cal: withLearnedScale(app), fromApp: true };
   const quick = loadQuickCal();
   return quick ? { cal: quick, fromApp: false } : null;
 }

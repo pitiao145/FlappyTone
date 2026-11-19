@@ -62,7 +62,6 @@ export class StepCapture {
   heardMs = 0;
   readonly f0s: number[] = [];
   private lastVoicedAt: number | null = null;
-  private lastFrameAt: number | null = null;
   private startedAt: number | null;
   /**
    * A take only listens after `lockSilenceMs` of quiet. A word still sounding
@@ -72,10 +71,10 @@ export class StepCapture {
   private armed = false;
   private quietSince: number | null = null;
 
-  constructor(
-    private readonly o: CaptureOptions,
-    startedAtMs: number | null = null,
-  ) {
+  private readonly o: CaptureOptions;
+
+  constructor(o: CaptureOptions, startedAtMs: number | null = null) {
+    this.o = o;
     this.startedAt = startedAtMs;
   }
 
@@ -98,7 +97,6 @@ export class StepCapture {
 
   push(f: TunerFrame): CapturePhase {
     if (this.phase === "locked" || this.phase === "tooShort") return this.phase;
-    this.lastFrameAt = f.tMs;
     this.startedAt ??= f.tMs;
     const voiced = f.voiced && f.f0 !== null && Number.isFinite(f.f0);
     if (!this.armed) {

@@ -50,3 +50,46 @@ describe("player ruler record (brief 44)", () => {
     expect(learnRuler(r, { semitones: Array(30).fill(0.5), tone: 1, heard: false })).toBe(r);
   });
 });
+
+describe("brief 50: the learned scale everywhere, quick start", () => {
+  let store: Map<string, string>;
+  let writes = 0;
+  beforeEach(() => {
+    store = new Map<string, string>();
+    writes = 0;
+    vi.stubGlobal("localStorage", {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => { writes++; store.set(k, v); },
+      removeItem: (k: string) => void store.delete(k),
+      clear: () => store.clear(),
+    });
+  });
+
+  it("withLearnedScale: the learned grid when this calibration has one, and it never writes", async () => {
+    const { withLearnedScale } = await import("./playerRuler.ts");
+    expect(withLearnedScale(CAL)).toEqual(CAL); // nothing learned yet: the calibration
+    expect(writes).toBe(0);
+    saveRuler(withHalves(seedRuler(CAL), 5, 6));
+    writes = 0;
+    const out = withLearnedScale(CAL);
+    expect(out).toMatchObject({ f0Center: 130, rangeSemitones: 5, rangeDownSemitones: 6, noiseFloor: CAL.noiseFloor });
+    expect(writes).toBe(0);
+    // Another calibration's record is not this one's scale.
+    expect(withLearnedScale({ ...CAL, f0Center: 150 })).toEqual({ ...CAL, f0Center: 150 });
+  });
+
+  it("a quick-start record learns with the faster start; a calibrated one does not", () => {
+    const qs: CalibrationSettings = { ...CAL, quickStart: true };
+    const far = (s: CalibrationSettings) => learnRuler(seedRuler(s), { semitones: Array(30).fill(-5), targetChao: Array(30).fill(3.25), tone: 2, heard: true });
+    const fast = far(qs), slow = far(CAL);
+    expect(fast.quickStart).toBe(true);
+    expect(Math.abs(fast.state.grid.midSt)).toBeGreaterThan(3); // ~70% of the gap
+    expect(Math.abs(slow.state.grid.midSt)).toBeLessThan(1); // 10%
+  });
+
+  it("a preset record is not reused for a calibration with the same middle", () => {
+    const qs: CalibrationSettings = { ...CAL, quickStart: true };
+    saveRuler(withHalves(seedRuler(qs), 7, 7));
+    expect(rulerGrid(loadRuler(CAL)).up).toBe(CAL.rangeSemitones);
+  });
+});

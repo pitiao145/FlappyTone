@@ -54,7 +54,8 @@ export type RunEndReason = "out_of_hearts" | "finished" | "quit" | "restart" | "
 
 /** The calibration steps, mirrored from Calibration.tsx's `Step`. */
 // "middle": brief 44 middle step, only with the player ruler on (dev until brief 48).
-export type CalibStep = "quiet" | "talk" | "middle" | "low" | "high" | "done" | "preview";
+/** Brief 50 adds the Settings tuner's parts: room, top, bottom (middle and done are shared). */
+export type CalibStep = "quiet" | "talk" | "middle" | "low" | "high" | "done" | "preview" | "room" | "top" | "bottom";
 
 /**
  * Restated rather than imported from `audio/mic.ts`.
@@ -631,7 +632,10 @@ export type TrackedScreen =
   | "progress"
   | "profile"
   | "resetPassword"
-  | "toneder";
+  | "toneder"
+  /** Brief 50: the quick start's voice choice and the Settings tuner. */
+  | "voiceChoice"
+  | "tuner";
 
 /** The Settings controls that emit a `setting_changed` event. */
 /** The visualiser's practice tabs, mirrored from Visualiser.tsx. */
@@ -649,7 +653,11 @@ export type SettingKey =
   | "tone_marks"
   | "speech_style"
   | "theme"
-  | "sharing";
+  | "sharing"
+  /** Brief 50: the quick start's lower/higher voice choice ("lower" | "higher"). Never a voice number. */
+  | "voice_start"
+  /** Brief 50: "Back to calibration" in the Your voice card (value "calibration"). */
+  | "voice_scale";
 
 /**
  * Every event type this app sends, one kind only (brief 35: no consent tiers
