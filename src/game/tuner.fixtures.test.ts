@@ -152,3 +152,22 @@ describe("room and meters", () => {
     expect(halfSteps(0.4)).toBe("½");
   });
 });
+
+describe("the tuner's own tracker hears a recorded voice on every step (19 Nov bug)", () => {
+  it.each(["middle", "top", "bottom"] as const)("%s", async (part) => {
+    const { tunerTrackerConfig } = await import("./tuner.ts");
+    const { samples, sampleRate } = decodeWav(readFileSync("fixtures/captures/jane_ma1.wav"));
+    const cfg = tunerTrackerConfig(part, { f0Center: 180, noiseFloor: 0.0005 }, sampleRate);
+    expect(Object.values(cfg).every((v) => v !== undefined)).toBe(true);
+    const tr = new PitchTracker(cfg);
+    const cap = new StepCapture(OPTS);
+    let t = 0;
+    for (let s = 0; s + FRAME <= samples.length; s += HOP, t += (HOP / sampleRate) * 1000) {
+      const p = tr.push(samples.subarray(s, s + FRAME));
+      cap.push({ tMs: t, voiced: p.voiced, f0: p.f0 });
+    }
+    for (const f of silence(t, 800)) cap.push(f);
+    expect(cap.phase).toBe("locked");
+    expect(cap.f0s.length).toBeGreaterThan(20);
+  });
+});

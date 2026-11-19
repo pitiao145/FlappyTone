@@ -33,6 +33,7 @@ import {
   type RoomVerdict,
   type TunerPart,
   type TunerResult,
+  tunerTrackerConfig,
 } from "../game/tuner.ts";
 import { speakerFMin, tuning } from "../game/tuning.ts";
 import type { Word } from "../game/words.ts";
@@ -292,7 +293,7 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
     : [part === "top" ? TOP_WORD : BOTTOM_WORD];
   const [take, setTake] = useState(0);
   const [attempt, setAttempt] = useState(0);
-  const [note, setNote] = useState<"hold" | "louder" | "locked">("hold");
+  const [note, setNote] = useState<"hold" | "louder" | "pause" | "locked">("hold");
   /** "Couldn't hear that, try again": shown until the player's voice comes in again. */
   const [retry, setRetry] = useState(false);
   const retryRef = useRef(false);
@@ -318,7 +319,7 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
     let normal: PitchTracker | null = null;
     let low: PitchTracker | null = null;
     let lastNote: string = "hold";
-    const say = (n: "hold" | "louder" | "locked") => {
+    const say = (n: "hold" | "louder" | "pause" | "locked") => {
       if (n !== lastNote) {
         lastNote = n;
         setNote(n);
@@ -327,8 +328,8 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
     setFrameSink((frame, sampleRate) => {
       // Deaf while the example plays: the speaker would be measured, not the player.
       if (isCueAudible()) return;
-      const cfg = { sampleRate, noiseFloor: draft.noiseFloor, minVoicedRunMs: tuning().minVoicedRunMs };
-      normal ??= new PitchTracker({ ...cfg, fMin: part === "middle" ? undefined : speakerFMin(draft.f0Center) });
+      const cfg = tunerTrackerConfig(part, draft, sampleRate);
+      normal ??= new PitchTracker(cfg);
       low ??= new PitchTracker({ ...cfg, fMin: tuning().pitchFloorLowHz });
       const p = normal.push(frame);
       const q = low.push(frame);
@@ -354,7 +355,8 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
         setRetry(true);
         setAttempt((a) => a + 1);
       } else if (phase !== "locked") {
-        say(cap.stalled(now) ? "louder" : "hold");
+        // Voice before the short quiet that opens a take: tell the player, never stay silent.
+        say(!cap.listening && p.voiced ? "pause" : cap.stalled(now) ? "louder" : "hold");
       }
     });
     const stall = setInterval(() => {
@@ -436,6 +438,7 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
     note === "locked" ? { title: "Got it", sub: "" }
     : retry ? { title: "Couldn't hear that, try again", sub: "Say it once more, a little longer." }
     : note === "louder" ? { title: "Still listening", sub: "A bit louder?" }
+    : note === "pause" ? { title: "Ready when you are", sub: "Stop for a moment, then say it once." }
     : { title: "Listening", sub: "Hold it a little. It locks when you stop." };
   return (
     <>

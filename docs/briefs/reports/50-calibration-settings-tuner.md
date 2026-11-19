@@ -102,3 +102,9 @@ Copy to check: "Which voice is closer to yours?", the room verdicts (Quiet / A b
 - "Fine-tune" (live dot + sensitivity slider) is not on the new card; the tuner's per-part redo replaces it.
 - Brief 49 (pair reader) is on its own branch; nothing here touches `syllables.ts`.
 - Not built: a softer first gate for quick-start players (see step 1).
+
+## Fix after Pierre's first test (19 Nov 2026)
+
+- **Bug:** on the Middle step, saying 媽 did nothing. The voice bars moved, but the hold bar stayed empty and the step never moved on. Cause: the tuner built its pitch tracker with `fMin: undefined`. That overrode the tracker's default floor, so it found no pitch at all (checked: 0 voiced frames on the recorded `jane_ma1.wav`). The voice bars use loudness only, so they still moved. The unit tests missed it because they fed the step logic directly, not through the tuner's own tracker setup.
+- **Fix:** `tunerTrackerConfig()` in `tuner.ts` (never sets a key to undefined). New test: the tuner's own tracker setup hears a recorded 媽 and locks on the Middle, Top and Bottom steps.
+- **Feedback:** if you speak before the short quiet that opens a take, the meter now says "Ready when you are. Stop for a moment, then say it once." The screen no longer stays silent.

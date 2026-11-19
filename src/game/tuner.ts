@@ -13,7 +13,8 @@
  */
 import { computeMiddleHz } from "../pitch/calibration.ts";
 import type { CalibrationSettings } from "./settings.ts";
-import { tuning } from "./tuning.ts";
+import { speakerFMin, tuning } from "./tuning.ts";
+import type { PitchTrackerConfig } from "../pitch/types.ts";
 
 export type TunerPart = "room" | "middle" | "top" | "bottom";
 export const TUNER_PARTS: TunerPart[] = ["room", "middle", "top", "bottom"];
@@ -258,4 +259,19 @@ export function halfSteps(st: number): string {
 export function semitoneWord(st: number): string {
   const n = halfSteps(st);
   return `${n} semitone${n === "1" || n === "½" ? "" : "s"}`;
+}
+
+/**
+ * The tuner's pitch tracker settings for one step. The middle step keeps the
+ * tracker's default floor; top and bottom use the floor for this middle.
+ * Never sets a key to undefined: a spread `fMin: undefined` overrides the
+ * tracker's default and it then hears no pitch (19 Nov 2026 bug).
+ */
+export function tunerTrackerConfig(
+  part: Exclude<TunerPart, "room">,
+  s: Pick<CalibrationSettings, "f0Center" | "noiseFloor">,
+  sampleRate: number,
+): Partial<PitchTrackerConfig> & { sampleRate: number } {
+  const cfg = { sampleRate, noiseFloor: s.noiseFloor, minVoicedRunMs: tuning().minVoicedRunMs };
+  return part === "middle" ? cfg : { ...cfg, fMin: speakerFMin(s.f0Center) };
 }
