@@ -1,5 +1,5 @@
 ---
-status: ready
+status: running
 notion_task:
 risk: needs-approval
 ---

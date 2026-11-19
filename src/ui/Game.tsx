@@ -481,6 +481,10 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
             targetChao: g.targetChao,
             tone: g.tone,
             heard: g.heard,
+            // Brief 50: a wall-hit third tone does not teach the bottom line,
+            // and single-tone play (Tone Drill) does not move the middle.
+            wallHit: g.wallHit,
+            middleVote: mode !== "drill",
             bandLowSt: stFromRef(ruler, speakerFMin(settings.f0Center)),
             bandHighSt: stFromRef(ruler, DEFAULT_CONFIG.fMax),
           });

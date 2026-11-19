@@ -53,6 +53,12 @@ export interface CalibrationSettings {
    * absent on older records, which fall back to the fixed `noiseFloorMax`.
    */
   voiceRms?: number;
+  /**
+   * Brief 50: true when these numbers are a voice preset (quick start), not a
+   * calibration. The game plays on them and the learned scale fits them;
+   * Settings shows "not calibrated". Optional and additive, like `voice`.
+   */
+  quickStart?: true;
 }
 
 /**
@@ -130,6 +136,7 @@ export function loadSettings(): CalibrationSettings | null {
     if (!(typeof s.voiceRms === "number" && s.voiceRms > 0 && s.voiceRms < 1)) {
       delete loaded.voiceRms;
     }
+    if (s.quickStart !== true) delete loaded.quickStart;
     return loaded;
   } catch {
     return null;

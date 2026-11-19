@@ -148,3 +148,58 @@ describe("44 review fixes", () => {
     expect(highT3.t3.frames).toBe(0);
   });
 });
+
+describe("brief 50: safer and faster learning", () => {
+  it("a third tone that hit a wall teaches the bottom line nothing (decision 6)", () => {
+    const s = newGridLearnState({ midSt: 0, up: 6, down: 4 });
+    const low = onTarget(3, 1, TRUE); // a real low third tone, 7 st under the middle
+    const hit = learnGridFromGate(s, { ...low, wallHit: true }, P);
+    expect(hit.t3.frames).toBe(0);
+    expect(hit.grid.down).toBe(4);
+    const clean = learnGridFromGate(s, low, P);
+    expect(clean.t3.frames).toBe(30);
+  });
+
+  it("a wall hit still feeds the middle and the top", () => {
+    const s = newGridLearnState({ midSt: -2, up: 6, down: 7 });
+    const mid = learnGridFromGate(s, { ...onTarget(2, 3.5, TRUE), wallHit: true }, P);
+    expect(mid.grid.midSt).toBeGreaterThan(-2);
+    const top = learnGridFromGate(s, { ...onTarget(1, 5, TRUE), wallHit: true }, P);
+    expect(top.t1.frames).toBe(30);
+  });
+
+  it("single-tone play (middleVote false) leaves the middle alone but feeds its own line", () => {
+    let s = newGridLearnState({ midSt: 0, up: 3, down: 4 });
+    // A held first tone at 1 st over the middle, target at chao 4.5: the vote loop of test 8.
+    const g: LearnGate = { semitones: Array(30).fill(1), targetChao: Array(30).fill(4.5), tone: 1, heard: true };
+    let looped = s;
+    for (let i = 0; i < 60; i++) {
+      if (i % 5 === 0) { s = startGridRun(s); looped = startGridRun(looped); }
+      s = learnGridFromGate(s, { ...g, middleVote: false }, P);
+      looped = learnGridFromGate(looped, g, P);
+    }
+    expect(s.grid.midSt).toBe(0);
+    expect(s.all.frames).toBe(0);
+    expect(s.t1.frames).toBe(1800);
+    // Today's rule on the same play: the middle sinks under the voice.
+    expect(looped.grid.midSt).toBeLessThan(-1);
+  });
+
+  it("quick start: the first gates close the start share of the gap, uncapped until learned", () => {
+    const far = newGridLearnState({ midSt: -5, up: 6, down: 7 });
+    const qs = { ...P, startRate: 0.7, startGates: 3, uncappedUntilLearned: true };
+    const one = learnGridFromGate(far, onTarget(2, 3.5, TRUE), qs);
+    expect(one.grid.midSt).toBeCloseTo(-5 + 0.7 * 5, 5); // 3.5 st in one gate: over the 1.5 run cap
+    let s = far;
+    for (let i = 0; i < 4; i++) s = learnGridFromGate(s, onTarget(2, 3.5, TRUE), qs);
+    const before = s.grid.midSt;
+    const fourthGap = 0 - before;
+    const fifth = learnGridFromGate(s, onTarget(2, 3.5, TRUE), qs);
+    expect(fifth.grid.midSt - before).toBeCloseTo(0.1 * fourthGap, 5); // back to the normal rate
+  });
+
+  it("without the start fields nothing changes (calibrated players)", () => {
+    const far = newGridLearnState({ midSt: -5, up: 6, down: 7 });
+    expect(learnGridFromGate(far, onTarget(2, 3.5, TRUE), P).grid.midSt).toBeCloseTo(-4.5, 5);
+  });
+});

@@ -20,7 +20,7 @@ import { Run, type RunSnapshot } from "../../game/run.ts";
 import type { OutcomeFlash } from "../GameHud.tsx";
 import type { RunStats } from "../../game/scoring.ts";
 import type { Tone } from "../../game/gates.ts";
-import { loadSettings, type CalibrationSettings } from "../../game/settings.ts";
+import { loadSettings } from "../../game/settings.ts";
 import { sessionNoiseMeter, startingNoiseFloor } from "../../game/sessionNoise.ts";
 import { speakerFMin, tuning } from "../../game/tuning.ts";
 import type { Word } from "../../game/words.ts";
@@ -31,22 +31,14 @@ import { micErrorCopy } from "../micErrors.ts";
 import { clipUrl, playWord, stopWord, unlockAudio } from "../../site/wordAudio.ts";
 
 export { micErrorCopy };
+import { VOICE_PRESETS, saveVoiceStart, type VoicePreset } from "../../game/voiceStart.ts";
 
-export type VoicePreset = "lower" | "higher";
-
-/**
- * Calibration for a visitor who never calibrated: one preset per voice
- * register, centred on typical speaking pitch (about 115 Hz and 200 Hz) with
- * a generous range, so most voices stay on the grid without the calibration
- * screen. A device that has calibrated in /app uses its own numbers.
- */
-const PRESETS: Record<VoicePreset, CalibrationSettings> = {
-  lower: { f0Center: 115, noiseFloor: 0.002, rangeSemitones: 6, rangeDownSemitones: 5 },
-  higher: { f0Center: 200, noiseFloor: 0.002, rangeSemitones: 6, rangeDownSemitones: 5 },
-};
+export type { VoicePreset };
+const PRESETS = VOICE_PRESETS;
 
 export function hasSavedCalibration(): boolean {
-  return loadSettings() !== null;
+  const s = loadSettings();
+  return s !== null && !s.quickStart;
 }
 
 export interface MiniResult {
@@ -118,7 +110,11 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<MiniGame> {
     Promise.all(opts.words.map((w) => clipUrl(w.id))),
     new Promise((done) => setTimeout(done, PRELOAD_MAX_MS)),
   ]);
-  const settings = loadSettings() ?? PRESETS[opts.voice];
+  const stored = loadSettings();
+  const saved = stored && !stored.quickStart ? stored : null;
+  // Brief 50: the demo's voice choice is the game's quick start on this device.
+  if (!saved) saveVoiceStart(opts.voice);
+  const settings = saved ?? PRESETS[opts.voice];
   lockWorldTheme("pixel-flappy");
 
   const kind = opts.run ?? { mode: "game" };

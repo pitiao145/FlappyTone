@@ -304,6 +304,18 @@ export interface GridLearnParams {
    */
   anchorTopChao: number;
   anchorBottomChao: number;
+  /**
+   * Brief 50 quick start: the first `startGates` heard gates close this share
+   * of the gap instead of `rate` (a player who skipped calibration starts far
+   * off). Optional: absent means `rate` from the first gate.
+   */
+  startRate?: number;
+  startGates?: number;
+  /**
+   * Brief 50: while the scale is not yet learned (`gridLearned`), the per-run
+   * cap does not apply. Optional: absent means the cap always applies.
+   */
+  uncappedUntilLearned?: boolean;
 }
 
 /** Histogram bins: GRID_BIN_ST wide, from -GRID_SPAN_ST to +GRID_SPAN_ST around refHz. */
@@ -354,6 +366,21 @@ export interface LearnGate {
   /** The tracker's band edges (st from refHz); frames at an edge are clamped. Optional. */
   bandLowSt?: number;
   bandHighSt?: number;
+  /**
+   * Brief 50 (Pierre's decision 6): the gate cost a heart. A third tone that
+   * hit a wall does not feed the bottom line, so the floor never rises to
+   * meet a mistake. Optional: absent means no wall.
+   */
+  wallHit?: boolean;
+  /**
+   * Brief 50 (test 8): false in single-tone play (Tone Drill). A vote
+   * subtracts the target's share of a half (a first tone at chao ~4.5: 0.75 x
+   * up), and that half is top minus middle, so votes that all sit on one side
+   * feed back: on first-tone-only play the middle sank and the up half grew
+   * (2.3 -> 4.9 st). The gate still feeds its own line (top or bottom pool).
+   * Optional: absent means the gate votes.
+   */
+  middleVote?: boolean;
 }
 
 const emptyHist = (): GridHist => ({ w: new Array<number>(GRID_BINS).fill(0), frames: 0 });
@@ -430,7 +457,8 @@ function stepToward(cur: number, target: number, rate: number, used: number, bud
 
 /**
  * Learn from one resolved gate. An unheard gate returns the state unchanged.
- * A gate that hit a wall is still voice data and is learned from.
+ * A gate that hit a wall still feeds the middle and the top; a third tone
+ * that hit a wall does not feed the bottom (brief 50, decision 6).
  */
 export function learnGridFromGate(
   s: GridLearnState,
@@ -450,7 +478,7 @@ export function learnGridFromGate(
   // Middle votes: the frame's pitch minus the target's offset from the middle.
   const votes: number[] = [];
   const tc = gate.targetChao;
-  if (tc && tc.length === gate.semitones.length) {
+  if (tc && tc.length === gate.semitones.length && gate.middleVote !== false) {
     for (let i = 0; i < tc.length; i++) {
       const x = gate.semitones[i], c = tc[i];
       if (!keep(x) || !Number.isFinite(c)) continue;
@@ -465,7 +493,7 @@ export function learnGridFromGate(
   let tMax = -Infinity, tMin = Infinity;
   if (tc) for (const c of tc) if (Number.isFinite(c)) { if (c > tMax) tMax = c; if (c < tMin) tMin = c; }
   const t1 = gate.tone === 1 && tMax >= p.anchorTopChao ? addGate(s.t1, frames, p.memoryGates) : s.t1;
-  const t3 = gate.tone === 3 && tMin <= p.anchorBottomChao ? addGate(s.t3, frames, p.memoryGates) : s.t3;
+  const t3 = gate.tone === 3 && !gate.wallHit && tMin <= p.anchorBottomChao ? addGate(s.t3, frames, p.memoryGates) : s.t3;
   const next: GridLearnState = { ...s, all, t1, t3, gates: s.gates + 1 };
   const est = gridEstimate(next, p);
 
@@ -478,7 +506,11 @@ export function learnGridFromGate(
   let topSt = g0.midSt + g0.up;
   let bottomSt = g0.midSt - g0.down;
   let { mid: usedMid, up: usedUp, down: usedDown } = s.runMoved;
-  if (est.midSt !== null) [midSt, usedMid] = stepToward(midSt, est.midSt, p.rate, usedMid, p.maxStepPerRun);
+  // Quick start (brief 50): faster steps for the first heard gates, and no
+  // per-run cap until both anchor pools are full.
+  const rate = p.startGates && s.gates < p.startGates ? (p.startRate ?? p.rate) : p.rate;
+  const cap = p.uncappedUntilLearned && !gridLearned(s, p.minFrames) ? Infinity : p.maxStepPerRun;
+  if (est.midSt !== null) [midSt, usedMid] = stepToward(midSt, est.midSt, rate, usedMid, cap);
   // A middle move carries the top and bottom lines with it (halves kept), so
   // the middle votes, which use the halves, never feed back on themselves
   // (44 review: pairs-only play ran away to the clamps). First-tone and
@@ -486,8 +518,8 @@ export function learnGridFromGate(
   const carried = midSt - g0.midSt;
   topSt += carried;
   bottomSt += carried;
-  if (est.topSt !== null) [topSt, usedUp] = stepToward(topSt, est.topSt, p.rate, usedUp, p.maxStepPerRun);
-  if (est.bottomSt !== null) [bottomSt, usedDown] = stepToward(bottomSt, est.bottomSt, p.rate, usedDown, p.maxStepPerRun);
+  if (est.topSt !== null) [topSt, usedUp] = stepToward(topSt, est.topSt, rate, usedUp, cap);
+  if (est.bottomSt !== null) [bottomSt, usedDown] = stepToward(bottomSt, est.bottomSt, rate, usedDown, cap);
   const clampHalfTo = (x: number) => Math.min(p.halfMax, Math.max(p.halfMin, x));
   const up = clampHalfTo(topSt - midSt);
   const down = clampHalfTo(midSt - bottomSt);

@@ -190,6 +190,8 @@ export interface GateVoice {
   tone: Tone | null;
   /** False when the gate went "couldn't hear that" (hard rule 8). */
   heard: boolean;
+  /** True when the gate cost a heart (a wall, or a confident wrong read). */
+  wallHit: boolean;
 }
 
 export type CueStyle = "pause" | "off";
@@ -1277,7 +1279,6 @@ export class Run {
     // heart. This is why the collision flag is dropped here, not in scoreGate.
     const heard = heardUtterance(state.samples, mergeGapMs);
     const collided = heard ? state.collided : false;
-    this.reportGateVoice(state, heard);
 
     // Only the stretch flown inside the gate — see `lastOutcome.path` below
     // for why the whole trail isn't used.
@@ -1357,6 +1358,10 @@ export class Run {
     ) {
       ({ outcome, accuracy } = applyClassifierBoost(outcome, accuracy, classifiedConfidence));
     }
+
+    // After scoring: the learner needs to know whether this gate cost a heart
+    // (brief 50: a third tone that hit a wall does not teach the bottom line).
+    this.reportGateVoice(state, heard, outcome === "collision");
 
     // Tone accuracy — the learning number, separate from the score. Every
     // mode, a wall hit included: only an unheard gate has nothing to judge.
@@ -1449,7 +1454,7 @@ export class Run {
   }
 
   /** Brief 44: hands the gate's voice to the player-ruler learning. Never breaks the run. */
-  private reportGateVoice(state: ActiveGateState, heard: boolean): void {
+  private reportGateVoice(state: ActiveGateState, heard: boolean, wallHit: boolean): void {
     if (!this.onGateVoice) return;
     try {
       const v = state.voice;
@@ -1460,6 +1465,7 @@ export class Run {
         targetChao: v.map((x) => (span > 0 ? corridorChaoAt(state.gate.shape, (x.atMs - t0) / span) : NaN)),
         tone: state.gate.syllables === 1 ? state.gate.tone : null,
         heard,
+        wallHit,
       });
     } catch {
       // learning is optional; a run never fails because of it

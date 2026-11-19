@@ -25,7 +25,7 @@ import {
   type PlayerGrid,
 } from "../pitch/calibration.ts";
 import type { CalibrationSettings } from "./settings.ts";
-import { gridLearnParams, tuning } from "./tuning.ts";
+import { gridLearnParams, quickStartLearnParams, tuning } from "./tuning.ts";
 
 export const RULER_KEY = "toneflap.ruler.v1";
 const BINS = Math.round((2 * GRID_SPAN_ST) / GRID_BIN_ST) + 1;
@@ -39,6 +39,8 @@ export interface PlayerRulerRecord {
   /** False until both the first-tone and the third-tone pools have enough frames. */
   learned: boolean;
   state: GridLearnState;
+  /** Brief 50: seeded from a voice preset (quick start); learns with the faster start. */
+  quickStart?: boolean;
 }
 
 /** A fresh record from a calibration: middle and halves carried over, not yet learned. */
@@ -49,6 +51,7 @@ export function seedRuler(s: CalibrationSettings): PlayerRulerRecord {
     calibratedF0: s.f0Center,
     learned: false,
     state: newGridLearnState({ midSt: 0, up: s.rangeSemitones, down: s.rangeDownSemitones }),
+    ...(s.quickStart ? { quickStart: true } : {}),
   };
 }
 
@@ -68,7 +71,7 @@ export function startRulerRun(r: PlayerRulerRecord): PlayerRulerRecord {
 
 /** Learn from one resolved gate (semitones from `refHz`). Unheard gates change nothing. */
 export function learnRuler(r: PlayerRulerRecord, gate: LearnGate): PlayerRulerRecord {
-  const state = learnGridFromGate(r.state, gate, gridLearnParams());
+  const state = learnGridFromGate(r.state, gate, r.quickStart ? quickStartLearnParams() : gridLearnParams());
   if (state === r.state) return r;
   return { ...r, state, learned: gridLearned(state, tuning().gridLearnMinFrames) };
 }
@@ -108,7 +111,9 @@ export function loadRuler(s: CalibrationSettings): PlayerRulerRecord {
     const raw = localStorage.getItem(RULER_KEY);
     if (raw) {
       const r = JSON.parse(raw) as unknown;
-      if (valid(r) && r.calibratedF0 === s.f0Center) return { ...r, learned: !!r.learned };
+      if (valid(r) && r.calibratedF0 === s.f0Center && !!r.quickStart === !!s.quickStart) {
+        return { ...r, learned: !!r.learned, quickStart: !!r.quickStart || undefined };
+      }
     }
   } catch {
     // unreadable: seed below

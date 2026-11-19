@@ -686,6 +686,30 @@ export interface Tuning {
   /** Calibration middle step: voiced time needed per take (ms), and takes per word. */
   middleTakeVoicedMs: number;
   middleTakesPerWord: number;
+  // ---- quick start and the voice tuner (brief 50)
+  /**
+   * Quick start (no calibration): the first `gridLearnStartGates` heard gates
+   * close this share of the gap to the estimate (step 1 of brief 50: 0.7 x 3
+   * kept a voice between the two presets alive past gate 14; today's 0.1
+   * died near gate 9). Only for a scale seeded from a voice preset.
+   */
+  gridLearnStartRate: number;
+  gridLearnStartGates: number;
+  /** Quick start: no per-run cap until both anchor pools are full (1 = on, 0 = off). */
+  gridLearnUncappedUntilLearned: number;
+  /** Tuner: voiced time a step needs before it may lock (ms). */
+  tunerNeedVoicedMs: number;
+  /** Tuner: after enough voice, this much silence locks the step (ms). */
+  tunerLockSilenceMs: number;
+  /** Tuner: a step locks anyway after this much voice, so a held note cannot run on (ms). */
+  tunerMaxVoicedMs: number;
+  /** Tuner: no voice for this long shows "a bit louder?" (ms). */
+  tunerStallMs: number;
+  /** Tuner room step: how long it listens (ms). */
+  roomListenMs: number;
+  /** Room verdicts: noise floor (RMS) under this is quiet; over `roomNoisyRms` is too noisy. */
+  roomQuietRms: number;
+  roomNoisyRms: number;
 
   /**
    * Per-tone gate length in seconds.
@@ -882,7 +906,17 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   gridAnchorTopChao: 4.0,
   gridAnchorBottomChao: 1.5,
   middleTakeVoicedMs: 600,
-  middleTakesPerWord: 2,
+  middleTakesPerWord: 1,
+  gridLearnStartRate: 0.7,
+  gridLearnStartGates: 3,
+  gridLearnUncappedUntilLearned: 1,
+  tunerNeedVoicedMs: 450,
+  tunerLockSilenceMs: 300,
+  tunerMaxVoicedMs: 2500,
+  tunerStallMs: 4000,
+  roomListenMs: 2000,
+  roomQuietRms: 0.0005,
+  roomNoisyRms: 0.0015,
   gateDurationS: Object.freeze({ 1: 0.55, 2: 1.07, 3: 1.25, 4: 0.6 }),
   polylines: DEFAULT_POLYLINES,
   voiceMatchF0Hz: 160,
@@ -929,6 +963,17 @@ export function resetTuning(): void {
 /** The tracker's `fMin` for a speaker with this calibrated centre (null: not calibrated). */
 export function speakerFMin(f0Center: number | null | undefined): number {
   return speakerFloorHz(f0Center, tuning().pitchFloorLowHz, tuning().pitchFloorHighHz, tuning().pitchFloorFactor);
+}
+
+/** `GridLearnParams` for a scale seeded from a voice preset (brief 50 quick start). */
+export function quickStartLearnParams(): GridLearnParams {
+  const t = tuning();
+  return {
+    ...gridLearnParams(),
+    startRate: t.gridLearnStartRate,
+    startGates: t.gridLearnStartGates,
+    uncappedUntilLearned: t.gridLearnUncappedUntilLearned >= 1,
+  };
 }
 
 /** `GridLearnParams` from the live tuning. */
