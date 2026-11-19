@@ -386,3 +386,13 @@ Found by Pierre in the dev Visualiser (gōngyuán read "T4 · T2"). Analysed, no
 - Surprises: (1) logging the learned grid would be a voice profile, which brief 35 removed from analytics and the privacy policy rules out; proposal recommends noise floor + share heard only. (2) The ruler's pitch histograms on the device need a privacy-policy line at go-live whatever logging does (hard rule 12). (3) No public page hard-codes a 5-5 first tone; every drawn line comes from catalog or averages data, so it follows the go-live regeneration.
 - Open for Pierre (report, "Open decisions"): release-note wording, Monday go-live + marker for stats, logging A/B, regenerate site averages, whether Visualiser / checker / TONEder read the ruler, go-live order. Blockers before go-live unchanged: re-record 30 older first-tone words, pair-reading fix, natural pair cuts, merge `main` (both touched `words.ts`), `process-clips` on the one ruler.
 - Phase B plan is complete. Next is a go-live session, only on Pierre's yes.
+
+## 50 Calibration tuner, quick start, learned scale everywhere — 19 Nov 2026 — done
+
+Report: `docs/briefs/reports/50-calibration-settings-tuner.md`. All behind `playerRulerV2` (new foundation); old flow unchanged when off.
+- New player: one "Lower / Higher voice" tap (`VoiceChoice.tsx`, `voiceStart.ts`), none when the landing demo saved it. Preset settings marked `quickStart`; the learned scale starts fast (first 3 heard gates 70%, no per-run cap until learned). Step 1 (`bench39/quickstart.mjs`): an in-between voice loses ~1 extra heart on gate 1, then flies like a calibrated one.
+- Calibration is a tuner in Settings (`VoiceTuner.tsx`, `tuner.ts`): Room, Middle (媽 馬 once each), Top, Bottom; locks on silence; per-part redo; re-seeds the learned scale. Card: `VoiceCard.tsx`.
+- `withLearnedScale` (read-only) feeds the Visualiser and the public checker.
+- Learner: wall-hit third tones skip the bottom pool; Tone Drill does not vote on the middle (the test-8 loop: one-sided votes sank the middle, so the top half grew). `bench39/tophalf.mjs`.
+- Visualiser band button: "Target zone on/off".
+- Go-live: privacy line for the on-device voice summary + voice choice + room verdict.
