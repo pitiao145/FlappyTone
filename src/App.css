@@ -603,6 +603,11 @@
 .tuner-step.is-done, .tuner-step.is-now { color: var(--ink); font-weight: 600; }
 .tuner-step.is-done { color: var(--accent); }
 .tuner-step.is-done .tuner-step-bar, .tuner-step.is-now .tuner-step-bar { background: var(--accent); }
+.tuner-word { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+.tuner-word-step { font-size: 13px; color: var(--ink-muted); }
+.tuner-word-hanzi { font-size: 64px; line-height: 1.1; color: var(--ink); }
+.tuner-word-pinyin { font-size: 22px; font-weight: 600; color: var(--ink); }
+.tuner-word-hint { font-size: 15px; color: var(--accent); font-weight: 600; margin-top: 2px; }
 .tuner-head { display: flex; flex-direction: column; gap: 6px; }
 .tuner-head .note { margin: 0; line-height: 1.4; }
 .tuner-head-center { align-items: center; text-align: center; }

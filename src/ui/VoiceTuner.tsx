@@ -252,25 +252,15 @@ function paintBars(el: HTMLElement, n: number): void {
 
 // ------------------------------------------------------------------ voice steps
 
-const STEP_COPY: Record<Exclude<TunerPart, "room">, { title: string; say: (w: Word | undefined) => React.ReactNode }> = {
-  middle: {
-    title: "Your middle",
-    say: (w) => (
-      <>Listen, then say <span lang="zh-Hant">{w?.hanzi ?? ""}</span> {w?.pinyin ?? ""} back in your normal voice. Stop when you are done.</>
-    ),
-  },
-  top: {
-    title: "Your top line",
-    say: () => (
-      <>Say <span lang="zh-Hant">媽</span> mā as a first tone: high and flat, on a note that feels easy. Stop when you are done.</>
-    ),
-  },
-  bottom: {
-    title: "Your bottom line",
-    say: () => (
-      <>Say <span lang="zh-Hant">馬</span> mǎ as a third tone: go low and stay low, without forcing it. Stop when you are done.</>
-    ),
-  },
+/**
+ * What each voice step asks for. The word itself is shown big (hanzi and
+ * pinyin), with one short line on how to say it (Pierre, 19 Nov: learners
+ * should see the word, not read a sentence).
+ */
+const STEP_COPY: Record<Exclude<TunerPart, "room">, { title: string; hint: string; fallback: { hanzi: string; pinyin: string } }> = {
+  middle: { title: "Your middle", hint: "Say it in your normal voice", fallback: { hanzi: "媽", pinyin: "mā" } },
+  top: { title: "Your top line", hint: "First tone: high, easy, flat", fallback: { hanzi: "媽", pinyin: "mā" } },
+  bottom: { title: "Your bottom line", hint: "Third tone: go low, stay low", fallback: { hanzi: "馬", pinyin: "mǎ" } },
 };
 
 interface VoiceStepProps {
@@ -288,6 +278,10 @@ interface Live {
   progress: number;
   /** After a top/bottom take locks: the measured line (st from the middle), drawn as "your new line". */
   result: number | null;
+  /** The take has locked: the ring around the dot is full and shows a tick. */
+  locked: boolean;
+  /** The word to say, drawn where the dot will appear before any voice. */
+  hanzi: string;
 }
 
 function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
@@ -305,17 +299,19 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
   }, [retry]);
   /** Each locked take's frames, per tracker floor. A ref: fills at frame rate. */
   const pooled = useRef<{ normal: number[][]; low: number[][] }>({ normal: [], low: [] });
-  const live = useRef<Live>({ pts: [], bars: 0, progress: 0, result: null });
+  const live = useRef<Live>({ pts: [], bars: 0, progress: 0, result: null, locked: false, hanzi: "" });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const meterRef = useRef<HTMLDivElement>(null);
-  const holdRef = useRef<HTMLDivElement>(null);
   const word = words?.get(takes[take]);
   const tone: Tone = part === "top" ? 1 : part === "bottom" ? 3 : ((word?.tone ?? 1) as Tone);
+  useEffect(() => {
+    live.current.hanzi = word?.hanzi ?? STEP_COPY[part].fallback.hanzi;
+  }, [word, part]);
 
   // Capture: one StepCapture per take. Locks on silence after enough voice.
   useEffect(() => {
     if (take === 0) pooled.current = { normal: [], low: [] };
-    live.current = { pts: live.current.pts, bars: 0, progress: 0, result: null };
+    live.current = { pts: live.current.pts, bars: 0, progress: 0, result: null, locked: false, hanzi: live.current.hanzi };
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset the line under the meter for a new take
     setNote("hold");
     const cap = new StepCapture(captureOptions(), performance.now());
@@ -357,6 +353,7 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
         // Show where this take puts the line being measured, before moving on.
         L.result = part === "top" ? measureTop(cap.f0s, draft.f0Center) : part === "bottom" ? -(measureBottom(cap.f0s, draft.f0Center) ?? NaN) : null;
         if (L.result !== null && !Number.isFinite(L.result)) L.result = null;
+        L.locked = true;
         say("locked");
       } else if (phase === "tooShort") {
         // Too little voice: say so and listen again, never a wrong result (hard rule 8).
@@ -419,7 +416,6 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
       raf = requestAnimationFrame(draw);
       const L = live.current;
       if (meterRef.current) paintBars(meterRef.current, L.bars);
-      if (holdRef.current) holdRef.current.style.width = `${Math.round(L.progress * 100)}%`;
       const c = canvasRef.current;
       if (!c) return;
       const w = c.clientWidth, h = c.clientHeight;
@@ -450,13 +446,17 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
     : retry ? { title: "Couldn't hear that, try again", sub: "Say it once more, a little longer." }
     : note === "louder" ? { title: "Still listening", sub: "A bit louder?" }
     : note === "pause" ? { title: "Ready when you are", sub: "Stop for a moment, then say it once." }
-    : { title: "Listening", sub: "Hold it a little. It locks when you stop." };
+    : { title: "Listening", sub: "Hold it until the ring is full, then stop." };
   return (
     <>
-      <div className="tuner-head">
-        <h2>{copy.title}</h2>
-        <p className="note">{copy.say(word)}</p>
-        {part === "middle" && takes.length > 1 && <p className="tuner-take">Word {take + 1} of {takes.length}</p>}
+      <div className="tuner-word">
+        <span className="tuner-word-step">
+          {copy.title}
+          {part === "middle" && takes.length > 1 ? ` · word ${take + 1} of ${takes.length}` : ""}
+        </span>
+        <span className="tuner-word-hanzi" lang="zh-Hant">{word?.hanzi ?? copy.fallback.hanzi}</span>
+        <span className="tuner-word-pinyin">{word?.pinyin ?? copy.fallback.pinyin}</span>
+        <span className="tuner-word-hint">{copy.hint}</span>
       </div>
       <div className="tuner-panel tuner-stage">
         <canvas ref={canvasRef} role="img" aria-label={`Your voice as a moving line, with your middle${part === "top" ? " and the zone to aim for above it" : part === "bottom" ? " and the zone to aim for below it" : ""}`} />
@@ -467,7 +467,6 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
         </div>
         <div className="tuner-meter-text">
           <strong role="status">{status.title}</strong>
-          <div className="tuner-hold"><div ref={holdRef} /></div>
           {status.sub && <span className="note">{status.sub}</span>}
         </div>
       </div>
@@ -562,16 +561,50 @@ function drawStep(
     g.lineTo(xOf(b.tMs), y(b.st));
     g.stroke();
   }
+  // The dot, with a ring that fills while the word is held: where the eyes already are.
   const last = L.pts[L.pts.length - 1];
-  if (last && now - last.tMs < 200) {
-    g.fillStyle = `rgba(${beakRgb}, 0.22)`;
+  const live = !!last && now - last.tMs < 200;
+  const heldOn = L.progress > 0 || L.locked;
+  const cx = live || heldOn ? xOf(last ? last.tMs : now) : right - 24;
+  const cy = last && (live || heldOn) ? y(last.st) : y(0);
+  const R = 18;
+  if (!live && !heldOn) {
+    // Nothing heard yet: a waiting ring with the word, where the dot will appear.
+    g.strokeStyle = `rgba(${beakRgb}, 0.45)`;
+    g.lineWidth = 3;
+    g.setLineDash([4, 5]);
     g.beginPath();
-    g.arc(xOf(last.tMs), y(last.st), 16, 0, Math.PI * 2);
-    g.fill();
+    g.arc(cx, cy, R, 0, Math.PI * 2);
+    g.stroke();
+    g.setLineDash([]);
     g.fillStyle = beak;
+    g.font = "600 16px system-ui, sans-serif";
+    g.textAlign = "center";
+    g.fillText(L.hanzi, cx, cy + 6);
+    return;
+  }
+  g.strokeStyle = `rgba(${beakRgb}, 0.25)`;
+  g.lineWidth = 5;
+  g.beginPath();
+  g.arc(cx, cy, R, 0, Math.PI * 2);
+  g.stroke();
+  const full = L.locked ? 1 : L.progress;
+  g.strokeStyle = full >= 1 ? accent : beak;
+  g.beginPath();
+  g.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + full * Math.PI * 2);
+  g.stroke();
+  g.fillStyle = live ? beak : `rgba(${beakRgb}, 0.5)`;
+  g.beginPath();
+  g.arc(cx, cy, 9, 0, Math.PI * 2);
+  g.fill();
+  if (L.locked) {
+    g.strokeStyle = accent;
+    g.lineWidth = 3;
     g.beginPath();
-    g.arc(xOf(last.tMs), y(last.st), 8, 0, Math.PI * 2);
-    g.fill();
+    g.moveTo(cx + R + 6, cy);
+    g.lineTo(cx + R + 10, cy + 5);
+    g.lineTo(cx + R + 18, cy - 6);
+    g.stroke();
   }
 }
 
