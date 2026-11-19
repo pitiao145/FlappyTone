@@ -39,3 +39,18 @@ for (const m of MIXES) {
   const d = st(middleOf(m.flatMap((t) => pSingle(t, "ma").flatMap(pf))), pAll);
   console.log(`${m.map((t) => "T" + t).join("+").padEnd(13)} | ${a.toFixed(2).padStart(6)} | ${b.toFixed(2).padStart(6)} | ${c.toFixed(2).padStart(6)} | ${d.toFixed(2).padStart(6)}`);
 }
+
+// Brief 50 fix (19 Nov): the tuner's middle from one 媽 and one 馬. Pooled frames
+// let a long-held 媽 outweigh 馬 (Pierre's live take: middle on his 媽 height).
+// Each take's own middle, then the average in semitones, makes each word count once.
+const stMean = (hzs) => 2 ** (hzs.reduce((a, f) => a + Math.log2(f), 0) / hzs.length);
+const perTake = (takes) => stMean(takes.map(middleOf));
+console.log("\n媽 + 馬, one take each (st from full middle): pooled frames vs each word once; 'long 媽' = the 媽 frames x3");
+for (const [who, all, ma1s, ma3s] of [
+  ["Jane", janeAll, [jmf(1)], [jmf(3)]],
+  ["Pierre take 1", pAll, [pf(pSingle(1, "ma")[0])], [pf(pSingle(3, "ma")[0])]],
+  ["Pierre take 2", pAll, [pf(pSingle(1, "ma")[1])], [pf(pSingle(3, "ma")[1])]],
+]) {
+  const a = ma1s[0], b = ma3s[0], long = [...a, ...a, ...a];
+  console.log(`${who.padEnd(14)} pooled ${st(middleOf([...a, ...b]), all).toFixed(2)} | pooled, long 媽 ${st(middleOf([...long, ...b]), all).toFixed(2)} | each word once ${st(perTake([a, b]), all).toFixed(2)} | each once, long 媽 ${st(perTake([long, b]), all).toFixed(2)}`);
+}

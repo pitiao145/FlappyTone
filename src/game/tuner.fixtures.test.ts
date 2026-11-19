@@ -171,3 +171,18 @@ describe("the tuner's own tracker hears a recorded voice on every step (19 Nov b
     expect(cap.f0s.length).toBeGreaterThan(20);
   });
 });
+
+describe("middle: each word counts once (19 Nov fix)", () => {
+  it("a 媽 held three times longer does not move the middle (recorded frames)", async () => {
+    const { measureMiddleTakes, measureMiddle } = await import("./tuner.ts");
+    const f0 = (file: string) => frames(file, 0).filter((f) => f.voiced && f.f0 !== null).map((f) => f.f0!);
+    const ma1 = f0("jane_ma1.wav"), ma3 = f0("jane_ma3.wav");
+    const once = measureMiddleTakes([ma1, ma3])!;
+    const long = measureMiddleTakes([[...ma1, ...ma1, ...ma1], ma3])!;
+    expect(12 * Math.log2(long / once)).toBeCloseTo(0, 6);
+    // It sits between the two words, not on 媽.
+    const st1 = 12 * Math.log2(measureMiddle(ma1)! / once), st3 = 12 * Math.log2(measureMiddle(ma3)! / once);
+    expect(st1).toBeGreaterThan(1);
+    expect(st3).toBeLessThan(-1);
+  });
+});

@@ -649,15 +649,16 @@
 .tuner-rows { display: flex; flex-direction: column; gap: 10px; }
 .tuner-row { display: flex; align-items: center; gap: 12px; background: var(--surface-panel); border-radius: var(--radius-md); padding: 10px 10px 10px 16px; }
 .tuner-row-text { display: flex; flex-direction: column; flex: 1 1 auto; }
-.tuner-row-text .note { margin: 0; font-size: 13px; }
+.tuner-row-text { text-align: left; }
+.tuner-sub { margin: 0; font-size: 13px; color: var(--ink-muted); font-style: normal; text-align: left; }
 .tuner-row button { min-height: 44px; }
 .tuner-row-room { background: none; padding: 4px 16px; }
-.tuner-row-room .note { margin: 0; flex: 1 1 auto; font-size: 13px; }
+.tuner-row-room .tuner-sub { flex: 1 1 auto; }
 .tuner-link { background: none; border: none; box-shadow: none; color: var(--accent); text-decoration: underline; }
 .tuner-dot { width: 10px; height: 10px; border-radius: 5px; flex-shrink: 0; background: var(--ink-muted); }
-.tuner-dot.is-top { background: var(--accent-bright); }
+.tuner-dot.is-top { background: rgb(var(--demo-rgb)); }
 .tuner-dot.is-middle { background: var(--accent); }
-.tuner-dot.is-bottom { background: var(--beak); }
+.tuner-dot.is-bottom { background: var(--ink-soft); }
 .tuner-dot.is-room-quiet { background: var(--good); }
 .tuner-dot.is-room-noisy { background: var(--warn); }
 .tuner-dot.is-room-tooNoisy { background: var(--danger); }

@@ -149,9 +149,23 @@ function stFrom(f0s: number[], midHz: number): number[] {
     .filter((s) => s >= -creak);
 }
 
-/** Middle (Hz) from the middle step's takes: brief 44's rule (median, creak left out). */
+/** Middle (Hz) of one set of frames: brief 44's rule (median, creak left out). */
 export function measureMiddle(f0s: number[]): number | null {
   return computeMiddleHz(f0s, tuning().gridCreakSt);
+}
+
+/**
+ * Middle (Hz) of the middle step: each take's own middle, then their average
+ * in semitones, so every word counts once. Pooled frames let a long-held 媽
+ * outweigh 馬 (Pierre, 19 Nov: his middle landed on his 媽 height). Measured
+ * (`middle-words.mjs`, last table): one 媽 + one 馬 lands -0.28 / +0.14 st
+ * from Pierre's full middle and stays there with a 3x longer 媽 (pooled: up
+ * to +2.5 st). Takes that measure nothing are skipped; null if none measure.
+ */
+export function measureMiddleTakes(takes: number[][]): number | null {
+  const mids = takes.map(measureMiddle).filter((m): m is number => m !== null);
+  if (mids.length === 0) return null;
+  return 2 ** (mids.reduce((a, m) => a + Math.log2(m), 0) / mids.length);
 }
 
 /** Up half (st): the first tone's `gridTopPct` percentile above the middle. Null with under 10 frames. */

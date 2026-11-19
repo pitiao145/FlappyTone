@@ -15,7 +15,7 @@ import { inventoryNow, loadInventory } from "../audio/inventory.ts";
 import { prefetchPool } from "../audio/prefetch.ts";
 import { ensurePlaybackCtx, isCueAudible, playToneCue } from "../audio/reference.ts";
 import { getMicSession, setFrameSink } from "../audio/session.ts";
-import { corridorChaoAt, shapeForTone, type Tone } from "../game/gates.ts";
+import type { Tone } from "../game/gates.ts";
 import { MIDDLE_WORD_IDS } from "../game/run.ts";
 import type { CalibrationSettings } from "../game/settings.ts";
 import {
@@ -23,7 +23,7 @@ import {
   applyTunerResult,
   captureOptions,
   measureBottom,
-  measureMiddle,
+  measureMiddleTakes,
   measureTop,
   roomBars,
   roomMarker,
@@ -38,7 +38,7 @@ import {
 import { speakerFMin, tuning } from "../game/tuning.ts";
 import type { Word } from "../game/words.ts";
 import { computeNoiseFloor } from "../pitch/calibration.ts";
-import { rmsOf, semitonesToChao } from "../pitch/math.ts";
+import { rmsOf } from "../pitch/math.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
 
 const STEPS: TunerPart[] = ["room", "middle", "top", "bottom"];
@@ -282,9 +282,12 @@ interface VoiceStepProps {
 
 /** What the canvas loop reads each frame. Mutable, outside React (hard rule 1). */
 interface Live {
-  pts: Array<{ tMs: number; st: number }>;
+  /** Every voiced frame of the last few seconds (st from the draft middle); `counted` = part of the take. */
+  pts: Array<{ tMs: number; st: number; counted: boolean }>;
   bars: number;
   progress: number;
+  /** After a top/bottom take locks: the measured line (st from the middle), drawn as "your new line". */
+  result: number | null;
 }
 
 function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
@@ -300,8 +303,9 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
   useEffect(() => {
     retryRef.current = retry;
   }, [retry]);
-  const pooled = useRef<{ normal: number[]; low: number[] }>({ normal: [], low: [] });
-  const live = useRef<Live>({ pts: [], bars: 0, progress: 0 });
+  /** Each locked take's frames, per tracker floor. A ref: fills at frame rate. */
+  const pooled = useRef<{ normal: number[][]; low: number[][] }>({ normal: [], low: [] });
+  const live = useRef<Live>({ pts: [], bars: 0, progress: 0, result: null });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const meterRef = useRef<HTMLDivElement>(null);
   const holdRef = useRef<HTMLDivElement>(null);
@@ -311,7 +315,7 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
   // Capture: one StepCapture per take. Locks on silence after enough voice.
   useEffect(() => {
     if (take === 0) pooled.current = { normal: [], low: [] };
-    live.current = { pts: [], bars: 0, progress: 0 };
+    live.current = { pts: live.current.pts, bars: 0, progress: 0, result: null };
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset the line under the meter for a new take
     setNote("hold");
     const cap = new StepCapture(captureOptions(), performance.now());
@@ -342,12 +346,17 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
       const L = live.current;
       L.bars = voiceBars(p.rms, draft.noiseFloor);
       L.progress = cap.progress;
-      if (cap.f0s.length > before0 && p.f0 !== null) L.pts.push({ tMs: now, st: 12 * Math.log2(p.f0 / draft.f0Center) });
+      // Every voiced frame is drawn, like the Visualiser; the ones in the take are drawn bold.
+      if (p.voiced && p.f0 !== null) L.pts.push({ tMs: now, st: 12 * Math.log2(p.f0 / draft.f0Center), counted: cap.f0s.length > before0 });
+      while (L.pts.length > 0 && now - L.pts[0].tMs > TRACE_MS) L.pts.shift();
       if (phase === "hearing" && retryRef.current) setRetry(false);
       if (phase === "locked" && before !== "locked") {
         setFrameSink(null);
-        pooled.current.normal.push(...cap.f0s);
-        pooled.current.low.push(...lowFrames);
+        pooled.current.normal.push([...cap.f0s]);
+        pooled.current.low.push([...lowFrames]);
+        // Show where this take puts the line being measured, before moving on.
+        L.result = part === "top" ? measureTop(cap.f0s, draft.f0Center) : part === "bottom" ? -(measureBottom(cap.f0s, draft.f0Center) ?? NaN) : null;
+        if (L.result !== null && !Number.isFinite(L.result)) L.result = null;
         say("locked");
       } else if (phase === "tooShort") {
         // Too little voice: say so and listen again, never a wrong result (hard rule 8).
@@ -379,15 +388,16 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
       const f = pooled.current;
       let r: TunerResult | null;
       if (part === "middle") {
-        const first = measureMiddle(f.normal);
+        // Each word counts once, however long it was held.
+        const first = measureMiddleTakes(f.normal);
         // A deep voice: its floor sits under the normal one, so the low tracker's frames are fair.
-        const centre = first !== null && speakerFMin(first) < tuning().pitchFloorHighHz ? (measureMiddle(f.low) ?? first) : first;
+        const centre = first !== null && speakerFMin(first) < tuning().pitchFloorHighHz ? (measureMiddleTakes(f.low) ?? first) : first;
         r = centre !== null ? { part: "middle", f0Center: centre } : null;
       } else if (part === "top") {
-        const up = measureTop(f.normal, draft.f0Center);
+        const up = measureTop(f.normal.flat(), draft.f0Center);
         r = up !== null ? { part: "top", up } : null;
       } else {
-        const down = measureBottom(f.normal, draft.f0Center);
+        const down = measureBottom(f.normal.flat(), draft.f0Center);
         r = down !== null ? { part: "bottom", down } : null;
       }
       if (r) onDone(r);
@@ -397,7 +407,8 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
         setAttempt((a) => a + 1);
         setRetry(true);
       }
-    }, 600);
+    // Hold "Got it" a little longer on top/bottom, so the new line can be seen.
+    }, part === "middle" ? 600 : 1400);
     return () => clearTimeout(id);
   }, [note]);
 
@@ -419,7 +430,7 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
       if (!g) return;
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
       g.clearRect(0, 0, w, h);
-      drawStep(g, w, h, tone, part, draft, L.pts);
+      drawStep(g, w, h, tone, part, draft, L);
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
@@ -448,7 +459,7 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
         {part === "middle" && takes.length > 1 && <p className="tuner-take">Word {take + 1} of {takes.length}</p>}
       </div>
       <div className="tuner-panel tuner-stage">
-        <canvas ref={canvasRef} role="img" aria-label={`Five lines with the ${part === "top" ? "first-tone" : part === "bottom" ? "third-tone" : "word's"} corridor and your line`} />
+        <canvas ref={canvasRef} role="img" aria-label={`Your voice as a moving line, with your middle${part === "top" ? " and the zone to aim for above it" : part === "bottom" ? " and the zone to aim for below it" : ""}`} />
       </div>
       <div className="tuner-panel tuner-meter">
         <div className="tuner-voice-bars" ref={meterRef} role="img" aria-label="Voice level">
@@ -470,15 +481,26 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
   );
 }
 
-/** The canvas: lines 1-5, the middle (set or not), the corridor, the player's line in place. */
+/** How much of the past the moving line shows (ms), like the Visualiser's trail. */
+const TRACE_MS = 4000;
+/** The stage shows this many semitones above and below the middle: wide, so a voice never sticks to an edge. */
+const SPAN_ST = 9;
+
+/**
+ * The canvas, Visualiser-style: your voice as a line that moves right to left,
+ * with a dot (the bird) at your pitch now. The axis is plain semitones around
+ * the middle, so nothing clamps while a line is being measured. Drawn: the
+ * middle (solid), line 5 and line 1 as they are now (dashed), and on the Top
+ * and Bottom steps the zone to aim for. After a take locks, the measured line.
+ */
 function drawStep(
   g: CanvasRenderingContext2D,
   w: number,
   h: number,
-  tone: Tone,
+  _tone: Tone,
   part: Exclude<TunerPart, "room">,
   s: CalibrationSettings,
-  pts: Array<{ tMs: number; st: number }>,
+  L: Live,
 ): void {
   const css = getComputedStyle(document.documentElement);
   const v = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
@@ -486,71 +508,71 @@ function drawStep(
   const accent = v("--accent", "#1c7a63");
   const accentRgb = v("--accent-rgb", "28, 122, 99");
   const beak = v("--beak", "#c98a3c");
-  const top = 18, bottom = h - 18, left = 26, right = w - 10;
-  const y = (chao: number) => bottom - ((chao - 1) / 4) * (bottom - top);
-  g.font = "12px system-ui, sans-serif";
-  for (let c = 1; c <= 5; c++) {
-    g.fillStyle = `rgba(${ink}, 0.6)`;
-    g.fillText(String(c), 8, y(c) + 4);
-    g.strokeStyle = c === 3 && part !== "middle" ? accent : `rgba(${ink}, 0.16)`;
-    g.lineWidth = c === 3 && part !== "middle" ? 2.5 : 1;
+  const beakRgb = v("--beak-rgb", "200, 138, 60");
+  const top = 14, bottom = h - 14, left = 8, right = w - 26;
+  const y = (st: number) => {
+    const c = Math.max(-SPAN_ST, Math.min(SPAN_ST, st));
+    return top + ((SPAN_ST - c) / (2 * SPAN_ST)) * (bottom - top);
+  };
+  const line = (st: number, color: string, width: number, dash: number[], label: string) => {
+    g.strokeStyle = color;
+    g.lineWidth = width;
+    g.setLineDash(dash);
     g.beginPath();
-    g.moveTo(left, y(c));
-    g.lineTo(right, y(c));
+    g.moveTo(left, y(st));
+    g.lineTo(right, y(st));
     g.stroke();
+    g.setLineDash([]);
+    g.fillStyle = color;
+    g.font = "12px system-ui, sans-serif";
+    g.textAlign = "right";
+    g.fillText(label, w - 4, y(st) + 4);
+  };
+  // The zone to aim for: a first tone above the middle, a low third tone below it.
+  if (part !== "middle") {
+    const [a, b] = part === "top" ? [1.5, SPAN_ST] : [-1.5, -SPAN_ST];
+    g.fillStyle = `rgba(${accentRgb}, 0.12)`;
+    g.fillRect(left, Math.min(y(a), y(b)), right - left, Math.abs(y(a) - y(b)));
+    g.fillStyle = accent;
+    g.font = "600 13px system-ui, sans-serif";
+    g.textAlign = "left";
+    g.fillText(part === "top" ? "Aim here: high, easy, flat" : "Aim here: low, and stay low", left + 8, part === "top" ? top + 18 : bottom - 10);
   }
-  // The corridor for this word's tone, across the middle of the stage.
-  const shape = shapeForTone(tone);
-  const x0 = left + (right - left) * 0.12, x1 = right - 8;
-  const tol = 0.55;
-  g.fillStyle = `rgba(${accentRgb}, 0.14)`;
-  g.strokeStyle = `rgba(${accentRgb}, 0.7)`;
-  g.lineWidth = 1.5;
-  g.beginPath();
-  const N = 40;
-  for (let i = 0; i <= N; i++) {
-    const t = i / N;
-    const yy = y(Math.min(5, corridorChaoAt(shape, t) + tol));
-    if (i === 0) g.moveTo(x0 + (x1 - x0) * t, yy);
-    else g.lineTo(x0 + (x1 - x0) * t, yy);
-  }
-  for (let i = N; i >= 0; i--) {
-    const t = i / N;
-    g.lineTo(x0 + (x1 - x0) * t, y(Math.max(1, corridorChaoAt(shape, t) - tol)));
-  }
-  g.closePath();
-  g.fill();
-  g.setLineDash([6, 5]);
-  g.beginPath();
-  for (let i = 0; i <= N; i++) {
-    const t = i / N;
-    const yy = y(corridorChaoAt(shape, t));
-    if (i === 0) g.moveTo(x0 + (x1 - x0) * t, yy);
-    else g.lineTo(x0 + (x1 - x0) * t, yy);
-  }
-  g.stroke();
-  g.setLineDash([]);
-  // The player's line, in place: from the corridor's start, about one word long.
-  if (pts.length < 2) return;
-  const t0 = pts[0].tMs;
-  const span = Math.max(700, pts[pts.length - 1].tMs - t0);
-  g.strokeStyle = beak;
-  g.lineWidth = 5;
+  line(s.rangeSemitones, `rgba(${ink}, 0.35)`, 1, [5, 5], "5");
+  line(-s.rangeDownSemitones, `rgba(${ink}, 0.35)`, 1, [5, 5], "1");
+  line(0, accent, 2.5, [], "3");
+  g.fillStyle = `rgba(${ink}, 0.55)`;
+  g.font = "12px system-ui, sans-serif";
+  g.textAlign = "left";
+  g.fillText("your middle", left + 8, y(0) - 6);
+  // The measured line once the take locks.
+  if (L.result !== null) line(L.result, beak, 3, [], part === "top" ? "5 ✓" : "1 ✓");
+  // Your voice: a trail moving right to left, and the dot at your pitch now.
+  const now = performance.now();
+  const xOf = (t: number) => right - 24 - ((now - t) / TRACE_MS) * (right - 24 - left);
   g.lineCap = "round";
   g.lineJoin = "round";
-  g.beginPath();
-  pts.forEach((p, i) => {
-    const xx = x0 + (x1 - x0) * ((p.tMs - t0) / span);
-    const yy = y(semitonesToChao(p.st, s.rangeSemitones, s.rangeDownSemitones));
-    if (i === 0) g.moveTo(xx, yy);
-    else g.lineTo(xx, yy);
-  });
-  g.stroke();
-  const last = pts[pts.length - 1];
-  g.fillStyle = beak;
-  g.beginPath();
-  g.arc(x0 + (x1 - x0) * ((last.tMs - t0) / span), y(semitonesToChao(last.st, s.rangeSemitones, s.rangeDownSemitones)), 8, 0, Math.PI * 2);
-  g.fill();
+  for (let i = 1; i < L.pts.length; i++) {
+    const a = L.pts[i - 1], b = L.pts[i];
+    if (b.tMs - a.tMs > 120) continue; // a gap in the voice is a gap in the line
+    g.strokeStyle = b.counted ? beak : `rgba(${beakRgb}, 0.35)`;
+    g.lineWidth = b.counted ? 5 : 3;
+    g.beginPath();
+    g.moveTo(xOf(a.tMs), y(a.st));
+    g.lineTo(xOf(b.tMs), y(b.st));
+    g.stroke();
+  }
+  const last = L.pts[L.pts.length - 1];
+  if (last && now - last.tMs < 200) {
+    g.fillStyle = `rgba(${beakRgb}, 0.22)`;
+    g.beginPath();
+    g.arc(xOf(last.tMs), y(last.st), 16, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = beak;
+    g.beginPath();
+    g.arc(xOf(last.tMs), y(last.st), 8, 0, Math.PI * 2);
+    g.fill();
+  }
 }
 
 // ------------------------------------------------------------------ done
@@ -590,15 +612,15 @@ function DoneView({ draft, room, changed, onRedo, onDone, onCancel }: DoneProps)
             <span className={`tuner-dot is-${r.dot}`} />
             <div className="tuner-row-text">
               <strong>{r.title}</strong>
-              <span className="note">{r.sub}</span>
+              <span className="tuner-sub">{r.sub}</span>
             </div>
             <button onClick={() => onRedo(r.part)}>Redo</button>
           </div>
         ))}
+        {/* Information only (Pierre, 19 Nov): a new room check changes nothing you can act on. */}
         <div className="tuner-row tuner-row-room">
           <span className={`tuner-dot is-room-${roomVerdictNow}`} />
-          <span className="note">Room: {ROOM_COPY[roomVerdictNow].title.toLowerCase()}</span>
-          <button className="tuner-link" onClick={() => onRedo("room")}>Check again</button>
+          <span className="tuner-sub">Room: {ROOM_COPY[roomVerdictNow].title.toLowerCase()}</span>
         </div>
       </div>
       <span className="param-help">1 semitone = one key on a piano.</span>
