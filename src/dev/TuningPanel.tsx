@@ -153,6 +153,20 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
         help: "Silence between two syllables that still counts as one utterance. Too low splits a real pause-between-syllables attempt into two; too high risks merging a genuinely unheard second syllable into the first." },
       { key: "syllableDipRatio", label: "syllable dip", min: 0.3, max: 1, step: 0.05,
         help: "Visualiser / tone checker pairs: a loudness dip splits two syllables only if it is quieter than this share of the quieter syllable's peak. Lower = stricter, more \"?\" reads; higher = more forced cuts." },
+      { key: "pairEdgeQuiet", label: "pair edge quiet", min: 0, max: 0.5, step: 0.01,
+        help: "Brief 49 pair cut: a bit of sound at the edge of a pair attempt quieter than this share of its loudest frame is dropped before cutting (breath, room noise)." },
+      { key: "pairEdgeShortMs", label: "pair edge short", min: 0, max: 300, step: 10,
+        help: "Brief 49 pair cut: a short, not-loud bit at the edge, apart from the word by more than the merge gap, is dropped before cutting." },
+      { key: "pairCutWindowScale", label: "pair cut window", min: 0.5, max: 2, step: 0.05,
+        help: "Brief 49 pair cut: widens or narrows every tone pair's search window around the spot where Jane's join usually sits." },
+      { key: "pairCutFarWidths", label: "pair cut far", min: 1, max: 5, step: 0.25,
+        help: "Brief 49 pair cut: a long silence further than this many window half-widths from the expected spot is not trusted; both syllables read \"?\"." },
+      { key: "pairCutGapMs", label: "pair cut gap", min: 20, max: 150, step: 5,
+        help: "Brief 49 pair cut: inside the search window, a hole in the voice longer than this is the join." },
+      { key: "pairEventMinChao", label: "pair pitch event", min: 0, max: 1, step: 0.05,
+        help: "Brief 49 pair cut: the tone pair's pitch event (fall or rise at the join) must move at least this much (chao) to place the cut." },
+      { key: "pairEdgeTrim", label: "pair syllable trim", min: 0, max: 0.3, step: 0.01,
+        help: "Brief 49: each syllable of a pair loses edge frames quieter than this share of its own loudest frame before it is read." },
       { key: "multiGateChance", label: "mix roll", min: 0, max: 1, step: 0.05,
         help: "Classic game, wordMix \"all\" only: chance a given gate draws a pair instead of a single syllable." },
     ],
@@ -248,7 +262,7 @@ export function TuningPanel() {
   const toggleRow = (
     label: string,
     checked: boolean,
-    key: "toneMismatchCollisionEnabled" | "toneClassifierBoostEnabled" | "toneClassifierV2",
+    key: "toneMismatchCollisionEnabled" | "toneClassifierBoostEnabled" | "toneClassifierV2" | "pairCutOn",
     help: string,
   ) => (
     <div className="knob">
@@ -354,6 +368,13 @@ export function TuningPanel() {
                 `A gate the classifier reads as the correct tone at ${Math.round(
                   t.toneClassifierBoostMinConfidence * 100,
                 )}% confidence or more has its accuracy raised to match. A false positive only over-rewards; it never costs a heart.`,
+              )}
+            {group.title === "pairs" &&
+              toggleRow(
+                "Cut pairs at the tone pair's spot (brief 49)",
+                t.pairCutOn,
+                "pairCutOn",
+                "Visualiser / tone checker pairs: cut near where Jane's join for this tone pair usually sits (silence, then a loudness dip, then the pair's pitch event; nothing found → \"?\"). Off = the brief 46 finder (silence, then the deepest loudness dip).",
               )}
             {group.knobs.map(knobRow)}
           </details>

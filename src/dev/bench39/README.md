@@ -25,6 +25,11 @@ node src/dev/bench39/reading.mjs        # classifier v2 and the pair read
 node src/dev/bench39/reader45.mjs [--half fit|held|all] [--confusion] [--accuracy] [--learning] [--pierre]
                                         # brief 45: reader + tone accuracy on Jane's one ruler
 node src/dev/bench39/fit45.mjs          # brief 45: coordinate-descent fit of toneReaderRuler on the FIT half
+node_modules/.cache/bench39/venv/bin/python src/dev/bench39/praat-int49.py   # brief 49: Praat loudness cache
+node src/dev/bench39/cut49.mjs [--summary] # brief 49 step 2: four ways to cut a pair, per tone pair and style
+node src/dev/bench39/cut49ship.mjs [--pairs|--swap|--pierre|--praat|--pipe|--emit]
+                                        # brief 49: the shipped pair cut, production path; --emit writes src/game/pairCutSpotsData.ts
+node src/dev/bench39/t3low49.mjs [--cut] # brief 49 part 2: low-only natural third tone
 ```
 
 | File | What it is |

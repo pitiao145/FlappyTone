@@ -387,8 +387,10 @@ export function classifyTone(
    * averages against freshly computed ones in one run.
    */
   templates: Record<Tone, number[]> = AVERAGED_TONE_SHAPE.textbook,
+  /** The word's speech style; "natural" turns on v2's natural-only rules (brief 49). */
+  style: "textbook" | "natural" = "textbook",
 ): ToneClassification | null {
-  return tuning().toneClassifierV2 ? classifyToneV2(contour) : classifyToneV1(contour, templates);
+  return tuning().toneClassifierV2 ? classifyToneV2(contour, style) : classifyToneV1(contour, templates);
 }
 
 /** Version 1 (correlation with Jane's averages), kept while v2 is evaluated. */

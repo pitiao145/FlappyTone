@@ -216,6 +216,26 @@ export interface Tuning {
    */
   syllableDipRatio: number;
   /**
+   * Brief 49 pair cut (`findPairCut` in `syllables.ts`): a two-syllable word
+   * with a known tone pair is cut near the spot where Jane's join for that
+   * pair usually sits (`pairCutSpots.ts`). Off = the brief 46 finder.
+   */
+  pairCutOn: boolean;
+  /** A hole in the voiced frames longer than this inside the search window is the join. */
+  pairCutGapMs: number;
+  /** Scales every tone pair's search window (1 = as learned). */
+  pairCutWindowScale: number;
+  /** A long silence further than this many window half-widths from the spot is not trusted → "?". */
+  pairCutFarWidths: number;
+  /** The pair's pitch event must move at least this (chao, frame to frame over 3 frames). */
+  pairEventMinChao: number;
+  /** Edge bits quieter than this share of the attempt's loudest frame are not part of the word. */
+  pairEdgeQuiet: number;
+  /** Edge bits shorter than this, apart from the word by more than `mergeGapMs`, are not part of it. */
+  pairEdgeShortMs: number;
+  /** Each syllable loses edge frames quieter than this share of its own loudest frame. */
+  pairEdgeTrim: number;
+  /**
    * Classic `game` mode's `wordMix: "all"` setting: the chance, per gate,
    * that the queue draws a multi-syllable word instead of a single one. Only
    * consulted when `wordMix === "all"` — `"single"`/`"multi"` bypass the
@@ -735,6 +755,14 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   mergeGapMs: 150,
   multiMergeGapMs: 400,
   syllableDipRatio: 0.7,
+  pairCutOn: true,
+  pairCutGapMs: 45,
+  pairCutWindowScale: 1,
+  pairCutFarWidths: 2,
+  pairEventMinChao: 0.2,
+  pairEdgeQuiet: 0.15,
+  pairEdgeShortMs: 100,
+  pairEdgeTrim: 0.06,
   multiGateChance: 0.5,
   pairScoreMultiplier: 5.0,
   toneAccShapeWeight: 0.6,
@@ -801,6 +829,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
     },
     votes: ["turnTime", "riseShare", "dropShare", "drop"],
     floorRule: true,
+    lowHoldT3: { minFallChao: 0.3, maxLowChao: 1.15 },
   },
   toneClassifierBoostMinConfidence: 0.9,
   toneClassifierBoostFloorAccuracy: 0.6,

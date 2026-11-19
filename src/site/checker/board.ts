@@ -10,6 +10,7 @@ import type { Contour } from "../../game/contours.ts";
 import type { Tone } from "../../game/gates.ts";
 import { classifyToneV2 } from "../../game/toneClassifierV2.ts";
 import { readContourSyllables } from "../../game/freeAttempts.ts";
+import { spokenTones } from "../../game/sandhi.ts";
 import { toneAccuracyDetail } from "../../game/toneAccuracy.ts";
 import { corridorChaoAt, shapeForWord } from "../../game/gates.ts";
 import type { Word } from "../../game/words.ts";
@@ -73,10 +74,11 @@ export function scoreAttempt(contour: Contour, word: Word, mode: RefMode): Attem
       mode === "real",
     )?.accuracy ?? null;
   // The classifier misreads a two-syllable contour (same rule as the app).
-  const r = word.syllables === 1 && accuracy !== null ? classifyToneV2(contour) : null;
+  const style = mode === "real" ? "natural" : "textbook";
+  const r = word.syllables === 1 && accuracy !== null ? classifyToneV2(contour, style) : null;
   const syllables =
     word.syllables > 1 && accuracy !== null
-      ? (readContourSyllables(contour, word.syllables)?.map((s) => s?.tone ?? null) ?? [])
+      ? (readContourSyllables(contour, word.syllables, { tones: spokenTones(word), style })?.map((s) => s?.tone ?? null) ?? [])
       : null;
   return { accuracy, read: r ? { tone: r.tone, confidence: r.confidence } : null, syllables };
 }
