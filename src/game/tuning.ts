@@ -661,8 +661,8 @@ export interface Tuning {
   /**
    * Brief 44: the player's grid follows the one-ruler rule and learns slowly in
    * play (`learnGridFromGate`, `src/game/playerRuler.ts`); calibration measures
-   * the middle on tone words instead of free talk. Off in production until
-   * brief 48; on in dev with the brief 43 shapes switch (`ft.shapesV2`).
+   * the middle on tone words instead of free talk. On since go-live (brief 51):
+   * the new foundation. The Lab can still turn it off; production never does.
    */
   playerRulerV2: boolean;
   /**
@@ -924,7 +924,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   pitchFloorFactor: 0.6,
   reachToToneSpaceUp: 1,
   reachToToneSpaceDown: 1,
-  playerRulerV2: false,
+  playerRulerV2: true,
   gridUpSemitones: 5.25,
   gridDownSemitones: 5.75,
   gridLearnRate: 0.1,

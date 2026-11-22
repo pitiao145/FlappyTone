@@ -6,20 +6,19 @@
  *   npm run process-clips -- --speaker jane --style textbook --all           # re-cut published too
  *   npm run process-clips -- --speaker jane --style textbook --all --dry-run # cut, write nothing
  *   npm run process-clips -- --speaker jane --style natural --all --no-upload # rows only, no R2
- *   npm run process-clips -- --speaker jane --style textbook --one-ruler --dry-run  # new foundation
+ *   npm run process-clips -- --speaker jane --style textbook --old-board   # roll-back path only
  *
- * ## `--one-ruler`: the new foundation's shapes (brief 51)
+ * ## The one ruler: the new foundation's shapes (brief 51, the default)
  *
- * With `--one-ruler`, every take is shaped the way `bench39/make-shapes.mjs`
+ * Every take is shaped the way `bench39/make-shapes.mjs`
  * built `shapes-v2.json` (`clipRuler.ts`'s `shapeOnRuler`): per-clip gate, the
  * speaker's one ruler, knee templates, the refined pair fit. No cohort stretch,
  * no session reference, no textbook map for natural: each clip stands on the
  * ruler alone, so only the selected words are cut. The take is measured with
  * its edges faded, as it ships. A speaker with no ruler in `clipRuler.ts` is
  * refused. Offline proof: `node src/dev/bench39/ruler-pipeline-check.mjs`.
- * Opt-in until go-live: the live catalog still holds old-board shapes, and a
- * new word on the ruler beside them would not match. At go-live this becomes
- * the default (docs/briefs/reports, brief 51 checklist).
+ * `--old-board` runs the old cohort stretch below instead: the roll-back path,
+ * for a catalog restored to old-board shapes.
  *
  * ## `--speaker` and `--style` are both required, and unknown values exit non-zero
  *
@@ -142,8 +141,9 @@ const dryRun = args.includes("--dry-run");
 // byte-identical on a re-cut, so a measurement-only change (a new chao map)
 // needs only the word_clips rows rewritten.
 const noUpload = args.includes("--no-upload");
-// The new foundation's shapes (brief 51); see the header.
-const oneRuler = args.includes("--one-ruler");
+// The new foundation's shapes, the default since go-live (brief 51); `--old-board`
+// is the roll-back path only. See the header.
+const oneRuler = !args.includes("--old-board");
 const sessionIdx = args.indexOf("--session");
 // A flag is not a session id. Taking the next token blindly means
 // `-- --session --dry-run` silently filters on the session "--dry-run",
@@ -222,11 +222,11 @@ if (!Number.isFinite(rawSeed)) {
 }
 const seedF0 = resolveSeed(rawSeed);
 
-/** The speaker's one ruler, required by `--one-ruler`. */
+/** The speaker's one ruler, required unless `--old-board`. */
 const ruler: ClipRuler | null = oneRuler ? rulerFor(speaker.id) : null;
 if (oneRuler && !ruler) {
   console.error(
-    `--one-ruler: no ruler measured for speaker "${speaker.id}" (src/dev/clipRuler.ts).\n` +
+    `no ruler measured for speaker "${speaker.id}" (src/dev/clipRuler.ts).\n` +
       "Measure one first (brief 43's rule, make-shapes.mjs) and add it there.",
   );
   process.exit(1);
@@ -358,7 +358,7 @@ const selectedIds = new Set(selected.map((r) => r.id));
 const cohortsTouched = new Set(selected.map(cohortKey));
 // See the header: the chao map belongs to the cohort, so the whole cohort is
 // cut even when only part of it is written.
-// With `--one-ruler` there is no cohort map: only the selected words are cut.
+// On the one ruler there is no cohort map: only the selected words are cut.
 const toCut = oneRuler
   ? selected
   : catalog.filter(
@@ -493,7 +493,7 @@ interface Cut {
   pinnedFraction: number;
   samples: Float32Array;
   sampleRate: number;
-  /** Set by `--one-ruler`: the fitted shape, already on the ruler. */
+  /** Set on the one ruler: the fitted shape, already on the ruler. */
   polyline?: ContourPoint[];
 }
 
@@ -738,7 +738,7 @@ for (const [key, cohort] of [...cohorts].sort(([a], [b]) => a.localeCompare(b)))
   }
 }
 
-} // end of the cohort stretch (skipped by --one-ruler: each clip is already on the ruler)
+} // end of the cohort stretch (skipped on the one ruler: each clip is already on the ruler)
 // ---- Cohort medians, for the review's duration outlier check.
 //
 // This speaker's own published clips, never the catalog's. The medians are a
@@ -876,7 +876,7 @@ for (const cut of [...cuts].sort((a, b) => a.row.id.localeCompare(b.row.id))) {
     // canonical chao heights above, and the polyline has to describe the
     // contour that actually ships. The syllable boundaries are a property of
     // the audio, so they survive that rescale and the refit is exact.
-    // `--one-ruler` fitted its shape at the cut, on the ruler (brief 51).
+    // The one-ruler path fitted its shape at the cut, on the ruler (brief 51).
     polyline: cut.polyline ??
       (cut.row.syllables > 1 && cut.syllableSpans
         ? multiSyllablePolyline(cut.contour, cut.syllableSpans)

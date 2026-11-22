@@ -2,7 +2,6 @@ import { tuning } from "../game/tuning.ts";
 import { loadRuler, saveRuler, seedRuler, withHalves, withLearnedScale } from "../game/playerRuler.ts";
 import { loadVoiceStart, quickStartSettings, saveVoiceStart, type VoicePreset } from "../game/voiceStart.ts";
 import { saveRoom, type RoomVerdict } from "../game/tuner.ts";
-import { applyPlayerRulerSwitch } from "../dev/shapesV2.ts";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { track, trackFirstSeoTouch, trackSpeechStyle } from "../analytics/client";
 import { seoSource } from "../site/pageAnalytics.ts";
@@ -83,9 +82,6 @@ import { TonederScreen } from "./TonederScreen.tsx";
 import { parsePairKey } from "../toneder/cta.ts";
 import "../App.css";
 
-// Brief 44: dev-only switch (ft.shapesV2) for the player ruler. Gated here so
-// neither the call nor the module reaches dist/ (hard rule 7).
-if (import.meta.env.DEV) applyPlayerRulerSwitch();
 
 export type Screen =
   | "play"

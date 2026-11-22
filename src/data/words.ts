@@ -28,7 +28,6 @@ import fallback from "./wordsFallback.json";
 import { getSupabase, warn } from "./supabase.ts";
 // Brief 43 dev switch. Every call site is behind `import.meta.env.DEV`, so the
 // build drops the call, then this import and the JSON behind it (hard rule 7).
-import { applyShapesV2 } from "../dev/shapesV2.ts";
 
 /**
  * v2 because the row shape changed (the measurements moved to `word_clips`),
@@ -70,7 +69,7 @@ export function catalogFromCache(speaker: string): Word[] | null {
     // start.
     const words = wordsFromCatalog(parsed.rows);
     if (words.length === 0) return null;
-    return import.meta.env.DEV ? applyShapesV2(words) : words;
+    return words;
   } catch {
     // Corrupt value, blocked storage, or no `localStorage` at all (a Node
     // test, a prerender). All of them mean the same thing to a caller.
@@ -106,7 +105,7 @@ function writeCache(speaker: string, rows: unknown[]): void {
  */
 export function catalogFromFallback(): Word[] {
   const words = wordsFromCatalog(fallback.rows.map((r) => ({ ...r, speaker_id: DEFAULT_SPEAKER_ID })));
-  return import.meta.env.DEV ? applyShapesV2(words) : words;
+  return words;
 }
 
 /**
@@ -151,7 +150,7 @@ export async function fetchCatalog(opts: { speaker: string; listId?: string }): 
         const words = wordsFromCatalog(rows);
         if (words.length > 0) {
           writeCache(opts.speaker, rows);
-          return import.meta.env.DEV ? applyShapesV2(words) : words;
+          return words;
         }
         // A live read that parses to nothing is a misconfiguration, not an
         // empty catalog — publishing every word away is not a thing anyone

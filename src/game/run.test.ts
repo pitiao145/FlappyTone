@@ -294,6 +294,7 @@ describe("Run — scoring a gate", () => {
   });
 
   it("a brief excursion outside the corridor does not collide", () => {
+    setTuning({ playerRulerV2: false }); // old-board corridor numbers (old foundation)
     // Two frames (~32ms) off-corridor, well under COLLISION_SUSTAIN_MS. At one
     // frame per collision this ended the gate; a 21ms sample is measurement,
     // not flying into a wall.
@@ -313,6 +314,7 @@ describe("Run — scoring a gate", () => {
     const outcomes = outcomesOf(snapshots);
     expect(outcomes[0].outcome).not.toBe("collision");
     expect(snapshots[snapshots.length - 1].hearts).toBe(3);
+    resetTuning();
   });
 
   it("a sustained excursion still collides and costs a heart", () => {
@@ -1163,11 +1165,13 @@ describe("Run — rewarding a confident correct shape (spec: classifier boost)",
   });
 
   it("does not boost when disabled", () => {
+    setTuning({ playerRulerV2: false }); // old-board corridor numbers (old foundation)
     setTuning({ toneClassifierBoostEnabled: false });
     const run = newT2FirstRun();
     const { snapshots } = simulate(run, 1600, levelShifted(0.5));
     const log = snapshots[snapshots.length - 1].gateLog.find((g) => g.tone === 2);
     expect(log?.outcome).toBe("good");
+    resetTuning();
   });
 
   it("never turns a real wall collision into a reward", () => {
@@ -1180,6 +1184,7 @@ describe("Run — rewarding a confident correct shape (spec: classifier boost)",
   });
 
   it("with classifier v1, neither boosts nor reads a natural gate (speech style floor rule)", () => {
+    setTuning({ playerRulerV2: false }); // old-board corridor numbers (old foundation)
     // Same trace that boosts to perfect above. v1's textbook anchors misread
     // natural speech, so v1 stays out of a natural gate entirely — no boost,
     // no read, so no mismatch collision either. (v2: the test below.)

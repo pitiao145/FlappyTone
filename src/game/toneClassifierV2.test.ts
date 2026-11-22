@@ -1,8 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import { setTuning } from "./tuning.ts";
 import sample from "../../fixtures/contours/jane-textbook-sample.json";
 import { classifyToneV2, toneFeatures } from "./toneClassifierV2.ts";
 import type { Contour } from "./contours.ts";
 import { AVERAGED_TONE_SHAPE } from "./toneAverages.ts";
+
+// The old foundation (one-ruler flag off): these tests pin the old board,
+// kept as the Lab's roll-back path. The new foundation (the default since
+// brief 51) is pinned in toneReaderRuler.test.ts and the ruler tests.
+beforeEach(() => setTuning({ playerRulerV2: false }));
 
 const contourOf = (points: { tMs: number; chao: number }[]): Contour => ({
   points,

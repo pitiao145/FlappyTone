@@ -1,7 +1,7 @@
 /**
  * Brief 45: the reader's one-ruler settings (`toneReaderRuler`), used only
  * when `playerRulerV2` is on. The old board's behaviour is pinned by
- * toneClassifierV2.test.ts with the flag off (the default).
+ * toneClassifierV2.test.ts with the flag off (the old foundation; on is the default since brief 51).
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { classifyToneV2, readerSettings } from "./toneClassifierV2.ts";
@@ -21,6 +21,7 @@ afterEach(() => resetTuning());
 
 describe("reader settings by flag", () => {
   it("flag off: the old board's toneV2* fields, no ruler-only guards", () => {
+    setTuning({ playerRulerV2: false });
     const r = readerSettings();
     expect(r.t1MinChao).toBe(DEFAULT_TUNING.toneV2T1MinChao);
     expect(r.t4MinPeakChao).toBe(DEFAULT_TUNING.toneV2T4MinPeakChao);
@@ -100,6 +101,7 @@ describe("ruler reader: onset scoop", () => {
 
 describe("one-ruler averages and default corridors behind the flag", () => {
   it("flag off: today's averages and corridors", () => {
+    setTuning({ playerRulerV2: false });
     expect(averagedShapes().tone).toBe(AVERAGED_TONE_SHAPE);
     expect(referenceFor([2])).toBe(AVERAGED_TONE_SHAPE.textbook[2]);
     expect(shapeForTone(3).polyline).toEqual(DEFAULT_TUNING.polylines[3]);

@@ -5,7 +5,7 @@ import { decodeWav } from "./wav.ts";
 
 const load = (f: string) => decodeWav(new Uint8Array(readFileSync(`fixtures/captures/${f}`)));
 
-describe("clipRuler (process-clips --one-ruler, brief 51)", () => {
+describe("clipRuler (process-clips, brief 51)", () => {
   it("has Jane's brief 43 ruler and none for an unmeasured voice", () => {
     expect(rulerFor("jane")).toBe(JANE_RULER);
     expect(JANE_RULER).toMatchObject({ middleHz: 197.4, upSemitones: 5.75, downSemitones: 7.25 });

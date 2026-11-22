@@ -4,7 +4,7 @@
  * One take in, one target shape out, placed on the speaker's ONE ruler
  * instead of the old per-tone cohort stretch (`clipNormalize.ts`). This is the
  * shaping code of `src/dev/bench39/make-shapes.mjs`, which built
- * `shapes-v2.json`, moved into a module so `process-clips --one-ruler` and the
+ * `shapes-v2.json`, moved into a module so `process-clips` and the
  * offline proof (`bench39/ruler-pipeline-check.mjs`) run the very same lines:
  *
  * - per-clip gate: the noise floor is measured from the clip itself

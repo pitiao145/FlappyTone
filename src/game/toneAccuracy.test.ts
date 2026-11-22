@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import { setTuning } from "./tuning.ts";
 import sample from "../../fixtures/contours/jane-textbook-sample.json";
 import fallback from "../data/wordsFallback.json";
 import type { ContourPoint } from "./contours.ts";
@@ -14,6 +15,11 @@ import {
 } from "./toneAccuracy.ts";
 import { spokenTones } from "./sandhi.ts";
 import { multiWords, toneComboKey, wordsFromCatalog, wordsOfTone } from "./words.ts";
+
+// The old foundation (one-ruler flag off): these tests pin the old board,
+// kept as the Lab's roll-back path. The new foundation (the default since
+// brief 51) is pinned in toneReaderRuler.test.ts and the ruler tests.
+beforeEach(() => setTuning({ playerRulerV2: false }));
 
 /**
  * Real measured contours: Jane's published textbook clips, sampled into

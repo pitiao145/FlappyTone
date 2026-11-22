@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import { setTuning } from "./tuning.ts";
 import sample from "../../fixtures/contours/jane-natural-sample.json";
 import bundle from "../data/wordsFallback.json";
 import { spokenTones } from "./sandhi.ts";
@@ -8,6 +9,11 @@ import { averagePolyline } from "./toneAverage.ts";
 import { AVERAGED_PAIR_SHAPE, AVERAGED_TONE_SHAPE } from "./toneAverages.ts";
 import { referenceFor, toneAccuracy, toneAccuracyDetail } from "./toneAccuracy.ts";
 import { toneComboKey, type Word } from "./words.ts";
+
+// The old foundation (one-ruler flag off): these tests pin the old board,
+// kept as the Lab's roll-back path. The new foundation (the default since
+// brief 51) is pinned in toneReaderRuler.test.ts and the ruler tests.
+beforeEach(() => setTuning({ playerRulerV2: false }));
 
 /**
  * Jane's published NATURAL clips (speech style spec §3.4), the counterpart of

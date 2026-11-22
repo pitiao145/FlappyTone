@@ -1,5 +1,5 @@
 import { DEFAULT_TUNING, setTuning, tuning } from "./tuning.ts";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   applyCorridorWidth,
   corridorChaoAt,
@@ -16,6 +16,11 @@ import {
   shapeForTone,
   type Tone,
 } from "./gates.ts";
+
+// The old foundation (one-ruler flag off): these tests pin the old board,
+// kept as the Lab's roll-back path. The new foundation (the default since
+// brief 51) is pinned in toneReaderRuler.test.ts and the ruler tests.
+beforeEach(() => setTuning({ playerRulerV2: false }));
 
 describe("corridorChaoAt", () => {
   // DEFAULT_POLYLINES is now a fixed 2/3/4/3-vertex template per tone (see

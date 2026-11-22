@@ -1,4 +1,4 @@
-// Brief 51 step 4: offline proof that `process-clips --one-ruler` makes the
+// Brief 51 step 4: offline proof that `process-clips` makes the
 // shapes of `src/dev/local/shapes-v2.json`. Dev-only. Reads local audio only:
 // no Supabase, no R2, no network, writes nothing.
 //
@@ -54,7 +54,7 @@ const at = (p, t) => { for (let i = 1; i < p.length; i++) if (t <= p[i][0]) { co
 const gap = (a, b) => { let m = 0; for (let i = 0; i <= 50; i++) m = Math.max(m, Math.abs(at(a, i / 50) - at(b, i / 50))); return m; };
 const liftPt = ([t, c]) => [t, +Math.min(5, Math.max(1, c + lift.chao)).toFixed(3)];
 
-// process-clips --one-ruler measures the take with faded edges (fadeEdges there).
+// process-clips measures the take with faded edges (fadeEdges there).
 function fade(samples, sampleRate) {
   const out = samples.slice();
   const n = Math.round((FADE_MS / 1000) * sampleRate);
