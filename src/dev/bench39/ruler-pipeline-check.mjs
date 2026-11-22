@@ -9,11 +9,12 @@
 // make-shapes adds (it is a stopgap; those words get re-recorded).
 //
 // Second pass (--raw): the raw takes under fixtures/recordings/jane/<session>/
-// (process-clips' real input, edges not faded) for the newer textbook words.
+// (process-clips' real input), faded as process-clips does, newer textbook words.
 //
 //   node src/dev/bench39/ruler-pipeline-check.mjs [--raw]
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { shapeOnRuler, JANE_RULER } from "../clipRuler.ts";
+import { FADE_MS } from "../clipCut.ts";
 import { loadWav, med, fmt } from "./lib.mjs";
 
 const LIMIT = 0.05; // chao
@@ -53,7 +54,15 @@ const at = (p, t) => { for (let i = 1; i < p.length; i++) if (t <= p[i][0]) { co
 const gap = (a, b) => { let m = 0; for (let i = 0; i <= 50; i++) m = Math.max(m, Math.abs(at(a, i / 50) - at(b, i / 50))); return m; };
 const liftPt = ([t, c]) => [t, +Math.min(5, Math.max(1, c + lift.chao)).toFixed(3)];
 
-function check(label, style, fileOf, ids) {
+// process-clips --one-ruler measures the take with faded edges (fadeEdges there).
+function fade(samples, sampleRate) {
+  const out = samples.slice();
+  const n = Math.round((FADE_MS / 1000) * sampleRate);
+  for (let i = 0; i < n && i < out.length; i++) { out[i] *= i / n; out[out.length - 1 - i] *= i / n; }
+  return out;
+}
+
+function check(label, style, fileOf, ids, faded = false) {
   const res = [];
   const missing = [], failed = [];
   for (const r of rows) {
@@ -63,7 +72,9 @@ function check(label, style, fileOf, ids) {
     if (!stored) { if (file) missing.push(r.id); continue; }
     if (!file) { missing.push(r.id); continue; }
     try {
-      const { samples, sampleRate } = loadWav(file);
+      const w = loadWav(file);
+      const { sampleRate } = w;
+      const samples = faded ? fade(w.samples, sampleRate) : w.samples;
       const s = shapeOnRuler(samples, sampleRate, JANE_RULER, r.tone, r.syllables);
       const poly = style === "textbook" && lifted.has(r.id) ? s.polyline.map(liftPt) : s.polyline;
       res.push({
@@ -89,6 +100,6 @@ const a = check("textbook, make-shapes' own inputs", "textbook", sourceOf);
 const b = check("natural, make-shapes' own inputs", "natural", sourceOf);
 if (process.argv.includes("--raw")) {
   const newer = new Set(rows.filter((r) => existsSync(`fixtures/clips/jane/${r.id}.wav`)).map((r) => r.id));
-  check("textbook, raw takes (process-clips' real input, edges not faded), newer words", "textbook", (_s, id) => rawOf(id), newer);
+  check("textbook, raw takes faded as process-clips does (its real input), newer words", "textbook", (_s, id) => rawOf(id), newer, true);
 }
 console.log(`\nresult: ${a.over + b.over === 0 ? "PASS" : "MISSES"}: ${a.n + b.n} shapes, ${a.over + b.over} over ${LIMIT} chao`);
