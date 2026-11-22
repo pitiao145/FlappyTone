@@ -66,6 +66,7 @@ import { drawWorld, refreshMotionPreference, refreshThemePreference } from "../r
 import { JumpingPip } from "./bird/index.ts";
 import { PauseMenu } from "./PauseMenu.tsx";
 import { GameHud, type OutcomeFlash } from "./GameHud.tsx";
+import { runSignal } from "../analytics/runSignal.ts";
 import type { Tone } from "../game/gates.ts";
 
 /** The away watch of a host that does not handle abandonment (the Lab). */
@@ -251,6 +252,12 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
    */
   const frozenRef = useRef(false);
   /**
+   * The noise floor (linear RMS) the tracker uses this run: the saved floor
+   * until the session's own room measurement lands, then that. Read only by
+   * `reportRunEnd` for `run_end.noiseDb` (brief 51); null before the first frame.
+   */
+  const noiseFloorRef = useRef<number | null>(null);
+  /**
    * `Run.tickFrame`/`tickAudio` take an absolute timestamp, and `Run` stamps
    * things like a cue's fire time (`cue.atMs`) with whatever it's handed —
    * so simply not calling them while frozen isn't enough on its own. The
@@ -391,6 +398,9 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
         // actually finished on is the honest answer.
         voice: inventorySpeaker(),
         speechStyle: runRef.current?.speechStyle,
+        // Room loudness and the share of in-gate frames heard (brief 51,
+        // option A). No pitch, no learned scale. `runSignal` never throws.
+        ...runSignal(snap.gateLog, noiseFloorRef.current),
       });
       // Every account's run goes to the server once (brief 05; a no-op for a
       // guest). The log's outcome is the run's real end (`runLogOutcome`);
@@ -562,6 +572,7 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
     // read against the harder one's settings.
     track({ type: "run_start", mode, corridor, cue: cueStyle });
     let tracker: PitchTracker | null = null;
+    noiseFloorRef.current = null;
     let rafId = 0;
     let running = true;
     let finished = false;
@@ -616,14 +627,17 @@ export const Game = forwardRef<GameHandle, Props>(function Game({
           fMin: speakerFMin(settings.f0Center),
           // The saved calibration floor, capped, until this session's own
           // measurement of the room lands (`measureNoise` below).
-          noiseFloor: startingNoiseFloor(settings.noiseFloor, settings.voiceRms),
+          noiseFloor: (noiseFloorRef.current = startingNoiseFloor(settings.noiseFloor, settings.voiceRms)),
           minVoicedRunMs: tuning().minVoicedRunMs,
           rangeSemitones: grid ? grid.up : settings.rangeSemitones,
           rangeDownSemitones: grid ? grid.down : settings.rangeDownSemitones,
         });
       }
       const measured = measureNoise(frame, sampleRate);
-      if (measured !== null) tracker.setNoiseFloor(measured);
+      if (measured !== null) {
+        tracker.setNoiseFloor(measured);
+        noiseFloorRef.current = measured;
+      }
       const pitch = tracker.push(frame);
       // A walkthrough card (steps B/C/D) holds the world still — no pitch
       // frame should reach Run while one is up. The frozen-time offset (see

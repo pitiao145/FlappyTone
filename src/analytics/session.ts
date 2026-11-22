@@ -387,6 +387,18 @@ export type AnalyticsEvent =
        * as `voice`.
        */
       speechStyle?: SpeechStyle;
+      /**
+       * How loud the room was during the run: the session noise floor in dB
+       * full scale, a whole number (`runSignal.ts`). Describes the room, not
+       * the voice. Absent when no floor was known (brief 51, logging option A).
+       */
+      noiseDb?: number;
+      /**
+       * Share of the frames inside gates where the game heard a voice, whole
+       * percent 0–100. A quality number, not a voice profile. Absent when no
+       * gate had frames (brief 51, logging option A).
+       */
+      heardPct?: number;
     }
   /**
    * The native clip wasn't loaded yet when its cue was due, so the synthetic
