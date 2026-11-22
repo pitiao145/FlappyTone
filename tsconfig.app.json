@@ -52,6 +52,8 @@
     "src/dev/serviceClient.ts",
     "src/dev/export-fallback.ts",
     "src/dev/clipCut.test.ts",
+    "src/dev/clipRuler.ts",
+    "src/dev/clipRuler.test.ts",
     "src/dev/clipCutMulti.ts",
     "src/dev/dropDevFixtures.ts",
     "src/dev/generate-fixture-words.ts",
