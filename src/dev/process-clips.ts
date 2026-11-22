@@ -6,6 +6,20 @@
  *   npm run process-clips -- --speaker jane --style textbook --all           # re-cut published too
  *   npm run process-clips -- --speaker jane --style textbook --all --dry-run # cut, write nothing
  *   npm run process-clips -- --speaker jane --style natural --all --no-upload # rows only, no R2
+ *   npm run process-clips -- --speaker jane --style textbook --one-ruler --dry-run  # new foundation
+ *
+ * ## `--one-ruler`: the new foundation's shapes (brief 51)
+ *
+ * With `--one-ruler`, every take is shaped the way `bench39/make-shapes.mjs`
+ * built `shapes-v2.json` (`clipRuler.ts`'s `shapeOnRuler`): per-clip gate, the
+ * speaker's one ruler, knee templates, the refined pair fit. No cohort stretch,
+ * no session reference, no textbook map for natural: each clip stands on the
+ * ruler alone, so only the selected words are cut. The take is measured with
+ * its edges faded, as it ships. A speaker with no ruler in `clipRuler.ts` is
+ * refused. Offline proof: `node src/dev/bench39/ruler-pipeline-check.mjs`.
+ * Opt-in until go-live: the live catalog still holds old-board shapes, and a
+ * new word on the ruler beside them would not match. At go-live this becomes
+ * the default (docs/briefs/reports, brief 51 checklist).
  *
  * ## `--speaker` and `--style` are both required, and unknown values exit non-zero
  *
@@ -101,6 +115,7 @@ import {
 import { MIN_REFERENCE_FRAMES, resolveSeed } from "./clipPipeline.ts";
 import { median, reviewClip } from "./clipReview.ts";
 import { multiSyllablePolyline } from "./clipCutMulti.ts";
+import { rulerFor, rulerReference, shapeOnRuler, type ClipRuler } from "./clipRuler.ts";
 import type { Tone } from "../game/gates.ts";
 import { decodeWav, encodeWav } from "./wav.ts";
 import { r2Get, r2Put } from "./r2.ts";
@@ -127,6 +142,8 @@ const dryRun = args.includes("--dry-run");
 // byte-identical on a re-cut, so a measurement-only change (a new chao map)
 // needs only the word_clips rows rewritten.
 const noUpload = args.includes("--no-upload");
+// The new foundation's shapes (brief 51); see the header.
+const oneRuler = args.includes("--one-ruler");
 const sessionIdx = args.indexOf("--session");
 // A flag is not a session id. Taking the next token blindly means
 // `-- --session --dry-run` silently filters on the session "--dry-run",
@@ -204,6 +221,21 @@ if (!Number.isFinite(rawSeed)) {
   process.exit(1);
 }
 const seedF0 = resolveSeed(rawSeed);
+
+/** The speaker's one ruler, required by `--one-ruler`. */
+const ruler: ClipRuler | null = oneRuler ? rulerFor(speaker.id) : null;
+if (oneRuler && !ruler) {
+  console.error(
+    `--one-ruler: no ruler measured for speaker "${speaker.id}" (src/dev/clipRuler.ts).\n` +
+      "Measure one first (brief 43's rule, make-shapes.mjs) and add it there.",
+  );
+  process.exit(1);
+}
+if (ruler) {
+  console.log(
+    `One ruler: middle ${ruler.middleHz}Hz, up ${ruler.upSemitones} st, down ${ruler.downSemitones} st (${ruler.source}).`,
+  );
+}
 console.log(`Speaker ${speaker.id} (${speaker.name}), style ${style} — pitch-search seed ${seedF0}Hz.`);
 
 interface Row {
@@ -326,10 +358,13 @@ const selectedIds = new Set(selected.map((r) => r.id));
 const cohortsTouched = new Set(selected.map(cohortKey));
 // See the header: the chao map belongs to the cohort, so the whole cohort is
 // cut even when only part of it is written.
-const toCut = catalog.filter(
-  (r) =>
-    hasTake(r) && cohortsTouched.has(cohortKey(r)) && ["recorded", "published"].includes(r.status),
-);
+// With `--one-ruler` there is no cohort map: only the selected words are cut.
+const toCut = oneRuler
+  ? selected
+  : catalog.filter(
+      (r) =>
+        hasTake(r) && cohortsTouched.has(cohortKey(r)) && ["recorded", "published"].includes(r.status),
+    );
 const cohortOnly = toCut.length - selected.length;
 
 // ------------------------------------------------------------- the audio
@@ -458,6 +493,8 @@ interface Cut {
   pinnedFraction: number;
   samples: Float32Array;
   sampleRate: number;
+  /** Set by `--one-ruler`: the fitted shape, already on the ruler. */
+  polyline?: ContourPoint[];
 }
 
 /**
@@ -496,6 +533,17 @@ async function cutRows(toCut: Row[]): Promise<{ cuts: Cut[]; failed: string[]; r
   const referenceNotes: string[] = [];
 
   for (const [session, takes] of takesBySession) {
+    if (ruler) {
+      // One ruler for every session: nothing to measure or borrow.
+      const ref = rulerReference(ruler, session);
+      referenceBySession.set(session, {
+        f0Center: ref.f0Center,
+        rangeSemitones: ref.rangeSemitones,
+        frames: 0,
+        borrowedFrom: null,
+      });
+      continue;
+    }
     const measured = measurePitchReference(takes, seedF0);
 
     if (measured && measured.frames >= MIN_REFERENCE_FRAMES) {
@@ -533,6 +581,29 @@ async function cutRows(toCut: Row[]): Promise<{ cuts: Cut[]; failed: string[]; r
     for (const { row, samples, sampleRate } of takes) {
       const tone = row.tone as Tone;
       try {
+        if (ruler) {
+          // Measured on the faded take, the audio that ships (brief 51).
+          const faded = fadeEdges(samples, sampleRate);
+          const shape = shapeOnRuler(faded, sampleRate, ruler, tone, row.syllables);
+          cuts.push({
+            row,
+            tone,
+            syllableSpans: shape.syllableSpans,
+            underSegmented: shape.underSegmented,
+            overSegmented: shape.overSegmented,
+            session,
+            reference,
+            durationMs: shape.durationMs,
+            onsetMs: shape.onsetMs,
+            clipMs: shape.clipMs,
+            contour: shape.contour,
+            pinnedFraction: shape.pinnedFraction,
+            samples: faded,
+            sampleRate,
+            polyline: shape.polyline,
+          });
+          continue;
+        }
         const clip = cutClip(
           samples,
           sampleRate,
@@ -611,6 +682,7 @@ const asContours = (m: Map<string, Cut[]>): Map<string, CohortContours> =>
 
 const cohorts = groupCohorts(cuts);
 
+if (!oneRuler) {
 let mapSources: Map<string, CohortContours>;
 if (style === "natural") {
   // Every textbook take, exactly as `--style textbook --all` cuts them, so the
@@ -666,6 +738,7 @@ for (const [key, cohort] of [...cohorts].sort(([a], [b]) => a.localeCompare(b)))
   }
 }
 
+} // end of the cohort stretch (skipped by --one-ruler: each clip is already on the ruler)
 // ---- Cohort medians, for the review's duration outlier check.
 //
 // This speaker's own published clips, never the catalog's. The medians are a
@@ -722,7 +795,13 @@ interface Published {
   clipS: number;
   polyline: ContourPoint[];
   contour: ContourPoint[];
-  reference: { session: string; f0Center: number; rangeSemitones: number };
+  reference: {
+    session: string;
+    f0Center: number;
+    rangeSemitones: number;
+    upSemitones?: number;
+    downSemitones?: number;
+  };
   file: string;
 }
 
@@ -797,18 +876,21 @@ for (const cut of [...cuts].sort((a, b) => a.row.id.localeCompare(b.row.id))) {
     // canonical chao heights above, and the polyline has to describe the
     // contour that actually ships. The syllable boundaries are a property of
     // the audio, so they survive that rescale and the refit is exact.
-    polyline:
-      cut.row.syllables > 1 && cut.syllableSpans
+    // `--one-ruler` fitted its shape at the cut, on the ruler (brief 51).
+    polyline: cut.polyline ??
+      (cut.row.syllables > 1 && cut.syllableSpans
         ? multiSyllablePolyline(cut.contour, cut.syllableSpans)
-        : templateContour(cut.tone, cut.contour),
+        : templateContour(cut.tone, cut.contour)),
     // Every measured voiced frame — the evidence the polyline was fitted to,
     // kept so a better fit can be derived later without re-cutting.
     contour: cut.contour.map(([t, chao]) => [Number(t.toFixed(4)), Number(chao.toFixed(3))]),
-    reference: {
-      session: cut.session,
-      f0Center: Number(cut.reference.f0Center.toFixed(1)),
-      rangeSemitones: cut.reference.rangeSemitones,
-    },
+    reference: ruler
+      ? rulerReference(ruler, cut.session)
+      : {
+          session: cut.session,
+          f0Center: Number(cut.reference.f0Center.toFixed(1)),
+          rangeSemitones: cut.reference.rangeSemitones,
+        },
     file,
   });
 }
