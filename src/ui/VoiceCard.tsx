@@ -18,8 +18,8 @@ interface Props {
   busy: boolean;
   /** Opens the mic (in this tap) and the tuner from step 1. */
   onCalibrate: () => void;
-  /** Opens the mic (in this tap) and the tuner on its Done screen, to redo one part. */
-  onAdjust: () => void;
+  /** Unused since 22 Nov (the tuner is one short flow now); kept so callers need no change. */
+  onAdjust?: () => void;
 }
 
 /** "½ lower", "2 higher", "same". */
@@ -28,7 +28,7 @@ function middleWord(st: number): string {
   return `${halfSteps(st)} ${st > 0 ? "higher" : "lower"}`;
 }
 
-export function VoiceCard({ settings, busy, onCalibrate, onAdjust }: Props) {
+export function VoiceCard({ settings, busy, onCalibrate }: Props) {
   const [, bump] = useState(0);
   const cal = settings !== null && !settings.quickStart ? settings : null;
   const calibrated = cal !== null;
@@ -94,14 +94,9 @@ export function VoiceCard({ settings, busy, onCalibrate, onAdjust }: Props) {
         <button className="primary" disabled={busy} onClick={onCalibrate}>
           Calibrate
         </button>
-        <div className="voice-parts">
-          <button disabled={busy || !calibrated} onClick={onAdjust}>
-            Adjust one part
-          </button>
-          <button disabled={!calibrated || gates === 0} onClick={backToCalibration}>
-            Back to calibration
-          </button>
-        </div>
+        <button disabled={!calibrated || gates === 0} onClick={backToCalibration}>
+          Back to calibration
+        </button>
       </div>
       {room && (
         <p className="param-help">

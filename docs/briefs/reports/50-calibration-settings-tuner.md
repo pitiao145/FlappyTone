@@ -136,3 +136,21 @@ Replaces the semitone stage, the small dot ring and the big word above it.
 ## No Middle step (Pierre, 22 Nov 2026)
 
 The tuner is now Room → High (媽) → Low (馬). The Middle step asked for 媽 and 馬 "like talking", which fought the words and repeated the next two steps (test 9: "a pre-calibration"). The middle is computed from the High and Low takes with the same rule (each word's middle, then the semitone average: `settingsFromTakes`). Free talk was not used: it sits about 1.5 st under the middle of the tones (brief 44), and line 3 is the middle of the tones on the native speaker's ruler too. Risk, stated: someone who strains on the High step moves the middle up a little; the learned scale corrects the middle within about 10 gates. Done screen: Middle shows "line 3, between your high and low notes" without its own Redo; a redo of High or Low re-sets the middle when both takes are from this session, else keeps it. Tests: middle between recorded 媽 and 馬, lines from it; one take keeps the middle.
+
+## Calibration from mā má mǎ mà (Pierre, 22 Nov 2026)
+
+Pierre's first take with the High / Low tuner: 117 Hz, up 3, down 3 (both at the minimum); his 40-take ruler says 133 Hz, up 4.5, down 4.0. On his *recorded* 媽 and 馬 the same rule lands within 0.15 st, so the live miss came from the instructions ("easy, not a shout", "like a sigh"): they pushed 媽 down and 馬 down. Asking for "high" and "low" notes is singing, not Mandarin.
+
+Tested (`node src/dev/bench39/calib-words.mjs`; one take per word, Pierre's 16 take sets of his recorded 媽 麻 馬 罵 vs his ruler; the native speaker's older 媽 麻 馬 罵 vs her 357-clip ruler; error in st, median (worst)):
+
+| method | Pierre middle | up | down | native middle | up | down |
+|---|---|---|---|---|---|---|
+| A 媽+馬 midpoint, top p90 媽, bottom p10 馬 (the High/Low tuner) | +0.14 (−0.85) | −2.27 (−3.31) | −0.50 (−1.48) | −0.96 | −1.59 | −0.15 |
+| B fit of the chao rule on 媽+馬 | +1.95 | −3.71 | +0.96 | +0.85 | −3.65 | +1.09 |
+| C fit of the chao rule on all four | +0.08 (−1.21) | −1.91 (−4.10) | −0.19 (−1.17) | +1.59 | −4.09 | +1.84 |
+| **D middle from 媽+馬; top/bottom from the high/low parts of all four** | **+0.14 (−0.85)** | **+0.56 (1.74)** | **+0.35 (1.39)** | **−0.96** | **+1.46** | **−0.14** |
+| E as D, middle = median of all four | +0.45 (2.33) | +0.25 | +0.76 (2.78) | +2.80 | −2.30 | +3.62 |
+
+Why D fits Mandarin: a first tone alone does not reach a speaker's top; the start of the fourth tone and the end of the second do (Chao 51 and 35). The bottom is shared by the third-tone dip, the end of the fourth and the dip of the second. The middle of 媽 and 馬 is the centre of the Chao scale (55 and 21/214). For the native speaker D's lines land within 1 st (top +0.5, bottom −0.8).
+
+Built: Room → 媽 → 麻 → 馬 → 罵. Each word: the native example plays, "Your turn", say it back naturally; the ring fills while the voice is heard; the word locks on the silence after it (so the whole tone is caught: the target is matched over the word, `tunerToneNeedMs` 350 ms); the bird shows it against the word's target. Done: Top / Middle / Bottom and "Say the four tones again" (no per-line redo: each line now comes from several words). Settings card: "Adjust one part" removed. Test: the scale from the recorded 媽 麻 馬 罵; no third tone, no result.

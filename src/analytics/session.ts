@@ -54,8 +54,8 @@ export type RunEndReason = "out_of_hearts" | "finished" | "quit" | "restart" | "
 
 /** The calibration steps, mirrored from Calibration.tsx's `Step`. */
 // "middle": brief 44 middle step, only with the player ruler on (dev until brief 48).
-/** Brief 50 adds the Settings tuner's parts: room, top, bottom (middle and done are shared). */
-export type CalibStep = "quiet" | "talk" | "middle" | "low" | "high" | "done" | "preview" | "room" | "top" | "bottom";
+/** Brief 50: the Settings tuner reports room, then t1-t4 (mā má mǎ mà), then done. top/bottom were an earlier tuner. */
+export type CalibStep = "quiet" | "talk" | "middle" | "low" | "high" | "done" | "preview" | "room" | "top" | "bottom" | "t1" | "t2" | "t3" | "t4";
 
 /**
  * Restated rather than imported from `audio/mic.ts`.

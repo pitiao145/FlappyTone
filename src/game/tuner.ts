@@ -303,34 +303,55 @@ export interface TunerTake {
   low: number[];
 }
 
+/** One word of the four-tone step: its tone, its frames, and the word's target line at each normal frame (chao). */
+export interface ToneTake extends TunerTake {
+  tone: 1 | 2 | 3 | 4;
+  target: number[];
+}
+
 /**
- * Brief 50, 22 Nov (Pierre): no separate Middle step. The middle comes from
- * the High (媽, first tone) and Low (馬, third tone) takes: each take's own
- * middle, then their average in semitones (`measureMiddleTakes`, the rule
- * the Middle step used). Top and bottom are then measured from that middle.
- * With one take only (redo one part), the middle stays and only that line
- * is measured. Null when a take measures nothing (the caller says "try again").
+ * Brief 50, 22 Nov (Pierre: "think about Mandarin"): the scale from the four
+ * tones every learner practises first, mā má mǎ mà, each said naturally after
+ * the native example. No "say it high" or "say it low": that instruction
+ * pushed the voice away from its normal tones.
+ *
+ * - Middle: 媽 and 馬, each word's own middle, then their average in
+ *   semitones (`measureMiddleTakes`).
+ * - Top: p90 of every frame whose target sits at the top (chao >=
+ *   `tunerHighChao`: the first tone, the start of the fourth, the end of the
+ *   second). Bottom: p10 of every frame whose target sits at the bottom
+ *   (<= `tunerLowChao`: the third-tone dip, the end of the fourth, the dip of
+ *   the second). Creak (10 st under a word's own median) left out.
+ *
+ * Measured (`bench39/calib-words.mjs`, one take per word, 16 take sets):
+ * Pierre middle +0.14 st (worst -0.85), up +0.56 (worst 1.74), down +0.35
+ * (worst 1.39); with 媽 and 馬 only the up half was 2.3 st too small. The
+ * native speaker: lines within about 1 st. Null when a word measures nothing.
  */
-export function settingsFromTakes(base: CalibrationSettings, t: { top?: TunerTake; bottom?: TunerTake }): CalibrationSettings | null {
-  let mid = base.f0Center;
-  if (t.top && t.bottom) {
-    const first = measureMiddleTakes([t.top.normal, t.bottom.normal]);
-    // A deep voice: its floor sits under the normal one, so the low tracker's frames are fair.
-    const deep = first !== null && speakerFMin(first) < tuning().pitchFloorHighHz;
-    const m = deep ? (measureMiddleTakes([t.top.low, t.bottom.low]) ?? first) : first;
-    if (m === null) return null;
-    mid = m;
+export function settingsFromTones(base: CalibrationSettings, takes: ToneTake[]): CalibrationSettings | null {
+  const t = tuning();
+  const t1 = takes.find((k) => k.tone === 1), t3 = takes.find((k) => k.tone === 3);
+  if (!t1 || !t3) return null;
+  const first = measureMiddleTakes([t1.normal, t3.normal]);
+  // A deep voice: its floor sits under the normal one, so the low tracker's frames are fair.
+  const deep = first !== null && speakerFMin(first) < t.pitchFloorHighHz;
+  const mid = deep ? (measureMiddleTakes([t1.low, t3.low]) ?? first) : first;
+  if (mid === null) return null;
+  const hi: number[] = [], lo: number[] = [];
+  for (const k of takes) {
+    const st = k.normal.map((f) => 12 * Math.log2(f / mid));
+    const sorted = st.filter(Number.isFinite).sort((a, b) => a - b);
+    if (sorted.length === 0) continue;
+    const floor = sorted[Math.floor(sorted.length / 2)] - t.gridCreakSt;
+    st.forEach((x, i) => {
+      const c = k.target[i];
+      if (!Number.isFinite(x) || x < floor || !Number.isFinite(c)) return;
+      if (c >= t.tunerHighChao) hi.push(x);
+      if (c <= t.tunerLowChao) lo.push(x);
+    });
   }
+  if (hi.length < 10 || lo.length < 10) return null;
   let out = applyTunerResult(base, { part: "middle", f0Center: mid });
-  if (t.top) {
-    const up = measureTop(t.top.normal, mid);
-    if (up === null) return null;
-    out = applyTunerResult(out, { part: "top", up });
-  }
-  if (t.bottom) {
-    const down = measureBottom(t.bottom.normal, mid);
-    if (down === null) return null;
-    out = applyTunerResult(out, { part: "bottom", down });
-  }
-  return out;
+  out = applyTunerResult(out, { part: "top", up: clampHalf(pct(hi, t.gridTopPct)) });
+  return applyTunerResult(out, { part: "bottom", down: clampHalf(-pct(lo, t.gridBottomPct)) });
 }

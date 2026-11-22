@@ -203,27 +203,31 @@ describe("lock when the ring is full (22 Nov)", () => {
   });
 });
 
-describe("middle from the High and Low takes (22 Nov: no Middle step)", () => {
+describe("the scale from mā má mǎ mà (22 Nov)", () => {
   const BASE: CalibrationSettings = { f0Center: 150, noiseFloor: 0.0005, rangeSemitones: 6, rangeDownSemitones: 5, quickStart: true };
-  const f0 = (file: string) => frames(file, 0).filter((f) => f.voiced && f.f0 !== null).map((f) => f.f0!);
-  it("sets the middle between 媽 and 馬, then both lines from it (recorded frames)", async () => {
-    const { settingsFromTakes, measureMiddleTakes, measureTop, measureBottom } = await import("./tuner.ts");
-    const top = { normal: f0("jane_ma1.wav"), low: f0("jane_ma1.wav") };
-    const bottom = { normal: f0("jane_ma3.wav"), low: f0("jane_ma3.wav") };
-    const out = settingsFromTakes(BASE, { top, bottom })!;
-    const mid = measureMiddleTakes([top.normal, bottom.normal])!;
-    expect(out.f0Center).toBeCloseTo(mid, 6);
-    expect(out.rangeSemitones).toBeCloseTo(measureTop(top.normal, mid)!, 6);
-    expect(out.rangeDownSemitones).toBeCloseTo(measureBottom(bottom.normal, mid)!, 6);
+  /** A recorded word as a take, with the word's target on its own clock (as the tuner does). */
+  const takeOf = async (file: string, tone: 1 | 2 | 3 | 4, shape: Array<[number, number]>) => {
+    const { corridorChaoAt } = await import("./gates.ts");
+    const fr = frames(file, 0).filter((f) => f.voiced && f.f0 !== null);
+    const t0 = fr[0].tMs, span = fr.at(-1)!.tMs - t0;
+    const f0 = fr.map((f) => f.f0!);
+    return { tone, normal: f0, low: f0, target: fr.map((f) => corridorChaoAt({ polyline: shape, durationS: span / 1000 }, (f.tMs - t0) / span)) };
+  };
+  it("middle from 媽 and 馬; top and bottom from the high and low parts of all four (recorded)", async () => {
+    const { settingsFromTones, measureMiddleTakes } = await import("./tuner.ts");
+    const takes = [
+      await takeOf("jane_ma1.wav", 1, [[0, 5], [1, 5]]),
+      await takeOf("jane_ma2.wav", 2, [[0, 1.72], [0.29, 1.29], [0.65, 2.97], [0.84, 4.79], [1, 5]]),
+      await takeOf("jane_ma3.wav", 3, [[0, 2.48], [0.39, 1], [0.71, 1.22], [0.93, 3.8], [1, 3.88]]),
+      await takeOf("jane_ma4.wav", 4, [[0, 3.3], [0.22, 5], [0.9, 1.43], [1, 1.21]]),
+    ];
+    const out = settingsFromTones(BASE, takes)!;
+    expect(out.f0Center).toBeCloseTo(measureMiddleTakes([takes[0].normal, takes[2].normal])!, 6);
+    expect(out.rangeSemitones).toBeGreaterThan(3);
+    expect(out.rangeDownSemitones).toBeGreaterThan(3);
     expect(out.quickStart).toBeUndefined();
     expect(out.noiseFloor).toBe(BASE.noiseFloor);
-  });
-  it("one take only (redo High): the middle stays, only the top changes", async () => {
-    const { settingsFromTakes } = await import("./tuner.ts");
-    const cal = { ...BASE, quickStart: undefined, f0Center: 180 };
-    const out = settingsFromTakes(cal, { top: { normal: f0("jane_ma1.wav"), low: [] } })!;
-    expect(out.f0Center).toBe(180);
-    expect(out.rangeDownSemitones).toBe(cal.rangeDownSemitones);
-    expect(out.rangeSemitones).not.toBe(cal.rangeSemitones);
+    // Without a first or third tone there is no middle: nothing is measured.
+    expect(settingsFromTones(BASE, takes.filter((k) => k.tone !== 3))).toBeNull();
   });
 });
