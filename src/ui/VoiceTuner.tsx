@@ -15,22 +15,20 @@ import { inventoryNow, loadInventory } from "../audio/inventory.ts";
 import { prefetchPool } from "../audio/prefetch.ts";
 import { ensurePlaybackCtx, isCueAudible, playToneCue } from "../audio/reference.ts";
 import { getMicSession, setFrameSink } from "../audio/session.ts";
-import { corridorChaoAt, shapeForTone } from "../game/gates.ts";
 import type { CalibrationSettings } from "../game/settings.ts";
 import {
   StepCapture,
   applyTunerResult,
   captureOptions,
   measureMiddle,
-  settingsFromTones,
-  type ToneTake,
+  settingsFromParts,
+  type TunerTake,
   roomBars,
   roomMarker,
   roomVerdict,
   semitoneWord,
   voiceBars,
   type RoomVerdict,
-  type TunerPart,
   type TunerResult,
   tunerTrackerConfig,
 } from "../game/tuner.ts";
@@ -45,20 +43,18 @@ import { withLearnedScale } from "../game/playerRuler.ts";
 import { drawVisualiser } from "../render/visualiser.ts";
 
 /**
- * Room, then the four tones of ma, said naturally after the native example
- * (22 Nov 2026, brief 50 report "mā má mǎ mà"). The middle and both lines come
- * from all four (`settingsFromTones`).
+ * Room → Talk → 媽 → 馬 (Pierre, 22 Nov 2026). Talk (read numbers aloud, any
+ * language) sets the middle; 媽 the top line, 馬 the bottom line
+ * (`settingsFromParts`). Each part can be redone on its own.
  */
-type VoicePart = "t1" | "t2" | "t3" | "t4";
+type VoicePart = "talk" | "t1" | "t3";
 type StepPart = "room" | VoicePart;
-const STEPS: StepPart[] = ["room", "t1", "t2", "t3", "t4"];
-const TONE_WORD: Record<VoicePart, { id: string; tone: 1 | 2 | 3 | 4; hanzi: string; pinyin: string; label: string; hint: string }> = {
-  t1: { id: "ma1b", tone: 1, hanzi: "媽", pinyin: "mā", label: "First tone", hint: "High and flat" },
-  t2: { id: "ma2", tone: 2, hanzi: "麻", pinyin: "má", label: "Second tone", hint: "Rising, like a question" },
-  t3: { id: "ma3b", tone: 3, hanzi: "馬", pinyin: "mǎ", label: "Third tone", hint: "Low" },
-  t4: { id: "ma4b", tone: 4, hanzi: "罵", pinyin: "mà", label: "Fourth tone", hint: "Falling, firm" },
+const STEPS: StepPart[] = ["room", "talk", "t1", "t3"];
+const TONE_WORD: Record<"t1" | "t3", { id: string; tone: 1 | 3; hanzi: string; pinyin: string; label: string; hint: string }> = {
+  t1: { id: "ma1b", tone: 1, hanzi: "媽", pinyin: "mā", label: "First tone", hint: "Listen, then say it back" },
+  t3: { id: "ma3b", tone: 3, hanzi: "馬", pinyin: "mǎ", label: "Third tone", hint: "Listen, then say it back" },
 };
-const STEP_LABEL: Record<StepPart, string> = { room: "Room", t1: "mā", t2: "má", t3: "mǎ", t4: "mà" };
+const STEP_LABEL: Record<StepPart, string> = { room: "Room", talk: "Talk", t1: "媽 mā", t3: "馬 mǎ" };
 /** A start for the drawing before anything is measured: a voice between the two presets. */
 const NEUTRAL: CalibrationSettings = { f0Center: 150, noiseFloor: 0.0005, rangeSemitones: 5, rangeDownSemitones: 5 };
 
@@ -119,10 +115,10 @@ export function VoiceTuner({ settings, start, onDone, onCancel }: Props) {
     };
   }, []);
 
-  /** This session's four tone takes. The lines are set once all four exist. */
-  const takesRef = useRef<Partial<Record<VoicePart, ToneTake>>>({});
-  /** True when the four words measured nothing usable: start the words again with a note. */
-  const [again, setAgain] = useState(false);
+  /** This session's takes, per part. */
+  const takesRef = useRef<Partial<Record<VoicePart, TunerTake>>>({});
+  /** The part that measured nothing usable: it shows "Couldn't hear that" when it opens again. */
+  const [again, setAgain] = useState<VoicePart | null>(null);
 
   const finishStep = (r: TunerResult | null, verdict?: RoomVerdict) => {
     if (r) setDraft((d) => applyTunerResult(d, r));
@@ -130,23 +126,23 @@ export function VoiceTuner({ settings, start, onDone, onCancel }: Props) {
     advance();
   };
 
-  const finishTake = (part: VoicePart, take: ToneTake) => {
+  /**
+   * A take locked. Talk sets the middle at once (the bird then flies on it);
+   * 媽 and 馬 set their line from that middle. A redo changes only its part.
+   */
+  const finishTake = (part: VoicePart, take: TunerTake) => {
     takesRef.current = { ...takesRef.current, [part]: take };
-    if (part !== "t4") {
-      advance();
-      return;
-    }
-    const next = settingsFromTones(draft, Object.values(takesRef.current) as ToneTake[]);
+    const next = settingsFromParts(draft, { [part]: take });
     if (!next) {
-      // Never a wrong result (hard rule 8): say the four again.
-      takesRef.current = {};
-      setAgain(true);
-      setView({ kind: "step", part: "t1", back: "next" });
+      // Never a wrong result (hard rule 8): this part again.
+      setAgain(part);
+      setView({ kind: "step", part, back: view.kind === "step" ? view.back : "next" });
       return;
     }
-    setAgain(false);
+    setAgain(null);
     setDraft(next);
-    setView({ kind: "done" });
+    if (view.kind === "step" && view.back === "done") setView({ kind: "done" });
+    else advance();
   };
 
   const advance = () => {
@@ -167,10 +163,7 @@ export function VoiceTuner({ settings, start, onDone, onCancel }: Props) {
         draft={draft}
         room={room}
         changed={!base || JSON.stringify(base) !== JSON.stringify(draft) || room !== null}
-        onRedo={() => {
-          takesRef.current = {};
-          setView({ kind: "step", part: "t1", back: "next" });
-        }}
+        onRedo={(part) => setView({ kind: "step", part, back: "done" })}
         onDone={() => {
           track({ type: "calib_done" });
           onDone(draft, room);
@@ -186,7 +179,7 @@ export function VoiceTuner({ settings, start, onDone, onCancel }: Props) {
       <div className="tuner-top">
         <button className="tuner-cancel" onClick={cancel}>Cancel</button>
         <span className="tuner-count">
-          {`Step ${stepIndex + 1} of ${STEPS.length}`}
+          {view.back === "done" ? `Redo: ${STEP_LABEL[view.part]}` : `Step ${stepIndex + 1} of ${STEPS.length}`}
         </span>
       </div>
       <div className="tuner-steps">
@@ -201,11 +194,11 @@ export function VoiceTuner({ settings, start, onDone, onCancel }: Props) {
         <RoomStep key={`room-${view.back}`} onDone={(floor, verdict) => finishStep({ part: "room", noiseFloor: floor }, verdict)} />
       ) : (
         <VoiceStep
-          key={view.part}
+          key={`${view.part}-${view.back}`}
           part={view.part}
           draft={draft}
           words={words}
-          again={again && view.part === "t1"}
+          again={again === view.part}
           onTake={(take) => finishTake(view.part as VoicePart, take)}
         />
       )}
@@ -294,32 +287,44 @@ function paintBars(el: HTMLElement, n: number): void {
 // ------------------------------------------------------------------ voice steps
 
 /**
- * One word of mā má mǎ mà. The native example plays first, then the
- * player says it back (the game's own call and response). The ring around
- * the word fills while the voice is heard; the word locks on the silence
- * after it, so the whole tone is caught. Below, the Visualiser's canvas: the
- * bird on the left, the line behind it, the word's target as a guide.
+ * One voice part, same screen for all three:
+ * - Talk: a number in the ring, a new one every 1.7 s; read them out loud,
+ *   any language. The ring fills with voiced speech; pauses are fine.
+ * - 媽 / 馬: the native example plays, then "Your turn"; the ring fills while
+ *   the voice is heard and the word locks on the silence after it.
+ * Below, the Visualiser's canvas: the bird on the left, the line behind it,
+ * and for 媽 / 馬 the word's target as a guide.
  */
 const SPAN_MS = 1600;
 const RING_R = 54;
 const RING_C = 2 * Math.PI * RING_R;
+/** The talk step's looser loudness gate (old calibration: normal speech must not be thrown away). */
+const TALK_RMS_MULT = 1.5;
+const NUMBER_FLASH_MS = 1700;
+const randomNumber = (last: string | null): string => {
+  let n: string;
+  do n = String(Math.floor(10 + Math.random() * 90)); while (n === last);
+  return n;
+};
 
 interface VoiceStepProps {
   part: VoicePart;
   draft: CalibrationSettings;
   words: Map<string, Word> | null;
-  /** The four words measured nothing usable last time: say so once. */
+  /** This part measured nothing usable last time: say so once. */
   again: boolean;
-  onTake: (take: ToneTake) => void;
+  onTake: (take: TunerTake) => void;
 }
 
 type Note = "listen" | "ready" | "hearing" | "louder" | "pause" | "locked";
 
 function VoiceStep({ part, draft, words, again, onTake }: VoiceStepProps) {
-  const spec = TONE_WORD[part];
-  const word = words?.get(spec.id);
+  const talk = part === "talk";
+  const spec = talk ? null : TONE_WORD[part];
+  const word = spec ? words?.get(spec.id) : undefined;
   const [attempt, setAttempt] = useState(0);
-  const [note, setNote] = useState<Note>("listen");
+  const [note, setNote] = useState<Note>(talk ? "ready" : "listen");
+  const [number, setNumber] = useState(() => randomNumber(null));
   /** "Couldn't hear that": shown until the player's voice comes in again. */
   const [retry, setRetry] = useState(again);
   const retryRef = useRef(again);
@@ -328,34 +333,46 @@ function VoiceStep({ part, draft, words, again, onTake }: VoiceStepProps) {
   }, [retry]);
   /** What the drawing reads each frame. Mutable, outside React (hard rule 1). */
   const live = useRef({ trail: new PitchTrail(SPAN_MS, BRIDGE_MS), chao: 3, voiced: false, progress: 0, locked: false, bars: 0 });
+  const takeRef = useRef<TunerTake | null>(null);
   const barsRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ringRef = useRef<SVGCircleElement>(null);
   // The scale the bird flies on: the learned one if any, else this calibration (read only).
   const shown = withLearnedScale(draft);
-  const shape = word ? { polyline: word.polyline, durationS: word.durationS } : shapeForTone(spec.tone);
 
   const playExample = () => {
-    if (!word) return;
+    if (!word || !spec) return;
     void ensurePlaybackCtx();
     const audio = getMicSession()?.ctx;
     if (audio && audio.state === "suspended") void audio.resume();
     playToneCue(spec.tone, shown.f0Center, shown.rangeSemitones, word, shown.rangeDownSemitones);
   };
 
-  // The example plays once when the word appears (Settings' Calibrate tap unlocked audio).
+  // 媽 / 馬: the example plays once when the word appears (Settings' Calibrate tap unlocked audio).
   useEffect(() => {
     if (word && attempt === 0) playExample();
   }, [word]);
 
-  // Capture: lock on the silence after enough voice, so the whole tone is caught.
+  // Talk: a new number to read every 1.7 s, until the ring is full.
+  useEffect(() => {
+    if (!talk || note === "locked") return;
+    const id = setInterval(() => setNumber((n) => randomNumber(n)), NUMBER_FLASH_MS);
+    return () => clearInterval(id);
+  }, [talk, note]);
+
+  // Capture.
   useEffect(() => {
     const L = live.current;
     L.progress = 0;
     L.locked = false;
     L.trail = new PitchTrail(SPAN_MS, BRIDGE_MS);
-    const cap = new StepCapture({ ...captureOptions(), needMs: tuning().tunerToneNeedMs, lockOnFull: false }, performance.now());
-    const times: number[] = [];
+    const t = tuning();
+    const cap = new StepCapture(
+      talk
+        ? { ...captureOptions(), needMs: t.tunerTalkVoicedMs, lockOnFull: true, allowPauses: true }
+        : { ...captureOptions(), needMs: t.tunerToneNeedMs, lockOnFull: false },
+      performance.now(),
+    );
     const lowFrames: number[] = [];
     let normal: PitchTracker | null = null;
     let low: PitchTracker | null = null;
@@ -373,19 +390,16 @@ function VoiceStep({ part, draft, words, again, onTake }: VoiceStepProps) {
         say("listen");
         return;
       }
-      const cfg = tunerTrackerConfig("middle", draft, sampleRate);
+      const cfg = { ...tunerTrackerConfig(talk ? "middle" : "top", draft, sampleRate), ...(talk ? { rmsMult: TALK_RMS_MULT } : {}) };
       normal ??= new PitchTracker({ ...cfg, f0Center: shown.f0Center, rangeSemitones: shown.rangeSemitones, rangeDownSemitones: shown.rangeDownSemitones });
-      low ??= new PitchTracker({ ...cfg, fMin: tuning().pitchFloorLowHz });
+      low ??= new PitchTracker({ ...cfg, fMin: t.pitchFloorLowHz });
       const p = normal.push(frame);
       const q = low.push(frame);
       const now = performance.now();
       L.bars = voiceBars(p.rms, draft.noiseFloor);
       const before = cap.f0s.length;
       const phase = cap.push({ tMs: now, voiced: p.voiced, f0: p.f0 });
-      if (cap.f0s.length > before) {
-        times.push(now);
-        lowFrames.push(q.voiced && q.f0 !== null ? q.f0 : (p.f0 as number));
-      }
+      if (cap.f0s.length > before) lowFrames.push(q.voiced && q.f0 !== null ? q.f0 : (p.f0 as number));
       if (phase !== "locked") {
         L.trail.push(p.smoothedChao, p.voiced, now);
         if (p.voiced) L.chao = p.smoothedChao;
@@ -401,9 +415,7 @@ function VoiceStep({ part, draft, words, again, onTake }: VoiceStepProps) {
         L.locked = true;
         L.voiced = false;
         L.progress = 1;
-        const t0 = times[0], span = times[times.length - 1] - t0;
-        const target = times.map((t) => (span > 0 ? corridorChaoAt(shape, (t - t0) / span) : NaN));
-        takeRef.current = { tone: spec.tone, normal: [...cap.f0s], low: lowFrames, target };
+        takeRef.current = { normal: [...cap.f0s], low: lowFrames };
         say("locked");
       } else if (phase === "tooShort") {
         // Too little voice: say so and listen again, never a wrong result (hard rule 8).
@@ -417,13 +429,12 @@ function VoiceStep({ part, draft, words, again, onTake }: VoiceStepProps) {
     return () => setFrameSink(null);
   }, [attempt, part, draft.noiseFloor]);
 
-  const takeRef = useRef<ToneTake | null>(null);
-  // A locked word: a short "done" beat, then the next word.
+  // Locked: a short "done" beat, then the next part.
   useEffect(() => {
     if (note !== "locked") return;
     const id = setTimeout(() => {
-      const t = takeRef.current;
-      if (t && measureMiddle(t.normal) !== null) onTake(t);
+      const tk = takeRef.current;
+      if (tk && measureMiddle(tk.normal) !== null) onTake(tk);
       else {
         setRetry(true);
         setAttempt((a) => a + 1);
@@ -450,7 +461,7 @@ function VoiceStep({ part, draft, words, again, onTake }: VoiceStepProps) {
       if (!g) return;
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
       drawVisualiser(g, w, h, {
-        tone: spec.tone,
+        tone: spec ? spec.tone : null,
         word: word ?? null,
         live: null,
         finished: [],
@@ -458,7 +469,7 @@ function VoiceStep({ part, draft, words, again, onTake }: VoiceStepProps) {
         chao: L.chao,
         voiced: L.voiced,
         scroll: { points: L.trail.points(), nowMs: L.trail.clockMs(), originMs: L.trail.originMs() },
-        scrollGuide: true,
+        scrollGuide: !!spec,
         corridor: "wide",
         band: true,
       });
@@ -467,27 +478,33 @@ function VoiceStep({ part, draft, words, again, onTake }: VoiceStepProps) {
     return () => cancelAnimationFrame(raf);
   }, [part, word]);
 
+  const locked = note === "locked";
   const status =
-    note === "locked" ? "Done ✓"
+    locked ? "Done ✓"
     : retry ? "Couldn't hear that. Again"
     : note === "listen" ? "Listen…"
     : note === "louder" ? "Louder?"
     : note === "pause" ? "Pause, then say it"
-    : note === "hearing" ? "…"
-    : "Your turn";
-  const locked = note === "locked";
+    : note === "hearing" ? (talk ? "Keep reading…" : "…")
+    : talk ? "Read the number out loud" : "Your turn";
   return (
     <>
       <div className={`tuner-ring tuner-enter${locked ? " is-locked" : ""}`}>
-        <span className="tuner-ring-label">{spec.label}</span>
-        <svg viewBox="0 0 128 128" width="128" height="128" role="img" aria-label={`Hold indicator for ${spec.hanzi}`}>
+        <span className="tuner-ring-label">{talk ? "Your speaking voice" : spec!.label}</span>
+        <svg viewBox="0 0 128 128" width="128" height="128" role="img" aria-label={talk ? "Hold indicator: read the numbers" : `Hold indicator for ${spec!.hanzi}`}>
           <circle cx="64" cy="64" r={RING_R} className="tuner-ring-track" />
           <circle cx="64" cy="64" r={RING_R} className="tuner-ring-fill" ref={ringRef}
             style={{ strokeDasharray: RING_C, strokeDashoffset: RING_C }} transform="rotate(-90 64 64)" />
-          <text x="64" y="62" textAnchor="middle" className="tuner-ring-hanzi" lang="zh-Hant">{spec.hanzi}</text>
-          <text x="64" y="90" textAnchor="middle" className="tuner-ring-pinyin">{locked ? "✓" : spec.pinyin}</text>
+          {talk ? (
+            <text x="64" y="78" textAnchor="middle" className="tuner-ring-hanzi">{locked ? "✓" : number}</text>
+          ) : (
+            <>
+              <text x="64" y="62" textAnchor="middle" className="tuner-ring-hanzi" lang="zh-Hant">{spec!.hanzi}</text>
+              <text x="64" y="90" textAnchor="middle" className="tuner-ring-pinyin">{locked ? "✓" : spec!.pinyin}</text>
+            </>
+          )}
         </svg>
-        <span className="tuner-ring-hint">{spec.hint}</span>
+        <span className="tuner-ring-hint">{talk ? "In your normal voice, any language" : spec!.hint}</span>
       </div>
       <div className="tuner-panel tuner-stage">
         <canvas ref={canvasRef} role="img" aria-label="Your voice: the bird follows your pitch" />
@@ -499,7 +516,7 @@ function VoiceStep({ part, draft, words, again, onTake }: VoiceStepProps) {
         <strong className={`tuner-ring-status${locked ? " is-locked" : ""}`} role="status">{status}</strong>
       </div>
       <div className="tuner-actions">
-        <button disabled={!word} onClick={playExample}>▶ Hear it</button>
+        {!talk && <button disabled={!word} onClick={playExample}>▶ Hear it</button>}
         <button onClick={() => setAttempt((a) => a + 1)}>Start over</button>
       </div>
     </>
@@ -512,17 +529,17 @@ interface DoneProps {
   draft: CalibrationSettings;
   room: RoomVerdict | null;
   changed: boolean;
-  onRedo: () => void;
+  onRedo: (p: VoicePart) => void;
   onDone: () => void;
   onCancel: () => void;
 }
 
 function DoneView({ draft, room, changed, onRedo, onDone, onCancel }: DoneProps) {
   const roomVerdictNow = room ?? roomVerdict(draft.noiseFloor);
-  const rows: Array<{ part: TunerPart; dot: string; title: string; sub: string }> = [
-    { part: "top", dot: "top", title: `Top: ${semitoneWord(draft.rangeSemitones)} up`, sub: "from the middle to line 5" },
-    { part: "room", dot: "middle", title: "Middle: line 3", sub: "the centre of your four tones" },
-    { part: "bottom", dot: "bottom", title: `Bottom: ${semitoneWord(draft.rangeDownSemitones)} down`, sub: "from the middle to line 1" },
+  const rows: Array<{ part: VoicePart; dot: string; title: string; sub: string }> = [
+    { part: "t1", dot: "top", title: `Top: ${semitoneWord(draft.rangeSemitones)} up`, sub: "from your first tone 媽" },
+    { part: "talk", dot: "middle", title: "Middle: your speaking voice", sub: "line 3" },
+    { part: "t3", dot: "bottom", title: `Bottom: ${semitoneWord(draft.rangeDownSemitones)} down`, sub: "from your third tone 馬" },
   ];
   return (
     <div className="screen tuner-screen tuner-done">
@@ -535,7 +552,7 @@ function DoneView({ draft, room, changed, onRedo, onDone, onCancel }: DoneProps)
       </svg>
       <div className="tuner-head tuner-head-center">
         <h2>Your voice is set</h2>
-        <p className="note">The game keeps fine-tuning it while you play.</p>
+        <p className="note">The game keeps fine-tuning it while you play. Something feel off? Redo just that part.</p>
       </div>
       <div className="tuner-rows">
         {rows.map((r) => (
@@ -545,6 +562,7 @@ function DoneView({ draft, room, changed, onRedo, onDone, onCancel }: DoneProps)
               <strong>{r.title}</strong>
               <span className="tuner-sub">{r.sub}</span>
             </div>
+            <button onClick={() => onRedo(r.part)}>Redo</button>
           </div>
         ))}
         {/* Information only (Pierre, 19 Nov): a new room check changes nothing you can act on. */}
@@ -554,7 +572,6 @@ function DoneView({ draft, room, changed, onRedo, onDone, onCancel }: DoneProps)
         </div>
       </div>
       <span className="param-help">1 semitone = one key on a piano.</span>
-      <button onClick={onRedo}>Say the four tones again</button>
       <div className="tuner-grow" />
       <button className="primary tuner-wide" onClick={changed ? onDone : onCancel}>Done</button>
     </div>

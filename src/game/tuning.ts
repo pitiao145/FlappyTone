@@ -705,11 +705,12 @@ export interface Tuning {
   tunerMaxVoicedMs: number;
   /** Tuner: no voice for this long shows "a bit louder?" (ms). */
   tunerStallMs: number;
-  /** Tuner four-tone step: frames whose target sits at or above this chao set the top line; at or below `tunerLowChao`, the bottom. */
-  tunerHighChao: number;
-  tunerLowChao: number;
-  /** Tuner four-tone step: voice that fills the ring; the word then locks on the silence after it (ms). */
+  /** Tuner 媽 / 馬 steps: voice that fills the ring; the word then locks on the silence after it (ms). */
   tunerToneNeedMs: number;
+  /** Tuner talk step: voiced speech that fills the ring (ms). */
+  tunerTalkVoicedMs: number;
+  /** Tuner talk step: line 3 = the talking median moved by this (st). 0 = as the old calibration. */
+  tunerTalkOffsetSt: number;
   /** Tuner room step: how long it listens (ms). */
   roomListenMs: number;
   /** Room verdicts: noise floor (RMS) under this is quiet; over `roomNoisyRms` is too noisy. */
@@ -919,9 +920,9 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   tunerLockSilenceMs: 300,
   tunerMaxVoicedMs: 2500,
   tunerStallMs: 4000,
-  tunerHighChao: 4.5,
-  tunerLowChao: 1.5,
   tunerToneNeedMs: 350,
+  tunerTalkVoicedMs: 3000,
+  tunerTalkOffsetSt: 0,
   roomListenMs: 2000,
   roomQuietRms: 0.0005,
   roomNoisyRms: 0.0015,

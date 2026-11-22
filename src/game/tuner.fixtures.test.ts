@@ -203,31 +203,37 @@ describe("lock when the ring is full (22 Nov)", () => {
   });
 });
 
-describe("the scale from mā má mǎ mà (22 Nov)", () => {
+describe("Room → Talk → 媽 → 馬 (22 Nov, Pierre's choice)", () => {
   const BASE: CalibrationSettings = { f0Center: 150, noiseFloor: 0.0005, rangeSemitones: 6, rangeDownSemitones: 5, quickStart: true };
-  /** A recorded word as a take, with the word's target on its own clock (as the tuner does). */
-  const takeOf = async (file: string, tone: 1 | 2 | 3 | 4, shape: Array<[number, number]>) => {
-    const { corridorChaoAt } = await import("./gates.ts");
-    const fr = frames(file, 0).filter((f) => f.voiced && f.f0 !== null);
-    const t0 = fr[0].tMs, span = fr.at(-1)!.tMs - t0;
-    const f0 = fr.map((f) => f.f0!);
-    return { tone, normal: f0, low: f0, target: fr.map((f) => corridorChaoAt({ polyline: shape, durationS: span / 1000 }, (f.tMs - t0) / span)) };
-  };
-  it("middle from 媽 and 馬; top and bottom from the high and low parts of all four (recorded)", async () => {
-    const { settingsFromTones, measureMiddleTakes } = await import("./tuner.ts");
-    const takes = [
-      await takeOf("jane_ma1.wav", 1, [[0, 5], [1, 5]]),
-      await takeOf("jane_ma2.wav", 2, [[0, 1.72], [0.29, 1.29], [0.65, 2.97], [0.84, 4.79], [1, 5]]),
-      await takeOf("jane_ma3.wav", 3, [[0, 2.48], [0.39, 1], [0.71, 1.22], [0.93, 3.8], [1, 3.88]]),
-      await takeOf("jane_ma4.wav", 4, [[0, 3.3], [0.22, 5], [0.9, 1.43], [1, 1.21]]),
-    ];
-    const out = settingsFromTones(BASE, takes)!;
-    expect(out.f0Center).toBeCloseTo(measureMiddleTakes([takes[0].normal, takes[2].normal])!, 6);
-    expect(out.rangeSemitones).toBeGreaterThan(3);
-    expect(out.rangeDownSemitones).toBeGreaterThan(3);
+  const f0 = (file: string) => frames(file, 0).filter((f) => f.voiced && f.f0 !== null).map((f) => f.f0!);
+  it("talk sets the middle (median, as before); 媽 and 馬 set the lines from it", async () => {
+    const { settingsFromParts, measureTop, measureBottom } = await import("./tuner.ts");
+    const talk = Array.from({ length: 60 }, (_, i) => 160 * 2 ** (((i % 7) - 3) / 12));
+    const t1 = f0("jane_ma1.wav"), t3 = f0("jane_ma3.wav");
+    const out = settingsFromParts(BASE, { talk: { normal: talk, low: talk }, t1: { normal: t1, low: t1 }, t3: { normal: t3, low: t3 } })!;
+    expect(out.f0Center).toBeCloseTo(160, 6);
+    expect(out.rangeSemitones).toBeCloseTo(measureTop(t1, 160)!, 6);
+    expect(out.rangeDownSemitones).toBeCloseTo(measureBottom(t3, 160)!, 6);
     expect(out.quickStart).toBeUndefined();
-    expect(out.noiseFloor).toBe(BASE.noiseFloor);
-    // Without a first or third tone there is no middle: nothing is measured.
-    expect(settingsFromTones(BASE, takes.filter((k) => k.tone !== 3))).toBeNull();
+  });
+  it("the talk offset knob moves line 3", async () => {
+    const { settingsFromParts } = await import("./tuner.ts");
+    setTuning({ tunerTalkOffsetSt: 1.5 });
+    const talk = Array(30).fill(160);
+    expect(12 * Math.log2(settingsFromParts(BASE, { talk: { normal: talk, low: talk } })!.f0Center / 160)).toBeCloseTo(1.5, 6);
+  });
+  it("redo of one part changes only that part", async () => {
+    const { settingsFromParts } = await import("./tuner.ts");
+    const cal: CalibrationSettings = { f0Center: 180, noiseFloor: 0.0005, rangeSemitones: 4, rangeDownSemitones: 5 };
+    const t1 = f0("jane_ma1.wav");
+    const top = settingsFromParts(cal, { t1: { normal: t1, low: t1 } })!;
+    expect(top.f0Center).toBe(180);
+    expect(top.rangeDownSemitones).toBe(5);
+    const mid = settingsFromParts(cal, { talk: { normal: Array(30).fill(150), low: [] } })!;
+    expect(mid).toEqual({ ...cal, f0Center: 150 });
+  });
+  it("a take with too little voice measures nothing", async () => {
+    const { settingsFromParts } = await import("./tuner.ts");
+    expect(settingsFromParts(BASE, { talk: { normal: [150, 151], low: [] } })).toBeNull();
   });
 });
