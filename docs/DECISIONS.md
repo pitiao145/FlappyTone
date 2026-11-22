@@ -1616,3 +1616,29 @@ Briefs 42–47 built a new pitch foundation on branch `research/39-pitch-foundat
 - **Go live is one database write with a backup and a restore** (`npm run golive-shapes`), then `export-fallback` and a build with the flag on. Clip audio does not change.
 - **The first tone is not lower.** The release note says "first tone: no change" (Pierre, 16 Nov 2026). Measured: median first-tone target 4.54 → 4.55 chao. The "first tone near 4" idea was withdrawn on 11 Nov (brief 43).
 - **Not yet:** the 30 older first-tone words carry a shared lift and must be re-recorded; brief 46's pair finder must not ship before a pair-reading fix (first tone read as fourth at voiced joins); `process-clips` must move to the one-ruler path before any new word is published.
+
+## The demo parks its rounds for a new account (17 Nov 2026, brief 50)
+
+**Evidence.** PostHog 3–16 Nov (small numbers, direction only): 21 opened the demo, 17 finished, some replayed up to 15 times. On the end screen 9 tapped retry (most then left), 4 tapped sign up, and all 4 signed up. The replays prove the fun; the end screen is where sign-ups happen. A new account then opened on an empty Progress screen, so the rounds that made them sign up were lost.
+
+**Decided.**
+- Every demo round is parked in the browser (`toneflap.demoRuns.v1`, latest 5, 24 h). A new account (created after the first parked round, 10 s slack as `authMode`) imports them on its first /app load as finished runs, through the run outbox and `api/runlog.ts` only. Never the leaderboard or the daily run count. An existing account imports nothing; the key is cleared either way.
+- The end screen counts this page load's rounds: rounds 1–2 as before; 3–4 sell "N rounds, best X. Keep them: sign up free." with "One last round"; from 5, no retry, "Sign up to keep playing" and Close.
+- The imported rounds keep the day they were played (the outbox entry's `day`), not the signup day.
+- This reverses the 7 Nov call that the demo run is not kept. The privacy policy now describes the parked rounds and the import (Pierre approved the wording, 17 Nov 2026).
+
+**Rejected.** Posting through `postRunLog`: it stamps today's date and flushes once per run, and a second flush that starts while the first drain runs can leave a round in the outbox until the next load. Per-account parking: the visitor has no account yet. Importing into an existing account: a returning player's history should not change because someone tried the demo signed out on their browser.
+
+**Check in 2 weeks.** Sign-up rate by demo `round` (`tool_cta_click` `demo_gameover_signup`), and `demo_runs_imported` count.
+
+### Follow-up: three free rounds, a round tracker and running totals (17 Nov 2026)
+
+**Decided (Pierre).** The demo stops at 3 rounds per page load, not 5: three is enough to make a player want more, and the last round's only action is the signup. The score card shows the three rounds as slots (scores, best starred, rounds left empty), so the limit is visible from round 1 and the progress is visible as it fills. From round 2 the tone tiles show the total over all rounds with this round under it, as the real game sums runs. The retry is a real button with a replay icon. The last round adds a true loss line (parked rounds expire after 24 h).
+
+**Why.** Marc Lou's "free credits" pattern: enough to understand the product, a visible limit, then a signup that keeps what was made (his Visualize Habit free tool imports the habits into the paid app, the same shape as the demo import). Alex West's warning applies to measuring it: at our traffic, read the 2-week PostHog numbers as direction only.
+
+**Not done (open).** A browser-wide 3-round cap (stored with the parked rounds). Today a reload resets the count. Claude's view: low cost, and a cap that greets a returning visitor with "no rounds left" is a worse first touch. Pierre to decide.
+
+**Copy and the auth card (17 Nov 2026, Pierre).** The slots read "Demo round N of 3", not "free": the account is free too, so "free round" undersold it. The /app signup card shows its demo thumbnail and "Try a round first" only for a `direct` visitor; one who arrives from a site signup button (`lp_cta`, including the demo's end screen) already chose to sign up and sees the signup alone.
+
+**"Too easy? Try tone pairs" is back, and the saved line is a notice (17 Nov 2026, Pierre).** Brief 29 removed the harder round to give the end screen one job. Pierre wants it back next to the retry: a player who found single tones easy sees the game's depth, and a Tone Pairs round still ends on the same signup card and counts as one of the 3 demo rounds. Cost: one more choice next to the signup. Play home's "Your N demo rounds are saved." is now its pinned notification card (`UpdateBanner`), not a line under the title; PlayHome's brief-49 test now allows that one use and no what's-new banner.

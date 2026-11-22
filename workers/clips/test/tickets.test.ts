@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { signTicket, verifyTicket, TICKET_TTL_S, type Ticket } from "../src/tickets.ts";
+import { checkTicket, ipDrift, signTicket, verifyTicket, TICKET_TTL_S, type Ticket } from "../src/tickets.ts";
 
 const SECRET = "correct-horse-battery-staple";
 const IP = "203.0.113.7";
@@ -37,5 +37,38 @@ describe("tickets", () => {
 
   it("rejects garbage input without throwing", async () => {
     expect(await verifyTicket("not-a-jwt", SECRET, IP)).toBeNull();
+  });
+});
+
+describe("checkTicket reasons", () => {
+  it("reports a missing ticket", async () => {
+    expect(await checkTicket(null, SECRET, IP)).toEqual({ ok: false, reason: "missing" });
+  });
+
+  it("reports an expired ticket as expired, not invalid", async () => {
+    const issuedAt = new Date(Date.now() - (TICKET_TTL_S + 60) * 1000);
+    const jwt = await signTicket({ tier: "free", ip: IP }, SECRET, issuedAt);
+    expect(await checkTicket(jwt, SECRET, IP)).toEqual({ ok: false, reason: "expired" });
+  });
+
+  it("reports a forged ticket as invalid", async () => {
+    const jwt = await signTicket({ tier: "pro", ip: IP }, SECRET);
+    expect(await checkTicket(jwt, "other", IP)).toEqual({ ok: false, reason: "invalid" });
+  });
+
+  it("reports an IP move with how far it moved", async () => {
+    const jwt = await signTicket({ tier: "guest", ip: IP }, SECRET);
+    expect(await checkTicket(jwt, SECRET, "203.0.113.99")).toEqual({
+      ok: false,
+      reason: "ip_mismatch",
+      drift: "same_prefix",
+    });
+    expect(await checkTicket(jwt, SECRET, "198.51.100.1")).toMatchObject({ drift: "other_prefix" });
+    expect(await checkTicket(jwt, SECRET, "2001:db8::1")).toMatchObject({ drift: "family" });
+  });
+
+  it("compares IPv6 by /48", () => {
+    expect(ipDrift("2001:db8:aa:1::1", "2001:db8:aa:2::9")).toBe("same_prefix");
+    expect(ipDrift("2001:db8:aa::1", "2001:db8:bb::1")).toBe("other_prefix");
   });
 });

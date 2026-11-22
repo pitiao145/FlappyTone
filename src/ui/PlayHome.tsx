@@ -1,8 +1,7 @@
 import { SITE_HREF } from "./appLink.ts";
 import { brand } from "../brand.ts";
-import { track } from "../analytics/client.ts";
-import { UpdateBanner } from "./UpdateBanner.tsx";
 import { ThemeGateLoop } from "./ThemeGateLoop.tsx";
+import { UpdateBanner } from "./UpdateBanner.tsx";
 
 /** "drill", "learn" and "pairs" are only ever started from ModeSelect, never
  * from a button here — kept in this union anyway since GameApp's
@@ -26,8 +25,6 @@ interface Props {
   onStart: (intent: PlayIntent) => void;
   /** Opens the Modes picker. No mic needed — only starting a run there does. */
   onModes: () => void;
-  /** Opens Settings scrolled to the Themes section (the current update banner's link). */
-  onOpenThemes: () => void;
   /** Matches the size Game/Calibration will actually open at — see GameApp's computeCanvasSize. */
   canvasWidth: number;
   canvasHeight: number;
@@ -35,6 +32,10 @@ interface Props {
   challengeScore: number | null;
   /** Who set it (`?n=` on the share link); null falls back to "Someone". */
   challengeName?: string | null;
+  /** Demo rounds this account just imported (brief 50); 0 hides the line. */
+  demoSaved?: number;
+  /** Opens the Progress tab, from the "saved" line. */
+  onProgress?: () => void;
 }
 
 /**
@@ -50,11 +51,12 @@ export function PlayHome({
   error: externalError,
   onStart,
   onModes,
-  onOpenThemes,
   canvasWidth,
   canvasHeight,
   challengeScore,
   challengeName,
+  demoSaved = 0,
+  onProgress,
 }: Props) {
   const error = externalError;
 
@@ -70,17 +72,6 @@ export function PlayHome({
           <img src="/favicon.svg" alt="" width={60} height={60} />
         </a>
         <div className="screen playhome-overlay">
-          {/* What's new. One banner at a time: swap the props when the next
-              update ships. */}
-          <UpdateBanner
-            id="themes"
-            onEvent={(action) => track({ type: "update_banner", id: "themes", surface: "play_home", action })}
-            label="New"
-            title="New themes available!"
-            actionLabel="See themes"
-            onAction={onOpenThemes}
-          />
-
           {/* The bird flying one gate per tone, a different theme each. */}
           <ThemeGateLoop />
           {challengeScore != null && (
@@ -89,6 +80,17 @@ export function PlayHome({
               <br />
               Practice your Mandarin tones and try to beat them!
             </p>
+          )}
+          {/* Brief 50: a new account's imported demo rounds, as the Play home's
+              pinned notification card (once per account, GameApp). */}
+          {demoSaved > 0 && (
+            <UpdateBanner
+              id="demo-rounds-saved"
+              label={brand.demoSaved.label}
+              title={brand.demoSaved.line(demoSaved)}
+              actionLabel={onProgress ? brand.demoSaved.link : undefined}
+              onAction={onProgress}
+            />
           )}
           <h1>{brand.name}</h1>
           {tutorialDone && <p className="prompt">Nice, ready to play?</p>}

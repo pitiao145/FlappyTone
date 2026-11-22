@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  wordsForTierLevels,
   availableToneCombos,
   availableTones,
   capWordsPerCombo,
@@ -332,6 +333,22 @@ describe("resolvedPool", () => {
     ];
     setTierLimits("free", { pairWordsPerCombo: 1 });
     expect(resolvedPool(manyPairs, "free", "pairs", "beginner", null).map((w) => w.id)).toEqual(["p1"]);
+  });
+
+  it("'pairs' mode drops TOCFL levels the tier's ticket cannot fetch, before the cap", () => {
+    // The 11 Nov 2026 incident: free Pairs drew TOCFL 3 pair words, the clips
+    // Worker 403'd them, and those gates cued the synthetic sweep.
+    const pairs = [
+      word({ id: "l3", tone: 2, tones: [2, 1], syllables: 2, position: 1, lists: ["hsk3", "tocfl3"] }),
+      word({ id: "l2", tone: 2, tones: [2, 1], syllables: 2, position: 2, lists: ["tocfl2"] }),
+      word({ id: "sm", tone: 2, tones: [2, 1], syllables: 2, position: 3, lists: ["sampler-intermediate", "tocfl3"] }),
+      word({ id: "un", tone: 2, tones: [2, 1], syllables: 2, position: 4, lists: ["hsk1"] }),
+    ];
+    setTierLimits("free", { pairWordsPerCombo: 2 });
+    // l3 is skipped, so the two capped slots go to words free can hear.
+    expect(resolvedPool(pairs, "free", "pairs", "beginner", null).map((w) => w.id)).toEqual(["l2", "sm"]);
+    expect(wordsForTierLevels(pairs, "free").map((w) => w.id)).toEqual(["l2", "sm", "un"]);
+    expect(wordsForTierLevels(pairs, "pro").map((w) => w.id)).toEqual(["l3", "l2", "sm", "un"]);
   });
 
   it("free + beginner + level 1 resolves via TOCFL tags, not the sampler", () => {

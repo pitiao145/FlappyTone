@@ -52,6 +52,8 @@ export interface MiniResult {
   stats: RunStats;
   /** Single-syllable gates per tone: flown, and flown through. For tracking. */
   perTone: Record<Tone, { gates: number; cleared: number }>;
+  /** Word ids flown this round, for the parked round (brief 50). */
+  wordIds: string[];
 }
 
 /**
@@ -224,6 +226,7 @@ export async function startMiniGame(opts: MiniGameOptions): Promise<MiniGame> {
         unheard: count(snap, "unheard"),
         stats: snap.stats,
         perTone: perTone(snap),
+        wordIds: snap.wordIds,
       };
       stop();
       opts.onEnd(result);

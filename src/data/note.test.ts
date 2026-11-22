@@ -39,6 +39,53 @@ describe("note show-once logic", () => {
   });
 });
 
+describe("note open check (brief 38)", () => {
+  beforeEach(() => resetNoteState());
+
+  it("the first ready Play home in a load asks once with no finish", () => {
+    expect(takeNoteCheck(false, true)).toBe(true);
+  });
+
+  it("a second Play home visit without a finish does not ask", () => {
+    takeNoteCheck(false, true);
+    expect(takeNoteCheck(false, true)).toBe(false);
+  });
+
+  it("is not lost when the account is not known yet", () => {
+    expect(takeNoteCheck(false, false)).toBe(false);
+    expect(takeNoteCheck(false, false)).toBe(false);
+    expect(takeNoteCheck(false, true)).toBe(true);
+  });
+
+  it("a finish re-arms as before", () => {
+    takeNoteCheck(false, true);
+    armNote();
+    expect(takeNoteCheck(false, true)).toBe(true);
+    expect(takeNoteCheck(false, true)).toBe(false);
+  });
+
+  it("a finish checked while ready also uses up the open check", () => {
+    armNote();
+    expect(takeNoteCheck(false, true)).toBe(true);
+    expect(takeNoteCheck(false, true)).toBe(false);
+  });
+
+  it("answered stops all checks, the open one included", () => {
+    markNoteAnswered();
+    expect(takeNoteCheck(false, true)).toBe(false);
+    armNote();
+    expect(takeNoteCheck(false, true)).toBe(false);
+  });
+
+  it("a paid player is asked at most once per load", () => {
+    expect(takeNoteCheck(true, true)).toBe(true);
+    armNote();
+    expect(takeNoteCheck(true, true)).toBe(false);
+    armNote();
+    expect(takeNoteCheck(true, true)).toBe(false);
+  });
+});
+
 describe("parseNoteCheck", () => {
   const note = { peek: "p", body: "b", question: "q" };
 

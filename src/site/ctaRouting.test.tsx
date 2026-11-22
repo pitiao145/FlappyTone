@@ -74,3 +74,12 @@ describe("site CTA routing (brief 25)", () => {
     expect(out).not.toContain("/app?");
   });
 });
+
+describe("front door (brief 49)", () => {
+  it("/say word pages: a seeded Fly demo CTA mid-page and a small one at the top", () => {
+    const out = html("/say/thank-you");
+    expect(out).toMatch(/data-cta="overlay"[^>]*>Fly <span lang="zh-Hant-TW">[^<]+<\/span> with your voice/);
+    expect(out).toContain("Fly this word");
+    expect(out).toContain("See your pitch");
+  });
+});

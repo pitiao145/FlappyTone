@@ -13,7 +13,7 @@ const html = (stats = newRunStats()) =>
   );
 
 describe("DemoGameOver", () => {
-  it("score, then the card (title, perks, button), the quote, then One more round", () => {
+  it("score, then the card (title, perks, button), the quote, then Play round 2", () => {
     let stats = newRunStats();
     stats = applyGate(stats, [1], "good", 0.9);
     stats = applyGate(stats, [4], "collision", 0.4);
@@ -21,7 +21,7 @@ describe("DemoGameOver", () => {
     const out = html(stats);
     expect(out).toContain("Fourth tone: 40% accuracy. Keep it climbing.");
     expect(out).toContain(`Free, ${DEFAULT_TIER_LIMITS.free.runsPerDay} runs a day, no card`);
-    const order = ["go-score", "Keep it climbing", "go-demo-perks", "Save my progress, improve my tones", "go-demo-quote", "One more round"].map(
+    const order = ["go-score", "Keep it climbing", "go-demo-perks", "Save my progress, improve my tones", "go-demo-quote", "Play round 2"].map(
       (s) => out.indexOf(s),
     );
     expect(order.every((i) => i >= 0)).toBe(true);
@@ -67,8 +67,82 @@ describe("DemoGameOver", () => {
     expect(html(stats)).toContain("Strong start! Your lowest is the third tone, at 89% accuracy.");
   });
 
-  it("the perks never promise to keep this run (the demo writes nothing)", () => {
-    expect(html().toLowerCase()).not.toContain("save this run");
+  const round = (score: number, ...gates: [number, number][]) => {
+    let st = { ...newRunStats() };
+    for (const [tone, acc] of gates) st = applyGate(st, [tone as 1 | 2 | 3 | 4], "ok", acc);
+    return { ...st, score };
+  };
+  const render = (rounds: ReturnType<typeof round>[]) =>
+    renderToStaticMarkup(
+      <DemoGameOver stats={rounds[rounds.length - 1]} rounds={rounds} onSignup={() => {}} onRetry={() => {}} />,
+    ).replaceAll("</span><span>", " ");
+
+  it("round 1: weakest-tone title, demo round 1 of 3, a Play round 2 button", () => {
+    const out = render([round(725, [2, 0.6])]);
+    expect(out).toContain("Second tone: 60% accuracy.");
+    expect(out).toContain("Demo round 1 of 3");
+    expect(out).toContain("Round 1: 725");
+    expect(out).toContain("Round 2: not played yet");
+    expect(out).toContain("Play round 2");
+    expect(out).toContain("go-demo-retry-icon");
+    expect(out).toContain("Tone accuracy this run");
+    expect(out).not.toContain("this round");
+  });
+
+  it("round 2: the rounds and best, total tone accuracy with this round under it, last-round button", () => {
+    const out = render([round(725, [3, 0.9]), round(1650, [3, 0.3], [1, 0.8])]);
+    expect(out).toContain("2 rounds, best 1,650. Sign up to keep them.");
+    expect(out).toContain("Demo round 2 of 3");
+    expect(out).toContain("Round 2: 1,650, your best");
+    expect(out).toContain("Tone accuracy, all 2 rounds");
+    // Third tone: (0.9 + 0.3) / 2 = 60% over both rounds, 30% this round.
+    expect(out).toContain("Third tone: 60% tone accuracy, 30% this round");
+    expect(out).toContain("this\u00a0round 30%");
+    expect(out).toContain("Play your last round");
+    expect(out.indexOf("Save my progress")).toBeLessThan(out.indexOf("Play your last round"));
+  });
+
+  it("round 3, the last: signup only, no retry, the loss line", () => {
+    const out = render([round(725, [1, 0.9]), round(1650, [1, 0.9]), round(0, [1, 0.96])]);
+    expect(out).toContain("That was your last demo round. Sign up free to keep all 3.");
+    expect(out).toContain("Sign up to keep playing");
+    expect(out).toContain("Without an account, these rounds are gone in 24 hours.");
+    expect(out).not.toContain("go-demo-retry");
+    expect(out).not.toContain("Play round");
+    expect(out).not.toContain("Play your last round");
+  });
+
+  it("after a classic round, Too easy? Try tone pairs sits beside the retry; never on the last round", () => {
+    const withPairs = (rounds: ReturnType<typeof round>[]) =>
+      renderToStaticMarkup(
+        <DemoGameOver stats={rounds[rounds.length - 1]} rounds={rounds} onSignup={() => {}} onRetry={() => {}} onPairs={() => {}} />,
+      );
+    const one = withPairs([round(725, [1, 0.9])]);
+    expect(one).toContain("Too easy? Try tone pairs");
+    expect(one.indexOf("Play round 2")).toBeLessThan(one.indexOf("Too easy? Try tone pairs"));
+    expect(withPairs([round(1), round(2), round(3)])).not.toContain("Too easy");
+    expect(render([round(725, [1, 0.9])])).not.toContain("Too easy");
+  });
+
+  it("a Tone Pairs round shows its pairs, summed over rounds", () => {
+    let pairs = newRunStats();
+    pairs = applyGate(pairs, [3, 2], "ok", 0.5);
+    pairs = { ...pairs, score: 400 };
+    let pairs2 = newRunStats();
+    pairs2 = applyGate(pairs2, [3, 2], "ok", 0.9);
+    pairs2 = { ...pairs2, score: 900 };
+    const one = renderToStaticMarkup(<DemoGameOver stats={pairs} onSignup={() => {}} onRetry={() => {}} />);
+    expect(one).toContain("Third tone then second tone: 50% tone accuracy");
+    const two = renderToStaticMarkup(
+      <DemoGameOver stats={pairs2} rounds={[pairs, pairs2]} onSignup={() => {}} onRetry={() => {}} />,
+    );
+    expect(two).toContain("Third tone then second tone: 70% tone accuracy, 90% this round");
+  });
+
+  it("with nothing scored, the title skips the best score and no round is starred", () => {
+    const out = render([round(0), round(0)]);
+    expect(out).toContain("2 rounds. Sign up to keep them.");
+    expect(out).not.toContain("your best");
   });
 
   it("has no share, leaderboard, recalibration, XP, personal best or tone breakdown", () => {

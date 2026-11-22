@@ -17,6 +17,7 @@ import { ensurePlaybackCtx } from "../audio/reference";
 import { ensureMic, getMicSession, MicCancelled, stopMic } from "../audio/session";
 import { incrementDailyRuns, loadDailyRuns, refreshServerDailyRuns } from "../game/dailyLimit.ts";
 import { getAccount, syncAccount } from "../data/account.ts";
+import { dismissDemoNotice, importDemoRuns, pendingDemoNotice } from "../data/demoImport.ts";
 import { noteAccount } from "../data/accountScope.ts";
 import { loadRoster } from "../data/speakers.ts";
 import { fetchCatalog } from "../data/words.ts";
@@ -353,9 +354,11 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
   useEffect(() => {
     trackSpeechStyle(effectiveSpeechStyle(tier));
   }, [tier]);
-  // The note-from-Pierre card: after a finished run or TONEder round, the Play
-  // home asks the server once whether this player has a note (api/note.ts):
-  // a targeted note Pierre wrote for this account, or the generic one.
+  // The note-from-Pierre card: the Play home asks the server whether this
+  // player has a note (api/note.ts): a targeted note Pierre wrote for this
+  // account, or the generic one. It asks once when a signed-in player first
+  // reaches it in this page load (brief 38), and after each finished run or
+  // TONEder round.
   // Dev only: `/app?note` shows the generic card at once, `/app?note=targeted`
   // the targeted one with brief 36's copy; both write nothing (hard rule 7).
   const noteParam = import.meta.env.DEV ? new URLSearchParams(window.location.search).get("note") : null;
@@ -385,7 +388,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
   // share link has to work on a session that has never opened the mic yet.
   // `leaderboard`/`pairs`/`pricing` need no such handoff (see `initialIntent`'s
   // doc comment) — they just pick a different initial screen.
-  const [settingsFocus, setSettingsFocus] = useState<"speechStyle" | "theme" | null>(null);
+  const [settingsFocus] = useState<"speechStyle" | "theme" | null>(null);
   const [screen, setScreen] = useState<Screen>(() => {
     // A reset-password link: AuthGate caught PASSWORD_RECOVERY before this mounted.
     if (recovery) return "resetPassword";
@@ -425,14 +428,23 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
   // the answer is always kept; the card renders only on Play (see below), so
   // a player who left Play meanwhile sees it when they come back.
   // A paid player is asked once per page load (targeted notes only).
+  // The open check waits for a signed-in tier: `tier` starts as "guest" and
+  // only becomes free/pro once `refreshTier()` has read the restored session,
+  // and this effect re-runs on that change, so a too-early Play home keeps the
+  // check pending instead of losing it. Guests are never asked on open (the
+  // server refuses anonymous sessions anyway). `settings !== null` keeps it
+  // off an uncalibrated device: there Play leads into the mic, calibration
+  // and tutorial first-run flow, and the check waits for a later Play home.
+  // The dev previews skip it, so they never claim a real note or swap copy.
+  const noteOpenReady = tier !== "guest" && settings !== null && !notePreview;
   useEffect(() => {
-    if (screen !== "play" || !takeNoteCheck(tier === "pro")) return;
+    if (screen !== "play" || !takeNoteCheck(tier === "pro", noteOpenReady)) return;
     void checkNote().then(({ show, note }) => {
       if (!show) return;
       setNoteCopy(note);
       setNoteOpen(true);
     });
-  }, [screen, tier]);
+  }, [screen, tier, noteOpenReady]);
   /**
    * Whether the mic session backing the Visualiser screen is actually open.
    * Landing here via `onNavigate("visualiser")` (a real click) only ever
@@ -534,6 +546,22 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
    * is up replaces it and restarts the 5s clock (no queue).
    */
   const [authToast, setAuthToast] = useState<AuthToastKind | null>(null);
+  /**
+   * Brief 50: how many demo rounds this account imported, for Play home's
+   * one-time "saved" line (0 = none). Shown on the next Play home, then
+   * gone for good once the player leaves it.
+   */
+  const [demoSaved, setDemoSaved] = useState(0);
+  const demoSavedShownRef = useRef(false);
+  useEffect(() => {
+    if (demoSaved <= 0) return;
+    if (screen === "play") {
+      demoSavedShownRef.current = true;
+      dismissDemoNotice();
+    } else if (demoSavedShownRef.current) {
+      setDemoSaved(0);
+    }
+  }, [screen, demoSaved]);
   useEffect(() => subscribeAuthToast(setAuthToast), []);
   useEffect(() => {
     if (!authToast) return;
@@ -1235,6 +1263,11 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
       // last time runs the account-change steps before anything reads them.
       noteAccount(account.status === "permanent" ? account.userId : null);
       if (account.status !== "permanent") return;
+      // Brief 50: a new account's parked demo rounds go into the run outbox
+      // first, so the `syncAccount()` below posts them and reads them back.
+      const imported = importDemoRuns(account);
+      if (imported > 0) track({ type: "demo_runs_imported", count: imported });
+      setDemoSaved(pendingDemoNotice(account.userId));
       void refreshServerDailyRuns();
       void syncAccount();
     });
@@ -1338,14 +1371,12 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
               error={error}
               onStart={startPlay}
               onModes={() => setScreen("modes")}
-              onOpenThemes={() => {
-                setSettingsFocus("theme");
-                setScreen("settings");
-              }}
               canvasWidth={CANVAS_W}
               canvasHeight={GAME_CANVAS_H}
               challengeScore={challengeScoreState}
               challengeName={challengeNameState}
+              demoSaved={demoSaved}
+              onProgress={() => setScreen("progress")}
             />
           )}
 

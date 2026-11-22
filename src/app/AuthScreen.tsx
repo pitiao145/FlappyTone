@@ -10,6 +10,7 @@
  * session and swaps in the game.
  */
 import { useEffect, useId, useState } from "react";
+import { createPortal } from "react-dom";
 import { track } from "../analytics/client";
 import type { AuthMethod, AuthScreenStep } from "../analytics/session.ts";
 import {
@@ -36,6 +37,7 @@ import {
 import { redirectToCheckoutForCurrentAccount } from "../data/checkout.ts";
 import { canUseGoogleSignIn } from "../lib/inAppBrowser.ts";
 import { InAppBrowserPrompt } from "../ui/InAppBrowserPrompt.tsx";
+import { DemoLoop } from "../ui/DemoLoop.tsx";
 import { Nav } from "../ui/Nav.tsx";
 import "../site/site.css";
 import "./AuthScreen.css";
@@ -43,6 +45,11 @@ import "./AuthScreen.css";
 /** The site's faces (Lilita One, Figtree): /app's HTML only loads the game's. */
 const SKY_FONTS =
   "https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Lilita+One&display=swap";
+
+type DemoOverlayModule = typeof import("../site/DemoOverlay.tsx");
+
+/** Where a failed demo load goes: the landing page's own demo (hard rule 10). */
+const DEMO_FALLBACK = "/#demo";
 
 /** Seconds before "Resend code" works again (Supabase also rate-limits sends). */
 export const RESEND_COOLDOWN_S = 60;
@@ -97,6 +104,23 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     }
   });
   const ids = useId();
+  /** The no-signup demo, loaded on the tap only (hard rules 4 and 13). */
+  const [demoMod, setDemoMod] = useState<DemoOverlayModule | null>(null);
+  const [demoOpen, setDemoOpen] = useState(false);
+  // Only a visitor who typed /app or came from outside: one who tapped a
+  // site signup button (often right after the demo) already chose to sign
+  // up, so the card shows no demo (Pierre, 17 Nov 2026).
+  const canTry = source === "direct" && view === "signup";
+
+  function tryDemo() {
+    if (source === "direct") track({ type: "auth_try_demo", source });
+    import("../site/DemoOverlay.tsx")
+      .then((m) => {
+        setDemoMod(m);
+        setDemoOpen(true);
+      })
+      .catch(() => window.location.assign(DEMO_FALLBACK));
+  }
 
   useEffect(() => {
     if (document.querySelector(`link[href="${SKY_FONTS}"]`)) return;
@@ -515,12 +539,39 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
 
   return (
     <div id="top" className="sky sky-site auth">
-      <Nav linkBase="/" />
+      <Nav
+        linkBase="/"
+        trySlot={
+          canTry ? (
+            <button type="button" className="sky-btn sky-btn-small auth-nav-try" aria-haspopup="dialog" onClick={tryDemo}>
+              Try a round first
+            </button>
+          ) : undefined
+        }
+      />
       {/* Google is hidden in this in-app browser: offer the real browser. */}
       {!googleOk && <InAppBrowserPrompt />}
       <main className="auth-main">
         <div className="auth-panel">
-          <img className="auth-bird" src="/Bird-hor-no-halo.png" alt="" width={96} height={96} />
+          {/* A muted clip where the bird sits; the tap opens the demo. */}
+          {canTry ? (
+            <figure className="auth-demo">
+              <DemoLoop width={300} />
+              <button
+                type="button"
+                className="auth-demo-btn"
+                data-testid="auth-try"
+                aria-haspopup="dialog"
+                aria-label="Try a round first, no signup"
+                onClick={tryDemo}
+              >
+                <span className="auth-demo-note">New here? Try it out first:</span>
+                <span className="sky-btn">Try the demo</span>
+              </button>
+            </figure>
+          ) : (
+            <img className="auth-bird" src="/Bird-hor-no-halo.png" alt="" width={96} height={96} />
+          )}
           <h1 className="auth-title">{head.title}</h1>
           <p className="auth-sub">{head.sub}</p>
 
@@ -547,6 +598,20 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
           )}
         </div>
       </main>
+      {/* On <body>, like DemoTrigger: the card's CSS must not restyle the demo. */}
+      {demoOpen &&
+        demoMod &&
+        createPortal(
+          <demoMod.DemoOverlay
+            seedId={null}
+            onClose={() => setDemoOpen(false)}
+            onSignup={() => {
+              setDemoOpen(false);
+              go("signup");
+            }}
+          />,
+          document.body,
+        )}
     </div>
   );
 }

@@ -132,6 +132,68 @@ describe("loadClip", () => {
     await loadClip(word("ma1"));
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("retries a word whose ticket mint failed, once a ticket is available", async () => {
+    getPlayTicket.mockResolvedValueOnce(null).mockResolvedValue("tok-2");
+    fetchMock.mockResolvedValue({ ok: false, status: 404 } as unknown as Response);
+    const { loadClip } = await load();
+    await loadClip(word("ma1"));
+    expect(fetchMock).not.toHaveBeenCalled();
+    // Not cached as a failure: the next gate's request goes out.
+    await loadClip(word("ma1"));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("still caches a missing clips source (a build without the env var stays synthetic)", async () => {
+    baseUrl = null;
+    const { loadClip } = await load();
+    await loadClip(word("ma1"));
+    await loadClip(word("ma1"));
+    expect(getPlayTicket).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("clipFallbackInfo — why a cue fell back", () => {
+  const cases: Array<[string, () => void, string]> = [
+    ["401", () => fetchMock.mockResolvedValue({ ok: false, status: 401 }), "unauthorized"],
+    ["403", () => fetchMock.mockResolvedValue({ ok: false, status: 403 }), "forbidden"],
+    ["404", () => fetchMock.mockResolvedValue({ ok: false, status: 404 }), "not_found"],
+    ["429", () => fetchMock.mockResolvedValue({ ok: false, status: 429, headers: new Headers() }), "rate_limited"],
+    ["503", () => fetchMock.mockResolvedValue({ ok: false, status: 503 }), "server"],
+    ["a thrown fetch", () => fetchMock.mockRejectedValue(new Error("offline")), "network"],
+    ["no ticket", () => getPlayTicket.mockResolvedValue(null), "no_ticket"],
+  ];
+  for (const [what, arrange, reason] of cases) {
+    it(`reports ${what} as ${reason}`, async () => {
+      arrange();
+      const { loadClip, clipFallbackInfo } = await load();
+      await loadClip(word("ma1"));
+      expect(clipFallbackInfo(word("ma1"))).toMatchObject({ reason, retrying: false });
+    });
+  }
+
+  it("reports a fetch still running as loading, with how long it has waited", async () => {
+    fetchMock.mockReturnValue(new Promise(() => {}));
+    const { loadClip, clipFallbackInfo } = await load();
+    void loadClip(word("ma1"));
+    const info = clipFallbackInfo(word("ma1"));
+    expect(info.reason).toBe("loading");
+    expect(info.waitMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it("keeps the 401 as the reason while the retry is in flight", async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 401 }).mockReturnValue(new Promise(() => {}));
+    const { loadClip, clipFallbackInfo } = await load();
+    await loadClip(word("ma1"));
+    void loadClip(word("ma1"));
+    expect(clipFallbackInfo(word("ma1"))).toMatchObject({ reason: "unauthorized", retrying: true });
+  });
+
+  it("says not_requested for a word nothing asked for, and no_word for a wordless cue", async () => {
+    const { clipFallbackInfo } = await load();
+    expect(clipFallbackInfo(word("zz9")).reason).toBe("not_requested");
+    expect(clipFallbackInfo(null).reason).toBe("no_word");
+  });
 });
 
 describe("prefetchPool", () => {

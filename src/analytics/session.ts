@@ -45,6 +45,28 @@ import type { SpeechStyle } from "../game/words.ts";
 import type { GateOutcome } from "../game/scoring.ts";
 
 /**
+ * Why one clip download failed (`src/audio/reference.ts` records it per word).
+ * Declared here, not in `src/audio/`, so this payload module stays free of the
+ * audio graph. `other` = a failure nothing more specific tagged.
+ */
+export type ClipFailure =
+  | "no_source"
+  | "no_ticket"
+  | "unauthorized"
+  | "forbidden"
+  | "not_found"
+  | "rate_limited"
+  | "server"
+  | "network"
+  | "aborted"
+  | "decode"
+  | "http_other"
+  | "other";
+
+/** `cue_fallback.reason`: a failure, or why there is none to report. */
+export type CueFallbackReason = ClipFailure | "loading" | "not_requested" | "no_word";
+
+/**
  * Why a run stopped. `quit` and `restart` both come from the pause menu, which
  * otherwise leaves no trace. `abandoned`: the run sat out of sight (another
  * nav tab, or the page hidden) past `ABANDON_AFTER_MS`, or the page closed
@@ -213,7 +235,11 @@ export type SeoCta =
   /** No longer shown (removed 2 Nov 2026); kept so old events still type. */
   | "visualizer_result_retry"
   /** "Hear it first" in the tone visualizer's reference card. */
-  | "visualizer_hear_example";
+  | "visualizer_hear_example"
+  /** /say word page: "Fly {hanzi} with your voice" in the practise section (brief 49). */
+  | "say_practise"
+  /** /say word page: small "Fly this word" beside the top card (brief 49). */
+  | "say_top";
 
 /** How a player signed in (brief 30). */
 export type AuthMethod = "otp" | "google" | "password" | "magic_link";
@@ -366,8 +392,11 @@ export type AnalyticsEvent =
    * The native clip wasn't loaded yet when its cue was due, so the synthetic
    * sweep played instead (see src/audio/reference.ts's `playToneCue`). Should
    * be rare to nonexistent in production; this exists to confirm that.
+   * `reason`/`retrying`/`waitMs` come from `clipFallbackInfo` — why the clip
+   * was not ready (e.g. `unauthorized` = the IP-bound ticket was refused,
+   * `loading` = still downloading after `waitMs`). Closed values and a number.
    */
-  | { type: "cue_fallback"; tone: Tone }
+  | { type: "cue_fallback"; tone: Tone; reason: CueFallbackReason; retrying: boolean; waitMs?: number }
   /** Share button tapped on GameOver, before the share sheet opens — see docs/flappytone-SPEC-share.md. */
   | { type: "share_clicked"; mode: RunMode; score: number; is_best: boolean }
   /** A `?c=<score>` challenge link landed on a cold or returning session. */
@@ -419,6 +448,10 @@ export type AnalyticsEvent =
    * commit and its follow-up (never deployed) "email" replaced signup/login.
    */
   | { type: "auth_screen_viewed"; screen: AuthScreenStep; source: "challenge" | "direct" | "lp_cta" }
+  /** AuthScreen.tsx: a cold visitor tapped the demo on the signup card or nav (brief 49). */
+  | { type: "auth_try_demo"; source: "direct" | "lp_cta" }
+  /** GameApp mount: a new account imported this many parked demo rounds (`src/data/demoImport.ts`, brief 50). */
+  | { type: "demo_runs_imported"; count: number }
   /** A returning player signed in to an existing account (`signup_completed` with mode "login"). */
   | { type: "login_completed"; method: AuthMethod }
   /** AuthScreen.tsx: the sign-in code email was sent (also first-time sends; `resend` for the button). */
@@ -568,8 +601,8 @@ export type AnalyticsEvent =
       t4Cleared: number;
       t4Acc: number | null;
     } & DemoWhere)
-  /** Try it now's way into /app or a new round, from its end screen. */
-  | ({ type: "tool_cta_click"; tool: "try-now"; placement: "demo_gameover_signup" | "demo_gameover_retry" } & DemoWhere)
+  /** Try it now's way into /app or a new round, from its end screen. `round`: this page load's round number (brief 50). */
+  | ({ type: "tool_cta_click"; tool: "try-now"; placement: "demo_gameover_signup" | "demo_gameover_retry" | "demo_gameover_pairs"; round: number } & DemoWhere)
   /**
    * A routed CTA on a route-table page (brief 25): `overlay` opens the Try it
    * now demo on the page, `signup` leaves for /app. `page` is the route path,
@@ -697,7 +730,9 @@ export const APP_EVENT_TYPES: Record<AnalyticsEvent["type"], true> = {
   signup_started: true,
   signup_completed: true,
   auth_screen_viewed: true,
+  auth_try_demo: true,
   login_completed: true,
+  demo_runs_imported: true,
   auth_code_sent: true,
   auth_code_failed: true,
   daily_limit_reached: true,

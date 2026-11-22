@@ -1,6 +1,6 @@
 # FlappyTone — Privacy Policy
 
-**Last updated: 9 November 2026**
+**Last updated: 17 November 2026**
 
 This policy explains what personal data FlappyTone ("we", "us") collects, why, and your rights over it. FlappyTone is operated by Pierre Bruyninckx, an independent developer, at [flappytone.com](https://flappytone.com). For any privacy question or request, contact [pierre@pierrebuilds.dev](mailto:pierre@pierrebuilds.dev).
 
@@ -13,7 +13,8 @@ FlappyTone listens to your voice through your device's microphone to drive the g
 ## What we collect
 
 **If you try FlappyTone without an account:**
-- You can try the demo on our pages without an account. Nothing from the demo is stored on our servers or sent to us, apart from the analytics described below. Playing the full game needs an account.
+- You can try the demo on our pages without an account. While you play, your browser keeps a short summary of your last 5 demo rounds, for up to 24 hours: when each round happened, the game mode, your score, the words you flew and your tone accuracy for the round and per tone (or two-tone combination). These are numbers derived on your device, **not audio**. They stay in your browser and are not sent to us, apart from the analytics described below.
+- If you then create a new account in the same browser, we save these rounds to your new account as runs (see "Your last 5 runs" below), so your progress does not start empty. If you sign in to an account that already existed, the rounds are deleted from your browser and never sent to us. Playing the full game needs an account.
 
 **If you create an account:**
 - **Email address** (to sign in, sync your data, and contact you about your account). You can sign in with an emailed 6-digit code or link, with a password, or with Google (see below).
@@ -65,7 +66,7 @@ Each processes data on our behalf under its own terms. Some may process data out
 
 ## Cookies and local storage
 
-FlappyTone uses your browser's **local storage** to keep your game progress and settings, and to remember a device identifier for the leaderboard. **PostHog** may set cookies or similar identifiers for analytics. We don't use third-party advertising cookies.
+FlappyTone uses your browser's **local storage** to keep your game progress and settings, a summary of your recent demo rounds (for up to 24 hours, see above), and to remember a device identifier for the leaderboard. **PostHog** may set cookies or similar identifiers for analytics. We don't use third-party advertising cookies.
 
 ## Marketing emails
 

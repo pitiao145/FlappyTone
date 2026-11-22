@@ -2490,3 +2490,25 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
 @media (prefers-reduced-motion: reduce) {
   .sky-nav-bar, .sky-nav, .sky .sky-brand, .sky-brand .pip { transition: none; }
 }
+
+/* Brief 49: /say demo CTAs. */
+.say-page .say-card-fly {
+  margin-top: var(--space-3);
+}
+.say-page .say-fly-small {
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 8px 14px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--beak);
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.say-page .say-secondary-link {
+  font-weight: 700;
+  color: var(--ink);
+}

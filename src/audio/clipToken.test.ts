@@ -116,10 +116,24 @@ describe("getPlayTicket", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("does not cache a failure — the next call retries", async () => {
+  it("does not cache a failure — a call after the cooldown retries", async () => {
+    vi.useFakeTimers();
     fetchMock.mockRejectedValueOnce(new Error("offline"));
     const { getPlayTicket } = await load();
     expect(await getPlayTicket()).toBeNull();
+    // Inside the cooldown: no request, so a dead /token is not asked 4x/s.
+    expect(await getPlayTicket()).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(3001);
+    expect(await getPlayTicket()).toBe("tok-1");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("an invalidation (auth change) skips the cooldown", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("offline"));
+    const { getPlayTicket, invalidatePlayTicket } = await load();
+    expect(await getPlayTicket()).toBeNull();
+    invalidatePlayTicket();
     expect(await getPlayTicket()).toBe("tok-1");
   });
 });

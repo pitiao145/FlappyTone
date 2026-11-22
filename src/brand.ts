@@ -50,9 +50,9 @@ export const brand = {
     titleStrong: (name: string, pct: number) => `Strong start! Your lowest is the ${name}, at ${pct}% accuracy.`,
     titleAny: "Keep your tones climbing.",
     /**
-     * What a free account gives. The demo itself saves nothing, so the perks
-     * speak of runs from now on. (The button says "Save my progress", not "score": the demo run is not kept; Pierre's
-     * call, 7 Nov 2026.) `runs` is the free tier's daily runs.
+     * What a free account gives. `runs` is the free tier's daily runs. Since
+     * brief 50 the demo's rounds are parked in the browser and a new account
+     * imports them (`src/lib/demoRuns.ts`, `src/data/demoImport.ts`).
      */
     perks: (runs: number) => [
       "Save every run from now on",
@@ -60,9 +60,37 @@ export const brand = {
       `Free, ${runs} runs a day, no card`,
     ],
     signup: "Save my progress, improve my tones",
-    /** Over the score card's tone tiles. */
+    /** Over the score card's tone tiles: round 1, then the total from round 2. */
     tonesLabel: "Tone accuracy this run",
-    retry: "One more round",
+    tonesTotalLabel: (rounds: number) => `Tone accuracy, all ${rounds} rounds`,
+    /** Under a total tile: this round's own accuracy for that tone. */
+    toneThisRound: (pct: number) => `this\u00a0round ${pct}%`,
+    /**
+     * The demo's free rounds per page load (brief 50 follow-up, Pierre
+     * 17 Nov 2026). The last round has no retry, only the signup.
+     */
+    freeRounds: 3,
+    /** Over the round slots on the score card. "Demo", not "free": the account is free too. */
+    roundsLabel: (played: number, of: number) => `Demo round ${played} of ${of}`,
+    /** The retry button: before the last round, then into it. */
+    retry: "Play round 2",
+    lastRetry: "Play your last round",
+    /** Beside the retry after a classic round: the next round flies Tone Pairs (brief 50 follow-up). */
+    pairs: "Too easy? Try tone pairs",
+    /** From round 2: the title sells keeping the player's own rounds. */
+    keepTitle: (rounds: number, best: number) =>
+      `${rounds} rounds${best > 0 ? `, best ${best.toLocaleString("en-US")}` : ""}. Sign up to keep them.`,
+    /** The last free round. */
+    lastTitle: (rounds: number) => `That was your last demo round. Sign up free to keep all ${rounds}.`,
+    signupMore: "Sign up to keep playing",
+    /** Under the button on the last round. True: parked rounds expire after 24 h (`demoRuns.ts`). */
+    lossLine: "Without an account, these rounds are gone in 24 hours.",
+  },
+  /** Play home's one-time line after a new account imported its demo rounds (brief 50). */
+  demoSaved: {
+    label: "Saved",
+    line: (n: number) => `Your ${n} demo ${n === 1 ? "round is" : "rounds are"} saved.`,
+    link: "See Progress",
   },
 
   /** The site nav's button: the no-signup demo overlay (signed-in players see "Play"). */

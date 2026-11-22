@@ -80,7 +80,7 @@
 }
 .sky-try-over * { min-width: 0; max-width: 100%; box-sizing: border-box; }
 .sky-try-over .screen.gameover-screen { margin-top: 0; text-align: left; }
-.go-demo-actions { display: grid; gap: 8px; justify-items: center; }
+.go-demo-actions { display: flex; flex-wrap: wrap; gap: 10px 12px; justify-content: center; }
 /* The signup pitch: the one jade card, right under the score, so it reads
    as the next step. Cream text on jade for contrast; the button is the
    site's gold "Play the game" button, so it reads as the main action. */
@@ -182,9 +182,10 @@
 }
 .sky-try-over .go-demo-tones li {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 3px;
   padding: 6px 10px;
   border: 2px solid var(--ink);
   border-radius: 10px;
@@ -192,13 +193,136 @@
   font: 400 0.95rem/1 var(--font-display);
   color: var(--ink);
 }
+.sky-try-over .go-demo-tone-main { display: flex; align-items: center; gap: 8px; }
+/* From round 2 the tile's big figure is the total; this round's own sits under it. */
+.sky-try-over .go-demo-tones small {
+  font: 600 0.72rem/1.15 var(--font-body);
+  color: var(--ink-soft);
+  text-align: center;
+  text-wrap: balance;
+}
 .sky-try-over .go-demo-tone-icon { display: block; width: 30px; height: 22px; }
 .sky-try-over .go-demo-tones b { font-weight: 400; min-width: 3.2ch; text-align: right; }
 /* Wide enough for one row of four. */
 @media (min-width: 480px) {
   .sky-try-over .go-demo-tones { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
-/* "One more round": quiet, but a real tap target. */
-.sky-try-over .go-demo-actions .go-subtle-link { min-height: 44px; padding-inline: 16px; }
+/* The free rounds as three slots, the screen's one bold device: each round's
+   score, the best in beak gold with a star, the ones left as dashed gaps.
+   Same dashed divider as the tone tiles' block below it. */
+.sky-try-over .go-demo-rounds-block {
+  display: grid;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 2px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+}
+.sky-try-over .go-demo-rounds-label {
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.sky-try-over .go-demo-rounds {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sky-try-over .go-demo-round {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 6px 10px;
+  border: 2px dashed color-mix(in srgb, var(--ink) 35%, transparent);
+  border-radius: 12px;
+  color: var(--ink-soft);
+  font: 400 1.05rem/1 var(--font-display);
+}
+.sky-try-over .go-demo-round b { font-weight: 400; }
+/* A played round: a pale jade fill on the tan score card (the best is gold). */
+.sky-try-over .go-demo-round.is-done {
+  border: 2px solid var(--ink);
+  background: color-mix(in srgb, var(--accent) 20%, var(--accent-ink));
+  color: var(--ink);
+  box-shadow: 0 3px 0 var(--ink);
+}
+.sky-try-over .go-demo-round.is-best { background: var(--beak); }
+.sky-try-over .go-demo-round-n {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  font: 700 0.75rem/1 var(--font-body);
+}
+.sky-try-over .go-demo-round.is-done .go-demo-round-n { background: var(--accent); color: var(--accent-ink); }
+.sky-try-over .go-demo-round.is-best .go-demo-round-n { background: var(--ink); }
+.sky-try-over .go-demo-round-star {
+  position: absolute;
+  top: -11px;
+  right: -9px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--accent-ink);
+  color: var(--beak);
+  font-size: 0.8rem;
+  line-height: 1;
+}
+/* The round just played lands once; nothing else on the screen moves. */
+.sky-try-over .go-demo-round.is-now { animation: go-demo-round-in 420ms var(--ease-snap, cubic-bezier(.3,1.4,.5,1)) both; }
+@keyframes go-demo-round-in {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sky-try-over .go-demo-round.is-now { animation: none; }
+}
+/* The last round's honest loss line, under the button. */
+.sky-try-over .go-demo-pitch .go-demo-loss {
+  margin: -6px 0 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  opacity: 0.9;
+}
+/* Another round: a real sticker button, second to the gold signup. White
+   with the ink edge and a replay arrow, so it reads as "play", not "buy". */
+.sky-try-over .screen button.go-demo-retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 4px 22px 0;
+  border: var(--outline, 3px) solid var(--ink);
+  border-radius: var(--radius, 14px);
+  /* The score card's tan, a step deeper: a sibling of the card, quieter than the gold signup. */
+  background: color-mix(in srgb, var(--beak) 34%, var(--accent-ink));
+  color: var(--ink);
+  font: 400 1.02rem/1.1 var(--font-display);
+  box-shadow: 0 4px 0 var(--ink);
+  transition: translate 120ms var(--ease-snap), box-shadow 120ms var(--ease-snap);
+}
+.sky-try-over .screen button.go-demo-retry:hover { translate: 0 -2px; box-shadow: 0 6px 0 var(--ink); }
+.sky-try-over .screen button.go-demo-retry:active { translate: 0 3px; box-shadow: 0 1px 0 var(--ink); }
+.sky-try-over .screen button.go-demo-retry:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.sky-try-over .go-demo-retry-icon { width: 20px; height: 20px; flex: none; margin-top: -3px; }
 /* More air between cards than the in-app screen, which has a full page. */
 .sky-try-over .screen.gameover-screen { gap: 22px; }
+/* The quote and the next-round buttons, one stack. */
+.sky-try-over .go-demo-side { display: flex; flex-direction: column; gap: inherit; }
+/* A pair tile: two small marks where a tone tile has one. */
+.sky-try-over .go-demo-pair-marks { display: inline-flex; gap: 1px; }
+.sky-try-over .go-demo-pair-icon { display: block; width: 17px; height: 14px; }
+
