@@ -132,3 +132,7 @@ Replaces the semitone stage, the small dot ring and the big word above it.
 - **Mic bars always on**, next to the status, also while the example plays and during the "done" beat.
 - **Less text:** a label ("Normal voice", "High note", "Low note"), a three-word hint ("Like talking", "High and steady", "Low and relaxed"), a one- or two-word status ("Say it", "Hold…", "Done ✓", "Louder?", "Pause, then say it", "Too short. Again").
 - **Target guide on every step**, the middle step included (the word's own target band).
+
+## No Middle step (Pierre, 22 Nov 2026)
+
+The tuner is now Room → High (媽) → Low (馬). The Middle step asked for 媽 and 馬 "like talking", which fought the words and repeated the next two steps (test 9: "a pre-calibration"). The middle is computed from the High and Low takes with the same rule (each word's middle, then the semitone average: `settingsFromTakes`). Free talk was not used: it sits about 1.5 st under the middle of the tones (brief 44), and line 3 is the middle of the tones on the native speaker's ruler too. Risk, stated: someone who strains on the High step moves the middle up a little; the learned scale corrects the middle within about 10 gates. Done screen: Middle shows "line 3, between your high and low notes" without its own Redo; a redo of High or Low re-sets the middle when both takes are from this session, else keeps it. Tests: middle between recorded 媽 and 馬, lines from it; one take keeps the middle.

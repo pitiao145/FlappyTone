@@ -167,8 +167,6 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
         help: "Quick start only: how many heard gates use the start rate." },
       { key: "gridLearnUncappedUntilLearned", label: "no cap until learned", min: 0, max: 1, step: 1,
         help: "Quick start only: 1 = no per-run step cap until the top and bottom pools are full." },
-      { key: "middleTakesPerWord", label: "middle takes per word", min: 1, max: 3, step: 1,
-        help: "Tuner middle step: how many times each word (媽, 馬) is said." },
       { key: "tunerNeedVoicedMs", label: "tuner voice needed", min: 200, max: 1500, step: 50,
         help: "Voiced ms that fills the ring and locks a tuner step." },
       { key: "tunerLockSilenceMs", label: "tuner lock silence", min: 100, max: 1000, step: 25,

@@ -296,3 +296,41 @@ export function tunerTrackerConfig(
   const cfg = { sampleRate, noiseFloor: s.noiseFloor, minVoicedRunMs: tuning().minVoicedRunMs };
   return part === "middle" ? cfg : { ...cfg, fMin: speakerFMin(s.f0Center) };
 }
+
+/** One locked take of a voice step: f0s from the normal tracker and from the low-floor tracker. */
+export interface TunerTake {
+  normal: number[];
+  low: number[];
+}
+
+/**
+ * Brief 50, 22 Nov (Pierre): no separate Middle step. The middle comes from
+ * the High (媽, first tone) and Low (馬, third tone) takes: each take's own
+ * middle, then their average in semitones (`measureMiddleTakes`, the rule
+ * the Middle step used). Top and bottom are then measured from that middle.
+ * With one take only (redo one part), the middle stays and only that line
+ * is measured. Null when a take measures nothing (the caller says "try again").
+ */
+export function settingsFromTakes(base: CalibrationSettings, t: { top?: TunerTake; bottom?: TunerTake }): CalibrationSettings | null {
+  let mid = base.f0Center;
+  if (t.top && t.bottom) {
+    const first = measureMiddleTakes([t.top.normal, t.bottom.normal]);
+    // A deep voice: its floor sits under the normal one, so the low tracker's frames are fair.
+    const deep = first !== null && speakerFMin(first) < tuning().pitchFloorHighHz;
+    const m = deep ? (measureMiddleTakes([t.top.low, t.bottom.low]) ?? first) : first;
+    if (m === null) return null;
+    mid = m;
+  }
+  let out = applyTunerResult(base, { part: "middle", f0Center: mid });
+  if (t.top) {
+    const up = measureTop(t.top.normal, mid);
+    if (up === null) return null;
+    out = applyTunerResult(out, { part: "top", up });
+  }
+  if (t.bottom) {
+    const down = measureBottom(t.bottom.normal, mid);
+    if (down === null) return null;
+    out = applyTunerResult(out, { part: "bottom", down });
+  }
+  return out;
+}

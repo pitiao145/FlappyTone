@@ -202,3 +202,28 @@ describe("lock when the ring is full (22 Nov)", () => {
     expect(next.f0s.length).toBe(0);
   });
 });
+
+describe("middle from the High and Low takes (22 Nov: no Middle step)", () => {
+  const BASE: CalibrationSettings = { f0Center: 150, noiseFloor: 0.0005, rangeSemitones: 6, rangeDownSemitones: 5, quickStart: true };
+  const f0 = (file: string) => frames(file, 0).filter((f) => f.voiced && f.f0 !== null).map((f) => f.f0!);
+  it("sets the middle between 媽 and 馬, then both lines from it (recorded frames)", async () => {
+    const { settingsFromTakes, measureMiddleTakes, measureTop, measureBottom } = await import("./tuner.ts");
+    const top = { normal: f0("jane_ma1.wav"), low: f0("jane_ma1.wav") };
+    const bottom = { normal: f0("jane_ma3.wav"), low: f0("jane_ma3.wav") };
+    const out = settingsFromTakes(BASE, { top, bottom })!;
+    const mid = measureMiddleTakes([top.normal, bottom.normal])!;
+    expect(out.f0Center).toBeCloseTo(mid, 6);
+    expect(out.rangeSemitones).toBeCloseTo(measureTop(top.normal, mid)!, 6);
+    expect(out.rangeDownSemitones).toBeCloseTo(measureBottom(bottom.normal, mid)!, 6);
+    expect(out.quickStart).toBeUndefined();
+    expect(out.noiseFloor).toBe(BASE.noiseFloor);
+  });
+  it("one take only (redo High): the middle stays, only the top changes", async () => {
+    const { settingsFromTakes } = await import("./tuner.ts");
+    const cal = { ...BASE, quickStart: undefined, f0Center: 180 };
+    const out = settingsFromTakes(cal, { top: { normal: f0("jane_ma1.wav"), low: [] } })!;
+    expect(out.f0Center).toBe(180);
+    expect(out.rangeDownSemitones).toBe(cal.rangeDownSemitones);
+    expect(out.rangeSemitones).not.toBe(cal.rangeSemitones);
+  });
+});

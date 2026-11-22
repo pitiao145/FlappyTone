@@ -16,15 +16,14 @@ import { prefetchPool } from "../audio/prefetch.ts";
 import { ensurePlaybackCtx, isCueAudible, playToneCue } from "../audio/reference.ts";
 import { getMicSession, setFrameSink } from "../audio/session.ts";
 import type { Tone } from "../game/gates.ts";
-import { MIDDLE_WORD_IDS } from "../game/run.ts";
 import type { CalibrationSettings } from "../game/settings.ts";
 import {
   StepCapture,
   applyTunerResult,
   captureOptions,
-  measureBottom,
-  measureMiddleTakes,
-  measureTop,
+  measureMiddle,
+  settingsFromTakes,
+  type TunerTake,
   roomBars,
   roomMarker,
   roomVerdict,
@@ -35,7 +34,7 @@ import {
   type TunerResult,
   tunerTrackerConfig,
 } from "../game/tuner.ts";
-import { speakerFMin, tuning } from "../game/tuning.ts";
+import { tuning } from "../game/tuning.ts";
 import type { Word } from "../game/words.ts";
 import { computeNoiseFloor } from "../pitch/calibration.ts";
 import { rmsOf } from "../pitch/math.ts";
@@ -45,8 +44,11 @@ import { BRIDGE_MS } from "../game/visualiserCore.ts";
 import { withLearnedScale } from "../game/playerRuler.ts";
 import { drawVisualiser } from "../render/visualiser.ts";
 
-const STEPS: TunerPart[] = ["room", "middle", "top", "bottom"];
-const STEP_LABEL: Record<TunerPart, string> = { room: "Room", middle: "Middle", top: "Top", bottom: "Bottom" };
+/** Three steps (22 Nov): the middle is set from the High and Low takes, no step of its own. */
+type StepPart = "room" | "top" | "bottom";
+type VoicePart = "top" | "bottom";
+const STEPS: StepPart[] = ["room", "top", "bottom"];
+const STEP_LABEL: Record<StepPart, string> = { room: "Room", top: "High", bottom: "Low" };
 /** The word each voice step asks for (Traditional hanzi, hard rule 9). */
 const TOP_WORD = "ma1b"; // 媽 mā
 const BOTTOM_WORD = "ma3b"; // 馬 mǎ
@@ -76,7 +78,7 @@ interface Props {
   onCancel: () => void;
 }
 
-type View = { kind: "step"; part: TunerPart; back: "next" | "done" } | { kind: "done" };
+type View = { kind: "step"; part: StepPart; back: "next" | "done" } | { kind: "done" };
 
 export function VoiceTuner({ settings, start, onDone, onCancel }: Props) {
   const base = settings && !settings.quickStart ? settings : null;
@@ -101,7 +103,7 @@ export function VoiceTuner({ settings, start, onDone, onCancel }: Props) {
       }
       if (!live) return;
       const m = new Map(ws.map((w) => [w.id, w]));
-      const found = [...MIDDLE_WORD_IDS, TOP_WORD, BOTTOM_WORD].map((id) => m.get(id)).filter((w): w is Word => !!w);
+      const found = [TOP_WORD, BOTTOM_WORD].map((id) => m.get(id)).filter((w): w is Word => !!w);
       if (found.length > 0) prefetchPool(found);
       setWords(m);
     })();
@@ -110,9 +112,28 @@ export function VoiceTuner({ settings, start, onDone, onCancel }: Props) {
     };
   }, []);
 
+  /** This session's High and Low takes; the middle comes from both. */
+  const takesRef = useRef<{ top?: TunerTake; bottom?: TunerTake }>({});
+
   const finishStep = (r: TunerResult | null, verdict?: RoomVerdict) => {
     if (r) setDraft((d) => applyTunerResult(d, r));
     if (verdict) setRoom(verdict);
+    advance();
+  };
+
+  /** A voice take locked. Lines are set once both takes exist (or on a redo of one part). */
+  const finishTake = (part: VoicePart, take: TunerTake) => {
+    takesRef.current = { ...takesRef.current, [part]: take };
+    const t = takesRef.current;
+    const firstPass = view.kind === "step" && view.back === "next" && part === "top";
+    if (!firstPass) {
+      const next = settingsFromTakes(draft, t);
+      if (next) setDraft(next);
+    }
+    advance();
+  };
+
+  const advance = () => {
     if (view.kind !== "step") return;
     if (view.back === "done") {
       setView({ kind: "done" });
@@ -150,7 +171,7 @@ export function VoiceTuner({ settings, start, onDone, onCancel }: Props) {
       <div className="tuner-top">
         <button className="tuner-cancel" onClick={cancel}>Cancel</button>
         <span className="tuner-count">
-          {view.back === "done" ? `Redo: ${STEP_LABEL[view.part]}` : `Step ${stepIndex + 1} of 4`}
+          {view.back === "done" ? `Redo: ${STEP_LABEL[view.part]}` : `Step ${stepIndex + 1} of ${STEPS.length}`}
         </span>
       </div>
       <div className="tuner-steps" aria-hidden={view.back === "done"}>
@@ -166,10 +187,10 @@ export function VoiceTuner({ settings, start, onDone, onCancel }: Props) {
       ) : (
         <VoiceStep
           key={`${view.part}-${view.back}`}
-          part={view.part}
+          part={view.part as VoicePart}
           draft={draft}
           words={words}
-          onDone={finishStep}
+          onTake={(take) => finishTake(view.part as VoicePart, take)}
         />
       )}
     </div>
@@ -263,8 +284,7 @@ function paintBars(el: HTMLElement, n: number): void {
  * it, and (top and bottom) the word's target as a guide. Pierre, 22 Nov:
  * "like the rest of the game", the hold indicator where people look.
  */
-const STEP_COPY: Record<Exclude<TunerPart, "room">, { label: string; hint: string; fallback: { hanzi: string; pinyin: string } }> = {
-  middle: { label: "Normal voice", hint: "Like talking", fallback: { hanzi: "媽", pinyin: "mā" } },
+const STEP_COPY: Record<VoicePart, { label: string; hint: string; fallback: { hanzi: string; pinyin: string } }> = {
   top: { label: "High note", hint: "High and steady", fallback: { hanzi: "媽", pinyin: "mā" } },
   bottom: { label: "Low note", hint: "Low and relaxed", fallback: { hanzi: "馬", pinyin: "mǎ" } },
 };
@@ -275,18 +295,17 @@ const RING_R = 54;
 const RING_C = 2 * Math.PI * RING_R;
 
 interface VoiceStepProps {
-  part: Exclude<TunerPart, "room">;
+  part: VoicePart;
   draft: CalibrationSettings;
   words: Map<string, Word> | null;
-  onDone: (r: TunerResult | null) => void;
+  /** The locked take; the parent sets the lines (middle from both takes). */
+  onTake: (take: TunerTake) => void;
 }
 
 type Note = "ready" | "hearing" | "louder" | "pause" | "locked";
 
-function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
-  const takes = part === "middle"
-    ? Array.from({ length: tuning().middleTakesPerWord }, () => MIDDLE_WORD_IDS).flat()
-    : [part === "top" ? TOP_WORD : BOTTOM_WORD];
+function VoiceStep({ part, draft, words, onTake }: VoiceStepProps) {
+  const takes = [part === "top" ? TOP_WORD : BOTTOM_WORD];
   const [take, setTake] = useState(0);
   const [attempt, setAttempt] = useState(0);
   const [note, setNote] = useState<Note>("ready");
@@ -390,23 +409,10 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
         return;
       }
       const f = pooled.current;
-      let r: TunerResult | null;
-      if (part === "middle") {
-        // Each word counts once, however long it was held.
-        const first = measureMiddleTakes(f.normal);
-        // A deep voice: its floor sits under the normal one, so the low tracker's frames are fair.
-        const centre = first !== null && speakerFMin(first) < tuning().pitchFloorHighHz ? (measureMiddleTakes(f.low) ?? first) : first;
-        r = centre !== null ? { part: "middle", f0Center: centre } : null;
-      } else if (part === "top") {
-        const up = measureTop(f.normal.flat(), draft.f0Center);
-        r = up !== null ? { part: "top", up } : null;
-      } else {
-        const down = measureBottom(f.normal.flat(), draft.f0Center);
-        r = down !== null ? { part: "bottom", down } : null;
-      }
-      if (r) onDone(r);
+      const got: TunerTake = { normal: f.normal.flat(), low: f.low.flat() };
+      // Enough of a voice to measure? Else "try again", never a wrong result (hard rule 8).
+      if (measureMiddle(got.normal) !== null) onTake(got);
       else {
-        // Never a wrong score: the app did not hear enough (hard rule 8).
         setTake(0);
         setAttempt((a) => a + 1);
         setRetry(true);
@@ -473,7 +479,6 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
       <div key={`${part}-${take}`} className={`tuner-ring tuner-enter${locked ? " is-locked" : ""}`}>
         <span className="tuner-ring-label">
           {copy.label}
-          {part === "middle" && takes.length > 1 ? ` · ${take + 1}/${takes.length}` : ""}
         </span>
         <svg viewBox="0 0 128 128" width="128" height="128" role="img" aria-label={`Hold indicator for ${word?.hanzi ?? copy.fallback.hanzi}`}>
           <circle cx="64" cy="64" r={RING_R} className="tuner-ring-track" />
@@ -509,7 +514,7 @@ interface DoneProps {
   draft: CalibrationSettings;
   room: RoomVerdict | null;
   changed: boolean;
-  onRedo: (p: TunerPart) => void;
+  onRedo: (p: StepPart) => void;
   onDone: () => void;
   onCancel: () => void;
 }
@@ -517,9 +522,9 @@ interface DoneProps {
 function DoneView({ draft, room, changed, onRedo, onDone, onCancel }: DoneProps) {
   const roomVerdictNow = room ?? roomVerdict(draft.noiseFloor);
   const rows: Array<{ part: TunerPart; dot: string; title: string; sub: string }> = [
-    { part: "top", dot: "top", title: `Top: ${semitoneWord(draft.rangeSemitones)} up`, sub: "from your normal voice to line 5" },
-    { part: "middle", dot: "middle", title: "Middle: your normal voice", sub: "line 3" },
-    { part: "bottom", dot: "bottom", title: `Bottom: ${semitoneWord(draft.rangeDownSemitones)} down`, sub: "from your normal voice to line 1" },
+    { part: "top", dot: "top", title: `Top: ${semitoneWord(draft.rangeSemitones)} up`, sub: "from the middle to line 5" },
+    { part: "room", dot: "middle", title: "Middle: line 3", sub: "between your high and low notes" },
+    { part: "bottom", dot: "bottom", title: `Bottom: ${semitoneWord(draft.rangeDownSemitones)} down`, sub: "from the middle to line 1" },
   ];
   return (
     <div className="screen tuner-screen tuner-done">
@@ -542,7 +547,7 @@ function DoneView({ draft, room, changed, onRedo, onDone, onCancel }: DoneProps)
               <strong>{r.title}</strong>
               <span className="tuner-sub">{r.sub}</span>
             </div>
-            <button onClick={() => onRedo(r.part)}>Redo</button>
+            {r.part !== "room" && <button onClick={() => onRedo(r.part as StepPart)}>Redo</button>}
           </div>
         ))}
         {/* Information only (Pierre, 19 Nov): a new room check changes nothing you can act on. */}
