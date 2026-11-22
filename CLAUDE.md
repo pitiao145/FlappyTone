@@ -89,7 +89,7 @@ Verify it by running `npm run analyze fixtures/captures/<file>.wav <f0Center>` a
 
 **Tone classifier and tone accuracy** are checked against Jane's real measured contours, never synthetic curves (`npm run classifier-check`; protocol in `docs/TESTING.md`). Those contours come from the same listener, so they show agreement, not truth; `npm run bench` checks the listener and the reader against Praat (0 FAIL required). "Wall hits on a correct speaker" must not go up. Any change to `src/pitch/` needs the fixture tests to pass **and** a before/after `npm run report`; state which of fit/lag/wiggle/voiced% moved, including the ones that got worse.
 
-Ground truth is `fixtures/captures/jane_*.wav` (native Taiwanese speaker, direct mic). The large regression set is Jane's 829 local catalog clips, scored against Praat by `npm run bench`. The synthetic `fixtures/tone*.wav` prove nothing about real voices.
+Ground truth is the Praat scorecard: `npm run bench` scores Jane's 829 local catalog clips (native Taiwanese speaker) against Praat. The 4 `fixtures/captures/jane_ma*.wav` captures (direct mic) stay as the fast fixture tests. The synthetic `fixtures/tone*.wav` prove nothing about real voices.
 
 ## Working style
 
