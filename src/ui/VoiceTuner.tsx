@@ -29,7 +29,6 @@ import {
   roomMarker,
   roomVerdict,
   semitoneWord,
-  voiceBars,
   type RoomVerdict,
   type TunerPart,
   type TunerResult,
@@ -40,6 +39,10 @@ import type { Word } from "../game/words.ts";
 import { computeNoiseFloor } from "../pitch/calibration.ts";
 import { rmsOf } from "../pitch/math.ts";
 import { PitchTracker } from "../pitch/PitchTracker.ts";
+import { PitchTrail } from "../game/contours.ts";
+import { BRIDGE_MS } from "../game/visualiserCore.ts";
+import { withLearnedScale } from "../game/playerRuler.ts";
+import { drawVisualiser } from "../render/visualiser.ts";
 
 const STEPS: TunerPart[] = ["room", "middle", "top", "bottom"];
 const STEP_LABEL: Record<TunerPart, string> = { room: "Room", middle: "Middle", top: "Top", bottom: "Bottom" };
@@ -253,15 +256,22 @@ function paintBars(el: HTMLElement, n: number): void {
 // ------------------------------------------------------------------ voice steps
 
 /**
- * What each voice step asks for. The word itself is shown big (hanzi and
- * pinyin), with one short line on how to say it (Pierre, 19 Nov: learners
- * should see the word, not read a sentence).
+ * Each voice step, for a beginner: the word in a big ring (the ring fills
+ * while you hold the word), one plain instruction, and below it the
+ * Visualiser's own canvas: the bird on the left, your line scrolling behind
+ * it, and (top and bottom) the word's target as a guide. Pierre, 22 Nov:
+ * "like the rest of the game", the hold indicator where people look.
  */
-const STEP_COPY: Record<Exclude<TunerPart, "room">, { title: string; hint: string; fallback: { hanzi: string; pinyin: string } }> = {
-  middle: { title: "Your middle", hint: "Say it in your normal voice", fallback: { hanzi: "媽", pinyin: "mā" } },
-  top: { title: "Your top line", hint: "First tone: high, easy, flat", fallback: { hanzi: "媽", pinyin: "mā" } },
-  bottom: { title: "Your bottom line", hint: "Third tone: go low, stay low", fallback: { hanzi: "馬", pinyin: "mǎ" } },
+const STEP_COPY: Record<Exclude<TunerPart, "room">, { label: string; hint: string; tone: Tone; fallback: { hanzi: string; pinyin: string } }> = {
+  middle: { label: "Your normal voice", hint: "Say it like you are talking to a friend. Not high, not low.", tone: 1, fallback: { hanzi: "媽", pinyin: "mā" } },
+  top: { label: "Your high note", hint: "One high, steady note, like a long “maaa”. Easy, not a shout.", tone: 1, fallback: { hanzi: "媽", pinyin: "mā" } },
+  bottom: { label: "Your low note", hint: "Low and relaxed. Let your voice drop and stay down, like a sigh.", tone: 3, fallback: { hanzi: "馬", pinyin: "mǎ" } },
 };
+
+/** Canvas width in time, the Visualiser's own (Visualiser.tsx `SPAN_MS`). */
+const SPAN_MS = 1600;
+const RING_R = 54;
+const RING_C = 2 * Math.PI * RING_R;
 
 interface VoiceStepProps {
   part: Exclude<TunerPart, "room">;
@@ -270,19 +280,7 @@ interface VoiceStepProps {
   onDone: (r: TunerResult | null) => void;
 }
 
-/** What the canvas loop reads each frame. Mutable, outside React (hard rule 1). */
-interface Live {
-  /** Every voiced frame of the last few seconds (st from the draft middle); `counted` = part of the take. */
-  pts: Array<{ tMs: number; st: number; counted: boolean }>;
-  bars: number;
-  progress: number;
-  /** After a top/bottom take locks: the measured line (st from the middle), drawn as "your new line". */
-  result: number | null;
-  /** The take has locked: the ring around the dot is full and shows a tick. */
-  locked: boolean;
-  /** The word to say, drawn where the dot will appear before any voice. */
-  hanzi: string;
-}
+type Note = "ready" | "hearing" | "louder" | "pause" | "locked";
 
 function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
   const takes = part === "middle"
@@ -290,7 +288,7 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
     : [part === "top" ? TOP_WORD : BOTTOM_WORD];
   const [take, setTake] = useState(0);
   const [attempt, setAttempt] = useState(0);
-  const [note, setNote] = useState<"hold" | "louder" | "pause" | "locked">("hold");
+  const [note, setNote] = useState<Note>("ready");
   /** "Couldn't hear that, try again": shown until the player's voice comes in again. */
   const [retry, setRetry] = useState(false);
   const retryRef = useRef(false);
@@ -299,27 +297,29 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
   }, [retry]);
   /** Each locked take's frames, per tracker floor. A ref: fills at frame rate. */
   const pooled = useRef<{ normal: number[][]; low: number[][] }>({ normal: [], low: [] });
-  const live = useRef<Live>({ pts: [], bars: 0, progress: 0, result: null, locked: false, hanzi: "" });
+  /** What the drawing reads each frame. Mutable, outside React (hard rule 1). */
+  const live = useRef({ trail: new PitchTrail(SPAN_MS, BRIDGE_MS), chao: 3, voiced: false, progress: 0, locked: false });
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const meterRef = useRef<HTMLDivElement>(null);
+  const ringRef = useRef<SVGCircleElement>(null);
   const word = words?.get(takes[take]);
-  const tone: Tone = part === "top" ? 1 : part === "bottom" ? 3 : ((word?.tone ?? 1) as Tone);
-  useEffect(() => {
-    live.current.hanzi = word?.hanzi ?? STEP_COPY[part].fallback.hanzi;
-  }, [word, part]);
+  const copy = STEP_COPY[part];
+  // The scale the bird flies on: the learned one if any, else this calibration (read only).
+  const shown = withLearnedScale(draft);
 
   // Capture: one StepCapture per take. Locks on silence after enough voice.
   useEffect(() => {
     if (take === 0) pooled.current = { normal: [], low: [] };
-    live.current = { pts: live.current.pts, bars: 0, progress: 0, result: null, locked: false, hanzi: live.current.hanzi };
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset the line under the meter for a new take
-    setNote("hold");
+    const L = live.current;
+    L.progress = 0;
+    L.locked = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- a new take starts ready
+    setNote("ready");
     const cap = new StepCapture(captureOptions(), performance.now());
     const lowFrames: number[] = [];
     let normal: PitchTracker | null = null;
     let low: PitchTracker | null = null;
-    let lastNote: string = "hold";
-    const say = (n: "hold" | "louder" | "pause" | "locked") => {
+    let lastNote: Note = "ready";
+    const say = (n: Note) => {
       if (n !== lastNote) {
         lastNote = n;
         setNote(n);
@@ -329,7 +329,7 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
       // Deaf while the example plays: the speaker would be measured, not the player.
       if (isCueAudible()) return;
       const cfg = tunerTrackerConfig(part, draft, sampleRate);
-      normal ??= new PitchTracker(cfg);
+      normal ??= new PitchTracker({ ...cfg, f0Center: shown.f0Center, rangeSemitones: shown.rangeSemitones, rangeDownSemitones: shown.rangeDownSemitones });
       low ??= new PitchTracker({ ...cfg, fMin: tuning().pitchFloorLowHz });
       const p = normal.push(frame);
       const q = low.push(frame);
@@ -337,32 +337,26 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
       const before = cap.phase;
       const before0 = cap.f0s.length;
       const phase = cap.push({ tMs: now, voiced: p.voiced, f0: p.f0 });
-      // The low-floor tracker's frames for the same moments (middle step, deep voice).
       if (cap.f0s.length > before0 && q.voiced && q.f0 !== null) lowFrames.push(q.f0);
-      const L = live.current;
-      L.bars = voiceBars(p.rms, draft.noiseFloor);
+      L.trail.push(p.smoothedChao, p.voiced, now);
+      if (p.voiced) L.chao = p.smoothedChao;
+      L.voiced = p.voiced;
       L.progress = cap.progress;
-      // Every voiced frame is drawn, like the Visualiser; the ones in the take are drawn bold.
-      if (p.voiced && p.f0 !== null) L.pts.push({ tMs: now, st: 12 * Math.log2(p.f0 / draft.f0Center), counted: cap.f0s.length > before0 });
-      while (L.pts.length > 0 && now - L.pts[0].tMs > TRACE_MS) L.pts.shift();
       if (phase === "hearing" && retryRef.current) setRetry(false);
       if (phase === "locked" && before !== "locked") {
         setFrameSink(null);
         pooled.current.normal.push([...cap.f0s]);
         pooled.current.low.push([...lowFrames]);
-        // Show where this take puts the line being measured, before moving on.
-        L.result = part === "top" ? measureTop(cap.f0s, draft.f0Center) : part === "bottom" ? -(measureBottom(cap.f0s, draft.f0Center) ?? NaN) : null;
-        if (L.result !== null && !Number.isFinite(L.result)) L.result = null;
         L.locked = true;
+        L.voiced = false;
         say("locked");
       } else if (phase === "tooShort") {
         // Too little voice: say so and listen again, never a wrong result (hard rule 8).
         setFrameSink(null);
         setRetry(true);
         setAttempt((a) => a + 1);
-      } else if (phase !== "locked") {
-        // Voice before the short quiet that opens a take: tell the player, never stay silent.
-        say(!cap.listening && p.voiced ? "pause" : cap.stalled(now) ? "louder" : "hold");
+      } else {
+        say(!cap.listening && p.voiced ? "pause" : phase === "hearing" ? "hearing" : cap.stalled(now) ? "louder" : "ready");
       }
     });
     const stall = setInterval(() => {
@@ -404,18 +398,18 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
         setAttempt((a) => a + 1);
         setRetry(true);
       }
-    // Hold "Got it" a little longer on top/bottom, so the new line can be seen.
-    }, part === "middle" ? 600 : 1400);
+    }, 700);
     return () => clearTimeout(id);
   }, [note]);
 
-  // The drawing: five lines, the word's corridor, the player's line, the meters. rAF, refs only.
+  // Drawing: the ring and the Visualiser canvas, from refs in a rAF loop (hard rule 1).
   useEffect(() => {
     let raf = 0;
+    const guide = part === "middle" ? null : (word ?? null);
     const draw = () => {
       raf = requestAnimationFrame(draw);
       const L = live.current;
-      if (meterRef.current) paintBars(meterRef.current, L.bars);
+      if (ringRef.current) ringRef.current.style.strokeDashoffset = String(RING_C * (1 - (L.locked ? 1 : L.progress)));
       const c = canvasRef.current;
       if (!c) return;
       const w = c.clientWidth, h = c.clientHeight;
@@ -425,187 +419,67 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
       const g = c.getContext("2d");
       if (!g) return;
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      g.clearRect(0, 0, w, h);
-      drawStep(g, w, h, tone, part, draft, L);
+      drawVisualiser(g, w, h, {
+        tone: part === "middle" ? null : copy.tone,
+        word: guide,
+        live: null,
+        finished: [],
+        spanMs: SPAN_MS,
+        chao: L.chao,
+        voiced: L.voiced,
+        scroll: { points: L.trail.points(), nowMs: L.trail.clockMs(), originMs: L.trail.originMs() },
+        scrollGuide: part !== "middle",
+        corridor: "wide",
+        band: true,
+      });
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [tone, part, draft]);
+  }, [part, word, copy.tone]);
 
   const playExample = () => {
     if (!word) return;
     void ensurePlaybackCtx();
     const audio = getMicSession()?.ctx;
     if (audio && audio.state === "suspended") void audio.resume();
-    playToneCue(word.tone as Tone, draft.f0Center, draft.rangeSemitones, word, draft.rangeDownSemitones);
+    playToneCue(word.tone as Tone, shown.f0Center, shown.rangeSemitones, word, shown.rangeDownSemitones);
   };
 
-  const copy = STEP_COPY[part];
   const status =
-    note === "locked" ? { title: "Got it", sub: "" }
-    : retry ? { title: "Couldn't hear that, try again", sub: "Say it once more, a little longer." }
-    : note === "louder" ? { title: "Still listening", sub: "A bit louder?" }
-    : note === "pause" ? { title: "Ready when you are", sub: "Stop for a moment, then say it once." }
-    : { title: "Listening", sub: "Hold it until the ring is full, then stop." };
+    note === "locked" ? "Got it ✓"
+    : retry ? "Couldn't hear that. Say it once more, a bit longer."
+    : note === "louder" ? "I can't hear you yet. A bit louder?"
+    : note === "pause" ? "Stop for a second, then say it once."
+    : note === "hearing" ? "Keep going… stop when the circle is full."
+    : "Say it now. Hold it until the circle is full.";
   return (
     <>
-      <div className="tuner-word">
-        <span className="tuner-word-step">
-          {copy.title}
-          {part === "middle" && takes.length > 1 ? ` · word ${take + 1} of ${takes.length}` : ""}
+      <div className={`tuner-ring${note === "locked" ? " is-locked" : ""}`}>
+        <span className="tuner-ring-label">
+          {copy.label}
+          {part === "middle" && takes.length > 1 ? ` · ${take + 1} of ${takes.length}` : ""}
         </span>
-        <span className="tuner-word-hanzi" lang="zh-Hant">{word?.hanzi ?? copy.fallback.hanzi}</span>
-        <span className="tuner-word-pinyin">{word?.pinyin ?? copy.fallback.pinyin}</span>
-        <span className="tuner-word-hint">{copy.hint}</span>
+        <svg viewBox="0 0 128 128" width="128" height="128" role="img" aria-label={`Hold indicator for ${word?.hanzi ?? copy.fallback.hanzi}`}>
+          <circle cx="64" cy="64" r={RING_R} className="tuner-ring-track" />
+          <circle cx="64" cy="64" r={RING_R} className="tuner-ring-fill" ref={ringRef}
+            style={{ strokeDasharray: RING_C, strokeDashoffset: RING_C }} transform="rotate(-90 64 64)" />
+          <text x="64" y="62" textAnchor="middle" className="tuner-ring-hanzi" lang="zh-Hant">{word?.hanzi ?? copy.fallback.hanzi}</text>
+          <text x="64" y="90" textAnchor="middle" className="tuner-ring-pinyin">{word?.pinyin ?? copy.fallback.pinyin}</text>
+        </svg>
+        <span className="tuner-ring-hint">{copy.hint}</span>
+        <strong className="tuner-ring-status" role="status">{status}</strong>
       </div>
       <div className="tuner-panel tuner-stage">
-        <canvas ref={canvasRef} role="img" aria-label={`Your voice as a moving line, with your middle${part === "top" ? " and the zone to aim for above it" : part === "bottom" ? " and the zone to aim for below it" : ""}`} />
-      </div>
-      <div className="tuner-panel tuner-meter">
-        <div className="tuner-voice-bars" ref={meterRef} role="img" aria-label="Voice level">
-          {Array.from({ length: 5 }, (_, i) => <span key={i} style={{ height: `${8 + i * 5}px` }} />)}
-        </div>
-        <div className="tuner-meter-text">
-          <strong role="status">{status.title}</strong>
-          {status.sub && <span className="note">{status.sub}</span>}
-        </div>
+        <canvas ref={canvasRef} role="img" aria-label="Your voice: the bird follows your pitch" />
       </div>
       <div className="tuner-actions">
         <button disabled={!word} onClick={playExample}>
-          ▶ Hear <span lang="zh-Hant">{word?.hanzi ?? ""}</span>
+          ▶ Hear it
         </button>
-        <button onClick={() => { setTake(0); setAttempt((a) => a + 1); }}>Try again</button>
+        <button onClick={() => { setTake(0); setAttempt((a) => a + 1); }}>Start over</button>
       </div>
     </>
   );
-}
-
-/** How much of the past the moving line shows (ms), like the Visualiser's trail. */
-const TRACE_MS = 4000;
-/** The stage shows this many semitones above and below the middle: wide, so a voice never sticks to an edge. */
-const SPAN_ST = 9;
-
-/**
- * The canvas, Visualiser-style: your voice as a line that moves right to left,
- * with a dot (the bird) at your pitch now. The axis is plain semitones around
- * the middle, so nothing clamps while a line is being measured. Drawn: the
- * middle (solid), line 5 and line 1 as they are now (dashed), and on the Top
- * and Bottom steps the zone to aim for. After a take locks, the measured line.
- */
-function drawStep(
-  g: CanvasRenderingContext2D,
-  w: number,
-  h: number,
-  _tone: Tone,
-  part: Exclude<TunerPart, "room">,
-  s: CalibrationSettings,
-  L: Live,
-): void {
-  const css = getComputedStyle(document.documentElement);
-  const v = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
-  const ink = v("--ink-rgb", "36, 29, 21");
-  const accent = v("--accent", "#1c7a63");
-  const accentRgb = v("--accent-rgb", "28, 122, 99");
-  const beak = v("--beak", "#c98a3c");
-  const beakRgb = v("--beak-rgb", "200, 138, 60");
-  const top = 14, bottom = h - 14, left = 8, right = w - 26;
-  const y = (st: number) => {
-    const c = Math.max(-SPAN_ST, Math.min(SPAN_ST, st));
-    return top + ((SPAN_ST - c) / (2 * SPAN_ST)) * (bottom - top);
-  };
-  const line = (st: number, color: string, width: number, dash: number[], label: string) => {
-    g.strokeStyle = color;
-    g.lineWidth = width;
-    g.setLineDash(dash);
-    g.beginPath();
-    g.moveTo(left, y(st));
-    g.lineTo(right, y(st));
-    g.stroke();
-    g.setLineDash([]);
-    g.fillStyle = color;
-    g.font = "12px system-ui, sans-serif";
-    g.textAlign = "right";
-    g.fillText(label, w - 4, y(st) + 4);
-  };
-  // The zone to aim for: a first tone above the middle, a low third tone below it.
-  if (part !== "middle") {
-    const [a, b] = part === "top" ? [1.5, SPAN_ST] : [-1.5, -SPAN_ST];
-    g.fillStyle = `rgba(${accentRgb}, 0.12)`;
-    g.fillRect(left, Math.min(y(a), y(b)), right - left, Math.abs(y(a) - y(b)));
-    g.fillStyle = accent;
-    g.font = "600 13px system-ui, sans-serif";
-    g.textAlign = "left";
-    g.fillText(part === "top" ? "Aim here: high, easy, flat" : "Aim here: low, and stay low", left + 8, part === "top" ? top + 18 : bottom - 10);
-  }
-  line(s.rangeSemitones, `rgba(${ink}, 0.35)`, 1, [5, 5], "5");
-  line(-s.rangeDownSemitones, `rgba(${ink}, 0.35)`, 1, [5, 5], "1");
-  line(0, accent, 2.5, [], "3");
-  g.fillStyle = `rgba(${ink}, 0.55)`;
-  g.font = "12px system-ui, sans-serif";
-  g.textAlign = "left";
-  g.fillText("your middle", left + 8, y(0) - 6);
-  // The measured line once the take locks.
-  if (L.result !== null) line(L.result, beak, 3, [], part === "top" ? "5 ✓" : "1 ✓");
-  // Your voice: a trail moving right to left, and the dot at your pitch now.
-  const now = performance.now();
-  const xOf = (t: number) => right - 24 - ((now - t) / TRACE_MS) * (right - 24 - left);
-  g.lineCap = "round";
-  g.lineJoin = "round";
-  for (let i = 1; i < L.pts.length; i++) {
-    const a = L.pts[i - 1], b = L.pts[i];
-    if (b.tMs - a.tMs > 120) continue; // a gap in the voice is a gap in the line
-    g.strokeStyle = b.counted ? beak : `rgba(${beakRgb}, 0.35)`;
-    g.lineWidth = b.counted ? 5 : 3;
-    g.beginPath();
-    g.moveTo(xOf(a.tMs), y(a.st));
-    g.lineTo(xOf(b.tMs), y(b.st));
-    g.stroke();
-  }
-  // The dot, with a ring that fills while the word is held: where the eyes already are.
-  const last = L.pts[L.pts.length - 1];
-  const live = !!last && now - last.tMs < 200;
-  const heldOn = L.progress > 0 || L.locked;
-  const cx = live || heldOn ? xOf(last ? last.tMs : now) : right - 24;
-  const cy = last && (live || heldOn) ? y(last.st) : y(0);
-  const R = 18;
-  if (!live && !heldOn) {
-    // Nothing heard yet: a waiting ring with the word, where the dot will appear.
-    g.strokeStyle = `rgba(${beakRgb}, 0.45)`;
-    g.lineWidth = 3;
-    g.setLineDash([4, 5]);
-    g.beginPath();
-    g.arc(cx, cy, R, 0, Math.PI * 2);
-    g.stroke();
-    g.setLineDash([]);
-    g.fillStyle = beak;
-    g.font = "600 16px system-ui, sans-serif";
-    g.textAlign = "center";
-    g.fillText(L.hanzi, cx, cy + 6);
-    return;
-  }
-  g.strokeStyle = `rgba(${beakRgb}, 0.25)`;
-  g.lineWidth = 5;
-  g.beginPath();
-  g.arc(cx, cy, R, 0, Math.PI * 2);
-  g.stroke();
-  const full = L.locked ? 1 : L.progress;
-  g.strokeStyle = full >= 1 ? accent : beak;
-  g.beginPath();
-  g.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + full * Math.PI * 2);
-  g.stroke();
-  g.fillStyle = live ? beak : `rgba(${beakRgb}, 0.5)`;
-  g.beginPath();
-  g.arc(cx, cy, 9, 0, Math.PI * 2);
-  g.fill();
-  if (L.locked) {
-    g.strokeStyle = accent;
-    g.lineWidth = 3;
-    g.beginPath();
-    g.moveTo(cx + R + 6, cy);
-    g.lineTo(cx + R + 10, cy + 5);
-    g.lineTo(cx + R + 18, cy - 6);
-    g.stroke();
-  }
 }
 
 // ------------------------------------------------------------------ done

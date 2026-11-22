@@ -117,3 +117,11 @@ Copy to check: "Which voice is closer to yours?", the room verdicts (Quiet / A b
 - Done screen layout: row sub-lines left-aligned, not italic; the Top and Middle dots now differ (warm / green).
 - **The word, big** (Pierre: learners should see, not read): each voice step shows the word large (媽 / 馬, 64 px), its pinyin, and one short line ("Say it in your normal voice", "First tone: high, easy, flat", "Third tone: go low, stay low"). The step name is a small label above it.
 - **Hold ring on the dot**, inside the stage where the player looks: a ring around the live dot fills while the word is held, turns green and shows a tick when the take locks. Before any voice, a dashed ring with the word sits where the dot will appear. The hold bar under the stage is gone.
+
+## Redesign of the voice steps (Pierre, 22 Nov 2026)
+
+Replaces the semitone stage, the small dot ring and the big word above it.
+- **Hold ring at the top, with the word inside it** (the pattern of voice-enrolment screens such as "Hey Siri" or Face ID setup: one big ring, one thing to do, the ring fills while you do it). The ring fills while the voice is held and turns green when the take locks. Under it: one plain instruction for a beginner and one live status line ("Say it now. Hold it until the circle is full." → "Keep going… stop when the circle is full." → "Got it ✓"; "I can't hear you yet. A bit louder?"; "Stop for a second, then say it once."; "Couldn't hear that. Say it once more, a bit longer.").
+- Instructions: Middle "Your normal voice: say it like you are talking to a friend. Not high, not low." Top "Your high note: one high, steady note, like a long “maaa”. Easy, not a shout." Bottom "Your low note: low and relaxed. Let your voice drop and stay down, like a sigh."
+- **The stage is the Visualiser's own renderer** (`drawVisualiser`, scroll mode): the bird starts on the left as in the game, the line scrolls behind it, and on Top and Bottom the word's target band is the guide. The bird flies on your current scale (learned if any, else calibration), read only.
+- Buttons: "▶ Hear it", "Start over". The voice-bar meter under the stage is gone.
