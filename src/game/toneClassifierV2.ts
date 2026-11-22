@@ -37,6 +37,7 @@
 import type { Contour } from "./contours.ts";
 import type { ToneClassification } from "./toneClassifier.ts";
 import { tuning } from "./tuning.ts";
+import type { SpeechStyle } from "./words.ts";
 
 type VoteKey = "turnTime" | "riseShare" | "riseRate" | "drop" | "dropShare" | "low";
 const VOTE_KEYS: VoteKey[] = ["turnTime", "riseShare", "riseRate", "drop", "dropShare", "low"];
@@ -107,6 +108,13 @@ export interface ToneReaderSettings {
   votes: VoteKey[];
   /** The "judged on depth alone" rule in `t2t3Cue`. It reads the absolute `low`. */
   floorRule: boolean;
+  /**
+   * Natural style only (brief 49): a fall of at least `minFallChao` that ends
+   * on the bottom line (low at or under `maxLowChao`) with no rise back is a
+   * low third tone (the everyday half-third), even when the fall is too short
+   * for the usual low-fall test. Never decisive. Null: no such rule.
+   */
+  lowHoldT3: { minFallChao: number; maxLowChao: number } | null;
 }
 
 export function readerSettings(): ToneReaderSettings {
@@ -131,6 +139,7 @@ export function readerSettings(): ToneReaderSettings {
     anchors: t.toneV2T23Anchors,
     votes: VOTE_KEYS,
     floorRule: true,
+    lowHoldT3: null,
   };
 }
 
@@ -266,7 +275,7 @@ export function toneFeatures(contour: Contour): ToneFeatures | null {
 const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
 
 /** Family scores, 0..1 each. Exported for tests and the check tool. */
-export function familyScores(f: ToneFeatures): {
+export function familyScores(f: ToneFeatures, style: SpeechStyle = "textbook"): {
   level: number;
   dipRise: number;
   fall: number;
@@ -293,7 +302,12 @@ export function familyScores(f: ToneFeatures): {
   const past = (v: number, min: number | null) => (min === null ? 1 : clamp01((v - min) / 0.5));
   const highStart = Math.min(past(f.fallPeak, r.t4MinPeakChao), past(f.fall, r.t4MinFallChao));
   const fall = fallShape * highStart;
-  const lowFall = fallShape * (1 - highStart);
+  let lowFall = fallShape * (1 - highStart);
+  // A natural third tone that only goes low: short fall, ends on the floor.
+  const lh = r.lowHoldT3;
+  if (style === "natural" && lh && f.low <= lh.maxLowChao) {
+    lowFall = Math.max(lowFall, clamp01((f.fall - f.rise - lh.minFallChao) / 0.4) * (1 - highStart));
+  }
 
   // Dip-rise: a real rise after the low, at least as big as most of the drop.
   const dipRise = clamp01((f.rise - r.dipRiseMinChao) / 1.2) * clamp01(f.rise / Math.max(0.3, 0.6 * f.drop));
@@ -380,12 +394,13 @@ function longestGapMs(points: { tMs: number }[]): number {
   return gap;
 }
 
-export function classifyToneV2(contour: Contour): ToneClassification | null {
+/** `style`: the speech style of the word being read; "natural" turns on the natural-only rules. */
+export function classifyToneV2(contour: Contour, style: SpeechStyle = "textbook"): ToneClassification | null {
   const f = toneFeatures(contour);
   if (!f) return null;
   const t = tuning();
   const r = readerSettings();
-  const scores = familyScores(f);
+  const scores = familyScores(f, style);
   const ranked = (
     [
       ["level", scores.level],

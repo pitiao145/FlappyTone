@@ -619,7 +619,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       // way Free mode does (`readAttempt`) — the classifier only ever sees
       // one syllable, never the two-syllable contour it misreads.
       if (latest && (word?.syllables ?? 1) > 1) {
-        setPairSyllables(readContourSyllables(latest, word?.syllables));
+        setPairSyllables(readContourSyllables(latest, word?.syllables, word ? { tones: spokenTones(word), style: word.clipStyle ?? "textbook" } : undefined));
       }
 
       // Standalone recognition — runs off the same `finished()` array as the
@@ -629,7 +629,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
       // Single-syllable only: the classifier misreads a two-syllable contour
       // (same rule as the pairs run mode), so a pair word gets no read.
       if (latest && (word?.syllables ?? 1) === 1) {
-        const result = classifyToneV2(latest);
+        const result = classifyToneV2(latest, word?.clipStyle ?? "textbook");
         sessionAttemptsRef.current += 1;
         // Dev only: keep every attempt for offline classifier tests. In the
         // console: copy(JSON.stringify(window.__toneLog)).

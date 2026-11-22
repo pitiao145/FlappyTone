@@ -1319,7 +1319,7 @@ export class Run {
         state.samples.length > 0 ? state.samples[0].atMs : state.enteredAtMs;
       const classifyPath = this.trail.filter((s) => s.t >= classifyStartMs);
       const contour = this.contourFromPath(classifyPath);
-      const classification = contour ? classifyTone(contour) : null;
+      const classification = contour ? classifyTone(contour, undefined, this.speechStyle) : null;
       classifiedTone = classification?.tone ?? null;
       classifiedConfidence = classification?.confidence ?? null;
 
