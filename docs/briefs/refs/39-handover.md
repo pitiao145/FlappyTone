@@ -387,12 +387,13 @@ Found by Pierre in the dev Visualiser (gōngyuán read "T4 · T2"). Analysed, no
 - Open for Pierre (report, "Open decisions"): release-note wording, Monday go-live + marker for stats, logging A/B, regenerate site averages, whether Visualiser / checker / TONEder read the ruler, go-live order. Blockers before go-live unchanged: re-record 30 older first-tone words, pair-reading fix, natural pair cuts, merge `main` (both touched `words.ts`), `process-clips` on the one ruler.
 - Phase B plan is complete. Next is a go-live session, only on Pierre's yes.
 
-## 50 Calibration tuner, quick start, learned scale everywhere — 19 Nov 2026 — done
+## 50 Calibration tuner, quick start, learned scale everywhere — 19–22 Nov 2026 — done
 
-Report: `docs/briefs/reports/50-calibration-settings-tuner.md`. All behind `playerRulerV2` (new foundation); old flow unchanged when off.
-- New player: one "Lower / Higher voice" tap (`VoiceChoice.tsx`, `voiceStart.ts`), none when the landing demo saved it. Preset settings marked `quickStart`; the learned scale starts fast (first 3 heard gates 70%, no per-run cap until learned). Step 1 (`bench39/quickstart.mjs`): an in-between voice loses ~1 extra heart on gate 1, then flies like a calibrated one.
-- Calibration is a tuner in Settings (`VoiceTuner.tsx`, `tuner.ts`): Room, Middle (媽 馬 once each), Top, Bottom; locks on silence; per-part redo; re-seeds the learned scale. Card: `VoiceCard.tsx`.
-- `withLearnedScale` (read-only) feeds the Visualiser and the public checker.
-- Learner: wall-hit third tones skip the bottom pool; Tone Drill does not vote on the middle (the test-8 loop: one-sided votes sank the middle, so the top half grew). `bench39/tophalf.mjs`.
+Report: `docs/briefs/reports/50-calibration-settings-tuner.md` (its last section is the final flow). All behind `playerRulerV2` (new foundation); the old flow is unchanged when it is off.
+- New player: one "Lower / Higher voice" tap (`VoiceChoice.tsx`, `voiceStart.ts`), none when the landing demo saved it. Preset settings marked `quickStart`; the learned scale starts fast (first 3 heard gates 70%, no per-run cap until learned). Step 1 (`bench39/quickstart.mjs`): an in-between voice loses about 1 extra heart on gate 1, then flies like a calibrated one.
+- Calibration is a tuner in Settings (`VoiceTuner.tsx`, `tuner.ts` `settingsFromParts`), Pierre's final choice of 22 Nov: Room → Talk (read numbers, any language; talking median = line 3, Lab knob `tunerTalkOffsetSt`, default 0) → 媽 (native example, say it back; p90 = line 5) → 馬 (p10 = line 1). Each part: a ring that fills while the voice is heard, mic bars always on, the Visualiser bird with the word's target. Talk locks when the ring is full, 媽 / 馬 on the silence after the word. Redo per part; a new calibration re-seeds the learned scale. Card: `VoiceCard.tsx` (calibration vs learned, Adjust one part, Back to calibration).
+- Tried and dropped on 22 Nov: a middle from tone words (Pierre's live take came out 117 Hz, both halves at the 3 st minimum, because "high / low" instructions moved his voice), and the four tones mā má mǎ mà (`bench39/calib-words.mjs`; beginners cannot yet say tones). Open: the talk offset, and a top half about 2 st small from one 媽 (learning widens it).
+- `withLearnedScale` (read only) feeds the Visualiser and the public checker.
+- Learner: wall-hit third tones skip the bottom pool; Tone Drill does not vote on the middle (the test-8 loop). `bench39/tophalf.mjs`.
 - Visualiser band button: "Target zone on/off".
-- Go-live: privacy line for the on-device voice summary + voice choice + room verdict.
+- Go-live: a privacy line for the on-device voice summary, the voice choice and the room verdict; remove the old calibration screens once the switch is gone.
