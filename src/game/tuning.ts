@@ -697,7 +697,7 @@ export interface Tuning {
   gridLearnStartGates: number;
   /** Quick start: no per-run cap until both anchor pools are full (1 = on, 0 = off). */
   gridLearnUncappedUntilLearned: number;
-  /** Tuner: voiced time a step needs before it may lock (ms). */
+  /** Tuner: voiced time that fills the ring and locks the take (ms). */
   tunerNeedVoicedMs: number;
   /** Tuner: after enough voice, this much silence locks the step (ms). */
   tunerLockSilenceMs: number;
@@ -910,7 +910,7 @@ export const DEFAULT_TUNING: Readonly<Tuning> = Object.freeze({
   gridLearnStartRate: 0.7,
   gridLearnStartGates: 3,
   gridLearnUncappedUntilLearned: 1,
-  tunerNeedVoicedMs: 450,
+  tunerNeedVoicedMs: 600,
   tunerLockSilenceMs: 300,
   tunerMaxVoicedMs: 2500,
   tunerStallMs: 4000,

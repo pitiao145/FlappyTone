@@ -45,11 +45,18 @@ export interface CaptureOptions {
   lockSilenceMs: number;
   maxMs: number;
   stallMs: number;
+  /**
+   * Lock the moment `needMs` of voice is heard (the ring is full), instead of
+   * waiting for the silence after it (Pierre, 22 Nov: the step must end when
+   * the ring is full). The rest of that word never reaches the next take: a
+   * take listens only after a short quiet. Optional: absent = lock on silence.
+   */
+  lockOnFull?: boolean;
 }
 
 export function captureOptions(): CaptureOptions {
   const t = tuning();
-  return { needMs: t.tunerNeedVoicedMs, lockSilenceMs: t.tunerLockSilenceMs, maxMs: t.tunerMaxVoicedMs, stallMs: t.tunerStallMs };
+  return { needMs: t.tunerNeedVoicedMs, lockSilenceMs: t.tunerLockSilenceMs, maxMs: t.tunerMaxVoicedMs, stallMs: t.tunerStallMs, lockOnFull: true };
 }
 
 /**
@@ -114,7 +121,7 @@ export class StepCapture {
       this.lastVoicedAt = f.tMs;
       this.f0s.push(f.f0 as number);
       this.phase = "hearing";
-      if (this.heardMs >= this.o.maxMs) this.phase = "locked";
+      if (this.heardMs >= this.o.maxMs || (this.o.lockOnFull && this.heardMs >= this.o.needMs)) this.phase = "locked";
       return this.phase;
     }
     if (this.lastVoicedAt === null) return this.phase;

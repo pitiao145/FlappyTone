@@ -125,3 +125,10 @@ Replaces the semitone stage, the small dot ring and the big word above it.
 - Instructions: Middle "Your normal voice: say it like you are talking to a friend. Not high, not low." Top "Your high note: one high, steady note, like a long “maaa”. Easy, not a shout." Bottom "Your low note: low and relaxed. Let your voice drop and stay down, like a sigh."
 - **The stage is the Visualiser's own renderer** (`drawVisualiser`, scroll mode): the bird starts on the left as in the game, the line scrolls behind it, and on Top and Bottom the word's target band is the guide. The bird flies on your current scale (learned if any, else calibration), read only.
 - Buttons: "▶ Hear it", "Start over". The voice-bar meter under the stage is gone.
+
+## Voice steps, second pass (Pierre, 22 Nov 2026)
+
+- **Locks when the ring is full** (600 ms of voice, `tunerNeedVoicedMs`, `lockOnFull`), not on the silence after it. The bird stops at that moment; only the mic bars keep moving. The ring turns green with a ✓ and the status says "Done ✓ Next word…"; after 0.9 s the next word slides in on a clean stage. A long 媽 still never reaches the next take: each take waits for a short quiet first (test on the recorded 媽: locked mid-word, the tail adds nothing to the next take).
+- **Mic bars always on**, next to the status, also while the example plays and during the "done" beat.
+- **Less text:** a label ("Normal voice", "High note", "Low note"), a three-word hint ("Like talking", "High and steady", "Low and relaxed"), a one- or two-word status ("Say it", "Hold…", "Done ✓", "Louder?", "Pause, then say it", "Too short. Again").
+- **Target guide on every step**, the middle step included (the word's own target band).

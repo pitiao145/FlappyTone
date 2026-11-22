@@ -186,3 +186,19 @@ describe("middle: each word counts once (19 Nov fix)", () => {
     expect(st3).toBeLessThan(-1);
   });
 });
+
+describe("lock when the ring is full (22 Nov)", () => {
+  it("locks while the recorded 媽 still sounds, and the rest of it never reaches the next take", () => {
+    const ma = frames("jane_ma1.wav", 0);
+    const opts = { ...OPTS, lockOnFull: true };
+    const first = new StepCapture(opts);
+    let i = 0;
+    for (; i < ma.length && first.push(ma[i]) !== "locked"; i++);
+    expect(first.phase).toBe("locked");
+    expect(first.heardMs).toBeGreaterThanOrEqual(opts.needMs);
+    expect(ma.slice(i + 1).some((f) => f.voiced)).toBe(true); // 媽 was still sounding
+    const next = new StepCapture(opts);
+    for (const f of ma.slice(i + 1)) next.push(f);
+    expect(next.f0s.length).toBe(0);
+  });
+});

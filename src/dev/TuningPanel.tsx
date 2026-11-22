@@ -170,7 +170,7 @@ const GROUPS: Array<{ title: string; note: string; knobs: Knob[] }> = [
       { key: "middleTakesPerWord", label: "middle takes per word", min: 1, max: 3, step: 1,
         help: "Tuner middle step: how many times each word (媽, 馬) is said." },
       { key: "tunerNeedVoicedMs", label: "tuner voice needed", min: 200, max: 1500, step: 50,
-        help: "Voiced ms a tuner step needs before silence may lock it." },
+        help: "Voiced ms that fills the ring and locks a tuner step." },
       { key: "tunerLockSilenceMs", label: "tuner lock silence", min: 100, max: 1000, step: 25,
         help: "Silence after enough voice that locks the step. Lower = snappier; too low may cut a word at a gap." },
       { key: "tunerMaxVoicedMs", label: "tuner max voice", min: 1000, max: 6000, step: 100,

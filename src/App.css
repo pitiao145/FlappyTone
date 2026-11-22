@@ -610,8 +610,14 @@
 .tuner-ring.is-locked .tuner-ring-fill { stroke: var(--accent); }
 .tuner-ring-hanzi { font-size: 44px; fill: var(--ink); }
 .tuner-ring-pinyin { font-size: 17px; font-weight: 600; fill: var(--ink-muted); }
-.tuner-ring-hint { font-size: 15px; color: var(--ink); max-width: 32ch; line-height: 1.35; }
-.tuner-ring-status { font-size: 15px; color: var(--accent); min-height: 1.4em; }
+.tuner-ring-hint { font-size: 15px; color: var(--ink-muted); }
+.tuner-ring-status { font-size: 17px; color: var(--ink); }
+.tuner-ring-status.is-locked { color: var(--accent); }
+.tuner-ring.is-locked .tuner-ring-pinyin { fill: var(--accent); font-size: 22px; }
+/* A new word or step slides in, so the change is seen (Pierre, 22 Nov). */
+@keyframes tuner-enter { from { opacity: 0; transform: translateX(24px) scale(0.96); } to { opacity: 1; transform: none; } }
+.tuner-enter { animation: tuner-enter 320ms ease-out; }
+@media (prefers-reduced-motion: reduce) { .tuner-enter { animation: none; } }
 .tuner-stage { padding: 0; overflow: hidden; }
 .tuner-word { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
 .tuner-word-step { font-size: 13px; color: var(--ink-muted); }

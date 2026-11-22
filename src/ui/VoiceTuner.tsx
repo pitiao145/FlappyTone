@@ -29,6 +29,7 @@ import {
   roomMarker,
   roomVerdict,
   semitoneWord,
+  voiceBars,
   type RoomVerdict,
   type TunerPart,
   type TunerResult,
@@ -262,10 +263,10 @@ function paintBars(el: HTMLElement, n: number): void {
  * it, and (top and bottom) the word's target as a guide. Pierre, 22 Nov:
  * "like the rest of the game", the hold indicator where people look.
  */
-const STEP_COPY: Record<Exclude<TunerPart, "room">, { label: string; hint: string; tone: Tone; fallback: { hanzi: string; pinyin: string } }> = {
-  middle: { label: "Your normal voice", hint: "Say it like you are talking to a friend. Not high, not low.", tone: 1, fallback: { hanzi: "媽", pinyin: "mā" } },
-  top: { label: "Your high note", hint: "One high, steady note, like a long “maaa”. Easy, not a shout.", tone: 1, fallback: { hanzi: "媽", pinyin: "mā" } },
-  bottom: { label: "Your low note", hint: "Low and relaxed. Let your voice drop and stay down, like a sigh.", tone: 3, fallback: { hanzi: "馬", pinyin: "mǎ" } },
+const STEP_COPY: Record<Exclude<TunerPart, "room">, { label: string; hint: string; fallback: { hanzi: string; pinyin: string } }> = {
+  middle: { label: "Normal voice", hint: "Like talking", fallback: { hanzi: "媽", pinyin: "mā" } },
+  top: { label: "High note", hint: "High and steady", fallback: { hanzi: "媽", pinyin: "mā" } },
+  bottom: { label: "Low note", hint: "Low and relaxed", fallback: { hanzi: "馬", pinyin: "mǎ" } },
 };
 
 /** Canvas width in time, the Visualiser's own (Visualiser.tsx `SPAN_MS`). */
@@ -298,7 +299,8 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
   /** Each locked take's frames, per tracker floor. A ref: fills at frame rate. */
   const pooled = useRef<{ normal: number[][]; low: number[][] }>({ normal: [], low: [] });
   /** What the drawing reads each frame. Mutable, outside React (hard rule 1). */
-  const live = useRef({ trail: new PitchTrail(SPAN_MS, BRIDGE_MS), chao: 3, voiced: false, progress: 0, locked: false });
+  const live = useRef({ trail: new PitchTrail(SPAN_MS, BRIDGE_MS), chao: 3, voiced: false, progress: 0, locked: false, bars: 0 });
+  const barsRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ringRef = useRef<SVGCircleElement>(null);
   const word = words?.get(takes[take]);
@@ -312,6 +314,8 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
     const L = live.current;
     L.progress = 0;
     L.locked = false;
+    // A new word starts on a clean stage, so the change is visible.
+    L.trail = new PitchTrail(SPAN_MS, BRIDGE_MS);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- a new take starts ready
     setNote("ready");
     const cap = new StepCapture(captureOptions(), performance.now());
@@ -327,13 +331,18 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
     };
     setFrameSink((frame, sampleRate) => {
       // Deaf while the example plays: the speaker would be measured, not the player.
-      if (isCueAudible()) return;
+      // The mic bars still move: the player always sees the mic is live.
+      if (isCueAudible()) {
+        L.bars = voiceBars(rmsOf(frame), draft.noiseFloor);
+        return;
+      }
       const cfg = tunerTrackerConfig(part, draft, sampleRate);
       normal ??= new PitchTracker({ ...cfg, f0Center: shown.f0Center, rangeSemitones: shown.rangeSemitones, rangeDownSemitones: shown.rangeDownSemitones });
       low ??= new PitchTracker({ ...cfg, fMin: tuning().pitchFloorLowHz });
       const p = normal.push(frame);
       const q = low.push(frame);
       const now = performance.now();
+      L.bars = voiceBars(p.rms, draft.noiseFloor);
       const before = cap.phase;
       const before0 = cap.f0s.length;
       const phase = cap.push({ tMs: now, voiced: p.voiced, f0: p.f0 });
@@ -344,11 +353,15 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
       L.progress = cap.progress;
       if (phase === "hearing" && retryRef.current) setRetry(false);
       if (phase === "locked" && before !== "locked") {
-        setFrameSink(null);
+        // The ring is full: the bird stops here. Only the mic bars keep moving.
+        setFrameSink((f) => {
+          live.current.bars = voiceBars(rmsOf(f), draft.noiseFloor);
+        });
         pooled.current.normal.push([...cap.f0s]);
         pooled.current.low.push([...lowFrames]);
         L.locked = true;
         L.voiced = false;
+        L.progress = 1;
         say("locked");
       } else if (phase === "tooShort") {
         // Too little voice: say so and listen again, never a wrong result (hard rule 8).
@@ -398,18 +411,20 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
         setAttempt((a) => a + 1);
         setRetry(true);
       }
-    }, 700);
+    }, 900);
     return () => clearTimeout(id);
   }, [note]);
 
   // Drawing: the ring and the Visualiser canvas, from refs in a rAF loop (hard rule 1).
   useEffect(() => {
     let raf = 0;
-    const guide = part === "middle" ? null : (word ?? null);
+    const guide = word ?? null;
+    const guideTone: Tone = (word?.tone as Tone | undefined) ?? (part === "bottom" ? 3 : 1);
     const draw = () => {
       raf = requestAnimationFrame(draw);
       const L = live.current;
       if (ringRef.current) ringRef.current.style.strokeDashoffset = String(RING_C * (1 - (L.locked ? 1 : L.progress)));
+      if (barsRef.current) paintBars(barsRef.current, L.bars);
       const c = canvasRef.current;
       if (!c) return;
       const w = c.clientWidth, h = c.clientHeight;
@@ -420,7 +435,7 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
       if (!g) return;
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
       drawVisualiser(g, w, h, {
-        tone: part === "middle" ? null : copy.tone,
+        tone: guideTone,
         word: guide,
         live: null,
         finished: [],
@@ -428,14 +443,14 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
         chao: L.chao,
         voiced: L.voiced,
         scroll: { points: L.trail.points(), nowMs: L.trail.clockMs(), originMs: L.trail.originMs() },
-        scrollGuide: part !== "middle",
+        scrollGuide: true,
         corridor: "wide",
         band: true,
       });
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [part, word, copy.tone]);
+  }, [part, word]);
 
   const playExample = () => {
     if (!word) return;
@@ -446,31 +461,37 @@ function VoiceStep({ part, draft, words, onDone }: VoiceStepProps) {
   };
 
   const status =
-    note === "locked" ? "Got it ✓"
-    : retry ? "Couldn't hear that. Say it once more, a bit longer."
-    : note === "louder" ? "I can't hear you yet. A bit louder?"
-    : note === "pause" ? "Stop for a second, then say it once."
-    : note === "hearing" ? "Keep going… stop when the circle is full."
-    : "Say it now. Hold it until the circle is full.";
+    note === "locked" ? (take + 1 < takes.length ? "Done ✓ Next word…" : "Done ✓")
+    : retry ? "Too short. Again"
+    : note === "louder" ? "Louder?"
+    : note === "pause" ? "Pause, then say it"
+    : note === "hearing" ? "Hold…"
+    : "Say it";
+  const locked = note === "locked";
   return (
     <>
-      <div className={`tuner-ring${note === "locked" ? " is-locked" : ""}`}>
+      <div key={`${part}-${take}`} className={`tuner-ring tuner-enter${locked ? " is-locked" : ""}`}>
         <span className="tuner-ring-label">
           {copy.label}
-          {part === "middle" && takes.length > 1 ? ` · ${take + 1} of ${takes.length}` : ""}
+          {part === "middle" && takes.length > 1 ? ` · ${take + 1}/${takes.length}` : ""}
         </span>
         <svg viewBox="0 0 128 128" width="128" height="128" role="img" aria-label={`Hold indicator for ${word?.hanzi ?? copy.fallback.hanzi}`}>
           <circle cx="64" cy="64" r={RING_R} className="tuner-ring-track" />
           <circle cx="64" cy="64" r={RING_R} className="tuner-ring-fill" ref={ringRef}
             style={{ strokeDasharray: RING_C, strokeDashoffset: RING_C }} transform="rotate(-90 64 64)" />
           <text x="64" y="62" textAnchor="middle" className="tuner-ring-hanzi" lang="zh-Hant">{word?.hanzi ?? copy.fallback.hanzi}</text>
-          <text x="64" y="90" textAnchor="middle" className="tuner-ring-pinyin">{word?.pinyin ?? copy.fallback.pinyin}</text>
+          <text x="64" y="90" textAnchor="middle" className="tuner-ring-pinyin">{locked ? "✓" : (word?.pinyin ?? copy.fallback.pinyin)}</text>
         </svg>
         <span className="tuner-ring-hint">{copy.hint}</span>
-        <strong className="tuner-ring-status" role="status">{status}</strong>
       </div>
       <div className="tuner-panel tuner-stage">
         <canvas ref={canvasRef} role="img" aria-label="Your voice: the bird follows your pitch" />
+      </div>
+      <div className="tuner-panel tuner-meter">
+        <div className="tuner-voice-bars" ref={barsRef} role="img" aria-label="Microphone level">
+          {Array.from({ length: 5 }, (_, i) => <span key={i} style={{ height: `${8 + i * 5}px` }} />)}
+        </div>
+        <strong className={`tuner-ring-status${locked ? " is-locked" : ""}`} role="status">{status}</strong>
       </div>
       <div className="tuner-actions">
         <button disabled={!word} onClick={playExample}>
