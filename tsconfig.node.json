@@ -87,6 +87,7 @@
     "src/dev/simplified.test.ts",
     "src/dev/process-clips.ts",
     "src/dev/golive-shapes.ts",
+    "src/dev/refresh-contour-fixtures.ts",
     "src/record/wordIds.ts",
     "src/dev/clipPipeline.ts",
     "src/dev/clipPipeline.test.ts",

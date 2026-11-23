@@ -1,6 +1,6 @@
 # FlappyTone — Privacy Policy
 
-**Last updated: 22 November 2026**
+**Last updated: 23 November 2026**
 
 This policy explains what personal data FlappyTone ("we", "us") collects, why, and your rights over it. FlappyTone is operated by Pierre Bruyninckx, an independent developer, at [flappytone.com](https://flappytone.com). For any privacy question or request, contact [pierre@pierrebuilds.dev](mailto:pierre@pierrebuilds.dev).
 

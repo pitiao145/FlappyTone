@@ -370,7 +370,10 @@ describe("the shipped fallback", () => {
       // The Lab's smoothing can produce a larger number of vertices for some
       // complex contours; accept up to 16 to keep the test robust to small
       // pipeline improvements.
-      expect(w.polyline.length, w.id).toBeLessThanOrEqual(16);
+      // Since go-live (brief 51): the refined pair fit adds up to 2 nodes per
+      // syllable, so a 4-syllable word may have 20 (gonggongqiche1441 18,
+      // shizilukou2443 20).
+      expect(w.polyline.length, w.id).toBeLessThanOrEqual(Math.max(16, 5 * (w.syllables ?? 1)));
       for (const [t, chao] of w.polyline) {
         expect(t, w.id).toBeGreaterThanOrEqual(0);
         expect(t, w.id).toBeLessThanOrEqual(1);
@@ -404,7 +407,9 @@ describe("the shipped fallback", () => {
     for (const w of t4) {
       const chaos = w.polyline.map((p) => p[1]);
       expect(Math.max(...chaos), w.id).toBeGreaterThan(4);
-      expect(chaos[chaos.length - 1], w.id).toBeLessThan(2.5);
+      // Under 3 since go-live (brief 51, one ruler): shu4 ends at 2.94 and
+      // fan4 at 2.53, where Jane stopped her fall. Old board: under 2.5.
+      expect(chaos[chaos.length - 1], w.id).toBeLessThan(3);
     }
   });
 });

@@ -4,6 +4,7 @@
 //   npm run bench -- --write-baseline # write the current values as the new baseline
 // Exits 1 on any FAIL. Tracker runs are cached by a hash of src/pitch/ (tracks.mjs).
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { JANE_RULER } from "../clipRuler.ts";
 import { classifyToneV2 } from "../../game/toneClassifierV2.ts";
 import { corridorChaoAt } from "../../game/gates.ts";
 import { semitonesToChao } from "../../pitch/math.ts";
@@ -190,10 +191,11 @@ for (const [label, shift] of [["calibrated", 0], ["voice2stLower", -2]]) for (co
 // ---- 5. targets vs what Jane said (heights.mjs method, Praat reference) ------
 {
   const all = clipList();
-  const f0s = (set) => all.filter((c) => c.set === set).flatMap((c) => { const r = praatRef(c); return r.f0.filter((f, i) => r.trusted[i]); });
-  const C = med(f0s("natural"));
-  const pool = (tone) => all.filter((c) => c.set === "textbook" && c.tones.length === 1 && c.tones[0] === tone).flatMap((c) => { const r = praatRef(c); return r.f0.filter((f, i) => r.trusted[i] && f >= 70).map((f) => 12 * Math.log2(f / C)); });
-  const up = Math.round(pct(pool(1), 90) * 4) / 4, down = Math.round(-pct(pool(3), 10) * 4) / 4;
+  // Since go-live (brief 51): Jane's one ruler, the scale the shipped targets
+  // are drawn on (`clipRuler.ts`). Before, a ruler centred on her natural
+  // Praat median (heights.mjs default), which put new second tones 0.11 chao
+  // further off than they are on their own scale.
+  const C = JANE_RULER.middleHz, up = JANE_RULER.upSemitones, down = JANE_RULER.downSemitones;
   const toChao = (f) => semitonesToChao(12 * Math.log2(f / C), up, down);
   const toRaw = (f) => { const s = 12 * Math.log2(f / C); return 3 + (s / (s >= 0 ? up : down)) * 2; };
   const out = [];
