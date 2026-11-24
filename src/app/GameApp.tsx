@@ -1421,14 +1421,6 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     <div className={FOCUS_SCREENS.has(screen) ? "app app-game is-focus" : "app app-game"}>
       <GameNav active={navTabFor(screen)} onNavigate={onNavigate} />
       <div className="app-main" ref={mainRef}>
-        {/* Brief 54: a top row on phones (a corner pill that never covers
-            content); on desktop the row is invisible and the tab is the
-            fixed edge tab, as before. */}
-        {FEEDBACK_SCREENS.has(screen) && (
-          <div className="app-topbar">
-            <FeedbackWidget screen={screen} />
-          </div>
-        )}
         <div className="frame">
           {screen === "play" && <BrowserHint />}
           {screen === "play" && <InAppBrowserPrompt />}
@@ -1748,6 +1740,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
         </div>
       )}
 
+      {FEEDBACK_SCREENS.has(screen) && <FeedbackWidget screen={screen} />}
 
       {noteOpen && screen === "play" && <PierreNote onDone={closeNote} note={noteCopy} tier={tier} preview={notePreview} />}
 

@@ -7892,34 +7892,13 @@ button.switch-track.switch-on {
   border-color: var(--ink-soft);
 }
 
-/* GameApp's top row around the tab: nothing on desktop (the tab is fixed to
-   the right edge there). */
-.app-topbar {
-  display: contents;
-}
-
-/* Brief 54, phones: the edge tab sat on top of cards and buttons (a phone
-   has no side gutter). It becomes a pill at the end of a slim top row, in
-   the page flow, so it can never cover content. Same dashed paper look;
-   44 px tall, a real tap target. */
+/* Phones have no side gutter, so the tab is slimmer there: it covers less
+   of the card under it. Same look and place. */
 @media (max-width: 719px) {
-  .app-game .app-topbar {
-    display: flex;
-    justify-content: flex-end;
-    flex: 0 0 auto;
-    width: 100%;
-    padding: var(--space-2) var(--space-3) 0;
-  }
-
-  .app-topbar .feedback-tab {
-    position: static;
-    writing-mode: horizontal-tb;
-    transform: none;
-    min-height: 44px;
-    padding: 0 var(--space-4);
-    border: 1px dashed var(--line-strong);
-    border-radius: var(--radius-pill);
-    box-shadow: none;
+  .feedback-tab {
+    padding: 10px 3px;
+    letter-spacing: 0;
+    line-height: 1.1;
   }
 }
 
@@ -10033,48 +10012,23 @@ button.switch-track.switch-on {
 
   .app-game .playhome-overlay > .playhome-loop {
     flex: 1 1 0;
-    min-height: 0;
+    min-height: 120px;
     max-height: 270px;
     width: auto;
     height: auto;
     max-width: 62%;
   }
 
-  /* Too short for the loop (a small phone, with the install tip up): the
-     title and buttons alone, starting under the home link. */
+  /* A small phone (the install tip up): the loop shrinks but stays; the
+     buttons keep their full height. */
   @container playhome (max-height: 440px) {
-    .playhome-overlay > .playhome-loop {
-      display: none;
-    }
-
     .playhome-overlay:has(> .playhome-loop) {
-      padding-top: 80px;
       gap: var(--space-2);
     }
 
     .playhome-overlay:has(> .playhome-loop) .playhome-menu button {
       min-height: 44px;
     }
-  }
-
-  /* On Play home the Feedback pill takes the canvas's free top-right corner
-     (the home link has the left one) rather than a row of its own. */
-  .app-game .app-main {
-    position: relative;
-  }
-
-  .app-game:has(.playhome-home-link) .app-topbar {
-    position: absolute;
-    top: 0;
-    right: 0;
-    z-index: 3;
-    width: auto;
-    padding: var(--space-3) var(--space-3) 0;
-  }
-
-  /* The first-visit "Add to Home Screen" tip owns the top while it is up. */
-  .app-game:has(.browser-hint) .app-topbar {
-    display: none;
   }
 
   /* Calibration fills the phone's height (it still scrolls when the phone is
