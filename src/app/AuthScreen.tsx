@@ -580,7 +580,7 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
             </figure>
           ) : tool && !onLoginSide ? (
             // Brief 52: the tool's visitor sees the word they were on, not the bird.
-            tool.ref && <ToolWord r={tool.ref} />
+            tool.ref && <ToolDemo r={tool.ref} />
           ) : (
             <img className="auth-bird" src="/Bird-hor-no-halo.png" alt="" width={96} height={96} />
           )}
@@ -629,25 +629,110 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
   );
 }
 
+/** Board geometry of the signup demo (viewBox units). */
+const DEMO = { w: 240, h: 132, left: 22, right: 10, top: 12, bottom: 12 };
+const DEMO_VOICE = "#4f9a7e";
+const DEMO_LOOP_S = 4;
+
+function demoX(t: number): number {
+  return DEMO.left + t * (DEMO.w - DEMO.left - DEMO.right);
+}
+function demoY(chao: number): number {
+  return DEMO.h - DEMO.bottom - ((chao - 1) / 4) * (DEMO.h - DEMO.top - DEMO.bottom);
+}
+function demoPath(points: readonly (readonly [number, number])[]): string {
+  return points.map(([t, c], i) => `${i ? "L" : "M"}${demoX(t).toFixed(1)} ${demoY(c).toFixed(1)}`).join(" ");
+}
+
+function reducedMotion(): boolean {
+  try {
+    return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * The word the visitor was on in the tool: hanzi, pinyin and the tone's
- * Standard line (the tool's own data, no audio, no extra chunk).
+ * A tiny, looping visualizer for the word the visitor was on: the native
+ * speaker's line (dashed), then a voice line drawing itself over it while the
+ * bird follows, then the accuracy. Pure SVG (no video, no audio, no chunk).
+ * Reduced motion shows the last frame.
  */
-function ToolWord({ r }: { r: ToneRef }) {
+function ToolDemo({ r }: { r: ToneRef }) {
+  const [still] = useState(reducedMotion);
   const { pinyin, hanzi } = splitExample(r.example);
-  const d = polylineOf(r, "textbook")
-    .map(([t, c], i) => `${i ? "L" : "M"}${(4 + t * 92).toFixed(1)} ${(36 - ((c - 1) / 4) * 32).toFixed(1)}`)
-    .join(" ");
+  const native = polylineOf(r, "textbook");
+  // A believable learner: a little high, a little wobbly, same shape.
+  const voice = native.map(([t, c]) => [t, Math.min(5.2, c + 0.3 + 0.12 * Math.sin(t * 11))] as const);
+  const voiceD = demoPath(voice);
+  const color = TONE_LINE_COLOR[r.tones[0]];
+  const end = voice[voice.length - 1];
+  const dur = `${DEMO_LOOP_S}s`;
+  // 0–15%: empty board · 15–70%: the voice line draws · 70–100%: the result holds.
+  const keyTimes = "0;0.15;0.7;1";
   return (
-    <figure className="auth-word" data-testid="auth-tool-word" style={{ borderColor: TONE_LINE_COLOR[r.tones[0]] }}>
-      <span className="auth-word-hanzi" lang="zh-Hant-TW">
-        {hanzi}
-      </span>
-      <span className="auth-word-pinyin">{pinyin}</span>
-      <svg className="auth-word-shape" viewBox="0 0 100 40" aria-hidden="true">
-        <path d={d} stroke={TONE_LINE_COLOR[r.tones[0]]} />
+    <figure className="auth-demo" data-testid="auth-tool-word">
+      <svg
+        className="auth-demo-board"
+        viewBox={`0 0 ${DEMO.w} ${DEMO.h}`}
+        role="img"
+        aria-label={`A voice drawing its ${r.label.toLowerCase()} over our native speaker's line`}
+      >
+        <rect x="0" y="0" width={DEMO.w} height={DEMO.h} rx="12" className="auth-demo-bg" />
+        {[1, 2, 3, 4, 5].map((c) => (
+          <g key={c} className="auth-demo-axis">
+            <line x1={DEMO.left - 4} x2={DEMO.w - 4} y1={demoY(c)} y2={demoY(c)} />
+            <text x={6} y={demoY(c) + 3}>
+              {c}
+            </text>
+          </g>
+        ))}
+        <path d={demoPath(native)} className="auth-demo-native" stroke={color} />
+        <path
+          d={voiceD}
+          className="auth-demo-voice"
+          stroke={DEMO_VOICE}
+          pathLength={100}
+          strokeDasharray="100"
+          strokeDashoffset={still ? 0 : 100}
+        >
+          {!still && (
+            <animate
+              attributeName="stroke-dashoffset"
+              values="100;100;0;0"
+              keyTimes={keyTimes}
+              dur={dur}
+              repeatCount="indefinite"
+            />
+          )}
+        </path>
+        <g transform={still ? `translate(${demoX(end[0]).toFixed(1)} ${demoY(end[1]).toFixed(1)})` : undefined}>
+          {!still && (
+            <animateMotion
+              path={voiceD}
+              keyPoints="0;0;1;1"
+              keyTimes={keyTimes}
+              calcMode="linear"
+              dur={dur}
+              repeatCount="indefinite"
+            />
+          )}
+          <circle r="11" className="auth-demo-halo" />
+          <image href="/Bird-hor-no-halo.png" x="-10" y="-10" width="20" height="20" />
+        </g>
+        <g className="auth-demo-score" opacity={still ? 1 : 0}>
+          {!still && (
+            <animate attributeName="opacity" values="0;0;0;1;1" keyTimes="0;0.15;0.68;0.74;1" dur={dur} repeatCount="indefinite" />
+          )}
+          <rect x={DEMO.w - 74} y="6" width="66" height="20" rx="10" />
+          <text x={DEMO.w - 41} y="20">
+            92%
+          </text>
+        </g>
       </svg>
-      <figcaption className="auth-word-label">{r.label}</figcaption>
+      <figcaption className="auth-demo-word">
+        <span lang="zh-Hant-TW">{hanzi}</span> <b>{pinyin}</b> <span style={{ color }}>{r.label}</span>
+      </figcaption>
     </figure>
   );
 }

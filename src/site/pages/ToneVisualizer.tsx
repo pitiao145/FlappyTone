@@ -1,20 +1,17 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { captureGameEvent } from "../../analytics/posthog.ts";
-import { TONE_LINE_COLOR } from "../../ui/toneColors.ts";
 import { appHref } from "../../ui/appLink.ts";
 import { useSignedIn } from "../../ui/signedIn.ts";
 import { VoiceChoice } from "../../ui/VoiceChoice.tsx";
 import { saveVoiceStart, type VoicePreset } from "../../game/voiceStart.ts";
 import { trackSignupCta } from "../DemoCta.tsx";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
-import { toneName } from "../toneNames.ts";
 import { Pip, PipCta } from "../Pip.tsx";
 import { SpeakerHighIcon } from "../../ui/icons.tsx";
 import {
   DEFAULT_REF,
   polylineOf,
   refFor,
-  TONE_REFS,
   type RefId,
   type RefMode,
   type ToneRef,
@@ -71,8 +68,6 @@ function loadHost(): Promise<HostModule> {
 }
 
 type Phase = "idle" | "loading" | "tap-again" | "voice" | "opening" | "error" | "running";
-
-const SINGLE = TONE_REFS.filter((r) => r.tones.length === 1);
 
 /**
  * The stand-in board before Start: the third tone's line on the board's own
@@ -285,9 +280,8 @@ function Visualizer() {
 }
 
 /**
- * The tool before Start: the Visualiser's own frame, empty (the chao grid,
- * the bird, the readout cards), with one Start card on the board. The four
- * tones and their example words stay as text, for readers and crawlers.
+ * The tool before Start: the Visualiser's empty board (the chao grid, the
+ * third tone's guide line, the bird) with one Start card on it.
  */
 function StandIn({
   phase,
@@ -355,29 +349,6 @@ function StandIn({
             </>
           )}
         </div>
-      </div>
-      <div className="tool-vis-side">
-        <div className="tool-vis-cards" aria-hidden="true">
-          <span>
-            Tone accuracy <b>–</b>
-          </span>
-          <span>
-            Tone <b>–</b>
-          </span>
-        </div>
-        <p className="tool-vis-label">By tone</p>
-        <ul className="tool-vis-tones">
-          {SINGLE.map((r) => (
-            <li key={r.id} style={{ borderColor: TONE_LINE_COLOR[r.tones[0]] }}>
-              <span style={{ color: TONE_LINE_COLOR[r.tones[0]] }}>{toneName(r.tones[0], true)}</span>{" "}
-              <span lang="zh-Hant-TW">{r.example}</span>
-            </li>
-          ))}
-        </ul>
-        <p className="tool-vis-ref">
-          <b style={{ color: TONE_LINE_COLOR[3] }}>{ref.label}</b>, e.g. <span lang="zh-Hant-TW">{ref.example}</span>:
-          the line is our native speaker&apos;s average at slow, clear speed. {ref.diff}
-        </p>
       </div>
     </div>
   );

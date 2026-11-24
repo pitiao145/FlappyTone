@@ -1544,13 +1544,12 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
   margin: var(--space-4) 0 var(--space-2);
 }
 
-/* The app's Visualiser is a phone-shaped screen: on wide screens the app
-   gives it 900px and the window's height, so the board is narrow and tall.
-   Same here. The box keeps its size before and after Start (no jump). */
+/* The full width of the text column, and about the window's height, so the
+   board stays tall as in the app. The box keeps its size before and after
+   Start (no jump). */
 .tool-vis {
   position: relative;
   width: 100%;
-  max-width: 900px;
   height: clamp(580px, 84svh, 760px);
   margin-inline: auto;
   border: 2px solid var(--ink);
@@ -1582,8 +1581,6 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
 
 @media (min-width: 720px) {
   .tool-vis-standin {
-    flex-direction: row;
-    gap: var(--space-4);
     padding: var(--space-6) var(--space-4) var(--space-4);
   }
 }
@@ -1662,97 +1659,6 @@ html:has(.sky-nav-bar) { scroll-padding-top: 88px; }
 
 .legal-body .tool-vis-start .sticker-button {
   min-width: 160px;
-}
-
-/* Beside the board on wide screens, under it on phones. */
-.tool-vis-side {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  flex: 0 0 auto;
-}
-
-@media (min-width: 720px) {
-  .tool-vis-side {
-    flex: 0 0 300px;
-    gap: var(--space-3);
-  }
-}
-
-/* The app's two readout cards, empty. Wide screens only, as in the app. */
-.tool-vis-cards {
-  display: none;
-}
-
-@media (min-width: 720px) {
-  .tool-vis-cards {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-3);
-  }
-
-  .tool-vis-cards span {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-4) var(--space-2);
-    border: 1.5px solid var(--ink-soft);
-    border-radius: var(--radius-md);
-    background: var(--surface-panel);
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink-muted);
-  }
-
-  .tool-vis-cards b {
-    font-family: var(--font-display);
-    font-size: 1.8rem;
-    line-height: 1;
-    color: var(--ink);
-  }
-}
-
-.legal-body .tool-vis-label {
-  margin: 0;
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.tool-vis-tones {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.tool-vis-tones li {
-  padding: 6px 10px;
-  border: 1.5px solid;
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  font-size: 0.85rem;
-  line-height: 1.3;
-}
-
-@media (min-width: 720px) {
-  .tool-vis-tones {
-    grid-template-columns: 1fr;
-  }
-
-  .tool-vis-tones li {
-    font-size: 0.95rem;
-  }
-}
-
-.legal-body .tool-vis-ref {
-  margin: 0;
-  font-size: 0.8rem;
-  line-height: 1.45;
 }
 
 .tc-error {

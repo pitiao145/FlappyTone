@@ -122,11 +122,11 @@ Four rules hold the split together:
 (24 Nov 2026) the page runs **the app's own `src/ui/Visualiser.tsx`** in tool
 mode (`tool` prop), so the tool and the app can never look different. Before
 Start the page shows a static stand-in in a box of the same size: the
-Visualiser's empty frame (chao grid, bird, readout cards) with one Start card
-on the board, and the four tones with their example words as crawlable text;
-nothing moves when the Visualiser swaps in. The box copies the app's shape
-(900px wide at most, about the window's height), so the board is narrow and
-tall as in the app. Start (pointerdown preloads, the
+Visualiser's empty board (chao grid, third-tone guide, bird) with one Start
+card on it; nothing moves when the Visualiser swaps in. The box is the text
+column's full width and about the window's height. The tool's signup screen
+(`AuthScreen`, tool entry) shows a small looping SVG visualizer of the
+visitor's word (`ToolDemo`, no video, no audio). Start (pointerdown preloads, the
 click opens the mic, hard rule 4) loads one chunk, `src/site/toolMic.ts` +
 `src/site/toolVisualiser.tsx`. Board: the game's own settings on this device
 (with the learned scale), else brief 50's lower/higher voice choice

@@ -384,49 +384,75 @@
   .auth .auth-nav-try { display: none; }
 }
 
-/* Brief 52: the tone visualizer tool's signup screen. The word the visitor
-   was on sits where the bird sits on every other entry. */
-.auth-word {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
-  align-items: center;
-  column-gap: var(--space-3);
+/* Brief 52/53: the tone visualizer tool's signup screen. A tiny looping
+   visualizer of the word the visitor was on sits where the bird sits on
+   every other entry. */
+.auth-demo {
   width: min(100%, 300px);
   margin: 0 auto var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border: var(--outline) solid var(--color-ink);
-  border-radius: 16px;
-  background: var(--color-card);
-  text-align: left;
 }
-.auth-word-hanzi {
-  grid-row: 1 / span 2;
-  font-size: 2.6rem;
-  line-height: 1;
-  color: var(--color-ink);
-}
-.auth-word-pinyin {
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--color-ink);
-}
-.auth-word-shape {
-  grid-column: 2;
+.auth-demo-board {
+  display: block;
   width: 100%;
-  height: 32px;
+  height: auto;
+  border: var(--outline) solid var(--color-ink);
+  border-radius: 14px;
+  box-shadow: 4px 4px 0 var(--color-ink);
+  overflow: hidden;
 }
-.auth-word-shape path {
+.auth-demo-bg {
+  fill: rgb(238, 228, 204);
+}
+.auth-demo-axis line {
+  stroke: var(--color-ink);
+  stroke-opacity: 0.22;
+  stroke-width: 1;
+}
+.auth-demo-axis text {
+  fill: var(--color-ink);
+  fill-opacity: 0.5;
+  font-size: 9px;
+  font-family: inherit;
+}
+.auth-demo-native,
+.auth-demo-voice {
   fill: none;
-  stroke-width: 4;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.auth-word-label {
-  grid-column: 1 / span 2;
-  margin-top: var(--space-2);
-  font-size: 0.85rem;
-  color: var(--color-ink-2);
+.auth-demo-native {
+  stroke-width: 2.5;
+  stroke-dasharray: 5 5;
+}
+.auth-demo-voice {
+  stroke-width: 3.5;
+}
+.auth-demo-halo {
+  fill: #4f9a7e;
+  fill-opacity: 0.22;
+}
+.auth-demo-score rect {
+  fill: var(--color-card);
+  stroke: var(--color-ink);
+  stroke-width: 1.5;
+}
+.auth-demo-score text {
+  fill: var(--color-ink);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  text-anchor: middle;
+}
+.auth-demo-word {
+  margin-top: var(--space-3);
+  font-size: 0.95rem;
+  color: var(--color-ink);
+}
+.auth-demo-word span:first-child {
+  font-size: 1.15rem;
+}
+.auth-demo-word span:last-child {
+  font-weight: 600;
 }
 .auth-perks {
   margin: calc(-1 * var(--space-3)) auto var(--space-5);
