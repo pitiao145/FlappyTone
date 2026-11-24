@@ -20,7 +20,6 @@ import {
   stopMic,
 } from "../audio/session.ts";
 import { acquireWakeLock, releaseWakeLock } from "../audio/wakeLock.ts";
-import { useTier } from "../data/tier.ts";
 import { VisualiserCore } from "../game/visualiserCore.ts";
 import type { Tone } from "../game/gates.ts";
 import {
@@ -33,7 +32,7 @@ import {
 import { type ToneClassification } from "../game/toneClassifier.ts";
 import { classifyToneV2 } from "../game/toneClassifierV2.ts";
 import { spokenTones } from "../game/sandhi.ts";
-import { tierLimits, type TocflLevel } from "../game/tiers.ts";
+import { tierLimits, type Tier, type TocflLevel } from "../game/tiers.ts";
 import { tuning } from "../game/tuning.ts";
 import { referenceFromWord, toneAccuracyDetail } from "../game/toneAccuracy.ts";
 import type { SpeechStyle, Word } from "../game/words.ts";
@@ -53,7 +52,8 @@ import { readAttempt, readContourSyllables, type FreeAttempt } from "../game/fre
 import { AttemptThumbs, MobileAttemptThumb } from "./AttemptThumbs.tsx";
 import { micErrorCopy } from "./micErrors.ts";
 import type { ArrivalTarget } from "./toolEntry.ts";
-import { SPEECH_STYLE_LABEL } from "./Settings.tsx";
+import { playsInTool } from "./toolPlayable.ts";
+import { SPEECH_STYLE_LABEL } from "./speechStyleLabel.ts";
 import {
   visualiserComboCount,
   levelToAdd,
@@ -142,8 +142,34 @@ function defaultLevels(levels: TocflLevel[] | null): TocflLevel[] {
   return [levels.includes(1) ? 1 : [...levels].sort((a, b) => a - b)[0]];
 }
 
+/**
+ * Brief 53: the public tool page (/tools/tone-visualizer) mounts this same
+ * screen. It shows what a free account sees (the free tier's lists, read,
+ * never changed), but only the first word on screen plays its sound; any
+ * other word selects and draws its shape, and a note links to signup.
+ */
+export interface ToolMode {
+  /** The locked-sound note's link: signup, or the app for a signed-in browser. */
+  cta: { href: string; label: string; onClick?: () => void };
+  /** A finished attempt, on the target on screen ("3", "3-3", "free"). */
+  onAttempt?: (targetId: string) => void;
+  /** A tap on a word whose sound is locked here. */
+  onLockedSound?: () => void;
+  /** The tone or pair on screen changed ("3", "3-3"); null for the Free tab. */
+  onTarget?: (id: string | null) => void;
+}
+
+/** "3", "3-3" or "free": the target on screen, as the tool names it. */
+function targetKey(tone: Tone | null, combo: Tone[] | null): string {
+  return combo !== null ? combo.join("-") : tone !== null ? String(tone) : "free";
+}
+
 interface Props {
   settings: CalibrationSettings;
+  /** The account's tier (GameApp's `useTier()`). Tool mode reads the free tier instead. */
+  tier: Tier;
+  /** Brief 53: the public tool page's limited mode. Absent in the app. */
+  tool?: ToolMode;
   canvasWidth: number;
   canvasHeight: number;
   /** Called when a guest taps a locked tone row/pill or a locked word chip. */
@@ -171,6 +197,8 @@ interface Props {
  */
 export function Visualiser({
   settings,
+  tier: accountTier,
+  tool,
   canvasWidth,
   canvasHeight,
   onLocked,
@@ -178,8 +206,16 @@ export function Visualiser({
   onArrivalUsed,
   onFlyIt,
 }: Props) {
-  const tier = useTier();
+  // Tool mode shows the free tier's lists whatever the browser holds: the
+  // page never reads the account (brief 53).
+  const tier: Tier = tool ? "free" : accountTier;
   const limits = tierLimits()[tier];
+  const toolRef = useRef(tool);
+  useEffect(() => {
+    toolRef.current = tool;
+  });
+  /** Tool mode: a locked word was tapped, so the note stands out. */
+  const [soundLocked, setSoundLocked] = useState(false);
   // The recording style the visualiser plays, draws and scores in (spec
   // decision 9). A guest is always textbook. Words with no natural take drop
   // out of the rail, as they do from a natural run's pool.
@@ -282,6 +318,10 @@ export function Visualiser({
   /** Read by the rAF loop, which must not re-run when the tone changes. */
   const toneRef = useRef<Tone | null>(null);
   toneRef.current = tone;
+  const comboRef = useRef<Tone[] | null>(null);
+  useEffect(() => {
+    comboRef.current = combo;
+  }, [combo]);
   const wordRef = useRef<Word | null>(null);
   wordRef.current = selectedWord;
   /** The per-frame core shared with the public tone checker. */
@@ -353,10 +393,13 @@ export function Visualiser({
   const [arrivalTried, setArrivalTried] = useState(false);
   const noteAttempt = () => {
     if (arrivalIdRef.current !== null) setArrivalTried(true);
+    toolRef.current?.onAttempt?.(targetKey(toneRef.current, comboRef.current));
   };
   useEffect(() => {
     sessionStartRef.current = performance.now();
     return () => {
+      // The tool page reports its own `tool_used` / `tool_summary` instead.
+      if (toolRef.current) return;
       const started = sessionStartRef.current ?? performance.now();
       track({
         type: "visualiser_session",
@@ -554,6 +597,11 @@ export function Visualiser({
       : tone === null
         ? []
         : wordsOfTone(listWords, tone).slice(wordsForTone.length);
+  /**
+   * Whether a word plays its sound: always in the app; on the tool page only
+   * the first word of the list on screen (brief 53).
+   */
+  const soundPlays = (w: Word) => !tool || playsInTool(w, wordsForTone);
   /** Something is picked — a tone or a pair — so the word rail has content. */
   const filtering = tone !== null || combo !== null;
 
@@ -814,6 +862,12 @@ export function Visualiser({
    */
   const showLocked = (feature: string) => {
     setTonePopoverOpen(false);
+    if (tool) {
+      // The tool page has no upsell modal: the note under the board says it.
+      setSoundLocked(true);
+      tool.onLockedSound?.();
+      return;
+    }
     onLocked?.(feature);
   };
 
@@ -827,6 +881,12 @@ export function Visualiser({
     sessionWordSelectedRef.current = true;
     sessionWordTapsRef.current += 1;
     setSelectedWord(word);
+    // Tool mode: the shape draws, the sound stays locked (brief 53).
+    if (!soundPlays(word)) {
+      setSoundLocked(true);
+      tool?.onLockedSound?.();
+      return;
+    }
     // Resume the output context inside the tap: the play below may run after
     // an await, and iOS only allows a resume from a gesture.
     void ensurePlaybackCtx();
@@ -1049,13 +1109,19 @@ export function Visualiser({
   const wordChip = (w: Word) => (
     <button
       key={w.id}
-      className={
-        selectedWord?.id === w.id ? "choice-option word-chip active" : "choice-option word-chip"
-      }
+      className={`choice-option word-chip${selectedWord?.id === w.id ? " active" : ""}${
+        soundPlays(w) ? "" : " is-sound-locked"
+      }`}
       onClick={() => playWord(w)}
+      aria-label={soundPlays(w) ? undefined : `${w.hanzi} ${w.pinyin}, sound locked`}
     >
       <span className="word-chip-hanzi">{w.hanzi}</span>
       <span className="word-chip-pinyin">{w.pinyin}</span>
+      {!soundPlays(w) && (
+        <span className="word-chip-mute" aria-hidden="true">
+          🔒
+        </span>
+      )}
     </button>
   );
 
@@ -1242,6 +1308,11 @@ export function Visualiser({
   const pickTone = (t: Tone) => (toneEmpty(t) ? setEmptyTarget({ tone: t }) : chooseTone(t));
   const pickCombo = (c: Tone[]) => (comboEmpty(c) ? setEmptyTarget({ combo: c }) : chooseCombo(c));
 
+  // Brief 53: tell the tool page which tone or pair is on screen (its CTAs carry it).
+  useEffect(() => {
+    toolRef.current?.onTarget?.(tone === null && combo === null ? null : targetKey(tone, combo));
+  }, [tone, combo]);
+
   // Brief 52: open on the tool's tone or pair. Waits for the real tier (it
   // starts as "guest" until the account is read): a guest's lock would turn
   // the pick into an upsell. Once only; a bad id never gets here (the host
@@ -1275,7 +1346,8 @@ export function Visualiser({
     arrivalWordRef.current = null;
     // The tool's example word, else the list's first: the player must see
     // which word to say (a free list rarely holds the single-tone examples).
-    const w = wordsForTone.find((x) => x.hanzi === hanzi) ?? wordsForTone[0];
+    // The tool page opens on the first word: the one that plays there.
+    const w = (tool ? undefined : wordsForTone.find((x) => x.hanzi === hanzi)) ?? wordsForTone[0];
     if (!w) return;
     setSelectedWord(w);
     // Then play it once, so they hear the word before they say it.
@@ -1465,9 +1537,10 @@ export function Visualiser({
     </div>
   );
 
+  // Tool mode pins the lists to the free default (TOCFL 1): no level picker.
   const pickerSettings = (
     <div className="vis-settings">
-      {wordListSetting}
+      {!tool && wordListSetting}
       {speechStyleSetting}
     </div>
   );
@@ -1561,6 +1634,16 @@ export function Visualiser({
             {toolButtons}
             <button onClick={resetAttempts}>Clear</button>
           </div>
+
+          {tool && (
+            <p className={soundLocked ? "vis-tool-note is-on" : "vis-tool-note"} role="status">
+              <span aria-hidden="true">🔒 </span>
+              Here the first word of each tone and pair plays its sound.{" "}
+              <a href={tool.cta.href} onClick={tool.cta.onClick}>
+                {tool.cta.label}
+              </a>
+            </p>
+          )}
         </div>
 
         {/* ---------------------------------------------------- mobile */}

@@ -2,13 +2,15 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { captureGameEvent } from "../../analytics/posthog.ts";
 import { TONE_LINE_COLOR } from "../../ui/toneColors.ts";
 import { appHref } from "../../ui/appLink.ts";
+import { useSignedIn } from "../../ui/signedIn.ts";
+import { VoiceChoice } from "../../ui/VoiceChoice.tsx";
+import { saveVoiceStart, type VoicePreset } from "../../game/voiceStart.ts";
 import { trackSignupCta } from "../DemoCta.tsx";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
 import { toneName } from "../toneNames.ts";
-import { Pip, PipCta } from "../Pip.tsx";
+import { PipCta } from "../Pip.tsx";
 import {
   DEFAULT_REF,
-  modeFor,
   polylineOf,
   refFor,
   TONE_REFS,
@@ -16,18 +18,8 @@ import {
   type RefMode,
   type ToneRef,
 } from "../checker/toneRefs.ts";
-import type { ToolCta } from "../../ui/toolEntry.ts";
-import {
-  attemptView,
-  makeCheckerReporter,
-  type AttemptView,
-  type CheckerReporter,
-} from "../checker/checkerCopy.ts";
-// Types only: erased at build, so neither chunk lands in this one.
-import type { CalStep, Checker, FreeAttempt } from "../checker/engine.ts";
-// No audio: draws finished attempts only (the app's own corner thumbnail).
-import { AttemptThumbs, MobileAttemptThumb } from "../../ui/AttemptThumbs.tsx";
-import { ChevronIcon } from "../../ui/toneIcons.tsx";
+import { arrivalTarget, toneTarget, type ToolCta } from "../../ui/toolEntry.ts";
+import { makeCheckerReporter, type CheckerReporter } from "../checker/checkerCopy.ts";
 import { InAppMicNotice, MicAllowNote, MicHelpPanel, continueInApp } from "../../ui/MicHelp.tsx";
 
 const PATH = "/tools/tone-visualizer";
@@ -57,75 +49,34 @@ function subscribeRef(f: () => void): () => void {
   return () => refListeners.delete(f);
 }
 
-type EngineModule = typeof import("../checker/engine.ts");
-type BoardModule = typeof import("../checker/board.ts");
+type HostModule = typeof import("../toolMic.ts") & typeof import("../toolVisualiser.tsx");
 
 /**
- * The engine chunk — the only site code that touches the microphone. Loaded on
- * the first press of Start (pointerdown, so it is usually ready by the click),
- * never with the page.
+ * Brief 53: the app's own Visualiser, plus the mic — the only site code that
+ * touches Web Audio here. Loaded on the first press of Start (pointerdown, so
+ * it is usually ready by the click), never with the page (hard rule 13).
  */
-let enginePromise: Promise<EngineModule> | null = null;
-let engineLoaded: EngineModule | null = null;
-function loadEngine(): Promise<EngineModule> {
-  enginePromise ??= import("../checker/engine.ts").then((m) => {
-    engineLoaded = m;
-    return m;
+let hostPromise: Promise<HostModule> | null = null;
+let hostLoaded: HostModule | null = null;
+function loadHost(): Promise<HostModule> {
+  hostPromise ??= Promise.all([import("../toolMic.ts"), import("../toolVisualiser.tsx")]).then(([mic, ui]) => {
+    hostLoaded = { ...mic, ...ui };
+    return hostLoaded;
   });
-  enginePromise.catch(() => {
-    enginePromise = null;
+  hostPromise.catch(() => {
+    hostPromise = null;
   });
-  return enginePromise;
+  return hostPromise;
 }
 
-/** The board renderer (no mic): loaded after mount to draw the idle board. */
-let boardPromise: Promise<BoardModule> | null = null;
-function loadBoard(): Promise<BoardModule> {
-  boardPromise ??= import("../checker/board.ts");
-  return boardPromise;
-}
-
-type Phase =
-  | "idle"
-  | "loading"
-  | "tap-again"
-  | "opening"
-  | "error"
-  | "cal"
-  | "ready"
-  | "paused";
+type Phase = "idle" | "loading" | "tap-again" | "voice" | "opening" | "error" | "running";
 
 const SINGLE = TONE_REFS.filter((r) => r.tones.length === 1);
 const PAIRS = TONE_REFS.filter((r) => r.tones.length > 1);
 
-/** Attempts kept for the corner thumbnail, as in the app's Free tab. */
-const MAX_ATTEMPTS = 3;
-
-/** The same 85 % / 60 % cut points as the app's accuracy card. */
-function tierOf(v: number): "good" | "ok" | "bad" {
-  return v >= 0.85 ? "good" : v >= 0.6 ? "ok" : "bad";
-}
-
 /**
- * The Tone card for one attempt, as the app's Free tab shows it: "T3" with
- * its confidence for one syllable, "T2 · T3" for two, "?" for a syllable too
- * short to judge (never a wrong tone, hard rule 8).
- */
-function toneCard(a: FreeAttempt | null): { value: string; sub: string | null } | null {
-  if (!a) return null;
-  const s = a.syllables;
-  const one = (r: (typeof s)[number]) => (!r ? "?" : r.tone === "none" ? "–" : `T${r.tone}`);
-  if (s.length === 1) {
-    const r = s[0];
-    return { value: one(r), sub: r && r.tone !== "none" ? `${Math.round(r.confidence * 100)}%` : null };
-  }
-  return { value: s.map(one).join(" · "), sub: null };
-}
-
-/**
- * The prerendered stand-in until the real renderer draws: the same line, on
- * the board's own axes (time from the bird's rest point, chao 1–5 over the
- * playable band). Replaced by the canvas as soon as `board.ts` loads.
+ * The stand-in board before Start: the third tone's line on the board's own
+ * axes (time from the bird's rest point, chao 1–5 over the playable band).
  */
 function shapePath(ref: ToneRef, mode: RefMode): string {
   const x = (t: number) => 18 + t * 80 * (ref.durationS / 1.6);
@@ -146,7 +97,7 @@ const FAQ = [
   },
   {
     q: "Why do I have to calibrate first?",
-    a: "Everyone's voice sits at a different height. You say one high, level mā and one low mǎ, and the visualizer sizes the board to your voice. That takes about ten seconds, and it is saved on this device. If you have played FlappyTone on this device, it uses that calibration instead.",
+    a: "Everyone's voice sits at a different height. You pick a lower or a higher voice, and the visualizer sizes the board from it. That takes one tap, and it is saved on this device. If you have played FlappyTone on this device, it uses that calibration instead.",
   },
   {
     q: "Why does it say “couldn't hear that”?",
@@ -164,120 +115,54 @@ function useReporter(): CheckerReporter {
   return ref.current;
 }
 
-/** The tool: pick a tone and a version, say it, see your line over it. */
+/**
+ * The tool: the app's Visualiser in tool mode (brief 53). Before Start, a
+ * static stand-in of the same size with the tones and their example words,
+ * so the prerender keeps that text and nothing moves when it swaps in.
+ */
 function Visualizer() {
-  const [ref, setRef] = useState<ToneRef>(() => refFor(DEFAULT_REF));
-  // Standard first, as in the app (a guest always starts on Standard).
-  const [mode, setMode] = useState<RefMode>("textbook");
   const [phase, setPhase] = useState<Phase>("idle");
-  const [calStep, setCalStep] = useState<CalStep>("high");
-  const [calRetry, setCalRetry] = useState(false);
-  const [calProgress, setCalProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   /** The last mic failure's kind; `permission-denied` shows the unblock help. */
   const [micKind, setMicKind] = useState<string | null>(null);
-  const [result, setResult] = useState<AttemptView | null>(null);
-  /** The last few attempts, for the corner thumbnail and the Tone card. */
-  const [attempts, setAttempts] = useState<FreeAttempt[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  /** Running tone accuracy on the current line; reset on a new line or Clear. */
-  const [stats, setStats] = useState({ sum: 0, n: 0 });
-  const [boardDrawn, setBoardDrawn] = useState(false);
-  /** The tone pairs row; closed at first (the prerender has it closed too). */
-  const [pairsOpen, setPairsOpen] = useState(false);
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  const signedIn = useSignedIn();
   const reporter = useReporter();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const checkerRef = useRef<Checker | null>(null);
-  const targetRef = useRef({ ref, mode });
-  useEffect(() => setCurrentRef(ref.id), [ref]);
-
-  const running = phase === "cal" || phase === "ready" || phase === "paused";
-
-  /** Forgets every attempt and the running accuracy. */
-  const resetAttempts = () => {
-    setResult(null);
-    setAttempts([]);
-    setSelectedId(null);
-    setStats({ sum: 0, n: 0 });
-  };
-
-  const choose = (nextRef: ToneRef, nextMode: RefMode) => {
-    targetRef.current = { ref: nextRef, mode: nextMode };
-    setRef(nextRef);
-    setMode(nextMode);
-    resetAttempts();
-    checkerRef.current?.setTarget(nextRef, nextMode);
-  };
-
-  // `?tone=3-3&mode=real`. Read after mount so the prerendered markup
-  // (Tone 3, Standard) and the first client render agree.
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search);
-    if (!q.has("tone") && !q.has("mode")) return;
-    const next = { ref: refFor(q.get("tone")), mode: modeFor(q.get("mode")) };
-    targetRef.current = next;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- the URL is read once, after hydration
-    setRef(next.ref);
-    setMode(next.mode);
-    // A pair from the URL must be visible: open the grid unless it is in
-    // the first row (1 + n), which always shows.
-    if (next.ref.tones.length > 1 && next.ref.tones[0] !== 1) setPairsOpen(true);
-  }, []);
-
-  // The idle board, drawn by the app's own renderer (grid, corridor, bird).
-  // Once the mic runs, the engine draws every frame instead.
-  useEffect(() => {
-    if (running) return;
-    let alive = true;
-    void loadBoard().then((b) => {
-      const canvas = canvasRef.current;
-      const stage = stageRef.current;
-      if (!alive || !canvas || !stage) return;
-      const r = stage.getBoundingClientRect();
-      b.drawIdle(canvas, Math.round(r.width), Math.round(r.height), ref, mode);
-      setBoardDrawn(true);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [ref, mode, running]);
+  const refId = useSyncExternalStore(subscribeRef, () => currentRefId, () => DEFAULT_REF);
+  const boxRef = useRef<HTMLDivElement>(null);
+  /** `?tone=3-3` (links from the guide pages): the tone or pair to open on; Tone 3 by default. */
+  const [arrival] = useState(() => {
+    const q = typeof window === "undefined" ? "" : window.location.search;
+    return arrivalTarget(`?intent=visualiser&tone=${new URLSearchParams(q).get("tone") ?? DEFAULT_REF}`);
+  });
 
   // Leaving the page stops the mic, and sends the visit's counts once.
   useEffect(() => {
     const onHide = () => {
       reporter.summary();
-      checkerRef.current?.destroy();
-      checkerRef.current = null;
+      hostLoaded?.closeMic();
     };
     window.addEventListener("pagehide", onHide);
     return () => {
       window.removeEventListener("pagehide", onHide);
-      checkerRef.current?.destroy();
-      checkerRef.current = null;
+      hostLoaded?.closeMic();
     };
   }, [reporter]);
 
-  // Keep the canvas sized to its stage.
+  // The Visualiser is sized to the box the page reserves for it.
   useEffect(() => {
-    const stage = stageRef.current;
-    if (!stage || typeof ResizeObserver === "undefined") return;
+    const box = boxRef.current;
+    if (!box || typeof ResizeObserver === "undefined") return;
     const ro = new ResizeObserver(() => {
-      const r = stage.getBoundingClientRect();
-      const w = Math.round(r.width);
-      const h = Math.round(r.height);
-      if (checkerRef.current) checkerRef.current.resize(w, h);
-      else if (canvasRef.current) {
-        const t = targetRef.current;
-        void loadBoard().then((b) => b.drawIdle(canvasRef.current!, w, h, t.ref, t.mode));
-      }
+      const r = box.getBoundingClientRect();
+      setSize({ w: Math.round(r.width), h: Math.round(r.height) });
     });
-    ro.observe(stage);
+    ro.observe(box);
     return () => ro.disconnect();
   }, []);
 
-  /** Must run inside the tap (hard rule 4): `openMic` is the first call. */
-  const open = (mod: EngineModule) => {
+  /** Opens the mic inside this tap (hard rule 4), then shows the Visualiser. */
+  const open = (mod: HostModule) => {
     setPhase("opening");
     setError(null);
     setMicKind(null);
@@ -285,43 +170,7 @@ function Visualizer() {
     continueInApp();
     mod
       .openMic()
-      .then(() => {
-        const canvas = canvasRef.current;
-        const stage = stageRef.current;
-        if (!canvas || !stage) return;
-        const r = stage.getBoundingClientRect();
-        checkerRef.current = mod.startChecker(
-          canvas,
-          { width: Math.round(r.width), height: Math.round(r.height) },
-          targetRef.current,
-          {
-            onCalStep(step, retry) {
-              setPhase("cal");
-              setCalStep(step);
-              setCalRetry(retry);
-            },
-            onCalProgress: setCalProgress,
-            onReady() {
-              setPhase("ready");
-              reporter.action("calibrated");
-            },
-            onAttempt(r, attempt) {
-              const t = targetRef.current.ref;
-              reporter.attempt(t.id);
-              setResult(attemptView(r, t.tones[0], t.tones.length));
-              if (attempt) {
-                setAttempts((prev) => [...prev, attempt].slice(-MAX_ATTEMPTS));
-                setSelectedId(attempt.id);
-              }
-              const acc = r.accuracy;
-              if (acc !== null) setStats((s) => ({ sum: s.sum + acc, n: s.n + 1 }));
-            },
-            onPaused() {
-              setPhase("paused");
-            },
-          },
-        );
-      })
+      .then(() => setPhase("running"))
       .catch((err: unknown) => {
         const kind = mod.micErrorKind(err);
         if (kind === "permission-denied" || kind === "no-microphone") {
@@ -330,20 +179,26 @@ function Visualizer() {
         setMicKind(kind);
         setError(mod.micErrorMessage(err));
         setPhase("error");
-        mod.shutdownMic();
+        mod.closeMic();
       });
+  };
+
+  /** With a board on this device, straight to the mic; else the voice choice first. */
+  const begin = (mod: HostModule) => {
+    if (mod.toolSettings()) open(mod);
+    else setPhase("voice");
   };
 
   const start = () => {
     reporter.action("started");
-    if (engineLoaded) {
-      open(engineLoaded);
+    if (hostLoaded) {
+      begin(hostLoaded);
       return;
     }
     // The chunk was not ready inside this tap. Opening the mic after an
     // await would lose the gesture on iOS, so ask for one more tap.
     setPhase("loading");
-    loadEngine().then(
+    loadHost().then(
       () => setPhase("tap-again"),
       () => {
         setError("Couldn't load the visualizer. Check your connection and try again.");
@@ -352,332 +207,153 @@ function Visualizer() {
     );
   };
 
-  const startLabel =
-    phase === "tap-again" ? "Allow the microphone" : phase === "error" ? "Try again" : "Start";
-  const color = TONE_LINE_COLOR[ref.tones[0]];
-  const accuracy = stats.n > 0 ? stats.sum / stats.n : null;
-  const tone = toneCard(attempts.find((a) => a.id === selectedId) ?? null);
+  const chooseVoice = (p: VoicePreset) => {
+    saveVoiceStart(p);
+    reporter.action("calibrated");
+    if (hostLoaded) open(hostLoaded);
+  };
+
+  /** The note under the board: signup, or the app for a browser that is signed in. */
+  const lockedCta = signedIn
+    ? { href: toolHref(refId, "more"), label: "Open the full visualizer" }
+    : { href: toolHref(refId, "hear"), label: "Sign up free to hear every word" };
 
   return (
-    <div className="tc-tool" role="group" aria-label="Mandarin tone visualizer">
-      <Pip size={72} tilt={-10} className="tm-tool-pip" />
-      <div className="tc-picker">
-        <div className="tc-section">
-          <div className="tc-picker-label">Pick a tone</div>
-          <div className="tc-row">
-            {SINGLE.map((r) => (
-              <RefChip key={r.id} r={r} selected={r.id === ref.id} pick={() => choose(r, mode)} />
-            ))}
+    <div className="tc-tool tool-vis-tool" role="group" aria-label="Mandarin tone visualizer">
+      <div className="tool-vis" ref={boxRef}>
+        {phase === "running" && hostLoaded && size ? (
+          <hostLoaded.ToolVisualiser
+            width={size.w}
+            height={size.h}
+            arrival={arrival}
+            tool={{
+              cta: {
+                ...lockedCta,
+                onClick: () => trackSignupCta(PATH, "visualizer_sound_locked", refId),
+              },
+              onAttempt: (id) => reporter.attempt(id),
+              onLockedSound: () => reporter.action("sound_locked"),
+              onTarget: (id) => {
+                if (id !== null && toneTarget(id)) setCurrentRef(id as RefId);
+              },
+            }}
+          />
+        ) : phase === "voice" ? (
+          <div className="tool-vis-voice">
+            <VoiceChoice
+              onChoose={chooseVoice}
+              onBack={() => setPhase("idle")}
+              note="The board starts from this voice, so your line sits where it should."
+              help="Not sure? Pick either."
+            />
           </div>
-        </div>
-
-        {/* A 4 × 4 grid, first tone across, second tone down. Only the
-            first row shows until it is opened, so the panel stays calm. */}
-        <div className="tc-section">
-          <div className="tc-picker-label">Tone pairs</div>
-          <div className="tc-pair-grid" id="tc-pairs">
-            {(pairsOpen ? PAIRS : PAIRS.slice(0, 4)).map((r) => (
-              <RefChip key={r.id} r={r} selected={r.id === ref.id} pick={() => choose(r, mode)} />
-            ))}
-          </div>
-          <button
-            type="button"
-            className="tc-pairs-toggle"
-            aria-expanded={pairsOpen}
-            aria-controls="tc-pairs"
-            onClick={() => setPairsOpen((o) => !o)}
-          >
-            {pairsOpen ? "Show fewer pairs" : `Show all ${PAIRS.length} pairs`}
-            <ChevronIcon open={pairsOpen} className="tc-pairs-chevron" />
-          </button>
-        </div>
-
-        <div className="tc-section">
-          <div className="tc-picker-label">Practise against</div>
-          <div className="tc-toggle" role="radiogroup" aria-label="Reference line">
-            {(["textbook", "real"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                role="radio"
-                aria-checked={mode === m}
-                className={mode === m ? "tc-toggle-on" : undefined}
-                onClick={() => choose(ref, m)}
-              >
-                {m === "real" ? "Spoken" : "Standard"}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="tc-ref-card" style={{ borderColor: color }}>
-          <div className="tc-ref-title">
-            <span style={{ color }}>{ref.label}</span>{" "}
-            <span className="tc-ref-example" lang="zh-Hant-TW">
-              e.g. {ref.example}
-            </span>
-          </div>
-          <p>
-            {mode === "real"
-              ? "The line is our native speaker's average at everyday speed. "
-              : "The line is our native speaker's average at slow, clear speed. "}
-            {ref.diff}
-          </p>
-        </div>
-
-        {/* This page plays no audio (hearing real words is what the app
-            adds), so the wish to hear the tone first leads there. */}
-        <a
-          className="tc-hear-link"
-          href={toolHref(ref.id, "hear")}
-          onClick={() => trackSignupCta(PATH, "visualizer_hear_example", ref.id)}
-        >
-          <span aria-hidden="true">🔊</span> Want to hear it first? Sign up and listen to our
-          native speaker in the full visualizer.
-        </a>
+        ) : (
+          <StandIn
+            phase={phase}
+            error={error}
+            micKind={micKind}
+            onStart={start}
+            onRetry={() => (hostLoaded ? begin(hostLoaded) : start())}
+            onTapAgain={() => hostLoaded && begin(hostLoaded)}
+          />
+        )}
       </div>
 
-      <div className="tc-main">
-        {/* The app visualiser's two readout cards. */}
-        <div className="tc-readouts" aria-live="polite">
-          <div className="tc-card">
-            <span className="tc-card-label">Tone accuracy</span>
-            {accuracy !== null ? (
-              <>
-                <strong className={`tc-card-value tc-tier-${tierOf(accuracy)}`}>
-                  {Math.round(accuracy * 100)}%
-                </strong>
-                <span className="tc-card-sub">
-                  {stats.n} {stats.n === 1 ? "try" : "tries"}
-                </span>
-              </>
-            ) : (
-              <span className="tc-card-value tc-card-empty">–</span>
-            )}
-          </div>
-          <div className="tc-card">
-            <span className="tc-card-label">Tone</span>
-            {tone ? (
-              <>
-                <strong className="tc-card-value">{tone.value}</strong>
-                {tone.sub && <span className="tc-card-sub">{tone.sub}</span>}
-              </>
-            ) : (
-              <span className="tc-card-value tc-card-empty">–</span>
-            )}
-          </div>
-        </div>
+      {/* One word per tone plays here; hearing every word is what the app
+          adds, so that wish leads there (brief 52's tool-user signup). */}
+      <a
+        className="tc-hear-link"
+        href={toolHref(refId, "hear")}
+        onClick={() => trackSignupCta(PATH, "visualizer_hear_example", refId)}
+      >
+        <span aria-hidden="true">🔊</span> Want to hear every word? Sign up and listen to our
+        native speaker say all of them in the full visualizer.
+      </a>
+    </div>
+  );
+}
 
-        {/* Wide screens: the board and the attempt strip side by side, as in
-            the app's desktop panel. Narrow ones: the corner thumbnail, as on
-            the app's mobile screen. site.css picks one. */}
-        <div className="tc-board-row">
-          <div className="tc-stage" ref={stageRef}>
-            <canvas ref={canvasRef} className="tc-canvas" aria-hidden="true" />
-            {attempts.length > 0 && (
-              <MobileAttemptThumb
-                attempts={attempts}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-                guide={polylineOf(ref, mode)}
-              />
-            )}
-            {phase === "cal" && (
-              <div className="tc-stage-say" aria-hidden="true">
-                <span>Step {calStep === "high" ? 1 : 2}/2</span>
-                Say{" "}
-                <b style={{ color: TONE_LINE_COLOR[calStep === "high" ? 1 : 3] }}>
-                  {calStep === "high" ? "mā" : "mǎ"}
-                </b>
-              </div>
-            )}
-            {!boardDrawn && (
-              <svg
-                className="tc-idle"
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
-                <path d={shapePath(ref, mode)} style={{ stroke: color }} />
-              </svg>
-            )}
-          </div>
-          <div className="tc-attempts">
-            {attempts.length > 0 ? (
-              <AttemptThumbs
-                attempts={attempts}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-                guide={polylineOf(ref, mode)}
-              />
-            ) : (
-              <p className="tc-attempts-empty">
-                Your last attempts show here.
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="tc-status" aria-live="polite">
+/**
+ * The tool before Start: the Visualiser's frame with the third tone's line,
+ * every tone and pair with its example word (crawlable text), and Start.
+ */
+function StandIn({
+  phase,
+  error,
+  micKind,
+  onStart,
+  onRetry,
+  onTapAgain,
+}: {
+  phase: Phase;
+  error: string | null;
+  micKind: string | null;
+  onStart: () => void;
+  onRetry: () => void;
+  onTapAgain: () => void;
+}) {
+  const ref = refFor(DEFAULT_REF);
+  return (
+    <div className="tool-vis-standin">
+      <div className="tool-vis-board">
+        <svg className="tc-idle" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <path d={shapePath(ref, "textbook")} style={{ stroke: TONE_LINE_COLOR[3] }} />
+        </svg>
+      </div>
+      <div className="tool-vis-side">
+        <p className="tool-vis-ref">
+          <b style={{ color: TONE_LINE_COLOR[3] }}>{ref.label}</b>{" "}
+          <span lang="zh-Hant-TW">e.g. {ref.example}</span>. The line is our native speaker&apos;s average
+          at slow, clear speed. {ref.diff}
+        </p>
+        <p className="tool-vis-label">By tone</p>
+        <ul className="tool-vis-refs">
+          {SINGLE.map((r) => (
+            <li key={r.id}>
+              <span style={{ color: TONE_LINE_COLOR[r.tones[0]] }}>{toneName(r.tones[0], true)}</span>{" "}
+              <span lang="zh-Hant-TW">{r.example}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="tool-vis-label">Tone pairs</p>
+        <ul className="tool-vis-refs tool-vis-pairs">
+          {PAIRS.map((r) => (
+            <li key={r.id}>
+              <span>{r.label}</span> <span lang="zh-Hant-TW">{r.example}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="tool-vis-start" aria-live="polite">
           {(phase === "idle" || phase === "tap-again") && <InAppMicNotice surface="visualizer-tool" />}
           {phase === "idle" && (
             <p>
-              Tap Start, then say any syllable in {ref.label.toLowerCase()} (or{" "}
-              <span lang="zh-Hant-TW">{ref.example}</span>) and see your pitch drawn
-              over the line.
+              Tap Start, pick a lower or higher voice, then say a word. Your pitch is drawn over our native
+              speaker&apos;s line, Standard (slow, clear) or Spoken (everyday speed), with your tone accuracy.
             </p>
           )}
           {phase === "loading" && <p>Loading the visualizer…</p>}
           {phase === "tap-again" && <p>Ready. Tap once more to allow the microphone.</p>}
           {phase === "opening" && <p>Allow the microphone when your browser asks.</p>}
           {phase === "error" && micKind === "permission-denied" ? (
-            <MicHelpPanel
-              surface="visualizer-tool"
-              reason="permission-denied"
-              onTryAgain={() => {
-                // Asks again inside this tap (hard rule 4).
-                if (engineLoaded) open(engineLoaded);
-                else start();
-              }}
-            />
+            <MicHelpPanel surface="visualizer-tool" reason="permission-denied" onTryAgain={onRetry} />
           ) : (
-            phase === "error" && <p className="tc-error">{error}</p>
+            phase === "error" && error && <p className="tc-error">{error}</p>
           )}
-          {phase === "cal" && (
-            <div className="tc-cal">
-              <div className="tc-cal-step">
-                Step {calStep === "high" ? 1 : 2} of 2 · Fitting the board to your voice
-              </div>
-              {calRetry && (
-                <p className="tc-cal-retry">Couldn’t hear that clearly. Let’s try again.</p>
-              )}
-              <p className="tc-cal-say">
-                Say{" "}
-                <b style={{ color: TONE_LINE_COLOR[calStep === "high" ? 1 : 3] }}>
-                  {calStep === "high" ? "mā" : "mǎ"}
-                </b>{" "}
-                <span lang="zh-Hant-TW">{calStep === "high" ? "媽" : "馬"}</span>
-              </p>
-              <p>
-                {calStep === "high"
-                  ? "High and steady, like holding a note. Hold it for about a second, following the flat line."
-                  : "Low: let your voice dip as low as is comfortable, following the line down."}
-              </p>
-              <div className="tc-meter" aria-hidden="true">
-                <span style={{ width: `${Math.round(calProgress * 100)}%` }} />
-              </div>
-              <p className="tc-note">
-                Every voice is different, so we measure yours first. Two short
-                sounds, about 10 seconds, only once on this device.
-              </p>
-            </div>
-          )}
-          {phase === "ready" && !result && (
-            <p>
-              Your turn: say {ref.label.toLowerCase()} (
-              <span lang="zh-Hant-TW">{ref.example}</span>).
-            </p>
-          )}
-          {phase === "ready" && result && (
-            <div className={`tc-result tc-result-${result.tier}`}>
-              {result.percent !== null && (
-                <span className="tc-percent">{result.percent}%</span>
-              )}
-              <span className="tc-headline">{result.headline}</span>
-              {result.read && <span className="tc-read">{result.read}</span>}
-              {result.percent !== null && (
-                <span className="tc-note">
-                  Tone accuracy against the {mode === "real" ? "Spoken" : "Standard"} line.
-                </span>
-              )}
-              {result.tier === "good" && (
-                <a
-                  className="tc-result-cta"
-                  href={toolHref(ref.id, "result")}
-                  onClick={() => trackSignupCta(PATH, "visualizer_result_good", ref.id)}
-                >
-                  Keep going: practise real words for this{" "}
-                  {ref.tones.length > 1 ? "tone pair" : "tone"} in the full visualizer
-                </a>
-              )}
-            </div>
-          )}
-          {phase === "paused" && <p>Paused. Tap Resume to keep going.</p>}
-        </div>
-
-        <div className="tc-controls">
-          {!running && !(phase === "error" && micKind === "permission-denied") && (
+          {!(phase === "error" && micKind === "permission-denied") && (
             <button
               type="button"
               className="tc-button tc-primary"
               disabled={phase === "loading" || phase === "opening"}
-              onPointerDown={() => void loadEngine()}
-              onClick={() => {
-                if (phase === "tap-again" && engineLoaded) open(engineLoaded);
-                else start();
-              }}
+              onPointerDown={() => void loadHost()}
+              onClick={phase === "tap-again" ? onTapAgain : phase === "error" ? onRetry : onStart}
             >
-              {startLabel}
+              {phase === "tap-again" ? "Allow the microphone" : phase === "error" ? "Try again" : "Start"}
             </button>
           )}
           {(phase === "idle" || phase === "tap-again") && <MicAllowNote />}
-          {phase === "paused" && (
-            <button
-              type="button"
-              className="tc-button tc-primary"
-              onClick={() => {
-                checkerRef.current?.resume();
-                setPhase("ready");
-              }}
-            >
-              Resume
-            </button>
-          )}
-          {phase === "ready" && (
-            <button
-              type="button"
-              className="tc-button"
-              onClick={() => {
-                checkerRef.current?.clear();
-                resetAttempts();
-              }}
-            >
-              Clear
-            </button>
-          )}
-          {running && (
-            <button
-              type="button"
-              className="tc-link"
-              onClick={() => {
-                resetAttempts();
-                checkerRef.current?.recalibrate();
-              }}
-            >
-              Recalibrate
-            </button>
-          )}
         </div>
       </div>
     </div>
-  );
-}
-
-function RefChip({ r, selected, pick }: { r: ToneRef; selected: boolean; pick: () => void }) {
-  return (
-    <button
-      type="button"
-      className={selected ? "tc-chip tc-chip-on" : "tc-chip"}
-      aria-pressed={selected}
-      onClick={pick}
-    >
-      {r.tones.map((t, i) => (
-        <span key={i} style={{ color: TONE_LINE_COLOR[t] }}>
-          {i ? " + " : ""}
-          {r.tones.length > 1 ? t : toneName(t, true)}
-        </span>
-      ))}
-    </button>
   );
 }
 

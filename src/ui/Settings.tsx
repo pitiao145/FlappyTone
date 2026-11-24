@@ -53,6 +53,7 @@ import { Choice } from "./Choice.tsx";
 import { ThemeSection } from "./ThemeSection.tsx";
 import { MicrophoneIcon } from "./toneIcons.tsx";
 import { Switch } from "./Switch.tsx";
+import { SPEECH_STYLE_LABEL } from "./speechStyleLabel.ts";
 
 const SHARING = ["on", "off"] as const;
 
@@ -72,7 +73,7 @@ const VOICE_LABEL: Record<Gender, string> = {
 
 const SPEECH_STYLES = ["textbook", "natural"] as const satisfies readonly SpeechStyle[];
 
-export const SPEECH_STYLE_LABEL: Record<SpeechStyle, string> = { textbook: "Standard", natural: "Spoken" };
+export { SPEECH_STYLE_LABEL };
 
 const PROFICIENCIES = ["beginner", "intermediate"] as const satisfies readonly Proficiency[];
 

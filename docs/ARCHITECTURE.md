@@ -58,7 +58,7 @@ src/
   record/     the /record entry: the recording booth (talks to the clips Worker, not Vercel api/).
   analytics/  what a play session sends home. session.ts is pure; client.ts/posthog.ts are the impure part.
   share/      share-card rendering. Never throws (same contract as src/data/).
-  site/       the route table (routes.ts), sitemap/llms.txt/head generation (siteFiles.ts), page analytics + ?src= (pageAnalytics.ts), and the shared-shell pages (pages.tsx, main.tsx, pages/). NO audio/pitch — except checker/engine.ts, lazy-loaded (see "Three entries" rule 1).
+  site/       the route table (routes.ts), sitemap/llms.txt/head generation (siteFiles.ts), page analytics + ?src= (pageAnalytics.ts), and the shared-shell pages (pages.tsx, main.tsx, pages/). NO audio/pitch — except toolMic.ts + toolVisualiser.tsx (the tone visualizer, brief 53), lazy-loaded (see "Three entries" rule 1).
   dev/        the Lab (dev-only tuning instance) + CLI analysis/build/pipeline scripts.
 api/          Vercel functions: newsletter, score, run, webhook-ls, shapes, runlog — see above.
 workers/clips/  Cloudflare Worker (`flappytone-clips-api`, clips.flappytone.com): mints play tickets, serves clip audio from R2. Separate deploy target and toolchain (`npm -w workers/clips`), not part of the Vercel `api/` count.
@@ -106,7 +106,7 @@ on `landed`, and strips it. Like `?intent=`, it never starts anything.
 
 Four rules hold the split together:
 
-1. **The marketing page must not import `src/audio/` or `src/pitch/` up front.** The same rule holds for every route-table page and `src/site/`, with **two named exceptions, both loaded only with a dynamic `import()` on a tap (never statically, never with the page):** the tone visualizer's engine, `src/site/checker/engine.ts` (`/tools/tone-visualizer`, on the Start tap), and the landing page's "Try it now" mini run, `src/ui/landing/miniGame.ts` (decided 26 Oct 2026: the landing page must let a visitor try the game). Since brief 29 the demo has one surface: the overlay `src/site/DemoOverlay.tsx` → `TryItNow` → `miniGame.ts`, loaded only on a tap. On route-table pages `src/site/DemoCta.tsx` (in the page chunk, no game code) loads it; on the landing page `SkyLanding.tsx`'s `openDemo` does. There is no inline demo in the landing hero any more: the hero has one button, "Try it now, no signup" (opens the overlay), a small "Already playing? Log in" link to /app, and the muted hero clip (`DemoLoop`, `id="demo"`, also a tap target for the overlay). Routing rule: a visitor who has not played or spoken yet gets the overlay (`DemoTrigger`, prerendered as a `/#demo` link for no-JS); one who already got a personal result (tone-test round, visualizer result) goes to /app (signup). The nav's button (`src/ui/Nav.tsx`) is "Try it free", which opens the page's overlay (legal pages use `DemoTrigger`; the static 404 links to `/#demo`); when the browser holds a signed-in, non-anonymous Supabase session (`src/ui/signedIn.ts` reads supabase-js's `sb-*-auth-token` from localStorage, no Supabase import, false in the prerender) it is "Play" → /app instead. An overlay CTA can seed the run with the page's word (`demoSeed.ts`: 1–2 syllables and in wordsFallback.json, else the normal pool). The landing page uses the same overlay for "Try Tone Pairs" and its mode chooser's "Try it" (`mode="drill"|"pairs"|"game"`; Learn has no demo): Drill and Pairs open on the game's own picker (`src/ui/ModePickers.tsx`, shared with `ModeSelect`), then fly the game's real `drill`/`pairs` Run mode on the guest pools. Only one overlay is open at a time, so two runs never share the mic. The visualiser stays in the nav ("Learn and tools") and its own section, not in the hero. The mini run loads on the first tap and opens the mic on the second, so `ensureMic` stays inside a gesture; its cues play through the guest-ticket `src/site/wordAudio.ts`, not `src/audio/reference.ts` (which pulls in the account code). Check after touching `src/ui/landing/`, `src/site/` or anything they import:
+1. **The marketing page must not import `src/audio/` or `src/pitch/` up front.** The same rule holds for every route-table page and `src/site/`, with **two named exceptions, both loaded only with a dynamic `import()` on a tap (never statically, never with the page):** the tone visualizer's host, `src/site/toolMic.ts` + `src/site/toolVisualiser.tsx` (`/tools/tone-visualizer`, on the Start tap; it mounts the app's own `Visualiser.tsx`, brief 53), and the landing page's "Try it now" mini run, `src/ui/landing/miniGame.ts` (decided 26 Oct 2026: the landing page must let a visitor try the game). Since brief 29 the demo has one surface: the overlay `src/site/DemoOverlay.tsx` → `TryItNow` → `miniGame.ts`, loaded only on a tap. On route-table pages `src/site/DemoCta.tsx` (in the page chunk, no game code) loads it; on the landing page `SkyLanding.tsx`'s `openDemo` does. There is no inline demo in the landing hero any more: the hero has one button, "Try it now, no signup" (opens the overlay), a small "Already playing? Log in" link to /app, and the muted hero clip (`DemoLoop`, `id="demo"`, also a tap target for the overlay). Routing rule: a visitor who has not played or spoken yet gets the overlay (`DemoTrigger`, prerendered as a `/#demo` link for no-JS); one who already got a personal result (tone-test round, visualizer result) goes to /app (signup). The nav's button (`src/ui/Nav.tsx`) is "Try it free", which opens the page's overlay (legal pages use `DemoTrigger`; the static 404 links to `/#demo`); when the browser holds a signed-in, non-anonymous Supabase session (`src/ui/signedIn.ts` reads supabase-js's `sb-*-auth-token` from localStorage, no Supabase import, false in the prerender) it is "Play" → /app instead. An overlay CTA can seed the run with the page's word (`demoSeed.ts`: 1–2 syllables and in wordsFallback.json, else the normal pool). The landing page uses the same overlay for "Try Tone Pairs" and its mode chooser's "Try it" (`mode="drill"|"pairs"|"game"`; Learn has no demo): Drill and Pairs open on the game's own picker (`src/ui/ModePickers.tsx`, shared with `ModeSelect`), then fly the game's real `drill`/`pairs` Run mode on the guest pools. Only one overlay is open at a time, so two runs never share the mic. The visualiser stays in the nav ("Learn and tools") and its own section, not in the hero. The mini run loads on the first tap and opens the mic on the second, so `ensureMic` stays inside a gesture; its cues play through the guest-ticket `src/site/wordAudio.ts`, not `src/audio/reference.ts` (which pulls in the account code). Check after touching `src/ui/landing/`, `src/site/` or anything they import:
    ```bash
    npm run build
    npm run check:mic-chunks   # getUserMedia only in mic-*.js (vite.config.ts names it); no page but /app and /record loads it up front
@@ -118,27 +118,40 @@ Four rules hold the split together:
 3. **Only route-table pages are prerendered** (`/app`/`/record` never). `src/dev/prerender.ts` bakes each into its HTML for crawlers, and `prerenderEntry.tsx`'s markup must stay identical to what the client renders, or crawler markup and React's markup diverge: `<SkyLanding />` bare for `/` (as `LandingApp` renders it), `.app > .app-main > .frame` for the legal apps, `SitePage` for the rest.
 4. **`Nav.tsx` is the marketing site's bar; the game has its own (`src/app/GameNav.tsx`).** Do not reintroduce a shared nav.
 
-**The public tone visualizer (`/tools/tone-visualizer`, `src/site/checker/`).**
-The in-app visualiser's engine on a free, no-signup page, with **no word
-audio** (hearing real words is what the app adds). The visitor picks a tone
-(1–4) or any of the 16 tone pairs and a version to practise and be scored
-against, named like the app's speech styles: **Spoken** (`real`) = our
-speaker's natural-speed average (`AVERAGED_TONE_SHAPE.natural` /
-`AVERAGED_PAIR_SHAPE.natural`), **Standard** (`textbook`) = her slow, clear
-average (`AVERAGED_*.textbook`); 3+3 reads "2-3" in both (`toneRefs.ts`). The
-left panel (picker, reference card) is the page's own; the right side runs the
-app's **Free mode**: one scrolling line, with the picked line drawn behind it
-as a fixed guide from the bird's rest point (`scrollGuide` in
-`render/visualiser.ts`, which the app's Free tab does not set). Each attempt
-read off the trail is scored against the picked line and fills the app's two
-readout cards (Tone accuracy = running average on that line, Tone = the
-selected attempt's per-syllable read) and its attempt views, with the guide
-drawn behind each attempt: from 1024px a portrait board with the desktop
-strip (`AttemptThumbs`) beside it, below that the corner thumbnail
-(`MobileAttemptThumb`); phones get a tall 3:4 board. Both components' CSS is in
-`src/ui/attemptThumbs.css`, shared with the app. `board.ts` (no mic) holds the shared renderer/scorer
-and draws the idle board; `engine.ts` is the mic chunk and never imports
-`Visualiser.tsx`. **Both `engine.ts` and the app's `Visualiser.tsx` run the
+**The public tone visualizer (`/tools/tone-visualizer`).** Since brief 53
+(24 Nov 2026) the page runs **the app's own `src/ui/Visualiser.tsx`** in tool
+mode (`tool` prop), so the tool and the app can never look different. Before
+Start the page shows a static stand-in in a box of the same size (the third
+tone's line, every tone and pair with its example word as crawlable text);
+nothing moves when the Visualiser swaps in. Start (pointerdown preloads, the
+click opens the mic, hard rule 4) loads one chunk, `src/site/toolMic.ts` +
+`src/site/toolVisualiser.tsx`. Board: the game's own settings on this device
+(with the learned scale), else brief 50's lower/higher voice choice
+(`VoiceChoice`, `saveVoiceStart`, `quickStartSettings`); only the choice is
+saved (`toneflap.voiceStart.v1`, shared with /app on the same origin), the
+app's settings are never written from the site. **Tool mode** shows the free
+tier's lists (`tier` is forced to `"free"`; `tiers.ts` untouched; the page
+never reads the account for its view), pins them to TOCFL 1 (no word-list
+picker; the empty-list hint can still add a level), keeps the Standard/Spoken
+toggle, and plays the sound of **only the first word on screen** per tone or
+pair (`playsInTool`, `src/ui/toolPlayable.ts`). Any other word selects and
+draws its shape with no sound; locked chips and locked-sound taps light up
+the note under the board, which links to the tool-user signup (or "Open the
+full visualizer" when the browser holds a session, `signedIn.ts`). It opens
+on `?tone=` (Tone 3 by default) with the first word selected and played once.
+`Visualiser` takes `tier` as a prop (GameApp passes `useTier()`), so its chunk
+has no tier store; its cues still go through `src/audio/reference.ts` and the
+clip ticket (`clipToken.ts`, which sends the session's JWT when there is one).
+No `visualiser_session` from the site: the page sends `tool_used
+{tool:"tone-visualizer", action: started|mic_denied|calibrated (voice
+chosen)|first_attempt|sound_locked}` (each once per load) and `tool_summary
+{attempts, targets}` on `pagehide`, counts only (`checker/checkerCopy.ts`);
+the locked-sound note's link is `seo_cta_click` `visualizer_sound_locked`.
+The old page-own screen, `checker/engine.ts`, `board.ts` and the mā/mǎ
+`quickCal.ts` (`flappytone.quickcal.v1`) are gone; the Spoken/Standard
+reference lines (`toneRefs.ts`) stay for brief 52's signup screen and the
+stand-in. **The app's `Visualiser.tsx` (and, before brief 53, the tool's
+`engine.ts`) run the
 same per-frame core, `src/game/visualiserCore.ts`** (`VisualiserCore`): when
 an attempt ends (silence over `SINGLE_TONE_GAP_MS` 400ms for one tone,
 `BRIDGE_MS` 700ms for a pair or Free mode — visualiser-only, the game keeps
@@ -167,19 +180,13 @@ first gate gets (`visualiserTolerance` → `corridorToleranceAt`, the player's
 corridor width setting; brief 47), with the dashed centre line inside, so
 "inside" means the same on both screens. In the app the player can hide the
 band with a button next to mute (`loadShowVisBand`, `toneflap.visBand.v1`,
-on by default); the site page has no toggle and always shows it. The app Visualiser measures the room
+on by default); the tool page shows the same button. The app Visualiser measures the room
 once per mic session (`sessionNoiseFor`, keyed by the mic session): a resize
 or rotation re-runs its frame effect but not the measurement. The clip
 pipeline keeps its own splitter (`multiSyllableSpan`): the shared one finds no
 cut for 137 of its 520 multi-syllable clips (`src/dev/bench39/pipe46.mjs`).
 The read is never judged against the target yet. Textbook scoring passes `t23Cue = false` to
-`toneAccuracyDetail` (the cue measures likeness to real speech). Calibration:
-the game's own (`loadSettings()`) if the device has one, else a ~10 s quick
-one (one mā, one mǎ, `quickCal.ts`) under **`flappytone.quickcal.v1`** — never
-`toneflap.settings.v3`, never read by /app. `?tone=<1-4|a-b>&mode=real`
-preselect; the default is Standard (`textbook`), as in the app. Analytics: `tool_used {tool:"tone-visualizer", action}` (each once
-per load) and `tool_summary {attempts, targets}` on `pagehide`,
-counts only.
+`toneAccuracyDetail` (the cue measures likeness to real speech).
 
 **The public tone listening test (`/tools/tone-test`, `src/toneder/`,
 `pages/ToneTest.tsx`, app tab `src/app/TonederScreen.tsx`).** TONEder, the

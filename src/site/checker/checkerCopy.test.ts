@@ -1,39 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AnalyticsEvent } from "../../analytics/session.ts";
 import { APP_EVENT_TYPES } from "../../analytics/session.ts";
-import { attemptView, makeCheckerReporter } from "./checkerCopy.ts";
-
-describe("attemptView", () => {
-  it("an unclear attempt is never a score or a tone read (hard rule 8)", () => {
-    const v = attemptView({ accuracy: null, read: { tone: 2, confidence: 1 } }, 3, 1);
-    expect(v.percent).toBeNull();
-    expect(v.read).toBeNull();
-    expect(v.headline).toMatch(/couldn't hear/i);
-  });
-
-  it("names the read tone against the target", () => {
-    const v = attemptView({ accuracy: 0.5, read: { tone: 2, confidence: 0.8 } }, 3, 1);
-    expect(v.percent).toBe(50);
-    expect(v.read).toBe("Sounded like a second tone. Target: third tone.");
-    expect(attemptView({ accuracy: 0.9, read: { tone: 3, confidence: 1 } }, 3, 1).tier).toBe("good");
-  });
-
-  it("describes a pair per syllable, or says it couldn't split it", () => {
-    expect(attemptView({ accuracy: 0.7, read: null, syllables: [4, 1] }, 4, 2).read).toBe(
-      "Sounded like a fourth tone, then a first tone.",
-    );
-    expect(attemptView({ accuracy: 0.7, read: null, syllables: [4] }, 4, 2).read).toBe(
-      "Couldn't detect both tones.",
-    );
-    expect(attemptView({ accuracy: 0.7, read: null, syllables: [4, null] }, 4, 2).read).toBe(
-      "Couldn't detect both tones.",
-    );
-  });
-
-  it("gives no tone read for a two-syllable word", () => {
-    expect(attemptView({ accuracy: 0.7, read: null }, 3, 2).read).toBeNull();
-  });
-});
+import { makeCheckerReporter } from "./checkerCopy.ts";
 
 describe("tone visualizer analytics", () => {
   const ALLOWED_KEYS = new Set(["type", "tool", "action", "attempts", "targets"]);

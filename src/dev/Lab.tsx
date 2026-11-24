@@ -25,6 +25,7 @@ import { Choice } from "../ui/Choice.tsx";
 import { Game } from "../ui/Game.tsx";
 import { SPEECH_STYLE_LABEL } from "../ui/Settings.tsx";
 import { Visualiser } from "../ui/Visualiser.tsx";
+import { useTier } from "../data/tier.ts";
 import { FIXTURE_WORDS } from "./fixtureWords.ts";
 import { GateStage } from "./GateStage.tsx";
 import { PairGates } from "./PairGates.tsx";
@@ -78,6 +79,7 @@ interface Props {
  */
 export function Lab({ onBack }: Props) {
   const [tab, setTab] = useState<Tab>("play");
+  const tier = useTier();
 
   // The Lab draws paper whatever theme the player picked; the Themes tab
   // passes its theme explicitly. Released when the Lab closes.
@@ -173,7 +175,7 @@ export function Lab({ onBack }: Props) {
         )}
         {tab === "visualiser" && (
           <div className="lab-pane lab-pane-stage">
-            <Visualiser settings={settings} canvasWidth={360} canvasHeight={640} />
+            <Visualiser settings={settings} tier={tier} canvasWidth={360} canvasHeight={640} />
           </div>
         )}
       </main>

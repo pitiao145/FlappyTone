@@ -237,6 +237,8 @@ export type SeoCta =
   | "visualizer_result_retry"
   /** "Hear it first" in the tone visualizer's reference card. */
   | "visualizer_hear_example"
+  /** Brief 53: the "sign up to hear every word" note under the tool's Visualiser. */
+  | "visualizer_sound_locked"
   /** /say word page: "Fly {hanzi} with your voice" in the practise section (brief 49). */
   | "say_practise"
   /** /say word page: small "Fly this word" beside the top card (brief 49). */
@@ -556,7 +558,8 @@ export type AnalyticsEvent =
   | {
       type: "tool_used";
       tool: "tone-visualizer";
-      action: "started" | "mic_denied" | "calibrated" | "first_attempt";
+      /** `calibrated`: a voice was chosen (brief 53). `sound_locked`: a word whose sound is locked was tapped. */
+      action: "started" | "mic_denied" | "calibrated" | "first_attempt" | "sound_locked";
     }
   /**
    * A /say/<slug> word page (`src/site/pages/SayWord.tsx`): each action at

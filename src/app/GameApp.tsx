@@ -1525,6 +1525,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
           // `.visualiser-screen.game-stage` rule in App.css.
           <Visualiser
             settings={visualiserSettings ?? settings}
+            tier={tier}
             canvasWidth={CANVAS_W}
             canvasHeight={GAME_CANVAS_H}
             onLocked={(feature) => openEarlyBird("visualiser", feature)}
