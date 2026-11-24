@@ -1330,6 +1330,10 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
    * calls `goHome()`, which already clears `pendingRef`.
    */
   const openVisualiser = useCallback(() => {
+    // Every caller is a tap (nav, the arrival tap gate, TutorialDone): unlock
+    // cue playback here too, so a tool arrival's word can play itself once
+    // the Visualiser opens (brief 52; iOS resumes only inside a gesture).
+    void ensurePlaybackCtx();
     if (gameAlive) gameRef.current?.pause();
     const s = settingsOrQuickStart();
     if (!s) pendingRef.current = "visualiser";

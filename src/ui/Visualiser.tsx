@@ -95,6 +95,9 @@ const TONES: Tone[] = [1, 2, 3, 4];
  */
 const CLIP_WAIT_MS = 2500;
 
+/** Brief 52: how long a tool arrival sees its word before it plays once. */
+const ARRIVAL_CUE_DELAY_MS = 2000;
+
 interface WordStats {
   attempts: number;
   sumAccuracy: number;
@@ -338,6 +341,14 @@ export function Visualiser({
   const arrivalIdRef = useRef<string | null>(null);
   /** Its example word's hanzi, selected once it shows in the list. */
   const arrivalWordRef = useRef<string | null>(null);
+  /** The arrival's one autoplay of its word, cleared on unmount. */
+  const arrivalCueTimerRef = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (arrivalCueTimerRef.current !== null) clearTimeout(arrivalCueTimerRef.current);
+    },
+    [],
+  );
   /** A tool arrival made its first attempt: the game link shows. */
   const [arrivalTried, setArrivalTried] = useState(false);
   const noteAttempt = () => {
@@ -819,6 +830,15 @@ export function Visualiser({
     // Resume the output context inside the tap: the play below may run after
     // an await, and iOS only allows a resume from a gesture.
     void ensurePlaybackCtx();
+    cueWord(word);
+  };
+
+  /**
+   * Loads the word's clip (or waits CLIP_WAIT_MS) and plays it. A newer call
+   * supersedes this one. The caller owns the gesture: a tap, or the
+   * arrival's autoplay, whose context the "Tap to start" tap already resumed.
+   */
+  const cueWord = (word: Word) => {
     const seq = ++tapSeqRef.current;
     // Jumps the warm-up queue: the tapped word is needed now, whatever the
     // background trickle is currently working through. Wait for it (up to
@@ -1253,9 +1273,16 @@ export function Visualiser({
     const hanzi = arrivalWordRef.current;
     if (hanzi === null || (tone === null && combo === null)) return;
     arrivalWordRef.current = null;
-    const w = wordsForTone.find((x) => x.hanzi === hanzi);
+    // The tool's example word, else the list's first: the player must see
+    // which word to say (a free list rarely holds the single-tone examples).
+    const w = wordsForTone.find((x) => x.hanzi === hanzi) ?? wordsForTone[0];
     if (!w) return;
     setSelectedWord(w);
+    // Then play it once, so they hear the word before they say it.
+    arrivalCueTimerRef.current = window.setTimeout(() => {
+      arrivalCueTimerRef.current = null;
+      if (wordRef.current?.id === w.id) cueWord(w);
+    }, ARRIVAL_CUE_DELAY_MS);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- railKey stands for wordsForTone
   }, [railKey]);
 
