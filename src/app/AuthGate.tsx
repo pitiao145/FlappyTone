@@ -25,6 +25,7 @@ import {
   weakPairLine,
 } from "./authGate.ts";
 import GameApp, { parseChallengeScore } from "./GameApp.tsx";
+import { toolEntryProps } from "../ui/toolEntry.ts";
 
 /**
  * Lazy, so the site's Sky stylesheet (nav, faces, its own :root tokens) is
@@ -84,13 +85,14 @@ export default function AuthGate() {
           // sign-in itself (and clears the marker); counting here too would
           // double it under the wrong method.
           const pending = ownSubmitPending() ? null : consumeAuthPending(storage());
+          // Restored first, so the completion event carries the tool's entry (brief 52).
+          const search = restoreReturn(window.location.search, storage());
           if (pending) {
             const mode = authMode(account.createdAt ?? null, pending.at);
-            track({ type: "signup_completed", mode, method: pending.method });
+            track({ type: "signup_completed", mode, method: pending.method, ...toolEntryProps(search) });
             if (mode === "login") track({ type: "login_completed", method: pending.method });
             if (pending.consent) void recordMarketingConsent(true);
           }
-          const search = restoreReturn(window.location.search, storage());
           if (search !== window.location.search) {
             history.replaceState(null, "", `${window.location.pathname}${search}${window.location.hash}`);
           }

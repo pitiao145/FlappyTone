@@ -56,6 +56,7 @@ export function PipCta({
   body,
   secondary,
   intent,
+  params,
   preview = "flight",
   to = "demo",
   seedId,
@@ -69,6 +70,8 @@ export function PipCta({
   preview?: "flight" | "visualiser";
   /** `to="signup"` only: where the game should land (`?intent=`); the default is Play. */
   intent?: AppIntent;
+  /** `to="signup"` only: extra one-shot params for /app (brief 52: the tool's `tone`, `cta`). */
+  params?: Readonly<Record<string, string>>;
   title: string;
   body: string;
   secondary?: { href: string; label: string };
@@ -95,8 +98,8 @@ export function PipCta({
             ) : (
               <a
                 className="sticker-button"
-                href={appHref(intent, path)}
-                onClick={() => trackSignupCta(path, "pip_cta")}
+                href={appHref(intent, path, params)}
+                onClick={() => trackSignupCta(path, "pip_cta", params?.tone)}
               >
                 {PIP_CTA_LABEL.signup}
               </a>

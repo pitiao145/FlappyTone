@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { captureGameEvent } from "../../analytics/posthog.ts";
 import { TONE_LINE_COLOR } from "../../ui/toneColors.ts";
 import { appHref } from "../../ui/appLink.ts";
@@ -12,9 +12,11 @@ import {
   polylineOf,
   refFor,
   TONE_REFS,
+  type RefId,
   type RefMode,
   type ToneRef,
 } from "../checker/toneRefs.ts";
+import type { ToolCta } from "../../ui/toolEntry.ts";
 import {
   attemptView,
   makeCheckerReporter,
@@ -29,6 +31,31 @@ import { ChevronIcon } from "../../ui/toneIcons.tsx";
 import { InAppMicNotice, MicAllowNote, MicHelpPanel, continueInApp } from "../../ui/MicHelp.tsx";
 
 const PATH = "/tools/tone-visualizer";
+
+/**
+ * Brief 52: every signup CTA here opens the in-app Visualiser on the tone or
+ * pair the visitor is on, and says which CTA it was, so /app can show a
+ * tool-user signup screen (see `src/ui/toolEntry.ts`).
+ */
+function toolHref(id: RefId, cta: ToolCta): string {
+  return appHref("visualiser", PATH, { tone: id, cta });
+}
+
+/**
+ * The tone or pair the tool is on, for the closing card, which sits outside
+ * `Visualizer`. The prerender (and the first client render) use the default.
+ */
+let currentRefId: RefId = DEFAULT_REF;
+const refListeners = new Set<() => void>();
+function setCurrentRef(id: RefId): void {
+  if (id === currentRefId) return;
+  currentRefId = id;
+  refListeners.forEach((f) => f());
+}
+function subscribeRef(f: () => void): () => void {
+  refListeners.add(f);
+  return () => refListeners.delete(f);
+}
 
 type EngineModule = typeof import("../checker/engine.ts");
 type BoardModule = typeof import("../checker/board.ts");
@@ -163,6 +190,7 @@ function Visualizer() {
   const stageRef = useRef<HTMLDivElement>(null);
   const checkerRef = useRef<Checker | null>(null);
   const targetRef = useRef({ ref, mode });
+  useEffect(() => setCurrentRef(ref.id), [ref]);
 
   const running = phase === "cal" || phase === "ready" || phase === "paused";
 
@@ -401,8 +429,8 @@ function Visualizer() {
             adds), so the wish to hear the tone first leads there. */}
         <a
           className="tc-hear-link"
-          href={appHref("visualiser", PATH)}
-          onClick={() => trackSignupCta(PATH, "visualizer_hear_example")}
+          href={toolHref(ref.id, "hear")}
+          onClick={() => trackSignupCta(PATH, "visualizer_hear_example", ref.id)}
         >
           <span aria-hidden="true">🔊</span> Want to hear it first? Sign up and listen to our
           native speaker in the full visualizer.
@@ -565,10 +593,11 @@ function Visualizer() {
               {result.tier === "good" && (
                 <a
                   className="tc-result-cta"
-                  href={appHref(undefined, PATH)}
-                  onClick={() => trackSignupCta(PATH, "visualizer_result_good")}
+                  href={toolHref(ref.id, "result")}
+                  onClick={() => trackSignupCta(PATH, "visualizer_result_good", ref.id)}
                 >
-                  Now fly it: your voice steers the bird in FlappyTone
+                  Keep going: practise real words for this{" "}
+                  {ref.tones.length > 1 ? "tone pair" : "tone"} in the full visualizer
                 </a>
               )}
             </div>
@@ -653,6 +682,7 @@ function RefChip({ r, selected, pick }: { r: ToneRef; selected: boolean; pick: (
 }
 
 export function ToneVisualizer() {
+  const refId = useSyncExternalStore(subscribeRef, () => currentRefId, () => DEFAULT_REF);
   return (
     <div className="screen legal-screen site-page site-wide">
       <article className="legal-body">
@@ -713,6 +743,7 @@ export function ToneVisualizer() {
           path={PATH}
           to="signup"
           intent="visualiser"
+          params={{ tone: refId, cta: "more" }}
           preview="visualiser"
           title="Practise, then play"
           body="Practise in the full visualizer, then let the game turn it into flight: your voice steers the bird through tunnels shaped like each tone."

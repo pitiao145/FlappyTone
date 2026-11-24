@@ -38,6 +38,9 @@ import { redirectToCheckoutForCurrentAccount } from "../data/checkout.ts";
 import { canUseGoogleSignIn } from "../lib/inAppBrowser.ts";
 import { InAppBrowserPrompt } from "../ui/InAppBrowserPrompt.tsx";
 import { DemoLoop } from "../ui/DemoLoop.tsx";
+import { TONE_LINE_COLOR } from "../ui/toneColors.ts";
+import { splitExample, toolEntry, toolEntryProps, toolSignupCopy } from "../ui/toolEntry.ts";
+import { polylineOf, type ToneRef } from "../site/checker/toneRefs.ts";
 import { Nav } from "../ui/Nav.tsx";
 import "../site/site.css";
 import "./AuthScreen.css";
@@ -104,6 +107,9 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     }
   });
   const ids = useId();
+  /** Brief 52: opened from the tone visualizer tool's signup CTAs; null for every other entry. */
+  const [tool] = useState(() => toolEntry(window.location.search));
+  const [toolProps] = useState(() => toolEntryProps(window.location.search));
   /** The no-signup demo, loaded on the tap only (hard rules 4 and 13). */
   const [demoMod, setDemoMod] = useState<DemoOverlayModule | null>(null);
   const [demoOpen, setDemoOpen] = useState(false);
@@ -133,8 +139,8 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
   useEffect(() => {
     if (view === "reset") return;
     const screen: AuthScreenStep = view;
-    track({ type: "auth_screen_viewed", screen, source });
-  }, [view, source]);
+    track({ type: "auth_screen_viewed", screen, source, ...toolProps });
+  }, [view, source, toolProps]);
 
   // A Google round trip that came back with an error: say what happened
   // (a player who cancelled at Google needs no message).
@@ -167,7 +173,7 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
   /** After an in-page sign-in: checkout for a "Go Pro" visitor, else a clean reload into the game. */
   function finish(mode: AuthCard, method: AuthMethod) {
     consumeAuthPending(storage()); // this sign-in is counted here, not by AuthGate
-    track({ type: "signup_completed", mode, method });
+    track({ type: "signup_completed", mode, method, ...toolProps });
     if (mode === "login") track({ type: "login_completed", method });
     // The short wait lets the events above leave first. A visitor who came
     // from the landing page's "Go Pro" goes on to checkout (brief 24); anyone
@@ -294,6 +300,7 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
     setResetSent(email.trim());
   }
 
+  const toolCopy = tool ? toolSignupCopy(tool) : null;
   const save = { title: "Save your progress" };
   const back = { title: "Welcome back", sub: "Ready to fly your tones?" };
   const head =
@@ -301,11 +308,13 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
       ? back
       : view === "reset"
         ? { title: "Reset your password", sub: "We'll email you a link to set a new one." }
-        : challengeScore != null
-          ? { ...save, sub: challengeLine(challengeScore, challengeName) }
-          : weakLine
-            ? { ...save, sub: weakLine }
-            : { ...save, sub: "Sign up free to play, and track how your tones improve." };
+        : toolCopy
+          ? { title: toolCopy.title, sub: toolCopy.sub }
+          : challengeScore != null
+            ? { ...save, sub: challengeLine(challengeScore, challengeName) }
+            : weakLine
+              ? { ...save, sub: weakLine }
+              : { ...save, sub: "Sign up free to play, and track how your tones improve." };
 
   const errorBox = error && (
     <p className="auth-error" role="alert">
@@ -519,7 +528,7 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
         {view === "password_signup" && consentBox}
         {errorBox}
         <button type="submit" className="sky-btn auth-primary" disabled={busy}>
-          {busy ? "One moment…" : view === "password" ? "Log in" : "Create account and play"}
+          {busy ? "One moment…" : view === "password" ? "Log in" : tool ? "Create account" : "Create account and play"}
         </button>
         {view === "password" ? (
           <button type="button" className="auth-link auth-link-small" onClick={() => go("login")}>
@@ -569,11 +578,15 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
                 <span className="sky-btn">Try the demo</span>
               </button>
             </figure>
+          ) : tool && !onLoginSide ? (
+            // Brief 52: the tool's visitor sees the word they were on, not the bird.
+            tool.ref && <ToolWord r={tool.ref} />
           ) : (
             <img className="auth-bird" src="/Bird-hor-no-halo.png" alt="" width={96} height={96} />
           )}
           <h1 className="auth-title">{head.title}</h1>
           <p className="auth-sub">{head.sub}</p>
+          {toolCopy && !onLoginSide && view !== "code" && <ToolPerks perks={toolCopy.perks} />}
 
           <section
             className="auth-card"
@@ -613,6 +626,40 @@ export function AuthScreen({ source, challengeScore, challengeName, weakLine = n
           document.body,
         )}
     </div>
+  );
+}
+
+/**
+ * The word the visitor was on in the tool: hanzi, pinyin and the tone's
+ * Standard line (the tool's own data, no audio, no extra chunk).
+ */
+function ToolWord({ r }: { r: ToneRef }) {
+  const { pinyin, hanzi } = splitExample(r.example);
+  const d = polylineOf(r, "textbook")
+    .map(([t, c], i) => `${i ? "L" : "M"}${(4 + t * 92).toFixed(1)} ${(36 - ((c - 1) / 4) * 32).toFixed(1)}`)
+    .join(" ");
+  return (
+    <figure className="auth-word" data-testid="auth-tool-word" style={{ borderColor: TONE_LINE_COLOR[r.tones[0]] }}>
+      <span className="auth-word-hanzi" lang="zh-Hant-TW">
+        {hanzi}
+      </span>
+      <span className="auth-word-pinyin">{pinyin}</span>
+      <svg className="auth-word-shape" viewBox="0 0 100 40" aria-hidden="true">
+        <path d={d} stroke={TONE_LINE_COLOR[r.tones[0]]} />
+      </svg>
+      <figcaption className="auth-word-label">{r.label}</figcaption>
+    </figure>
+  );
+}
+
+/** What a free account gives a tool user, in three lines. */
+function ToolPerks({ perks }: { perks: string[] }) {
+  return (
+    <ul className="auth-perks">
+      {perks.map((p) => (
+        <li key={p}>{p}</li>
+      ))}
+    </ul>
   );
 }
 

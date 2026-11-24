@@ -58,3 +58,58 @@ describe("AuthScreen try link (brief 49)", () => {
     expect(tryItNowSrc).toMatch(/if \(onSignup\) onSignup\(\);\s*else window\.location\.assign\(appHref/);
   });
 });
+
+describe("AuthScreen tool-user screen (brief 52)", () => {
+  const TOOL = "?intent=visualiser&src=/tools/tone-visualizer";
+
+  it("tool entry: the word, its CTA headline and three perks; no bird, no game pitch", () => {
+    const out = render("lp_cta", `${TOOL}&tone=3&cta=hear`);
+    expect(out).toContain('data-testid="auth-tool-word"');
+    expect(out).toContain("馬");
+    expect(out).toContain("mǎ");
+    expect(out).toContain("Third tone");
+    expect(out).toContain("Hear it from a native speaker");
+    const perks = out.match(/<ul class="auth-perks">(.*?)<\/ul>/)?.[1] ?? "";
+    expect(perks.match(/<li>/g)).toHaveLength(3);
+    expect(out).not.toContain("auth-bird");
+    expect(out).not.toContain("Save your progress");
+    expect(out).not.toContain("Sign up free to play");
+  });
+
+  it("each tool CTA gets its own headline; a pair shows the pair's word", () => {
+    expect(render("lp_cta", `${TOOL}&tone=3&cta=result`)).toContain("Nice one. Keep going");
+    const pair = render("lp_cta", `${TOOL}&tone=3-3&cta=more`);
+    expect(pair).toContain("More words for this tone pair");
+    expect(pair).toContain("你好");
+  });
+
+  it("an unknown tone: tool copy, no word card, still no bird", () => {
+    const out = render("lp_cta", `${TOOL}&tone=nope&cta=more`);
+    expect(out).not.toContain('data-testid="auth-tool-word"');
+    expect(out).not.toContain("auth-bird");
+    expect(out).toContain("More words for this tone");
+  });
+
+  it("Log in from a tool link: today's Welcome back, with the bird", () => {
+    const out = render("lp_cta", `${TOOL}&tone=3&cta=hear&auth=login`);
+    expect(out).toContain("Welcome back");
+    expect(out).toContain("auth-bird");
+    expect(out).not.toContain('data-testid="auth-tool-word"');
+  });
+
+  it("every other entry renders today's screen unchanged", () => {
+    for (const [source, search] of [
+      ["direct", ""],
+      ["lp_cta", "?src=/chinese-tones"],
+      ["lp_cta", "?intent=visualiser&src=/chinese-tones&tone=3&cta=hear"],
+      ["lp_cta", "?intent=pricing&src=/tools/tone-visualizer"],
+    ] as const) {
+      const out = render(source, search);
+      expect(out, search).toContain("Save your progress");
+      expect(out, search).toContain("Sign up free to play, and track how your tones improve.");
+      expect(out, search).not.toContain('data-testid="auth-tool-word"');
+      expect(out, search).not.toContain("auth-perks");
+    }
+    expect(render("lp_cta", "?src=/chinese-tones")).toContain("auth-bird");
+  });
+});

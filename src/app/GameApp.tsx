@@ -65,6 +65,7 @@ import { Loading } from "../ui/Loading";
 import { LevelSelect } from "../ui/LevelSelect.tsx";
 import { ModeSelect } from "../ui/ModeSelect.tsx";
 import { PlayHome, type PlayIntent } from "../ui/PlayHome";
+import { arrivalTarget, type ArrivalTarget } from "../ui/toolEntry.ts";
 import { PierreNote, PREVIEW_TARGETED } from "../ui/PierreNote.tsx";
 import { armNote, checkNote, takeNoteCheck, type NoteCopy } from "../data/note.ts";
 import type { Tone } from "../game/gates.ts";
@@ -196,6 +197,20 @@ function initialIntent(): "visualiser" | "leaderboard" | "pairs" | "pricing" | n
     /* no window (tests) */
   }
   return null;
+}
+
+/**
+ * Brief 52: the tone or pair a `?intent=visualiser&tone=<id>` link (the tone
+ * visualizer tool's signup CTAs) asked the Visualiser to open on. Null for
+ * a missing or unknown id: the Visualiser opens on its home.
+ */
+function initialArrival(): ArrivalTarget | null {
+  try {
+    return arrivalTarget(window.location.search);
+  } catch {
+    /* no window (tests) */
+    return null;
+  }
 }
 
 /** Whether this load is the return trip from Lemon Squeezy checkout. */
@@ -455,6 +470,12 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
    * whether or not `settings` exists yet: the tap gate below covers both
    * "mic not open" and "not calibrated" with the same `openVisualiser` call.
    */
+  /**
+   * Brief 52: the tool's tone or pair, read once on mount (before the URL is
+   * stripped) and kept until the Visualiser has opened on it, so it survives
+   * the tap gate and a first-time calibration on the way.
+   */
+  const [arrival, setArrival] = useState<ArrivalTarget | null>(() => initialArrival());
   const [visualiserMicReady, setVisualiserMicReady] = useState(
     () => initialIntent() !== "visualiser" || getMicSession() !== null,
   );
@@ -1211,10 +1232,14 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
         params.has("src") ||
         params.has("word") ||
         params.has("weak") ||
+        params.has("tone") ||
+        params.has("cta") ||
         params.has("openExternalBrowser")
       ) {
         params.delete("src");
         params.delete("word");
+        params.delete("tone");
+        params.delete("cta");
         params.delete("weak");
         params.delete("c");
         params.delete("n");
@@ -1499,6 +1524,9 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
             canvasWidth={CANVAS_W}
             canvasHeight={GAME_CANVAS_H}
             onLocked={(feature) => openEarlyBird("visualiser", feature)}
+            arrival={arrival}
+            onArrivalUsed={() => setArrival(null)}
+            onFlyIt={() => onNavigate("play")}
           />
         )}
 

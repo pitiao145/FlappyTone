@@ -21,17 +21,20 @@ const noSubscribe = () => () => {};
 /** Where an overlay CTA goes without JS (or if the overlay fails to load). */
 export const DEMO_FALLBACK_HREF = "/#demo";
 
-function track(page: string, cta: SeoCta, target: "overlay" | "signup"): void {
+function track(page: string, cta: SeoCta, target: "overlay" | "signup", toolTarget?: string): void {
   try {
-    captureGameEvent({ type: "seo_cta_click", page, cta, target });
+    captureGameEvent({ type: "seo_cta_click", page, cta, target, ...(toolTarget ? { toolTarget } : {}) });
   } catch {
     // Analytics never breaks the page.
   }
 }
 
-/** For a signup CTA's `onClick`: the link itself leaves for /app. */
-export function trackSignupCta(page: string, cta: SeoCta): void {
-  track(page, cta, "signup");
+/**
+ * For a signup CTA's `onClick`: the link itself leaves for /app.
+ * `toolTarget`: the tone visualizer's tone or pair the link carries (brief 52).
+ */
+export function trackSignupCta(page: string, cta: SeoCta, toolTarget?: string): void {
+  track(page, cta, "signup", toolTarget);
 }
 
 /**

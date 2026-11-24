@@ -9745,3 +9745,17 @@ button.switch-track.switch-on {
   cursor: pointer;
   text-decoration: underline;
 }
+
+/* Brief 52: the one game link a tool arrival gets, after its first try. */
+.visualiser-screen .vis-fly-link {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  max-width: calc(100% - 16px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.85rem;
+}

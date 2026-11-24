@@ -40,12 +40,13 @@ export function authSource(search: string, referrer: string, origin: string): Au
 
 /**
  * The query params GameApp reads once on mount: the challenge (`c`, `n`), the
- * arrival intent and the attribution (`src`, `ref`, `word`, `weak`). A
+ * arrival intent and the attribution (`src`, `ref`, `word`, `weak`), and the
+ * tool visualiser's target (`tone`, `cta`, brief 52). A
  * password signup keeps them in the URL, since GameApp mounts in the same
  * page. A magic link comes back to bare `/app` (the redirect in account.ts),
  * so they are parked in storage and put back before GameApp mounts.
  */
-const KEPT_PARAMS = ["c", "n", "intent", "src", "ref", "word", "weak"] as const;
+const KEPT_PARAMS = ["c", "n", "intent", "src", "ref", "word", "weak", "tone", "cta"] as const;
 const PARKED_KEY = "toneflap.authReturn.v1";
 const PARKED_TTL_MS = 60 * 60 * 1000;
 

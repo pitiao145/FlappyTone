@@ -43,6 +43,7 @@ import type { CorridorWidth, Tone } from "../game/gates.ts";
 import type { CueStyle, GateLogEntry, RunMode, WordMix } from "../game/run.ts";
 import type { SpeechStyle } from "../game/words.ts";
 import type { GateOutcome } from "../game/scoring.ts";
+import type { ToolCta } from "../ui/toolEntry.ts";
 
 /**
  * Why one clip download failed (`src/audio/reference.ts` records it per word).
@@ -240,6 +241,16 @@ export type SeoCta =
   | "say_practise"
   /** /say word page: small "Fly this word" beside the top card (brief 49). */
   | "say_top";
+
+/**
+ * Brief 52: on the auth events, when /app was opened from the tone visualizer
+ * tool's signup CTAs (`src/ui/toolEntry.ts`): the tone or pair it carried
+ * (`"3"`, `"3-3"`) and which CTA. Absent for every other entry.
+ */
+export interface ToolEntryProps {
+  toolTarget?: string;
+  toolCta?: ToolCta;
+}
 
 /** How a player signed in (brief 30). */
 export type AuthMethod = "otp" | "google" | "password" | "magic_link";
@@ -452,14 +463,14 @@ export type AnalyticsEvent =
    * upgraded), "login" = an existing one. Fired by AuthScreen.tsx (password,
    * code) and AuthGate.tsx (magic link, Google, after the redirect).
    */
-  | { type: "signup_completed"; mode: "signup" | "login"; method?: AuthMethod }
+  | ({ type: "signup_completed"; mode: "signup" | "login"; method?: AuthMethod } & ToolEntryProps)
   /**
    * AuthScreen.tsx (the /app login gate): a step became visible: "signup"
    * (Google + "Sign up with email"), "login" (Google + email login code),
    * "code", "password" (log in), "password_signup". Between brief 30's first
    * commit and its follow-up (never deployed) "email" replaced signup/login.
    */
-  | { type: "auth_screen_viewed"; screen: AuthScreenStep; source: "challenge" | "direct" | "lp_cta" }
+  | ({ type: "auth_screen_viewed"; screen: AuthScreenStep; source: "challenge" | "direct" | "lp_cta" } & ToolEntryProps)
   /** AuthScreen.tsx: a cold visitor tapped the demo on the signup card or nav (brief 49). */
   | { type: "auth_try_demo"; source: "direct" | "lp_cta" }
   /** GameApp mount: a new account imported this many parked demo rounds (`src/data/demoImport.ts`, brief 50). */
@@ -508,6 +519,12 @@ export type AnalyticsEvent =
       levels?: number[];
       /** Whether the player changed the word-list selection this visit. */
       levelsChanged?: boolean;
+      /**
+       * Brief 52: the tone visualizer tool's tone or pair (`"3"`, `"3-3"`)
+       * this visit opened on, from its signup CTA (`?tone=`). Only on that
+       * first visit; absent otherwise.
+       */
+      arrivalTarget?: string;
     }
   /**
    * A "what's new" banner in the game (the landing page's banner sends its own
@@ -620,7 +637,14 @@ export type AnalyticsEvent =
    * now demo on the page, `signup` leaves for /app. `page` is the route path,
    * `cta` a closed name (`SeoCta`).
    */
-  | { type: "seo_cta_click"; page: string; cta: SeoCta; target: "overlay" | "signup" }
+  | {
+      type: "seo_cta_click";
+      page: string;
+      cta: SeoCta;
+      target: "overlay" | "signup";
+      /** Brief 52: the tone visualizer's tone or pair the signup link carries (`"3"`, `"3-3"`). */
+      toolTarget?: string;
+    }
   /** /app opened from the tone test's CTA (`?src=/tools/tone-test`), once per load. */
   | { type: "app_open"; source: "tone-test"; weak_pair: string }
   /**

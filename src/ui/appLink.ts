@@ -35,14 +35,21 @@ export function setAppLinkSource(path: string): void {
   linkSource = path;
 }
 
-/** `src` overrides the page source (for markup rendered before any entry runs, e.g. prerender). */
+/**
+ * `src` overrides the page source (for markup rendered before any entry runs,
+ * e.g. prerender). `extra` adds one-shot params GameApp reads on arrival
+ * (brief 52: the tool's `tone` and `cta`); they must be in `KEPT_PARAMS`
+ * (authGate.ts) to survive signup.
+ */
 export function appHref(
   intent?: AppIntent,
   src: string | undefined = linkSource,
+  extra?: Readonly<Record<string, string>>,
 ): string {
   const params = new URLSearchParams();
   if (intent) params.set("intent", intent);
   if (src) params.set("src", src);
+  for (const [k, v] of Object.entries(extra ?? {})) params.set(k, v);
   // `/` is legal in a query value; left unescaped so the URL reads
   // `/app?src=/chinese-tones`.
   const q = params.toString().replace(/%2F/g, "/");

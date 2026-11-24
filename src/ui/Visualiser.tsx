@@ -52,6 +52,7 @@ import { drawVisualiser } from "../render/visualiser.ts";
 import { readAttempt, readContourSyllables, type FreeAttempt } from "../game/freeAttempts.ts";
 import { AttemptThumbs, MobileAttemptThumb } from "./AttemptThumbs.tsx";
 import { micErrorCopy } from "./micErrors.ts";
+import type { ArrivalTarget } from "./toolEntry.ts";
 import { SPEECH_STYLE_LABEL } from "./Settings.tsx";
 import {
   visualiserComboCount,
@@ -144,6 +145,16 @@ interface Props {
   canvasHeight: number;
   /** Called when a guest taps a locked tone row/pill or a locked word chip. */
   onLocked?: (feature: string) => void;
+  /**
+   * Brief 52: the tone or pair the tone visualizer tool's signup link asked
+   * for. Picked once, as soon as the tier is known; its example word is
+   * selected too when the player's list holds it.
+   */
+  arrival?: ArrivalTarget | null;
+  /** Called once `arrival` has been picked, so the host can forget it. */
+  onArrivalUsed?: () => void;
+  /** The one game link a tool arrival gets, after its first attempt. */
+  onFlyIt?: () => void;
 }
 
 /**
@@ -155,7 +166,15 @@ interface Props {
  * corridor at the same time, and when that fails there is no way to tell which
  * half went wrong. Here there is only one half.
  */
-export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Props) {
+export function Visualiser({
+  settings,
+  canvasWidth,
+  canvasHeight,
+  onLocked,
+  arrival = null,
+  onArrivalUsed,
+  onFlyIt,
+}: Props) {
   const tier = useTier();
   const limits = tierLimits()[tier];
   // The recording style the visualiser plays, draws and scores in (spec
@@ -315,6 +334,15 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   /** Mirrors `selectedLevels` for the unmount flush. */
   const sessionLevelsRef = useRef<number[]>([]);
   sessionLevelsRef.current = selectedLevels;
+  /** Brief 52: the tool's tone or pair this visit opened on (`visualiser_session.arrivalTarget`). */
+  const arrivalIdRef = useRef<string | null>(null);
+  /** Its example word's hanzi, selected once it shows in the list. */
+  const arrivalWordRef = useRef<string | null>(null);
+  /** A tool arrival made its first attempt: the game link shows. */
+  const [arrivalTried, setArrivalTried] = useState(false);
+  const noteAttempt = () => {
+    if (arrivalIdRef.current !== null) setArrivalTried(true);
+  };
   useEffect(() => {
     sessionStartRef.current = performance.now();
     return () => {
@@ -334,6 +362,7 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         styleToggles: sessionStyleTogglesRef.current,
         levels: sessionLevelsRef.current,
         levelsChanged: sessionLevelsChangedRef.current,
+        ...(arrivalIdRef.current !== null ? { arrivalTarget: arrivalIdRef.current } : {}),
       });
     };
   }, []);
@@ -589,11 +618,13 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
         if (attempt === null) continue;
         setFreeAttempts((prev) => [...prev, attempt].slice(-MAX_FREE_ATTEMPTS));
         setSelectedAttemptId(attempt.id);
+        noteAttempt();
       }
 
       // Score the attempt that finished since the last frame (`frame.attempt`
       // is set once per attempt). Free mode reads its own attempts instead.
       const latest = free ? null : frame.attempt;
+      if (latest) noteAttempt();
       if (word && latest) {
         // Tone accuracy — the same timing-free measure the game logs per gate,
         // but judged against THIS word's own recorded contour (the line on
@@ -1191,6 +1222,41 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
   const pickTone = (t: Tone) => (toneEmpty(t) ? setEmptyTarget({ tone: t }) : chooseTone(t));
   const pickCombo = (c: Tone[]) => (comboEmpty(c) ? setEmptyTarget({ combo: c }) : chooseCombo(c));
 
+  // Brief 52: open on the tool's tone or pair. Waits for the real tier (it
+  // starts as "guest" until the account is read): a guest's lock would turn
+  // the pick into an upsell. Once only; a bad id never gets here (the host
+  // passes null and the Visualiser opens on its home).
+  useEffect(() => {
+    if (arrival === null || arrivalIdRef.current !== null || tier === "guest") return;
+    arrivalIdRef.current = arrival.id;
+    arrivalWordRef.current = arrival.hanzi;
+    const tab: VisualiserTab = "tone" in arrival ? "tone" : "pairs";
+    sessionTabsRef.current.add(tab);
+    // A one-shot arrival pick (guarded by arrivalIdRef), the same calls a tap makes.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setPopoverTab(tab);
+    if ("tone" in arrival) pickTone(arrival.tone);
+    else pickCombo(arrival.combo);
+    /* eslint-enable react-hooks/set-state-in-effect */
+    onArrivalUsed?.();
+    // The pick helpers are re-created each render; the guard keeps this once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arrival, tier]);
+
+  // ...and select its example word, once, if the list holds it (a free list
+  // may not: then the player picks one of its own words). Keyed on the
+  // rail's ids: `wordsForTone` is a new array every render.
+  const railKey = wordsForTone.map((w) => w.id).join(",");
+  useEffect(() => {
+    const hanzi = arrivalWordRef.current;
+    if (hanzi === null) return;
+    const w = wordsForTone.find((x) => x.hanzi === hanzi);
+    if (!w) return;
+    arrivalWordRef.current = null;
+    setSelectedWord(w);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- railKey stands for wordsForTone
+  }, [railKey]);
+
   /** "4–1", "3–neutral" — the pair as its tiles show it. */
   const comboLabel = (c: Tone[]) => c.map((t) => ((t as number) === 0 ? "neutral" : t)).join("–");
 
@@ -1446,6 +1512,13 @@ export function Visualiser({ settings, canvasWidth, canvasHeight, onLocked }: Pr
                 selectedId={selectedAttemptId}
                 onSelect={setSelectedAttemptId}
               />
+            )}
+
+            {/* Brief 52: a tool arrival meets the game only after its first try. */}
+            {arrivalTried && onFlyIt && (
+              <button type="button" className="vis-fly-link" onClick={onFlyIt}>
+                Now fly it: your voice steers the bird
+              </button>
             )}
 
             {paused && (
