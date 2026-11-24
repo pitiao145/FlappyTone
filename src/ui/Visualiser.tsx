@@ -1245,14 +1245,16 @@ export function Visualiser({
 
   // ...and select its example word, once, if the list holds it (a free list
   // may not: then the player picks one of its own words). Keyed on the
-  // rail's ids: `wordsForTone` is a new array every render.
-  const railKey = wordsForTone.map((w) => w.id).join(",");
+  // pick and the rail's ids (`wordsForTone` is a new array every render).
+  // Tried on the first rail after the pick only: a word that shows up later
+  // (a level or style change) must not be selected without a tap.
+  const railKey = `${tone}|${combo?.join("-") ?? ""}|${wordsForTone.map((w) => w.id).join(",")}`;
   useEffect(() => {
     const hanzi = arrivalWordRef.current;
-    if (hanzi === null) return;
+    if (hanzi === null || (tone === null && combo === null)) return;
+    arrivalWordRef.current = null;
     const w = wordsForTone.find((x) => x.hanzi === hanzi);
     if (!w) return;
-    arrivalWordRef.current = null;
     setSelectedWord(w);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- railKey stands for wordsForTone
   }, [railKey]);
