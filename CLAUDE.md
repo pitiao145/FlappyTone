@@ -94,6 +94,7 @@ Ground truth is the Praat scorecard: `npm run bench` scores Jane's 829 local cat
 ## Working style
 
 - One vertical slice per session. A slice ends with something runnable and committed.
+- **Worktrees:** create them with Claude Code's own worktree feature, never a bare `git worktree add`: only that copies `.env.local` (listed in `.worktreeinclude`). Then run `npm install` there and give Pierre the dev URL (`npm run dev`; Vite takes the next free port).
 - **Tune in the Lab, ship from the diff.** `npm run dev` → title → `lab`; "copy diff as TS" prints the fields that moved. A value that has not been flown is not tuned. After a tuning change, run the fixture tests and report which golden snapshots moved.
 - Ask before adding a dependency. Never push or deploy unless Pierre asks.
 - Public copy says "the bird" or FlappyTone, never "Pip", and does not name Jane ("our native speaker").
