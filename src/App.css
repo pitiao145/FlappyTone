@@ -10010,13 +10010,14 @@ button.switch-track.switch-on {
     justify-content: safe center;
   }
 
+  /* The loop keeps its own 3:4 shape (canvas 300 × 400). Its width comes
+     from the card's height (100cqh, minus ~360 px for title and buttons), so
+     on a short phone it scales down whole instead of being squeezed. */
   .app-game .playhome-overlay > .playhome-loop {
-    flex: 1 1 0;
-    min-height: 120px;
-    max-height: 270px;
-    width: auto;
+    flex: none;
+    aspect-ratio: 3 / 4;
     height: auto;
-    max-width: 62%;
+    width: clamp(90px, (100cqh - 360px) * 0.75, min(240px, 62%));
   }
 
   /* A small phone (the install tip up): the loop shrinks but stays; the
