@@ -1,0 +1,3 @@
+# Gitignored files Claude Code copies into every new worktree it creates
+# (CLI --worktree, desktop parallel sessions). Local secrets stay local.
+.env.local
