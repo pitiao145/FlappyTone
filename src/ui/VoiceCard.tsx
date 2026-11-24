@@ -90,7 +90,7 @@ export function VoiceCard({ settings, busy, onCalibrate, onAdjust }: Props) {
           </p>
         </>
       )}
-      <div className="setting-actions">
+      <div className="setting-actions voice-actions">
         <button className="primary" disabled={busy} onClick={onCalibrate}>
           Calibrate
         </button>

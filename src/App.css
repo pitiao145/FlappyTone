@@ -588,7 +588,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4) max(var(--space-4), env(safe-area-inset-bottom));
+  /* The shell reserves the home bar on focus screens (brief 54). */
+  padding: var(--space-3) var(--space-4) var(--space-4);
   text-align: left;
 }
 .voice-choice { justify-content: center; text-align: center; }
@@ -597,13 +598,16 @@
 .tuner-top { display: flex; align-items: center; justify-content: space-between; }
 .tuner-cancel { background: none; border: none; box-shadow: none; padding: 10px 0; color: var(--ink-muted); min-height: 44px; }
 .tuner-count { font-size: 13px; color: var(--ink-muted); }
-.tuner-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
-.tuner-step { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--ink-muted); }
+.tuner-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.tuner-step { display: flex; flex-direction: column; gap: 6px; font-size: var(--text-xs); color: var(--ink-muted); white-space: nowrap; }
 .tuner-step-bar { height: 4px; border-radius: 2px; background: var(--surface-deep); }
 .tuner-step.is-done, .tuner-step.is-now { color: var(--ink); font-weight: 600; }
 .tuner-step.is-done { color: var(--accent); }
 .tuner-step.is-done .tuner-step-bar, .tuner-step.is-now .tuner-step-bar { background: var(--accent); }
-.tuner-ring { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+/* Brief 54: never squeezed by the stage below (it used to shrink until the
+   ring covered its own hint); on a short phone the ring itself gets smaller. */
+.tuner-ring { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.tuner-ring svg { width: clamp(84px, 15svh, 128px); height: auto; }
 .tuner-ring-label { font-size: 13px; font-weight: 600; color: var(--ink-muted); }
 .tuner-ring-track { fill: var(--surface-panel); stroke: var(--surface-deep); stroke-width: 10; }
 .tuner-ring-fill { fill: none; stroke: var(--beak); stroke-width: 10; stroke-linecap: round; }
@@ -629,7 +633,9 @@
 .tuner-head-center { align-items: center; text-align: center; }
 .tuner-take { margin: 0; font-size: 13px; color: var(--ink-muted); }
 .tuner-panel { background: var(--surface-panel); border-radius: var(--radius-lg); padding: var(--space-3); }
-.tuner-stage { flex: 1 1 auto; min-height: 200px; display: flex; padding: 8px; }
+/* Brief 54: the live line takes all the height left, so the trace and the
+   bird are drawn large and centred instead of in a strip. */
+.tuner-stage { flex: 1 1 0; min-height: 140px; display: flex; padding: 8px; }
 .tuner-stage canvas { width: 100%; height: 100%; aspect-ratio: auto; }
 .tuner-meter { display: flex; align-items: center; gap: 14px; border-radius: var(--radius-md); padding: 12px 14px; }
 .tuner-meter-text { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; }
@@ -664,7 +670,7 @@
 .tuner-tip { color: var(--ink-muted); }
 .tuner-grow { flex: 1 1 auto; }
 .tuner-actions { display: flex; gap: 10px; }
-.tuner-actions button { flex: 1 1 0; min-height: 48px; }
+.tuner-actions button { flex: 1 1 0; min-height: 48px; padding-inline: var(--space-3); white-space: nowrap; }
 .tuner-done { align-items: stretch; }
 .tuner-check { align-self: center; color: var(--accent); }
 .tuner-rows { display: flex; flex-direction: column; gap: 10px; }
@@ -692,7 +698,18 @@
 .voice-table-head { font-size: 12px; color: var(--ink-muted); border-bottom: none; padding-bottom: 0; background: none; }
 .voice-table-row .is-old { color: var(--ink-muted); }
 .voice-table-row .is-now { font-weight: 600; }
-.voice-parts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+/* Brief 54: Calibrate and the two part buttons share one grid, all the same
+   height and never wrapped: two columns where a label fits (Calibrate |
+   Adjust one part, then Back to calibration across), one column on a narrow
+   phone. */
+.voice-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-2);
+}
+.voice-parts { display: contents; }
+.voice-parts > button:last-child { grid-column: 1 / -1; }
+.voice-actions button { min-height: 48px; padding-inline: var(--space-3); white-space: nowrap; }
 
 .meter {
   height: 8px;
