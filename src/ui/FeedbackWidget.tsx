@@ -26,23 +26,25 @@ type Status = "idle" | "sending" | "sent" | "failed";
  * must never appear over a live run or the visualiser, where a stray tap on
  * the tab would steal a player's attention mid-utterance.
  *
- * Both the tab and the sheet portal to `<body>`: `.frame` is a
- * `container-type` element, so `position: fixed` inside it would anchor to the
- * frame instead of the viewport (same reason as `JoinBoardModal`).
+ * The sheet portals to `<body>`: `.frame` is a `container-type` element, so
+ * `position: fixed` inside it would anchor to the frame instead of the
+ * viewport (same reason as `JoinBoardModal`). The tab renders where GameApp
+ * puts it, a top row outside `.frame` (brief 54): on desktop it is still the
+ * fixed edge tab; on a phone it is a pill in that row, so it never covers a
+ * card or a button.
  */
 export function FeedbackWidget({ screen }: { screen: string }) {
   const [open, setOpen] = useState(false);
 
-  return createPortal(
+  return (
     <>
       {!open && (
         <button type="button" className="feedback-tab" onClick={() => setOpen(true)}>
           Feedback
         </button>
       )}
-      {open && <FeedbackSheet screen={screen} onClose={() => setOpen(false)} />}
-    </>,
-    document.body,
+      {open && createPortal(<FeedbackSheet screen={screen} onClose={() => setOpen(false)} />, document.body)}
+    </>
   );
 }
 

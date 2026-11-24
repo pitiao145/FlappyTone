@@ -74,7 +74,20 @@
     min-height: 52px;
     max-height: 96px;
     margin: 0;
-    padding-bottom: 0;
+    /* Brief 54: the bar's own height plus the home bar under it, so the
+       labels never sit under an installed iPhone's home indicator. */
+    box-sizing: content-box;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Brief 54: calibration and live runs take the whole phone (GameApp's
+     FOCUS_SCREENS). The home bar is then reserved by the shell instead. */
+  .app-game.is-focus .game-nav {
+    display: none;
+  }
+
+  .app-game.is-focus .app-main {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   .app-game .game-nav-items {
@@ -7879,6 +7892,37 @@ button.switch-track.switch-on {
   border-color: var(--ink-soft);
 }
 
+/* GameApp's top row around the tab: nothing on desktop (the tab is fixed to
+   the right edge there). */
+.app-topbar {
+  display: contents;
+}
+
+/* Brief 54, phones: the edge tab sat on top of cards and buttons (a phone
+   has no side gutter). It becomes a pill at the end of a slim top row, in
+   the page flow, so it can never cover content. Same dashed paper look;
+   44 px tall, a real tap target. */
+@media (max-width: 719px) {
+  .app-game .app-topbar {
+    display: flex;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+    width: 100%;
+    padding: var(--space-2) var(--space-3) 0;
+  }
+
+  .app-topbar .feedback-tab {
+    position: static;
+    writing-mode: horizontal-tb;
+    transform: none;
+    min-height: 44px;
+    padding: 0 var(--space-4);
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius-pill);
+    box-shadow: none;
+  }
+}
+
 .feedback-header {
   display: flex;
   align-items: center;
@@ -9885,5 +9929,190 @@ button.switch-track.switch-on {
 @media (prefers-reduced-motion: reduce) {
   .visualiser-screen .vis-fly-link {
     transition: none;
+  }
+}
+
+/* ------------------------------------------------ phone touch targets
+   Brief 54: every control a thumb taps on a phone is at least 44 × 44 px
+   (Apple's minimum), and two-button rows never wrap a label. Desktop keeps
+   its compact sizes: a pointer does not need them. */
+@media (max-width: 719px) {
+  .screen button.link {
+    min-height: 44px;
+    padding: 0 var(--space-3);
+  }
+
+  .choice-option,
+  .vis-filter-group .vis-filter-btn,
+  .vis-setting-chips .vis-setting-chip,
+  .tone-popover-tabs .tone-popover-tab {
+    min-height: 44px;
+  }
+
+  .pause-card .pause-secondary {
+    min-height: 48px;
+  }
+
+  .browser-hint__dismiss {
+    min-width: 44px;
+    min-height: 44px;
+    margin: -10px -10px -10px 0;
+  }
+
+  .modal-close {
+    top: var(--space-1);
+    right: var(--space-1);
+    width: 44px;
+    height: 44px;
+  }
+
+  .screen button.go-btn-gold.hsm-join-btn {
+    min-height: 48px;
+  }
+
+  /* See leaderboard | Share: same height, side by side where both labels
+     fit, stacked on a narrow phone. */
+  .hsm-actions {
+    flex-wrap: wrap;
+  }
+
+  .hsm-action-btn {
+    flex: 1 1 9.5rem;
+    min-height: 48px;
+    padding-inline: var(--space-3);
+    white-space: nowrap;
+  }
+
+  .hsm-card .hsm-join-btn {
+    min-height: 48px;
+  }
+
+  /* A switch row is tapped as a whole (the <label>), so the row is the target. */
+  .switch-row {
+    min-height: 44px;
+  }
+}
+
+/* Brief 54, desktop: the level pick has no canvas size of its own, so its
+   card ran from the sidebar to the window edge, under the Feedback tab. It
+   is a centred card like the other Play screens. */
+@media (min-width: 720px) {
+  .level-select-screen.game-stage {
+    max-width: 560px;
+    margin-inline: auto;
+  }
+}
+
+/* ------------------------------------------------ phone layout fixes (brief 54) */
+@media (max-width: 719px) {
+  /* The frame's 9:16 width cap is for the game canvas. On a short phone it
+     squeezed these text screens to ~220 px (calibration's Redo buttons were
+     cut off); they take the phone's width instead. */
+  .app-game .frame:has(.tuner-screen, .calibrate-screen, .settings-screen, .gameover-screen) {
+    max-width: none;
+  }
+
+  /* Play home, Modes and the level pick: the title card fits the space left
+     (under the "Add to Home Screen" tip too) instead of running off the
+     bottom; the gate loop is what gives way, the buttons never do. */
+  .app-game .playhome-stage > .playhome-canvas {
+    max-height: 100%;
+    container: playhome / size;
+  }
+
+  /* Longer cards (Modes, Before you start, the level pick) scroll inside
+     the card on a short phone rather than losing their top and bottom.
+     `safe center` keeps the first line reachable when they overflow. */
+  .app-game .playhome-canvas > .playhome-overlay,
+  .app-game .level-select-screen > .playhome-overlay {
+    height: 100%;
+    max-height: 100%;
+    overflow-y: auto;
+    justify-content: safe center;
+  }
+
+  .app-game .playhome-overlay > .playhome-loop {
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: 270px;
+    width: auto;
+    height: auto;
+    max-width: 62%;
+  }
+
+  /* Too short for the loop (a small phone, with the install tip up): the
+     title and buttons alone, starting under the home link. */
+  @container playhome (max-height: 440px) {
+    .playhome-overlay > .playhome-loop {
+      display: none;
+    }
+
+    .playhome-overlay:has(> .playhome-loop) {
+      padding-top: 80px;
+      gap: var(--space-2);
+    }
+
+    .playhome-overlay:has(> .playhome-loop) .playhome-menu button {
+      min-height: 44px;
+    }
+  }
+
+  /* On Play home the Feedback pill takes the canvas's free top-right corner
+     (the home link has the left one) rather than a row of its own. */
+  .app-game .app-main {
+    position: relative;
+  }
+
+  .app-game:has(.playhome-home-link) .app-topbar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 3;
+    width: auto;
+    padding: var(--space-3) var(--space-3) 0;
+  }
+
+  /* The first-visit "Add to Home Screen" tip owns the top while it is up. */
+  .app-game:has(.browser-hint) .app-topbar {
+    display: none;
+  }
+
+  /* Calibration fills the phone's height (it still scrolls when the phone is
+     shorter than its content), so the live line gets the room left over
+     instead of leaving it empty under the buttons. */
+  .app-game .frame:has(.tuner-screen) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-game .frame > .tuner-screen {
+    flex: 1 0 auto;
+  }
+
+}
+
+/* Pause → Tunnel width: four options as a 2 × 2 grid on a narrow phone,
+   not three and a lone full-width "wide". */
+@media (max-width: 379px) {
+  .pause-settings-body .choice {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 719px) {
+
+  /* Mid-run, the banner sat on the hearts and the pause button. It moves to
+     the bottom of the stage, clear of the HUD. */
+  .mic-status {
+    top: auto;
+    bottom: var(--space-4);
+  }
+
+  /* While the mic is out, "hold it a little longer" and friends mean
+     nothing; the banner takes their place. */
+  .game-stage:has(.mic-status) .hud .toast,
+  .game-stage:has(.mic-status) .phase-banner {
+    visibility: hidden;
   }
 }
