@@ -22,6 +22,8 @@
   },
   "include": [
     "src/dev/render-demo.ts",
+    "src/dev/shots/shots.ts",
+    "src/dev/shots/summary.ts",
     "src/dev/seo-check-pinyin.ts",
     "src/dev/seoPinyin.ts",
     "src/site/zhuyin.ts",

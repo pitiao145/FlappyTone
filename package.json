@@ -36,6 +36,7 @@
     "process-clips": "node --experimental-strip-types src/dev/process-clips.ts",
     "golive-shapes": "node --experimental-strip-types src/dev/golive-shapes.ts",
     "render-demo": "node --experimental-strip-types src/dev/render-demo.ts",
+    "shots": "node --experimental-strip-types src/dev/shots/shots.ts",
     "check:mic-chunks": "node --experimental-strip-types src/dev/check-mic-chunks.ts",
     "video:studio": "remotion studio",
     "video:render": "remotion render Promo",

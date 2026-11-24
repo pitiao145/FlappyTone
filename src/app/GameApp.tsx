@@ -1365,6 +1365,23 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     openVisualiser();
   }, [openVisualiser]);
 
+  // Dev only (hard rule 7): brief 54's screenshot harness (src/dev/shots/)
+  // reaches the game-over screen without flying a whole run.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const w = window as unknown as { __ftShots?: unknown };
+    w.__ftShots = {
+      gameOver: (s: RunStats) => {
+        setGameAlive(false);
+        setStats(s);
+        setScreen("gameover");
+      },
+    };
+    return () => {
+      delete w.__ftShots;
+    };
+  }, []);
+
   const onNavigate = useCallback(
     (tab: NavTab) => {
       if (tab === "visualiser") {
