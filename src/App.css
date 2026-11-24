@@ -3281,39 +3281,105 @@
   color: currentColor;
 }
 
-/* Accuracy + Tone cards + Clear, above the canvas. Hidden again at the
-   desktop breakpoint, where the same readouts live in `.visualiser-panel`
-   and Clear sits under the canvas. A 1fr / auto / 1fr grid keeps the
-   cards centered in the viewport while Clear sits in the trailing lane. */
+/* Brief 54: above the canvas, two rows. Row 1: mute, the target-zone
+   toggle and Clear. Row 2: one strip holding both readouts (tone accuracy |
+   tone heard). One grid row of five items did not fit a phone: the toggle
+   was cut off and the cards shrank to one word per line. Hidden again at
+   the desktop breakpoint, where the same readouts live in
+   `.visualiser-panel` and Clear sits under the canvas. */
 .vis-top-bar {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex: 0 0 auto;
-  padding: 12px 12px 0;
+  padding: var(--space-3) var(--space-3) 0;
 }
 
-.vis-top-bar .vis-readouts {
-  grid-column: 2;
+.vis-top-bar .vis-tools {
+  order: 1;
 }
 
 /* `>`, not a descendant selector: Clear is a direct child of `.vis-top-bar`,
-   but the mute button is nested one level deeper inside `.vis-mute-group` —
-   an icon button, not this text-pill padding. */
+   but the mute button is nested one level deeper inside `.vis-mute-group`. */
 .vis-top-bar > button {
-  grid-column: 3;
-  justify-self: end;
+  order: 2;
+  margin-left: auto;
   flex: 0 0 auto;
-  padding: 8px 14px;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  white-space: nowrap;
 }
 
-/* Mirrors Clear's slot (column 3) on the opposite side — the empty 1fr
-   column 1 already existed to keep the centered readouts balanced, so the
-   mute toggle fills a slot that was previously just spacing. */
-.vis-top-bar .vis-tools {
-  grid-column: 1;
-  justify-self: start;
+.vis-top-bar .vis-readouts {
+  order: 3;
+  flex: 1 0 100%;
+  justify-content: stretch;
+  gap: 0;
+  padding: var(--space-1) 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  border: 1px solid var(--line);
+}
+
+/* Each readout is half the strip: label on top, value and detail on one
+   line under it. */
+.vis-top-bar .vis-accuracy {
+  flex: 1 1 0;
+  max-width: none;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-start;
+  column-gap: var(--space-2);
+  row-gap: 0;
+  padding: var(--space-1) var(--space-3);
+  border: none;
+  border-radius: 0;
+  background: none;
+  text-align: left;
+}
+
+.vis-top-bar .vis-accuracy + .vis-accuracy {
+  border-left: 1px solid var(--line);
+}
+
+.vis-top-bar .vis-accuracy-label {
+  flex: 0 0 100%;
+}
+
+.vis-top-bar .vis-accuracy.tier-bad {
+  border: none;
+  padding: var(--space-1) var(--space-3);
+  background: rgba(var(--danger-rgb), 0.1);
+}
+
+.vis-top-bar .vis-accuracy + .vis-accuracy.tier-bad {
+  border-left: 1px solid var(--line);
+}
+
+/* The toast hangs just under the strip's Tone half, over the canvas edge,
+   for its 1.2 s: inside the strip it hit the label on a narrow phone. */
+.vis-top-bar .vis-wrong-toast {
+  top: calc(100% + var(--space-2));
+  left: auto;
+  right: var(--space-2);
+  transform: none;
+  margin-left: 0;
+  font-size: var(--text-xs);
+}
+
+/* Free and pair reads: one small column per syllable (tone over its
+   confidence), side by side, so three syllables still fit half a phone. */
+.vis-syllables {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.vis-syllable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 /* Mute and the target-band toggle, side by side (column 1 on mobile, the
@@ -3340,8 +3406,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border-radius: var(--radius-pill);
 }
@@ -3352,11 +3418,11 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 40px;
-  padding: 0 12px;
+  height: 44px;
+  padding: 0 14px;
   border-radius: var(--radius-pill);
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--text-sm);
   white-space: nowrap;
 }
 .vis-band-label { color: var(--ink); }
@@ -3502,9 +3568,9 @@
 }
 
 .vis-accuracy-label {
-  font-size: 9px;
+  font-size: var(--text-xs);
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-dim);
 }
@@ -3532,7 +3598,7 @@
 }
 
 .vis-accuracy-tries {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--ink-dim);
 }
 

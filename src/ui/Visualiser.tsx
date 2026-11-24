@@ -1052,19 +1052,18 @@ export function Visualiser({
           <span className="vis-accuracy-tries">couldn't detect both tones</span>
         </>
       ) : syllableReads ? (
-        <>
-          <strong className="vis-accuracy-value">
-            {syllableReads
-              .map((r) => (r === null ? "?" : r.tone === "none" ? "none" : `T${r.tone}`))
-              .join(" · ")}
-          </strong>
-          {/* Confidence per syllable, in the same order as the tones. */}
-          <span className="vis-accuracy-tries">
-            {syllableReads
-              .map((r) => (r === null ? "–" : `${Math.round(r.confidence * 100)}%`))
-              .join(" · ")}
-          </span>
-        </>
+        // Brief 54: one column per syllable, the tone over its confidence,
+        // so three syllables fit half a phone without wrapping word by word.
+        <span className="vis-syllables">
+          {syllableReads.map((r, i) => (
+            <span key={i} className="vis-syllable">
+              <strong className="vis-accuracy-value">
+                {r === null ? "?" : r.tone === "none" ? "none" : `T${r.tone}`}
+              </strong>
+              <span className="vis-accuracy-tries">{r === null ? "–" : `${Math.round(r.confidence * 100)}%`}</span>
+            </span>
+          ))}
+        </span>
       ) : (
         <span className="vis-accuracy-value vis-accuracy-empty">–</span>
       )}
