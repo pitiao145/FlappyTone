@@ -61,11 +61,15 @@ describe("tool mode: the free tier's lists, one word playing per tone and pair",
     expect(visualiserSrc).not.toMatch(/from "\.\.\/data\/tier\.ts"/);
   });
 
-  it("shows the locked-sound note and hides the word-list picker", () => {
+  it("shows the locked-sound note, and every TOCFL level with only TOCFL 1 open", () => {
     const out = render({ tier: "free", tool: TOOL });
     expect(out).toContain("vis-tool-note");
     expect(out).toContain("Sign up free to hear every word");
-    expect(out).not.toContain("Word lists");
+    expect(out).toContain("Word lists");
+    expect(out).toContain("All levels 🔒");
+    expect(out).toContain("TOCFL 2 🔒");
+    expect(out).toContain("TOCFL 3 🔒");
+    expect(out).not.toContain("TOCFL 1 🔒");
   });
 
   it("a locked word selects and draws, plays nothing and shows the note", () => {
@@ -77,9 +81,10 @@ describe("tool mode: the free tier's lists, one word playing per tone and pair",
 });
 
 describe("the app's Visualiser (no tool prop) is unchanged", () => {
-  it("keeps the word-list picker and has no tool note", () => {
+  it("keeps the word-list picker as it was and has no tool note", () => {
     const out = render({ tier: "free" });
     expect(out).toContain("Word lists");
+    expect(out).not.toContain("All levels 🔒");
     expect(out).not.toContain("vis-tool-note");
   });
 });

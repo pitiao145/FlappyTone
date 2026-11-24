@@ -121,9 +121,12 @@ Four rules hold the split together:
 **The public tone visualizer (`/tools/tone-visualizer`).** Since brief 53
 (24 Nov 2026) the page runs **the app's own `src/ui/Visualiser.tsx`** in tool
 mode (`tool` prop), so the tool and the app can never look different. Before
-Start the page shows a static stand-in in a box of the same size (the third
-tone's line, every tone and pair with its example word as crawlable text);
-nothing moves when the Visualiser swaps in. Start (pointerdown preloads, the
+Start the page shows a static stand-in in a box of the same size: the
+Visualiser's empty frame (chao grid, bird, readout cards) with one Start card
+on the board, and the four tones with their example words as crawlable text;
+nothing moves when the Visualiser swaps in. The box copies the app's shape
+(900px wide at most, about the window's height), so the board is narrow and
+tall as in the app. Start (pointerdown preloads, the
 click opens the mic, hard rule 4) loads one chunk, `src/site/toolMic.ts` +
 `src/site/toolVisualiser.tsx`. Board: the game's own settings on this device
 (with the learned scale), else brief 50's lower/higher voice choice
@@ -131,11 +134,11 @@ click opens the mic, hard rule 4) loads one chunk, `src/site/toolMic.ts` +
 saved (`toneflap.voiceStart.v1`, shared with /app on the same origin), the
 app's settings are never written from the site. **Tool mode** shows the free
 tier's lists (`tier` is forced to `"free"`; `tiers.ts` untouched; the page
-never reads the account for its view), pins them to TOCFL 1 (no word-list
-picker; the empty-list hint can still add a level), keeps the Standard/Spoken
-toggle, and plays the sound of **only the first word on screen** per tone or
+never reads the account for its view), pins them to TOCFL 1 (the word-list picker shows every level, only TOCFL 1
+open; other levels, "All levels" and the empty-list hint's "Add TOCFL n" are
+locked), keeps the Standard/Spoken toggle, and plays the sound of **only the first word on screen** per tone or
 pair (`playsInTool`, `src/ui/toolPlayable.ts`). Any other word selects and
-draws its shape with no sound; locked chips and locked-sound taps light up
+draws its shape with no sound (a muted-speaker icon on its chip); locked chips and locked-sound taps light up
 the note under the board, which links to the tool-user signup (or "Open the
 full visualizer" when the browser holds a session, `signedIn.ts`). It opens
 on `?tone=` (Tone 3 by default) with the first word selected and played once.

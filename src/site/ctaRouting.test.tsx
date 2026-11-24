@@ -55,11 +55,11 @@ describe("site CTA routing (brief 25)", () => {
     // Only the nav's Try it free opens the overlay.
     expect(overlays(out)).toBe(1);
     // Brief 52: each carries the tone it is on (Tone 3 before hydration) and which CTA.
-    expect(out).toContain('class="tc-hear-link" href="/app?intent=visualiser&amp;src=/tools/tone-visualizer&amp;tone=3&amp;cta=hear"');
+    expect(out).toContain('class="sticker-button" href="/app?intent=visualiser&amp;src=/tools/tone-visualizer&amp;tone=3&amp;cta=hear"');
     expect(out).toContain('href="/app?intent=visualiser&amp;src=/tools/tone-visualizer&amp;tone=3&amp;cta=more"');
     expect(out).toContain(PIP_CTA_LABEL.signup);
-    // The one in-tool link: no audio here, so "hear it first" leads to the app.
-    expect(out).toContain("tc-hear-link");
+    // Brief 53: one word per tone plays here; "hear every word" leads to the app.
+    expect(out).toContain('class="tool-cta"');
     // The extra "Practise in the full visualizer" + feature line went (2 Nov 2026).
     expect(out).not.toContain("tc-app-features");
   });

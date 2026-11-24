@@ -8,7 +8,8 @@ import { saveVoiceStart, type VoicePreset } from "../../game/voiceStart.ts";
 import { trackSignupCta } from "../DemoCta.tsx";
 import { absoluteUrl, type SiteRoute } from "../routes.ts";
 import { toneName } from "../toneNames.ts";
-import { PipCta } from "../Pip.tsx";
+import { Pip, PipCta } from "../Pip.tsx";
+import { SpeakerHighIcon } from "../../ui/icons.tsx";
 import {
   DEFAULT_REF,
   polylineOf,
@@ -72,7 +73,6 @@ function loadHost(): Promise<HostModule> {
 type Phase = "idle" | "loading" | "tap-again" | "voice" | "opening" | "error" | "running";
 
 const SINGLE = TONE_REFS.filter((r) => r.tones.length === 1);
-const PAIRS = TONE_REFS.filter((r) => r.tones.length > 1);
 
 /**
  * The stand-in board before Start: the third tone's line on the board's own
@@ -215,8 +215,8 @@ function Visualizer() {
 
   /** The note under the board: signup, or the app for a browser that is signed in. */
   const lockedCta = signedIn
-    ? { href: toolHref(refId, "more"), label: "Open the full visualizer" }
-    : { href: toolHref(refId, "hear"), label: "Sign up free to hear every word" };
+    ? { href: toolHref(refId, "more"), label: "Open full visualizer" }
+    : { href: toolHref(refId, "hear"), label: "Hear every word" };
 
   return (
     <div className="tc-tool tool-vis-tool" role="group" aria-label="Mandarin tone visualizer">
@@ -261,21 +261,33 @@ function Visualizer() {
 
       {/* One word per tone plays here; hearing every word is what the app
           adds, so that wish leads there (brief 52's tool-user signup). */}
-      <a
-        className="tc-hear-link"
-        href={toolHref(refId, "hear")}
-        onClick={() => trackSignupCta(PATH, "visualizer_hear_example", refId)}
-      >
-        <span aria-hidden="true">🔊</span> Want to hear every word? Sign up and listen to our
-        native speaker say all of them in the full visualizer.
-      </a>
+      <aside className="tool-cta">
+        <div className="tool-cta-text">
+          <p className="tool-cta-title">
+            <SpeakerHighIcon />
+            Hear every word from a native speaker
+          </p>
+          <p className="tool-cta-body">
+            Sign up free: 5 practice words per tone and 10 per tone pair, each one said by our native
+            speaker, so you hear it before you say it.
+          </p>
+        </div>
+        <a
+          className="sticker-button"
+          href={signedIn ? toolHref(refId, "more") : toolHref(refId, "hear")}
+          onClick={() => trackSignupCta(PATH, "visualizer_hear_example", refId)}
+        >
+          {signedIn ? "Open the full visualizer" : "Sign up free"}
+        </a>
+      </aside>
     </div>
   );
 }
 
 /**
- * The tool before Start: the Visualiser's frame with the third tone's line,
- * every tone and pair with its example word (crawlable text), and Start.
+ * The tool before Start: the Visualiser's own frame, empty (the chao grid,
+ * the bird, the readout cards), with one Start card on the board. The four
+ * tones and their example words stay as text, for readers and crawlers.
  */
 function StandIn({
   phase,
@@ -293,65 +305,79 @@ function StandIn({
   onTapAgain: () => void;
 }) {
   const ref = refFor(DEFAULT_REF);
+  const helpOpen = phase === "error" && micKind === "permission-denied";
   return (
     <div className="tool-vis-standin">
       <div className="tool-vis-board">
-        <svg className="tc-idle" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <path d={shapePath(ref, "textbook")} style={{ stroke: TONE_LINE_COLOR[3] }} />
+        <svg className="tool-vis-grid" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          {[1, 2, 3, 4, 5].map((c) => (
+            <line key={c} x1="0" x2="100" y1={90 - (c - 1) * 20} y2={90 - (c - 1) * 20} />
+          ))}
+          <path className="tool-vis-guide" d={shapePath(ref, "textbook")} />
         </svg>
+        <Pip size={40} className="tool-vis-bird" />
+        <div className="tool-vis-start" aria-live="polite">
+          {helpOpen ? (
+            <MicHelpPanel surface="visualizer-tool" reason="permission-denied" onTryAgain={onRetry} />
+          ) : (
+            <>
+              <p className="tool-vis-start-title">Say a tone, see its shape</p>
+              <button
+                type="button"
+                className="sticker-button"
+                disabled={phase === "loading" || phase === "opening"}
+                onPointerDown={() => void loadHost()}
+                onClick={phase === "tap-again" ? onTapAgain : phase === "error" ? onRetry : onStart}
+              >
+                {phase === "tap-again"
+                  ? "Allow the microphone"
+                  : phase === "error"
+                    ? "Try again"
+                    : phase === "loading" || phase === "opening"
+                      ? "One moment…"
+                      : "Start"}
+              </button>
+              {phase === "error" && error ? (
+                <p className="tc-error">{error}</p>
+              ) : phase === "opening" ? (
+                <p>Allow the microphone when your browser asks.</p>
+              ) : phase === "tap-again" ? (
+                <p>Ready. Tap once more to allow the microphone.</p>
+              ) : (
+                <p>
+                  Pick a lower or higher voice, then say a word. Your pitch is drawn over our native
+                  speaker&apos;s line, Standard (slow, clear) or Spoken (everyday speed), with your tone
+                  accuracy.
+                </p>
+              )}
+              {(phase === "idle" || phase === "tap-again") && <InAppMicNotice surface="visualizer-tool" />}
+              {(phase === "idle" || phase === "tap-again") && <MicAllowNote />}
+            </>
+          )}
+        </div>
       </div>
       <div className="tool-vis-side">
-        <p className="tool-vis-ref">
-          <b style={{ color: TONE_LINE_COLOR[3] }}>{ref.label}</b>{" "}
-          <span lang="zh-Hant-TW">e.g. {ref.example}</span>. The line is our native speaker&apos;s average
-          at slow, clear speed. {ref.diff}
-        </p>
+        <div className="tool-vis-cards" aria-hidden="true">
+          <span>
+            Tone accuracy <b>–</b>
+          </span>
+          <span>
+            Tone <b>–</b>
+          </span>
+        </div>
         <p className="tool-vis-label">By tone</p>
-        <ul className="tool-vis-refs">
+        <ul className="tool-vis-tones">
           {SINGLE.map((r) => (
-            <li key={r.id}>
+            <li key={r.id} style={{ borderColor: TONE_LINE_COLOR[r.tones[0]] }}>
               <span style={{ color: TONE_LINE_COLOR[r.tones[0]] }}>{toneName(r.tones[0], true)}</span>{" "}
               <span lang="zh-Hant-TW">{r.example}</span>
             </li>
           ))}
         </ul>
-        <p className="tool-vis-label">Tone pairs</p>
-        <ul className="tool-vis-refs tool-vis-pairs">
-          {PAIRS.map((r) => (
-            <li key={r.id}>
-              <span>{r.label}</span> <span lang="zh-Hant-TW">{r.example}</span>
-            </li>
-          ))}
-        </ul>
-        <div className="tool-vis-start" aria-live="polite">
-          {(phase === "idle" || phase === "tap-again") && <InAppMicNotice surface="visualizer-tool" />}
-          {phase === "idle" && (
-            <p>
-              Tap Start, pick a lower or higher voice, then say a word. Your pitch is drawn over our native
-              speaker&apos;s line, Standard (slow, clear) or Spoken (everyday speed), with your tone accuracy.
-            </p>
-          )}
-          {phase === "loading" && <p>Loading the visualizer…</p>}
-          {phase === "tap-again" && <p>Ready. Tap once more to allow the microphone.</p>}
-          {phase === "opening" && <p>Allow the microphone when your browser asks.</p>}
-          {phase === "error" && micKind === "permission-denied" ? (
-            <MicHelpPanel surface="visualizer-tool" reason="permission-denied" onTryAgain={onRetry} />
-          ) : (
-            phase === "error" && error && <p className="tc-error">{error}</p>
-          )}
-          {!(phase === "error" && micKind === "permission-denied") && (
-            <button
-              type="button"
-              className="tc-button tc-primary"
-              disabled={phase === "loading" || phase === "opening"}
-              onPointerDown={() => void loadHost()}
-              onClick={phase === "tap-again" ? onTapAgain : phase === "error" ? onRetry : onStart}
-            >
-              {phase === "tap-again" ? "Allow the microphone" : phase === "error" ? "Try again" : "Start"}
-            </button>
-          )}
-          {(phase === "idle" || phase === "tap-again") && <MicAllowNote />}
-        </div>
+        <p className="tool-vis-ref">
+          <b style={{ color: TONE_LINE_COLOR[3] }}>{ref.label}</b>, e.g. <span lang="zh-Hant-TW">{ref.example}</span>:
+          the line is our native speaker&apos;s average at slow, clear speed. {ref.diff}
+        </p>
       </div>
     </div>
   );

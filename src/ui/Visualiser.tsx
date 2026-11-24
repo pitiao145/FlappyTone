@@ -71,6 +71,7 @@ import {
   TonesGridIcon,
   TONE_SHORT_LABEL,
   type ToneOrNeutral,
+  SpeakerSlashIcon,
 } from "./toneIcons.tsx";
 
 /**
@@ -1117,11 +1118,7 @@ export function Visualiser({
     >
       <span className="word-chip-hanzi">{w.hanzi}</span>
       <span className="word-chip-pinyin">{w.pinyin}</span>
-      {!soundPlays(w) && (
-        <span className="word-chip-mute" aria-hidden="true">
-          🔒
-        </span>
-      )}
+      {!soundPlays(w) && <SpeakerSlashIcon className="word-chip-mute" />}
     </button>
   );
 
@@ -1253,18 +1250,24 @@ export function Visualiser({
           {/* Shortcut: every level this tier allows. */}
           <button
             type="button"
-            className={`vis-setting-chip${allLevelsOn ? " active" : ""}`}
+            className={`vis-setting-chip${allLevelsOn && !tool ? " active" : ""}${tool ? " is-locked" : ""}`}
             onClick={() => {
+              if (tool) {
+                showLocked("visualiser-word-list");
+                return;
+              }
               sessionLevelsChangedRef.current = true;
               setSelectedLevels([...limits.beginner.levels!].sort((a, b) => a - b));
             }}
-            aria-pressed={allLevelsOn}
+            aria-pressed={tool ? undefined : allLevelsOn}
+            aria-label={tool ? "All levels, locked, sign up free" : undefined}
           >
-            {allLevelsOn && <span className="vis-chip-check" aria-hidden="true">✓</span>}
-            All levels
+            {allLevelsOn && !tool && <span className="vis-chip-check" aria-hidden="true">✓</span>}
+            All levels{tool && " 🔒"}
           </button>
           {([1, 2, 3] as const).map((n) => {
-            const unlocked = limits.beginner.levels!.includes(n);
+            // Tool mode: every level shows, only TOCFL 1 is open (brief 53).
+            const unlocked = tool ? n === 1 : limits.beginner.levels!.includes(n);
             const on = selectedLevels.includes(n);
             return (
               <button
@@ -1277,13 +1280,17 @@ export function Visualiser({
                     showLocked("visualiser-word-list");
                     return;
                   }
+                  // Tool mode keeps TOCFL 1 on: it is the only list there.
+                  if (tool) return;
                   sessionLevelsChangedRef.current = true;
                   setSelectedLevels((cur) =>
                     cur.includes(n) ? cur.filter((l) => l !== n) : [...cur, n].sort((a, b) => a - b),
                   );
                 }}
                 aria-pressed={unlocked ? on : undefined}
-                aria-label={unlocked ? LEVEL_LABEL[n] : `${LEVEL_LABEL[n]}, locked, Pro`}
+                aria-label={
+                  unlocked ? LEVEL_LABEL[n] : `${LEVEL_LABEL[n]}, locked, ${tool ? "sign up free" : "Pro"}`
+                }
               >
                 {on && <span className="vis-chip-check" aria-hidden="true">✓</span>}
                 {LEVEL_LABEL[n]}
@@ -1370,7 +1377,9 @@ export function Visualiser({
     const target = emptyTarget;
     if (target === null || ("tone" in target) !== (kind === "tone")) return null;
     const label = "tone" in target ? `Tone ${target.tone}` : comboLabel(target.combo);
-    const add = levelToAdd(words, tier, selectedLevels, speechStyle, target);
+    const found = levelToAdd(words, tier, selectedLevels, speechStyle, target);
+    // Tool mode: only TOCFL 1 is open, so another list is locked there.
+    const add = found && tool ? { ...found, unlocked: false } : found;
     return (
       <div className="vis-empty-hint" role="status">
         <p>
@@ -1537,10 +1546,9 @@ export function Visualiser({
     </div>
   );
 
-  // Tool mode pins the lists to the free default (TOCFL 1): no level picker.
   const pickerSettings = (
     <div className="vis-settings">
-      {!tool && wordListSetting}
+      {wordListSetting}
       {speechStyleSetting}
     </div>
   );
@@ -1636,13 +1644,13 @@ export function Visualiser({
           </div>
 
           {tool && (
-            <p className={soundLocked ? "vis-tool-note is-on" : "vis-tool-note"} role="status">
-              <span aria-hidden="true">🔒 </span>
-              Here the first word of each tone and pair plays its sound.{" "}
-              <a href={tool.cta.href} onClick={tool.cta.onClick}>
+            <div className={soundLocked ? "vis-tool-note is-on" : "vis-tool-note"} role="status">
+              <SpeakerSlashIcon className="vis-tool-note-icon" />
+              <span className="vis-tool-note-text">Only the first word of each tone and pair plays here.</span>
+              <a className="vis-tool-note-btn" href={tool.cta.href} onClick={tool.cta.onClick}>
                 {tool.cta.label}
               </a>
-            </p>
+            </div>
           )}
         </div>
 
