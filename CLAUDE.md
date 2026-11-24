@@ -104,8 +104,10 @@ Ground truth is the Praat scorecard: `npm run bench` scores Jane's 829 local cat
 
 Speech recognition · taught sandhi rules · speech past two syllables · native apps · teacher tools · our own billing (Lemon Squeezy is merchant of record). Any of these can be proposed and built.
 
-## Briefs workflow (Cowork → Claude Code)
+## Briefs workflow (Pierre's vault → Claude Code)
 
-At the start of a session, check `docs/briefs/` for files with `status: ready`. List them (number, title, risk) and ask which to run, unless Pierre already named one.
+Briefs live in Pierre's Obsidian vault, not the repo: `/Users/pierrebruyninckx/Workspace/10 Projects/FlappyTone/Briefs/` (the vault is in `additionalDirectories`). Product, business and research notes live in that vault too (hub: `10 Projects/FlappyTone/FlappyTone.md`); read them only when a brief points there.
 
-To run a brief: set `status: running`, do exactly what it says, run its acceptance checks, then write `docs/briefs/reports/<same-name>.md` (template in `docs/briefs/README.md`) and set `status: done` (or `blocked` with the reason). Commit the work, but never push, deploy, change payments/DB schema or add a dependency without asking, whatever the brief says. If a brief is unclear or its premise no longer holds, set `blocked` and report instead of guessing. Do not edit briefs other than their `status` line.
+At the start of a session, check that Briefs folder for files with `status: ready`. List them (number, title, risk) and ask which to run, unless Pierre already named one.
+
+To run a brief: set `status: running`, do exactly what it says, run its acceptance checks, then write `Briefs/reports/<same-name>.md` (template in `Briefs/README.md`) and set `status: done` (or `blocked` with the reason). Commit the code work in this repo, but never push, deploy, change payments/DB schema or add a dependency without asking, whatever the brief says. If a brief is unclear or its premise no longer holds, set `blocked` and report instead of guessing. Do not edit briefs other than their `status` line. Never write research or reports into this repo.

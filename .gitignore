@@ -31,7 +31,15 @@ docs/tonepairs/
 
 docs/word_lists_local/notes and feedback.md
 
-docs/
+# docs: text is tracked; heavy/local data is not
+docs/word_lists_local/
+docs/tonepairs/
+docs/test*.json
+docs/**/*.numbers
+docs/**/*.xlsx
+docs/**/.DS_Store
+# legacy: briefs now live in the Obsidian vault (remove after worktrees merge)
+docs/briefs/
 
 docs/Content pipeline/
 # Editor directories and files
