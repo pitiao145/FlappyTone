@@ -111,3 +111,10 @@ Briefs live in Pierre's Obsidian vault, not the repo: `/Users/pierrebruyninckx/W
 At the start of a session, check that Briefs folder for files with `status: ready`. List them (number, title, risk) and ask which to run, unless Pierre already named one.
 
 To run a brief: set `status: running`, do exactly what it says, run its acceptance checks, then write `Briefs/reports/<same-name>.md` (template in `Briefs/README.md`) and set `status: done` (or `blocked` with the reason). Commit the code work in this repo, but never push, deploy, change payments/DB schema or add a dependency without asking, whatever the brief says. If a brief is unclear or its premise no longer holds, set `blocked` and report instead of guessing. Do not edit briefs other than their `status` line. Never write research or reports into this repo.
+
+## Browser
+- Use dev-browser --headless for UI checks. Never --connect.
+- Never use the Claude browser (`mcp__Claude_Browser__*`), including `preview_start` / `preview_list`.
+- Start dev servers with Bash in the background (`FT_NO_SSL=1 npx vite --port 5180`), then point dev-browser at `http://localhost:5180`.
+- Logged-in sites are read-only: no posting, clicking buy/send/delete, or changing settings unless the brief explicitly says so.
+- If a login has expired, stop and tell Pierre. Never type passwords.
