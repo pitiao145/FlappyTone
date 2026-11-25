@@ -73,7 +73,9 @@ export default defineConfig({
   // workers/clips is its own npm workspace with its own vitest config/runner
   // (`npm run worker:test`) — this repo's own `test` script must not also
   // collect it, since it's a separate Worker runtime environment.
+  // `.claude/worktrees/` holds other branches' checkouts (Claude worktrees);
+  // their tests belong to those branches, not this run.
   test: {
-    exclude: [...configDefaults.exclude, 'workers/**'],
+    exclude: [...configDefaults.exclude, 'workers/**', '.claude/worktrees/**'],
   },
 })
