@@ -271,6 +271,12 @@ export function getMicStatus(): MicStatus {
   return micStatus;
 }
 
+// Dev only (hard rule 7): brief 54's screenshot harness shows the mic-status
+// banner without a real interruption.
+if (import.meta.env.DEV) {
+  (globalThis as { __ftMicStatus?: (s: MicStatus) => void }).__ftMicStatus = setMicStatus;
+}
+
 /** Subscribe to mic-status changes. Returns an unsubscribe function. */
 export function subscribeMicStatus(cb: (s: MicStatus) => void): () => void {
   statusListeners.add(cb);

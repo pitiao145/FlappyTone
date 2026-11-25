@@ -368,7 +368,7 @@ export function Settings({
       {/* Dev builds only. The Lab is a separate instance of the game for
           tuning, and it is not part of the product. */}
       {import.meta.env.DEV && onDevLab && onDevLogin && (
-        <section className="setting setting-card">
+        <section className="setting setting-card setting-dev">
           <div className="setting-card-head">
             <h3>Development</h3>
           </div>

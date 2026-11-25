@@ -91,3 +91,6 @@ video/public/*
 video/Video-in/
 demo-sources/
 backups/
+
+# Brief 54's phone screenshots and contact sheet (npm run shots).
+shots-out/

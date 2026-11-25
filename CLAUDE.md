@@ -47,7 +47,7 @@ React 19 + TypeScript + Vite. Canvas 2D. Web Audio (`AudioWorklet`). Plain CSS t
 7. **Dev tooling lives behind `import.meta.env.DEV` and stays out of `dist/`.** Gate the JSX at the usage site, not just inside the component — a query-param flag alone doesn't remove it from the bundle. Check after touching anything in `src/dev/`:
    ```bash
    npm run build
-   for s in TuningPanel "copy gate log" soundboard flappytone.gatelog; do grep -l "$s" dist/assets/*.js; done   # must print nothing
+   for s in TuningPanel "copy gate log" soundboard flappytone.gatelog __ftShots __ftMicStatus __shotsCheck; do grep -l "$s" dist/assets/*.js; done   # must print nothing
    ```
 8. **When the signal is unclear, the game says "couldn't hear that" — it never scores the player wrong.** A gate whose longest voiced run is under `minUtteranceMs` (default 160ms, merging gaps under `mergeGapMs`) is neutral: no points, no heart lost. The test is utterance *duration*, not voiced fraction. Confidently failing a correct speaker is the single fastest way to lose a user.
 9. **All hanzi is Traditional Mandarin, never Simplified.** Jane records Taiwan Mandarin. Check any new hanzi against a Traditional reference, not by eye — this has drifted once already (`src/brand.ts`'s `tones` map briefly shipped Simplified).

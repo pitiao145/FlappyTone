@@ -135,6 +135,24 @@ const FEEDBACK_SCREENS: ReadonlySet<Screen> = new Set<Screen>([
   "toneder",
 ]);
 
+/**
+ * Brief 54: screens that take the whole phone. The bottom nav is hidden on
+ * them (mobile only; the desktop sidebar stays): the calibration flow and
+ * every live run, where a stray tap on a tab would leave mid-flow. A paused
+ * run is left from its own pause menu.
+ */
+const FOCUS_SCREENS: ReadonlySet<Screen> = new Set<Screen>([
+  "tuner",
+  "calibrate",
+  "finetune",
+  "seeding",
+  "game",
+  "tutorial",
+  "drill",
+  "learn",
+  "pairs",
+]);
+
 /** Which nav item should read as active for a given screen. */
 function navTabFor(screen: Screen): NavTab {
   switch (screen) {
@@ -1365,6 +1383,23 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     openVisualiser();
   }, [openVisualiser]);
 
+  // Dev only (hard rule 7): brief 54's screenshot harness (src/dev/shots/)
+  // reaches the game-over screen without flying a whole run.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const w = window as unknown as { __ftShots?: unknown };
+    w.__ftShots = {
+      gameOver: (s: RunStats) => {
+        setGameAlive(false);
+        setStats(s);
+        setScreen("gameover");
+      },
+    };
+    return () => {
+      delete w.__ftShots;
+    };
+  }, []);
+
   const onNavigate = useCallback(
     (tab: NavTab) => {
       if (tab === "visualiser") {
@@ -1383,7 +1418,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
   );
 
   return (
-    <div className="app app-game">
+    <div className={FOCUS_SCREENS.has(screen) ? "app app-game is-focus" : "app app-game"}>
       <GameNav active={navTabFor(screen)} onNavigate={onNavigate} />
       <div className="app-main" ref={mainRef}>
         <div className="frame">
