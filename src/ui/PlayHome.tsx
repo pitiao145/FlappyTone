@@ -2,6 +2,7 @@ import { SITE_HREF } from "./appLink.ts";
 import { brand } from "../brand.ts";
 import { ThemeGateLoop } from "./ThemeGateLoop.tsx";
 import { UpdateBanner } from "./UpdateBanner.tsx";
+import { StreakCard } from "./StreakCard.tsx";
 
 /** "drill", "learn" and "pairs" are only ever started from ModeSelect, never
  * from a button here — kept in this union anyway since GameApp's
@@ -100,6 +101,9 @@ export function PlayHome({
               few practice gates to find your range.
             </p>
           )}
+          {/* Brief 55: the streak, one line above Play. Calibrated players
+              only: a first visit has the calibration note here instead. */}
+          {calibrated && <StreakCard />}
           <div className="menu playhome-menu">
             <button className="primary" onClick={() => onStart("game")}>
               Play
