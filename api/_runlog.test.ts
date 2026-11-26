@@ -165,6 +165,20 @@ describe("POST /api/runlog", () => {
     }));
   });
 
+  it("adds an applied counted run to the week's tone sums (brief 55)", async () => {
+    const { POST, rpc } = await load({ entitlement: null });
+    await POST(req());
+    expect(rpc).toHaveBeenCalledWith("add_weekly_tone_accuracy", expect.objectContaining({
+      p_user: "user-1", p_day: "2026-09-28",
+    }));
+  });
+
+  it("a retry adds nothing to the week (brief 55)", async () => {
+    const { POST, rpc } = await load({ rpcResult: false });
+    await POST(req());
+    expect(rpc.mock.calls.map((c) => c[0])).not.toContain("add_weekly_tone_accuracy");
+  });
+
   it("keeps every row for Pro (no ring)", async () => {
     const { POST, rpc } = await load();
     await POST(req());
