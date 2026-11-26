@@ -1441,11 +1441,13 @@
   pointer-events: none;
 }
 
-.go-header {
-  flex-wrap: wrap;
+.go-header.has-footer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
 }
 .go-header-footer {
-  flex: 1 0 100%;
+  grid-column: 1 / -1;
   padding-left: 56px;
   margin-top: calc(-1 * var(--space-2));
 }
@@ -10138,7 +10140,7 @@ button.switch-track.switch-on {
 }
 
 /* Tone-compare teaser (free): under tone accuracy. */
-.go-compare-teaser {
+.gameover-screen .go-compare-teaser {
   display: block;
   width: 100%;
   height: auto;

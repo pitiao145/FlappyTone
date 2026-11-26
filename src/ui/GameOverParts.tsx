@@ -53,7 +53,7 @@ export function GameOverHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="go-header">
+    <header className={footer ? "go-header has-footer" : "go-header"}>
       <img className="go-bird" src="/Bird-up-no-halo.png" alt="" aria-hidden="true" />
       <div className="go-header-score">
         <p className="go-eyebrow">{eyebrow}</p>
