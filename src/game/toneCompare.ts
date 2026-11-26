@@ -5,7 +5,6 @@
  * player's average line and Jane's on the shared 61-point grid
  * (`playerShape.ts`). "18% closer" = (last − this) ÷ last.
  */
-import type { Tone } from "./gates.ts";
 import { SAMPLE_TONE_SHAPES } from "../ui/sampleToneShapes.ts";
 
 /** A change smaller than this (in %) reads as "about as close". */
@@ -36,15 +35,15 @@ export function compareCaption(than: string, thisDist: number | null, lastDist: 
 
 /**
  * The mock-up for a free player: a real player's snapshot as "this week"
- * (`SAMPLE_TONE_SHAPES`; tone 1 has none, so a gentle offset from Jane), and
+ * (`SAMPLE_TONE_SHAPES`; tone 1 and pairs have none, so a gentle offset from Jane), and
  * a "last week" 22% further from Jane, so the caption reads like a real one.
  */
 export function mockWeekLines(
   jane: number[] | null,
-  tone: Tone,
+  key: string,
 ): { thisWeek: number[] | null; lastWeek: number[] | null; thisCount: number } {
   if (!jane) return { thisWeek: null, lastWeek: null, thisCount: 0 };
-  const sample = SAMPLE_TONE_SHAPES[String(tone)]?.line;
+  const sample = SAMPLE_TONE_SHAPES[key]?.line;
   const thisWeek =
     sample && sample.length === jane.length
       ? sample

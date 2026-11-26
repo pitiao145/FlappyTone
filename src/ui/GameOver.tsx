@@ -80,6 +80,8 @@ interface Props {
   dailyGoal?: CountedRunResult | null;
   /** Opens the EarlyBird modal (the tone-compare teaser's CTA). */
   onEarlyBird?: (feature: string) => void;
+  /** Opens Progress at the tone accuracy card (the weekly line's CTA). */
+  onToneStats?: () => void;
 }
 
 export function GameOver({
@@ -98,6 +100,7 @@ export function GameOver({
   onViewFullLeaderboard,
   dailyGoal = null,
   onEarlyBird,
+  onToneStats,
 }: Props) {
   const breakdown = toneBreakdown(stats);
   const tier = useTier();
@@ -474,22 +477,47 @@ export function GameOver({
       <GameOverHeader
         eyebrow={isNewBest ? "New personal best" : "Run over"}
         footer={
-          counted && (dailyGoal?.goalJustCompleted || streak.state === "done_today" || headline) ? (
+          counted ? (
             <>
-              {dailyGoal?.goalJustCompleted && (
-                <span className="go-goal-chip">Daily goal ✓ +{DAILY_GOAL_XP} XP</span>
-              )}
-              {(streak.state === "done_today" || headline) && (
-                <p className="go-streak-line">
-                  {streak.state === "done_today" && (
-                    <strong>🔥 {streak.current}-day streak · come back tomorrow</strong>
-                  )}
-                  {streak.state === "done_today" && headline && " · "}
-                  {streak.state === "done_today" ? headline?.text : headline && capFirst(headline.text)}
-                  {dailyGoal && dailyGoal.runsToday < DAILY_GOAL_RUNS && (
-                    <> · daily goal {dailyGoal.runsToday}/{DAILY_GOAL_RUNS}</>
-                  )}
+              {streak.state === "done_today" && (
+                <p className="go-announce">
+                  <span className="go-announce-flame" aria-hidden>🔥</span>
+                  <span>
+                    <strong>{streak.current}-day streak!</strong> Come back tomorrow to keep it.
+                  </span>
                 </p>
+              )}
+              {dailyGoal && (
+                <div
+                  className={`go-goal${dailyGoal.runsToday >= DAILY_GOAL_RUNS ? " is-done" : ""}`}
+                  role="progressbar"
+                  aria-label="Daily goal"
+                  aria-valuemin={0}
+                  aria-valuemax={DAILY_GOAL_RUNS}
+                  aria-valuenow={Math.min(dailyGoal.runsToday, DAILY_GOAL_RUNS)}
+                >
+                  <span className="go-goal-label">Daily goal</span>
+                  <span className="go-goal-bar" aria-hidden>
+                    {Array.from({ length: DAILY_GOAL_RUNS }, (_, i) => (
+                      <i key={i} className={i < dailyGoal.runsToday ? "is-on" : ""} />
+                    ))}
+                  </span>
+                  <span className="go-goal-count">
+                    {dailyGoal.goalJustCompleted
+                      ? `✓ +${DAILY_GOAL_XP} XP`
+                      : dailyGoal.runsToday >= DAILY_GOAL_RUNS
+                        ? "✓ done"
+                        : `${dailyGoal.runsToday}/${DAILY_GOAL_RUNS} runs`}
+                  </span>
+                </div>
+              )}
+              {headline && (
+                <button type="button" className="go-insight" onClick={() => onToneStats?.()}>
+                  <span className="go-insight-text">
+                    {headline.kind === "threshold" ? headline.text : `📈 ${capFirst(headline.text)}`}
+                  </span>
+                  <span className="go-insight-cta">Tone stats →</span>
+                </button>
               )}
             </>
           ) : null
@@ -510,12 +538,6 @@ export function GameOver({
         <p className="go-best">
           Best {history.bestScore.toLocaleString()} · ×{stats.bestMultiplier}
         </p>
-        {xpGain && (
-          <p className="go-xp-chip">
-            <span>+{xpGain.gained.toLocaleString()} XP</span>
-            {xpGain.levelUp && <span className="go-xp-chip-up">Level {xpGain.after.level}!</span>}
-          </p>
-        )}
         {challengeScore != null && (
           <p className="go-challenge">
             {stats.score >= challengeScore
@@ -541,6 +563,7 @@ export function GameOver({
             {xpGain.heard > 0
               ? `From ${xpGain.heard} heard ${xpGain.heard === 1 ? "gate" : "gates"} at ${xpGain.accPct}% tone accuracy. `
               : "No gate was heard, so no XP this run. "}
+            {dailyGoal?.goalJustCompleted && `+${DAILY_GOAL_XP} for the daily goal. `}
             {xpGain.unlocked.length > 0
               ? `New theme unlocked: ${xpGain.unlocked.map((t) => t.label).join(", ")}`
               : `${xpGain.after.toNext.toLocaleString()} XP to level ${xpGain.after.level + 1}${tier === "guest" ? " · sign up to keep it" : ""}`}

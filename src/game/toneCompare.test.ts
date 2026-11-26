@@ -17,7 +17,7 @@ describe("weekly compare (brief 55)", () => {
   });
   it("the mock-up reads as an improvement", () => {
     const j = Array.from({ length: 61 }, () => 3);
-    const m = mockWeekLines(j, 1);
+    const m = mockWeekLines(j, "1");
     expect(closerPct(shapeDistance(m.thisWeek, j), shapeDistance(m.lastWeek, j))).toBeGreaterThan(5);
   });
 });

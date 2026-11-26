@@ -650,6 +650,8 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
    * gets it scrolled straight to the board section rather than the top.
    */
   const progressLeaderboardRef = useRef(initialIntent() === "leaderboard");
+  /** Brief 55: the end screen's weekly line opens Progress at tone accuracy. */
+  const progressAccuracyRef = useRef(false);
   /**
    * True while the tutorial that immediately follows a calibration is running:
    * its measured range seeds the grid (calibration itself only sites the centre
@@ -1519,6 +1521,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
           <Progress
             onEarlyBird={(feature) => openEarlyBird("progress", feature)}
             leaderboardIntentRef={progressLeaderboardRef}
+            accuracyIntentRef={progressAccuracyRef}
           />
         )}
 
@@ -1731,6 +1734,10 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
               setScreen("progress");
             }}
             dailyGoal={dailyGoal}
+            onToneStats={() => {
+              progressAccuracyRef.current = true;
+              setScreen("progress");
+            }}
             onEarlyBird={(feature) => openEarlyBird("progress", feature)}
           />
         )}

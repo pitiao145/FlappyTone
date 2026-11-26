@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { track } from "../analytics/client.ts";
 import { useTier } from "../data/tier.ts";
-import { addWeeks, TONE_NAME, todayLocal, weekEnd, weekLabel, weekStart } from "../game/comeBack.ts";
+import { addWeeks, keyName, TONE_NAME, todayLocal, weekEnd, weekLabel, weekStart } from "../game/comeBack.ts";
 import type { Tone } from "../game/gates.ts";
 import { averageInPeriod, MIN_ATTEMPTS_TO_SHOW, type ShapeRow } from "../game/playerShape.ts";
 import { effectiveSpeechStyle } from "../game/settings.ts";
@@ -11,6 +11,11 @@ import { drawCompareChart } from "./toneAverageChart.ts";
 
 const TONES: Tone[] = [1, 2, 3, 4];
 const TAB_LABEL: Record<Tone, string> = { 1: "first", 2: "second", 3: "third", 4: "fourth" };
+const SHORT: Record<string, string> = { "1": "first", "2": "second", "3": "third", "4": "fourth" };
+/** The mock-up's sample pairs (a free player sees these). */
+const MOCK_PAIRS = ["3-2", "2-3", "4-1", "1-4"];
+/** "3-2" → "third + second". */
+const pairLabel = (key: string) => key.split("-").map((t) => SHORT[t] ?? t).join(" + ");
 
 interface Props {
   /** "pro": the player's own weekly shapes. "mock": a sample, for a free player (brief 55). */
@@ -29,9 +34,18 @@ export function ToneCompare({ mode, rows = null, initialTone = 3 }: Props) {
   const tier = useTier();
   const style = effectiveSpeechStyle(tier);
   const thisWeek = weekStart(todayLocal());
-  const [tone, setTone] = useState<Tone>(initialTone);
+  // A single tone ("3") or a pair ("3-2"), the same keys as player_tone_shapes.
+  const [key, setKey] = useState<string>(String(initialTone));
   const [week, setWeek] = useState(thisWeek);
-  const jane = averagedShapes().tone[style][tone] ?? null;
+  const isPair = key.includes("-");
+  const avg = averagedShapes();
+  const jane = (isPair ? avg.pair[style][key] : avg.tone[style][Number(key) as Tone]) ?? null;
+  /** Pairs to offer: the player's own (any attempt stored), or the mock-up's samples. */
+  const pairs = useMemo(() => {
+    if (mode === "mock") return MOCK_PAIRS.filter((k) => avg.pair[style][k]);
+    const have = new Set((rows ?? []).filter((r) => r.key.includes("-")).map((r) => r.key));
+    return [...have].filter((k) => /^[1-4]-[1-4]$/.test(k) && avg.pair[style][k]).sort();
+  }, [mode, rows, avg, style]);
 
   /** The earliest week with any of the player's rows: the picker stops there. */
   const firstWeek = useMemo(() => {
@@ -41,8 +55,7 @@ export function ToneCompare({ mode, rows = null, initialTone = 3 }: Props) {
   }, [mode, rows, thisWeek]);
 
   const lines = useMemo(() => {
-    if (mode === "mock") return mockWeekLines(jane, tone);
-    const key = String(tone);
+    if (mode === "mock") return mockWeekLines(jane, key);
     const prev = addWeeks(week, -1);
     const a = averageInPeriod(rows ?? [], key, week, weekEnd(week));
     const b = averageInPeriod(rows ?? [], key, prev, weekEnd(prev));
@@ -51,7 +64,7 @@ export function ToneCompare({ mode, rows = null, initialTone = 3 }: Props) {
       lastWeek: b && b.count >= MIN_ATTEMPTS_TO_SHOW ? b.line : null,
       thisCount: a?.count ?? 0,
     };
-  }, [mode, rows, tone, week, jane]);
+  }, [mode, rows, key, week, jane]);
 
   const caption = compareCaption(
     week === thisWeek ? "last week" : "the week before",
@@ -60,8 +73,8 @@ export function ToneCompare({ mode, rows = null, initialTone = 3 }: Props) {
   );
 
   useEffect(() => {
-    track({ type: "tone_compare_viewed", tone, week, mode });
-  }, [tone, week, mode]);
+    track({ type: "tone_compare_viewed", tone: Number(key[0]), key, week, mode });
+  }, [key, week, mode]);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -88,20 +101,37 @@ export function ToneCompare({ mode, rows = null, initialTone = 3 }: Props) {
             key={t}
             type="button"
             className="tone-compare-tab"
-            aria-pressed={tone === t}
+            aria-pressed={key === String(t)}
             aria-label={TONE_NAME[t]}
-            onClick={() => setTone(t)}
+            onClick={() => setKey(String(t))}
           >
             {TAB_LABEL[t]}
           </button>
         ))}
       </div>
+      {pairs.length > 0 && (
+        <div className="tone-compare-pairs" role="group" aria-label="Tone pairs">
+          <span className="tone-compare-pairs-label">Pairs</span>
+          {pairs.map((k) => (
+            <button
+              key={k}
+              type="button"
+              className="tone-compare-pair"
+              aria-pressed={key === k}
+              aria-label={keyName(k)}
+              onClick={() => setKey(k)}
+            >
+              {pairLabel(k)}
+            </button>
+          ))}
+        </div>
+      )}
       <p className="tone-compare-caption">{caption}</p>
       <canvas
         ref={canvasRef}
         className="tone-compare-canvas"
         role="img"
-        aria-label={`Your ${TONE_NAME[tone]} this week and last week, drawn over Jane's.`}
+        aria-label={`Your ${keyName(key)} this week and last week, drawn over Jane's.`}
       />
       <p className="tone-compare-legend">
         <span>

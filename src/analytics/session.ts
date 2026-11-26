@@ -502,8 +502,8 @@ export type AnalyticsEvent =
   | { type: "daily_goal_completed"; runs_today: number }
   /** Brief 55: the weekly headline was shown (end of run or Progress). `tone` 1..4; `delta` in points (0 = steady). */
   | { type: "weekly_insight_shown"; tone: number; delta: number; surface: "gameover" | "progress" }
-  /** Brief 55: the per-tone weekly compare view. `week` = its Monday (YYYY-MM-DD); `mode` mock = free player's mock-up. */
-  | { type: "tone_compare_viewed"; tone: number; week: string; mode: "pro" | "mock" }
+  /** Brief 55: the weekly compare view. `key` "3" (a tone) or "3-2" (a pair), `tone` its first tone. `week` = its Monday (YYYY-MM-DD); `mode` mock = free player's mock-up. */
+  | { type: "tone_compare_viewed"; tone: number; key: string; week: string; mode: "pro" | "mock" }
   /** Leaderboard.tsx's first successful board resolution per mount. */
   | {
       type: "visualiser_session";

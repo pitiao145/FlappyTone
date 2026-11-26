@@ -147,6 +147,8 @@ interface Props {
    * dev-only double-invoke) before this component ever sees `true`.
    */
   leaderboardIntentRef?: { current: boolean };
+  /** Same pattern: set by the end screen's weekly line, scrolls to tone accuracy (brief 55). */
+  accuracyIntentRef?: { current: boolean };
 }
 
 /**
@@ -156,9 +158,10 @@ interface Props {
  * section at the bottom instead of opening the upsell modal directly. See the
  * design handoff in docs/design_handoff_progress_pricing/.
  */
-export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
+export function Progress({ onEarlyBird, leaderboardIntentRef, accuracyIntentRef }: Props) {
   const tier = useTier();
   const leaderboardSectionRef = useRef<HTMLElement | null>(null);
+  const accuracySectionRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     // Read-and-clear happens here, after commit, not during GameApp's
     // render — a ref mutated during render can be torn by a second render
@@ -167,6 +170,9 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
     if (leaderboardIntentRef?.current) {
       leaderboardIntentRef.current = false;
       leaderboardSectionRef.current?.scrollIntoView({ block: "start" });
+    } else if (accuracyIntentRef?.current) {
+      accuracyIntentRef.current = false;
+      accuracySectionRef.current?.scrollIntoView({ block: "start" });
     }
     // Runs once, on mount — GameOver's link remounts this screen fresh each
     // time, it never toggles the ref live.
@@ -323,11 +329,9 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
                     : "Finish a run to start a streak"}
               {streak.best > streak.current ? ` · best ${streak.best}` : ""}
             </span>
-            <span className="streak-warning">
-              {tier === "guest"
-                ? "⚠️ Saved only on this device — clearing your browser data resets it."
-                : "Synced to your account."}
-            </span>
+            {tier === "guest" && (
+              <span className="streak-warning">⚠️ Saved only on this device — clearing your browser data resets it.</span>
+            )}
           </div>
 
           <div className="sticker-card level-card">
@@ -385,7 +389,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
       </section>
 
       {/* ---- Accuracy (tabbed) */}
-      <section className="progress-card sticker-card">
+      <section className="progress-card sticker-card" ref={accuracySectionRef}>
         <div className="acc-header">
           <div className="acc-tabs">
             <button
