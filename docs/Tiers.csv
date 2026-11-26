@@ -8,4 +8,7 @@ Intermediate Mode Vocab(<=2-Syllables),60-word sampler (30 Beginner + 30 Interme
 Available modes,"Tone drill, learn","Tone dril, learn, tone pairs",All
 Modes limits,Unlimited for available,"Unlimited drill, learn; limited tone pairs (5 words per tone pair)",Unlimited
 Visualizer,Grid + No ref words,Grid + 5 ref words per tone,Grid + All reference words
-Leaderboard,View theoretical rank,Join with Random Name,Join with Custom Name
+Leaderboard,View theoretical rank,Join with Random Name,Join with Custom NameStreak card + daily goal (3 runs = +150 XP once a day),—,Yes,Yes
+Weekly headline (most improved tone this week),—,Yes,Yes
+Tone accuracy period,—,Last 5 runs,"One week at a time (‹ week ›), weeks only"
+Tone compare view (per tone; this week vs last over Jane),—,Mock-up (example data) + end-of-run teaser from run 3,Yes (own shapes per week)

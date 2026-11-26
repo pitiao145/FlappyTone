@@ -16,6 +16,17 @@ share image in a different blue would not read as the same product.
 | `good` | 120, 230, 170 | `#78E6AA` | |
 | `danger` | 255, 110, 110 | `#FF6E6E` | |
 
+## Copy rule: tone names
+
+Players only ever see **"first tone", "second tone", "third tone", "fourth
+tone"** and **"neutral tone"** (brief 55). Never "Tone 3", "T3" or a bare
+number for a tone. Pairs read "third + second tone". Where a word must be
+short (a tab, a readout under a "Tone" label), the ordinal alone: "third".
+
+Code, analytics props and docs may keep numbers (`tone: 3`, `"3-2"`). The
+helpers are `toneName()` (`src/site/toneNames.ts`) and `TONE_NAME` /
+`keyName()` (`src/game/comeBack.ts`).
+
 ## The OG image
 
 `public/og.png` (1200×630), drawn from `src/dev/og-source.svg`.
