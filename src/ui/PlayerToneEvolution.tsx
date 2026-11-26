@@ -1,16 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { fetchShapes } from "../data/shapes.ts";
+import { useEffect, useRef } from "react";
 import { useTier } from "../data/tier.ts";
 import { effectiveSpeechStyle } from "../game/settings.ts";
 import type { Tone } from "../game/gates.ts";
-import {
-  averageUpTo,
-  keysWithData,
-  localDay,
-  MIN_ATTEMPTS_TO_SHOW,
-  monthsAgo,
-  type ShapeRow,
-} from "../game/playerShape.ts";
+import { MIN_ATTEMPTS_TO_SHOW } from "../game/playerShape.ts";
+import { capFirst, keyName } from "../game/comeBack.ts";
 import { averagedShapes } from "../game/toneAccuracy.ts";
 import { SAMPLE_TONE_SHAPES } from "./sampleToneShapes.ts";
 import { drawPlayerShapeChart, TONE_AVERAGE_COLOR } from "./toneAverageChart.ts";
@@ -20,95 +13,11 @@ const CARD_H = 120;
 /** A combo has no single tone to key a color off. */
 const COMBO_TINT = "hsla(210, 35%, 38%,";
 
-type Compare = "none" | "1m" | "2m" | "date";
-
 /**
- * Progress → "See how your tones evolve over time", for Pro (spec B). Per
- * tone and per combo the player has data for: Jane's average, the player's
- * average up to today, and optionally the average up to an earlier day,
- * fainter. Rows come from `player_tone_shapes` (owner-only read); the maths
- * is `playerShape.ts`'s.
+ * Sample tone-shape cards on a real player's snapshot: the blurred chart in
+ * the end-of-run tone-compare teaser (brief 55). The Pro view with a month
+ * picker that used to live here is replaced by `ToneCompare.tsx` (weeks only).
  */
-export function PlayerToneEvolution() {
-  const [rows, setRows] = useState<ShapeRow[] | null>(null);
-  const [compare, setCompare] = useState<Compare>("1m");
-  const [date, setDate] = useState(() => monthsAgo(1));
-
-  useEffect(() => {
-    let alive = true;
-    void fetchShapes().then((r) => alive && setRows(r));
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  const today = localDay();
-  const thenDay =
-    compare === "1m" ? monthsAgo(1) : compare === "2m" ? monthsAgo(2) : compare === "date" ? date : null;
-
-  const charts = useMemo(() => {
-    if (!rows) return [];
-    return keysWithData(rows)
-      .map((key) => {
-        const now = averageUpTo(rows, key, today);
-        const then = thenDay ? averageUpTo(rows, key, thenDay) : null;
-        return { key, now, then };
-      })
-      .filter((c) => c.now && c.now.count >= MIN_ATTEMPTS_TO_SHOW);
-  }, [rows, today, thenDay]);
-
-  if (rows === null) return <p className="note">Loading your tone shapes…</p>;
-
-  if (charts.length === 0) {
-    return (
-      <p className="note player-shape-empty">
-        Play a few runs to see your own shape. Each tone appears here after {MIN_ATTEMPTS_TO_SHOW} heard
-        attempts.
-      </p>
-    );
-  }
-
-  return (
-    <>
-      <div className="player-shape-controls">
-        <label>
-          Compare with{" "}
-          <select value={compare} onChange={(e) => setCompare(e.target.value as Compare)}>
-            <option value="none">nothing</option>
-            <option value="1m">1 month ago</option>
-            <option value="2m">2 months ago</option>
-            <option value="date">a date…</option>
-          </select>
-        </label>
-        {compare === "date" && (
-          <input type="date" value={date} max={today} onChange={(e) => e.target.value && setDate(e.target.value)} />
-        )}
-      </div>
-      <p className="note player-shape-legend">
-        <span className="player-shape-key player-shape-key-jane" /> Jane&apos;s average ·{" "}
-        <span className="player-shape-key player-shape-key-now" /> yours now (tone colour)
-        {thenDay && (
-          <>
-            {" "}
-            · <span className="player-shape-key player-shape-key-then" /> yours up to {thenDay}
-          </>
-        )}
-      </p>
-      <div className="tone-average-grid">
-        {charts.map(({ key, now, then }) => (
-          <ShapeCard
-            key={key}
-            shapeKey={key}
-            now={now!}
-            then={then}
-            thenDay={thenDay}
-          />
-        ))}
-      </div>
-    </>
-  );
-}
-
 /** The same cards on a real player's snapshot, for guests and free players (no earlier point to compare). */
 export function SamplePlayerToneEvolution() {
   return (
@@ -144,7 +53,7 @@ function ShapeCard({
   const avg = averagedShapes();
   const jane = single ? avg.tone[style][Number(shapeKey) as Tone] : (avg.pair[style][shapeKey] ?? null);
   const tint = single ? TONE_AVERAGE_COLOR[Number(shapeKey) as Tone] : COMBO_TINT;
-  const label = single ? `Tone ${shapeKey}` : `Tones ${shapeKey.replace("-", " + ")}`;
+  const label = capFirst(keyName(shapeKey));
 
   useEffect(() => {
     if (ref.current) {

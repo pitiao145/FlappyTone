@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { levelFor, runXp, totalXp } from "../game/xp.ts";
+import { levelFor, playerXpFrom, runXp } from "../game/xp.ts";
+import { streakStatus } from "../game/streak.ts";
+import {
+  DAILY_GOAL_RUNS,
+  DAILY_GOAL_XP,
+  loadComeBack,
+  TONE_NAME,
+  weeklyHeadline,
+  type CountedRunResult,
+} from "../game/comeBack.ts";
+import type { Tone } from "../game/gates.ts";
+import { SamplePlayerToneEvolution } from "./PlayerToneEvolution.tsx";
+import { ToneCompare } from "./ToneCompare.tsx";
+import { PRO_PRICE } from "./plan.ts";
 import { useSessionVersion } from "../data/sessionVersion.ts";
 import { THEMES } from "../game/themes.ts";
 import { toneBreakdown, type RunStats } from "../game/scoring.ts";
@@ -62,6 +75,10 @@ interface Props {
   challengeName?: string | null;
   /** Navigates to the full (week/month/all-time) leaderboard on the Progress screen. */
   onViewFullLeaderboard: () => void;
+  /** Brief 55: today's counted runs after this one; null for modes that don't count. */
+  dailyGoal?: CountedRunResult | null;
+  /** Opens the EarlyBird modal (the tone-compare teaser's CTA). */
+  onEarlyBird?: (feature: string) => void;
 }
 
 export function GameOver({
@@ -78,6 +95,8 @@ export function GameOver({
   challengeScore,
   challengeName,
   onViewFullLeaderboard,
+  dailyGoal = null,
+  onEarlyBird,
 }: Props) {
   const breakdown = toneBreakdown(stats);
   const tier = useTier();
@@ -100,14 +119,16 @@ export function GameOver({
    */
   const xpGain = useMemo(() => {
     if (mode !== "game" && mode !== "drill" && mode !== "pairs") return null;
-    const gained = runXp(stats);
+    // The daily-goal bonus lands on the run that completes it (brief 55).
+    const bonus = dailyGoal?.goalJustCompleted ? DAILY_GOAL_XP : 0;
+    const gained = runXp(stats) + bonus;
     let heard = 0;
     let acc = 0;
     for (const t of [...Object.values(stats.perTone), ...Object.values(stats.perCombo ?? {})]) {
       heard += t.gates;
       acc += t.accSum;
     }
-    const after = levelFor(totalXp(history));
+    const after = levelFor(playerXpFrom(history));
     const before = levelFor(Math.max(0, after.xp - gained));
     const unlocked =
       tier === "guest"
@@ -128,7 +149,32 @@ export function GameOver({
       levelUp: after.level > before.level,
       unlocked,
     };
-  }, [mode, stats, history, tier]);
+  }, [mode, stats, history, tier, dailyGoal]);
+
+  // ---- Brief 55: streak + weekly headline line, and the free compare teaser.
+  const counted = mode === "game" || mode === "drill" || mode === "pairs";
+  const streak = useMemo(() => streakStatus(), [version]);
+  const headline = useMemo(() => (counted ? weeklyHeadline(loadComeBack()) : null), [counted, version]);
+  useEffect(() => {
+    if (headline && headline.kind !== "threshold") {
+      track({ type: "weekly_insight_shown", tone: headline.tone, delta: headline.delta, surface: "gameover" });
+    }
+    // Once per end screen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  /** The free teaser's tone: the weakest over the player's lifetime totals, with its real number. */
+  const teaser = useMemo(() => {
+    if (tier !== "free" || !counted || history.totalRuns < 3) return null;
+    let pick: { tone: Tone; pct: number } | null = null;
+    for (const t of [1, 2, 3, 4] as Tone[]) {
+      const s = history.lifetimePerTone[t];
+      if (!s || s.attempts < 3) continue;
+      const pct = Math.round((Math.min(s.accSum, s.attempts) / s.attempts) * 100);
+      if (!pick || pct < pick.pct) pick = { tone: t, pct };
+    }
+    return pick;
+  }, [tier, counted, history]);
+  const [compareOpen, setCompareOpen] = useState(false);
 
   /** The coach card's weak tone (`weakestTone`); null hides the card. */
   const weakest = useMemo(() => weakestTone(breakdown), [breakdown]);
@@ -400,6 +446,29 @@ export function GameOver({
           onDismiss={() => setNamingShare(false)}
         />
       )}
+      {compareOpen && teaser && (
+        <div className="tone-compare-sheet" role="dialog" aria-modal="true" aria-label="Tone evolution example">
+          <div className="tone-compare-sheet-card">
+            <div className="tone-compare-sheet-head">
+              <h3>Your tones, week by week</h3>
+              <button type="button" className="feedback-close" aria-label="Close" onClick={() => setCompareOpen(false)}>
+                ×
+              </button>
+            </div>
+            <ToneCompare mode="mock" initialTone={teaser.tone} />
+            <button
+              type="button"
+              className="go-btn-primary tone-compare-sheet-cta"
+              onClick={() => {
+                setCompareOpen(false);
+                onEarlyBird?.("tone_compare_teaser");
+              }}
+            >
+              Get yours: EarlyBird {PRO_PRICE}
+            </button>
+          </div>
+        </div>
+      )}
       {/* ---- 1. header / score card, with the Pip breaking out of its corner */}
       <GameOverHeader
         eyebrow={isNewBest ? "New personal best" : "Run over"}
@@ -423,6 +492,23 @@ export function GameOver({
           <p className="go-xp-chip">
             <span>+{xpGain.gained.toLocaleString()} XP</span>
             {xpGain.levelUp && <span className="go-xp-chip-up">Level {xpGain.after.level}!</span>}
+            {dailyGoal?.goalJustCompleted && (
+              <span className="go-goal-chip">Daily goal ✓ +{DAILY_GOAL_XP} XP</span>
+            )}
+          </p>
+        )}
+        {counted && (streak.state === "done_today" || headline) && (
+          <p className="go-streak-line">
+            {streak.state === "done_today" && (
+              <strong>
+                🔥 {streak.current}-day streak · come back tomorrow
+              </strong>
+            )}
+            {streak.state === "done_today" && headline && " · "}
+            {headline?.text}
+            {dailyGoal && dailyGoal.runsToday < DAILY_GOAL_RUNS && (
+              <> · daily goal {dailyGoal.runsToday}/{DAILY_GOAL_RUNS}</>
+            )}
           </p>
         )}
         {challengeScore != null && (
@@ -480,6 +566,23 @@ export function GameOver({
                 tileClassName="go-tone-tile"
               />
             </section>
+            {teaser && (
+              <button
+                type="button"
+                className="go-card go-compare-teaser"
+                onClick={() => setCompareOpen(true)}
+              >
+                <p className="go-compare-teaser-title">
+                  See your {TONE_NAME[teaser.tone]} evolution · <span>{teaser.pct}% now</span>
+                </p>
+                <div className="go-compare-teaser-chart" aria-hidden>
+                  <div className="go-compare-teaser-blur">
+                    <SamplePlayerToneEvolution />
+                  </div>
+                  <span className="go-compare-teaser-cta">🔒 See it week by week</span>
+                </div>
+              </button>
+            )}
           </div>
         )}
 
