@@ -2,29 +2,26 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { track } from "../analytics/client.ts";
 import type { Tone } from "../game/gates.ts";
 import { entriesFromRows, loadRunHistory, type RunHistoryEntry, type RunOutcome } from "../game/runHistory.ts";
-import { periodAccuracy, periodFor } from "../game/accuracyPeriod.ts";
+import {
+  effectivePeriod,
+  PERIOD_LABEL,
+  PERIODS,
+  periodAccuracy,
+  periodAllowed,
+  type AccuracyPeriod,
+} from "../game/accuracyPeriod.ts";
 import { streakStatus } from "../game/streak.ts";
 import { levelFor, playerXpFrom } from "../game/xp.ts";
-import {
-  addWeeks,
-  capFirst,
-  keyName,
-  loadComeBack,
-  TONE_NAME,
-  todayLocal,
-  weekEnd,
-  weekLabel,
-  weeklyHeadline,
-  weekStart,
-} from "../game/comeBack.ts";
+import { capFirst, keyName, loadComeBack, TONE_NAME, weeklyHeadline } from "../game/comeBack.ts";
 import { fetchShapes } from "../data/shapes.ts";
 import type { ShapeRow } from "../game/playerShape.ts";
-import { ToneCompare, WeekPicker } from "./ToneCompare.tsx";
+import { ToneCompare, ToneKeyPicker } from "./ToneCompare.tsx";
+import { ToneMarkIcon } from "./toneIcons.tsx";
 import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
 import { fetchTrendRows } from "../data/runlog.ts";
-import { fetchWeekRuns, refreshServerStats } from "../data/stats.ts";
-import { trendKeys, weeklyTrend } from "../game/runTrend.ts";
+import { fetchRecentRuns, refreshServerStats } from "../data/stats.ts";
+import { dailyTrend, trendKeys } from "../game/runTrend.ts";
 import { Leaderboard } from "./Leaderboard.tsx";
 import { brand } from "../brand.ts";
 import { redirectToCheckoutForCurrentAccount } from "../data/checkout.ts";
@@ -46,11 +43,14 @@ const OUTCOME_LABEL: Record<RunOutcome, string> = {
   restart: "restarted",
 };
 
-/** The last `n` weeks' labels, ending this week — the mock chart's x-axis (weeks only, brief 55). */
-function mockWeekLabels(n: number): string[] {
-  const thisWeek = weekStart(todayLocal());
+/** Eight short date labels, one every ~3 days ending today — the mock chart's x-axis. */
+function mockDateLabels(n: number): string[] {
   const out: string[] = [];
-  for (let i = n - 1; i >= 0; i--) out.push(weekLabel(addWeeks(thisWeek, -i), thisWeek));
+  const now = Date.now();
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(now - i * 3 * 86_400_000);
+    out.push(d.toLocaleDateString(undefined, { month: "short", day: "numeric" }));
+  }
   return out;
 }
 
@@ -133,8 +133,10 @@ function keyColor(key: string): string {
   return TONE_LINE_COLOR[Number(key[0]) as Tone];
 }
 
-/** Short ordinal for a tone pill: "first" … "fourth". */
-const TONE_PILL: Record<Tone, string> = { 1: "1st", 2: "2nd", 3: "3rd", 4: "4th" };
+function shortDay(day: string): string {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
 
 interface Props {
   /** Opens the EarlyBird modal — used only by the pricing card's "Join EarlyBird" CTA now. */
@@ -190,28 +192,19 @@ export function Progress({ onEarlyBird, leaderboardIntentRef, accuracyIntentRef 
   useEffect(() => {
     if (isAccount) void refreshServerStats();
   }, [isAccount]);
-  // Free: always the last 5 runs. Pro: one week at a time (brief 55: weeks only).
-  const period = periodFor(tier);
-  const thisWeek = weekStart(todayLocal());
-  const [accWeek, setAccWeek] = useState(thisWeek);
-  const [historyWeek, setHistoryWeek] = useState(thisWeek);
-  const [weekRuns, setWeekRuns] = useState<Record<string, RunHistoryEntry[]>>({});
+  // Free/guest: always the last 5 runs. Pro: a period picker.
+  const [chosenPeriod, setChosenPeriod] = useState<AccuracyPeriod>("last5");
+  const period = effectivePeriod(tier, chosenPeriod);
+  const [last50, setLast50] = useState<RunHistoryEntry[] | null>(null);
   useEffect(() => {
-    if (period !== "week") return;
+    if (period !== "last50") return;
     let live = true;
-    for (const w of new Set([accWeek, historyWeek])) {
-      void fetchWeekRuns(w, weekEnd(w)).then(
-        (rows) => live && setWeekRuns((m) => ({ ...m, [w]: entriesFromRows(rows) })),
-      );
-    }
+    void fetchRecentRuns(50).then((rows) => live && setLast50(entriesFromRows(rows)));
     return () => {
       live = false;
     };
-  }, [period, accWeek, historyWeek, version]);
-  const accuracy = useMemo(
-    () => periodAccuracy(period, history, weekRuns[accWeek] ?? null),
-    [period, history, weekRuns, accWeek],
-  );
+  }, [period, version]);
+  const accuracy = useMemo(() => periodAccuracy(period, history, last50), [period, history, last50]);
   const toneAccuracy = accuracy.tones;
   const comboAccuracy = accuracy.combos;
   const streak = useMemo(() => streakStatus(), [version]);
@@ -237,7 +230,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef, accuracyIntentRef 
   // Mock accuracy-over-time data for the Pro teaser chart — generated once so
   // switching tabs/tones doesn't re-randomise. No real time-series exists yet.
   const mock = useMemo(() => {
-    const labels = mockWeekLabels(8);
+    const labels = mockDateLabels(8);
     const series = TONES.reduce(
       (acc, t) => {
         acc[t] = mockToneSeries(labels.length);
@@ -262,14 +255,14 @@ export function Progress({ onEarlyBird, leaderboardIntentRef, accuracyIntentRef 
       live = false;
     };
   }, [isPro, version]);
-  const trend = useMemo(() => weeklyTrend(trendRows ?? []), [trendRows]);
+  const trend = useMemo(() => dailyTrend(trendRows ?? []), [trendRows]);
   const proKeys = useMemo(() => trendKeys(trend), [trend]);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const activeKey = selectedKey && trend.has(selectedKey) ? selectedKey : (proKeys[0] ?? null);
   const proSeries = useMemo(() => {
     const pts = activeKey ? (trend.get(activeKey) ?? []) : [];
-    return { labels: pts.map((p) => weekLabel(p.day, thisWeek)), data: pts.map((p) => Math.round(p.accuracy * 100)) };
-  }, [trend, activeKey, thisWeek]);
+    return { labels: pts.map((p) => shortDay(p.day)), data: pts.map((p) => Math.round(p.accuracy * 100)) };
+  }, [trend, activeKey]);
 
   /** Each teaser CTA fires its own named event (see call sites below) before scrolling. */
   const scrollToPricing = () => {
@@ -412,15 +405,43 @@ export function Progress({ onEarlyBird, leaderboardIntentRef, accuracyIntentRef 
 
         {activeTab === "accuracy" ? (
           <>
-            {period === "week" && <WeekPicker week={accWeek} onChange={setAccWeek} firstWeek={addWeeks(thisWeek, -52)} />}
+            <div className="tone-pills" role="group" aria-label="Period">
+              {PERIODS.map((p) =>
+                periodAllowed(tier, p) ? (
+                  <button
+                    key={p}
+                    type="button"
+                    className={`tone-pill${period === p ? " tone-pill-active" : ""}`}
+                    aria-pressed={period === p}
+                    onClick={() => setChosenPeriod(p)}
+                  >
+                    {PERIOD_LABEL[p]}
+                  </button>
+                ) : (
+                  <button
+                    key={p}
+                    type="button"
+                    className="tone-pill"
+                    onClick={() => {
+                      track({ type: "progress_locked_cta_click", card: `accuracy_${p}` });
+                      scrollToPricing();
+                    }}
+                  >
+                    🔒 {PERIOD_LABEL[p]}
+                  </button>
+                ),
+              )}
+            </div>
             <p className="note">
-              {period === "week"
-                ? `Tone accuracy over your runs ${accWeek === thisWeek ? "this week" : "that week"}.`
-                : "Tone accuracy over your last 5 runs."}
+              {period === "all"
+                ? "Tone accuracy over every run you've played."
+                : period === "last50"
+                  ? "Tone accuracy over your last 50 runs."
+                  : `Tone accuracy over your last 5 runs${isAccount ? "" : " on this device"}.`}
             </p>
             {accuracy.empty ? (
               <p className="note">
-                {period === "week" && !weekRuns[accWeek] ? "Loading…" : "Play a run to see it here."}
+                {period === "last50" && last50 === null ? "Loading…" : "Play a run to see it here."}
               </p>
             ) : (
             <>
@@ -456,7 +477,9 @@ export function Progress({ onEarlyBird, leaderboardIntentRef, accuracyIntentRef 
                         {c.tones.map((t, i) => (
                           <span key={i}>
                             {i > 0 && " + "}
-                            <span style={{ color: TONE_LINE_COLOR[t] }}>{TONE_PILL[t]}</span>
+                            <span style={{ color: TONE_LINE_COLOR[t] }}>
+                              <ToneMarkIcon tone={t} className="tone-mark-icon" />
+                            </span>
                           </span>
                         ))}
                       </span>
@@ -486,24 +509,12 @@ export function Progress({ onEarlyBird, leaderboardIntentRef, accuracyIntentRef 
                 <p className="note">
                   {trendRows === null
                     ? "Loading your trend…"
-                    : "Your weekly trend starts with your next run."}
+                    : "Your daily trend starts with your next run."}
                 </p>
               ) : (
                 <>
-                  <p className="note">Tone accuracy per week, from every run since you went Pro.</p>
-                  <div className="tone-pills">
-                    {proKeys.map((k) => (
-                      <button
-                        key={k}
-                        type="button"
-                        className={`tone-pill${activeKey === k ? " tone-pill-active" : ""}`}
-                        style={activeKey === k ? { background: keyColor(k) } : undefined}
-                        onClick={() => setSelectedKey(k)}
-                      >
-                        {keyLabel(k)}
-                      </button>
-                    ))}
-                  </div>
+                  <p className="note">Tone accuracy per day, from every run since you went Pro.</p>
+                  <ToneKeyPicker keys={proKeys} active={activeKey} onPick={setSelectedKey} />
                   <Suspense fallback={<div className="acc-chart acc-chart-loading" aria-hidden />}>
                     <AccuracyProgressChart
                       subject={keyLabel(activeKey).toLowerCase()}
@@ -517,20 +528,12 @@ export function Progress({ onEarlyBird, leaderboardIntentRef, accuracyIntentRef 
             </>
           ) : (
             <>
-              <p className="note">Accuracy per week for the selected tone (example data).</p>
-              <div className="tone-pills">
-                {TONES.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    className={`tone-pill${selectedTone === t ? " tone-pill-active" : ""}`}
-                    style={selectedTone === t ? { background: TONE_LINE_COLOR[t] } : undefined}
-                    onClick={() => setSelectedTone(t)}
-                  >
-                    {TONE_PILL[t]}
-                  </button>
-                ))}
-              </div>
+              <p className="note">Accuracy over time for the selected tone (example data).</p>
+              <ToneKeyPicker
+                keys={TONES.map(String)}
+                active={String(selectedTone)}
+                onPick={(k) => setSelectedTone(Number(k) as Tone)}
+              />
               <Suspense fallback={<div className="acc-chart acc-chart-loading" aria-hidden />}>
                 <AccuracyProgressChart
                   subject={TONE_NAME[selectedTone]}
@@ -554,23 +557,12 @@ export function Progress({ onEarlyBird, leaderboardIntentRef, accuracyIntentRef 
       <section className="progress-card sticker-card">
         <div className="progress-card-header">
           <h3>Run history</h3>
-          {!isPro && <span className="badge-solid badge-solid-jade">Last 5 runs</span>}
+          <span className="badge-solid badge-solid-jade">Last 5 runs</span>
         </div>
         {!isAccount && <p className="note">Shows runs from this device only.</p>}
-        {isPro ? (
-          <>
-            <WeekPicker week={historyWeek} onChange={setHistoryWeek} firstWeek={addWeeks(thisWeek, -52)} />
-            {weekRuns[historyWeek] ? (
-              <LocalRuns history={{ ...history, lastRuns: weekRuns[historyWeek] }} />
-            ) : (
-              <p className="note">Loading…</p>
-            )}
-          </>
-        ) : (
-          <LocalRuns history={history} />
-        )}
+        <LocalRuns history={history} />
         {!isPro &&
-          lockCta("🔒 See every run and your accuracy week by week — unlock with Pro", "run_history")}
+          lockCta("🔒 See your accuracy over 50 runs, all time and per day — unlock with Pro", "run_history")}
       </section>
 
       {/* ---- Tone evolution (kept from today, restyled) */}

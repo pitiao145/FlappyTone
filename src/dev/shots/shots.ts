@@ -332,6 +332,15 @@ const FLOWS: Record<string, { mic: "fake" | "denied"; run: (c: FlowCtx) => Promi
       await page.waitForTimeout(400);
       await snap("compare-mock", "Compare view: mock-up (free)", { noNav: true });
 
+      // Free: Progress accuracy (last 5 only) and the trend mock with icon pills.
+      await page.goto(`${base}shots.html`);
+      await page.locator(".playhome-menu").waitFor();
+      await nav(page, "Progress");
+      await page.locator(".progress-screen").waitFor();
+      await page.locator(".acc-tab", { hasText: "Accuracy progress" }).click();
+      await page.waitForTimeout(800);
+      await page.locator(".acc-tab").first().scrollIntoViewIfNeeded();
+      await snap("progress-trend-free", "Progress: accuracy trend (free mock, icon pills)");
       await seed({ "flappytone.devtier": "pro" });
       await over({ runsToday: 2, goalJustCompleted: false });
       await snap("gameover-pro", "End of run: Pro (no teaser)");
@@ -342,14 +351,14 @@ const FLOWS: Record<string, { mic: "fake" | "denied"; run: (c: FlowCtx) => Promi
       await nav(page, "Play");
 
       // Pro compare view with seeded weekly shapes (dev hook, fetchShapes).
-      await page.evaluate(([thisMon, lastMon]) => {
+      await page.evaluate(([thisMon, lastMon, twoMon, fourMon]) => {
         const line = (k: number) => Array.from({ length: 61 }, (_, i) => {
           const x = i / 60;
           return 3 - 2.2 * Math.sin(Math.PI * Math.min(1, x * 1.4)) * (1 - x) + 2.4 * x * x + k * 0.5 * Math.sin(x * 6);
         });
         const row = (key: string, d: string, k: number) => ({ key, day: d, sum: line(k).map((v) => v * 8), count: 8 });
-        (globalThis as any).__ftShotsShapes = ["1", "2", "3", "4", "3-2", "2-4", "4-1"].flatMap((key) => [row(key, lastMon, 1.6), row(key, thisMon, 0.5)]);
-      }, [mon(0), mon(-1)]);
+        (globalThis as any).__ftShotsShapes = ["1", "2", "3", "4", "3-2", "2-4", "4-1"].flatMap((key) => [row(key, fourMon, 3), row(key, twoMon, 2.2), row(key, lastMon, 1.6), row(key, thisMon, 0.5)]);
+      }, [mon(0), mon(-1), mon(-2), mon(-4)]);
       await nav(page, "Progress");
       await page.locator(".progress-screen").waitFor();
       await page.waitForTimeout(800);
@@ -360,6 +369,10 @@ const FLOWS: Record<string, { mic: "fake" | "denied"; run: (c: FlowCtx) => Promi
       await page.locator(".tone-compare-pair").first().click();
       await page.waitForTimeout(300);
       await snap("compare-pro-pair", "Compare view: Pro, a tone pair");
+      await page.locator(".compare-back-pill", { hasText: "2 weeks" }).click().catch(() => {});
+      await page.locator(".week-picker-label").last().scrollIntoViewIfNeeded();
+      await page.waitForTimeout(300);
+      await snap("compare-pro-2w", "Compare view: Pro, compared with 2 weeks before");
     },
   },
   "mic-help": {

@@ -106,31 +106,6 @@ export async function fetchComeBackRows(): Promise<{ days: ServerDayRow[] | null
   }
 }
 
-/** The account's counted runs of one local week (`week` = its Monday), newest first; empty on any failure. Pro reads it (brief 55). */
-export async function fetchWeekRuns(week: string, weekEnd: string): Promise<ServerRunRow[]> {
-  try {
-    const supabase = getSupabase();
-    const userId = await accountUserId();
-    if (!supabase || !userId) return [];
-    const { data, error } = await supabase
-      .from("run_log")
-      .select(RUN_COLUMNS)
-      .eq("user_id", userId)
-      .in("mode", [...COUNTED_MODES])
-      .in("outcome", [...COUNTED_OUTCOMES])
-      .gte("day", week)
-      .lte("day", weekEnd)
-      .order("played_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(500);
-    if (error || !data) return [];
-    return data as unknown as ServerRunRow[];
-  } catch (err) {
-    warn("stats", "week runs read failed", err);
-    return [];
-  }
-}
-
 /** Everything Progress shows for an account; null when signed out or on any failure. */
 export async function fetchServerStats(): Promise<(AccountStats & { userId: string; displayName: string | null }) | null> {
   const supabase = getSupabase();

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { track } from "../analytics/client.ts";
 import { useTier } from "../data/tier.ts";
-import { addWeeks, keyName, TONE_NAME, todayLocal, weekEnd, weekLabel, weekStart } from "../game/comeBack.ts";
+import { addWeeks, keyName, todayLocal, weekEnd, weekLabel, weekStart } from "../game/comeBack.ts";
 import type { Tone } from "../game/gates.ts";
 import { averageInPeriod, MIN_ATTEMPTS_TO_SHOW, type ShapeRow } from "../game/playerShape.ts";
 import { effectiveSpeechStyle } from "../game/settings.ts";
@@ -11,6 +11,16 @@ import { drawCompareChart } from "./toneAverageChart.ts";
 import { ToneMarkIcon } from "./toneIcons.tsx";
 
 const TONES: Tone[] = [1, 2, 3, 4];
+/** How far back the compare line can go, in weeks. */
+const COMPARE_BACK = [1, 2, 4, 8];
+
+/** "last week" / "2 weeks ago" from this week; "the week before" / "4 weeks before" otherwise. */
+function compareLabel(week: string, compareWeek: string, thisWeek: string): string {
+  const back = Math.round((Date.parse(week) - Date.parse(compareWeek)) / (7 * 86_400_000));
+  if (week === thisWeek) return back === 1 ? "last week" : `${back} weeks ago`;
+  return back === 1 ? "the week before" : `${back} weeks before`;
+}
+
 /** The mock-up's sample pairs (a free player sees these). */
 const MOCK_PAIRS = ["3-2", "2-3", "4-1", "1-4"];
 
@@ -35,6 +45,9 @@ export function ToneCompare({ mode, rows = null, initialTone = 3 }: Props) {
   // A single tone ("3") or a pair ("3-2"), the same keys as player_tone_shapes.
   const [key, setKey] = useState<string>(String(initialTone));
   const [week, setWeek] = useState(thisWeek);
+  // The week it is compared with: any earlier week (default the one before).
+  const [compareBack, setCompareBack] = useState(1);
+  const compareWeek = addWeeks(week, -compareBack);
   const isPair = key.includes("-");
   const avg = averagedShapes();
   const jane = (isPair ? avg.pair[style][key] : avg.tone[style][Number(key) as Tone]) ?? null;
@@ -54,7 +67,7 @@ export function ToneCompare({ mode, rows = null, initialTone = 3 }: Props) {
 
   const lines = useMemo(() => {
     if (mode === "mock") return mockWeekLines(jane, key);
-    const prev = addWeeks(week, -1);
+    const prev = compareWeek;
     const a = averageInPeriod(rows ?? [], key, week, weekEnd(week));
     const b = averageInPeriod(rows ?? [], key, prev, weekEnd(prev));
     return {
@@ -62,10 +75,10 @@ export function ToneCompare({ mode, rows = null, initialTone = 3 }: Props) {
       lastWeek: b && b.count >= MIN_ATTEMPTS_TO_SHOW ? b.line : null,
       thisCount: a?.count ?? 0,
     };
-  }, [mode, rows, key, week, jane]);
+  }, [mode, rows, key, week, compareWeek, jane]);
 
   const caption = compareCaption(
-    week === thisWeek ? "last week" : "the week before",
+    compareLabel(week, compareWeek, thisWeek),
     shapeDistance(lines.thisWeek, jane),
     shapeDistance(lines.lastWeek, jane),
   );
@@ -93,39 +106,7 @@ export function ToneCompare({ mode, rows = null, initialTone = 3 }: Props) {
 
   return (
     <div className="tone-compare">
-      <div className="tone-compare-tabs" role="group" aria-label="Tone">
-        {TONES.map((t) => (
-          <button
-            key={t}
-            type="button"
-            className="tone-compare-tab"
-            aria-pressed={key === String(t)}
-            aria-label={TONE_NAME[t]}
-            onClick={() => setKey(String(t))}
-          >
-            <ToneMarkIcon tone={t} className="tone-compare-icon" />
-          </button>
-        ))}
-      </div>
-      {pairs.length > 0 && (
-        <div className="tone-compare-pairs" role="group" aria-label="Tone pairs">
-          <span className="tone-compare-pairs-label">Pairs</span>
-          {pairs.map((k) => (
-            <button
-              key={k}
-              type="button"
-              className="tone-compare-pair"
-              aria-pressed={key === k}
-              aria-label={keyName(k)}
-              onClick={() => setKey(k)}
-            >
-              {k.split("-").map((t, i) => (
-                <ToneMarkIcon key={i} tone={Number(t) as Tone} className="tone-compare-icon" />
-              ))}
-            </button>
-          ))}
-        </div>
-      )}
+      <ToneKeyPicker keys={[...TONES.map(String), ...pairs]} active={key} onPick={setKey} />
       <p className="tone-compare-caption">{caption}</p>
       <canvas
         ref={canvasRef}
@@ -142,10 +123,28 @@ export function ToneCompare({ mode, rows = null, initialTone = 3 }: Props) {
           {week === thisWeek ? "this week" : "that week"}
         </span>
         <span>
-          <i className="tone-compare-key tone-compare-key-last" aria-hidden /> the week before
+          <i className="tone-compare-key tone-compare-key-last" aria-hidden /> {compareLabel(week, compareWeek, thisWeek)}
         </span>
       </p>
-      <WeekPicker week={week} onChange={setWeek} firstWeek={firstWeek} />
+      <div className="tone-compare-weeks">
+        <span className="tone-compare-weeks-label">Week</span>
+        <WeekPicker week={week} onChange={(w) => setWeek(w)} firstWeek={addWeeks(firstWeek, 1)} />
+        <span className="tone-compare-weeks-label">Compare with</span>
+        <div className="compare-back" role="group" aria-label="Compare with">
+          {COMPARE_BACK.map((n) => (
+            <button
+              key={n}
+              type="button"
+              className="compare-back-pill"
+              aria-pressed={compareBack === n}
+              disabled={mode === "pro" && addWeeks(week, -n) < firstWeek}
+              onClick={() => setCompareBack(n)}
+            >
+              {n === 1 ? "1 week before" : `${n} weeks before`}
+            </button>
+          ))}
+        </div>
+      </div>
       {mode === "mock" && <p className="note">Example data. Yours fills in as you play.</p>}
     </div>
   );
@@ -171,6 +170,63 @@ export function WeekPicker({
       <button type="button" aria-label="Next week" disabled={week >= thisWeek} onClick={() => onChange(addWeeks(week, 1))}>
         ›
       </button>
+    </div>
+  );
+}
+
+/**
+ * Pick a tone or a pair with the tone-mark icons (brief 55 feedback): the 4
+ * tones on one row, pairs in a scrolling row under them. Names stay in the
+ * aria labels. Shared by the compare view and Progress's accuracy trend.
+ */
+export function ToneKeyPicker({
+  keys,
+  active,
+  onPick,
+}: {
+  keys: string[];
+  active: string | null;
+  onPick: (key: string) => void;
+}) {
+  const tones = keys.filter((k) => !k.includes("-"));
+  const pairKeys = keys.filter((k) => k.includes("-"));
+  return (
+    <div className="tone-compare tone-key-picker">
+      {tones.length > 0 && (
+        <div className="tone-compare-tabs" role="group" aria-label="Tone">
+          {tones.map((k) => (
+            <button
+              key={k}
+              type="button"
+              className="tone-compare-tab"
+              aria-pressed={active === k}
+              aria-label={keyName(k)}
+              onClick={() => onPick(k)}
+            >
+              <ToneMarkIcon tone={Number(k) as Tone} className="tone-compare-icon" />
+            </button>
+          ))}
+        </div>
+      )}
+      {pairKeys.length > 0 && (
+        <div className="tone-compare-pairs" role="group" aria-label="Tone pairs">
+          <span className="tone-compare-pairs-label">Pairs</span>
+          {pairKeys.map((k) => (
+            <button
+              key={k}
+              type="button"
+              className="tone-compare-pair"
+              aria-pressed={active === k}
+              aria-label={keyName(k)}
+              onClick={() => onPick(k)}
+            >
+              {k.split("-").map((t, i) => (
+                <ToneMarkIcon key={i} tone={Number(t) as Tone} className="tone-compare-icon" />
+              ))}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -13,7 +13,6 @@ import type { Tone } from "./gates.ts";
 import type { RunMode } from "./run.ts";
 import type { RunStats } from "./scoring.ts";
 import { isSpokenKey } from "./words.ts";
-import { weekStart } from "./comeBack.ts";
 
 export type LogOutcome = "finished" | "out_of_hearts" | "quit" | "restart";
 
@@ -139,14 +138,6 @@ export function dailyTrend(rows: Pick<RunLogRow, "day" | "per_key">[]): Map<stri
     );
   }
   return out;
-}
-
-/**
- * Per key, one point per local week (its Monday in `day`), oldest first.
- * Progress's accuracy trend reads weeks only since brief 55.
- */
-export function weeklyTrend(rows: Pick<RunLogRow, "day" | "per_key">[]): Map<string, TrendPoint[]> {
-  return dailyTrend(rows.map((r) => ({ day: weekStart(r.day), per_key: r.per_key })));
 }
 
 /** Keys the player has data for: tones 1–4 first, then combos, each in order. */
