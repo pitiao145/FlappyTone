@@ -10514,17 +10514,24 @@ button.switch-track.switch-on {
 .tone-compare-sheet-head h3 {
   margin: 0;
 }
-.tone-compare-close {
+.tone-compare-sheet .tone-compare-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
   width: 44px;
   height: 44px;
+  min-height: 0;
   padding: 0;
   border: 2px solid var(--ink);
   border-radius: 999px;
   background: var(--surface);
   color: var(--ink);
-  font-size: 1.4rem;
-  line-height: 1;
+  line-height: 0;
   cursor: pointer;
+}
+.tone-compare-close svg {
+  width: 16px;
+  height: 16px;
 }
 .tone-compare-sheet-cta {
   width: 100%;

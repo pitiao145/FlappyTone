@@ -456,7 +456,9 @@ export function GameOver({
             <div className="tone-compare-sheet-head">
               <h3>Your tones, week by week</h3>
               <button type="button" className="tone-compare-close" aria-label="Close" onClick={() => setCompareOpen(false)}>
-                ×
+                <svg viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+                </svg>
               </button>
             </div>
             <ToneCompare mode="mock" initialTone={teaser.tone} />
