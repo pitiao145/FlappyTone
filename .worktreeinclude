@@ -1,3 +1,6 @@
 # Gitignored files Claude Code copies into every new worktree it creates
 # (CLI --worktree, desktop parallel sessions). Local secrets stay local.
 .env.local
+# Vercel repo link: without it `vercel dev` in a worktree inside the repo
+# walks up to the main checkout's .vercel/ and serves the main checkout.
+.vercel/repo.json
