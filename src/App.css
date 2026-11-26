@@ -1441,6 +1441,17 @@
   pointer-events: none;
 }
 
+.go-header {
+  flex-wrap: wrap;
+}
+.go-header-footer {
+  flex: 1 0 100%;
+  padding-left: 56px;
+  margin-top: calc(-1 * var(--space-2));
+}
+.go-header-footer .go-goal-chip {
+  margin: 0;
+}
 .go-header-score {
   padding-left: 56px;
   flex: 1 1 auto;
@@ -10104,9 +10115,14 @@ button.switch-track.switch-on {
 .go-streak-line strong {
   color: var(--ink);
 }
+.go-xp-chip {
+  flex-wrap: wrap;
+}
+.go-xp-chip > span {
+  white-space: nowrap;
+}
 .go-goal-chip {
   display: inline-block;
-  margin: 6px 0 0 6px;
   padding: 3px 10px;
   border-radius: 999px;
   border: 1.5px solid var(--ink);
@@ -10125,10 +10141,17 @@ button.switch-track.switch-on {
 .go-compare-teaser {
   display: block;
   width: 100%;
+  height: auto;
+  margin: var(--space-4) 0 0;
+  padding: var(--space-4);
   text-align: left;
   cursor: pointer;
   font: inherit;
   color: inherit;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  box-shadow: var(--shadow-sticker);
 }
 .go-compare-teaser-title {
   margin: 0 0 var(--space-2);
@@ -10182,22 +10205,26 @@ button.switch-track.switch-on {
 }
 .tone-compare-tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
 }
-.tone-compare-tab {
-  padding: 8px 4px;
+.tone-compare .tone-compare-tab {
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 2px;
   border: 2px solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--surface);
   color: var(--ink);
   font: inherit;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 700;
+  line-height: 1.2;
   cursor: pointer;
   white-space: nowrap;
 }
-.tone-compare-tab[aria-pressed="true"] {
+.tone-compare .tone-compare-tab[aria-pressed="true"] {
   background: var(--accent);
   color: var(--accent-ink);
   box-shadow: 2px 2px 0 var(--ink);
@@ -10254,8 +10281,8 @@ button.switch-track.switch-on {
   font-weight: 700;
 }
 .week-picker button {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 2px solid var(--ink);
   border-radius: 999px;
@@ -10275,7 +10302,7 @@ button.switch-track.switch-on {
 .tone-compare-sheet {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 1000;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -10285,7 +10312,7 @@ button.switch-track.switch-on {
   width: min(100%, 480px);
   max-height: 92vh;
   overflow: auto;
-  padding: var(--space-5) var(--space-4) var(--space-6);
+  padding: var(--space-5) var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
   background: var(--surface);
   border: 2px solid var(--ink);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -10298,6 +10325,18 @@ button.switch-track.switch-on {
 }
 .tone-compare-sheet-head h3 {
   margin: 0;
+}
+.tone-compare-close {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
 }
 .tone-compare-sheet-cta {
   width: 100%;

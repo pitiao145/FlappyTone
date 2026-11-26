@@ -5,6 +5,7 @@ import {
   DAILY_GOAL_RUNS,
   DAILY_GOAL_XP,
   loadComeBack,
+  capFirst,
   TONE_NAME,
   weeklyHeadline,
   type CountedRunResult,
@@ -451,7 +452,7 @@ export function GameOver({
           <div className="tone-compare-sheet-card">
             <div className="tone-compare-sheet-head">
               <h3>Your tones, week by week</h3>
-              <button type="button" className="feedback-close" aria-label="Close" onClick={() => setCompareOpen(false)}>
+              <button type="button" className="tone-compare-close" aria-label="Close" onClick={() => setCompareOpen(false)}>
                 ×
               </button>
             </div>
@@ -472,6 +473,27 @@ export function GameOver({
       {/* ---- 1. header / score card, with the Pip breaking out of its corner */}
       <GameOverHeader
         eyebrow={isNewBest ? "New personal best" : "Run over"}
+        footer={
+          counted && (dailyGoal?.goalJustCompleted || streak.state === "done_today" || headline) ? (
+            <>
+              {dailyGoal?.goalJustCompleted && (
+                <span className="go-goal-chip">Daily goal ✓ +{DAILY_GOAL_XP} XP</span>
+              )}
+              {(streak.state === "done_today" || headline) && (
+                <p className="go-streak-line">
+                  {streak.state === "done_today" && (
+                    <strong>🔥 {streak.current}-day streak · come back tomorrow</strong>
+                  )}
+                  {streak.state === "done_today" && headline && " · "}
+                  {streak.state === "done_today" ? headline?.text : headline && capFirst(headline.text)}
+                  {dailyGoal && dailyGoal.runsToday < DAILY_GOAL_RUNS && (
+                    <> · daily goal {dailyGoal.runsToday}/{DAILY_GOAL_RUNS}</>
+                  )}
+                </p>
+              )}
+            </>
+          ) : null
+        }
         score={stats.score}
         actions={
           /* Share always lives here (right of the score). Play again joins it
@@ -492,23 +514,6 @@ export function GameOver({
           <p className="go-xp-chip">
             <span>+{xpGain.gained.toLocaleString()} XP</span>
             {xpGain.levelUp && <span className="go-xp-chip-up">Level {xpGain.after.level}!</span>}
-            {dailyGoal?.goalJustCompleted && (
-              <span className="go-goal-chip">Daily goal ✓ +{DAILY_GOAL_XP} XP</span>
-            )}
-          </p>
-        )}
-        {counted && (streak.state === "done_today" || headline) && (
-          <p className="go-streak-line">
-            {streak.state === "done_today" && (
-              <strong>
-                🔥 {streak.current}-day streak · come back tomorrow
-              </strong>
-            )}
-            {streak.state === "done_today" && headline && " · "}
-            {headline?.text}
-            {dailyGoal && dailyGoal.runsToday < DAILY_GOAL_RUNS && (
-              <> · daily goal {dailyGoal.runsToday}/{DAILY_GOAL_RUNS}</>
-            )}
           </p>
         )}
         {challengeScore != null && (

@@ -1400,9 +1400,10 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     if (!import.meta.env.DEV) return;
     const w = window as unknown as { __ftShots?: unknown };
     w.__ftShots = {
-      gameOver: (s: RunStats) => {
+      gameOver: (s: RunStats, goal?: CountedRunResult) => {
         setGameAlive(false);
         setStats(s);
+        setDailyGoal(goal ?? null);
         setScreen("gameover");
       },
     };

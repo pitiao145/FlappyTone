@@ -41,9 +41,12 @@ export function GameOverHeader({
   score,
   children,
   actions,
+  footer,
 }: {
   eyebrow: string;
   score: number;
+  /** Full-width lines under the score row (brief 55: streak, weekly headline, daily goal). */
+  footer?: ReactNode;
   /** Extra lines under the score (best, XP, challenge). */
   children?: ReactNode;
   /** Right of the score (share, play again on desktop). */
@@ -61,6 +64,7 @@ export function GameOverHeader({
         {children}
       </div>
       {actions}
+      {footer && <div className="go-header-footer">{footer}</div>}
     </header>
   );
 }

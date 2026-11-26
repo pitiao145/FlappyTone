@@ -251,6 +251,109 @@ const FLOWS: Record<string, { mic: "fake" | "denied"; run: (c: FlowCtx) => Promi
       await snap("gameover", "Game over", { scrollEnd: true });
     },
   },
+  // Brief 55: streak card states, end-of-run lines/chip/teaser, compare view.
+  comeback: {
+    mic: "fake",
+    run: async ({ page, snap, base }) => {
+      const day = (o: number) => {
+        const d = new Date();
+        d.setDate(d.getDate() + o);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      };
+      const streak = (last: string, current: number) => {
+        const st = { lastPlayedDate: last, current, best: Math.max(current, 6) };
+        let h = 0;
+        const str = `${st.lastPlayedDate}:${st.current}:${st.best}:ft-streak`;
+        for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+        return JSON.stringify({ ...st, chk: h.toString(36) });
+      };
+      const seed = async (kv: Record<string, string | null>) => {
+        await page.evaluate((kv) => {
+          for (const [k, v] of Object.entries(kv)) v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v);
+        }, kv);
+      };
+      const home = async (state: string, title: string, s: string | null) => {
+        await seed({ "toneflap.streak.v1": s });
+        await page.goto(`${base}shots.html`);
+        await page.locator(".playhome-menu").waitFor();
+        await page.waitForTimeout(500);
+        await snap(state, title);
+      };
+      await page.goto(`${base}shots.html`);
+      await page.locator(".playhome-menu").waitFor();
+      await home("home-done", "Play home: played today", streak(day(0), 4));
+      await home("home-at-risk", "Play home: played yesterday", streak(day(-1), 3));
+      await home("home-broken", "Play home: streak broken", streak(day(-3), 5));
+      await home("home-new", "Play home: new account", null);
+
+      // A free player with 3+ runs, two weeks of play (third tone improved).
+      const mon = (o: number) => {
+        const d = new Date();
+        d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + 7 * o);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      };
+      const lt = (attempts: number, acc: number) => ({ attempts, unheard: 0, accSum: attempts * acc, best: 1 });
+      const history = {
+        totalRuns: 9, bestScore: 2100, totalGates: 120, wordIds: [], lastRuns: [], statsVersion: 2,
+        lifetimePerTone: { 1: lt(30, 0.81), 2: lt(30, 0.7), 3: lt(30, 0.64), 4: lt(30, 0.77) },
+        lifetimePerCombo: {},
+      };
+      const wk = (a: number) => ({ 1: { attempts: 10, accSum: 8 }, 2: { attempts: 10, accSum: 7 }, 3: { attempts: 10, accSum: a }, 4: { attempts: 10, accSum: 7.5 } });
+      const comeback = { days: { [mon(-1)]: 4, [day(0)]: 3 }, weeks: { [mon(-1)]: wk(5.5), [mon(0)]: wk(6.4) } };
+      await seed({
+        "flappytone.devtier": "free",
+        "toneflap.streak.v1": streak(day(0), 4),
+        "toneflap.history.v1": JSON.stringify(history),
+        "toneflap.comeback.v1": JSON.stringify(comeback),
+      });
+      const over = async (goal: unknown) => {
+        await page.goto(`${base}shots.html`);
+        await page.locator(".playhome-menu").waitFor();
+        await page.evaluate((goal) => {
+          const t = { gates: 6, accSum: 4.6, unheard: 1, mismatched: 0, mismatchedAs: {}, best: 0.93 };
+          (globalThis as any).__ftShots.gameOver(
+            {
+              score: 1840, hearts: 0, combo: 0, bestMultiplier: 3,
+              perTone: { 1: t, 2: { ...t, accSum: 3.9 }, 3: { ...t, accSum: 3.1 }, 4: { ...t, accSum: 5.2 } },
+              perCombo: {},
+            },
+            goal,
+          );
+        }, goal);
+        await page.locator(".gameover-screen").waitFor();
+        await page.waitForTimeout(1200);
+      };
+      await over({ runsToday: 3, goalJustCompleted: true });
+      await snap("gameover-free", "End of run: free, daily goal, teaser");
+      await page.locator(".go-compare-teaser").scrollIntoViewIfNeeded();
+      await snap("gameover-free-teaser", "End of run: free, teaser in view");
+      await page.locator(".go-compare-teaser").click();
+      await page.locator(".tone-compare-sheet").waitFor();
+      await page.waitForTimeout(400);
+      await snap("compare-mock", "Compare view: mock-up (free)", { noNav: true });
+
+      await seed({ "flappytone.devtier": "pro" });
+      await over({ runsToday: 2, goalJustCompleted: false });
+      await snap("gameover-pro", "End of run: Pro (no teaser)");
+
+      // Pro compare view with seeded weekly shapes (dev hook, fetchShapes).
+      await page.evaluate(([thisMon, lastMon]) => {
+        const line = (k: number) => Array.from({ length: 61 }, (_, i) => {
+          const x = i / 60;
+          return 3 - 2.2 * Math.sin(Math.PI * Math.min(1, x * 1.4)) * (1 - x) + 2.4 * x * x + k * 0.5 * Math.sin(x * 6);
+        });
+        const row = (key: string, d: string, k: number) => ({ key, day: d, sum: line(k).map((v) => v * 8), count: 8 });
+        (globalThis as any).__ftShotsShapes = ["1", "2", "3", "4"].flatMap((key) => [row(key, lastMon, 1.6), row(key, thisMon, 0.5)]);
+      }, [mon(0), mon(-1)]);
+      await nav(page, "Progress");
+      await page.locator(".progress-screen").waitFor();
+      await page.waitForTimeout(800);
+      await snap("progress-top", "Progress: weekly headline");
+      await page.locator(".tone-compare").first().scrollIntoViewIfNeeded();
+      await page.waitForTimeout(400);
+      await snap("compare-pro", "Compare view: Pro");
+    },
+  },
   "mic-help": {
     mic: "denied",
     run: async ({ page, snap, base }) => {
