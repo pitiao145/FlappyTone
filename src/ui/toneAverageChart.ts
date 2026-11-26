@@ -155,3 +155,53 @@ export function drawPlayerShapeChart(
   stroke(lines.then, `${tint} 0.45)`, 2, [5, 4]);
   stroke(lines.now, `${tint} 0.95)`, 2.5, []);
 }
+
+/**
+ * The weekly compare view's one big chart (brief 55): Jane's average (grey,
+ * thick), this week (brand colour) and last week (dashed, lighter). Same
+ * Chao grid as `drawPlayerShapeChart`.
+ */
+export function drawCompareChart(
+  canvas: HTMLCanvasElement,
+  lines: { jane: number[] | null; thisWeek: number[] | null; lastWeek: number[] | null },
+  width: number,
+  height: number,
+): void {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  const pad = 10;
+  const y = (chao: number) => pad + ((TOP - chao) / (TOP - BOTTOM)) * (height - 2 * pad);
+
+  ctx.strokeStyle = rgba("grid", 0.35);
+  ctx.lineWidth = 1;
+  for (let chao = 1; chao <= 5; chao++) {
+    ctx.beginPath();
+    ctx.moveTo(0, y(chao));
+    ctx.lineTo(width, y(chao));
+    ctx.stroke();
+  }
+  const stroke = (line: number[] | null, style: string, w: number, dash: number[]) => {
+    if (!line || line.length < 2) return;
+    ctx.strokeStyle = style;
+    ctx.lineWidth = w;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.setLineDash(dash);
+    ctx.beginPath();
+    line.forEach((chao, i) => {
+      const px = pad + (i / (line.length - 1)) * (width - 2 * pad);
+      if (i === 0) ctx.moveTo(px, y(chao));
+      else ctx.lineTo(px, y(chao));
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+  };
+  stroke(lines.jane, rgba("ink", 0.3), 7, []);
+  stroke(lines.lastWeek, rgba("accent", 0.5), 2.5, [7, 6]);
+  stroke(lines.thisWeek, rgba("accent", 1), 3.5, []);
+}

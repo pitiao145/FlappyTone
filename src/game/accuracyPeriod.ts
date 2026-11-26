@@ -1,17 +1,15 @@
 /**
- * Which runs Progress's tone-accuracy bars read (brief 05). Pure — no React,
- * no Supabase.
+ * Which runs Progress's tone-accuracy bars read (brief 05, weeks since brief
+ * 55). Pure — no React, no Supabase.
  *
- * Free and guest: always the last 5 runs. Pro picks: the last 5, the last 50
- * (the latest 50 `run_log` rows' `per_key` summed), or all time
- * (`tone_accuracy_stats`, cached in the store's lifetime totals). An empty
+ * Free: always the last 5 runs. Pro: one local week at a time (‹ week ›,
+ * Monday to Sunday), from that week's counted `run_log` rows. Weeks only:
+ * there is no month, "last 50" or "all time" period any more. An empty
  * period shows an empty state — it never falls back to another period.
  */
 import type { Tier } from "./tiers.ts";
 import {
   comboAccuracyFromHistory,
-  lifetimeComboAccuracy,
-  lifetimeToneAccuracy,
   toneAccuracyFromHistory,
   type ComboAccuracy,
   type RunHistoryEntry,
@@ -19,23 +17,11 @@ import {
   type ToneAccuracy,
 } from "./runHistory.ts";
 
-export type AccuracyPeriod = "last5" | "last50" | "all";
+export type AccuracyPeriod = "last5" | "week";
 
-export const PERIODS: AccuracyPeriod[] = ["last5", "last50", "all"];
-
-export const PERIOD_LABEL: Record<AccuracyPeriod, string> = {
-  last5: "Last 5 runs",
-  last50: "Last 50 runs",
-  all: "All time",
-};
-
-export function periodAllowed(tier: Tier, period: AccuracyPeriod): boolean {
-  return period === "last5" || tier === "pro";
-}
-
-/** The period actually shown: a locked choice falls back to the last 5. */
-export function effectivePeriod(tier: Tier, chosen: AccuracyPeriod): AccuracyPeriod {
-  return periodAllowed(tier, chosen) ? chosen : "last5";
+/** Free reads the last 5; Pro reads a week. */
+export function periodFor(tier: Tier): AccuracyPeriod {
+  return tier === "pro" ? "week" : "last5";
 }
 
 export interface PeriodAccuracy {
@@ -46,23 +32,16 @@ export interface PeriodAccuracy {
 }
 
 /**
- * The bars for one period. `last50` is the fetched latest-50 runs (null while
- * loading — reads as empty).
+ * The bars for one period. `weekRuns` is the selected week's fetched runs
+ * (null while loading — reads as empty).
  */
 export function periodAccuracy(
   period: AccuracyPeriod,
   store: RunHistoryStore,
-  last50: RunHistoryEntry[] | null,
+  weekRuns: RunHistoryEntry[] | null,
 ): PeriodAccuracy {
-  let tones: ToneAccuracy[];
-  let combos: ComboAccuracy[];
-  if (period === "all") {
-    tones = lifetimeToneAccuracy(store);
-    combos = lifetimeComboAccuracy(store);
-  } else {
-    const runs = period === "last50" ? (last50 ?? []) : store.lastRuns.slice(0, 5);
-    tones = toneAccuracyFromHistory({ lastRuns: runs });
-    combos = comboAccuracyFromHistory({ lastRuns: runs });
-  }
+  const runs = period === "week" ? (weekRuns ?? []) : store.lastRuns.slice(0, 5);
+  const tones = toneAccuracyFromHistory({ lastRuns: runs });
+  const combos = comboAccuracyFromHistory({ lastRuns: runs });
   return { tones, combos, empty: tones.every((t) => t.gates === 0) && combos.length === 0 };
 }

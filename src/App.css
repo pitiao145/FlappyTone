@@ -10071,3 +10071,243 @@ button.switch-track.switch-on {
     visibility: hidden;
   }
 }
+
+/* ---- Brief 55: come-back loop ------------------------------------------ */
+
+/* Play home streak card: a small paper sticker, never a button. */
+.streak-chip {
+  margin: 0;
+  padding: 6px 14px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.streak-chip-at_risk {
+  background: #fff3d6;
+}
+.streak-chip-broken,
+.streak-chip-none {
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+/* End-of-run: one small line under Best, and the daily-goal chip. */
+.go-streak-line {
+  margin: 4px 0 0;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+.go-streak-line strong {
+  color: var(--ink);
+}
+.go-goal-chip {
+  display: inline-block;
+  margin: 6px 0 0 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 800;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.go-goal-progress {
+  margin: 4px 0 0;
+  font-size: var(--text-xs, 0.78rem);
+  color: var(--ink-muted);
+}
+
+/* Tone-compare teaser (free): under tone accuracy. */
+.go-compare-teaser {
+  display: block;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.go-compare-teaser-title {
+  margin: 0 0 var(--space-2);
+  font-weight: 800;
+  font-size: var(--text-md, 1rem);
+}
+.go-compare-teaser-title span {
+  color: var(--accent);
+}
+.go-compare-teaser-chart {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md, 10px);
+  max-height: 150px;
+}
+.go-compare-teaser-blur {
+  filter: blur(3px);
+  opacity: 0.75;
+  pointer-events: none;
+}
+.go-compare-teaser-cta {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  padding: 6px 14px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  font-weight: 800;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+/* Weekly headline at the top of Progress. */
+.weekly-headline {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-weight: 700;
+}
+.weekly-headline-threshold {
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+/* Compare view: tabs, one big chart, legend, week picker. */
+.tone-compare {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.tone-compare-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.tone-compare-tab {
+  padding: 8px 4px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tone-compare-tab[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.tone-compare-caption {
+  margin: 0;
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+.tone-compare-canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background: var(--canvas-backdrop);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-md, 10px);
+}
+.tone-compare-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+.tone-compare-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tone-compare-key {
+  display: inline-block;
+  width: 20px;
+  height: 0;
+}
+.tone-compare-key-jane {
+  border-top: 4px solid rgba(var(--ink-rgb), 0.35);
+}
+.tone-compare-key-this {
+  border-top: 3px solid var(--accent);
+}
+.tone-compare-key-last {
+  border-top: 2px dashed rgba(var(--accent-rgb), 0.55);
+}
+.week-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+}
+.week-picker-label {
+  min-width: 9em;
+  text-align: center;
+  font-weight: 700;
+}
+.week-picker button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.week-picker button:disabled {
+  opacity: 0.35;
+  box-shadow: none;
+  cursor: default;
+}
+.tone-compare-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(var(--ink-rgb), 0.45);
+}
+.tone-compare-sheet-card {
+  width: min(100%, 480px);
+  max-height: 92vh;
+  overflow: auto;
+  padding: var(--space-5) var(--space-4) var(--space-6);
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.tone-compare-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+.tone-compare-sheet-head h3 {
+  margin: 0;
+}
+.tone-compare-sheet-cta {
+  width: 100%;
+  margin-top: var(--space-4);
+}
+@media (min-width: 720px) {
+  .tone-compare-sheet {
+    align-items: center;
+  }
+  .tone-compare-sheet-card {
+    border-radius: var(--radius-lg);
+  }
+}
