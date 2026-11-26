@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { toneName } from "../site/toneNames.ts";
 import { drawToneAverageChart } from "./toneAverageChart.ts";
 import { TONE_INFO } from "../game/gates.ts";
 import type { Tone } from "../game/gates.ts";
@@ -37,7 +38,7 @@ export function ToneAverageCard({
         ref={ref}
         style={{ width: CARD_W, height: CARD_H }}
         role="img"
-        aria-label={`Measured pitch contour for tone ${tone}: ${info.cue}.`}
+        aria-label={`Measured pitch contour for the ${toneName(tone)}: ${info.cue}.`}
       />
       {showCaption && (
         <figcaption>

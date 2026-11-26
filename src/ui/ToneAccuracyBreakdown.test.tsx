@@ -20,7 +20,7 @@ describe("ToneAccuracyBreakdown", () => {
     stats = applyGate(stats, [3], "good", 0.72);
     stats = applyGate(stats, [1], "collision", 0.9);
     const out = html(stats);
-    expect(labels(out)).toEqual(["Tone 1: 90% tone accuracy", "Tone 3: 72% tone accuracy"]);
+    expect(labels(out)).toEqual(["First tone: 90% tone accuracy", "Third tone: 72% tone accuracy"]);
     expect(out).not.toContain("—");
     expect(out).toContain("tone accuracy");
     // Only one group, so no group headings.
@@ -42,10 +42,10 @@ describe("ToneAccuracyBreakdown", () => {
     expect(out).toContain("Tones");
     expect(out).toContain("Tone pairs");
     expect(labels(out).filter((l) => l.includes("then"))).toEqual([
-      "Tone 3 then tone 2: 40% tone accuracy",
-      "Tone 4 then tone 1: 55% tone accuracy",
-      "Tone 2 then tone 3: 65% tone accuracy",
-      "Tone 2 then tone 2: 70% tone accuracy",
+      "Third tone then second tone: 40% tone accuracy",
+      "Fourth tone then first tone: 55% tone accuracy",
+      "Second tone then third tone: 65% tone accuracy",
+      "Second tone then second tone: 70% tone accuracy",
     ]);
     expect(out).toContain("Show all 5");
   });
@@ -53,6 +53,6 @@ describe("ToneAccuracyBreakdown", () => {
   it("hides a stored 3-3 row: a 3+3 is never spoken (said 2+3)", () => {
     let stats = newRunStats();
     stats = applyGate(stats, [3, 3], "ok", 0.65);
-    expect(html(stats)).not.toContain("Tone 3 then tone 3");
+    expect(html(stats)).not.toContain("Third tone then third tone");
   });
 });

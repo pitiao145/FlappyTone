@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { toneName } from "../site/toneNames.ts";
 import {
   MIN_SCORED_GATES_FOR_TAKEAWAY,
   takeaway,
@@ -84,7 +85,7 @@ export function CoachCard({
         <span className="go-coach-eyebrow">Coach</span>
       </div>
       <h3 className="go-coach-title">
-        Weak spot: Tone {weakest.tone} ({TONE_SHORT_LABEL[weakest.tone]})
+        Weak spot: {toneName(weakest.tone)} ({TONE_SHORT_LABEL[weakest.tone]})
       </h3>
       <p className="go-coach-body">{takeaway(breakdown)}</p>
       {children}
