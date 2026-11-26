@@ -496,6 +496,14 @@ export type AnalyticsEvent =
   | { type: "progress_locked_cta_click"; card: string }
   /** Progress.tsx's pricing-section "Join EarlyBird" button. */
   | { type: "progress_earlybird_pricing_click" }
+  /** Brief 55: Play home's streak card, once per Play home mount. `streak` is the current day count (0 for broken/none). */
+  | { type: "streak_card_shown"; state: "done_today" | "at_risk" | "broken" | "none"; streak: number }
+  /** Brief 55: the run that reached the daily goal (3 counted runs in a local day). */
+  | { type: "daily_goal_completed"; runs_today: number }
+  /** Brief 55: the weekly headline was shown (end of run or Progress). `tone` 1..4; `delta` in points (0 = steady). */
+  | { type: "weekly_insight_shown"; tone: number; delta: number; surface: "gameover" | "progress" }
+  /** Brief 55: the per-tone weekly compare view. `week` = its Monday (YYYY-MM-DD); `mode` mock = free player's mock-up. */
+  | { type: "tone_compare_viewed"; tone: number; week: string; mode: "pro" | "mock" }
   /** Leaderboard.tsx's first successful board resolution per mount. */
   | {
       type: "visualiser_session";
@@ -781,6 +789,10 @@ export const APP_EVENT_TYPES: Record<AnalyticsEvent["type"], true> = {
   earlybird_checkout_opened: true,
   profile_earlybird_cta_click: true,
   progress_locked_cta_click: true,
+  streak_card_shown: true,
+  daily_goal_completed: true,
+  weekly_insight_shown: true,
+  tone_compare_viewed: true,
   progress_earlybird_pricing_click: true,
   feedback_submitted: true,
   update_banner: true,

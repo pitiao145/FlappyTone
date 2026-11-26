@@ -22,6 +22,7 @@
 
 import type { RunStats } from "./scoring.ts";
 import { loadRunHistory, type RunHistoryStore } from "./runHistory.ts";
+import { dailyGoalXp, loadComeBack } from "./comeBack.ts";
 
 /** XP for showing up: per heard gate (wall hits included). */
 export const XP_PER_GATE = 2;
@@ -89,7 +90,16 @@ export function levelFor(xp: number): LevelInfo {
   return { level, xp, intoLevel: xp - lo, levelSpan: hi - lo, toNext: hi - xp };
 }
 
+/**
+ * The player's XP: the lifetime-accuracy formula plus the daily-goal bonus
+ * (brief 55, `comeBack.ts`: `DAILY_GOAL_XP` per day with 3+ counted runs,
+ * days read from the server's `counted_runs`).
+ */
+export function playerXpFrom(store: Pick<RunHistoryStore, "lifetimePerTone" | "lifetimePerCombo">): number {
+  return totalXp(store) + dailyGoalXp(loadComeBack());
+}
+
 /** This device's view of the player's XP: the account's server cache, or a guest's own. */
 export function playerXp(): number {
-  return totalXp(loadRunHistory());
+  return playerXpFrom(loadRunHistory());
 }
