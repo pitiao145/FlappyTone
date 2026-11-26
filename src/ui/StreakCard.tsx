@@ -10,22 +10,6 @@ export function streakCardText(s: Pick<StreakStatus, "state" | "current">): stri
   return "Start a streak today";
 }
 
-/** Three looks for the card, picked by Pierre (brief 55 feedback). Dev only: `ft.dev.streakVariant`. */
-export type StreakVariant = "plate" | "week" | "ribbon";
-const DEFAULT_VARIANT: StreakVariant = "plate";
-
-function variantFor(): StreakVariant {
-  if (import.meta.env.DEV) {
-    try {
-      const v = localStorage.getItem("ft.dev.streakVariant");
-      if (v === "plate" || v === "week" || v === "ribbon") return v;
-    } catch {
-      // ignore
-    }
-  }
-  return DEFAULT_VARIANT;
-}
-
 function fmt(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -35,7 +19,7 @@ function fmt(d: Date): string {
  * the live streak (the `current` days ending on the last played day).
  */
 export function streakWeek(s: Pick<StreakStatus, "state" | "current">, lastPlayed: string, now = new Date()) {
-  const days: { label: string; played: boolean; today: boolean }[] = [];
+  const days: { label: string; played: boolean; today: boolean; missed: boolean }[] = [];
   const live = s.state === "done_today" || s.state === "at_risk";
   let first = "";
   if (live && lastPlayed) {
@@ -49,8 +33,12 @@ export function streakWeek(s: Pick<StreakStatus, "state" | "current">, lastPlaye
       label: d.toLocaleDateString("en", { weekday: "narrow" }),
       played: live && day >= first && day <= lastPlayed,
       today: i === 0,
+      missed: false,
     });
   }
+  // Habits Garden's grid tells a check-in from a miss: a past day without a
+  // run reads as missed once the player has ever played.
+  if (lastPlayed) for (const d of days) d.missed = !d.played && !d.today;
   return days;
 }
 
@@ -59,7 +47,7 @@ export function streakWeek(s: Pick<StreakStatus, "state" | "current">, lastPlaye
  * Reads `streakStatus()` (the server's `streak_last_day`, cached), re-read
  * when the account's stats land.
  */
-export function StreakCard({ variant = variantFor() }: { variant?: StreakVariant }) {
+export function StreakCard() {
   const version = useSessionVersion();
   const status = useMemo(() => streakStatus(), [version]);
   const lastPlayed = useMemo(() => loadStreakState().lastPlayedDate, [version]);
@@ -69,48 +57,37 @@ export function StreakCard({ variant = variantFor() }: { variant?: StreakVariant
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const live = status.state === "done_today" || status.state === "at_risk";
-  const sub =
-    status.state === "done_today" ? "done for today ✓" : status.state === "at_risk" ? "1 run keeps it" : "play a run to start";
-
-  if (variant === "week") {
-    return (
-      <div className={`streak-week streak-${status.state}`} role="status" aria-label={streakCardText(status)}>
+  const days = streakWeek(status, lastPlayed);
+  const caption =
+    status.state === "done_today"
+      ? "Done for today ✓ · come back tomorrow"
+      : status.state === "at_risk"
+        ? "1 run today keeps it"
+        : status.state === "broken"
+          ? "1 run starts a new streak"
+          : "1 run starts your streak";
+  return (
+    <div className={`streak-week streak-${status.state}`} role="status" aria-label={streakCardText(status)}>
+      <div className="streak-week-row">
         <span className="streak-week-count">
-          <span aria-hidden>🔥</span> {live ? status.current : 0}
+          <span className="streak-week-flame" aria-hidden>🔥</span>
+          <span className="streak-week-num">{live ? status.current : 0}</span>
         </span>
         <span className="streak-week-days" aria-hidden>
-          {streakWeek(status, lastPlayed).map((d, i) => (
-            <span key={i} className={`streak-day${d.played ? " is-played" : ""}${d.today ? " is-today" : ""}`}>
+          {days.map((d, i) => (
+            <span
+              key={i}
+              className={`streak-day${d.played ? " is-played" : ""}${d.today ? " is-today" : ""}${d.missed ? " is-missed" : ""}`}
+            >
               <i>{d.played ? "🔥" : ""}</i>
-              <b>{d.label}</b>
+              <b>{d.today ? "today" : d.label}</b>
             </span>
           ))}
         </span>
       </div>
-    );
-  }
-
-  if (variant === "ribbon") {
-    return (
-      <div className={`streak-ribbon streak-${status.state}`} role="status" aria-label={streakCardText(status)}>
-        <span className="streak-ribbon-band">
-          {live ? `🔥 ${status.current}-day streak` : "🔥 Start a streak"}
-        </span>
-        <span className="streak-ribbon-sub">{live ? sub : "1 run today starts it"}</span>
-      </div>
-    );
-  }
-
-  // "plate": the Flappy-style scoreboard plate.
-  return (
-    <div className={`streak-plate streak-${status.state}`} role="status" aria-label={streakCardText(status)}>
-      <span className="streak-plate-flame" aria-hidden>
-        🔥
-      </span>
-      <span className="streak-plate-num">{live ? status.current : 0}</span>
-      <span className="streak-plate-text">
-        <b>day streak</b>
-        <span>{live ? sub : "1 run today starts it"}</span>
+      <span className="streak-week-caption">
+        {caption}
+        {status.best > (live ? status.current : 0) && <> · best {status.best}</>}
       </span>
     </div>
   );

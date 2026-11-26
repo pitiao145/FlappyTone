@@ -281,14 +281,10 @@ const FLOWS: Record<string, { mic: "fake" | "denied"; run: (c: FlowCtx) => Promi
       };
       await page.goto(`${base}shots.html`);
       await page.locator(".playhome-menu").waitFor();
-      // Three looks for the streak (Pierre picks one), each in 3 states.
-      for (const variant of ["plate", "week", "ribbon"]) {
-        await seed({ "ft.dev.streakVariant": variant });
-        await home(`home-${variant}-done`, `Play home (${variant}): played today`, streak(day(0), 4));
-        await home(`home-${variant}-at-risk`, `Play home (${variant}): played yesterday`, streak(day(-1), 3));
-        await home(`home-${variant}-new`, `Play home (${variant}): broken / new`, null);
-      }
-      await seed({ "ft.dev.streakVariant": null });
+      await home("home-done", "Play home: played today", streak(day(0), 4));
+      await home("home-at-risk", "Play home: played yesterday", streak(day(-1), 3));
+      await home("home-broken", "Play home: streak lost", streak(day(-3), 5));
+      await home("home-new", "Play home: new account", null);
 
       // A free player with 3+ runs, two weeks of play (third tone improved).
       const mon = (o: number) => {

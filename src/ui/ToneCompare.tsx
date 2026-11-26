@@ -8,14 +8,12 @@ import { effectiveSpeechStyle } from "../game/settings.ts";
 import { averagedShapes } from "../game/toneAccuracy.ts";
 import { compareCaption, mockWeekLines, shapeDistance } from "../game/toneCompare.ts";
 import { drawCompareChart } from "./toneAverageChart.ts";
+import { ToneMarkIcon } from "./toneIcons.tsx";
 
 const TONES: Tone[] = [1, 2, 3, 4];
-const TAB_LABEL: Record<Tone, string> = { 1: "first", 2: "second", 3: "third", 4: "fourth" };
-const SHORT: Record<string, string> = { "1": "first", "2": "second", "3": "third", "4": "fourth" };
 /** The mock-up's sample pairs (a free player sees these). */
 const MOCK_PAIRS = ["3-2", "2-3", "4-1", "1-4"];
-/** "3-2" → "third + second". */
-const pairLabel = (key: string) => key.split("-").map((t) => SHORT[t] ?? t).join(" + ");
+
 
 interface Props {
   /** "pro": the player's own weekly shapes. "mock": a sample, for a free player (brief 55). */
@@ -105,7 +103,7 @@ export function ToneCompare({ mode, rows = null, initialTone = 3 }: Props) {
             aria-label={TONE_NAME[t]}
             onClick={() => setKey(String(t))}
           >
-            {TAB_LABEL[t]}
+            <ToneMarkIcon tone={t} className="tone-compare-icon" />
           </button>
         ))}
       </div>
@@ -121,7 +119,9 @@ export function ToneCompare({ mode, rows = null, initialTone = 3 }: Props) {
               aria-label={keyName(k)}
               onClick={() => setKey(k)}
             >
-              {pairLabel(k)}
+              {k.split("-").map((t, i) => (
+                <ToneMarkIcon key={i} tone={Number(t) as Tone} className="tone-compare-icon" />
+              ))}
             </button>
           ))}
         </div>
