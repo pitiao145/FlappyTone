@@ -296,7 +296,7 @@ const FLOWS: Record<string, { mic: "fake" | "denied"; run: (c: FlowCtx) => Promi
       const history = {
         totalRuns: 9, bestScore: 2100, totalGates: 120, wordIds: [], lastRuns: [], statsVersion: 2,
         lifetimePerTone: { 1: lt(30, 0.81), 2: lt(30, 0.7), 3: lt(30, 0.64), 4: lt(30, 0.77) },
-        lifetimePerCombo: {},
+        lifetimePerCombo: { "3-2": lt(12, 0.48), "1-4": lt(10, 0.67) },
       };
       const wk = (a: number) => ({ 1: { attempts: 10, accSum: 8 }, 2: { attempts: 10, accSum: 7 }, 3: { attempts: 10, accSum: a }, 4: { attempts: 10, accSum: 7.5 } });
       const comeback = { days: { [mon(-1)]: 4, [day(0)]: 3 }, weeks: { [mon(-1)]: wk(5.5), [mon(0)]: wk(6.4) } };
@@ -363,6 +363,10 @@ const FLOWS: Record<string, { mic: "fake" | "denied"; run: (c: FlowCtx) => Promi
       await page.locator(".progress-screen").waitFor();
       await page.waitForTimeout(800);
       await snap("progress-top", "Progress: weekly headline");
+      await page.locator(".tone-pill", { hasText: "All time" }).click();
+      await page.locator(".breakdown").first().scrollIntoViewIfNeeded();
+      await page.waitForTimeout(300);
+      await snap("progress-accuracy-all", "Progress: accuracy per tone, all time (Pro, icons)");
       await page.locator(".tone-compare").first().scrollIntoViewIfNeeded();
       await page.waitForTimeout(400);
       await snap("compare-pro", "Compare view: Pro");

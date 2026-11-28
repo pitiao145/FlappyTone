@@ -6700,6 +6700,24 @@ button.switch-track.switch-on {
 .progress-screen .tone-pill-active {
   color: var(--surface); /* background set inline to the tone's colour */
 }
+/* The period pills have no tone colour: ink, so the active label shows. */
+.progress-screen .tone-pills[aria-label="Period"] .tone-pill.tone-pill-active {
+  background: var(--ink);
+  color: var(--surface);
+}
+/* Accuracy per tone: the tone-mark icon instead of a name (brief 55). */
+.progress-screen .breakdown-row .acc-tone-icon {
+  flex: 0 0 64px;
+  line-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.progress-screen .acc-tone-icon .tone-mark-icon {
+  width: 30px;
+  height: 22.5px;
+}
 
 .acc-chart {
   position: relative;
@@ -10197,8 +10215,11 @@ button.switch-track.switch-on {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px 12px 6px;
+  gap: 6px;
+  /* Air above (after the title) and below (before Play), on top of the
+     overlay's own gap. */
+  margin: var(--space-2) 0 var(--space-3);
+  padding: 10px 16px 8px;
   border-radius: 16px;
   background: rgba(var(--surface-rgb), 0.92);
   border: 2px solid var(--ink);
@@ -10662,4 +10683,25 @@ button.switch-track.switch-on {
 .tone-key-picker {
   margin: var(--space-2) 0;
   gap: var(--space-2);
+}
+
+/* Short screens (SE-size browser): the streak strip shrinks so Play stays
+   above the fold. */
+@media (max-height: 620px) {
+  .streak-week {
+    margin: 0;
+    gap: 3px;
+    padding: 6px 10px 5px;
+  }
+  .streak-day i {
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
+  }
+  .streak-week-flame {
+    font-size: 1.3rem;
+  }
+  .streak-week-num {
+    font-size: 1.5rem;
+  }
 }

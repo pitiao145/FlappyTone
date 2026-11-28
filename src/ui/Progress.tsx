@@ -287,11 +287,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef, accuracyIntentRef 
   return (
     <div className="screen progress-screen">
       <h2>Your progress</h2>
-      <p className="note">
-        {tier === "guest"
-          ? "Saved on this device · sign up to keep it forever"
-          : "Synced to your account"}
-      </p>
+      {tier === "guest" && <p className="note">Saved on this device · sign up to keep it forever</p>}
 
       {/* ---- Brief 55: the weekly headline (free + Pro) */}
       {headline && (
@@ -448,7 +444,11 @@ export function Progress({ onEarlyBird, leaderboardIntentRef, accuracyIntentRef 
             <div className="breakdown">
               {toneAccuracy.map((t) => (
                 <div className="breakdown-row" key={t.tone}>
-                  <span className="syllable">{capFirst(TONE_NAME[t.tone])}</span>
+                  <span className="syllable acc-tone-icon" aria-label={capFirst(TONE_NAME[t.tone])}>
+                    <span style={{ color: TONE_LINE_COLOR[t.tone] }}>
+                      <ToneMarkIcon tone={t.tone} className="tone-mark-icon" />
+                    </span>
+                  </span>
                   <span className="bar">
                     <span
                       className="bar-fill"
@@ -473,10 +473,9 @@ export function Progress({ onEarlyBird, leaderboardIntentRef, accuracyIntentRef 
                       key={c.key}
                       aria-label={`${capFirst(TONE_NAME[c.tones[0]])} then ${TONE_NAME[c.tones[1]]}: ${Math.round(c.pct)}%`}
                     >
-                      <span className="syllable" aria-hidden>
+                      <span className="syllable acc-tone-icon" aria-hidden>
                         {c.tones.map((t, i) => (
                           <span key={i}>
-                            {i > 0 && " + "}
                             <span style={{ color: TONE_LINE_COLOR[t] }}>
                               <ToneMarkIcon tone={t} className="tone-mark-icon" />
                             </span>
