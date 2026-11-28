@@ -88,13 +88,12 @@ export async function fetchComeBackRows(): Promise<{ days: ServerDayRow[] | null
     const supabase = getSupabase();
     const userId = await accountUserId();
     if (!supabase || !userId) return { days: null, weeks: null };
-    // The `as never` casts: database.types.ts is regenerated after 0037 is applied.
     const [days, weeks] = await Promise.all([
       supabase.from("counted_runs").select("day, count").eq("user_id", userId),
       supabase
-        .from("weekly_tone_accuracy" as never)
+        .from("weekly_tone_accuracy")
         .select("week, tone, attempts, sum_accuracy")
-        .eq("user_id" as never, userId as never),
+        .eq("user_id", userId),
     ]);
     return {
       days: days.error || !days.data ? null : (days.data as ServerDayRow[]),
