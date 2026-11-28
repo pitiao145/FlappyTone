@@ -9,3 +9,6 @@ Available modes,"Tone drill, learn","Tone dril, learn, tone pairs",All
 Modes limits,Unlimited for available,"Unlimited drill, learn; limited tone pairs (5 words per tone pair)",Unlimited
 Visualizer,Grid + No ref words,Grid + 5 ref words per tone,Grid + All reference words
 Leaderboard,View theoretical rank,Join with Random Name,Join with Custom Name
+Streak card + daily goal (3 runs = +150 XP once a day),—,Yes,Yes
+Weekly headline (most improved tone this week),—,Yes,Yes
+Tone compare view (per tone and pair; a week vs an earlier week over Jane),—,Mock-up (example data) + end-of-run teaser from run 3,Yes (own shapes per week)

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toneName } from "../site/toneNames.ts";
 import { track } from "../analytics/client.ts";
 import type { VisualiserTab } from "../analytics/session.ts";
 import { inventoryNow, loadInventory, subscribeInventory } from "../audio/inventory.ts";
@@ -1058,7 +1059,7 @@ export function Visualiser({
           {syllableReads.map((r, i) => (
             <span key={i} className="vis-syllable">
               <strong className="vis-accuracy-value">
-                {r === null ? "?" : r.tone === "none" ? "none" : `T${r.tone}`}
+                {r === null ? "?" : r.tone === "none" ? "none" : toneName(r.tone).replace(" tone", "")}
               </strong>
               <span className="vis-accuracy-tries">{r === null ? "–" : `${Math.round(r.confidence * 100)}%`}</span>
             </span>
@@ -1081,7 +1082,7 @@ export function Visualiser({
           <strong
             className={`vis-accuracy-value tier-${recognizedTier(tone, recognized)}`}
           >
-            {recognized.tone === "none" ? "none" : `T${recognized.tone}`}
+            {recognized.tone === "none" ? "none" : toneName(recognized.tone).replace(" tone", "")}
           </strong>
           <span className="vis-accuracy-tries">
             {Math.round(recognized.confidence * 100)}%
@@ -1365,7 +1366,7 @@ export function Visualiser({
   }, [railKey]);
 
   /** "4–1", "3–neutral" — the pair as its tiles show it. */
-  const comboLabel = (c: Tone[]) => c.map((t) => ((t as number) === 0 ? "neutral" : t)).join("–");
+  const comboLabel = (c: Tone[]) => `${c.map((t) => ((t as number) === 0 ? "neutral" : toneName(t).replace(" tone", ""))).join(" + ")} tone`;
 
   /**
    * Under an empty tone or pair: why it is empty, and one tap to add the
@@ -1375,7 +1376,7 @@ export function Visualiser({
   const emptyHintFor = (kind: "tone" | "combo") => {
     const target = emptyTarget;
     if (target === null || ("tone" in target) !== (kind === "tone")) return null;
-    const label = "tone" in target ? `Tone ${target.tone}` : comboLabel(target.combo);
+    const label = "tone" in target ? toneName(target.tone, true) : comboLabel(target.combo);
     const found = levelToAdd(words, tier, selectedLevels, speechStyle, target);
     // Tool mode: only TOCFL 1 is open, so another list is locked there.
     const add = found && tool ? { ...found, unlocked: false } : found;
@@ -1428,7 +1429,7 @@ export function Visualiser({
           <span className="tone-popover-row-icon">
             <ToneMarkIcon tone={t} className="tone-mark-icon" />
           </span>
-          Tone {t} · {TONE_SHORT_LABEL[t]}
+          {toneName(t, true)} · {TONE_SHORT_LABEL[t]}
           {limits.visualiserPerTone && countBadge(visualiserToneCount(listWords, tier, t))}
           {!limits.visualiserPerTone && <span className="pro-badge">🔒 Pro</span>}
         </button>
@@ -1451,7 +1452,7 @@ export function Visualiser({
                 : "choice-option tone-pill"
           }
           onClick={() => pickTone(t)}
-          aria-label={`Tone ${t}, ${TONE_SHORT_LABEL[t]}${!limits.visualiserPerTone ? ", locked, Pro" : ""}`}
+          aria-label={`${toneName(t, true)}, ${TONE_SHORT_LABEL[t]}${!limits.visualiserPerTone ? ", locked, Pro" : ""}`}
         >
           <ToneMarkIcon tone={t} className="tone-mark-icon" />
           {limits.visualiserPerTone && countBadge(visualiserToneCount(listWords, tier, t))}
@@ -1530,7 +1531,7 @@ export function Visualiser({
               type="button"
               className={`choice-option vis-pair-tile${active ? " active" : ""}${pairsUnlocked ? "" : " is-locked"}`}
               onClick={() => pickCombo(c)}
-              aria-label={`Tone ${first} then ${second === 0 ? "neutral" : `tone ${second}`}${pairsUnlocked ? "" : ", locked"}`}
+              aria-label={`${toneName(first, true)} then ${second === 0 ? "neutral tone" : toneName(second)}${pairsUnlocked ? "" : ", locked"}`}
             >
               {c.map((t, n) => (
                 <ToneMarkIcon key={n} tone={t as ToneOrNeutral} className="tone-mark-icon" />

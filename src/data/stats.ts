@@ -9,6 +9,7 @@
  */
 import { cacheFromServer, type ServerRunRow, type ServerStats } from "../game/runHistory.ts";
 import { cacheStreakFromServer } from "../game/streak.ts";
+import { cacheComeBackFromServer, type ServerDayRow, type ServerWeekRow } from "../game/comeBack.ts";
 import { displayName } from "./leaderboard.ts";
 import { bumpSessionVersion } from "./sessionVersion.ts";
 import { currentSession, getSupabase, warn } from "./supabase.ts";
@@ -76,6 +77,34 @@ export async function fetchRecentRuns(limit: number): Promise<ServerRunRow[]> {
   }
 }
 
+/**
+ * The come-back loop's rows (brief 55, migration 0037): counted runs per local
+ * day (`counted_runs`) and per-week tone accuracy (`weekly_tone_accuracy`).
+ * Null for a part whose read failed (e.g. before 0037 is applied), so the
+ * cache keeps what it had.
+ */
+export async function fetchComeBackRows(): Promise<{ days: ServerDayRow[] | null; weeks: ServerWeekRow[] | null }> {
+  try {
+    const supabase = getSupabase();
+    const userId = await accountUserId();
+    if (!supabase || !userId) return { days: null, weeks: null };
+    const [days, weeks] = await Promise.all([
+      supabase.from("counted_runs").select("day, count").eq("user_id", userId),
+      supabase
+        .from("weekly_tone_accuracy")
+        .select("week, tone, attempts, sum_accuracy")
+        .eq("user_id", userId),
+    ]);
+    return {
+      days: days.error || !days.data ? null : (days.data as ServerDayRow[]),
+      weeks: weeks.error || !weeks.data ? null : (weeks.data as unknown as ServerWeekRow[]),
+    };
+  } catch (err) {
+    warn("stats", "come-back rows read failed", err);
+    return { days: null, weeks: null };
+  }
+}
+
 /** Everything Progress shows for an account; null when signed out or on any failure. */
 export async function fetchServerStats(): Promise<(AccountStats & { userId: string; displayName: string | null }) | null> {
   const supabase = getSupabase();
@@ -132,9 +161,10 @@ export async function fetchServerStats(): Promise<(AccountStats & { userId: stri
  * the caller; false-y on any failure, with the cache untouched.
  */
 export async function refreshServerStats(): Promise<{ ok: boolean; displayName: string | null }> {
-  const stats = await fetchServerStats();
+  const [stats, comeBack] = await Promise.all([fetchServerStats(), fetchComeBackRows()]);
   if (!stats) return { ok: false, displayName: null };
   cacheFromServer(stats, stats.userId);
+  if (comeBack.days) cacheComeBackFromServer(comeBack.days, comeBack.weeks);
   cacheStreakFromServer({ current: stats.streakCurrent, best: stats.streakBest, lastDay: stats.streakLastDay });
   bumpSessionVersion();
   return { ok: true, displayName: stats.displayName };

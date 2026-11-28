@@ -31,5 +31,5 @@ export function getSessionVersion(): number {
 }
 
 export function useSessionVersion(): number {
-  return useSyncExternalStore(subscribeSessionVersion, getSessionVersion);
+  return useSyncExternalStore(subscribeSessionVersion, getSessionVersion, getSessionVersion);
 }

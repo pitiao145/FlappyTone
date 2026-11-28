@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { toneName } from "../site/toneNames.ts";
 import {
   MIN_SCORED_GATES_FOR_TAKEAWAY,
   takeaway,
@@ -40,16 +41,19 @@ export function GameOverHeader({
   score,
   children,
   actions,
+  footer,
 }: {
   eyebrow: string;
   score: number;
+  /** Full-width lines under the score row (brief 55: streak, weekly headline, daily goal). */
+  footer?: ReactNode;
   /** Extra lines under the score (best, XP, challenge). */
   children?: ReactNode;
   /** Right of the score (share, play again on desktop). */
   actions?: ReactNode;
 }) {
   return (
-    <header className="go-header">
+    <header className={footer ? "go-header has-footer" : "go-header"}>
       <img className="go-bird" src="/Bird-up-no-halo.png" alt="" aria-hidden="true" />
       <div className="go-header-score">
         <p className="go-eyebrow">{eyebrow}</p>
@@ -60,6 +64,7 @@ export function GameOverHeader({
         {children}
       </div>
       {actions}
+      {footer && <div className="go-header-footer">{footer}</div>}
     </header>
   );
 }
@@ -84,7 +89,7 @@ export function CoachCard({
         <span className="go-coach-eyebrow">Coach</span>
       </div>
       <h3 className="go-coach-title">
-        Weak spot: Tone {weakest.tone} ({TONE_SHORT_LABEL[weakest.tone]})
+        Weak spot: {toneName(weakest.tone)} ({TONE_SHORT_LABEL[weakest.tone]})
       </h3>
       <p className="go-coach-body">{takeaway(breakdown)}</p>
       {children}

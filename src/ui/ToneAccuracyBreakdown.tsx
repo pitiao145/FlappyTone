@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toneName } from "../site/toneNames.ts";
 import type { Tone } from "../game/gates.ts";
 import { comboBreakdown, toneBreakdown, type RunStats } from "../game/scoring.ts";
 import { ToneMarkIcon } from "./toneIcons.tsx";
@@ -61,7 +62,7 @@ export function ToneAccuracyBreakdown({ stats, weakTone = null, tileClassName = 
                   weakTone === b.tone ? " go-tone-tile-weak" : ""
                 }`}
                 key={b.tone}
-                aria-label={`Tone ${b.tone}: ${Math.round(b.pct)}% tone accuracy`}
+                aria-label={`${toneName(b.tone, true)}: ${Math.round(b.pct)}% tone accuracy`}
               >
                 <ToneMarkIcon tone={b.tone} className="pause-tone-icon" />
                 <div className="pause-tone-bar">
@@ -82,7 +83,7 @@ export function ToneAccuracyBreakdown({ stats, weakTone = null, tileClassName = 
               <li
                 className="tone-acc-pair"
                 key={p.key}
-                aria-label={`Tone ${p.tones[0]} then tone ${p.tones[1]}: ${Math.round(p.pct)}% tone accuracy`}
+                aria-label={`${toneName(p.tones[0], true)} then ${toneName(p.tones[1])}: ${Math.round(p.pct)}% tone accuracy`}
               >
                 <span className="tone-acc-pair-label" aria-hidden="true">
                   {p.tones.map((t, i) => (

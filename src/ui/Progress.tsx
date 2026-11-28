@@ -11,7 +11,12 @@ import {
   type AccuracyPeriod,
 } from "../game/accuracyPeriod.ts";
 import { streakStatus } from "../game/streak.ts";
-import { levelFor, totalXp } from "../game/xp.ts";
+import { levelFor, playerXpFrom } from "../game/xp.ts";
+import { capFirst, keyName, loadComeBack, TONE_NAME, weeklyHeadline } from "../game/comeBack.ts";
+import { fetchShapes } from "../data/shapes.ts";
+import type { ShapeRow } from "../game/playerShape.ts";
+import { ToneCompare, ToneKeyPicker } from "./ToneCompare.tsx";
+import { ToneMarkIcon } from "./toneIcons.tsx";
 import { useSessionVersion } from "../data/sessionVersion.ts";
 import { useTier } from "../data/tier.ts";
 import { fetchTrendRows } from "../data/runlog.ts";
@@ -21,7 +26,6 @@ import { Leaderboard } from "./Leaderboard.tsx";
 import { brand } from "../brand.ts";
 import { redirectToCheckoutForCurrentAccount } from "../data/checkout.ts";
 import { FREE_HIGHLIGHTS, PRO_HIGHLIGHTS, PRO_PRICE } from "./plan.ts";
-import { PlayerToneEvolution, SamplePlayerToneEvolution } from "./PlayerToneEvolution.tsx";
 import { TONE_LINE_COLOR } from "./toneColors.ts";
 
 // Lazy so Chart.js (~165KB) loads only when the "Accuracy progress" tab is
@@ -119,9 +123,9 @@ function LocalRuns({ history }: { history: ReturnType<typeof loadRunHistory> }) 
 
 type AccuracyTab = "accuracy" | "progress";
 
-/** "2" → "Tone 2"; "3-2" → "3 + 2". */
+/** "2" → "Second tone"; "3-2" → "Third + second tone" (BRAND.md copy rule: never "Tone 2"). */
 function keyLabel(key: string): string {
-  return key.includes("-") ? key.split("-").join(" + ") : `Tone ${key}`;
+  return capFirst(keyName(key));
 }
 
 /** A chart line takes its (first) tone's colour. */
@@ -145,6 +149,8 @@ interface Props {
    * dev-only double-invoke) before this component ever sees `true`.
    */
   leaderboardIntentRef?: { current: boolean };
+  /** Same pattern: set by the end screen's weekly line, scrolls to tone accuracy (brief 55). */
+  accuracyIntentRef?: { current: boolean };
 }
 
 /**
@@ -154,9 +160,10 @@ interface Props {
  * section at the bottom instead of opening the upsell modal directly. See the
  * design handoff in docs/design_handoff_progress_pricing/.
  */
-export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
+export function Progress({ onEarlyBird, leaderboardIntentRef, accuracyIntentRef }: Props) {
   const tier = useTier();
   const leaderboardSectionRef = useRef<HTMLElement | null>(null);
+  const accuracySectionRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     // Read-and-clear happens here, after commit, not during GameApp's
     // render — a ref mutated during render can be torn by a second render
@@ -165,6 +172,9 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
     if (leaderboardIntentRef?.current) {
       leaderboardIntentRef.current = false;
       leaderboardSectionRef.current?.scrollIntoView({ block: "start" });
+    } else if (accuracyIntentRef?.current) {
+      accuracyIntentRef.current = false;
+      accuracySectionRef.current?.scrollIntoView({ block: "start" });
     }
     // Runs once, on mount — GameOver's link remounts this screen fresh each
     // time, it never toggles the ref live.
@@ -198,7 +208,24 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
   const toneAccuracy = accuracy.tones;
   const comboAccuracy = accuracy.combos;
   const streak = useMemo(() => streakStatus(), [version]);
-  const lvl = useMemo(() => levelFor(totalXp(history)), [history]);
+  const lvl = useMemo(() => levelFor(playerXpFrom(history)), [history]);
+  // Brief 55: the weekly headline, top of Progress (free + Pro).
+  const headline = useMemo(() => weeklyHeadline(loadComeBack()), [version]);
+  useEffect(() => {
+    if (headline && headline.kind !== "threshold") {
+      track({ type: "weekly_insight_shown", tone: headline.tone, delta: headline.delta, surface: "progress" });
+    }
+  }, [headline]);
+  // Pro: the player's stored shapes, for the weekly compare view.
+  const [shapeRows, setShapeRows] = useState<ShapeRow[] | null>(null);
+  useEffect(() => {
+    if (tier !== "pro") return;
+    let live = true;
+    void fetchShapes().then((r) => live && setShapeRows(r));
+    return () => {
+      live = false;
+    };
+  }, [tier, version]);
 
   // Mock accuracy-over-time data for the Pro teaser chart — generated once so
   // switching tabs/tones doesn't re-randomise. No real time-series exists yet.
@@ -260,11 +287,14 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
   return (
     <div className="screen progress-screen">
       <h2>Your progress</h2>
-      <p className="note">
-        {tier === "guest"
-          ? "Saved on this device · sign up to keep it forever"
-          : "Synced to your account"}
-      </p>
+      {tier === "guest" && <p className="note">Saved on this device · sign up to keep it forever</p>}
+
+      {/* ---- Brief 55: the weekly headline (free + Pro) */}
+      {headline && (
+        <p className={`sticker-card weekly-headline${headline.kind === "threshold" ? " weekly-headline-threshold" : ""}`}>
+          {headline.kind === "threshold" ? headline.text : `📈 ${capFirst(headline.text)}`}
+        </p>
+      )}
 
       {/* ---- Overview: streak + level, then the stat strip */}
       <div className="progress-overview">
@@ -288,11 +318,9 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
                     : "Finish a run to start a streak"}
               {streak.best > streak.current ? ` · best ${streak.best}` : ""}
             </span>
-            <span className="streak-warning">
-              {tier === "guest"
-                ? "⚠️ Saved only on this device — clearing your browser data resets it."
-                : "Synced to your account."}
-            </span>
+            {tier === "guest" && (
+              <span className="streak-warning">⚠️ Saved only on this device — clearing your browser data resets it.</span>
+            )}
           </div>
 
           <div className="sticker-card level-card">
@@ -350,7 +378,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
       </section>
 
       {/* ---- Accuracy (tabbed) */}
-      <section className="progress-card sticker-card">
+      <section className="progress-card sticker-card" ref={accuracySectionRef}>
         <div className="acc-header">
           <div className="acc-tabs">
             <button
@@ -416,7 +444,11 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
             <div className="breakdown">
               {toneAccuracy.map((t) => (
                 <div className="breakdown-row" key={t.tone}>
-                  <span className="syllable">Tone {t.tone}</span>
+                  <span className="syllable acc-tone-icon" aria-label={capFirst(TONE_NAME[t.tone])}>
+                    <span style={{ color: TONE_LINE_COLOR[t.tone] }}>
+                      <ToneMarkIcon tone={t.tone} className="tone-mark-icon" />
+                    </span>
+                  </span>
                   <span className="bar">
                     <span
                       className="bar-fill"
@@ -439,13 +471,14 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
                     <div
                       className="breakdown-row"
                       key={c.key}
-                      aria-label={`Tone ${c.tones[0]} then tone ${c.tones[1]}: ${Math.round(c.pct)}%`}
+                      aria-label={`${capFirst(TONE_NAME[c.tones[0]])} then ${TONE_NAME[c.tones[1]]}: ${Math.round(c.pct)}%`}
                     >
-                      <span className="syllable" aria-hidden>
+                      <span className="syllable acc-tone-icon" aria-hidden>
                         {c.tones.map((t, i) => (
                           <span key={i}>
-                            {i > 0 && " + "}
-                            <span style={{ color: TONE_LINE_COLOR[t] }}>{t}</span>
+                            <span style={{ color: TONE_LINE_COLOR[t] }}>
+                              <ToneMarkIcon tone={t} className="tone-mark-icon" />
+                            </span>
                           </span>
                         ))}
                       </span>
@@ -480,19 +513,7 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
               ) : (
                 <>
                   <p className="note">Tone accuracy per day, from every run since you went Pro.</p>
-                  <div className="tone-pills">
-                    {proKeys.map((k) => (
-                      <button
-                        key={k}
-                        type="button"
-                        className={`tone-pill${activeKey === k ? " tone-pill-active" : ""}`}
-                        style={activeKey === k ? { background: keyColor(k) } : undefined}
-                        onClick={() => setSelectedKey(k)}
-                      >
-                        {keyLabel(k)}
-                      </button>
-                    ))}
-                  </div>
+                  <ToneKeyPicker keys={proKeys} active={activeKey} onPick={setSelectedKey} />
                   <Suspense fallback={<div className="acc-chart acc-chart-loading" aria-hidden />}>
                     <AccuracyProgressChart
                       subject={keyLabel(activeKey).toLowerCase()}
@@ -507,22 +528,14 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
           ) : (
             <>
               <p className="note">Accuracy over time for the selected tone (example data).</p>
-              <div className="tone-pills">
-                {TONES.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    className={`tone-pill${selectedTone === t ? " tone-pill-active" : ""}`}
-                    style={selectedTone === t ? { background: TONE_LINE_COLOR[t] } : undefined}
-                    onClick={() => setSelectedTone(t)}
-                  >
-                    Tone {t}
-                  </button>
-                ))}
-              </div>
+              <ToneKeyPicker
+                keys={TONES.map(String)}
+                active={String(selectedTone)}
+                onPick={(k) => setSelectedTone(Number(k) as Tone)}
+              />
               <Suspense fallback={<div className="acc-chart acc-chart-loading" aria-hidden />}>
                 <AccuracyProgressChart
-                  subject={`tone ${selectedTone}`}
+                  subject={TONE_NAME[selectedTone]}
                   color={TONE_LINE_COLOR[selectedTone]}
                   labels={mock.labels}
                   data={mock.series[selectedTone]}
@@ -554,16 +567,15 @@ export function Progress({ onEarlyBird, leaderboardIntentRef }: Props) {
       {/* ---- Tone evolution (kept from today, restyled) */}
       <section className="progress-card sticker-card">
         <div className="progress-card-header">
-          <h3>See how your tones evolve over time</h3>
+          <h3>Your tones, week by week</h3>
           {!isPro && lockBadge}
         </div>
         {isPro ? (
-          // Spec B: the player's own average shape over Jane's, per tone
-          // and per combo, with an earlier point to compare against.
-          <PlayerToneEvolution key={version} />
+          // Brief 55: per tone, this week vs last week over Jane's.
+          <ToneCompare mode="pro" rows={shapeRows} />
         ) : (
           <>
-            <SamplePlayerToneEvolution />
+            <ToneCompare mode="mock" />
             {lockCta(
               "🔒 Compare against your own attempts — unlock with Pro",
               "tone_evolution",

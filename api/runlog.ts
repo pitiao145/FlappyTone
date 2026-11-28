@@ -324,5 +324,16 @@ export async function POST(request: Request): Promise<Response> {
     console.error("[runlog] record failed", error);
     return json(502, { error: "Could not record run." });
   }
+  if (data === true && flags.stats) {
+    // Brief 55: the week's per-tone sums for the weekly headline. After
+    // record_run applied the run, so a retry never adds it twice. Cosmetic:
+    // a failure (or migration 0037 not applied yet) never fails the run.
+    const { error: weekError } = await supabase.rpc("add_weekly_tone_accuracy", {
+      p_user: user.id,
+      p_day: day as string,
+      p_per_key: r.per_key,
+    });
+    if (weekError) console.error("[runlog] weekly add failed", weekError);
+  }
   return json(200, { applied: data === true });
 }

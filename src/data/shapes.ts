@@ -33,6 +33,11 @@ export async function postShapes(buckets: ShapeBucket[], opts: { keepalive?: boo
 
 /** Every stored row for the signed-in player; empty on any failure. */
 export async function fetchShapes(): Promise<ShapeRow[]> {
+  // Dev only (hard rule 7): the screenshot harness's seeded rows (brief 55).
+  if (import.meta.env.DEV) {
+    const seeded = (globalThis as { __ftShotsShapes?: ShapeRow[] }).__ftShotsShapes;
+    if (seeded) return seeded;
+  }
   try {
     const supabase = getSupabase();
     if (!supabase) return [];

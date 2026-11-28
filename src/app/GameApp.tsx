@@ -34,6 +34,7 @@ import {
 import type { RunSnapshot } from "../game/run";
 import { recordRun } from "../game/runHistory.ts";
 import { recordPlay } from "../game/streak.ts";
+import { recordCountedRun, type CountedRunResult } from "../game/comeBack.ts";
 import {
   effectiveSpeechStyle,
   loadLastLevel,
@@ -498,6 +499,8 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     () => initialIntent() !== "visualiser" || getMicSession() !== null,
   );
   const [stats, setStats] = useState<RunStats | null>(null);
+  /** Brief 55: the daily-goal count after the run on the end screen; null for uncounted modes. */
+  const [dailyGoal, setDailyGoal] = useState<CountedRunResult | null>(null);
   /**
    * The target score a `?c=<score>` share link asked this session to beat.
    * Captured once on mount (read before the URL is stripped, see the
@@ -647,6 +650,8 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
    * gets it scrolled straight to the board section rather than the top.
    */
   const progressLeaderboardRef = useRef(initialIntent() === "leaderboard");
+  /** Brief 55: the end screen's weekly line opens Progress at tone accuracy. */
+  const progressAccuracyRef = useRef(false);
   /**
    * True while the tutorial that immediately follows a calibration is running:
    * its measured range seeds the grid (calibration itself only sites the centre
@@ -807,6 +812,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
         lastModeRef.current === "pairs")
     ) {
       recordRun(snap, "quit");
+      recordCountedRun(snap.stats);
     }
     goHome();
   }, [goHome]);
@@ -828,6 +834,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
         lastModeRef.current === "pairs")
     ) {
       recordRun(snap, "quit");
+      recordCountedRun(snap.stats);
     }
     navRef.current += 1;
     setGameAlive(false);
@@ -1105,12 +1112,18 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     // streak): it's unscored-pressure recognition practice, not a run the
     // Progress tab's per-tone accuracy or the free-tier counter should read
     // as real pronunciation performance.
+    setDailyGoal(null);
     if (
       lastModeRef.current === "game" ||
       lastModeRef.current === "drill" ||
       lastModeRef.current === "pairs"
     ) {
       recordRun(snap, snap.stats.hearts <= 0 ? "out_of_hearts" : "finished");
+      // Brief 55: the daily goal (3 counted runs today = bonus XP, once).
+      // Local cache only; the server's counted_runs replaces it on refresh.
+      const goal = recordCountedRun(snap.stats);
+      setDailyGoal(goal);
+      if (goal.goalJustCompleted) track({ type: "daily_goal_completed", runs_today: goal.runsToday });
       // The next Play home may ask the server for the note-from-Pierre card.
       armNote();
       // Only a completed run (finished or out of hearts) counts against the
@@ -1389,9 +1402,10 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
     if (!import.meta.env.DEV) return;
     const w = window as unknown as { __ftShots?: unknown };
     w.__ftShots = {
-      gameOver: (s: RunStats) => {
+      gameOver: (s: RunStats, goal?: CountedRunResult) => {
         setGameAlive(false);
         setStats(s);
+        setDailyGoal(goal ?? null);
         setScreen("gameover");
       },
     };
@@ -1507,6 +1521,7 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
           <Progress
             onEarlyBird={(feature) => openEarlyBird("progress", feature)}
             leaderboardIntentRef={progressLeaderboardRef}
+            accuracyIntentRef={progressAccuracyRef}
           />
         )}
 
@@ -1718,6 +1733,12 @@ export default function GameApp({ recovery = false }: { recovery?: boolean }) {
               progressLeaderboardRef.current = true;
               setScreen("progress");
             }}
+            dailyGoal={dailyGoal}
+            onToneStats={() => {
+              progressAccuracyRef.current = true;
+              setScreen("progress");
+            }}
+            onEarlyBird={(feature) => openEarlyBird("progress", feature)}
           />
         )}
         </div>

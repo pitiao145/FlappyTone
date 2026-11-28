@@ -548,6 +548,41 @@ export type Database = {
           },
         ]
       }
+      weekly_tone_accuracy: {
+        Row: {
+          attempts: number
+          sum_accuracy: number
+          tone: string
+          updated_at: string
+          user_id: string
+          week: string
+        }
+        Insert: {
+          attempts?: number
+          sum_accuracy?: number
+          tone: string
+          updated_at?: string
+          user_id: string
+          week: string
+        }
+        Update: {
+          attempts?: number
+          sum_accuracy?: number
+          tone?: string
+          updated_at?: string
+          user_id?: string
+          week?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_tone_accuracy_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       word_clips: {
         Row: {
           clip_key: string | null
@@ -736,6 +771,10 @@ export type Database = {
       }
       add_tone_shapes: {
         Args: { p_day: string; p_rows: Json; p_user_id: string }
+        Returns: undefined
+      }
+      add_weekly_tone_accuracy: {
+        Args: { p_day: string; p_per_key: Json; p_user: string }
         Returns: undefined
       }
       adopt_guest: {

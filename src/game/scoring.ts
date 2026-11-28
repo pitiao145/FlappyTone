@@ -4,6 +4,7 @@
  */
 
 import type { Tone } from "./gates.ts";
+import { toneName } from "../site/toneNames.ts";
 import type { ClassifiedTone, ToneClassification } from "./toneClassifier.ts";
 import { tuning } from "./tuning.ts";
 import { isSpokenKey, toneComboKey } from "./words.ts";
@@ -498,7 +499,7 @@ export function takeaway(breakdown: ToneBreakdownEntry[]): string {
     worst.mismatchedAsMostly !== null &&
     worst.mismatched * 2 >= worst.gates
   ) {
-    return `Tone ${worst.tone} gates are landing like Tone ${worst.mismatchedAsMostly}: ${TONE_TAKEAWAY_CUE[worst.tone]}.`;
+    return `${toneName(worst.tone, true)} gates are landing like the ${toneName(worst.mismatchedAsMostly)}: ${TONE_TAKEAWAY_CUE[worst.tone]}.`;
   }
-  return `Tone ${worst.tone} is your weak spot: ${TONE_TAKEAWAY_CUE[worst.tone]}.`;
+  return `${toneName(worst.tone, true)} is your weak spot: ${TONE_TAKEAWAY_CUE[worst.tone]}.`;
 }
